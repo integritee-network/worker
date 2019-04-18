@@ -1,0 +1,8 @@
+[package]
+name = "substra-tee-worker"
+version = "0.1.0"
+authors = ["Marcel Frei <marcel.frei@scs.ch>"]
+edition = "2018"
+
+[dependencies]
+clap = { version = "2.33", features = [ "yaml" ] }

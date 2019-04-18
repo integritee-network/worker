@@ -1,0 +1,16 @@
+[package]
+name = "app"
+version = "0.1.0"
+authors = ["Alain Brenzikofer"]
+build = "build.rs"
+
+[dependencies]
+sgx_types = { path = "../rust-sgx-sdk/sgx_types" }
+sgx_urts = { path = "../rust-sgx-sdk/sgx_urts" }
+sgx_tseal = { path = "../rust-sgx-sdk/sgx_tseal" }
+rust-base58 = "*"
+rust-crypto = "*"
+dirs = "1.0.2"
+sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false}
+serde_json = "1.0"
+clap = { version = "2.33", features = [ "yaml" ] }
