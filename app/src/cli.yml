@@ -4,19 +4,20 @@ about: Worker using Intel SGX TEE for SubstraTEE-node
 author: Decentralized Systems @ SCS
 
 # AppSettings can be defined as a list and are **not** ascii case sensitive
-# settings:
+settings:
+    - ColoredHelp
+    - SubcommandRequired
     # - ArgRequiredElseHelp
 
 # All Args must be defined in the 'args:' list where the name of the arg, is the
 # key to a Hash object
-# args:
-    # The name of this argument, is 'wsport' which will be used to access the value
+args:
+    # The name of this argument is 'keyfile' which will be used to access the value
     # later in your Rust code
-    # - wsport:
-    #     help: specifies the WebSocket port to connect to
-    #     short: p
-    #     long: port
-    #     takes_value: true
+    - keyfile:
+        help: "Path to encrypted keyfile [default: ./encrypted_keypair]"
+        long: keyfile
+        takes_value: true
     # - opt:
     #     help: example option argument from yaml
     #     short: o
@@ -74,6 +75,10 @@ subcommands:
         about: Create a sealed key with the SGX
         version: "0.1"
         author: Alain Brenzikofer
+    - generate:
+        about: Generate a keypair
+        version: "0.1"
+        author: Marcel Frei
     # The name of this subcommand will be 'subcmd' which can be accessed in your
     # Rust code later
     # - subcmd:

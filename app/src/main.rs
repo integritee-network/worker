@@ -25,6 +25,8 @@ extern crate dirs;
 extern crate rust_base58;
 extern crate crypto;
 extern crate sgx_crypto_helper;
+extern crate substra_tee_worker;
+
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 //use sgx_tseal::{SgxSealedData};
@@ -36,9 +38,12 @@ use rust_base58::{ToBase58, FromBase58};
 use crypto::ed25519::{keypair, verify};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-
-static ENCLAVE_FILE: &'static str = "./bin/enclave.signed.so";
-static ENCLAVE_TOKEN: &'static str = "./bin/enclave.token";
+use substra_tee_worker::{
+    generate_keypair,
+    init_enclave::*,
+    utils::keyfile_exists,
+    utils::get_affirmation
+};
 
 extern {
     fn create_sealed_key(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,
@@ -58,82 +63,14 @@ extern {
 
 }
 
-fn init_enclave() -> SgxResult<SgxEnclave> {
-
-    let mut launch_token: sgx_launch_token_t = [0; 1024];
-    let mut launch_token_updated: i32 = 0;
-    // Step 1: try to retrieve the launch token saved by last transaction
-    //         if there is no token, then create a new one.
-    //
-    // try to get the token saved in $HOME */
-    let mut home_dir = path::PathBuf::new();
-    let use_token = match dirs::home_dir() {
-        Some(path) => {
-            println!("[+] Home dir is {}", path.display());
-            home_dir = path;
-            true
-        },
-        None => {
-            println!("[-] Cannot get home dir");
-            false
-        }
-    };
-
-    let token_file: path::PathBuf = home_dir.join(ENCLAVE_TOKEN);;
-    if use_token == true {
-        match fs::File::open(&token_file) {
-            Err(_) => {
-                println!("[-] Open token file {} error! Will create one.", token_file.as_path().to_str().unwrap());
-            },
-            Ok(mut f) => {
-                println!("[+] Open token file success! ");
-                match f.read(&mut launch_token) {
-                    Ok(1024) => {
-                        println!("[+] Token file valid!");
-                    },
-                    _ => println!("[+] Token file invalid, will create new token file"),
-                }
-            }
-        }
-    }
-
-    // Step 2: call sgx_create_enclave to initialize an enclave instance
-    // Debug Support: set 2nd parameter to 1
-    let debug = 1;
-    let mut misc_attr = sgx_misc_attribute_t {secs_attr: sgx_attributes_t { flags:0, xfrm:0}, misc_select:0};
-    let enclave = try!(SgxEnclave::create(ENCLAVE_FILE,
-                                          debug,
-                                          &mut launch_token,
-                                          &mut launch_token_updated,
-                                          &mut misc_attr));
-
-    // Step 3: save the launch token if it is updated
-    if use_token == true && launch_token_updated != 0 {
-        // reopen the file with write capablity
-        match fs::File::create(&token_file) {
-            Ok(mut f) => {
-                match f.write_all(&launch_token) {
-                    Ok(()) => println!("[+] Saved updated launch token!"),
-                    Err(_) => println!("[-] Failed to save updated launch token!"),
-                }
-            },
-            Err(_) => {
-                println!("[-] Failed to save updated enclave token, but doesn't matter");
-            },
-        }
-    }
-
-    Ok(enclave)
-}
-
 fn sealed_key() {
     let enclave = match init_enclave() {
         Ok(r) => {
-            println!("[+] Init Enclave Successful {}!", r.geteid());
+            println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
             r
         },
         Err(x) => {
-            println!("[-] Init Enclave Failed {}!", x.as_str());
+            println!("[-] Init Enclave Failed {}!", x);
             return;
         },
     };
@@ -142,7 +79,6 @@ fn sealed_key() {
     let mut sealed_seed = vec![0u8; sealed_seed_size as usize];
     let pubkey_size = 32;
     let mut pubkey = vec![0u8; pubkey_size as usize];
-
 
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -260,13 +196,41 @@ fn main() {
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
+    let keyfile: String  = matches.value_of("keyfile").unwrap_or("./encrypted_keypair").to_string();
+
     if matches.is_present("sealedkey") {
         println!("* Starting substraTEE-worker");
         println!("** Generating sealed key");
         println!("");
         sealed_key();
     }
+    else if matches.is_present("generate") {
+        println!("* Starting substraTEE-worker");
+        println!("** Generating key pair");
+        println!("");
+        generate(&keyfile);
+    }
     else {
         println!("For options: use --help");
     }
+}
+
+fn generate(path: &String) -> () {
+    match keyfile_exists(&path) {
+        false => println!("keyfile '{}' does NOT exist", &path),
+        true  => {
+            println!("[!] WARNING! File '{}' exists and will be overwritten!", &path);
+            match get_affirmation("This cannot be undone!".to_string()) {
+                false => println!("[-] Nothing will be done. exiting"),
+                true  => {
+                    println!("[+] File will be overwritten");
+                    match generate_keypair::run(&path) {
+                        Ok(_) => println!("[+] Key pair successfully saved to {}", &path),
+                        Err(e) => println!("[-] Error generating keypair:\n\t{:?}", e)
+                    };
+                }
+            }
+        }
+    }
+
 }
