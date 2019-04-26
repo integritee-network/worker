@@ -11,6 +11,10 @@ Cargo.lock
 
 # binaries
 bin/*.so
+bin/app
+
+# sealed data
+bin/rsa3072_key_sealed.bin
 
 # VS Code settings
 .vscode
