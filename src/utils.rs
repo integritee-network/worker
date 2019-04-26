@@ -15,21 +15,16 @@
 
 */
 
-use std::result;
-use error::AppError;
 use std::path::Path;
-use std::io::{stdin, stdout, Write};
 
-type Result<T> = result::Result<T, AppError>;
-
-pub fn keyfile_exists(path: &String) -> bool {
+pub fn file_exists(path: &str) -> bool {
     Path::new(path).exists()
 }
 
-pub fn get_affirmation(warn_msg: String) -> bool {
-    let mut s = String::new();
-    print!("[!] WARNING! {} Proceed? y/n ", warn_msg);
-    let _ = stdout().flush();
-    stdin().read_line(&mut s).expect("[-] You did not enter a correct string");
-    if s.trim() == "y" || s.trim() == "yes" || s.trim() == "Y" || s.trim() == "YES" || s.trim() == "Yes" { true } else { false }
-}
+// pub fn get_affirmation(warn_msg: String) -> bool {
+//     let mut s = String::new();
+//     print!("[!] WARNING! {} Proceed? y/n ", warn_msg);
+//     let _ = stdout().flush();
+//     stdin().read_line(&mut s).expect("[-] You did not enter a correct string");
+//     if s.trim() == "y" || s.trim() == "yes" || s.trim() == "Y" || s.trim() == "YES" || s.trim() == "Yes" { true } else { false }
+// }

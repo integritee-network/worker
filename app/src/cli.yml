@@ -11,13 +11,13 @@ settings:
 
 # All Args must be defined in the 'args:' list where the name of the arg, is the
 # key to a Hash object
-args:
+# args:
     # The name of this argument is 'keyfile' which will be used to access the value
     # later in your Rust code
-    - keyfile:
-        help: "Path to encrypted keyfile [default: ./encrypted_keypair]"
-        long: keyfile
-        takes_value: true
+    # - keyfile:
+    #     help: "Path to encrypted keyfile [default: ./encrypted_keypair]"
+    #     long: keyfile
+    #     takes_value: true
     # - opt:
     #     help: example option argument from yaml
     #     short: o
@@ -75,8 +75,8 @@ subcommands:
         about: Create a sealed key with the SGX
         version: "0.1"
         author: Alain Brenzikofer
-    - generate:
-        about: Generate a keypair
+    - worker:
+        about: Start the substraTEE-worker
         version: "0.1"
         author: Marcel Frei
     # The name of this subcommand will be 'subcmd' which can be accessed in your

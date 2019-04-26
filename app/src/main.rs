@@ -20,50 +20,75 @@ use clap::App;
 
 extern crate sgx_types;
 extern crate sgx_urts;
-//extern crate sgx_tseal;
-extern crate dirs;
-extern crate rust_base58;
-extern crate crypto;
 extern crate sgx_crypto_helper;
 extern crate substra_tee_worker;
 
+use std::fs;
+use std::str;
+use std::path;
+use std::path::Path;
+use std::io::{Read, Write};
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
-//use sgx_tseal::{SgxSealedData};
-use std::io::{Read, Write};
-use std::fs;
-use std::path;
-use std::str;
-use rust_base58::{ToBase58, FromBase58};
-use crypto::ed25519::{keypair, verify};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use substra_tee_worker::{
-    generate_keypair,
-    init_enclave::*,
-    utils::keyfile_exists,
-    utils::get_affirmation
-};
+use substra_tee_worker::constants::*;
+use substra_tee_worker::utils::file_exists;
 
 extern {
-    fn create_sealed_key(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,
-        sealed_seed: * mut u8, sealed_seed_size: u32,
-        pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t;
+    // fn sign(
+    //     eid: sgx_enclave_id_t,
+    //     retval: *mut sgx_status_t,
+    //     sealed_seed: * mut u8,
+    //     sealed_seed_size: u32,
+    //     msg: * mut u8,
+    //     msg_size: u32,
+    //     signature: * mut u8,
+    //     signature_size: u32
+    // ) -> sgx_status_t;
 
-    fn sign(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,
-        sealed_seed: * mut u8, sealed_seed_size: u32,
-        msg: * mut u8, msg_size: u32,
-        signature: * mut u8, signature_size: u32) -> sgx_status_t;
+    fn decrypt(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        ciphertext: * mut u8,
+        ciphertext_size: u32
+    ) -> sgx_status_t;
 
-    fn get_rsa_encryption_pubkey(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,
-        pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t;
+    fn create_sealed_rsa3072_keypair(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        filepath: *const u8,
+        filepath_size: usize
+    ) -> sgx_status_t;
 
-    fn decrypt(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,
-        ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t;
-
+    fn get_rsa_encryption_pubkey(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        pubkey: * mut u8,
+        pubkey_size: u32
+    ) -> sgx_status_t;
 }
 
-fn sealed_key() {
+fn main() {
+    let yml = load_yaml!("cli.yml");
+    let matches = App::from_yaml(yml).get_matches();
+
+    if matches.is_present("worker") {
+        println!("* Starting substraTEE-worker");
+        println!("");
+        worker();
+        println!("* Worker finished");
+    }
+    else {
+        println!("For options: use --help");
+    }
+}
+
+fn worker() -> () {
+    // ------------------------------------------------------------------------
+    // initialize the enclave
+    println!("");
+    println!("*** Starting enclave");
     let enclave = match init_enclave() {
         Ok(r) => {
             println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
@@ -75,77 +100,36 @@ fn sealed_key() {
         },
     };
 
-    let sealed_seed_size = 1024;
-    let mut sealed_seed = vec![0u8; sealed_seed_size as usize];
-    let pubkey_size = 32;
-    let mut pubkey = vec![0u8; pubkey_size as usize];
+    // ------------------------------------------------------------------------
+    // check if the sealed rsa3072 file exists and create it if needed
+    println!("");
+    println!("*** RSA3072 key generation/use");
+    match file_exists(RSA3072_SEALED_KEY_FILE) {
+        false => create_rsa3072_keypair(enclave.geteid()),
+        true  => println!("[+] File '{}' already exist", RSA3072_SEALED_KEY_FILE)
+    }
 
+    // ------------------------------------------------------------------------
+    // check if schnorrkel key is present -> used for signing the transaction
+    println!("");
+    println!("*** Schnorrkel key generation/use");
+    println!("**** TODO");
+
+    // ------------------------------------------------------------------------
+    // subscribe to event and react on fireing
+    println!("");
+    println!("*** Subscribe to substraTEE-proxy event");
+    println!("**** TODO");
+
+    let mut ciphertext : Vec<u8> = Vec::new();
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
-    let result = unsafe {
-        create_sealed_key(enclave.geteid(),
-                      &mut retval,
-                      sealed_seed.as_mut_ptr(),
-                      sealed_seed_size,
-                      pubkey.as_mut_ptr(),
-                      pubkey_size,
-                      )
-    };
-
-    match result {
-        sgx_status_t::SGX_SUCCESS => {},
-        _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
-            return;
-        }
-    }
-    // importing sgx_tseal causes collision with std
-    //let sdata = SgxSealedData::<u8>::from_raw_sealed_data_t(sealed_seed.as_mut_ptr() as * mut sgx_sealed_data_t, sealed_seed_size);
-    println!("[+] enclave returned pubkey: {:?}", pubkey.to_base58());
-
-    // now let the enclave sign our message
-    //let msg = b"This message is true";
-
-    //let mut msg = vec![0u8; msg_size as usize];
-    let mut msg = b"This message is true".to_vec();
-
-    println!("let enclave sign message: {}", str::from_utf8(&msg).unwrap());
-
-    //allocate signature
-    let signature_size = 64;
-    let mut signature = vec![0u8; signature_size as usize];
-
-    let result = unsafe {
-        sign(enclave.geteid(),
-                      &mut retval,
-                      sealed_seed.as_mut_ptr(),
-                      sealed_seed_size,
-                      msg.as_mut_ptr(),
-                      msg.len() as u32,
-                      signature.as_mut_ptr(),
-                      signature_size
-                      )
-    };
-
-    match result {
-        sgx_status_t::SGX_SUCCESS => {},
-        _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
-            return;
-        }
-    }
-
-    // verify signature with pubkey
-    let result = verify(&msg[..], &pubkey[..], &signature[..]);
-    match result {
-        true => {println!("[+] enclave signature is correct!");}
-        _ => {println!("[-] enclave signature is incorrect!");}
-    }
-
-    //////////////////////////////////777
-    // retrieve RSA pubkey
-
-    //allocate signature
+    // ------------------------------------------------------------------------
+    // encrypt a test message
+    // only used for testing purpose
+    println!("");
+    println!("*** Encrypt test message");
+    println!("**** TO BE REMOVED");
     let pubkey_size = 8192;
     let mut pubkey = vec![0u8; pubkey_size as usize];
 
@@ -170,15 +154,69 @@ fn sealed_key() {
     //self, plaintext: &[u8], ciphertext: &mut Vec<u8>
 
     let mut ciphertext : Vec<u8> = Vec::new();
-    let plaintext = b"This message is confidential".to_vec();
+    let plaintext = b"Alice,42".to_vec();
     rsa_keypair.encrypt_buffer(&plaintext, &mut ciphertext).unwrap();
+    println!("ciphertext = {:?}", ciphertext);
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // decrypt the payload of the message
+    // encoded message 'b"Alice, 42"'
+    println!("");
+    println!("*** Decrypt the payload");
+    // ciphertext = [35, 238, 142, 104, 209, 142, 188, 217, 158, 7, 107, 10, 12, 166, 221, 243, 6, 226, 186, 246, 237, 96, 37, 245, 134, 4, 113, 61, 182, 177, 228, 98, 209, 76, 15, 232, 184, 172, 110, 221, 152, 186, 106, 248, 173, 140, 41, 17, 97, 169, 140, 150, 138, 94, 27, 243, 196, 30, 68, 56, 13, 206, 32, 0, 255, 144, 140, 79, 76, 55, 219, 246, 14, 222, 234, 28, 187, 235, 117, 158, 71, 26, 229, 192, 209, 129, 138, 162, 184, 201, 95, 5, 62, 171, 193, 156, 237, 112, 115, 4, 222, 101, 171, 166, 79, 91, 102, 137, 241, 144, 96, 232, 179, 216, 216, 152, 246, 243, 155, 120, 133, 117, 65, 145, 176, 138, 228, 253, 117, 121, 21, 217, 141, 189, 55, 242, 233, 148, 121, 181, 197, 79, 134, 97, 169, 195, 71, 112, 166, 175, 147, 128, 178, 212, 224, 12, 73, 159, 242, 31, 124, 106, 134, 122, 154, 16, 108, 39, 185, 32, 8, 106, 26, 0, 235, 142, 106, 232, 6, 45, 6, 221, 100, 17, 21, 78, 100, 204, 176, 193, 91, 185, 61, 51, 57, 143, 146, 60, 170, 58, 222, 1, 182, 74, 181, 159, 82, 23, 135, 62, 115, 44, 143, 237, 96, 248, 250, 197, 225, 41, 208, 103, 234, 135, 86, 115, 173, 115, 72, 34, 230, 205, 210, 236, 136, 241, 65, 136, 42, 53, 148, 240, 73, 220, 105, 114, 167, 109, 209, 37, 186, 177, 100, 242, 9, 46, 0, 161, 90, 110, 243, 32, 164, 61, 102, 17, 139, 219, 210, 16, 118, 110, 156, 153, 169, 43, 242, 209, 10, 174, 167, 30, 250, 137, 25, 53, 86, 202, 125, 180, 208, 178, 111, 132, 150, 197, 182, 156, 248, 177, 225, 45, 187, 13, 235, 2, 126, 190, 136, 36, 140, 229, 22, 7, 181, 207, 115, 126, 205, 229, 168, 251, 105, 201, 134, 201, 197, 166, 166, 200, 60, 188, 86, 180, 175, 186, 238, 117, 210, 8, 202, 44, 233, 190, 17, 17, 209, 179, 185, 0, 169, 42, 191, 174, 78, 153, 128, 212, 237, 39, 87, 182, 251, 10, 100, 12, 79, 70, 242, 154, 243, 83, 123, 183, 131, 237, 197, 175, 116, 108, 45, 213, 172, 26].to_vec();
+
+    let file = String::from(RSA3072_SEALED_KEY_FILE);
 
     let result = unsafe {
         decrypt(enclave.geteid(),
-                      &mut retval,
-                      ciphertext.as_mut_ptr(),
-                      ciphertext.len() as u32
-                      )
+                &mut retval,
+                ciphertext.as_mut_ptr(),
+                ciphertext.len() as u32
+                )
+    };
+
+    match result {
+        sgx_status_t::SGX_SUCCESS => println!("[+] Message decoded and processed in the enclave."),
+        _ => {
+            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            return;
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // compose an extrinsic with the hash of the initial payload
+    println!("");
+    println!("*** Compose extrinsic");
+    println!("**** TODO");
+
+    // ------------------------------------------------------------------------
+    // send the extrinsic
+    println!("");
+    println!("*** Send extrinsic");
+    println!("**** TODO");
+
+    // ------------------------------------------------------------------------
+    // destroy the enclave
+    println!("");
+    println!("*** Destroy enclave");
+    enclave.destroy();
+}
+
+fn create_rsa3072_keypair(eid: sgx_enclave_id_t) -> () {
+    println!("");
+    println!("*** create RSA3072 keypair");
+
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+
+    let file = String::from(RSA3072_SEALED_KEY_FILE);
+
+    let result = unsafe {
+        create_sealed_rsa3072_keypair(
+            eid,
+            &mut retval,
+            file.as_ptr() as *const u8,
+            file.len())
     };
 
     match result {
@@ -188,49 +226,77 @@ fn sealed_key() {
             return;
         }
     }
-
-    enclave.destroy();
 }
 
-fn main() {
-    let yml = load_yaml!("cli.yml");
-    let matches = App::from_yaml(yml).get_matches();
+fn init_enclave() -> SgxResult<SgxEnclave> {
+    let mut launch_token: sgx_launch_token_t = [0; 1024];
+    let mut launch_token_updated: i32 = 0;
 
-    let keyfile: String  = matches.value_of("keyfile").unwrap_or("./encrypted_keypair").to_string();
-
-    if matches.is_present("sealedkey") {
-        println!("* Starting substraTEE-worker");
-        println!("** Generating sealed key");
-        println!("");
-        sealed_key();
-    }
-    else if matches.is_present("generate") {
-        println!("* Starting substraTEE-worker");
-        println!("** Generating key pair");
-        println!("");
-        generate(&keyfile);
-    }
-    else {
-        println!("For options: use --help");
-    }
-}
-
-fn generate(path: &String) -> () {
-    match keyfile_exists(&path) {
-        false => println!("keyfile '{}' does NOT exist", &path),
-        true  => {
-            println!("[!] WARNING! File '{}' exists and will be overwritten!", &path);
-            match get_affirmation("This cannot be undone!".to_string()) {
-                false => println!("[-] Nothing will be done. exiting"),
-                true  => {
-                    println!("[+] File will be overwritten");
-                    match generate_keypair::run(&path) {
-                        Ok(_) => println!("[+] Key pair successfully saved to {}", &path),
-                        Err(e) => println!("[-] Error generating keypair:\n\t{:?}", e)
-                    };
+    // Step 1: try to retrieve the launch token saved by last transaction
+    //         if there is no token, then create a new one.
+    //
+    // try to get the token saved in $HOME */
+    let mut home_dir = path::PathBuf::new();
+    let use_token = match dirs::home_dir() {
+        Some(path) => {
+            println!("[+] Home dir is {}", path.display());
+            home_dir = path;
+            true
+        }
+        None => {
+            println!("[-] Cannot get home dir");
+            false
+        }
+    };
+    let token_file: path::PathBuf = home_dir.join(ENCLAVE_TOKEN);;
+    if use_token == true {
+        match fs::File::open(&token_file) {
+            Err(_) => {
+                println!(
+                    "[-] Open token file {} error! Will create one.",
+                    token_file.as_path().to_str().unwrap()
+                );
+            }
+            Ok(mut f) => {
+                println!("[+] Open token file success! ");
+                match f.read(&mut launch_token) {
+                    Ok(1024) => {
+                        println!("[+] Token file valid!");
+                    }
+                    _ => println!("[+] Token file invalid, will create new token file"),
                 }
             }
         }
     }
 
+    // Step 2: call sgx_create_enclave to initialize an enclave instance
+    // Debug Support: 1 = debug mode, 0 = not debug mode
+    let debug = 1;
+    let mut misc_attr = sgx_misc_attribute_t {
+        secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
+        misc_select: 0,
+    };
+    let enclave = (SgxEnclave::create(
+        ENCLAVE_FILE,
+        debug,
+        &mut launch_token,
+        &mut launch_token_updated,
+        &mut misc_attr,
+    ))?;
+
+    // Step 3: save the launch token if it is updated
+    if use_token == true && launch_token_updated != 0 {
+        // reopen the file with write capablity
+        match fs::File::create(&token_file) {
+            Ok(mut f) => match f.write_all(&launch_token) {
+                Ok(()) => println!("[+] Saved updated launch token!"),
+                Err(_) => println!("[-] Failed to save updated launch token!"),
+            },
+            Err(_) => {
+                println!("[-] Failed to save updated enclave token, but doesn't matter");
+            }
+        }
+    }
+
+    Ok(enclave)
 }

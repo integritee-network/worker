@@ -19,6 +19,7 @@ sgx_tcrypto = { path = "../rust-sgx-sdk/sgx_tcrypto" }
 rust-crypto = { path = "../rust-sgx-sdk/third_party/rust-crypto" }
 rust-base58 = { path = "../rust-sgx-sdk/third_party/rust-base58" }
 sgx_crypto_helper = { path = "../rust-sgx-sdk/samplecode/static-data-distribution/enclave/sgx_crypto_helper", default-features = false, features = ["enclave_cargo"] }
+# substra_tee_worker = { path = "../" }
 
 [target.'cfg(target_env = "sgx")'.dependencies]
 sgx_crypto_helper = { path = "../rust-sgx-sdk/samplecode/static-data-distribution/enclave/sgx_crypto_helper", default-features = false }

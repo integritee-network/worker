@@ -4,9 +4,3 @@ version = "0.1.0"
 authors = ["Marcel Frei <marcel.frei@scs.ch>"]
 
 [dependencies]
-hex = "0.3.2"
-dirs = "1.0.2"
-reqwest = "0.9.3"
-clap = { version = "2.33", features = [ "yaml" ] }
-sgx_types = { path = "./rust-sgx-sdk/sgx_types" }
-sgx_urts = { path = "./rust-sgx-sdk/sgx_urts" }

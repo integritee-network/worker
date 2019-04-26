@@ -15,15 +15,5 @@
 
 */
 
-extern crate dirs;
-extern crate hex;
-extern crate reqwest;
-extern crate sgx_types;
-extern crate sgx_urts;
-
 pub mod constants;
-pub mod enclave_api;
-pub mod error;
 pub mod utils;
-pub mod generate_keypair;
-pub mod init_enclave;

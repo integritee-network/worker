@@ -1,16 +1,19 @@
-//  Copyright (c) 2019 Alain Brenzikofer
-//
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+/*
+   Copyright 2019 Supercomputing Systems AG
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+*/
 
 #![crate_name = "sealedkeyenclave"]
 #![crate_type = "staticlib"]
@@ -44,69 +47,76 @@ use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
-pub const KEYFILE: &'static str = "sealed_rsa_key.bin";
+pub static RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
 
 #[no_mangle]
-pub extern "C" fn create_sealed_key(sealed_seed: * mut u8, sealed_seed_size: u32, pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
 
-    let mut seed = [0u8; 32];
-
-    let mut rand = match StdRng::new() {
-        Ok(rng) => rng,
-        Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
-    };
-    rand.fill_bytes(&mut seed);
-
-    let aad: [u8; 0] = [0_u8; 0];
-    let result = SgxSealedData::<[u8; 32]>::seal_data(&aad, &seed);
-    let sealed_data = match result {
-        Ok(x) => x,
-        Err(ret) => { return ret; },
-    };
-
-    let opt = to_sealed_log(&sealed_data, sealed_seed, sealed_seed_size);
-    if opt.is_none() {
-        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    let str_slice = unsafe { slice::from_raw_parts(filepath, len) };
+    let mut filename = String::from("");
+    for c in str_slice.iter() {
+        filename.push(*c as char);
     }
 
-    //create ed25519 keypair
-    let (_privkey, _pubkey) = keypair(&seed);
-
-    println!("[Enclave] generated sealed keyair with pubkey: {:?}", _pubkey.to_base58());
-    
-    // now write pubkey back to caller
-    let pubkey_slice = unsafe {
-        slice::from_raw_parts_mut(pubkey, pubkey_size as usize)
-    };
-    pubkey_slice.clone_from_slice(&_pubkey);
-    
-    // also create a RSA keypair
+    // create a RSA keypair
     let rsa_keypair = Rsa3072KeyPair::new().unwrap();
     let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
-    //println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+    // println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
 
-    match SgxFile::create(KEYFILE) {
+    match SgxFile::create(&filename) {
         Ok(mut f) => match f.write_all(rsa_key_json.as_bytes()) {
             Ok(()) => {
-                println!("[Enclave] SgxFile write key file success!");
+                println!("[Enclave +] Writing keyfile '{}' successful", &filename);
                 sgx_status_t::SGX_SUCCESS
             }
             Err(x) => {
-                println!("[Enclave] SgxFile write key file failed! {}", x);
+                println!("[Enclave -] Writing keyfile '{}' failed! {}", &filename, x);
                 sgx_status_t::SGX_ERROR_UNEXPECTED
             }
         },
         Err(x) => {
-            println!("[Enclave] SgxFile create file {} error {}", KEYFILE, x);
+            println!("[Enclave !] Creating keyfile '{}' error! {}", &filename, x);
             sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     }
-
-    //sgx_status_t::SGX_SUCCESS
 }
 
 #[no_mangle]
-pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32, 
+pub extern "C" fn decrypt(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
+
+    let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
+
+    //restore RSA key pair from file
+    let mut keyvec: Vec<u8> = Vec::new();
+    let key_json_str = match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
+        Ok(mut f) => match f.read_to_end(&mut keyvec) {
+            Ok(len) => {
+                println!("[Enclave] Read {} bytes from Key file", len);
+                std::str::from_utf8(&keyvec).unwrap()
+            }
+            Err(x) => {
+                println!("[Enclave] Read keyfile failed {}", x);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        },
+        Err(x) => {
+            println!("[Enclave] get_sealed_pcl_key cannot open keyfile, please check if key is provisioned successfully! {}", x);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+    //println!("[Enclave] key_json = {}", key_json_str);
+    let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
+
+    let mut plaintext = Vec::new();
+    rsa_keypair.decrypt_buffer(&ciphertext_slice, &mut plaintext).unwrap();
+
+    let decrypted_string = String::from_utf8(plaintext).unwrap();
+    println!("[Enclave] decrypted data = {}", decrypted_string);
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
                         msg: * mut u8, msg_size: u32,
                         sig: * mut u8, sig_size: u32) -> sgx_status_t {
 
@@ -147,38 +157,10 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
     sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
-pub extern "C" fn decrypt(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
-
-    let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
-
-    //restore RSA key pair from file
-    let mut keyvec: Vec<u8> = Vec::new();
-    let key_json_str = match SgxFile::open(KEYFILE) {
-        Ok(mut f) => match f.read_to_end(&mut keyvec) {
-            Ok(len) => {
-                println!("[Enclave] Read {} bytes from Key file", len);
-                std::str::from_utf8(&keyvec).unwrap()
-            }
-            Err(x) => {
-                println!("[Enclave] Read keyfile failed {}", x);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] get_sealed_pcl_key cannot open keyfile, please check if key is provisioned successfully! {}", x);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
-    //println!("[Enclave] key_json = {}", key_json_str);
-    let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
-    
-    let mut plaintext = Vec::new();
-    rsa_keypair.decrypt_buffer(&ciphertext_slice, &mut plaintext).unwrap();
-
-    let decrypted_string = String::from_utf8(plaintext).unwrap();
-    println!("[Enclave] decrypted data = {}", decrypted_string);
-    sgx_status_t::SGX_SUCCESS
+fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
+    unsafe {
+        SgxSealedData::<T>::from_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
+    }
 }
 
 #[no_mangle]
@@ -188,7 +170,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
 
     //restore RSA key pair from file
     let mut keyvec: Vec<u8> = Vec::new();
-    let key_json_str = match SgxFile::open(KEYFILE) {
+    let key_json_str = match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
         Ok(mut f) => match f.read_to_end(&mut keyvec) {
             Ok(len) => {
                 println!("[Enclave] Read {} bytes from Key file", len);
@@ -219,13 +201,13 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
     };
 
     let _pubkey_json = serde_json::to_string(&_pubkey).unwrap();
-    println!("[Enclave] pubkey is: {}", _pubkey_json);   
+    println!("[Enclave] pubkey is: {}", _pubkey_json);
 */
     // now write pubkey back to caller
     let pubkey_slice = unsafe {
         slice::from_raw_parts_mut(pubkey, pubkey_size as usize)
     };
-    
+
     let keypair_json = match serde_json::to_string(&rsa_keypair) {
         Ok(k) => k,
         Err(x) => {
@@ -235,7 +217,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
     };
     println!("[Enclave] len pubkey_slice: {}", pubkey_slice.len());
     println!("[Enclave] len keypair_json: {}", keypair_json.len());
- 
+
     let (left, right) = pubkey_slice.split_at_mut(keypair_json.len());
     left.clone_from_slice(keypair_json.as_bytes());
     right.iter_mut().for_each(|x| *x = 0x20);
@@ -244,13 +226,72 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
     sgx_status_t::SGX_SUCCESS
 }
 
+// -- the following code will be deleted in the future
+/*
+#[no_mangle]
+pub extern "C" fn create_sealed_key(sealed_seed: * mut u8, sealed_seed_size: u32, pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+
+    let mut seed = [0u8; 32];
+
+    let mut rand = match StdRng::new() {
+        Ok(rng) => rng,
+        Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
+    };
+    rand.fill_bytes(&mut seed);
+
+    let aad: [u8; 0] = [0_u8; 0];
+    let result = SgxSealedData::<[u8; 32]>::seal_data(&aad, &seed);
+    let sealed_data = match result {
+        Ok(x) => x,
+        Err(ret) => { return ret; },
+    };
+
+    let opt = to_sealed_log(&sealed_data, sealed_seed, sealed_seed_size);
+    if opt.is_none() {
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    }
+
+    // create ed25519 keypair
+    let (_privkey, _pubkey) = keypair(&seed);
+
+    println!("[Enclave] generated sealed keyair with pubkey: {:?}", _pubkey.to_base58());
+
+    // now write pubkey back to caller
+    let pubkey_slice = unsafe {
+        slice::from_raw_parts_mut(pubkey, pubkey_size as usize)
+    };
+    pubkey_slice.clone_from_slice(&_pubkey);
+
+    // also create a RSA keypair
+    let rsa_keypair = Rsa3072KeyPair::new().unwrap();
+    let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
+    println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+
+    match SgxFile::create(KEYFILE) {
+        Ok(mut f) => match f.write_all(rsa_key_json.as_bytes()) {
+            Ok(()) => {
+                println!("[Enclave] SgxFile write key file success!");
+                sgx_status_t::SGX_SUCCESS
+            }
+            Err(x) => {
+                println!("[Enclave] SgxFile write key file failed! {}", x);
+                sgx_status_t::SGX_ERROR_UNEXPECTED
+            }
+        },
+        Err(x) => {
+            println!("[Enclave] SgxFile create file {} error {}", KEYFILE, x);
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        }
+    }
+
+    //sgx_status_t::SGX_SUCCESS
+}
+
+
 fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
     unsafe {
         sealed_data.to_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
     }
 }
-fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
-    unsafe {
-        SgxSealedData::<T>::from_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
-    }
-}
+
+*/
