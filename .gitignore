@@ -19,6 +19,10 @@ bin/*.bin
 # VS Code settings
 .vscode
 
+#intelliJ
+.idea/
+*.iml
+
 # generated enclave files
 app/Enclave_u.*
 app/libEnclave_u.*
