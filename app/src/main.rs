@@ -22,55 +22,21 @@ extern crate sgx_types;
 extern crate sgx_urts;
 extern crate sgx_crypto_helper;
 
-use std::fs;
-use std::str;
-use std::path;
-use std::path::Path;
-use std::io::{Read, Write};
-use sgx_types::*;
-use sgx_urts::SgxEnclave;
-use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-
 mod constants;
 mod utils;
+mod enclave_api;
+mod init_enclave;
+mod create_keys;
 
+use std::str;
+use sgx_types::*;
+use sgx_crypto_helper::RsaKeyPair;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use constants::*;
 use utils::file_exists;
-
-extern {
-    // fn sign(
-    //     eid: sgx_enclave_id_t,
-    //     retval: *mut sgx_status_t,
-    //     sealed_seed: * mut u8,
-    //     sealed_seed_size: u32,
-    //     msg: * mut u8,
-    //     msg_size: u32,
-    //     signature: * mut u8,
-    //     signature_size: u32
-    // ) -> sgx_status_t;
-
-    fn decrypt(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        ciphertext: * mut u8,
-        ciphertext_size: u32
-    ) -> sgx_status_t;
-
-    fn create_sealed_rsa3072_keypair(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        filepath: *const u8,
-        filepath_size: usize
-    ) -> sgx_status_t;
-
-    fn get_rsa_encryption_pubkey(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        pubkey: * mut u8,
-        pubkey_size: u32
-    ) -> sgx_status_t;
-}
+use enclave_api::*;
+use init_enclave::init_enclave;
+use create_keys::create_rsa3072_keypair;
 
 fn main() {
     let yml = load_yaml!("cli.yml");
@@ -204,102 +170,4 @@ fn worker() -> () {
     println!("");
     println!("*** Destroy enclave");
     enclave.destroy();
-}
-
-fn create_rsa3072_keypair(eid: sgx_enclave_id_t) -> () {
-    println!("");
-    println!("*** create RSA3072 keypair");
-
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-
-    let file = String::from(RSA3072_SEALED_KEY_FILE);
-
-    let result = unsafe {
-        create_sealed_rsa3072_keypair(
-            eid,
-            &mut retval,
-            file.as_ptr() as *const u8,
-            file.len())
-    };
-
-    match result {
-        sgx_status_t::SGX_SUCCESS => {},
-        _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
-            return;
-        }
-    }
-}
-
-fn init_enclave() -> SgxResult<SgxEnclave> {
-    let mut launch_token: sgx_launch_token_t = [0; 1024];
-    let mut launch_token_updated: i32 = 0;
-
-    // Step 1: try to retrieve the launch token saved by last transaction
-    //         if there is no token, then create a new one.
-    //
-    // try to get the token saved in $HOME */
-    let mut home_dir = path::PathBuf::new();
-    let use_token = match dirs::home_dir() {
-        Some(path) => {
-            println!("[+] Home dir is {}", path.display());
-            home_dir = path;
-            true
-        }
-        None => {
-            println!("[-] Cannot get home dir");
-            false
-        }
-    };
-    let token_file: path::PathBuf = home_dir.join(ENCLAVE_TOKEN);;
-    if use_token == true {
-        match fs::File::open(&token_file) {
-            Err(_) => {
-                println!(
-                    "[-] Open token file {} error! Will create one.",
-                    token_file.as_path().to_str().unwrap()
-                );
-            }
-            Ok(mut f) => {
-                println!("[+] Open token file success! ");
-                match f.read(&mut launch_token) {
-                    Ok(1024) => {
-                        println!("[+] Token file valid!");
-                    }
-                    _ => println!("[+] Token file invalid, will create new token file"),
-                }
-            }
-        }
-    }
-
-    // Step 2: call sgx_create_enclave to initialize an enclave instance
-    // Debug Support: 1 = debug mode, 0 = not debug mode
-    let debug = 1;
-    let mut misc_attr = sgx_misc_attribute_t {
-        secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
-        misc_select: 0,
-    };
-    let enclave = (SgxEnclave::create(
-        ENCLAVE_FILE,
-        debug,
-        &mut launch_token,
-        &mut launch_token_updated,
-        &mut misc_attr,
-    ))?;
-
-    // Step 3: save the launch token if it is updated
-    if use_token == true && launch_token_updated != 0 {
-        // reopen the file with write capablity
-        match fs::File::create(&token_file) {
-            Ok(mut f) => match f.write_all(&launch_token) {
-                Ok(()) => println!("[+] Saved updated launch token!"),
-                Err(_) => println!("[-] Failed to save updated launch token!"),
-            },
-            Err(_) => {
-                println!("[-] Failed to save updated enclave token, but doesn't matter");
-            }
-        }
-    }
-
-    Ok(enclave)
 }
