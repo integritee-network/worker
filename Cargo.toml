@@ -1,6 +1,0 @@
-[package]
-name = "substra_tee_worker"
-version = "0.1.0"
-authors = ["Marcel Frei <marcel.frei@scs.ch>"]
-
-[dependencies]
