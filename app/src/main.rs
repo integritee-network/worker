@@ -21,7 +21,6 @@ use clap::App;
 extern crate sgx_types;
 extern crate sgx_urts;
 extern crate sgx_crypto_helper;
-extern crate substra_tee_worker;
 
 use std::fs;
 use std::str;
@@ -32,8 +31,12 @@ use sgx_types::*;
 use sgx_urts::SgxEnclave;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use substra_tee_worker::constants::*;
-use substra_tee_worker::utils::file_exists;
+
+mod constants;
+mod utils;
+
+use constants::*;
+use utils::file_exists;
 
 extern {
     // fn sign(
