@@ -10,7 +10,7 @@ rust-base58 = "*"
 rust-crypto = "*"
 serde_json = "1.0"
 clap = { version = "2.33", features = [ "yaml" ] }
-sgx_urts = { path = "../rust-sgx-sdk/sgx_urts" }
-sgx_types = { path = "../rust-sgx-sdk/sgx_types" }
-sgx_tseal = { path = "../rust-sgx-sdk/sgx_tseal" }
-sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false}
+sgx_urts = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}

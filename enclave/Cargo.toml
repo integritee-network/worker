@@ -11,18 +11,17 @@ crate-type = ["staticlib"]
 default = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_types = { path = "../rust-sgx-sdk/sgx_types" }
-sgx_tseal = { path = "../rust-sgx-sdk/sgx_tseal" }
-sgx_tstd = { path = "../rust-sgx-sdk/sgx_tstd" }
-sgx_rand = { path = "../rust-sgx-sdk/sgx_rand" }
-sgx_tcrypto = { path = "../rust-sgx-sdk/sgx_tcrypto" }
-rust-crypto = { path = "../rust-sgx-sdk/third_party/rust-crypto" }
-rust-base58 = { path = "../rust-sgx-sdk/third_party/rust-base58" }
-sgx_crypto_helper = { path = "../rust-sgx-sdk/samplecode/static-data-distribution/enclave/sgx_crypto_helper", default-features = false, features = ["enclave_cargo"] }
-# substra_tee_worker = { path = "../" }
+sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_rand = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tcrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
+rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
+rust-base58 = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false, features = ["enclave_cargo"] }
 
 [target.'cfg(target_env = "sgx")'.dependencies]
-sgx_crypto_helper = { path = "../rust-sgx-sdk/samplecode/static-data-distribution/enclave/sgx_crypto_helper", default-features = false }
+sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false }
 
 [dependencies]
-serde_json = { path = "../rust-sgx-sdk/third_party/serde-rs/json" }
+serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
