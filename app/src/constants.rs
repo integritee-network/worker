@@ -19,4 +19,4 @@
 pub static ENCLAVE_TOKEN: &'static str = "./bin/enclave.token";
 pub static ENCLAVE_FILE: &'static str = "./bin/enclave.signed.so";
 
-pub static RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
+pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";

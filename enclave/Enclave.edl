@@ -33,15 +33,13 @@ enclave {
         //     [in, size=msg_size] uint8_t* msg, uint32_t msg_size,
         //     [out, size=signature_size] uint8_t* signature, uint32_t signature_size);
 
-        public sgx_status_t decrypt(
+        public sgx_status_t decrypt_and_process_payload(
             [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size
         );
 
         public sgx_status_t get_rsa_encryption_pubkey(
             [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
-        public sgx_status_t increment_counter([in, size=account_size]
-            uint8_t* account, uint32_t account_size);
     };
 
     untrusted {

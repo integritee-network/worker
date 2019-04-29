@@ -37,18 +37,18 @@ extern crate sgx_serialize;
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
 use sgx_tseal::{SgxSealedData};
-use sgx_rand::{Rng, StdRng};
+// use sgx_rand::{Rng, StdRng};
 use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 #[macro_use]
 extern crate sgx_serialize_derive;
-use sgx_serialize::*;
+// use sgx_serialize::*;
 
-use std::io::{self, Read, Write};
+use std::io::{/*self, */Read, Write};
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
-use std::borrow::ToOwned;
+// use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::string::ToString;
 
@@ -57,8 +57,8 @@ use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
-pub static RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
-pub const COUNTERSTATE: &'static str = "./bin/sealed_counter_state.bin";
+pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
+pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";
 
 #[no_mangle]
 pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
@@ -93,7 +93,7 @@ pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize)
 }
 
 #[no_mangle]
-pub extern "C" fn decrypt(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
+pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
 
     let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
 
@@ -102,16 +102,16 @@ pub extern "C" fn decrypt(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_sta
     let key_json_str = match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
         Ok(mut f) => match f.read_to_end(&mut keyvec) {
             Ok(len) => {
-                println!("[Enclave] Read {} bytes from Key file", len);
+                println!("[Enclave] Read {} bytes from key file", len);
                 std::str::from_utf8(&keyvec).unwrap()
             }
             Err(x) => {
-                println!("[Enclave] Read keyfile failed {}", x);
+                println!("[Enclave] Read key file failed {}", x);
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
         },
         Err(x) => {
-            println!("[Enclave] get_sealed_pcl_key cannot open keyfile, please check if key is provisioned successfully! {}", x);
+            println!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     };
@@ -122,8 +122,55 @@ pub extern "C" fn decrypt(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_sta
     rsa_keypair.decrypt_buffer(&ciphertext_slice, &mut plaintext).unwrap();
 
     let decrypted_string = String::from_utf8(plaintext).unwrap();
-    println!("[Enclave] decrypted data = {}", decrypted_string);
-    sgx_status_t::SGX_SUCCESS
+    println!("[Enclave] Decrypted data = {}", decrypted_string);
+
+    let mut retval;
+    let mut state_vec: Vec<u8> = Vec::new();
+
+    match SgxFile::open(COUNTERSTATE) {
+        Ok(mut f) => match f.read_to_end(&mut state_vec) {
+            Ok(len) => {
+                println!("[Enclave] Read {} bytes from storage file", len);
+                retval = sgx_status_t::SGX_SUCCESS;
+            }
+            Err(x) => {
+                println!("[Enclave] Read storage file failed {}", x);
+                retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        },
+        Err(x) => {
+            println!("[Enclave] No storage file found. Error: {}", x);
+            state_vec.push(0);
+        }
+    };
+
+    // println!("state_vec = {:?}", &state_vec);
+
+    // this is UGLY!!
+    // todo: implement properly when interface is defined
+    let v: Vec<_> = decrypted_string.split(',').collect();
+    // println!("v = {:?}", v);
+    // println!("v[0] = {}", v[0]);
+
+    let number: Vec<u8> = v.iter().filter_map(|x| x.parse().ok()).collect();
+    // println!("v[1] = {}", v[1]);
+    // println!("number = {:?}", number);
+
+    let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+    let mut counter = helper.decode().unwrap();
+    // println!("counter = {:?}", counter);
+
+    if let Some(x) = counter.entries.get_mut(v[0]) {
+        *x += number[0];
+        println!("[Enclave] Incremented counter for '{}'. New value: {:?}", v[0], counter.entries.get(v[0]).unwrap());
+    } else {
+        println!("[Enclave] No counter found for '{}', adding new with initial value {}", v[0], number[0]);
+        counter.entries.insert(v[0].to_string(), number[0]);
+    }
+
+    retval = write_counter_state(counter);
+
+    return retval;
 }
 
 #[no_mangle]
@@ -222,7 +269,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
     let keypair_json = match serde_json::to_string(&rsa_keypair) {
         Ok(k) => k,
         Err(x) => {
-            println!("[Enclave] can't serialize rsa_keypair {:?}", rsa_keypair);
+            println!("[Enclave] can't serialize rsa_keypair {:?} {}", rsa_keypair, x);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     };
@@ -237,76 +284,35 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
     sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
-pub extern "C" fn increment_counter(account: *const u8, account_size: u32) -> sgx_status_t {
-
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-    let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
-    let acc_str = std::str::from_utf8(account_slice).unwrap();
-    let mut state_vec: Vec<u8> = Vec::new();
-
-    let counter_str = match SgxFile::open(COUNTERSTATE) {
-        Ok(mut f) => match f.read_to_end(&mut state_vec) {
-            Ok(len) => {
-                state_vec
-            }
-            Err(x) => {
-                println!("[Enclave] Read counter failed {}", x);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] No counter found initialising counter: {}", x);
-            retval = create_counter_state();
-            println!("[Enclave] Initialised Counter");
-            return retval;
-        }
-    };
-
-    let helper = DeSerializeHelper::<AllCounts>::new(counter_str);
-    let mut counter = helper.decode().unwrap();
-
-    if let Some(x) = counter.entries.get_mut(acc_str) {
-        *x += 1;
-        println!("Incremented Counter. Current value: {:?}", counter.entries.get(acc_str).unwrap());
-    } else {
-        println!("No counter found for {}, adding new.", acc_str);
-        counter.entries.insert(acc_str.to_string(), 0);
-    }
-
-    retval = write_counter_state(counter);
-    return retval;
-}
-
  #[derive(Serializable, DeSerializable, Debug)]
 struct AllCounts {
     entries: HashMap<String, u8>
 }
 
- fn create_counter_state() -> sgx_status_t {
-    let mut c_init = AllCounts{ entries: HashMap::<String, u8>::new()};
+// fn create_counter_state() -> sgx_status_t {
+//     let c_init = AllCounts{ entries: HashMap::<String, u8>::new() };
 
-    println!("[Enclave] Init new account map: {:?}", &c_init);
-    write_counter_state(c_init)
-}
+//     println!("[Enclave] Create empty storage file. Init new account map: {:?}", &c_init);
+//     write_counter_state(c_init)
+// }
 
- fn write_counter_state(value: AllCounts) -> sgx_status_t {
+fn write_counter_state(value: AllCounts) -> sgx_status_t {
     let helper = SerializeHelper::new();
     let c = helper.encode(value).unwrap();
     match SgxFile::create(COUNTERSTATE) {
         Ok(mut f) => match f.write_all(&c) {
             Ok(()) => {
-                println!("[Enclave] SgxFile write state file success!");
+                println!("[Enclave] SgxFile write storage file success!");
                 sgx_status_t::SGX_SUCCESS
             }
 
-             Err(x) => {
-                println!("[Enclave] SgxFile write state file failed! {}", x);
+            Err(x) => {
+                println!("[Enclave] SgxFile write storage file failed! {}", x);
                 sgx_status_t::SGX_ERROR_UNEXPECTED
             }
         },
         Err(x) => {
-            println!("[Enclave] SgxFile create file {} error {}", COUNTERSTATE, x);
+            println!("[Enclave] SgxFile create storage file {} error {}", COUNTERSTATE, x);
             sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     }

@@ -30,7 +30,7 @@ extern {
     //     signature_size: u32
     // ) -> sgx_status_t;
 
-    pub fn decrypt(
+    pub fn decrypt_and_process_payload(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         ciphertext: * mut u8,
@@ -49,12 +49,5 @@ extern {
         retval: *mut sgx_status_t,
         pubkey: * mut u8,
         pubkey_size: u32
-    ) -> sgx_status_t;
-
-    pub fn increment_counter(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        account: *const str,
-        account_size: u32
     ) -> sgx_status_t;
 }
