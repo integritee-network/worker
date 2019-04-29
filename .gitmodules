@@ -1,3 +1,0 @@
-[submodule "rust-sgx-sdk"]
-	path = rust-sgx-sdk
-	url = https://github.com/baidu/rust-sgx-sdk.git
