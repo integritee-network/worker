@@ -32,7 +32,9 @@ extern crate crypto;
 extern crate rust_base58;
 extern crate serde_json;
 extern crate sgx_crypto_helper;
+
 extern crate sgx_serialize;
+extern crate schnorrkel;
 
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
@@ -56,6 +58,7 @@ use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use schnorrkel::keys::MiniSecretKey;
 
 pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
 pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";

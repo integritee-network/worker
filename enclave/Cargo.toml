@@ -25,5 +25,7 @@ sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-featur
 sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false }
 
 [dependencies]
+
 serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
+schnorrkel = "0.1.1"
