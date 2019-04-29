@@ -25,7 +25,14 @@ sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-featur
 sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false }
 
 [dependencies]
-
 serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
-schnorrkel = "0.1.1"
+parity-codec = { version = "3.0", default-features = false }
+
+# !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
+#schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
+
+primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="no_std_fixes", default-features = false, features=["no_global_allocator"]} 
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="no_std_fixes", default-features = false, features=["no_global_allocator", "no_panic_handler", "no_oom"] }
+node_runtime = { package = "node-runtime", git = "https://github.com/brenzi/substrate.git", branch="no_std_fixes", default-features = false, features=["core", "no_global_allocator"] }  
+

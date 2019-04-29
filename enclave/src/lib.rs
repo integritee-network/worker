@@ -34,7 +34,18 @@ extern crate serde_json;
 extern crate sgx_crypto_helper;
 
 extern crate sgx_serialize;
-extern crate schnorrkel;
+
+// FIXME: don't work with no_std yet
+//extern crate schnorrkel;
+//use schnorrkel::keys::MiniSecretKey;
+extern crate primitives;
+use primitives::ed25519;
+extern crate node_runtime;
+use node_runtime::{UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall};
+extern crate runtime_primitives;
+use runtime_primitives::generic::Era;
+extern crate parity_codec;
+use parity_codec::Encode;
 
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
@@ -58,7 +69,7 @@ use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use schnorrkel::keys::MiniSecretKey;
+
 
 pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
 pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";
@@ -391,3 +402,73 @@ fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sea
 }
 
 */
+
+trait Crypto {
+	type Seed: AsRef<[u8]> + AsMut<[u8]> + Sized + Default;
+	type Pair: Pair;
+	fn pair_from_seed(seed: &Self::Seed) -> Self::Pair;
+	fn pair_from_suri(phrase: &str, password: Option<&str>) -> Self::Pair {
+		Self::pair_from_seed(&Self::seed_from_phrase(phrase, password))
+	}
+	fn ss58_from_pair(pair: &Self::Pair) -> String;
+	fn public_from_pair(pair: &Self::Pair) -> Vec<u8>;
+	fn seed_from_pair(_pair: &Self::Pair) -> Option<&Self::Seed> { None }
+}
+
+
+struct Ed25519;
+
+impl Crypto for Ed25519 {
+	type Seed = [u8; 32];
+	type Pair = ed25519::Pair;
+	fn pair_from_seed(seed: &Self::Seed) -> Self::Pair { ed25519::Pair::from_seed(seed.clone()) }
+	fn pair_from_suri(suri: &str, password_override: Option<&str>) -> Self::Pair {
+		ed25519::Pair::from_legacy_string(suri, password_override)
+	}
+	fn ss58_from_pair(pair: &Self::Pair) -> String { pair.public().to_ss58check() }
+	fn public_from_pair(pair: &Self::Pair) -> Vec<u8> { (&pair.public().0[..]).to_owned() }
+	fn seed_from_pair(pair: &Self::Pair) -> Option<&Self::Seed> { Some(pair.seed()) }
+}
+
+
+pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+    let signer = Ed25519::pair_from_suri(from, Some(""));
+
+    let to = ed25519::Public::from_string(to).ok().or_else(||
+        ed25519::Pair::from_string(to, Some("")).ok().map(|p| p.public())
+    ).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
+    let amount = Balance::from(amount.low_u128());
+    let index = Index::from(index.low_u64());
+    //let amount = str::parse::<Balance>("42")
+    //	.expect("Invalid 'amount' parameter; expecting an integer.");
+    //let index = str::parse::<Index>("0")
+    //	.expect("Invalid 'index' parameter; expecting an integer.");
+
+    let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
+
+    let era = Era::immortal();
+
+    println!("using genesis hash: {:?}", genesis_hash);
+/*		let mut gh: [u8; 32] = Default::default();
+    gh.copy_from_slice(hex::decode(genesis_hash).unwrap().as_ref());
+    let genesis_hash = Hash::from(gh);
+    println!("using genesis hash to Hash: {:?}", gh);
+*/
+    //let genesis_hash: Hash = hex::decode(genesis_hash).unwrap();
+    //let genesis_hash: Hash = hex!["61b81c075e1e54b17a2f2d685a3075d3e5f5c7934456dd95332e68dd751a4b40"].into();
+//			let genesis_hash: Hash = hex!["58afaad82f5a80ecdc8e974f5d88c4298947260fb05e34f84a9eed18ec5a78f9"].into();
+    let raw_payload = (Compact(index), function, era, genesis_hash);
+    let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+        signer.sign(&blake2_256(payload)[..])
+    } else {
+        println!("signing {}", HexDisplay::from(&payload));
+        signer.sign(payload)
+    });
+    UncheckedExtrinsic::new_signed(
+        index,
+        raw_payload.1,
+        signer.public().into(),
+        signature.into(),
+        era,
+    )
+}
