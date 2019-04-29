@@ -27,6 +27,7 @@ mod utils;
 mod enclave_api;
 mod init_enclave;
 mod create_keys;
+mod counter;
 
 use std::str;
 use sgx_types::*;
@@ -37,6 +38,7 @@ use utils::file_exists;
 use enclave_api::*;
 use init_enclave::init_enclave;
 use create_keys::create_rsa3072_keypair;
+use counter::count;
 
 fn main() {
     let yml = load_yaml!("cli.yml");
@@ -89,6 +91,12 @@ fn worker() -> () {
     println!("");
     println!("*** Subscribe to substraTEE-proxy event");
     println!("**** TODO");
+
+    // ------------------------------------------------------------------------
+    // increment the counter
+    let acc = String::from("alice");
+    count(enclave.geteid(), &acc[..]);
+    // ------------------------------------------------------------------------
 
     let mut ciphertext : Vec<u8> = Vec::new();
     let mut retval = sgx_status_t::SGX_SUCCESS;

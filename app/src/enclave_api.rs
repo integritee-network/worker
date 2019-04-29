@@ -50,4 +50,11 @@ extern {
         pubkey: * mut u8,
         pubkey_size: u32
     ) -> sgx_status_t;
+
+    pub fn increment_counter(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        account: *const str,
+        account_size: u32
+    ) -> sgx_status_t;
 }

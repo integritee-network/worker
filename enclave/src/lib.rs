@@ -32,22 +32,33 @@ extern crate crypto;
 extern crate rust_base58;
 extern crate serde_json;
 extern crate sgx_crypto_helper;
+extern crate sgx_serialize;
 
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
 use sgx_tseal::{SgxSealedData};
 use sgx_rand::{Rng, StdRng};
+use sgx_serialize::{SerializeHelper, DeSerializeHelper};
+#[macro_use]
+extern crate sgx_serialize_derive;
+use sgx_serialize::*;
+
 use std::io::{self, Read, Write};
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
+use std::borrow::ToOwned;
+use std::collections::HashMap;
+use std::string::ToString;
+
 use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
 pub static RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
+pub const COUNTERSTATE: &'static str = "./bin/sealed_counter_state.bin";
 
 #[no_mangle]
 pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
@@ -225,6 +236,82 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
     //println!("[Enclave] enclave function success");
     sgx_status_t::SGX_SUCCESS
 }
+
+#[no_mangle]
+pub extern "C" fn increment_counter(account: *const u8, account_size: u32) -> sgx_status_t {
+
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
+    let acc_str = std::str::from_utf8(account_slice).unwrap();
+    let mut state_vec: Vec<u8> = Vec::new();
+
+    let counter_str = match SgxFile::open(COUNTERSTATE) {
+        Ok(mut f) => match f.read_to_end(&mut state_vec) {
+            Ok(len) => {
+                state_vec
+            }
+            Err(x) => {
+                println!("[Enclave] Read counter failed {}", x);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        },
+        Err(x) => {
+            println!("[Enclave] No counter found initialising counter: {}", x);
+            retval = create_counter_state();
+            println!("[Enclave] Initialised Counter");
+            return retval;
+        }
+    };
+
+    let helper = DeSerializeHelper::<AllCounts>::new(counter_str);
+    let mut counter = helper.decode().unwrap();
+
+    if let Some(x) = counter.entries.get_mut(acc_str) {
+        *x += 1;
+        println!("Incremented Counter. Current value: {:?}", counter.entries.get(acc_str).unwrap());
+    } else {
+        println!("No counter found for {}, adding new.", acc_str);
+        counter.entries.insert(acc_str.to_string(), 0);
+    }
+
+    retval = write_counter_state(counter);
+    return retval;
+}
+
+ #[derive(Serializable, DeSerializable, Debug)]
+struct AllCounts {
+    entries: HashMap<String, u8>
+}
+
+ fn create_counter_state() -> sgx_status_t {
+    let mut c_init = AllCounts{ entries: HashMap::<String, u8>::new()};
+
+    println!("[Enclave] Init new account map: {:?}", &c_init);
+    write_counter_state(c_init)
+}
+
+ fn write_counter_state(value: AllCounts) -> sgx_status_t {
+    let helper = SerializeHelper::new();
+    let c = helper.encode(value).unwrap();
+    match SgxFile::create(COUNTERSTATE) {
+        Ok(mut f) => match f.write_all(&c) {
+            Ok(()) => {
+                println!("[Enclave] SgxFile write state file success!");
+                sgx_status_t::SGX_SUCCESS
+            }
+
+             Err(x) => {
+                println!("[Enclave] SgxFile write state file failed! {}", x);
+                sgx_status_t::SGX_ERROR_UNEXPECTED
+            }
+        },
+        Err(x) => {
+            println!("[Enclave] SgxFile create file {} error {}", COUNTERSTATE, x);
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        }
+    }
+}
+
 
 // -- the following code will be deleted in the future
 /*

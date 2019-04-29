@@ -18,6 +18,7 @@ sgx_rand = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tcrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58 = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_serialize = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false, features = ["enclave_cargo"] }
 
 [target.'cfg(target_env = "sgx")'.dependencies]
@@ -25,3 +26,4 @@ sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-featur
 
 [dependencies]
 serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_serialize_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
