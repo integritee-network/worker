@@ -14,3 +14,7 @@ sgx_urts = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "substratee-runtime" }
+balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate.git", rev = '563e7876d72266ef62b18184f06264a6a89e8c0c' }
+node-runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git" }
+

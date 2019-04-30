@@ -22,6 +22,8 @@ extern crate sgx_types;
 extern crate sgx_urts;
 extern crate sgx_crypto_helper;
 
+extern crate substrate_api_client;
+
 mod constants;
 mod utils;
 mod enclave_api;
@@ -37,6 +39,11 @@ use utils::file_exists;
 use enclave_api::*;
 use init_enclave::init_enclave;
 use create_keys::create_rsa3072_keypair;
+
+use substrate_api_client::Api;
+
+use std::sync::mpsc::channel;
+use std::thread;
 
 fn main() {
     let yml = load_yaml!("cli.yml");
@@ -87,12 +94,49 @@ fn worker() -> () {
     // ------------------------------------------------------------------------
     // subscribe to event and react on fireing
     println!("");
-    println!("*** Subscribe to substraTEE-proxy event");
-    println!("**** TODO");
+    println!("*** Subscribing to events");
+	let mut api = Api::new("ws://127.0.0.1:9991".to_string());
+	api.init();
+
+	let (events_in, events_out) = channel();
+
+	let _eventsubscriber = thread::Builder::new()
+		.name("eventsubscriber".to_owned())
+		.spawn(move || {
+			api.subscribe_events(events_in.clone());
+		})
+		.unwrap();
+
+	loop {
+		let event = events_out.recv().unwrap();
+		match &event {
+			node_runtime::Event::balances(be) => {
+				println!(">>>>>>>>>> balances event: {:?}", be);
+				match &be {
+					balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+						println!("Transactor: {:?}", transactor);
+						println!("Destination: {:?}", dest);
+						println!("Value: {:?}", value);
+						println!("Fee: {:?}", fee);
+					},
+					_ => {
+						println!("ignoring unsupported balances event");
+					},
+				}
+			},
+			// Todo include SCS modified runtime with substratee_Proxy event
+			node_runtime::Event::substratee_proxy(pe) => {
+				println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
+			}
+			_ => {
+				println!("ignoring unsupported module event: {:?}", event)
+			},
+		}
+	}
 
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
-    // ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
     // encrypt a test message
     // only used for testing purpose
     println!("");
