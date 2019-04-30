@@ -32,7 +32,12 @@ parity-codec = { version = "3.0", default-features = false }
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
 #schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
 
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator"]} 
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator", "no_panic_handler", "no_oom"] }
+#only listed to get no_global_allocator feature in
+rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator"]}
+#only listed to get no_panic_handler and no_oom  features in
+runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_panic_handler", "no_oom"]}
+
+primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false} 
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
 node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }  
 
