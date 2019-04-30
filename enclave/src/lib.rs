@@ -50,7 +50,7 @@ use parity_codec::Encode;
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
 use sgx_tseal::{SgxSealedData};
-// use sgx_rand::{Rng, StdRng};
+use sgx_rand::{Rng, StdRng};
 use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 #[macro_use]
 extern crate sgx_serialize_derive;
@@ -74,6 +74,8 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
 pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";
 
+// FIXME: [brenzi] why pass a filepath at all? I'd rather ise the hard-coded filename in relative path RSA3072_SEALED_KEY_FILE
+// FIXME: no need to expose to app. check pre-existing file in here!
 #[no_mangle]
 pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
 
@@ -105,6 +107,49 @@ pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize)
         }
     }
 }
+
+//FIXME: as above, don't pass filepath as an arg
+// no need to expose to app
+fn create_sealed_ed25519_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
+    let str_slice = unsafe { slice::from_raw_parts(filepath, len) };
+    let mut filename = String::from("");
+    for c in str_slice.iter() {
+        filename.push(*c as char);
+    }
+
+    let mut seed = [0u8; 32];
+
+    let mut rand = match StdRng::new() {
+        Ok(rng) => rng,
+        Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
+    };
+    rand.fill_bytes(&mut seed);
+
+    // create ed25519 keypair
+    let (_privkey, _pubkey) = keypair(&seed);
+
+    println!("[Enclave] generated seed pubkey: {:?}", _pubkey.to_base58());
+
+    let seed_json = serde_json::to_string(&seed).unwrap();
+    match SgxFile::create(&filename) {
+        Ok(mut f) => match f.write_all(seed_json.as_bytes()) {
+            Ok(()) => {
+                println!("[Enclave +] Writing seed to '{}' successful", &filename);
+                sgx_status_t::SGX_SUCCESS
+            }
+            Err(x) => {
+                println!("[Enclave -] Writing seed to '{}' failed! {}", &filename, x);
+                sgx_status_t::SGX_ERROR_UNEXPECTED
+            }
+        },
+        Err(x) => {
+            println!("[Enclave !] Creating seed-file '{}' error! {}", &filename, x);
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        }
+    }
+    //sgx_status_t::SGX_SUCCESS
+}
+
 
 #[no_mangle]
 pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
@@ -173,7 +218,7 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
     let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
     let mut counter = helper.decode().unwrap();
     // println!("counter = {:?}", counter);
-
+/* FIXME: borrow checker trouble
     if let Some(x) = counter.entries.get_mut(v[0]) {
         *x += number[0];
         println!("[Enclave] Incremented counter for '{}'. New value: {:?}", v[0], counter.entries.get(v[0]).unwrap());
@@ -181,7 +226,7 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
         println!("[Enclave] No counter found for '{}', adding new with initial value {}", v[0], number[0]);
         counter.entries.insert(v[0].to_string(), number[0]);
     }
-
+*/
     retval = write_counter_state(counter);
 
     return retval;
@@ -333,67 +378,6 @@ fn write_counter_state(value: AllCounts) -> sgx_status_t {
 }
 
 
-// -- the following code will be deleted in the future
-/*
-#[no_mangle]
-pub extern "C" fn create_sealed_key(sealed_seed: * mut u8, sealed_seed_size: u32, pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
-
-    let mut seed = [0u8; 32];
-
-    let mut rand = match StdRng::new() {
-        Ok(rng) => rng,
-        Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
-    };
-    rand.fill_bytes(&mut seed);
-
-    let aad: [u8; 0] = [0_u8; 0];
-    let result = SgxSealedData::<[u8; 32]>::seal_data(&aad, &seed);
-    let sealed_data = match result {
-        Ok(x) => x,
-        Err(ret) => { return ret; },
-    };
-
-    let opt = to_sealed_log(&sealed_data, sealed_seed, sealed_seed_size);
-    if opt.is_none() {
-        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-    }
-
-    // create ed25519 keypair
-    let (_privkey, _pubkey) = keypair(&seed);
-
-    println!("[Enclave] generated sealed keyair with pubkey: {:?}", _pubkey.to_base58());
-
-    // now write pubkey back to caller
-    let pubkey_slice = unsafe {
-        slice::from_raw_parts_mut(pubkey, pubkey_size as usize)
-    };
-    pubkey_slice.clone_from_slice(&_pubkey);
-
-    // also create a RSA keypair
-    let rsa_keypair = Rsa3072KeyPair::new().unwrap();
-    let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
-    println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-
-    match SgxFile::create(KEYFILE) {
-        Ok(mut f) => match f.write_all(rsa_key_json.as_bytes()) {
-            Ok(()) => {
-                println!("[Enclave] SgxFile write key file success!");
-                sgx_status_t::SGX_SUCCESS
-            }
-            Err(x) => {
-                println!("[Enclave] SgxFile write key file failed! {}", x);
-                sgx_status_t::SGX_ERROR_UNEXPECTED
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] SgxFile create file {} error {}", KEYFILE, x);
-            sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    }
-
-    //sgx_status_t::SGX_SUCCESS
-}
-
 
 fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
     unsafe {
@@ -401,7 +385,7 @@ fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sea
     }
 }
 
-*/
+
 
 
 /*
@@ -476,4 +460,5 @@ pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: H
         era,
     )
 }
-    */
+
+*/
