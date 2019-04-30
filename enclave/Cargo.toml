@@ -32,7 +32,7 @@ parity-codec = { version = "3.0", default-features = false }
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
 #schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
 
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="no_std_fixes", default-features = false, features=["no_global_allocator"]} 
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="no_std_fixes", default-features = false, features=["no_global_allocator", "no_panic_handler", "no_oom"] }
-node_runtime = { package = "node-runtime", git = "https://github.com/brenzi/substrate.git", branch="no_std_fixes", default-features = false, features=["core", "no_global_allocator"] }  
+primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator"]} 
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator", "no_panic_handler", "no_oom"] }
+node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }  
 
