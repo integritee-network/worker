@@ -403,6 +403,8 @@ fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sea
 
 */
 
+
+/*
 trait Crypto {
 	type Seed: AsRef<[u8]> + AsMut<[u8]> + Sized + Default;
 	type Pair: Pair;
@@ -432,6 +434,8 @@ impl Crypto for Ed25519 {
 
 
 pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+
+    
     let signer = Ed25519::pair_from_suri(from, Some(""));
 
     let to = ed25519::Public::from_string(to).ok().or_else(||
@@ -472,3 +476,4 @@ pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: H
         era,
     )
 }
+    */
