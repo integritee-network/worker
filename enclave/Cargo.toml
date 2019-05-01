@@ -11,7 +11,7 @@ crate-type = ["staticlib"]
 default = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk"}
 sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_rand = { git = "https://github.com/baidu/rust-sgx-sdk" }
@@ -19,10 +19,10 @@ sgx_tcrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58 = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false, features = ["enclave_cargo"] }
+sgx_crypto_helper = { package="sgx_crypto_helper_trusted", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false, features = ["enclave_cargo"] }
 
 [target.'cfg(target_env = "sgx")'.dependencies]
-sgx_crypto_helper = { path = "../rust-sgx-sdk/sgx_crypto_helper", default-features = false }
+sgx_crypto_helper = { package="sgx_crypto_helper_trusted", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false }
 
 [dependencies]
 serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
