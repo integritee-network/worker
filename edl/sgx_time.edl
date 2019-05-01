@@ -28,34 +28,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
+ 
 enclave {
 
-    include "inc/stat.h"
-    include "sys/uio.h"
+    include "time.h"
 
-    from "sgx_mem.edl" import *;
-
-    trusted {
+	trusted {
         /* define ECALLs here. */
     };
 
     untrusted {
-        size_t u_read_ocall([out] int *error, int fd, [out, size=count] void *buf, size_t count);
-        size_t u_pread64_ocall([out] int *error, int fd, [out, size=count] void *buf, size_t count, int64_t offset);
-        size_t u_readv_ocall([out] int *error, int fd, [in, count=iovcnt] const struct iovec *iov, int iovcnt);
-        size_t u_preadv64_ocall([out] int *error, int fd, [in, count=iovcnt] const struct iovec *iov, int iovcnt, int64_t offset);
-
-        size_t u_write_ocall([out] int *error, int fd, [in, size=count] const void *buf, size_t count);
-        size_t u_pwrite64_ocall([out] int *error, int fd, [in, size=count] const void *buf, size_t count, int64_t offset);
-        size_t u_writev_ocall([out] int *error, int fd, [in, count=iovcnt] const struct iovec *iov, int iovcnt);
-        size_t u_pwritev64_ocall([out] int *error, int fd, [in, count=iovcnt] const struct iovec *iov, int iovcnt, int64_t offset);
-
-        int u_fcntl_arg0_ocall([out] int *error, int fd, int cmd);
-        int u_fcntl_arg1_ocall([out] int *error, int fd, int cmd, int arg);
-        int u_ioctl_arg0_ocall([out] int *error, int fd, int request);
-        int u_ioctl_arg1_ocall([out] int *error, int fd, int request, [in, out] int *arg);
-
-        int u_close_ocall([out] int *error, int fd);                   
+        int u_clock_gettime_ocall([out] int *error, int clk_id, [out] struct timespec *tp);
     };
 };
