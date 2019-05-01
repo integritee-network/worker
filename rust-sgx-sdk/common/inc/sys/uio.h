@@ -15,22 +15,14 @@
    License along with the GNU C Library; if not, see
    <http://www.gnu.org/licenses/>.  */
 
-#ifndef _SYS_SOCKADDR_H_
-#define _SYS_SOCKADDR_H_
+#ifndef _SYS_UIO_H_
+#define _SYS_UIO_H_
 
-/* POSIX.1g specifies this type name for the `sa_family' member.  */
-typedef unsigned short int sa_family_t;
-
-/* This macro is used to declare the initial common members
-   of the data types used for socket addresses, `struct sockaddr',
-   `struct sockaddr_in', `struct sockaddr_un', etc.  */
-
-#define	__SOCKADDR_COMMON(sa_prefix) \
-  sa_family_t sa_prefix##family
-
-#define __SOCKADDR_COMMON_SIZE	(sizeof (unsigned short int))
-
-/* Size of struct sockaddr_storage.  */
-#define _SS_SIZE 128
+/* Structure for scatter/gather I/O.  */
+struct iovec
+{
+    void *iov_base;	/* Pointer to data.  */
+    size_t iov_len;	/* Length of data.  */
+};
 
 #endif
