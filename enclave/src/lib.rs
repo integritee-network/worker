@@ -39,7 +39,9 @@ extern crate sgx_serialize;
 //extern crate schnorrkel;
 //use schnorrkel::keys::MiniSecretKey;
 extern crate primitives;
-use primitives::{ed25519};
+use primitives::{ed25519, sr25519};
+use primitives::crypto::UncheckedFrom;
+
 //extern crate keyring;
 extern crate node_runtime;
 use node_runtime::{AccountId, UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall, Hash, SubstraTEEProxyCall};
@@ -49,6 +51,8 @@ extern crate parity_codec;
 use parity_codec::{Encode, Compact};
 extern crate primitive_types;
 use primitive_types::U256;
+//extern crate node_primitives;
+//use node_primitives::Index;
 
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
@@ -73,6 +77,7 @@ use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
+type Index = u64;
 
 pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
 pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";
@@ -83,7 +88,8 @@ pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bi
 pub fn blake2_256_into(data: &[u8], dest: &mut [u8; 32]) {
 	dest.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], data).as_bytes());
 }
-
+*/
+/*
 /// Do a Blake2 256-bit hash and return result.
 pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	let mut r = [0; 32];
@@ -435,9 +441,9 @@ impl Crypto for Ed25519 {
 
 */
 
-pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash)  {
-    //FIXME: don't generate new keypair, use the one supplied as argument
+pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
+    //FIXME: don't generate new keypair, use the one supplied as argument
     let mut seed = [0u8; 32];
     let mut rand = StdRng::new().unwrap();
     rand.fill_bytes(&mut seed);
@@ -446,28 +452,35 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
     
     let era = Era::immortal();
     
-    //FIXME: use argument
+    //FIXME: use argument call_hash
     let call_hash_str = "0x01234".as_bytes().to_vec();
     let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash_str));
     
-    //let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
+    let index = Index::from(index.low_u64()); 
     let raw_payload = (Compact(index), function, era, genesis_hash);
-/*
-    let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-        signature(&blake2_256(payload)[..], &_privkey);
+
+    let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+        println!("unsupported payload size until blake hashing supports no_std");
+        signature(&[0u8; 64], &_privkey)
     } else {
         //println!("signing {}", HexDisplay::from(&payload));
-        signature(payload, &_privkey);
+        signature(payload, &_privkey)
     });
+    
+    //FIXME: until node_runtime changes to ed25519, CheckedExtrinsic will expect a sr25519!
+    let signerpub = ed25519::Public::unchecked_from(_pubkey);
+    let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
+
+    //FIXME: true ed25519 signature is replaced by fake sr25519 signature here
+    let signature_fake =  sr25519::Signature::default();
 
     UncheckedExtrinsic::new_signed(
         index,
         raw_payload.1,
-        _pubkey.into(),
-        signature.into(),
+        signerpub_fake.into(),
+        signature_fake.into(),
         era,
     )
-    */
 }
 
 //pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
