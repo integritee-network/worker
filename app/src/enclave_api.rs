@@ -37,13 +37,6 @@ extern {
         ciphertext_size: u32
     ) -> sgx_status_t;
 
-    pub fn create_sealed_rsa3072_keypair(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        filepath: *const u8,
-        filepath_size: usize
-    ) -> sgx_status_t;
-
     pub fn get_rsa_encryption_pubkey(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
