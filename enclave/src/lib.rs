@@ -128,18 +128,18 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
 }
 
 fn create_sealed_rsa3072_keypair() -> sgx_status_t {
-
-    // create a RSA keypair
     let rsa_keypair = Rsa3072KeyPair::new().unwrap();
     let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
     // println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
 	utils::write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
-//	write(RSA3072_SEALED_KEY_FILE, rsa_key_json.as_bytes())
 }
 
+#[no_mangle]
+pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+	sgx_status_t::SGX_SUCCESS
+}
 
 fn create_sealed_ed25519_keypair() -> sgx_status_t {
-
     let mut seed = [0u8; 32];
     let mut rand = match StdRng::new() {
         Ok(rng) => rng,
@@ -149,7 +149,6 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
 
     // create ed25519 keypair
     let (_privkey, _pubkey) = keypair(&seed);
-
     println!("[Enclave] generated seed pubkey: {:?}", _pubkey.to_base58());
 
     let seed_json = serde_json::to_string(&seed).unwrap();
@@ -183,22 +182,7 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
     let mut retval;
     let mut state_vec: Vec<u8> = Vec::new();
 
-    match SgxFile::open(COUNTERSTATE) {
-        Ok(mut f) => match f.read_to_end(&mut state_vec) {
-            Ok(len) => {
-                println!("[Enclave] Read {} bytes from storage file", len);
-                retval = sgx_status_t::SGX_SUCCESS;
-            }
-            Err(x) => {
-                println!("[Enclave] Read storage file failed {}", x);
-                retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] No storage file found. Error: {}", x);
-            state_vec.push(0);
-        }
-    };
+	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
     // println!("state_vec = {:?}", &state_vec);
 
@@ -222,50 +206,23 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
 }
 
 #[no_mangle]
-pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
-                        msg: * mut u8, msg_size: u32,
-                        sig: * mut u8, sig_size: u32) -> sgx_status_t {
+pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u8) -> sgx_status_t {
+	let mut state_vec: Vec<u8> = Vec::new();
 
-    // runseal seed
-    let opt = from_sealed_log::<[u8; 32]>(sealed_seed, sealed_seed_size);
-    let sealed_data = match opt {
-        Some(x) => x,
-        None => {
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-        },
-    };
+	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
+	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-    let result = sealed_data.unseal_data();
-    let unsealed_data = match result {
-        Ok(x) => x,
-        Err(ret) => {
-            return ret;
-        },
-    };
+	let mut sgx_status = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
-    let seed = unsealed_data.get_decrypt_txt();
+	if sgx_status != sgx_status_t::SGX_SUCCESS {
+		return sgx_status;
+	}
 
-    //restore ed25519 keypair from seed
-    let (_privkey, _pubkey) = keypair(seed);
+	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let mut counter = helper.decode().unwrap();
+	let value = counter.entries.entry(acc_str.to_string()).or_insert(0);
 
-    println!("[Enclave] restored sealed keyair with pubkey: {:?}", _pubkey.to_base58());
-
-    // sign message
-    let msg_slice = unsafe {
-        slice::from_raw_parts_mut(msg, msg_size as usize)
-    };
-    let sig_slice = unsafe {
-        slice::from_raw_parts_mut(sig, sig_size as usize)
-    };
-    let _sig = signature(&msg_slice, &_privkey);
-    sig_slice.clone_from_slice(&_sig);
-
-    sgx_status_t::SGX_SUCCESS
-}
-
- #[derive(Serializable, DeSerializable, Debug)]
-struct AllCounts {
-    entries: HashMap<String, u8>
+	sgx_status
 }
 
 fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
@@ -286,6 +243,53 @@ fn write_counter_state(value: AllCounts) -> sgx_status_t {
 	utils::write_file( &c, COUNTERSTATE)
 }
 
+#[no_mangle]
+pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
+					   msg: * mut u8, msg_size: u32,
+					   sig: * mut u8, sig_size: u32) -> sgx_status_t {
+
+	// runseal seed
+	let opt = from_sealed_log::<[u8; 32]>(sealed_seed, sealed_seed_size);
+	let sealed_data = match opt {
+		Some(x) => x,
+		None => {
+			return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+		},
+	};
+
+	let result = sealed_data.unseal_data();
+	let unsealed_data = match result {
+		Ok(x) => x,
+		Err(ret) => {
+			return ret;
+		},
+	};
+
+	let seed = unsealed_data.get_decrypt_txt();
+
+	//restore ed25519 keypair from seed
+	let (_privkey, _pubkey) = keypair(seed);
+
+	println!("[Enclave] restored sealed keyair with pubkey: {:?}", _pubkey.to_base58());
+
+	// sign message
+	let msg_slice = unsafe {
+		slice::from_raw_parts_mut(msg, msg_size as usize)
+	};
+	let sig_slice = unsafe {
+		slice::from_raw_parts_mut(sig, sig_size as usize)
+	};
+	let _sig = signature(&msg_slice, &_privkey);
+	sig_slice.clone_from_slice(&_sig);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[derive(Serializable, DeSerializable, Debug)]
+struct AllCounts {
+	entries: HashMap<String, u8>
+}
+
 fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
     unsafe {
         sealed_data.to_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
@@ -299,7 +303,7 @@ fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_
 }
 
 /*
-trait Crypto {
+trait Crypto {car
 	type Seed: AsRef<[u8]> + AsMut<[u8]> + Sized + Default;
 	type Pair: Pair;
 	fn pair_from_seed(seed: &Self::Seed) -> Self::Pair;
