@@ -39,13 +39,16 @@ extern crate sgx_serialize;
 //extern crate schnorrkel;
 //use schnorrkel::keys::MiniSecretKey;
 extern crate primitives;
-use primitives::ed25519;
+use primitives::{ed25519};
+//extern crate keyring;
 extern crate node_runtime;
-use node_runtime::{UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall};
+use node_runtime::{AccountId, UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall, Hash, SubstraTEEProxyCall};
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
 extern crate parity_codec;
-use parity_codec::Encode;
+use parity_codec::{Encode, Compact};
+extern crate primitive_types;
+use primitive_types::U256;
 
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
@@ -73,6 +76,22 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
 pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
 pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";
+
+/*
+//FIXME: no_std broken here
+/// Do a Blake2 256-bit hash and place result in `dest`.
+pub fn blake2_256_into(data: &[u8], dest: &mut [u8; 32]) {
+	dest.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], data).as_bytes());
+}
+
+/// Do a Blake2 256-bit hash and return result.
+pub fn blake2_256(data: &[u8]) -> [u8; 32] {
+	let mut r = [0; 32];
+	blake2_256_into(data, &mut r);
+	r
+}
+*/
+
 
 // FIXME: [brenzi] why pass a filepath at all? I'd rather ise the hard-coded filename in relative path RSA3072_SEALED_KEY_FILE
 // FIXME: no need to expose to app. check pre-existing file in here!
@@ -414,10 +433,46 @@ impl Crypto for Ed25519 {
 	fn seed_from_pair(pair: &Self::Pair) -> Option<&Self::Seed> { Some(pair.seed()) }
 }
 
+*/
 
-pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash)  {
+    //FIXME: don't generate new keypair, use the one supplied as argument
 
+    let mut seed = [0u8; 32];
+    let mut rand = StdRng::new().unwrap();
+    rand.fill_bytes(&mut seed);
+    // create ed25519 keypair
+    let (_privkey, _pubkey) = keypair(&seed);
+    
+    let era = Era::immortal();
+    
+    //FIXME: use argument
+    let call_hash_str = "0x01234".as_bytes().to_vec();
+    let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash_str));
+    
+    //let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
+    let raw_payload = (Compact(index), function, era, genesis_hash);
+/*
+    let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+        signature(&blake2_256(payload)[..], &_privkey);
+    } else {
+        //println!("signing {}", HexDisplay::from(&payload));
+        signature(payload, &_privkey);
+    });
 
+    UncheckedExtrinsic::new_signed(
+        index,
+        raw_payload.1,
+        _pubkey.into(),
+        signature.into(),
+        era,
+    )
+    */
+}
+
+//pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+
+  /*  
     let signer = Ed25519::pair_from_suri(from, Some(""));
 
     let to = ed25519::Public::from_string(to).ok().or_else(||
@@ -457,6 +512,7 @@ pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: H
         signature.into(),
         era,
     )
+    
 }
-
 */
+

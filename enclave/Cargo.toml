@@ -28,6 +28,8 @@ sgx_crypto_helper = { package="sgx_crypto_helper_trusted", git = "https://github
 serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
 parity-codec = { version = "3.0", default-features = false }
+primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
+blake2-rfc = { version = "0.2.18", default-features = false}
 
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
 #schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
@@ -39,5 +41,5 @@ runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git
 
 primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
 runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
-node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
-
+node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }  
+#keyring = { package = "substrate-keyring",git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
