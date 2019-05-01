@@ -38,7 +38,7 @@ use constants::*;
 use utils::file_exists;
 use enclave_api::*;
 use init_enclave::init_enclave;
-use create_keys::create_rsa3072_keypair;
+//use create_keys::create_rsa3072_keypair;
 
 use substrate_api_client::Api;
 
@@ -50,17 +50,20 @@ fn main() {
     let matches = App::from_yaml(yml).get_matches();
 
     if matches.is_present("worker") {
-        println!("* Starting substraTEE-worker");
-        println!("");
-        worker();
-        println!("* Worker finished");
-    }
-    else {
+		println!("* Starting substraTEE-worker");
+		println!("");
+		let mut port = "9944".to_string();
+		if matches.is_present("ws-port") {
+			port = value_t!(matches.value_of("ws-port"), String).unwrap();
+		}
+		worker(port);
+		println!("* Worker finished");
+	} else {
         println!("For options: use --help");
     }
 }
 
-fn worker() -> () {
+fn worker(port: String) -> () {
     // ------------------------------------------------------------------------
     // initialize the enclave
     println!("");
@@ -76,15 +79,6 @@ fn worker() -> () {
         },
     };
 
-    // ------------------------------------------------------------------------
-    // check if the sealed rsa3072 file exists and create it if needed
-    println!("");
-    println!("*** RSA3072 key generation/use");
-    match file_exists(RSA3072_SEALED_KEY_FILE) {
-        false => create_rsa3072_keypair(enclave.geteid()),
-        true  => println!("[+] File '{}' already exist", RSA3072_SEALED_KEY_FILE)
-    }
-
 	// ------------------------------------------------------------------------
 	// encrypt a test message, only used for testing purposes
 	let mut retval = sgx_status_t::SGX_SUCCESS;
@@ -98,7 +92,7 @@ fn worker() -> () {
     // subscribe to events and react on firing
     println!("");
     println!("*** Subscribing to events");
-	let mut api = Api::new("ws://127.0.0.1:9991".to_string());
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
 	let (events_in, events_out) = channel();
@@ -131,10 +125,10 @@ fn worker() -> () {
 				println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
 				match &pe {
 					node_runtime::substratee_proxy::RawEvent::CounterUpdated(sender) => {
-						println!("Counter event");
+						()
 					},
 					node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
-						println!("Forwarded event");
+						()
 					},
 					_ => {
 						println!("ignoring unsupported substratee_proxy event");

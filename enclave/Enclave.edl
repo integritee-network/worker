@@ -25,9 +25,6 @@ enclave {
 	trusted {
         /* define ECALLs here. */
 
-        public sgx_status_t create_sealed_rsa3072_keypair(
-            [in, size=len] const uint8_t* filepath, size_t len );
-
         // public sgx_status_t sign([in, size=sealed_seed_size]
         //     uint8_t* sealed_seed, uint32_t sealed_seed_size,
         //     [in, size=msg_size] uint8_t* msg, uint32_t msg_size,

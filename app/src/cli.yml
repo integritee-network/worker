@@ -79,6 +79,11 @@ subcommands:
         about: Start the substraTEE-worker
         version: "0.1"
         author: Marcel Frei
+    - ws-port:
+        takes_value: true
+        about: Set the Port the substraTEE-worker listens to
+        version: "0.1"
+        author: Christian Langenbacher
     # The name of this subcommand will be 'subcmd' which can be accessed in your
     # Rust code later
     # - subcmd:
