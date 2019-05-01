@@ -217,16 +217,8 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
 
     let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
     let mut counter = helper.decode().unwrap();
-    // println!("counter = {:?}", counter);
-/* FIXME: borrow checker trouble
-    if let Some(x) = counter.entries.get_mut(v[0]) {
-        *x += number[0];
-        println!("[Enclave] Incremented counter for '{}'. New value: {:?}", v[0], counter.entries.get(v[0]).unwrap());
-    } else {
-        println!("[Enclave] No counter found for '{}', adding new with initial value {}", v[0], number[0]);
-        counter.entries.insert(v[0].to_string(), number[0]);
-    }
-*/
+    //FIXME: borrow checker trouble, -> should be fixed untested
+	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
     return retval;
@@ -348,12 +340,18 @@ struct AllCounts {
     entries: HashMap<String, u8>
 }
 
-// fn create_counter_state() -> sgx_status_t {
-//     let c_init = AllCounts{ entries: HashMap::<String, u8>::new() };
+fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
+	{
+		let c = counter.entries.entry(name.to_string()).or_insert(0);
+		*c += value;
+	}
 
-//     println!("[Enclave] Create empty storage file. Init new account map: {:?}", &c_init);
-//     write_counter_state(c_init)
-// }
+	if counter.entries.get(name).unwrap() == &value {
+		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
+	} else {
+		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name));
+	}
+}
 
 fn write_counter_state(value: AllCounts) -> sgx_status_t {
     let helper = SerializeHelper::new();
@@ -419,7 +417,7 @@ impl Crypto for Ed25519 {
 
 pub fn transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
-    
+
     let signer = Ed25519::pair_from_suri(from, Some(""));
 
     let to = ed25519::Public::from_string(to).ok().or_else(||
