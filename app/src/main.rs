@@ -28,7 +28,6 @@ mod constants;
 mod utils;
 mod enclave_api;
 mod init_enclave;
-mod create_keys;
 
 use std::str;
 use sgx_types::*;
@@ -38,7 +37,6 @@ use constants::*;
 use utils::file_exists;
 use enclave_api::*;
 use init_enclave::init_enclave;
-//use create_keys::create_rsa3072_keypair;
 
 use substrate_api_client::Api;
 
@@ -49,21 +47,19 @@ fn main() {
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
-    if matches.is_present("worker") {
+    if let Some(matches) = matches.subcommand_matches("worker") {
 		println!("* Starting substraTEE-worker");
 		println!("");
-		let mut port = "9944".to_string();
-		if matches.is_present("ws-port") {
-			port = value_t!(matches.value_of("ws-port"), String).unwrap();
-		}
+		let mut port = matches.value_of("port").unwrap_or("9944");
 		worker(port);
+		println!("{}", port);
 		println!("* Worker finished");
 	} else {
         println!("For options: use --help");
     }
 }
 
-fn worker(port: String) -> () {
+fn worker(port: &str) -> () {
     // ------------------------------------------------------------------------
     // initialize the enclave
     println!("");
