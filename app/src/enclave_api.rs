@@ -37,10 +37,25 @@ extern {
         ciphertext_size: u32
     ) -> sgx_status_t;
 
+	pub fn get_counter(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		account: *const u8,
+		account_size: u32,
+		counter_value: *mut u8
+	) -> sgx_status_t;
+
     pub fn get_rsa_encryption_pubkey(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         pubkey: * mut u8,
         pubkey_size: u32
     ) -> sgx_status_t;
+
+	pub fn get_ecc_signing_pubkey(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		pubkey: * mut u8,
+		pubkey_size: u32
+	) -> sgx_status_t;
 }

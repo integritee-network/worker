@@ -152,18 +152,18 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
 }
 
 fn create_sealed_rsa3072_keypair() -> sgx_status_t {
-
-    // create a RSA keypair
     let rsa_keypair = Rsa3072KeyPair::new().unwrap();
     let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
     // println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
 	utils::write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
-//	write(RSA3072_SEALED_KEY_FILE, rsa_key_json.as_bytes())
 }
 
+#[no_mangle]
+pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+	sgx_status_t::SGX_SUCCESS
+}
 
 fn create_sealed_ed25519_keypair() -> sgx_status_t {
-
     let mut seed = [0u8; 32];
     let mut rand = match StdRng::new() {
         Ok(rng) => rng,
@@ -173,7 +173,6 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
 
     // create ed25519 keypair
     let (_privkey, _pubkey) = keypair(&seed);
-
     println!("[Enclave] generated seed pubkey: {:?}", _pubkey.to_base58());
 
     let seed_json = serde_json::to_string(&seed).unwrap();
@@ -207,22 +206,7 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
     let mut retval;
     let mut state_vec: Vec<u8> = Vec::new();
 
-    match SgxFile::open(COUNTERSTATE) {
-        Ok(mut f) => match f.read_to_end(&mut state_vec) {
-            Ok(len) => {
-                println!("[Enclave] Read {} bytes from storage file", len);
-                retval = sgx_status_t::SGX_SUCCESS;
-            }
-            Err(x) => {
-                println!("[Enclave] Read storage file failed {}", x);
-                retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] No storage file found. Error: {}", x);
-            state_vec.push(0);
-        }
-    };
+	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
     // println!("state_vec = {:?}", &state_vec);
 
@@ -243,6 +227,44 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
     retval = write_counter_state(counter);
 
     return retval;
+}
+
+#[no_mangle]
+pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u8) -> sgx_status_t {
+	let mut state_vec: Vec<u8> = Vec::new();
+
+	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
+	let acc_str = std::str::from_utf8(account_slice).unwrap();
+
+	let mut sgx_status = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
+
+	if sgx_status != sgx_status_t::SGX_SUCCESS {
+		return sgx_status;
+	}
+
+	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let mut counter = helper.decode().unwrap();
+	let value = counter.entries.entry(acc_str.to_string()).or_insert(0);
+
+	sgx_status
+}
+
+fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
+	{
+		let c = counter.entries.entry(name.to_string()).or_insert(0);
+		*c += value;
+	}
+	if counter.entries.get(name).unwrap() == &value {
+		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
+	} else {
+		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name));
+	}
+}
+
+fn write_counter_state(value: AllCounts) -> sgx_status_t {
+    let helper = SerializeHelper::new();
+    let c = helper.encode(value).unwrap();
+	utils::write_file( &c, COUNTERSTATE)
 }
 
 #[no_mangle]
@@ -290,24 +312,6 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
  #[derive(Serializable, DeSerializable, Debug)]
 struct AllCounts {
     entries: HashMap<String, u8>
-}
-
-fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
-	{
-		let c = counter.entries.entry(name.to_string()).or_insert(0);
-		*c += value;
-	}
-	if counter.entries.get(name).unwrap() == &value {
-		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
-	} else {
-		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name));
-	}
-}
-
-fn write_counter_state(value: AllCounts) -> sgx_status_t {
-    let helper = SerializeHelper::new();
-    let c = helper.encode(value).unwrap();
-	utils::write_file( &c, COUNTERSTATE)
 }
 
 fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
