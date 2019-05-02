@@ -1,0 +1,17 @@
+name: "substraTEE-client-example"
+version: "0.1.0"
+about: Example client for SubstraTEE-node
+author: Decentralized Systems @ SCS
+
+# AppSettings can be defined as a list and are **not** ascii case sensitive
+settings:
+    - ColoredHelp
+
+# All Args must be defined in the 'args:' list where the name of the arg, is the
+# key to a Hash object
+args:
+    - port:
+        short: p
+        long: ws-port
+        help: Set the websocket port to connect to substraTEE-node
+        takes_value: true

@@ -10,6 +10,7 @@ schnorrkel = "0.1"
 rand = "0.6"
 hex-literal = "0.2.0"
 hex = "0.3"
+clap = { version = "2.33", features = [ "yaml" ] }
 
 parity-codec = { version = "3.0", default-features = false }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git" }

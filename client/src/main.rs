@@ -60,6 +60,10 @@ use my_node_runtime::{
 use substrate_bip39::mini_secret_from_entropy;
 use hex_literal::hex;
 
+#[macro_use]
+extern crate clap;
+use clap::App;
+
 trait Crypto {
 	type Seed: AsRef<[u8]> + AsMut<[u8]> + Sized + Default;
 	type Pair: Pair;
@@ -151,7 +155,11 @@ impl Crypto for Sr25519 {
 }
 
 fn main() {
-	let mut api = Api::new("ws://127.0.0.1:9944".to_string());
+	let yml = load_yaml!("cli.yml");
+	let matches = App::from_yaml(yml).get_matches();
+	let mut port = matches.value_of("port").unwrap_or("9944");
+
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
 	// get Alice's AccountNonce
@@ -167,7 +175,7 @@ fn main() {
 
 	println!("extrinsic: {:?}", xt);
 	let mut _xthex = hex::encode(xt.encode());
-    _xthex.insert_str(0, "0x");
+	_xthex.insert_str(0, "0x");
 	// send and watch extrinsic until finalized
 	let tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
