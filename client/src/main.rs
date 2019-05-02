@@ -17,7 +17,7 @@
 
 extern crate substrate_api_client;
 extern crate runtime_primitives;
-extern crate node_runtime;
+extern crate my_node_runtime;
 extern crate parity_codec;
 extern crate primitives;
 extern crate hex_literal;
@@ -36,6 +36,7 @@ use substrate_api_client::{
 };
 use runtime_primitives::{
 	generic::Era,
+	AnySignature,
 };
 use primitives::{
 	ed25519,
@@ -49,7 +50,7 @@ use parity_codec::{Encode, Compact};
 use bip39::{Mnemonic, Language, MnemonicType};
 use schnorrkel::keys::MiniSecretKey;
 use rand::{RngCore, rngs::OsRng};
-use node_runtime::{
+use my_node_runtime::{
 	UncheckedExtrinsic,
 	CheckedExtrinsic,
 	Call,
@@ -150,7 +151,7 @@ impl Crypto for Sr25519 {
 }
 
 fn main() {
-	let mut api = Api::new("ws://127.0.0.1:9977".to_string());
+	let mut api = Api::new("ws://127.0.0.1:9944".to_string());
 	api.init();
 
 	// get Alice's AccountNonce
@@ -165,9 +166,10 @@ fn main() {
 	let xt = compose_extrinsic("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 
 	println!("extrinsic: {:?}", xt);
-
+	let mut _xthex = hex::encode(xt.encode());
+    _xthex.insert_str(0, "0x");
 	// send and watch extrinsic until finalized
-	let tx_hash = api.send_extrinsic(xt).unwrap();
+	let tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 }
 
@@ -188,6 +190,9 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
 		println!("signing {}", HexDisplay::from(&payload));
 		signer.sign(payload)
 	});
+
+	//let () = signature;
+	//let sign = AnySignature::from(signature);
 
 	UncheckedExtrinsic::new_signed(
 		index,

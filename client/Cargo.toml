@@ -9,6 +9,7 @@ tiny-bip39 = "0.6.0"
 schnorrkel = "0.1"
 rand = "0.6"
 hex-literal = "0.2.0"
+hex = "0.3"
 
 parity-codec = { version = "3.0", default-features = false }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git" }
@@ -16,10 +17,11 @@ substrate-keyring = { git = "https://github.com/brenzi/substrate.git", branch="g
 node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-runtime = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+#runtime = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 
 substrate_bip39 = { package="substrate-bip39", git = "https://github.com/paritytech/substrate-bip39" }
 
-# node-runtime = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+#node-runtime = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 # substratee-node-runtime = { git = "https://github.com/scs/substraTEE-node.git" }
-node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", features=["no_global_allocator"] }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", features=["no_global_allocator"] }
+primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
