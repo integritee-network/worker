@@ -199,7 +199,7 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
     println!("[Enclave] generated seed pubkey: {:?}", _pubkey.to_base58());
 
     let seed_json = serde_json::to_string(&seed).unwrap();
-	utils::write_file(seed_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
+	utils::write_file(seed_json.as_bytes(), ED25519_SEALED_KEY_FILE)
 }
 
 
