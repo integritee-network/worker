@@ -63,7 +63,6 @@ use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 extern crate sgx_serialize_derive;
 // use sgx_serialize::*;
 
-use std::io::{/*self, */Read, Write};
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
@@ -179,7 +178,7 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 	}
 
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-	//println!("[Enclave] key_json = {}", key_json_str);
+	println!("[Enclave] key_json = {}", key_json_str);
 
 	// Fixme: Here ends the wip
 
@@ -204,16 +203,15 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
 
 
 #[no_mangle]
-pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8,
+pub extern "C" fn call_counter(ciphertext: * mut u8,
 											  ciphertext_size: u32,
 											  unchechecked_extrinsic: * mut u8,
 											  unchecked_extrinsic_size: u32) -> sgx_status_t {
 
     let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
-	let mut retval = sgx_status_t::SGX_SUCCESS;
     //restore RSA key pair from file
     let mut keyvec: Vec<u8> = Vec::new();
-	retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
+	let retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
 		return retval;
@@ -234,6 +232,9 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8,
 
 	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
     // println!("state_vec = {:?}", &state_vec);
 
     // this is UGLY!!
@@ -252,7 +253,7 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8,
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
-	//FIXME: calculate hash, and pass genesis hash
+	//FIXME: calculate hash, and pass genesis hash,
 	let call_hash_str = "0x01234";
 	let ex = compose_extrinsic(v[0], call_hash_str, U256([2,3,4,5]), call_hash_str);
 
@@ -270,7 +271,7 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: 
 	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let mut retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
+	let retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
 		return retval;

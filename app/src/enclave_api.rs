@@ -30,7 +30,7 @@ extern {
     //     signature_size: u32
     // ) -> sgx_status_t;
 
-    pub fn decrypt_and_process_payload(
+    pub fn call_counter(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         ciphertext: * mut u8,
