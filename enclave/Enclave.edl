@@ -31,7 +31,8 @@ enclave {
         //     [out, size=signature_size] uint8_t* signature, uint32_t signature_size);
 
         public sgx_status_t decrypt_and_process_payload(
-            [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size
+            [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size,
+            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
         );
 
         public sgx_status_t get_counter(

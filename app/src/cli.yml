@@ -85,6 +85,10 @@ subcommands:
                 long: ws-port
                 help: Set the websocket port to listen for substrate events
                 takes_value: true
+    - tests:
+        about: Run tests that interact with enclave.
+        version: "0.1"
+        author: "Christian Langenbacher"
 
     # The name of this subcommand will be 'subcmd' which can be accessed in your
     # Rust code later

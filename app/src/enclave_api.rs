@@ -34,7 +34,9 @@ extern {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         ciphertext: * mut u8,
-        ciphertext_size: u32
+        ciphertext_size: u32,
+		unchecked_extrinsic: * mut u8,
+		unchecked_extrinsic_size: u32
     ) -> sgx_status_t;
 
 	pub fn get_counter(

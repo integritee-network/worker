@@ -204,7 +204,10 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
 
 
 #[no_mangle]
-pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
+pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8,
+											  ciphertext_size: u32,
+											  unchechecked_extrinsic: * mut u8,
+											  unchecked_extrinsic_size: u32) -> sgx_status_t {
 
     let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
 	let mut retval = sgx_status_t::SGX_SUCCESS;
@@ -249,9 +252,17 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
-    return retval;
+	//FIXME: calculate hash, and pass genesis hash
+	let call_hash_str = "0x01234";
+	let ex = compose_extrinsic(v[0], call_hash_str, U256([2,3,4,5]), call_hash_str);
+
+	let encoded = ex.encode();
+	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
+	extrinsic_slize.clone_from_slice(&encoded);
+    retval
 }
 
+//untested function
 #[no_mangle]
 pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: *mut u8) -> sgx_status_t {
 	let mut state_vec: Vec<u8> = Vec::new();
@@ -349,7 +360,7 @@ fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_
 	}
 }
 
-pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn compose_extrinsic(sender: &str, call_hash_str: &str, index: U256, genesis_hash: &str) -> UncheckedExtrinsic {
 
     //FIXME: don't generate new keypair, use the one supplied as argument
     let mut seed = [0u8; 32];
@@ -359,10 +370,7 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
     let (_privkey, _pubkey) = keypair(&seed);
 
     let era = Era::immortal();
-
-    //FIXME: use argument call_hash
-    let call_hash_str = "0x01234".as_bytes().to_vec();
-    let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash_str));
+	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash_str.as_bytes().to_vec()));
 
     let index = Index::from(index.low_u64());
     let raw_payload = (Compact(index), function, era, genesis_hash);
