@@ -332,7 +332,7 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
     sgx_status_t::SGX_SUCCESS
 }
 
- #[derive(Serializable, DeSerializable, Debug)]
+#[derive(Serializable, DeSerializable, Debug)]
 struct AllCounts {
     entries: HashMap<String, u8>
 }
