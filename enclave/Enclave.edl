@@ -25,9 +25,6 @@ enclave {
 	trusted {
         /* define ECALLs here. */
 
-        public sgx_status_t create_sealed_rsa3072_keypair(
-            [in, size=len] const uint8_t* filepath, size_t len );
-
         // public sgx_status_t sign([in, size=sealed_seed_size]
         //     uint8_t* sealed_seed, uint32_t sealed_seed_size,
         //     [in, size=msg_size] uint8_t* msg, uint32_t msg_size,
@@ -37,8 +34,15 @@ enclave {
             [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size
         );
 
+        public sgx_status_t get_counter(
+        	[in, size=account_size] uint8_t* account, uint32_t account_size,
+        	[out] uint8_t* counter_value);
+
         public sgx_status_t get_rsa_encryption_pubkey(
             [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
+
+        public sgx_status_t get_ecc_signing_pubkey(
+                    [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
     };
 

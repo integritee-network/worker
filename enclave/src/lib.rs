@@ -79,9 +79,9 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
 type Index = u64;
 
-pub const RSA3072_SEALED_KEY_FILE: &'static str = "./bin/rsa3072_key_sealed.bin";
-pub const COUNTERSTATE:            &'static str = "./bin/sealed_counter_state.bin";
-
+mod constants;
+mod utils;
+use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 /*
 //FIXME: no_std broken here
 /// Do a Blake2 256-bit hash and place result in `dest`.
@@ -98,52 +98,96 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 }
 */
 
-
-// FIXME: [brenzi] why pass a filepath at all? I'd rather ise the hard-coded filename in relative path RSA3072_SEALED_KEY_FILE
-// FIXME: no need to expose to app. check pre-existing file in here!
 #[no_mangle]
-pub extern "C" fn create_sealed_rsa3072_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
+pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
 
-    let str_slice = unsafe { slice::from_raw_parts(filepath, len) };
-    let mut filename = String::from("");
-    for c in str_slice.iter() {
-        filename.push(*c as char);
-    }
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
+		Err(x) => {
+			println!("[Enclave] Keyfile not found, creating new! {}", x);
+			retval = create_sealed_rsa3072_keypair();
+		},
+		_ => ()
+	}
 
-    // create a RSA keypair
+	if retval != sgx_status_t::SGX_SUCCESS {
+		// detailed error msgs are already printed in utils::write file
+		return retval;
+	}
+
+	//restore RSA key pair from file
+	let mut keyvec: Vec<u8> = Vec::new();
+	retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
+
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
+
+	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
+	//println!("[Enclave] key_json = {}", key_json_str);
+	let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
+
+	// now write pubkey back to caller
+	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
+
+	let keypair_json = match serde_json::to_string(&rsa_keypair) {
+		Ok(k) => k,
+		Err(x) => {
+			println!("[Enclave] can't serialize rsa_keypair {:?} {}", rsa_keypair, x);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
+	println!("[Enclave] len pubkey_slice: {}", pubkey_slice.len());
+	println!("[Enclave] len keypair_json: {}", keypair_json.len());
+
+	let (left, right) = pubkey_slice.split_at_mut(keypair_json.len());
+	left.clone_from_slice(keypair_json.as_bytes());
+	right.iter_mut().for_each(|x| *x = 0x20);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn create_sealed_rsa3072_keypair() -> sgx_status_t {
     let rsa_keypair = Rsa3072KeyPair::new().unwrap();
     let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
     // println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-
-    match SgxFile::create(&filename) {
-        Ok(mut f) => match f.write_all(rsa_key_json.as_bytes()) {
-            Ok(()) => {
-                println!("[Enclave +] Writing keyfile '{}' successful", &filename);
-                sgx_status_t::SGX_SUCCESS
-            }
-            Err(x) => {
-                println!("[Enclave -] Writing keyfile '{}' failed! {}", &filename, x);
-                sgx_status_t::SGX_ERROR_UNEXPECTED
-            }
-        },
-        Err(x) => {
-            println!("[Enclave !] Creating keyfile '{}' error! {}", &filename, x);
-            sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    }
+	utils::write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
 }
 
-//FIXME: as above, don't pass filepath as an arg
-// no need to expose to app
-fn create_sealed_ed25519_keypair(filepath: *const u8, len: usize) -> sgx_status_t {
-    let str_slice = unsafe { slice::from_raw_parts(filepath, len) };
-    let mut filename = String::from("");
-    for c in str_slice.iter() {
-        filename.push(*c as char);
-    }
+#[no_mangle]
+pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+	let mut retval = sgx_status_t::SGX_SUCCESS;
 
+	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
+		Ok(_k) => (),
+		Err(x) => {
+			println!("[Enclave] Keyfile not found, creating new! {}", x);
+			retval = create_sealed_ed25519_keypair();
+		},
+	}
+
+	if retval != sgx_status_t::SGX_SUCCESS {
+		// detailed error msgs are already printed in utils::write file
+		return retval;
+	}
+
+	//restore ecc key pair from file
+	let mut keyvec: Vec<u8> = Vec::new();
+	retval = utils::read_file(&mut keyvec, ED25519_SEALED_KEY_FILE);
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
+
+	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
+	//println!("[Enclave] key_json = {}", key_json_str);
+
+	// Fixme: Here ends the wip
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn create_sealed_ed25519_keypair() -> sgx_status_t {
     let mut seed = [0u8; 32];
-
     let mut rand = match StdRng::new() {
         Ok(rng) => rng,
         Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
@@ -152,27 +196,10 @@ fn create_sealed_ed25519_keypair(filepath: *const u8, len: usize) -> sgx_status_
 
     // create ed25519 keypair
     let (_privkey, _pubkey) = keypair(&seed);
-
     println!("[Enclave] generated seed pubkey: {:?}", _pubkey.to_base58());
 
     let seed_json = serde_json::to_string(&seed).unwrap();
-    match SgxFile::create(&filename) {
-        Ok(mut f) => match f.write_all(seed_json.as_bytes()) {
-            Ok(()) => {
-                println!("[Enclave +] Writing seed to '{}' successful", &filename);
-                sgx_status_t::SGX_SUCCESS
-            }
-            Err(x) => {
-                println!("[Enclave -] Writing seed to '{}' failed! {}", &filename, x);
-                sgx_status_t::SGX_ERROR_UNEXPECTED
-            }
-        },
-        Err(x) => {
-            println!("[Enclave !] Creating seed-file '{}' error! {}", &filename, x);
-            sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    }
-    //sgx_status_t::SGX_SUCCESS
+	utils::write_file(seed_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
 }
 
 
@@ -180,25 +207,16 @@ fn create_sealed_ed25519_keypair(filepath: *const u8, len: usize) -> sgx_status_
 pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_size: u32) -> sgx_status_t {
 
     let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
-
+	let mut retval = sgx_status_t::SGX_SUCCESS;
     //restore RSA key pair from file
     let mut keyvec: Vec<u8> = Vec::new();
-    let key_json_str = match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
-        Ok(mut f) => match f.read_to_end(&mut keyvec) {
-            Ok(len) => {
-                println!("[Enclave] Read {} bytes from key file", len);
-                std::str::from_utf8(&keyvec).unwrap()
-            }
-            Err(x) => {
-                println!("[Enclave] Read key file failed {}", x);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
+	retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
+
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
+
+	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
     //println!("[Enclave] key_json = {}", key_json_str);
     let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
 
@@ -211,22 +229,7 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
     let mut retval;
     let mut state_vec: Vec<u8> = Vec::new();
 
-    match SgxFile::open(COUNTERSTATE) {
-        Ok(mut f) => match f.read_to_end(&mut state_vec) {
-            Ok(len) => {
-                println!("[Enclave] Read {} bytes from storage file", len);
-                retval = sgx_status_t::SGX_SUCCESS;
-            }
-            Err(x) => {
-                println!("[Enclave] Read storage file failed {}", x);
-                retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] No storage file found. Error: {}", x);
-            state_vec.push(0);
-        }
-    };
+	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
     // println!("state_vec = {:?}", &state_vec);
 
@@ -242,11 +245,49 @@ pub extern "C" fn decrypt_and_process_payload(ciphertext: * mut u8, ciphertext_s
 
     let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
     let mut counter = helper.decode().unwrap();
-    //FIXME: borrow checker trouble, -> should be fixed untested
+    //FIXME: borrow checker trouble, -> should be fixed, untested
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
     return retval;
+}
+
+#[no_mangle]
+pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: *mut u8) -> sgx_status_t {
+	let mut state_vec: Vec<u8> = Vec::new();
+
+	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
+	let acc_str = std::str::from_utf8(account_slice).unwrap();
+
+	let mut retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
+
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
+
+	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let mut counter = helper.decode().unwrap();
+	value = counter.entries.entry(acc_str.to_string()).or_insert(0);
+
+	retval
+}
+
+fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
+	{
+		let c = counter.entries.entry(name.to_string()).or_insert(0);
+		*c += value;
+	}
+	if counter.entries.get(name).unwrap() == &value {
+		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
+	} else {
+		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name));
+	}
+}
+
+fn write_counter_state(value: AllCounts) -> sgx_status_t {
+    let helper = SerializeHelper::new();
+    let c = helper.encode(value).unwrap();
+	utils::write_file( &c, COUNTERSTATE)
 }
 
 #[no_mangle]
@@ -291,116 +332,10 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
     sgx_status_t::SGX_SUCCESS
 }
 
-fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
-    unsafe {
-        SgxSealedData::<T>::from_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
-
-    let pubkey_slice = unsafe { slice::from_raw_parts(pubkey, pubkey_size as usize) };
-
-    //restore RSA key pair from file
-    let mut keyvec: Vec<u8> = Vec::new();
-    let key_json_str = match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
-        Ok(mut f) => match f.read_to_end(&mut keyvec) {
-            Ok(len) => {
-                println!("[Enclave] Read {} bytes from Key file", len);
-                std::str::from_utf8(&keyvec).unwrap()
-            }
-            Err(x) => {
-                println!("[Enclave] Read keyfile failed {}", x);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] get_sealed_pcl_key cannot open keyfile, please check if key is provisioned successfully! {}", x);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
-    //println!("[Enclave] key_json = {}", key_json_str);
-    let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
- /*
- TODO: should only return pubkey, not keypair. But SgxRsaPubkey isnt serializable!
-
-    let res = rsa_keypair.to_pubkey();
-    let _pubkey = match res {
-        Ok(x) => x,
-        _ => {
-            println!("[Enclave] couldn't create pubkey form rsa keypair");
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-        },
-    };
-
-    let _pubkey_json = serde_json::to_string(&_pubkey).unwrap();
-    println!("[Enclave] pubkey is: {}", _pubkey_json);
-*/
-    // now write pubkey back to caller
-    let pubkey_slice = unsafe {
-        slice::from_raw_parts_mut(pubkey, pubkey_size as usize)
-    };
-
-    let keypair_json = match serde_json::to_string(&rsa_keypair) {
-        Ok(k) => k,
-        Err(x) => {
-            println!("[Enclave] can't serialize rsa_keypair {:?} {}", rsa_keypair, x);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
-    println!("[Enclave] len pubkey_slice: {}", pubkey_slice.len());
-    println!("[Enclave] len keypair_json: {}", keypair_json.len());
-
-    let (left, right) = pubkey_slice.split_at_mut(keypair_json.len());
-    left.clone_from_slice(keypair_json.as_bytes());
-    right.iter_mut().for_each(|x| *x = 0x20);
-
-    //println!("[Enclave] enclave function success");
-    sgx_status_t::SGX_SUCCESS
-}
-
- #[derive(Serializable, DeSerializable, Debug)]
+#[derive(Serializable, DeSerializable, Debug)]
 struct AllCounts {
     entries: HashMap<String, u8>
 }
-
-fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
-	{
-		let c = counter.entries.entry(name.to_string()).or_insert(0);
-		*c += value;
-	}
-
-	if counter.entries.get(name).unwrap() == &value {
-		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
-	} else {
-		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name));
-	}
-}
-
-fn write_counter_state(value: AllCounts) -> sgx_status_t {
-    let helper = SerializeHelper::new();
-    let c = helper.encode(value).unwrap();
-    match SgxFile::create(COUNTERSTATE) {
-        Ok(mut f) => match f.write_all(&c) {
-            Ok(()) => {
-                println!("[Enclave] SgxFile write storage file success!");
-                sgx_status_t::SGX_SUCCESS
-            }
-
-            Err(x) => {
-                println!("[Enclave] SgxFile write storage file failed! {}", x);
-                sgx_status_t::SGX_ERROR_UNEXPECTED
-            }
-        },
-        Err(x) => {
-            println!("[Enclave] SgxFile create storage file {} error {}", COUNTERSTATE, x);
-            sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    }
-}
-
-
 
 fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
     unsafe {
@@ -408,6 +343,11 @@ fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sea
     }
 }
 
+fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
+	unsafe {
+		SgxSealedData::<T>::from_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
+	}
+}
 
 pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
@@ -417,14 +357,14 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
     rand.fill_bytes(&mut seed);
     // create ed25519 keypair
     let (_privkey, _pubkey) = keypair(&seed);
-    
+
     let era = Era::immortal();
-    
+
     //FIXME: use argument call_hash
     let call_hash_str = "0x01234".as_bytes().to_vec();
     let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash_str));
-    
-    let index = Index::from(index.low_u64()); 
+
+    let index = Index::from(index.low_u64());
     let raw_payload = (Compact(index), function, era, genesis_hash);
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
@@ -434,7 +374,7 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
         //println!("signing {}", HexDisplay::from(&payload));
         signature(payload, &_privkey)
     });
-    
+
     //FIXME: until node_runtime changes to ed25519, CheckedExtrinsic will expect a sr25519!
     // this should be correct
     let signerpub = ed25519::Public::unchecked_from(_pubkey);
@@ -452,5 +392,3 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
         era,
     )
 }
-
-
