@@ -68,7 +68,7 @@ endif
 
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
-CUSTOM_EDL_PATH := ./edl
+CUSTOM_EDL_PATH := ./rust-sgx-sdk/edl
 CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 
 ######## EDL Settings ########
