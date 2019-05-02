@@ -103,7 +103,7 @@ fn worker(port: &str) -> () {
 	loop {
 		let event = events_out.recv().unwrap();
 		match &event {
-			node_runtime::Event::balances(be) => {
+			my_node_runtime::Event::balances(be) => {
 				println!(">>>>>>>>>> balances event: {:?}", be);
 				match &be {
 					balances::RawEvent::Transfer(transactor, dest, value, fee) => {
@@ -117,14 +117,14 @@ fn worker(port: &str) -> () {
 					},
 				}
 			},
-			node_runtime::Event::substratee_proxy(pe) => {
+			my_node_runtime::Event::substratee_proxy(pe) => {
 				println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
 				match &pe {
-					node_runtime::substratee_proxy::RawEvent::CounterUpdated(sender) => {
+					my_node_runtime::substratee_proxy::RawEvent::CounterUpdated(sender) => {
 						()
 					},
-					node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
-						()
+					my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
+						println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
 					},
 					_ => {
 						println!("ignoring unsupported substratee_proxy event");

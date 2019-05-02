@@ -43,8 +43,8 @@ use primitives::{ed25519, sr25519};
 use primitives::crypto::UncheckedFrom;
 
 //extern crate keyring;
-extern crate node_runtime;
-use node_runtime::{AccountId, UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall, Hash, SubstraTEEProxyCall};
+extern crate my_node_runtime;
+use my_node_runtime::{AccountId, UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall, Hash, SubstraTEEProxyCall};
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
 extern crate parity_codec;

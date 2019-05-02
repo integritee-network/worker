@@ -41,6 +41,6 @@ runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git
 
 primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
 runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
-node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
 #keyring = { package = "substrate-keyring",git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
 #node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
