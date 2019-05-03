@@ -145,26 +145,10 @@ fn worker(port: &str) -> () {
 			},
 		}
 	}
-
-    // ------------------------------------------------------------------------
-    // compose an extrinsic with the hash of the initial payload
-    // println!("");
-    // println!("*** Compose extrinsic");
-    // println!("**** TODO");
-
-    // ------------------------------------------------------------------------
-    // send the extrinsic
-    // println!("");
-    // println!("*** Send extrinsic");
-    // println!("**** TODO");
-
-    // ------------------------------------------------------------------------
-    // destroy the enclave
-    // println!("");
-    // println!("*** Destroy enclave");
-    // enclave.destroy();
 }
 
+// only used for testing purposes
+// FIXME: move to dedicated testing file
 fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t) -> UncheckedExtrinsic {
 	// encoded message 'b"Alice, 42"'
 	println!("");
