@@ -12,19 +12,17 @@ hex-literal = "0.2.0"
 hex = "0.3"
 clap = { version = "2.33", features = [ "yaml" ] }
 serde_json = "1.0"
-
 parity-codec = { version = "3.0", default-features = false }
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git" }
-substrate-keyring = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-#runtime = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git" }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", branch="marcel-ed25519", features=["no_global_allocator"] }
 
 substrate_bip39 = { package="substrate-bip39", git = "https://github.com/paritytech/substrate-bip39" }
 
-#node-runtime = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-# substratee-node-runtime = { git = "https://github.com/scs/substraTEE-node.git" }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", branch="marcel-ed25519", features=["no_global_allocator"] }
+node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+substrate-keyring = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
 primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
