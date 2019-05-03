@@ -44,11 +44,11 @@ use primitives::crypto::UncheckedFrom;
 
 //extern crate keyring;
 extern crate my_node_runtime;
-use my_node_runtime::{AccountId, UncheckedExtrinsic, CheckedExtrinsic, Call, BalancesCall, Hash, SubstraTEEProxyCall};
+use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
 extern crate parity_codec;
-use parity_codec::{Encode, Compact};
+use parity_codec::{Decode, Encode, Compact};
 extern crate primitive_types;
 use primitive_types::U256;
 //extern crate node_primitives;
@@ -61,13 +61,11 @@ use sgx_rand::{Rng, StdRng};
 use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 #[macro_use]
 extern crate sgx_serialize_derive;
-// use sgx_serialize::*;
 
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
-// use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::string::ToString;
 
@@ -209,12 +207,19 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
 
 #[no_mangle]
 pub extern "C" fn call_counter(ciphertext: * mut u8,
-											  ciphertext_size: u32,
-											  unchechecked_extrinsic: * mut u8,
-											  unchecked_extrinsic_size: u32) -> sgx_status_t {
+							   ciphertext_size: u32,
+							   hash: * const u8,
+							   hash_size: u32,
+							   nonce: * const u8,
+							   nonce_size: u32,
+							   unchechecked_extrinsic: * mut u8,
+							   unchecked_extrinsic_size: u32) -> sgx_status_t {
 
     let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
-    //restore RSA key pair from file
+	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
+	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
+
+	//restore RSA key pair from file
     let mut keyvec: Vec<u8> = Vec::new();
 	let retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
 
@@ -228,6 +233,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 
     let mut plaintext = Vec::new();
     rsa_keypair.decrypt_buffer(&ciphertext_slice, &mut plaintext).unwrap();
+
 
     let decrypted_string = String::from_utf8(plaintext).unwrap();
     println!("[Enclave] Decrypted data = {}", decrypted_string);
@@ -258,9 +264,11 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
-	//FIXME: calculate hash, and pass genesis hash,
-	let call_hash_str = "0x01234";
-	let ex = compose_extrinsic(v[0], call_hash_str, U256([2,3,4,5]), call_hash_str);
+	// Fixme: ciphertext is bigger 256 -> throwing error
+	let call_hash = "0x01234";
+	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let ex = compose_extrinsic(v[0], call_hash.as_bytes(), nonce, hash_slice);
+//	let ex = compose_extrinsic(v[0], ciphertext_slice, nonce, hash_slice);
 
 	let encoded = ex.encode();
 	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
@@ -268,7 +276,6 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
     retval
 }
 
-//untested function
 #[no_mangle]
 pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: *mut u8) -> sgx_status_t {
 	let mut state_vec: Vec<u8> = Vec::new();
@@ -366,17 +373,17 @@ fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_
 	}
 }
 
-pub fn compose_extrinsic(sender: &str, call_hash_str: &str, index: U256, genesis_hash: &str) -> UncheckedExtrinsic {
+pub fn compose_extrinsic(sender: &str, call_hash: &[u8], index: U256, genesis_hash: &[u8]) -> UncheckedExtrinsic {
 
-    //FIXME: don't generate new keypair, use the one supplied as argument
+	//FIXME: don't generate new keypair, use the one supplied as argument
     let mut seed = [0u8; 32];
     let mut rand = StdRng::new().unwrap();
     rand.fill_bytes(&mut seed);
     // create ed25519 keypair
     let (_privkey, _pubkey) = keypair(&seed);
 
-    let era = Era::immortal();
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash_str.as_bytes().to_vec()));
+	let era = Era::immortal();
+	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
     let index = Index::from(index.low_u64());
     let raw_payload = (Compact(index), function, era, genesis_hash);

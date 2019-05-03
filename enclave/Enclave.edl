@@ -32,6 +32,8 @@ enclave {
 
         public sgx_status_t call_counter(
             [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size,
+            [in, size=hash_size] uint8_t* hash, uint32_t hash_size,
+          	[in, size=index_size] uint8_t* index, uint32_t index_size,
             [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
         );
 

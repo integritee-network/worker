@@ -22,7 +22,12 @@ extern crate sgx_types;
 extern crate sgx_urts;
 extern crate sgx_crypto_helper;
 
+extern crate my_node_runtime;
 extern crate substrate_api_client;
+extern crate parity_codec;
+extern crate substrate_keyring;
+extern crate node_primitives;
+extern crate primitive_types;
 
 mod constants;
 mod utils;
@@ -38,7 +43,17 @@ use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
 
-use substrate_api_client::Api;
+use substrate_keyring::AccountKeyring;
+use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
+use my_node_runtime::{UncheckedExtrinsic, SubstraTEEProxyCall};
+use parity_codec::{Decode, Encode, Codec, Input, HasCompact};
+use primitive_types::U256;
+
+use node_primitives::{
+	Index,
+	Hash,
+	AccountId,
+};
 
 use std::sync::mpsc::channel;
 use std::thread;
@@ -151,7 +166,7 @@ fn worker(port: &str) -> () {
     // enclave.destroy();
 }
 
-fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t) -> () {
+fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t) -> UncheckedExtrinsic {
 	// encoded message 'b"Alice, 42"'
 	println!("");
 	println!("*** Decrypt and process the payload");
@@ -161,14 +176,29 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 	let extrinsic_size = 112;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
 
+	let mut api = Api::new(format!("ws://127.0.0.1:9991"));
+	api.init();
+	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
+
+	// get Alice's AccountNonce
+	let accountid = AccountId::from(AccountKeyring::Alice);
+	let mut nonce_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
+	println!("");
+	println!("[+] Alice's account nonce is {}", nonce_str);
+	let nonce_u = hexstr_to_u256(nonce_str);
+	let nonce_bytes = U256::encode(&nonce_u);
+
 	let result = unsafe {
 		call_counter(eid,
-									retval,
-									ciphertext.as_mut_ptr(),
-									ciphertext.len() as u32,
-									unchecked_extrinsic.as_mut_ptr(),
-									extrinsic_size as u32
-
+					 retval,
+					 ciphertext.as_mut_ptr(),
+					 ciphertext.len() as u32,
+					 genesis_hash.as_ptr(),
+					 genesis_hash.len() as u32,
+					 nonce_bytes.as_ptr(),
+					 nonce_bytes.len() as u32,
+					 unchecked_extrinsic.as_mut_ptr(),
+					 extrinsic_size as u32
 		)
 	};
 
@@ -176,9 +206,10 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 		sgx_status_t::SGX_SUCCESS => println!("[+] Message decoded and processed in the enclave."),
 		_ => {
 			println!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
+//			return;
 		}
 	}
+	Decode::decode(&mut unchecked_extrinsic.as_slice()).unwrap()
 }
 
 fn get_public_key_tee()
@@ -247,7 +278,15 @@ fn test_pipeline() {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let mut ct = get_test_ciphertext(enclave.geteid(), &mut retval);
-	decryt_and_process_payload(enclave.geteid(), ct, &mut retval);
+	let xt = decryt_and_process_payload(enclave.geteid(), ct, &mut retval);
+
+	// send and watch extrinsic until finalized
+	let mut api = Api::new("ws://127.0.0.1:9991".to_string());
+	api.init();
+	let tx_hash = api.send_extrinsic(xt).unwrap();
+
+	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("");
 
 	enclave.destroy();
 	assert_eq!(retval, sgx_status_t::SGX_SUCCESS);

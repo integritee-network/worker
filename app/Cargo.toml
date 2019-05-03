@@ -18,4 +18,9 @@ sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-fea
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "substratee-runtime" }
 balances = { package = "srml-balances", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git" }
+parity-codec = { version = "3.0", default-features = false }
+substrate-keyring = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
+
 

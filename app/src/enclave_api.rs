@@ -35,6 +35,10 @@ extern {
         retval: *mut sgx_status_t,
         ciphertext: * mut u8,
         ciphertext_size: u32,
+		hash: * const u8,
+		hash_size: u32,
+		index: * const u8,
+		index_size: u32,
 		unchecked_extrinsic: * mut u8,
 		unchecked_extrinsic_size: u32
     ) -> sgx_status_t;
