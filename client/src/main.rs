@@ -21,7 +21,9 @@ extern crate my_node_runtime;
 extern crate parity_codec;
 extern crate primitives;
 extern crate hex_literal;
+extern crate sgx_crypto_helper;
 
+use std::fs;
 use substrate_keyring::AccountKeyring;
 use node_primitives::{
 	Index,
@@ -56,10 +58,13 @@ use my_node_runtime::{
 };
 use substrate_bip39::mini_secret_from_entropy;
 use hex_literal::hex;
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 
 #[macro_use]
 extern crate clap;
 use clap::App;
+
+pub static RSA_PUB_KEY: &'static str = "../bin/rsa_pubkey.txt";
 
 trait Crypto {
 	type Seed: AsRef<[u8]> + AsMut<[u8]> + Sized + Default;
@@ -186,12 +191,18 @@ fn main() {
 	println!("");
 	println!("[+] Alice's new account nonce is {}", nonce);
 
-	// generate extrinsic
-	// FIXME: the payload must be encrypted with the public key of the TEE
-	let payload_encrypted: Hash = hex!["1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"].into();
+	// get the public key of the TEE
+	let data = fs::read_to_string(RSA_PUB_KEY).expect("Unable to open rsa pubkey file");
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&data).unwrap();
+	println!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
+
+	// generate extrinsic with encrypted payload
+	let mut payload_encrypted: Vec<u8> = Vec::new();
+	let plaintext = b"Alice,42".to_vec();
+	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
 	let xt_2 = compose_extrinsic_substratee_forward("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 
-	println!("");
+	// println!("");
 	// println!("extrinsic: {:?}", xt_2);
 	_xthex = hex::encode(xt_2.encode());
 	_xthex.insert_str(0, "0x");
@@ -202,12 +213,13 @@ fn main() {
 	println!("");
 }
 
-pub fn compose_extrinsic_substratee_forward(sender: &str, payload_encrypted: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn compose_extrinsic_substratee_forward(sender: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
 	let signer = Sr25519::pair_from_suri(sender, Some(""));
 	let era = Era::immortal();
 
-	let payload_encrypted_str = payload_encrypted.as_bytes().to_vec();
+	// let payload_encrypted_str = payload_encrypted.as_bytes().to_vec();
+	let payload_encrypted_str = payload_encrypted;
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::forward(payload_encrypted_str));
 
 	let index = Index::from(index.low_u64());
