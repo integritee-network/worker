@@ -189,7 +189,7 @@ fn main() {
 	// generate extrinsic
 	// FIXME: the payload must be encrypted with the public key of the TEE
 	let payload_encrypted: Hash = hex!["1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"].into();
-	let xt_2 = compose_extrinsic("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
+	let xt_2 = compose_extrinsic_substratee_forward("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 
 	println!("");
 	// println!("extrinsic: {:?}", xt_2);
@@ -202,13 +202,13 @@ fn main() {
 	println!("");
 }
 
-pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn compose_extrinsic_substratee_forward(sender: &str, payload_encrypted: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
 	let signer = Sr25519::pair_from_suri(sender, Some(""));
 	let era = Era::immortal();
 
-	let call_hash_str = call_hash.as_bytes().to_vec();
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::forward(call_hash_str));
+	let payload_encrypted_str = payload_encrypted.as_bytes().to_vec();
+	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::forward(payload_encrypted_str));
 
 	let index = Index::from(index.low_u64());
 	let raw_payload = (Compact(index), function, era, genesis_hash);
