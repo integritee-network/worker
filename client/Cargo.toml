@@ -25,6 +25,6 @@ substrate_bip39 = { package="substrate-bip39", git = "https://github.com/parityt
 
 #node-runtime = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 # substratee-node-runtime = { git = "https://github.com/scs/substraTEE-node.git" }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", features=["no_global_allocator"] }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", branch="marcel-ed25519", features=["no_global_allocator"] }
 primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}

@@ -24,41 +24,25 @@ extern crate hex_literal;
 extern crate sgx_crypto_helper;
 
 use std::fs;
-use substrate_keyring::AccountKeyring;
-use node_primitives::{
-	Index,
-	Hash,
-	AccountId,
-};
 use primitive_types::U256;
-use substrate_api_client::{
-	Api,
-	hexstr_to_u256,
-	extrinsic::transfer
-};
-use runtime_primitives::{
-	generic::Era,
-};
+use node_primitives::{Index,Hash,Balance};
+use parity_codec::{Encode, Compact};
+use runtime_primitives::generic::Era;
+use substrate_api_client::{Api,hexstr_to_u256};
 use primitives::{
-	// ed25519,
-	sr25519,
+	ed25519,
 	hexdisplay::HexDisplay,
 	Pair,
 	crypto::Ss58Codec,
 	blake2_256,
 };
-use parity_codec::{Encode, Compact};
-use bip39::{Mnemonic, Language, MnemonicType};
-use schnorrkel::keys::MiniSecretKey;
-use rand::{RngCore, rngs::OsRng};
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
 	SubstraTEEProxyCall,
+	BalancesCall,
 };
-use substrate_bip39::mini_secret_from_entropy;
-use hex_literal::hex;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
 #[macro_use]
 extern crate clap;
@@ -66,94 +50,40 @@ use clap::App;
 
 pub static RSA_PUB_KEY: &'static str = "../bin/rsa_pubkey.txt";
 
-trait Crypto {
-	type Seed: AsRef<[u8]> + AsMut<[u8]> + Sized + Default;
-	type Pair: Pair;
-	fn generate_phrase() -> String {
-		Mnemonic::new(MnemonicType::Words12, Language::English).phrase().to_owned()
-	}
-	fn generate_seed() -> Self::Seed {
-		let mut seed: Self::Seed = Default::default();
-		OsRng::new().unwrap().fill_bytes(seed.as_mut());
-		seed
-	}
-	fn seed_from_phrase(phrase: &str, password: Option<&str>) -> Self::Seed;
-	fn pair_from_seed(seed: &Self::Seed) -> Self::Pair;
-	fn pair_from_suri(phrase: &str, password: Option<&str>) -> Self::Pair {
-		Self::pair_from_seed(&Self::seed_from_phrase(phrase, password))
-	}
-	fn ss58_from_pair(pair: &Self::Pair) -> String;
-	fn public_from_pair(pair: &Self::Pair) -> Vec<u8>;
-	fn seed_from_pair(_pair: &Self::Pair) -> Option<&Self::Seed> { None }
-	fn print_from_seed(seed: &Self::Seed) {
-		let pair = Self::pair_from_seed(seed);
-		println!("Seed 0x{} is account:\n  Public key (hex): 0x{}\n  Address (SS58): {}",
-			HexDisplay::from(&seed.as_ref()),
-			HexDisplay::from(&Self::public_from_pair(&pair)),
-			Self::ss58_from_pair(&pair)
-		);
-	}
-	fn print_from_phrase(phrase: &str, password: Option<&str>) {
-		let seed = Self::seed_from_phrase(phrase, password);
-		let pair = Self::pair_from_seed(&seed);
-		println!("Phrase `{}` is account:\n  Seed: 0x{}\n  Public key (hex): 0x{}\n  Address (SS58): {}",
-			phrase,
-			HexDisplay::from(&seed.as_ref()),
-			HexDisplay::from(&Self::public_from_pair(&pair)),
-			Self::ss58_from_pair(&pair)
-		);
-	}
-	fn print_from_uri(uri: &str, password: Option<&str>) where <Self::Pair as Pair>::Public: Sized + Ss58Codec + AsRef<[u8]> {
-		if let Ok(pair) = Self::Pair::from_string(uri, password) {
-			let seed_text = Self::seed_from_pair(&pair)
-				.map_or_else(Default::default, |s| format!("\n  Seed: 0x{}", HexDisplay::from(&s.as_ref())));
-			println!("Secret Key URI `{}` is account:{}\n  Public key (hex): 0x{}\n  Address (SS58): {}",
-				uri,
-				seed_text,
-				HexDisplay::from(&Self::public_from_pair(&pair)),
-				Self::ss58_from_pair(&pair)
-			);
-		}
-		if let Ok(public) = <Self::Pair as Pair>::Public::from_string(uri) {
-			println!("Public Key URI `{}` is account:\n  Public key (hex): 0x{}\n  Address (SS58): {}",
-				uri,
-				HexDisplay::from(&public.as_ref()),
-				public.to_ss58check()
-			);
-		}
-	}
+fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
+	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
 }
 
-struct Sr25519;
+// function to get the free balance of a user
+fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
+	println!("");
+	println!("[>] Get {}'s free balance", user);
 
-impl Crypto for Sr25519 {
-	type Seed = [u8; 32];
-	type Pair = sr25519::Pair;
+	let accountid = ed25519::Public::from_string(user).ok().or_else(||
+			ed25519::Pair::from_string(user, Some("")).ok().map(|p| p.public())
+		).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
 
-	fn seed_from_phrase(phrase: &str, password: Option<&str>) -> Self::Seed {
-		mini_secret_from_entropy(
-			Mnemonic::from_phrase(phrase, Language::English)
-				.unwrap_or_else(|_|
-					panic!("Phrase is not a valid BIP-39 phrase: \n    {}", phrase)
-				)
-				.entropy(),
-			password.unwrap_or("")
-		)
-			.expect("32 bytes can always build a key; qed")
-			.to_bytes()
-	}
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(accountid.encode())).unwrap();
+    let result = hexstr_to_u256(result_str);
 
-	fn pair_from_suri(suri: &str, password: Option<&str>) -> Self::Pair {
-		sr25519::Pair::from_string(suri, password).expect("Invalid phrase")
-	}
+	println!("[<] {}'s free balance is {}", user, result);
+	println!("");
+}
 
-	fn pair_from_seed(seed: &Self::Seed) -> Self::Pair {
-		MiniSecretKey::from_bytes(seed)
-			.expect("32 bytes can always build a key; qed")
-			.into()
-	}
-	fn ss58_from_pair(pair: &Self::Pair) -> String { pair.public().to_ss58check() }
-	fn public_from_pair(pair: &Self::Pair) -> Vec<u8> { (&pair.public().0[..]).to_owned() }
+// function to get the account nonce of a user
+fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
+	println!("");
+	println!("[>] Get {}'s account nonce", user);
+
+	let accountid = ed25519::Public::from_string(user).ok().or_else(||
+			ed25519::Pair::from_string(user, Some("")).ok().map(|p| p.public())
+		).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
+
+	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
+	let nonce = hexstr_to_u256(result_str);
+	println!("[<] {}'s account nonce is {}", user, nonce);
+	println!("");
+	nonce
 }
 
 fn main() {
@@ -161,35 +91,24 @@ fn main() {
 	let matches = App::from_yaml(yml).get_matches();
 	let port = matches.value_of("port").unwrap_or("9944");
 
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+	let mut api: substrate_api_client::Api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
-	// get Alice's AccountNonce
-	let accountid = AccountId::from(AccountKeyring::Alice);
-	let mut result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	let mut nonce = hexstr_to_u256(result_str);
-	println!("");
-	println!("[+] Alice's account nonce is {}", nonce);
+	// get Alice's free balance
+	get_free_balance(&api, "//Alice");
 
-	// fund the account of the TEE (= Bob)
-	let transfer_amount = 1000;
-	println!("");
-	println!("[+] Transfer {} to Bob", transfer_amount);
-	let xt_1 = transfer("//Alice", "//Bob", U256::from(transfer_amount), nonce, api.genesis_hash.unwrap());
-	let mut _xthex = hex::encode(xt_1.encode());
-	_xthex.insert_str(0, "0x");
-	// println!("extrinsic: {:?}", xt_1);
+	// get Alice's account nonce
+	let mut nonce = get_account_nonce(&api, "//Alice");
 
-	// send and watch extrinsic until finalized
-	let mut tx_hash = api.send_extrinsic(_xthex).unwrap();
-	println!("");
-	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	// fund the account of Alice
+	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash.unwrap());
+
+	// transfer from Alice to Bob (= TEE)
+	nonce = get_account_nonce(&api, "//Alice");
+	transfer_amount(&api, "//Alice", "//Bob", U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// get the new nonce of Alice
-	result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	nonce = hexstr_to_u256(result_str);
-	println!("");
-	println!("[+] Alice's new account nonce is {}", nonce);
+	nonce = get_account_nonce(&api, "//Alice");
 
 	// get the public key of the TEE
 	let data = fs::read_to_string(RSA_PUB_KEY).expect("Unable to open rsa pubkey file");
@@ -200,22 +119,118 @@ fn main() {
 	let mut payload_encrypted: Vec<u8> = Vec::new();
 	let plaintext = b"Alice,42".to_vec();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	let xt_2 = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
+	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 
 	// println!("");
-	// println!("extrinsic: {:?}", xt_2);
-	_xthex = hex::encode(xt_2.encode());
+	// println!("extrinsic: {:?}", xt);
+	let mut _xthex = hex::encode(xt.encode());
 	_xthex.insert_str(0, "0x");
 
 	// send and watch extrinsic until finalized
-	tx_hash = api.send_extrinsic(_xthex).unwrap();
+	let tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("");
 }
 
+fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
+	println!("");
+	println!("[>] Fund {}'s account with {}", user, amount);
+
+	// build the extrinsic for funding
+	let xt = extrinsic_fund(user, user, amount, amount, nonce, genesis_hash);
+
+	// encode as hex
+	let mut xthex = hex::encode(xt.encode());
+	xthex.insert_str(0, "0x");
+
+	// send the extrinsic
+	let tx_hash = api.send_extrinsic(xthex).unwrap();
+	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("");
+}
+
+// function to compose the extrinsic for a Balance::set_balance call
+fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let signer = pair_from_suri(from, Some(""));
+
+	let to = ed25519::Public::from_string(to).ok().or_else(||
+			ed25519::Pair::from_string(to, Some("")).ok().map(|p| p.public())
+		).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
+
+	let era = Era::immortal();
+	let index = Index::from(index.low_u64());
+
+	let function = Call::Balances(BalancesCall::set_balance(to.into(), free, reserved));
+	let raw_payload = (Compact(index), function, era, genesis_hash);
+
+	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+		signer.sign(&blake2_256(payload)[..])
+	} else {
+		println!("signing {}", HexDisplay::from(&payload));
+		signer.sign(payload)
+	});
+
+	UncheckedExtrinsic::new_signed(
+		index,
+		raw_payload.1,
+		signer.public().into(),
+		signature.into(),
+		era,
+	)
+}
+
+fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: &str, amount: U256, nonce: U256, genesis_hash: Hash) {
+	println!("");
+	println!("[>] Transfer {} from {} to {}", amount, from, to);
+
+	// build the extrinsic for transfer
+	let xt = extrinsic_transfer(from, to, amount, nonce, genesis_hash);
+
+	// encode as hex
+	let mut xthex = hex::encode(xt.encode());
+	xthex.insert_str(0, "0x");
+
+	// send the extrinsic
+	let tx_hash = api.send_extrinsic(xthex).unwrap();
+	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("");
+}
+
+// function to compose the extrinsic for a Balance::transfer call
+fn extrinsic_transfer(from: &str, to: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let signer = pair_from_suri(from, Some(""));
+
+	let to = ed25519::Public::from_string(to).ok().or_else(||
+			ed25519::Pair::from_string(to, Some("")).ok().map(|p| p.public())
+		).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
+
+	let era = Era::immortal();
+	let amount = Balance::from(amount.low_u128());
+	let index = Index::from(index.low_u64());
+
+	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
+	let raw_payload = (Compact(index), function, era, genesis_hash);
+
+	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+		signer.sign(&blake2_256(payload)[..])
+	} else {
+		println!("signing {}", HexDisplay::from(&payload));
+		signer.sign(payload)
+	});
+
+	UncheckedExtrinsic::new_signed(
+		index,
+		raw_payload.1,
+		signer.public().into(),
+		signature.into(),
+		era,
+	)
+}
+
+// function to compose the extrinsic for a SubstraTEEProxy::call_worker call
 pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
-	let signer = Sr25519::pair_from_suri(sender, Some(""));
+	let signer = pair_from_suri(sender, Some(""));
 	let era = Era::immortal();
 
 	// let payload_encrypted_str = payload_encrypted.as_bytes().to_vec();
@@ -244,3 +259,4 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 		era,
 	)
 }
+
