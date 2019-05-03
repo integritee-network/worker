@@ -28,6 +28,8 @@ extern crate parity_codec;
 extern crate substrate_keyring;
 extern crate node_primitives;
 extern crate primitive_types;
+extern crate primitives;
+extern crate system;
 
 mod constants;
 mod utils;
@@ -42,6 +44,15 @@ use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
+
+use primitives::{
+	 ed25519,
+	sr25519,
+	hexdisplay::HexDisplay,
+	Pair,
+	crypto::Ss58Codec,
+	blake2_256,
+};
 
 use substrate_keyring::AccountKeyring;
 use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
@@ -113,36 +124,51 @@ fn worker(port: &str) -> () {
 		.unwrap();
 
 	loop {
-		let event = events_out.recv().unwrap();
-		match &event {
-			my_node_runtime::Event::balances(be) => {
-				println!(">>>>>>>>>> balances event: {:?}", be);
-				match &be {
-					balances::RawEvent::Transfer(transactor, dest, value, fee) => {
-						println!("Transactor: {:?}", transactor);
-						println!("Destination: {:?}", dest);
-						println!("Value: {:?}", value);
-						println!("Fee: {:?}", fee);
-					},
-					_ => {
-						println!("ignoring unsupported balances event");
-					},
-				}
-			},
-			my_node_runtime::Event::substratee_proxy(pe) => {
-				println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
-				match &pe {
-					my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
-						println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
-					},
-					_ => {
-						println!("ignoring unsupported substratee_proxy event");
-					},
+		let event_str = events_out.recv().unwrap();
+
+		let _unhex = hexstr_to_vec(event_str);
+		let mut _er_enc = _unhex.as_slice();
+		let _events = Vec::<system::EventRecord::<my_node_runtime::Event>>::decode(&mut _er_enc);
+		match _events {
+			Some(evts) => {
+				for ev in &evts {
+					println!("decoded: phase {:?} event {:?}", ev.phase, ev.event);
+					match &ev.event {
+						my_node_runtime::Event::balances(be) => {
+							println!(">>>>>>>>>> balances event: {:?}", be);
+							match &be {
+								balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+									println!("Transactor: {:?}", transactor);
+									println!("Destination: {:?}", dest);
+									println!("Value: {:?}", value);
+									println!("Fee: {:?}", fee);
+								},
+								_ => {
+									println!("ignoring unsupported balances event");
+								},
+							}},
+						_ => {
+							println!("ignoring unsupported module event: {:?}", ev.event)
+						},
+						my_node_runtime::Event::substratee_proxy(pe) => {
+							println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
+							match &pe {
+								my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
+									println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
+								},
+								_ => {
+									println!("ignoring unsupported substratee_proxy event");
+								},
+							}
+						}
+						_ => {
+							println!("ignoring unsupported module event: {:?}", ev)
+						},
+					}
+
 				}
 			}
-			_ => {
-				println!("ignoring unsupported module event: {:?}", event)
-			},
+			None => println!("couldn't decode event record list")
 		}
 	}
 
@@ -180,7 +206,10 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
 
 	// get Alice's AccountNonce
-	let accountid = AccountId::from(AccountKeyring::Alice);
+//	let accountid = AccountId::from(AccountKeyring::Alice);
+	let mut accountid = ed25519::Public::from_string("//Alice").ok().or_else(||
+		ed25519::Pair::from_string("//Alice", Some("")).ok().map(|p| p.public()))
+		.expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
 	let nonce_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
 	println!("");
 	println!("[+] Alice's account nonce is {}", nonce_str);
@@ -324,13 +353,15 @@ fn test_pipeline() {
 	let xt = decryt_and_process_payload(enclave.geteid(), ct, &mut retval);
 
 	// send and watch extrinsic until finalized
-	let mut api = Api::new("ws://127.0.0.1:9991".to_string());
+	let mut api = Api::new("ws://127.0.0.1:9977".to_string());
 	api.init();
-	let tx_hash = api.send_extrinsic(xt).unwrap();
 
-	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
-	println!("");
+	let mut _xthex = hex::encode(xt.encode());
+	_xthex.insert_str(0, "0x");
 
+	// send and watch extrinsic until finalized
+	let tx_hash = api.send_extrinsic(_xthex).unwrap();
+	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
 	enclave.destroy();
 	assert_eq!(retval, sgx_status_t::SGX_SUCCESS);
 }

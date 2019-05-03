@@ -376,6 +376,8 @@ pub fn compose_extrinsic(sender: &str, call_hash: &[u8], index: U256, genesis_ha
     // create ed25519 keypair
     let (_privkey, _pubkey) = keypair(&seed);
 
+	let signer = pair_from_suri(&format!("//{}", sender), Some(""));
+
 	let era = Era::immortal();
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
@@ -384,29 +386,35 @@ pub fn compose_extrinsic(sender: &str, call_hash: &[u8], index: U256, genesis_ha
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
         println!("unsupported payload size until blake hashing supports no_std");
-        signature(&[0u8; 64], &_privkey)
+//        signature(&[0u8; 64], &_privkey)
+		pair.sign(call_hash)
     } else {
         //println!("signing {}", HexDisplay::from(&payload));
-        signature(payload, &_privkey)
+		pair.sign(call_hash)
+//        signature(payload, &_privkey)
     });
 
     //FIXME: until node_runtime changes to ed25519, CheckedExtrinsic will expect a sr25519!
     // this should be correct
-    let signerpub = ed25519::Public::unchecked_from(_pubkey);
+//    let signerpub = ed25519::Public::unchecked_from(_pubkey);
     // this is fake
     let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
 
     //FIXME: true ed25519 signature is replaced by fake sr25519 signature here
     let signature_fake =  sr25519::Signature::default();
-    let signature =  ed25519::Signature::from_raw(sign);
+//    let signature =  ed25519::Signature::from_raw(sign);
 
     UncheckedExtrinsic::new_signed(
         index,
         raw_payload.1,
-//        signerpub.into(),
-//        signature.into(),
-		signerpub_fake.into(),
-        signature_fake.into(),
+        signer.public().into(),
+        sign.into(),
+//		signerpub_fake.into(),
+//      signature_fake.into(),
         era,
     )
+}
+
+fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
+	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
 }
