@@ -18,4 +18,5 @@
 // pub const SECRET_KEY_SIZE: usize = 32;
 pub static ENCLAVE_TOKEN: &'static str = "./bin/enclave.token";
 pub static ENCLAVE_FILE: &'static str = "./bin/enclave.signed.so";
+pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
 

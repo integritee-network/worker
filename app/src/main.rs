@@ -30,11 +30,11 @@ mod enclave_api;
 mod init_enclave;
 
 use std::str;
+use std::fs;
 use sgx_types::*;
 use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use constants::*;
-use utils::file_exists;
 use enclave_api::*;
 use init_enclave::init_enclave;
 
@@ -57,6 +57,8 @@ fn main() {
 	} else if matches.is_present("tests"){
 		test_pipeline();
 		test_get_counter();
+	} else if matches.is_present("getpublickey"){
+		get_public_key_tee();
 	} else {
         println!("For options: use --help");
     }
@@ -132,21 +134,21 @@ fn worker(port: &str) -> () {
 
     // ------------------------------------------------------------------------
     // compose an extrinsic with the hash of the initial payload
-    println!("");
-    println!("*** Compose extrinsic");
-    println!("**** TODO");
+    // println!("");
+    // println!("*** Compose extrinsic");
+    // println!("**** TODO");
 
     // ------------------------------------------------------------------------
     // send the extrinsic
-    println!("");
-    println!("*** Send extrinsic");
-    println!("**** TODO");
+    // println!("");
+    // println!("*** Send extrinsic");
+    // println!("**** TODO");
 
     // ------------------------------------------------------------------------
     // destroy the enclave
-    println!("");
-    println!("*** Destroy enclave");
-    enclave.destroy();
+    // println!("");
+    // println!("*** Destroy enclave");
+    // enclave.destroy();
 }
 
 fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t) -> () {
@@ -176,6 +178,56 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 			println!("[-] ECALL Enclave Failed {}!", result.as_str());
 			return;
 		}
+	}
+}
+
+fn get_public_key_tee()
+{
+	println!("");
+	println!("*** Get the public key from the TEE");
+
+	println!("");
+	println!("*** Starting enclave");
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
+			r
+		},
+		Err(x) => {
+			println!("[-] Init Enclave Failed {}!", x);
+			return;
+		},
+	};
+
+	// define the size
+	let pubkey_size = 8192;
+	let mut pubkey = vec![0u8; pubkey_size as usize];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_rsa_encryption_pubkey(enclave.geteid(),
+								  &mut retval,
+								  pubkey.as_mut_ptr(),
+								  pubkey_size
+		)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			println!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}
+
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+
+	println!("[+] RSA3072 public key from TEE = {:?}", rsa_pubkey);
+
+	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
+	match fs::write(RSA_PUB_KEY, rsa_pubkey_json) {
+		Err(x) => { println!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
+		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}
 }
 
@@ -252,14 +304,11 @@ fn get_test_ciphertext(eid: sgx_enclave_id_t, retval: &mut sgx_status_t) -> Vec<
 //			return;
 		}
 	}
-	let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
-	// we actually should only get the pubkey here
-	//let rsa_pubkey = rsa_keypair.to_pubkey();
-	//self, plaintext: &[u8], ciphertext: &mut Vec<u8>
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
 
 	let mut ciphertext : Vec<u8> = Vec::new();
 	let plaintext = b"Alice,42".to_vec();
-	rsa_keypair.encrypt_buffer(&plaintext, &mut ciphertext).unwrap();
+	rsa_pubkey.encrypt_buffer(&plaintext, &mut ciphertext).unwrap();
 	println!("ciphertext = {:?}", ciphertext);
 	return ciphertext;
 }

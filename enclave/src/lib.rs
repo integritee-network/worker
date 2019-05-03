@@ -74,7 +74,7 @@ use std::string::ToString;
 use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 
 type Index = u64;
 
@@ -98,7 +98,7 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 */
 
 #[no_mangle]
-pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
@@ -114,33 +114,38 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: * mut u8, pubkey_size: u32) 
 		return retval;
 	}
 
-	//restore RSA key pair from file
+	// restore RSA key pair from file
 	let mut keyvec: Vec<u8> = Vec::new();
 	retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
-		return retval;
+        println!("[Enclave] read_file '{}' failed", RSA3072_SEALED_KEY_FILE);
+        return retval;
 	}
 
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-	//println!("[Enclave] key_json = {}", key_json_str);
+	// println!("[Enclave] key_json = {}", key_json_str);
 	let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
+
+    let rsa_pubkey = rsa_keypair.export_pubkey().unwrap();
+    // println!("rsa_pubkey = {:?}", rsa_pubkey);
+
+    let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
+		Ok(k) => k,
+		Err(x) => {
+			println!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
+    // println!("rsa_pubkey_json = {:?}", rsa_pubkey_json);
 
 	// now write pubkey back to caller
 	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
 
-	let keypair_json = match serde_json::to_string(&rsa_keypair) {
-		Ok(k) => k,
-		Err(x) => {
-			println!("[Enclave] can't serialize rsa_keypair {:?} {}", rsa_keypair, x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
-	};
-	println!("[Enclave] len pubkey_slice: {}", pubkey_slice.len());
-	println!("[Enclave] len keypair_json: {}", keypair_json.len());
-
-	let (left, right) = pubkey_slice.split_at_mut(keypair_json.len());
-	left.clone_from_slice(keypair_json.as_bytes());
+    // split the pubkey_slice at the length of the rsa_pubkey_json
+    // and fill the right side with whitespace so that the json can be decoded later on
+	let (left, right) = pubkey_slice.split_at_mut(rsa_pubkey_json.len());
+	left.clone_from_slice(rsa_pubkey_json.as_bytes());
 	right.iter_mut().for_each(|x| *x = 0x20);
 
 	sgx_status_t::SGX_SUCCESS

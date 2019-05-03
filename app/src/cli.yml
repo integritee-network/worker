@@ -89,6 +89,9 @@ subcommands:
         about: Run tests that interact with enclave.
         version: "0.1"
         author: "Christian Langenbacher"
+    - getpublickey:
+        about: Get the public key from the TEE
+        version: "0.1"
 
     # The name of this subcommand will be 'subcmd' which can be accessed in your
     # Rust code later
