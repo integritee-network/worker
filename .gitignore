@@ -16,6 +16,9 @@ bin/app
 # sealed data
 bin/*.bin
 
+# public RSA key
+bin/rsa_pubkey.txt
+
 # VS Code settings
 .vscode
 
