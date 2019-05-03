@@ -164,7 +164,7 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 		Ok(_k) => (),
 		Err(x) => {
 			println!("[Enclave] Keyfile not found, creating new! {}", x);
-			retval = create_sealed_ed25519_keypair();
+			retval = create_sealed_ed25519_seed();
 		},
 	}
 
@@ -174,21 +174,22 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 	}
 
 	//restore ecc key pair from file
-	let mut keyvec: Vec<u8> = Vec::new();
-	retval = utils::read_file(&mut keyvec, ED25519_SEALED_KEY_FILE);
+	let mut seed_vec: Vec<u8> = Vec::new();
+	retval = utils::read_file(&mut seed_vec, ED25519_SEALED_KEY_FILE);
 	if retval != sgx_status_t::SGX_SUCCESS {
 		return retval;
 	}
 
-	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-	println!("[Enclave] key_json = {}", key_json_str);
+	let (_privkey, _pubkey) = keypair(&seed_vec);
+    println!("[Enclave] restored ecc pubkey: {:?}", _pubkey.to_base58());
 
-	// Fixme: Here ends the wip
+	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
+	pubkey_slice.clone_from_slice(&_pubkey);
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_sealed_ed25519_keypair() -> sgx_status_t {
+fn create_sealed_ed25519_seed() -> sgx_status_t {
     let mut seed = [0u8; 32];
     let mut rand = match StdRng::new() {
         Ok(rng) => rng,
@@ -196,12 +197,7 @@ fn create_sealed_ed25519_keypair() -> sgx_status_t {
     };
     rand.fill_bytes(&mut seed);
 
-    // create ed25519 keypair
-    let (_privkey, _pubkey) = keypair(&seed);
-    println!("[Enclave] generated seed pubkey: {:?}", _pubkey.to_base58());
-
-    let seed_json = serde_json::to_string(&seed).unwrap();
-	utils::write_file(seed_json.as_bytes(), ED25519_SEALED_KEY_FILE)
+	utils::write_file(&seed, ED25519_SEALED_KEY_FILE)
 }
 
 
@@ -218,10 +214,11 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
     let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
 	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
 	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
+	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
 
 	//restore RSA key pair from file
     let mut keyvec: Vec<u8> = Vec::new();
-	let retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
+	let mut retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
 		return retval;
@@ -238,9 +235,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
     let decrypted_string = String::from_utf8(plaintext).unwrap();
     println!("[Enclave] Decrypted data = {}", decrypted_string);
 
-    let mut retval;
     let mut state_vec: Vec<u8> = Vec::new();
-
 	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
@@ -264,14 +259,13 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
-	// Fixme: ciphertext is bigger 256 -> throwing error
 	let call_hash = "0x01234";
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let ex = compose_extrinsic(v[0], call_hash.as_bytes(), nonce, hash_slice);
+	// Fixme: ciphertext is bigger 256 -> throwing error
 //	let ex = compose_extrinsic(v[0], ciphertext_slice, nonce, hash_slice);
 
 	let encoded = ex.encode();
-	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
 	extrinsic_slize.clone_from_slice(&encoded);
     retval
 }
@@ -404,11 +398,14 @@ pub fn compose_extrinsic(sender: &str, call_hash: &[u8], index: U256, genesis_ha
 
     //FIXME: true ed25519 signature is replaced by fake sr25519 signature here
     let signature_fake =  sr25519::Signature::default();
+    let signature =  ed25519::Signature::from_raw(sign);
 
     UncheckedExtrinsic::new_signed(
         index,
         raw_payload.1,
-        signerpub_fake.into(),
+//        signerpub.into(),
+//        signature.into(),
+		signerpub_fake.into(),
         signature_fake.into(),
         era,
     )
