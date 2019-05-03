@@ -24,7 +24,6 @@ extern crate hex_literal;
 
 use substrate_keyring::AccountKeyring;
 use node_primitives::{
-	Balance,
 	Index,
 	Hash,
 	AccountId,
@@ -33,13 +32,13 @@ use primitive_types::U256;
 use substrate_api_client::{
 	Api,
 	hexstr_to_u256,
+	extrinsic::transfer
 };
 use runtime_primitives::{
 	generic::Era,
-	AnySignature,
 };
 use primitives::{
-	ed25519,
+	// ed25519,
 	sr25519,
 	hexdisplay::HexDisplay,
 	Pair,
@@ -52,9 +51,7 @@ use schnorrkel::keys::MiniSecretKey;
 use rand::{RngCore, rngs::OsRng};
 use my_node_runtime::{
 	UncheckedExtrinsic,
-	CheckedExtrinsic,
 	Call,
-	BalancesCall,
 	SubstraTEEProxyCall,
 };
 use substrate_bip39::mini_secret_from_entropy;
@@ -157,28 +154,52 @@ impl Crypto for Sr25519 {
 fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
-	let mut port = matches.value_of("port").unwrap_or("9944");
+	let port = matches.value_of("port").unwrap_or("9944");
 
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
 	// get Alice's AccountNonce
 	let accountid = AccountId::from(AccountKeyring::Alice);
-	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	let nonce = hexstr_to_u256(result_str);
-	println!("[+] Alice's Account Nonce is {}", nonce);
+	let mut result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
+	let mut nonce = hexstr_to_u256(result_str);
+	println!("");
+	println!("[+] Alice's account nonce is {}", nonce);
+
+	// fund the account of the TEE (= Bob)
+	let transfer_amount = 1000;
+	println!("");
+	println!("[+] Transfer {} to Bob", transfer_amount);
+	let xt_1 = transfer("//Alice", "//Bob", U256::from(transfer_amount), nonce, api.genesis_hash.unwrap());
+	let mut _xthex = hex::encode(xt_1.encode());
+	_xthex.insert_str(0, "0x");
+	// println!("extrinsic: {:?}", xt_1);
+
+	// send and watch extrinsic until finalized
+	let mut tx_hash = api.send_extrinsic(_xthex).unwrap();
+	println!("");
+	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+
+	// get the new nonce of Alice
+	result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
+	nonce = hexstr_to_u256(result_str);
+	println!("");
+	println!("[+] Alice's new account nonce is {}", nonce);
 
 	// generate extrinsic
 	// FIXME: the payload must be encrypted with the public key of the TEE
 	let payload_encrypted: Hash = hex!["1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"].into();
-	let xt = compose_extrinsic("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
+	let xt_2 = compose_extrinsic("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 
-	println!("extrinsic: {:?}", xt);
-	let mut _xthex = hex::encode(xt.encode());
+	println!("");
+	// println!("extrinsic: {:?}", xt_2);
+	_xthex = hex::encode(xt_2.encode());
 	_xthex.insert_str(0, "0x");
+
 	// send and watch extrinsic until finalized
-	let tx_hash = api.send_extrinsic(_xthex).unwrap();
+	tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("");
 }
 
 pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
@@ -195,6 +216,7 @@ pub fn compose_extrinsic(sender: &str, call_hash: Hash, index: U256, genesis_has
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
 		signer.sign(&blake2_256(payload)[..])
 	} else {
+		println!("");
 		println!("signing {}", HexDisplay::from(&payload));
 		signer.sign(payload)
 	});
