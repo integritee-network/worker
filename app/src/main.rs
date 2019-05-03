@@ -130,9 +130,6 @@ fn worker(port: &str) -> () {
 			my_node_runtime::Event::substratee_proxy(pe) => {
 				println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
 				match &pe {
-					my_node_runtime::substratee_proxy::RawEvent::CounterUpdated(sender) => {
-						()
-					},
 					my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
 						println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
 					},
