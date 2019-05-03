@@ -200,7 +200,7 @@ fn main() {
 	let mut payload_encrypted: Vec<u8> = Vec::new();
 	let plaintext = b"Alice,42".to_vec();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	let xt_2 = compose_extrinsic_substratee_forward("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
+	let xt_2 = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 
 	// println!("");
 	// println!("extrinsic: {:?}", xt_2);
@@ -213,14 +213,14 @@ fn main() {
 	println!("");
 }
 
-pub fn compose_extrinsic_substratee_forward(sender: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 
 	let signer = Sr25519::pair_from_suri(sender, Some(""));
 	let era = Era::immortal();
 
 	// let payload_encrypted_str = payload_encrypted.as_bytes().to_vec();
 	let payload_encrypted_str = payload_encrypted;
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::forward(payload_encrypted_str));
+	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::call_worker(payload_encrypted_str));
 
 	let index = Index::from(index.low_u64());
 	let raw_payload = (Compact(index), function, era, genesis_hash);
