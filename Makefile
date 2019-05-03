@@ -27,6 +27,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+########################## WARNING ###########################
+# THIS FILE CONTAINS MODIFICATIONS FOR THE SUBSTRATEE-WORKER #
+# DON'T OVERWRITE THE CONTENT BLINDLY                        #
+##############################################################
+
 ######## Update SGX SDK ########
 include UpdateRustSGXSDK.mk
 
@@ -89,6 +94,18 @@ App_Rust_Path := ./app/target/release
 App_Enclave_u_Object :=app/libEnclave_u.a
 App_Name := bin/app
 
+######## SubstraTEE-client Settings ########
+Client_SRC_Path := client
+Client_Rust_Flags := --release
+Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
+Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
+Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
+
+Client_Rust_Path := ./$(Client_SRC_Path)/target/release
+Client_Path := bin
+Client_Binary := substratee_client_example
+Client_Name := $(Client_Path)/$(Client_Binary)
+
 ######## Enclave Settings ########
 
 ifneq ($(SGX_MODE), HW)
@@ -121,7 +138,7 @@ RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
 .PHONY: all
-all: $(App_Name) $(Signed_RustEnclave_Name)
+all: $(Client_Name) $(App_Name) $(Signed_RustEnclave_Name)
 
 ######## EDL Objects ########
 
@@ -144,6 +161,13 @@ $(App_Name): $(App_Enclave_u_Object) $(App_SRC_Files)
 	@cd app && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(App_Rust_Path)/app ./bin
+
+######## Client Objects ########
+
+$(Client_Name): $(Client_SRC_Files)
+	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
+	@echo "Cargo  =>  $@"
+	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 
 ######## Enclave Objects ########
 
@@ -170,7 +194,7 @@ compiler-rt:
 
 .PHONY: clean
 clean:
-	@rm -f $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a bin/*.bin
+	@rm -f $(Client_Name) $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a bin/*.bin
 	@cd enclave && cargo clean && rm -f Cargo.lock
 	@cd app && cargo clean && rm -f Cargo.lock
 
