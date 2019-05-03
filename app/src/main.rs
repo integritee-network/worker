@@ -69,11 +69,13 @@ fn main() {
 		println!("Worker listening on port {}", port);
 		worker(port);
 		println!("* Worker finished");
-	} else if matches.is_present("tests"){
+	} else if matches.is_present("tests") {
 		test_pipeline();
-		test_get_counter();
-	} else if matches.is_present("getpublickey"){
+//		test_get_counter();
+	} else if matches.is_present("getpublickey") {
 		get_public_key_tee();
+	} else if matches.is_present("getsignkey") {
+		get_signing_key_tee();
 	} else {
         println!("For options: use --help");
     }
@@ -130,9 +132,6 @@ fn worker(port: &str) -> () {
 			my_node_runtime::Event::substratee_proxy(pe) => {
 				println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
 				match &pe {
-					my_node_runtime::substratee_proxy::RawEvent::CounterUpdated(sender) => {
-						()
-					},
 					my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
 						println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
 					},
@@ -182,7 +181,7 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 
 	// get Alice's AccountNonce
 	let accountid = AccountId::from(AccountKeyring::Alice);
-	let mut nonce_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
+	let nonce_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
 	println!("");
 	println!("[+] Alice's account nonce is {}", nonce_str);
 	let nonce_u = hexstr_to_u256(nonce_str);
@@ -261,6 +260,50 @@ fn get_public_key_tee()
 		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}
 }
+
+fn get_signing_key_tee() {
+	println!("");
+	println!("*** Get the signing key from the TEE");
+
+	println!("");
+	println!("*** Starting enclave");
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
+			r
+		},
+		Err(x) => {
+			println!("[-] Init Enclave Failed {}!", x);
+			return;
+		},
+	};
+
+	// define the size
+	let pubkey_size = 32;
+	let mut pubkey = vec![0u8; pubkey_size as usize];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_ecc_signing_pubkey(enclave.geteid(),
+								  &mut retval,
+								  pubkey.as_mut_ptr(),
+								  pubkey_size
+		)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			println!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}
+
+	// Fixme: create string, and write to file
+	println!("[+] ECC public key from TEE = {:?}", &pubkey);
+
+}
+
 
 fn test_pipeline() {
 	println!("");

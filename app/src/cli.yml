@@ -92,6 +92,9 @@ subcommands:
     - getpublickey:
         about: Get the public key from the TEE
         version: "0.1"
+    - getsignkey:
+        about: get the public signing key from the TEE
+        version: "0.1"
 
     # The name of this subcommand will be 'subcmd' which can be accessed in your
     # Rust code later
