@@ -12,6 +12,7 @@ Cargo.lock
 # binaries
 bin/*.so
 bin/app
+bin/substratee_client_example
 
 # sealed data
 bin/*.bin
