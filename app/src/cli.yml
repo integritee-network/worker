@@ -10,18 +10,19 @@ settings:
 
 # All subcommands must be listed in the 'subcommand:' object, where the key to
 # the list is the name of the subcommand, and all settings for that command are
-# are part of a Hash object
+# are part of a Hash
+args:
+    - port:
+        short: p
+        long: ws-port
+        help: Set the websocket port to listen for substrate events
+        takes_value: true
+
 subcommands:
     - worker:
         about: Start the substraTEE-worker
         version: "0.1"
         author: Marcel Frei
-        args:
-            - port:
-                short: p
-                long: ws-port
-                help: Set the websocket port to listen for substrate events
-                takes_value: true
     - tests:
         about: Run tests that interact with enclave.
         version: "0.1"

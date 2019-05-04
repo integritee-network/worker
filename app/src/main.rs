@@ -73,15 +73,16 @@ fn main() {
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
+	let port = matches.value_of("port").unwrap_or("9944");
+	println!("Intercating with port {}", port);
+
     if let Some(matches) = matches.subcommand_matches("worker") {
 		println!("* Starting substraTEE-worker");
 		println!("");
-		let port = matches.value_of("port").unwrap_or("9944");
-		println!("Worker listening on port {}", port);
 		worker(port);
 		println!("* Worker finished");
-	} else if matches.is_present("tests") {
-		test_pipeline();
+	} else if let Some(matches) = matches.subcommand_matches("tests") {
+		test_pipeline(port);
 //		test_get_counter();
 	} else if matches.is_present("getpublickey") {
 		get_public_key_tee();
@@ -175,7 +176,7 @@ fn worker(port: &str) -> () {
 
 // only used for testing purposes
 // FIXME: move to dedicated testing file
-fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t) -> UncheckedExtrinsic {
+fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str) -> UncheckedExtrinsic {
 	// encoded message 'b"Alice, 42"'
 	println!("");
 	println!("*** Decrypt and process the payload");
@@ -185,7 +186,7 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 	let extrinsic_size = 112;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
 
-	let mut api = Api::new(format!("ws://127.0.0.1:9991"));
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
 
@@ -318,7 +319,7 @@ fn get_signing_key_tee() {
 }
 
 
-fn test_pipeline() {
+fn test_pipeline(port: &str) {
 	println!("");
 	println!("*** Test Pipeline");
 	let enclave = match init_enclave() {
@@ -334,10 +335,10 @@ fn test_pipeline() {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let mut ct = get_test_ciphertext(enclave.geteid(), &mut retval);
-	let xt = decryt_and_process_payload(enclave.geteid(), ct, &mut retval);
+	let xt = decryt_and_process_payload(enclave.geteid(), ct, &mut retval, port);
 
 	// send and watch extrinsic until finalized
-	let mut api = Api::new("ws://127.0.0.1:9977".to_string());
+	let mut api = Api::new(format!("ws://127.0.0.1:{}",port));
 	api.init();
 
 	let mut _xthex = hex::encode(xt.encode());
