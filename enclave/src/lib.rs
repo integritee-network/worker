@@ -173,20 +173,20 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 		return retval;
 	}
 
-	//restore ecc key pair from file
-	let mut seed_vec: Vec<u8> = Vec::new();
-	retval = utils::read_file(&mut seed_vec, ED25519_SEALED_KEY_FILE);
-	if retval != sgx_status_t::SGX_SUCCESS {
-		return retval;
-	}
-
-	let (_privkey, _pubkey) = keypair(&seed_vec);
-    println!("[Enclave] restored ecc pubkey: {:?}", _pubkey.to_base58());
+	let _seed = _get_ecc_seed_file(&mut retval);
+	let (_privkey, _pubkey) = keypair(&_seed);
+	println!("[Enclave] restored ecc pubkey: {:?}", _pubkey.to_base58());
 
 	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
 	pubkey_slice.clone_from_slice(&_pubkey);
 
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn _get_ecc_seed_file(status: &mut sgx_status_t) -> (Vec<u8>) {
+	let mut seed_vec: Vec<u8> = Vec::new();
+	*status = utils::read_file(&mut seed_vec, ED25519_SEALED_KEY_FILE);
+	seed_vec
 }
 
 fn create_sealed_ed25519_seed() -> sgx_status_t {
@@ -261,8 +261,9 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 
 	let call_hash = "0x01234";
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
-	let ex = compose_extrinsic(v[0], call_hash.as_bytes(), nonce, hash_slice);
-	// Fixme: ciphertext is bigger 256 -> throwing error
+	let _seed = _get_ecc_seed_file(&mut retval);
+
+	let ex = compose_extrinsic(_seed, call_hash.as_bytes(), nonce, hash_slice);
 //	let ex = compose_extrinsic(v[0], ciphertext_slice, nonce, hash_slice);
 
 	let encoded = ex.encode();
@@ -367,16 +368,13 @@ fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_
 	}
 }
 
-pub fn compose_extrinsic(sender: &str, call_hash: &[u8], index: U256, genesis_hash: &[u8]) -> UncheckedExtrinsic {
 
-	//FIXME: don't generate new keypair, use the one supplied as argument
-    let mut seed = [0u8; 32];
-    let mut rand = StdRng::new().unwrap();
-    rand.fill_bytes(&mut seed);
-    // create ed25519 keypair
-    let (_privkey, _pubkey) = keypair(&seed);
+pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_hash: &[u8]) -> UncheckedExtrinsic {
 
-	let signer = pair_from_suri(&format!("//{}", sender), Some(""));
+	// Fixme: Cannot use primitives::ed25519::{Pair, Public} as they are not no_std. I tried to create the enclave account
+	// from the our client, but the client is not working atm? throws an unwrap error in send_extrinsic in substrate-api-client
+
+	let (_privkey, _pubkey) = keypair(&seed);
 
 	let era = Era::immortal();
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
@@ -386,35 +384,29 @@ pub fn compose_extrinsic(sender: &str, call_hash: &[u8], index: U256, genesis_ha
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
         println!("unsupported payload size until blake hashing supports no_std");
-//        signature(&[0u8; 64], &_privkey)
-		pair.sign(call_hash)
+        signature(&[0u8; 64], &_privkey)
     } else {
         //println!("signing {}", HexDisplay::from(&payload));
-		pair.sign(call_hash)
-//        signature(payload, &_privkey)
+        signature(payload, &_privkey)
     });
 
     //FIXME: until node_runtime changes to ed25519, CheckedExtrinsic will expect a sr25519!
     // this should be correct
-//    let signerpub = ed25519::Public::unchecked_from(_pubkey);
-    // this is fake
-    let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
+	let signerpub = ed25519::Public::unchecked_from(_pubkey);
+	let signature =  ed25519::Signature::from_raw(sign);
 
-    //FIXME: true ed25519 signature is replaced by fake sr25519 signature here
-    let signature_fake =  sr25519::Signature::default();
-//    let signature =  ed25519::Signature::from_raw(sign);
+	//FIXME: true ed25519 signature is replaced by fake sr25519 signature here
+//    let signature_fake =  sr25519::Signature::default();
+	let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
 
     UncheckedExtrinsic::new_signed(
         index,
         raw_payload.1,
-        signer.public().into(),
-        sign.into(),
+        signerpub.into(),
+        signature,
 //		signerpub_fake.into(),
 //      signature_fake.into(),
         era,
     )
 }
 
-fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
-	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
-}

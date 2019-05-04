@@ -39,7 +39,7 @@ rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", br
 #only listed to get no_panic_handler and no_oom  features in
 runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_panic_handler", "no_oom"]}
 
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
 runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
 #my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
 my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] , branch="marcel-ed25519" }
