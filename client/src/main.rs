@@ -24,23 +24,26 @@ extern crate hex_literal;
 extern crate sgx_crypto_helper;
 
 use std::fs;
+use my_node_runtime::{
+	UncheckedExtrinsic,
+	Call,
+	SubstraTEEProxyCall,
+	BalancesCall,
+	Hash,
+};
+
 use primitive_types::U256;
-use node_primitives::{Index,Hash,Balance};
+use node_primitives::{Index,Balance};
 use parity_codec::{Encode, Compact};
 use runtime_primitives::generic::Era;
 use substrate_api_client::{Api,hexstr_to_u256};
+
 use primitives::{
 	ed25519,
 	hexdisplay::HexDisplay,
 	Pair,
 	crypto::Ss58Codec,
 	blake2_256,
-};
-use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	SubstraTEEProxyCall,
-	BalancesCall,
 };
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 

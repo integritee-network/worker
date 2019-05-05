@@ -15,7 +15,7 @@ serde_json = "1.0"
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", default-features = false }
 my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", features=["no_global_allocator"] }
 
 substrate_bip39 = { package="substrate-bip39", git = "https://github.com/paritytech/substrate-bip39" }
