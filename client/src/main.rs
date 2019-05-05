@@ -90,8 +90,9 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 	let port = matches.value_of("port").unwrap_or("9944");
+	let server = matches.value_of("server").unwrap_or("127.0.0.1");
 
-	let mut api: substrate_api_client::Api = Api::new(format!("ws://127.0.0.1:{}", port));
+	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
 	api.init();
 
 	// get Alice's free balance
@@ -117,7 +118,9 @@ fn main() {
 
 	// generate extrinsic with encrypted payload
 	let mut payload_encrypted: Vec<u8> = Vec::new();
-	let plaintext = b"Alice,42".to_vec();
+	let message = matches.value_of("message").unwrap_or("Alice,42");
+	let plaintext = message.as_bytes();
+	println!("sending message {:?}", plaintext);
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
 	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 

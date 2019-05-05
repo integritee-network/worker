@@ -15,3 +15,14 @@ args:
         long: ws-port
         help: Set the websocket port to connect to substraTEE-node
         takes_value: true
+    - server:
+        short: s
+        long: ws-server
+        help: Set the websocket server address to connect to substraTEE-node
+        takes_value: true
+    - message:
+        short: m
+        long: message
+        help: Set the message to be sent to the substraTEE-worker
+        takes_value: true
+
