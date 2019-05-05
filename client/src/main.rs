@@ -52,6 +52,7 @@ extern crate clap;
 use clap::App;
 
 pub static RSA_PUB_KEY: &'static str = "../bin/rsa_pubkey.txt";
+pub static ECC_PUB_KEY: &'static str = "../bin/ecc_pubkey.txt";
 
 fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
@@ -109,12 +110,17 @@ fn main() {
 
 	// transfer from Alice to Bob (= TEE)
 	nonce = get_account_nonce(&api, "//Alice");
-	transfer_amount(&api, "//Alice", "//Bob", U256::from(1000), nonce, api.genesis_hash.unwrap());
+
+	// get the public signing key of the TEE
+	let mut ecc_key = fs::read_to_string(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
+	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", ecc_key);
+
+	transfer_amount(&api, "//Alice", &ecc_key, U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// get the new nonce of Alice
 	nonce = get_account_nonce(&api, "//Alice");
 
-	// get the public key of the TEE
+	// get the public encryption key of the TEE
 	let data = fs::read_to_string(RSA_PUB_KEY).expect("Unable to open rsa pubkey file");
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&data).unwrap();
 	println!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
@@ -209,6 +215,8 @@ fn extrinsic_transfer(from: &str, to: &str, amount: U256, index: U256, genesis_h
 	let to = ed25519::Public::from_string(to).ok().or_else(||
 			ed25519::Pair::from_string(to, Some("")).ok().map(|p| p.public())
 		).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
+
+	println!("To whom this may concern {}", to);
 
 	let era = Era::immortal();
 	let amount = Balance::from(amount.low_u128());

@@ -30,6 +30,8 @@ extern crate node_primitives;
 extern crate primitive_types;
 extern crate primitives;
 extern crate system;
+extern crate rust_base58;
+
 
 mod constants;
 mod utils;
@@ -65,6 +67,8 @@ use node_primitives::{
 	Hash,
 	AccountId,
 };
+use rust_base58::{ToBase58};
+
 
 use std::sync::mpsc::channel;
 use std::thread;
@@ -294,7 +298,7 @@ fn get_signing_key_tee() {
 
 	// define the size
 	let pubkey_size = 32;
-	let mut pubkey = vec![0u8; pubkey_size as usize];
+	let mut pubkey = [0u8; 32];
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
@@ -314,7 +318,11 @@ fn get_signing_key_tee() {
 	}
 
 	// Fixme: create string, and write to file
-	println!("[+] ECC public key from TEE = {:?}", &pubkey);
+	println!("[+] ECC public key from TEE = {:?}", hex::encode(pubkey));
+	match fs::write(ECC_PUB_KEY, hex::encode(pubkey)) {
+		Err(x) => { println!("[-] Failed to write '{}'. {}", ECC_PUB_KEY, x); },
+		_      => { println!("[+] File '{}' written successfully", ECC_PUB_KEY); }
+	}
 
 }
 

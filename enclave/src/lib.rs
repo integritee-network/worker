@@ -370,10 +370,6 @@ fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_
 
 
 pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_hash: &[u8]) -> UncheckedExtrinsic {
-
-	// Fixme: Cannot use primitives::ed25519::{Pair, Public} as they are not no_std. I tried to create the enclave account
-	// from the our client, but the client is not working atm? throws an unwrap error in send_extrinsic in substrate-api-client
-
 	let (_privkey, _pubkey) = keypair(&seed);
 
 	let era = Era::immortal();
@@ -392,7 +388,7 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_h
 
     //FIXME: until node_runtime changes to ed25519, CheckedExtrinsic will expect a sr25519!
     // this should be correct
-	let signerpub = ed25519::Public::unchecked_from(_pubkey);
+	let signerpub = ed25519::Public::from_raw(_pubkey);
 	let signature =  ed25519::Signature::from_raw(sign);
 
 	//FIXME: true ed25519 signature is replaced by fake sr25519 signature here

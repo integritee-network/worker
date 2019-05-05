@@ -19,6 +19,7 @@ bin/*.bin
 
 # public RSA key
 bin/rsa_pubkey.txt
+bin/ecc_pubkey.txt
 
 # VS Code settings
 .vscode
