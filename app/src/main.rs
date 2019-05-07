@@ -228,7 +228,7 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 //			return;
 		}
 	}
-	Decode::decode(&mut unchecked_extrinsic.as_slice()).unwrap()
+	UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap()
 }
 
 fn get_public_key_tee()

@@ -269,7 +269,7 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 
 // function to compose the extrinsic for a Balance::transfer call
 fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	println!("\n Transfer from {} to Enclave\n", to);
+	println!("\n Transfer from {} to Enclave\n", from);
 	let signer = pair_from_suri(from, Some(""));
 
 	let mut key = [0; 32];
