@@ -58,7 +58,7 @@ use primitives::{
 
 use substrate_keyring::AccountKeyring;
 use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
-use my_node_runtime::{UncheckedExtrinsic, SubstraTEEProxyCall};
+use my_node_runtime::{UncheckedExtrinsic, SubstraTEEProxyCall, Event};
 use parity_codec::{Decode, Encode, Codec, Input, HasCompact};
 use primitive_types::U256;
 
@@ -86,7 +86,7 @@ fn main() {
 		worker(port);
 		println!("* Worker finished");
 	} else if let Some(matches) = matches.subcommand_matches("tests") {
-		test_pipeline(port);
+//		test_pipeline(port);
 //		test_get_counter();
 	} else if matches.is_present("getpublickey") {
 		get_public_key_tee();
@@ -112,6 +112,9 @@ fn worker(port: &str) -> () {
             return;
         },
     };
+
+	let mut status = sgx_status_t::SGX_SUCCESS;
+
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
     println!("");
@@ -133,14 +136,14 @@ fn worker(port: &str) -> () {
 
 		let _unhex = hexstr_to_vec(event_str);
 		let mut _er_enc = _unhex.as_slice();
-		let _events = Vec::<system::EventRecord::<my_node_runtime::Event>>::decode(&mut _er_enc);
+		let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
 		match _events {
 			Some(evts) => {
-				for ev in &evts {
-					println!("decoded: phase {:?} event {:?}", ev.phase, ev.event);
-					match &ev.event {
-						my_node_runtime::Event::balances(be) => {
-							println!(">>>>>>>>>> balances event: {:?}", be);
+				for evr in &evts {
+					println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
+					match &evr.event {
+						Event::balances(be) => {
+							println!("\n>>>>>>>>>> balances event: {:?}\n", be);
 							match &be {
 								balances::RawEvent::Transfer(transactor, dest, value, fee) => {
 									println!("Transactor: {:?}", transactor);
@@ -152,14 +155,13 @@ fn worker(port: &str) -> () {
 									println!("ignoring unsupported balances event");
 								},
 							}},
-						_ => {
-							println!("ignoring unsupported module event: {:?}", ev.event)
-						},
-						my_node_runtime::Event::substratee_proxy(pe) => {
-							println!(">>>>>>>>>> substratee_Proxy event: {:?}", pe);
+						Event::substratee_proxy(pe) => {
+							println!("\n>>>>>>>>>> substratee_Proxy event: {:?}", pe);
 							match &pe {
 								my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
 									println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
+									test_pipeline(enclave.geteid(), payload.to_vec(), &mut status, port);
+
 								},
 								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
 									println!("received confirm call from {:?} with payload {}", sender, hex::encode(payload));
@@ -170,7 +172,7 @@ fn worker(port: &str) -> () {
 							}
 						}
 						_ => {
-							println!("ignoring unsupported module event: {:?}", ev)
+							println!("ignoring unsupported module event: {:?}", evr)
 						},
 					}
 
@@ -196,12 +198,12 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 
 	let mut key = [0; 32];
 	// get the public signing key of the TEE
-	let mut ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
+	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
 	key.copy_from_slice(&ecc_key[..]);
 	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
 
 	// get enclaves's AccountNonce
-	let mut accountid = ed25519::Public::from_raw(key);
+	let accountid = ed25519::Public::from_raw(key);
 	println!("Enclaves account id: {:?}", accountid);
 
 	let nonce_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
@@ -332,7 +334,7 @@ fn get_signing_key_tee() {
 }
 
 
-fn test_pipeline(port: &str) {
+fn test_pipeline(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str) {
 	println!("");
 	println!("*** Test Pipeline");
 	let enclave = match init_enclave() {
@@ -349,10 +351,8 @@ fn test_pipeline(port: &str) {
 	let mut api = Api::new(format!("ws://127.0.0.1:{}",port));
 	api.init();
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-
-	let mut ct = get_test_ciphertext(enclave.geteid(), &mut retval);
-	let xt = decryt_and_process_payload(enclave.geteid(), ct, &mut retval, port);
+	let ct = get_test_ciphertext(eid, retval);
+	let xt = decryt_and_process_payload(eid, ct, retval, port);
 
 	let mut _xthex = hex::encode(xt.encode());
 	_xthex.insert_str(0, "0x");
@@ -360,7 +360,7 @@ fn test_pipeline(port: &str) {
 	let tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
 	enclave.destroy();
-	assert_eq!(retval, sgx_status_t::SGX_SUCCESS);
+//	assert_eq!(retval, sgx_status_t::SGX_SUCCESS);
 }
 
 fn test_get_counter() {

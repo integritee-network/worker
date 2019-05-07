@@ -111,7 +111,7 @@ fn main() {
 	// transfer from Alice to Bob (= TEE)
 	nonce = get_account_nonce(&api, "//Alice");
 
-//	transfer_amount(&api, "//Alice", //Bob, U256::from(1000), nonce, api.genesis_hash.unwrap());
+	transfer_amount(&api, "//Alice", "//Bob", U256::from(1000), nonce, api.genesis_hash.unwrap());
 	extrinsic_tranfer_to_enclave("//Alice", U256::from(1000), nonce, api.genesis_hash.unwrap());
 	// get the new nonce of Alice
 	nonce = get_account_nonce(&api, "//Alice");
