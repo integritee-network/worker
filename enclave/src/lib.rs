@@ -73,6 +73,7 @@ use crypto::ed25519::{keypair, signature, verify};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
+use crypto::blake2s::Blake2s;
 
 type Index = u64;
 
@@ -259,12 +260,13 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
-	let call_hash = "0x0123456789a";
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let _seed = _get_ecc_seed_file(&mut retval);
 
-	let ex = compose_extrinsic(_seed, call_hash.as_bytes(), nonce, hash_slice);
-//	let ex = compose_extrinsic(v[0], ciphertext_slice, nonce, hash_slice);
+	let mut call_hash: [u8; 32] = Default::default();
+	Blake2s::blake2s(&mut call_hash, &ciphertext_slice[..], &[0; 32]);
+
+	let ex = compose_extrinsic(_seed, &call_hash, nonce, hash_slice);
 
 	let encoded = ex.encode();
 //	println!("extrinsic size: {}", encoded.len());
@@ -384,7 +386,7 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_h
     let raw_payload = (Compact(index), function, era, gh);
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-        println!("unsupported payload size until blake hashing supports no_std");
+        println!("unsupported payload size");
         signature(&[0u8; 64], &_privkey)
     } else {
         //println!("signing {}", HexDisplay::from(&payload));

@@ -189,7 +189,7 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 	// encoded message 'b"Alice, 42"'
 	println!("");
 	println!("*** Decrypt and process the payload");
-	let extrinsic_size = 118;
+	let extrinsic_size = 137;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
 
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
