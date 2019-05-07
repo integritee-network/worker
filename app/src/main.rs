@@ -161,6 +161,9 @@ fn worker(port: &str) -> () {
 								my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
 									println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
 								},
+								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
+									println!("received confirm call from {:?} with payload {}", sender, hex::encode(payload));
+								},
 								_ => {
 									println!("ignoring unsupported substratee_proxy event");
 								},
@@ -184,7 +187,7 @@ fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, re
 	// encoded message 'b"Alice, 42"'
 	println!("");
 	println!("*** Decrypt and process the payload");
-	let extrinsic_size = 112;
+	let extrinsic_size = 118;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
 
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));

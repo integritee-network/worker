@@ -259,7 +259,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	increment_or_insert_counter(&mut counter, v[0], number[0]);
     retval = write_counter_state(counter);
 
-	let call_hash = "0x01234";
+	let call_hash = "0x0123456789a";
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let _seed = _get_ecc_seed_file(&mut retval);
 
@@ -267,6 +267,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 //	let ex = compose_extrinsic(v[0], ciphertext_slice, nonce, hash_slice);
 
 	let encoded = ex.encode();
+//	println!("extrinsic size: {}", encoded.len());
 	extrinsic_slize.clone_from_slice(&encoded);
     retval
 }
@@ -376,7 +377,11 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_h
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
     let index = Index::from(index.low_u64());
-    let raw_payload = (Compact(index), function, era, genesis_hash);
+    let mut g = [0; 32];
+	g.copy_from_slice(&genesis_hash[..]);
+	let gh = Hash::from(&mut g);
+
+    let raw_payload = (Compact(index), function, era, gh);
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
         println!("unsupported payload size until blake hashing supports no_std");
@@ -395,7 +400,7 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_h
 //    let signature_fake =  sr25519::Signature::default();
 	let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
 
-	println!("Signerpub as bytes to vec: {:?}", signerpub.encode());
+	println!("Signerpub as bytes: {:?}", signerpub.encode());
 	println!("Verifying own msg {}", verify(&raw_payload.encode(), &_pubkey ,&sign));
 
 	UncheckedExtrinsic::new_signed(
