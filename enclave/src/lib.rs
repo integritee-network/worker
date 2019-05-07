@@ -233,7 +233,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
     rsa_keypair.decrypt_buffer(&ciphertext_slice, &mut plaintext).unwrap();
 
 
-    let decrypted_string = String::from_utf8(plaintext).unwrap();
+    let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
     println!("[Enclave] Decrypted data = {}", decrypted_string);
 
     let mut state_vec: Vec<u8> = Vec::new();
@@ -264,7 +264,9 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	let _seed = _get_ecc_seed_file(&mut retval);
 
 	let mut call_hash: [u8; 32] = Default::default();
-	Blake2s::blake2s(&mut call_hash, &ciphertext_slice[..], &[0; 32]);
+	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
+
+	println!("[Enclave]: Call hash {:?}", call_hash);
 
 	let ex = compose_extrinsic(_seed, &call_hash, nonce, hash_slice);
 

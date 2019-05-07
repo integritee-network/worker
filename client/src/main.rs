@@ -34,9 +34,9 @@ use my_node_runtime::{
 
 use primitive_types::U256;
 use node_primitives::{Index,Balance};
-use parity_codec::{Encode, Compact};
+use parity_codec::{Encode, Decode, Compact};
 use runtime_primitives::generic::Era;
-use substrate_api_client::{Api,hexstr_to_u256};
+use substrate_api_client::{Api,hexstr_to_u256, hexstr_to_vec};
 
 use primitives::{
 	ed25519,
@@ -50,6 +50,8 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 #[macro_use]
 extern crate clap;
 use clap::App;
+
+use blake2_rfc::blake2s::{blake2s};
 
 pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
 pub static ECC_PUB_KEY: &'static str = "./bin/ecc_pubkey.txt";
@@ -138,6 +140,11 @@ fn main() {
 	let tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("");
+
+	let act_hash = subscribe_to_call_confirmed(port);
+
+	println!("Expected Hash: {:?}", blake2s(32, &[], &plaintext).as_bytes());
+	println!("Actual Hash: {:?}", act_hash);
 }
 
 fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
@@ -303,5 +310,59 @@ fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, genesis_h
 		signature.into(),
 		era,
 	)
+}
+
+extern crate system;
+use std::sync::mpsc::channel;
+use std::thread;
+use my_node_runtime::Event;
+
+fn subscribe_to_call_confirmed(port: &str) -> Vec<u8>{
+	// ------------------------------------------------------------------------
+	// subscribe to events and react on firing
+	println!("");
+	println!("*** Subscribing to call confirmed");
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+	api.init();
+
+	let (events_in, events_out) = channel();
+
+	let _eventsubscriber = thread::Builder::new()
+		.name("eventsubscriber".to_owned())
+		.spawn(move || {
+			api.subscribe_events(events_in.clone());
+		})
+		.unwrap();
+
+	loop {
+		let event_str = events_out.recv().unwrap();
+
+		let _unhex = hexstr_to_vec(event_str);
+		let mut _er_enc = _unhex.as_slice();
+		let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+		match _events {
+			Some(evts) => {
+				for evr in &evts {
+					match &evr.event {
+						Event::substratee_proxy(pe) => {
+							println!("\n>>>>>>>>>> substratee_Proxy event: {:?}", pe);
+							match &pe {
+								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
+									return payload.to_vec().clone();
+								},
+								_ => {
+									println!("ignoring other substratee_proxy event");
+								},
+							}
+						}
+						_ => {
+							println!("ignoring other module event")
+						},
+					}
+				}
+			}
+			None => println!("couldn't decode event record list")
+		}
+	}
 }
 
