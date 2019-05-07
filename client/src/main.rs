@@ -51,8 +51,8 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 extern crate clap;
 use clap::App;
 
-pub static RSA_PUB_KEY: &'static str = "../bin/rsa_pubkey.txt";
-pub static ECC_PUB_KEY: &'static str = "../bin/ecc_pubkey.txt";
+pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
+pub static ECC_PUB_KEY: &'static str = "./bin/ecc_pubkey.txt";
 
 fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
@@ -111,12 +111,8 @@ fn main() {
 	// transfer from Alice to Bob (= TEE)
 	nonce = get_account_nonce(&api, "//Alice");
 
-	// get the public signing key of the TEE
-	let mut ecc_key = fs::read_to_string(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
-	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", ecc_key);
-
-	transfer_amount(&api, "//Alice", &ecc_key, U256::from(1000), nonce, api.genesis_hash.unwrap());
-
+//	transfer_amount(&api, "//Alice", //Bob, U256::from(1000), nonce, api.genesis_hash.unwrap());
+	extrinsic_tranfer_to_enclave("//Alice", U256::from(1000), nonce, api.genesis_hash.unwrap());
 	// get the new nonce of Alice
 	nonce = get_account_nonce(&api, "//Alice");
 
@@ -216,8 +212,6 @@ fn extrinsic_transfer(from: &str, to: &str, amount: U256, index: U256, genesis_h
 			ed25519::Pair::from_string(to, Some("")).ok().map(|p| p.public())
 		).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
 
-	println!("To whom this may concern {}", to);
-
 	let era = Era::immortal();
 	let amount = Balance::from(amount.low_u128());
 	let index = Index::from(index.low_u64());
@@ -243,7 +237,6 @@ fn extrinsic_transfer(from: &str, to: &str, amount: U256, index: U256, genesis_h
 
 // function to compose the extrinsic for a SubstraTEEProxy::call_worker call
 pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-
 	let signer = pair_from_suri(sender, Some(""));
 	let era = Era::immortal();
 
@@ -264,6 +257,44 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 
 	//let () = signature;
 	//let sign = AnySignature::from(signature);
+
+	UncheckedExtrinsic::new_signed(
+		index,
+		raw_payload.1,
+		signer.public().into(),
+		signature.into(),
+		era,
+	)
+}
+
+// function to compose the extrinsic for a Balance::transfer call
+fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	println!("\n Transfer from {} to Enclave\n", to);
+	let signer = pair_from_suri(from, Some(""));
+
+	let mut key = [0; 32];
+		// get the public signing key of the TEE
+	let mut ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
+	key.copy_from_slice(&ecc_key[..]);
+	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
+
+	let to = ed25519::Public::from_raw(key);
+	println!("\n\n[+] Got primitives key = {:?}\n\n", to.encode());
+
+
+	let era = Era::immortal();
+	let amount = Balance::from(amount.low_u128());
+	let index = Index::from(index.low_u64());
+
+	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
+	let raw_payload = (Compact(index), function, era, genesis_hash);
+
+	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+		signer.sign(&blake2_256(payload)[..])
+	} else {
+		println!("signing {}", HexDisplay::from(&payload));
+		signer.sign(payload)
+	});
 
 	UncheckedExtrinsic::new_signed(
 		index,

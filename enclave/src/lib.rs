@@ -69,7 +69,7 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use std::string::ToString;
 
-use crypto::ed25519::{keypair, signature};
+use crypto::ed25519::{keypair, signature, verify};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
@@ -395,11 +395,14 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_h
 //    let signature_fake =  sr25519::Signature::default();
 	let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
 
-    UncheckedExtrinsic::new_signed(
+	println!("Signerpub as bytes to vec: {:?}", signerpub.encode());
+	println!("Verifying own msg {}", verify(&raw_payload.encode(), &_pubkey ,&sign));
+
+	UncheckedExtrinsic::new_signed(
         index,
         raw_payload.1,
         signerpub.into(),
-        signature,
+		signature.into(),
 //		signerpub_fake.into(),
 //      signature_fake.into(),
         era,
