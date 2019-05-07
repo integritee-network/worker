@@ -114,7 +114,10 @@ fn main() {
 	nonce = get_account_nonce(&api, "//Alice");
 
 	transfer_amount(&api, "//Alice", "//Bob", U256::from(1000), nonce, api.genesis_hash.unwrap());
-	extrinsic_tranfer_to_enclave("//Alice", U256::from(1000), nonce, api.genesis_hash.unwrap());
+
+	// transfer from Alice to Bob (= TEE)
+	nonce = get_account_nonce(&api, "//Alice");
+	extrinsic_tranfer_to_enclave("//Alice", U256::from(1000), nonce, &api);
 	// get the new nonce of Alice
 	nonce = get_account_nonce(&api, "//Alice");
 
@@ -143,7 +146,7 @@ fn main() {
 
 	let act_hash = subscribe_to_call_confirmed(port);
 
-	println!("Expected Hash: {:?}", blake2s(32, &[], &plaintext).as_bytes());
+	println!("Expected Hash: {:?}", blake2s(32, &[0; 32], &plaintext).as_bytes());
 	println!("Actual Hash: {:?}", act_hash);
 }
 
@@ -274,8 +277,9 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 	)
 }
 
+
 // function to compose the extrinsic for a Balance::transfer call
-fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, api: &substrate_api_client::Api)  {
 	println!("\n Transfer from {} to Enclave\n", from);
 	let signer = pair_from_suri(from, Some(""));
 
@@ -294,7 +298,7 @@ fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, genesis_h
 	let index = Index::from(index.low_u64());
 
 	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
-	let raw_payload = (Compact(index), function, era, genesis_hash);
+	let raw_payload = (Compact(index), function, era, api.genesis_hash.unwrap());
 
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
 		signer.sign(&blake2_256(payload)[..])
@@ -303,13 +307,21 @@ fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, genesis_h
 		signer.sign(payload)
 	});
 
-	UncheckedExtrinsic::new_signed(
+	let xt = UncheckedExtrinsic::new_signed(
 		index,
 		raw_payload.1,
 		signer.public().into(),
 		signature.into(),
 		era,
-	)
+	);
+
+	let mut xthex = hex::encode(xt.encode());
+	xthex.insert_str(0, "0x");
+
+	// send the extrinsic
+	let tx_hash = api.send_extrinsic(xthex).unwrap();
+	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("");
 }
 
 extern crate system;
@@ -345,7 +357,6 @@ fn subscribe_to_call_confirmed(port: &str) -> Vec<u8>{
 				for evr in &evts {
 					match &evr.event {
 						Event::substratee_proxy(pe) => {
-							println!("\n>>>>>>>>>> substratee_Proxy event: {:?}", pe);
 							match &pe {
 								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
 									return payload.to_vec().clone();
