@@ -13,66 +13,20 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-extern crate sgx_types;
-extern crate sgx_urts;
-extern crate sgx_crypto_helper;
-
-extern crate my_node_runtime;
-extern crate substrate_api_client;
-extern crate parity_codec;
-extern crate substrate_keyring;
-extern crate node_primitives;
-extern crate primitive_types;
-extern crate primitives;
-extern crate system;
-extern crate rust_base58;
-extern crate ws;
-extern crate env_logger;
-
-mod constants;
-mod utils;
-mod enclave_api;
-mod init_enclave;
-mod ws_server;
-
 use std::str;
 use std::fs;
 use sgx_types::*;
-use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
+use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
 use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
-use ws_server::start_ws_server;
 
-use primitives::{
-	ed25519,
-	sr25519,
-	hexdisplay::HexDisplay,
-	Pair,
-	crypto::Ss58Codec,
-	blake2_256,
-};
+use primitives::{ed25519};
 
-use substrate_keyring::AccountKeyring;
-use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
-use my_node_runtime::{UncheckedExtrinsic, SubstraTEEProxyCall, Event};
-use parity_codec::{Decode, Encode, Codec, Input, HasCompact};
+use substrate_api_client::{Api, hexstr_to_u256};
+use my_node_runtime::{UncheckedExtrinsic};
+use parity_codec::{Decode, Encode};
 use primitive_types::U256;
-
-use node_primitives::{
-	Index,
-	Hash,
-	AccountId,
-};
-use rust_base58::{ToBase58};
-
-// use ws::{connect, listen, CloseCode, Sender, Handler, Message, Result};
-use std::thread::sleep;
-use std::time::Duration;
-
-use std::sync::mpsc::channel;
-use std::thread;
 
 // only used for testing purposes
 // FIXME: move to dedicated testing file
