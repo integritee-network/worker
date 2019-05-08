@@ -26,3 +26,7 @@ args:
         help: Set the message to be sent to the substraTEE-worker
         takes_value: true
 
+subcommands:
+    - getcounter:
+        about: Get the counter from the substraTEE-worker
+        version: "0.1"

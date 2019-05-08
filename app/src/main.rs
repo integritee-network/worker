@@ -31,12 +31,14 @@ extern crate primitive_types;
 extern crate primitives;
 extern crate system;
 extern crate rust_base58;
-
+extern crate ws;
+extern crate env_logger;
 
 mod constants;
 mod utils;
 mod enclave_api;
 mod init_enclave;
+mod ws_server;
 
 use std::str;
 use std::fs;
@@ -46,6 +48,7 @@ use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
+use ws_server::start_ws_server;
 
 use primitives::{
 	 ed25519,
@@ -69,11 +72,17 @@ use node_primitives::{
 };
 use rust_base58::{ToBase58};
 
+// use ws::{connect, listen, CloseCode, Sender, Handler, Message, Result};
+use std::thread::sleep;
+use std::time::Duration;
 
 use std::sync::mpsc::channel;
 use std::thread;
 
 fn main() {
+	// Setup logging
+    env_logger::init();
+
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
@@ -112,6 +121,9 @@ fn worker(port: &str) -> () {
             return;
         },
     };
+
+	// start the websocket server
+	start_ws_server(enclave.geteid());
 
 	let mut status = sgx_status_t::SGX_SUCCESS;
 

@@ -5,6 +5,8 @@ authors = ["Alain Brenzikofer"]
 build = "build.rs"
 
 [dependencies]
+ws = "*"
+env_logger = "*"
 hex = "0.3"
 dirs = "1.0.2"
 rust-base58 = "*"

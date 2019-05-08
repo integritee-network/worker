@@ -5,6 +5,8 @@ authors = ["Marcel Frei <marcel.frei@scs.ch>"]
 edition = "2018"
 
 [dependencies]
+ws = "*"
+env_logger = "*"
 tiny-bip39 = "0.6.0"
 schnorrkel = "0.1"
 rand = "0.6"

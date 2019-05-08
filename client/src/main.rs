@@ -22,8 +22,12 @@ extern crate parity_codec;
 extern crate primitives;
 extern crate hex_literal;
 extern crate sgx_crypto_helper;
+extern crate env_logger;
 
 use std::fs;
+use ws::{connect, listen, CloseCode, Sender, Handshake, Handler, Message, Result};
+
+
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
@@ -92,12 +96,39 @@ fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
 	nonce
 }
 
+// function to get the counter from the substraTEE-worker
+fn get_counter(user: &'static str)
+{
+	// setup logging
+	env_logger::init();
+
+	// Client thread
+    let client = thread::spawn(move || {
+        connect("ws://127.0.0.1:2019", |out| {
+            out.send(format!("{}", user)).unwrap();
+
+            move |msg| {
+                println!("Client got message '{}'. ", msg);
+                out.close(CloseCode::Normal)
+            }
+
+        }).unwrap()
+    });
+	let _ = client.join();
+}
+
 fn main() {
 	let yml = load_yaml!("cli.yml");
+
 	let matches = App::from_yaml(yml).get_matches();
+	if let Some(matches) = matches.subcommand_matches("getcounter") {
+		println!("* Getting the counter value from the substraTEE-worker");
+		get_counter("Alice");
+		return;
+	}
+
 	let port = matches.value_of("port").unwrap_or("9944");
 	let server = matches.value_of("server").unwrap_or("127.0.0.1");
-
 	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
 	api.init();
 
