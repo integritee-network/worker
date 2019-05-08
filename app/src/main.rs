@@ -40,23 +40,23 @@ mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
+mod tests;
 
 use std::str;
 use std::fs;
 use sgx_types::*;
-use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
-use enclave_api::*;
 use init_enclave::init_enclave;
+use enclave_wrappers::*;
 use ws_server::start_ws_server;
+use tests::{test_pipeline, test_get_counter};
 
 use substrate_api_client::{Api,  hexstr_to_vec};
 use my_node_runtime::Event;
-use parity_codec::{Decode, Encode};
 
+use parity_codec::Decode;
 use std::sync::mpsc::channel;
-use std::thread;
 
-use enclave_wrappers::*;
+use std::thread;
 
 fn main() {
 	// Setup logging
@@ -75,7 +75,7 @@ fn main() {
 		println!("* Worker finished");
 	} else if let Some(_matches) = matches.subcommand_matches("tests") {
 //		test_pipeline(port);
-		test_get_counter();
+//		test_get_counter();
 	} else if matches.is_present("getpublickey") {
 		get_public_key_tee();
 	} else if matches.is_present("getsignkey") {
@@ -170,93 +170,3 @@ fn worker(port: &str) -> () {
 		}
 	}
 }
-
-fn test_pipeline(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str) {
-	println!("");
-	println!("*** Test Pipeline");
-	let enclave = match init_enclave() {
-		Ok(r) => {
-			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
-			r
-		},
-		Err(x) => {
-			println!("[-] Init Enclave Failed {}!", x);
-			return;
-		},
-	};
-
-	let mut api = Api::new(format!("ws://127.0.0.1:{}",port));
-	api.init();
-
-	let ct = get_test_ciphertext(eid, retval);
-	let xt = decryt_and_process_payload(eid, ct, retval, port);
-
-	let mut _xthex = hex::encode(xt.encode());
-	_xthex.insert_str(0, "0x");
-
-	let tx_hash = api.send_extrinsic(_xthex).unwrap();
-	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
-	enclave.destroy();
-//	assert_eq!(retval, sgx_status_t::SGX_SUCCESS);
-}
-
-fn test_get_counter() {
-	println!("***Test get_counter");
-	let enclave = match init_enclave() {
-		Ok(r) => {
-			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
-			r
-		},
-		Err(x) => {
-			println!("[-] Init Enclave Failed {}!", x);
-			return;
-		},
-	};
-
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let account = "Alice";
-	let mut value = 0u8;
-
-	let result = unsafe {
-		get_counter(enclave.geteid(),
-					&mut retval,
-					account.as_ptr(),
-					account.len() as u32,
-					&mut value)
-	};
-
-
-	println!("Countervalue for Alice: {}", value);
-	enclave.destroy();
-	assert_eq!(retval, sgx_status_t::SGX_SUCCESS);
-}
-
-// debug function called from tests
-fn get_test_ciphertext(eid: sgx_enclave_id_t, retval: &mut sgx_status_t) -> Vec<u8> {
-	let pubkey_size = 8192;
-	let mut pubkey = vec![0u8; pubkey_size as usize];
-
-	let result = unsafe {
-		get_rsa_encryption_pubkey(eid,
-								  retval,
-								  pubkey.as_mut_ptr(),
-								  pubkey_size
-		)
-	};
-
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			println!("[-] ECALL Enclave Failed {}!", result.as_str());
-//			return;
-		}
-	}
-	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
-
-	let mut ciphertext : Vec<u8> = Vec::new();
-	let plaintext = b"Alice,42".to_vec();
-	rsa_pubkey.encrypt_buffer(&plaintext, &mut ciphertext).unwrap();
-	println!("ciphertext = {:?}", ciphertext);
-	return ciphertext;
-}
-
