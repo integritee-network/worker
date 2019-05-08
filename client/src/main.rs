@@ -25,16 +25,6 @@ extern crate sgx_crypto_helper;
 extern crate env_logger;
 
 use std::fs;
-use ws::{connect, listen, CloseCode, Sender, Handshake, Handler, Message, Result};
-
-
-use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	SubstraTEEProxyCall,
-	BalancesCall,
-	Hash,
-};
 
 use primitive_types::U256;
 use parity_codec::{Encode};
@@ -52,32 +42,11 @@ pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
 
 use substratee_client_example::*;
 
-// function to get the counter from the substraTEE-worker
-fn get_counter(user: &'static str)
-{
-	// setup logging
-	env_logger::init();
-
-	// Client thread
-    let client = thread::spawn(move || {
-        connect("ws://127.0.0.1:2019", |out| {
-            out.send(format!("{}", user)).unwrap();
-
-            move |msg| {
-                println!("Client got message '{}'. ", msg);
-                out.close(CloseCode::Normal)
-            }
-
-        }).unwrap()
-    });
-	let _ = client.join();
-}
-
 fn main() {
 	let yml = load_yaml!("cli.yml");
 
 	let matches = App::from_yaml(yml).get_matches();
-	if let Some(matches) = matches.subcommand_matches("getcounter") {
+	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		println!("* Getting the counter value from the substraTEE-worker");
 		get_counter("Alice");
 		return;

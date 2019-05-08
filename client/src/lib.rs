@@ -3,6 +3,7 @@ extern crate system;
 use std::sync::mpsc::channel;
 use std::thread;
 use std::fs;
+use ws::{connect, CloseCode};
 
 use my_node_runtime::{
 	UncheckedExtrinsic,
@@ -68,11 +69,32 @@ pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
 
 pub fn get_enclave_pub_key() -> ed25519::Public {
 	let mut key = [0; 32];
-	let mut ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
+	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
 	key.copy_from_slice(&ecc_key[..]);
 	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
 
 	ed25519::Public::from_raw(key)
+}
+
+// function to get the counter from the substraTEE-worker
+pub fn get_counter(user: &'static str)
+{
+	// setup logging
+	env_logger::init();
+
+	// Client thread
+	let client = thread::spawn(move || {
+		connect("ws://127.0.0.1:2019", |out| {
+			out.send(format!("{}", user)).unwrap();
+
+			move |msg| {
+				println!("Client got message '{}'. ", msg);
+				out.close(CloseCode::Normal)
+			}
+
+		}).unwrap()
+	});
+	let _ = client.join();
 }
 
 pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
@@ -226,6 +248,7 @@ pub fn subscribe_to_call_confirmed(port: &str) -> Vec<u8>{
 						Event::substratee_proxy(pe) => {
 							match &pe {
 								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
+									println!("Received confirm call from {}", sender);
 									return payload.to_vec().clone();
 								},
 								_ => {},
