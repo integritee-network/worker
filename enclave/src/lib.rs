@@ -291,8 +291,10 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: 
 
 	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
 	let mut counter = helper.decode().unwrap();
-	value = counter.entries.entry(acc_str.to_string()).or_insert(0);
-
+	unsafe {
+		let mut ref_mut = &mut *value;
+		*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
+	}
 	retval
 }
 

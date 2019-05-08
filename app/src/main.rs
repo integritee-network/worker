@@ -96,7 +96,7 @@ fn main() {
 		println!("* Worker finished");
 	} else if let Some(matches) = matches.subcommand_matches("tests") {
 //		test_pipeline(port);
-//		test_get_counter();
+		test_get_counter();
 	} else if matches.is_present("getpublickey") {
 		get_public_key_tee();
 	} else if matches.is_present("getsignkey") {
@@ -389,13 +389,13 @@ fn test_get_counter() {
 	};
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let account = b"Alice";
+	let account = "Alice";
 	let mut value = 0u8;
 
 	let result = unsafe {
 		get_counter(enclave.geteid(),
 					&mut retval,
-					account.to_vec().as_ptr(),
+					account.as_ptr(),
 					account.len() as u32,
 					&mut value)
 	};

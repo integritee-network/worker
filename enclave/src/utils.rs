@@ -70,16 +70,16 @@ pub fn read_counterstate(mut state_vec: &mut Vec<u8>, filepath: &str) -> sgx_sta
 	match SgxFile::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
 			Ok(len) => {
-				println!("[Enclave] Read {} bytes from key file", len);
+				println!("[Enclave] Read {} bytes from counter file", len);
 				return sgx_status_t::SGX_SUCCESS;
 			}
 			Err(x) => {
-				println!("[Enclave] Read key file failed {}", x);
+				println!("[Enclave] Read counter file failed {}", x);
 				return sgx_status_t::SGX_ERROR_UNEXPECTED;
 			}
 		},
 		Err(x) => {
-			println!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
+			println!("[Enclave] can't get counter file! {}", x);
 			state_vec.push(0);
 			return sgx_status_t::SGX_SUCCESS;
 		}
