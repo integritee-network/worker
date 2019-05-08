@@ -22,9 +22,14 @@ extern crate sgx_types;
 use std::sgxfs::SgxFile;
 use std::io::{Read, Write};
 use std::vec::Vec;
+use std::string::String;
+use std::string::ToString;
+use sgx_crypto_helper::RsaKeyPair;
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 
 use sgx_types::sgx_status_t;
-
+use my_node_runtime::Hash;
+use crypto::blake2s::Blake2s;
 
 pub fn write_file(bytes: &[u8] ,filepath: &str) -> sgx_status_t {
 	match SgxFile::create(filepath) {
@@ -86,3 +91,36 @@ pub fn read_counterstate(mut state_vec: &mut Vec<u8>, filepath: &str) -> sgx_sta
 	};
 }
 
+pub fn get_plaintext_from_encrypted_data(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
+	let mut plaintext = Vec::new();
+	rsa_pair.decrypt_buffer(ciphertext_slice, &mut plaintext).unwrap();
+	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
+	println!("[Enclave] Decrypted data = {}", decrypted_string);
+	plaintext
+}
+
+pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, u8) {
+	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
+	// this is UGLY!!
+	// todo: implement properly when interface is defined
+	let v: Vec<_> = decrypted_string.split(',').collect();
+	// println!("v = {:?}", v);
+	// println!("v[0] = {}", v[0]);
+
+	let number: Vec<u8> = v.iter().filter_map(|x| x.parse().ok()).collect();
+	// println!("v[1] = {}", v[1]);
+	// println!("number = {:?}", number);
+	(v[0].to_string(), number[0])
+}
+
+pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
+	let mut g = [0; 32];
+	g.copy_from_slice(&hash_slize[..]);
+	Hash::from(&mut g)
+}
+
+pub fn blake2s(plaintext: &[u8]) ->  [u8; 32] {
+	let mut call_hash: [u8; 32] = Default::default();
+	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
+	call_hash
+}

@@ -35,14 +35,10 @@ extern crate sgx_crypto_helper;
 
 extern crate sgx_serialize;
 
-// FIXME: don't work with no_std yet
-//extern crate schnorrkel;
-//use schnorrkel::keys::MiniSecretKey;
 extern crate primitives;
 use primitives::{ed25519, sr25519};
 use primitives::crypto::UncheckedFrom;
 
-//extern crate keyring;
 extern crate my_node_runtime;
 use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
 extern crate runtime_primitives;
@@ -51,8 +47,6 @@ extern crate parity_codec;
 use parity_codec::{Decode, Encode, Compact};
 extern crate primitive_types;
 use primitive_types::U256;
-//extern crate node_primitives;
-//use node_primitives::Index;
 
 use sgx_types::{sgx_status_t, sgx_sealed_data_t};
 use sgx_types::marker::ContiguousMemory;
@@ -73,28 +67,12 @@ use crypto::ed25519::{keypair, signature, verify};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
-use crypto::blake2s::Blake2s;
 
 type Index = u64;
 
 mod constants;
 mod utils;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
-/*
-//FIXME: no_std broken here
-/// Do a Blake2 256-bit hash and place result in `dest`.
-pub fn blake2_256_into(data: &[u8], dest: &mut [u8; 32]) {
-	dest.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], data).as_bytes());
-}
-*/
-/*
-/// Do a Blake2 256-bit hash and return result.
-pub fn blake2_256(data: &[u8]) -> [u8; 32] {
-	let mut r = [0; 32];
-	blake2_256_into(data, &mut r);
-	r
-}
-*/
 
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
@@ -226,15 +204,10 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	}
 
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-    //println!("[Enclave] key_json = {}", key_json_str);
     let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
 
-    let mut plaintext = Vec::new();
-    rsa_keypair.decrypt_buffer(&ciphertext_slice, &mut plaintext).unwrap();
-
-
-    let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
-    println!("[Enclave] Decrypted data = {}", decrypted_string);
+	let plaintext = utils::get_plaintext_from_encrypted_data(&ciphertext_slice, &rsa_keypair);
+	let (account, increment) = utils::get_account_and_increment_from_plaintext(plaintext.clone());
 
     let mut state_vec: Vec<u8> = Vec::new();
 	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
@@ -242,36 +215,24 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	if retval != sgx_status_t::SGX_SUCCESS {
 		return retval;
 	}
-    // println!("state_vec = {:?}", &state_vec);
-
-    // this is UGLY!!
-    // todo: implement properly when interface is defined
-    let v: Vec<_> = decrypted_string.split(',').collect();
-    // println!("v = {:?}", v);
-    // println!("v[0] = {}", v[0]);
-
-    let number: Vec<u8> = v.iter().filter_map(|x| x.parse().ok()).collect();
-    // println!("v[1] = {}", v[1]);
-    // println!("number = {:?}", number);
 
     let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
     let mut counter = helper.decode().unwrap();
+
     //FIXME: borrow checker trouble, -> should be fixed, untested
-	increment_or_insert_counter(&mut counter, v[0], number[0]);
+	increment_or_insert_counter(&mut counter, &account, increment);
     retval = write_counter_state(counter);
 
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let _seed = _get_ecc_seed_file(&mut retval);
 
-	let mut call_hash: [u8; 32] = Default::default();
-	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
+	let genesis_hash = utils::hash_from_slice(hash_slice);
+	let call_hash = utils::blake2s(&plaintext);
+//	println!("[Enclave]: Call hash {:?}", call_hash);
 
-	println!("[Enclave]: Call hash {:?}", call_hash);
-
-	let ex = compose_extrinsic(_seed, &call_hash, nonce, hash_slice);
+	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
 
 	let encoded = ex.encode();
-//	println!("extrinsic size: {}", encoded.len());
 	extrinsic_slize.clone_from_slice(&encoded);
     retval
 }
@@ -343,7 +304,7 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
     //restore ed25519 keypair from seed
     let (_privkey, _pubkey) = keypair(seed);
 
-    println!("[Enclave] restored sealed keyair with pubkey: {:?}", _pubkey.to_base58());
+    println!("[Enclave]: restored sealed keyair with pubkey: {:?}", _pubkey.to_base58());
 
     // sign message
     let msg_slice = unsafe {
@@ -376,20 +337,17 @@ fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_
 }
 
 
-pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_hash: &[u8]) -> UncheckedExtrinsic {
+pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let (_privkey, _pubkey) = keypair(&seed);
 
 	let era = Era::immortal();
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
-    let index = Index::from(index.low_u64());
-    let mut g = [0; 32];
-	g.copy_from_slice(&genesis_hash[..]);
-	let gh = Hash::from(&mut g);
-
-    let raw_payload = (Compact(index), function, era, gh);
+    let index = Index::from(nonce.low_u64());
+    let raw_payload = (Compact(index), function, era, genesis_hash);
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+		// should not be thrown as we calculate a 32 byte hash ourselves
         println!("unsupported payload size");
         signature(&[0u8; 64], &_privkey)
     } else {
@@ -397,25 +355,14 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], index: U256, genesis_h
         signature(payload, &_privkey)
     });
 
-    //FIXME: until node_runtime changes to ed25519, CheckedExtrinsic will expect a sr25519!
-    // this should be correct
 	let signerpub = ed25519::Public::from_raw(_pubkey);
 	let signature =  ed25519::Signature::from_raw(sign);
-
-	//FIXME: true ed25519 signature is replaced by fake sr25519 signature here
-//    let signature_fake =  sr25519::Signature::default();
-	let signerpub_fake = sr25519::Public::unchecked_from(_pubkey);
-
-	println!("Signerpub as bytes: {:?}", signerpub.encode());
-	println!("Verifying own msg {}", verify(&raw_payload.encode(), &_pubkey ,&sign));
 
 	UncheckedExtrinsic::new_signed(
         index,
         raw_payload.1,
         signerpub.into(),
 		signature.into(),
-//		signerpub_fake.into(),
-//      signature_fake.into(),
         era,
     )
 }
