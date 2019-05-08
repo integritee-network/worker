@@ -186,8 +186,6 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 		signer.sign(payload)
 	});
 
-	//let () = signature;
-	//let sign = AnySignature::from(signature);
 
 	UncheckedExtrinsic::new_signed(
 		index,
@@ -198,47 +196,8 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 	)
 }
 
-// function to compose the extrinsic for a Balance::transfer call
-pub fn extrinsic_tranfer_to_enclave(from: &str, amount: U256, index: U256, api: &substrate_api_client::Api)  {
-	println!("\n Transfer from {} to Enclave\n", from);
-	let signer = pair_from_suri(from, Some(""));
-
-	let to = get_enclave_pub_key();
-
-	let era = Era::immortal();
-	let amount = Balance::from(amount.low_u128());
-	let index = Index::from(index.low_u64());
-
-	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
-	let raw_payload = (Compact(index), function, era, api.genesis_hash.unwrap());
-
-	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		signer.sign(&blake2_256(payload)[..])
-	} else {
-		println!("signing {}", HexDisplay::from(&payload));
-		signer.sign(payload)
-	});
-
-	let xt = UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signer.public().into(),
-		signature.into(),
-		era,
-	);
-
-	let mut xthex = hex::encode(xt.encode());
-	xthex.insert_str(0, "0x");
-
-	// send the extrinsic
-	let tx_hash = api.send_extrinsic(xthex).unwrap();
-	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
-	println!("");
-}
-
+/// Subscribes to he substratee_proxy events of type CallConfirmed
 pub fn subscribe_to_call_confirmed(port: &str) -> Vec<u8>{
-	// ------------------------------------------------------------------------
-	// subscribe to events and react on firing
 	println!("");
 	println!("*** Subscribing to call confirmed");
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
