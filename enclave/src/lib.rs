@@ -36,8 +36,7 @@ extern crate sgx_crypto_helper;
 extern crate sgx_serialize;
 
 extern crate primitives;
-use primitives::{ed25519, sr25519};
-use primitives::crypto::UncheckedFrom;
+use primitives::{ed25519};
 
 extern crate my_node_runtime;
 use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
@@ -63,10 +62,10 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use std::string::ToString;
 
-use crypto::ed25519::{keypair, signature, verify};
+use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
 type Index = u64;
 
@@ -91,19 +90,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -
 		return retval;
 	}
 
-	// restore RSA key pair from file
-	let mut keyvec: Vec<u8> = Vec::new();
-	retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
-
-	if retval != sgx_status_t::SGX_SUCCESS {
-        println!("[Enclave] read_file '{}' failed", RSA3072_SEALED_KEY_FILE);
-        return retval;
-	}
-
-	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-	// println!("[Enclave] key_json = {}", key_json_str);
-	let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
-
+	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
     let rsa_pubkey = rsa_keypair.export_pubkey().unwrap();
     // println!("rsa_pubkey = {:?}", rsa_pubkey);
 
@@ -114,9 +101,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -
 			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
-    // println!("rsa_pubkey_json = {:?}", rsa_pubkey_json);
 
-	// now write pubkey back to caller
 	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
 
     // split the pubkey_slice at the length of the rsa_pubkey_json
@@ -195,16 +180,14 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
 	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
 
-	//restore RSA key pair from file
-    let mut keyvec: Vec<u8> = Vec::new();
-	let mut retval = utils::read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+
+	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
+
 		return retval;
 	}
-
-	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-    let rsa_keypair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
 
 	let plaintext = utils::get_plaintext_from_encrypted_data(&ciphertext_slice, &rsa_keypair);
 	let (account, increment) = utils::get_account_and_increment_from_plaintext(plaintext.clone());
@@ -238,7 +221,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 }
 
 #[no_mangle]
-pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: *mut u8) -> sgx_status_t {
+pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u8) -> sgx_status_t {
 	let mut state_vec: Vec<u8> = Vec::new();
 
 	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
@@ -253,7 +236,7 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, mut value: 
 	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
 	let mut counter = helper.decode().unwrap();
 	unsafe {
-		let mut ref_mut = &mut *value;
+		let ref_mut = &mut *value;
 		*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
 	}
 	retval
@@ -267,7 +250,7 @@ fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
 	if counter.entries.get(name).unwrap() == &value {
 		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
 	} else {
-		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name));
+		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name).unwrap());
 	}
 }
 

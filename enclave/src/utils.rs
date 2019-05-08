@@ -25,11 +25,20 @@ use std::vec::Vec;
 use std::string::String;
 use std::string::ToString;
 use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
 use sgx_types::sgx_status_t;
 use my_node_runtime::Hash;
 use crypto::blake2s::Blake2s;
+
+use constants::RSA3072_SEALED_KEY_FILE;
+
+pub fn read_rsa_keypair(status: &mut sgx_status_t) -> Rsa3072KeyPair {
+	let mut keyvec: Vec<u8> = Vec::new();
+	*status = read_file(&mut keyvec, RSA3072_SEALED_KEY_FILE);
+	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
+	serde_json::from_str(&key_json_str).unwrap()
+}
 
 pub fn write_file(bytes: &[u8] ,filepath: &str) -> sgx_status_t {
 	match SgxFile::create(filepath) {
