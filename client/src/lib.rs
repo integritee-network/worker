@@ -35,7 +35,7 @@ use primitive_types::U256;
 use node_primitives::{Index,Balance};
 use parity_codec::{Encode, Decode, Compact};
 use runtime_primitives::generic::Era;
-use substrate_api_client::{Api,hexstr_to_u256, hexstr_to_vec};
+use substrate_api_client::{hexstr_to_u256, hexstr_to_vec};
 
 use primitives::{
 	ed25519,
@@ -44,6 +44,7 @@ use primitives::{
 	crypto::Ss58Codec,
 	blake2_256,
 };
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
 pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
 pub static ECC_PUB_KEY: &'static str = "./bin/ecc_pubkey.txt";
@@ -84,21 +85,29 @@ pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
 	nonce
 }
 
-pub fn get_enclave_pub_key() -> ed25519::Public {
+// function to get the ED25519 public key from the enclave
+pub fn get_enclave_ecc_pub_key() -> ed25519::Public {
 	let mut key = [0; 32];
 	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
 	key.copy_from_slice(&ecc_key[..]);
-	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
+	// println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
 
 	ed25519::Public::from_raw(key)
+}
+
+// function to get the RSA3072 public key from the enclave
+pub fn get_enclave_rsa_pub_key() -> Rsa3072PubKey {
+
+	let data = fs::read_to_string(RSA_PUB_KEY).expect("Unable to open rsa pubkey file");
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&data).unwrap();
+	// println!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
+
+	rsa_pubkey
 }
 
 // function to get the counter from the substraTEE-worker
 pub fn get_counter(user: &'static str)
 {
-	// setup logging
-	env_logger::init();
-
 	// Client thread
 	let client = thread::spawn(move || {
 		connect("ws://127.0.0.1:2019", |out| {
@@ -114,6 +123,7 @@ pub fn get_counter(user: &'static str)
 	let _ = client.join();
 }
 
+// function to fund an account
 pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
 	println!("");
 	println!("[>] Fund {}'s account with {}", user, amount);
@@ -128,6 +138,7 @@ pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, n
 	// send the extrinsic
 	let tx_hash = api.send_extrinsic(xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("[<] Fund completed");
 	println!("");
 }
 
@@ -163,7 +174,7 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 
 pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
 	println!("");
-	println!("[>] Transfer {} from {} to {}", amount, from, to);
+	println!("[>] Transfer {} from '{}' to '{}'", amount, from, to);
 
 	// build the extrinsic for transfer
 	let xt = extrinsic_transfer(from, to, amount, nonce, genesis_hash);
@@ -175,6 +186,7 @@ pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519:
 	// send the extrinsic
 	let tx_hash = api.send_extrinsic(xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
+	println!("[<] Transfer completed");
 	println!("");
 }
 
@@ -192,7 +204,6 @@ pub fn extrinsic_transfer(from: &str, to: ed25519::Public, amount: U256, index: 
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
 		signer.sign(&blake2_256(payload)[..])
 	} else {
-		println!("signing {}", HexDisplay::from(&payload));
 		signer.sign(payload)
 	});
 
@@ -220,11 +231,8 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
 		signer.sign(&blake2_256(payload)[..])
 	} else {
-		println!("");
-		println!("signing {}", HexDisplay::from(&payload));
 		signer.sign(payload)
 	});
-
 
 	UncheckedExtrinsic::new_signed(
 		index,
@@ -236,12 +244,7 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 }
 
 /// Subscribes to he substratee_proxy events of type CallConfirmed
-pub fn subscribe_to_call_confirmed(port: &str) -> Vec<u8>{
-	println!("");
-	println!("*** Subscribing to call confirmed");
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
-	api.init();
-
+pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
 	let (events_in, events_out) = channel();
 
 	let _eventsubscriber = thread::Builder::new()
@@ -265,7 +268,7 @@ pub fn subscribe_to_call_confirmed(port: &str) -> Vec<u8>{
 						Event::substratee_proxy(pe) => {
 							match &pe {
 								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
-									println!("Received confirm call from {}", sender);
+									println!("[+] Received confirm call from {}", sender);
 									return payload.to_vec().clone();
 								},
 								_ => {},
