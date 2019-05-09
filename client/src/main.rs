@@ -70,8 +70,6 @@ fn main() {
 	let tee_pub = get_enclave_ecc_pub_key();
 	transfer_amount(&api, "//Alice", tee_pub, U256::from(1000), nonce, api.genesis_hash.unwrap());
 
-	nonce = get_account_nonce(&api, "//Alice");
-
 	// compose extrinsic with encrypted payload
 	let rsa_pubkey = get_enclave_rsa_pub_key();
 	let mut payload_encrypted: Vec<u8> = Vec::new();
@@ -79,6 +77,7 @@ fn main() {
 	let plaintext = message.as_bytes();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
 	println!("[>] Sending message {:?} to substraTEE-worker", message);
+	nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 	let mut _xthex = hex::encode(xt.encode());
 	_xthex.insert_str(0, "0x");

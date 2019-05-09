@@ -17,11 +17,16 @@
 
 extern crate system;
 
-use std::sync::mpsc::channel;
 use std::thread;
 use std::fs;
+use primitive_types::U256;
+use std::sync::mpsc::channel;
 use ws::{connect, CloseCode};
-
+use node_primitives::{Index,Balance};
+use runtime_primitives::generic::Era;
+use parity_codec::{Encode, Decode, Compact};
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use substrate_api_client::{hexstr_to_u256, hexstr_to_vec};
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
@@ -30,13 +35,6 @@ use my_node_runtime::{
 	Hash,
 	Event,
 };
-
-use primitive_types::U256;
-use node_primitives::{Index,Balance};
-use parity_codec::{Encode, Decode, Compact};
-use runtime_primitives::generic::Era;
-use substrate_api_client::{hexstr_to_u256, hexstr_to_vec};
-
 use primitives::{
 	ed25519,
 	hexdisplay::HexDisplay,
@@ -44,7 +42,6 @@ use primitives::{
 	crypto::Ss58Codec,
 	blake2_256,
 };
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
 pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
 pub static ECC_PUB_KEY: &'static str = "./bin/ecc_pubkey.txt";
@@ -243,7 +240,7 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 	)
 }
 
-/// Subscribes to he substratee_proxy events of type CallConfirmed
+// subscribes to he substratee_proxy events of type CallConfirmed
 pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
 	let (events_in, events_out) = channel();
 
