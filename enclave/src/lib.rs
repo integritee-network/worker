@@ -364,5 +364,8 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 /////////////////////////////////////////////////////////////////////////////
 pub fn init_runtime() {
 	let rt = runtime_wrapper::Runtime;
+
+	// TODO: provide wasm ink contract to runtime and call some contract method
+
 }
 

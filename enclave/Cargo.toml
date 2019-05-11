@@ -42,12 +42,14 @@ runtime_io = { package = "sr-io", git = "https://github.com/paritytech/substrate
 primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 runtime_primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 #my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", branch = "brenzi-v200", default-features = false, features=["no_global_allocator"] }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", branch = "brenzi-contract", default-features = false, features=["no_global_allocator"] }
 #keyring = { package = "substrate-keyring",git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false}
 #node-primitives = { git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3" }
 
-contract = { package = "substratee-contract", path = "./contract/", default-features = false}
+#contract = { package = "substratee-contract", path = "./contract/", default-features = false, features = ["core"]}
+contract = { package = "srml-contract", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false, features = ["core"]}
 timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 srml_support = { package = "srml-support", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 #aura = { package = "srml-aura", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
+

@@ -4,14 +4,15 @@
 //! `cargo expand --no-default-features > node-runtime-expanded.rs`
 //!
 //! then extract all definitions for
-//! Runtime, Origin, Log, InternalLog
+//! Runtime, Log, InternalLog
 //! and put them here
 //!
 //! you might have to repeat this procedure for runtime updates
 
-use my_node_runtime::{AccountId, Indices, Hash, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event};
+use my_node_runtime::{Balances, AccountId, Indices, Hash, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event, Call, Origin};
 use runtime_primitives::generic;
 use runtime_primitives::traits::BlakeTwo256;
+use srml_support::traits::Currency;
 use std::vec::Vec;
 
 
@@ -57,120 +58,6 @@ impl ::srml_support::runtime_primitives::traits::GetRuntimeBlockType for
     Block;
 }
 
-
-#[allow(non_camel_case_types)]
-#[structural_match]
-pub enum Origin {
-    system(system::Origin<Runtime>),
-
-    #[allow(dead_code)]
-    Void(::srml_support::Void),
-}
-#[automatically_derived]
-#[allow(unused_qualifications)]
-#[allow(non_camel_case_types)]
-impl ::core::clone::Clone for Origin {
-    #[inline]
-    fn clone(&self) -> Origin {
-        match (&*self,) {
-            (&Origin::system(ref __self_0),) =>
-            Origin::system(::core::clone::Clone::clone(&(*__self_0))),
-            (&Origin::Void(ref __self_0),) =>
-            Origin::Void(::core::clone::Clone::clone(&(*__self_0))),
-        }
-    }
-}
-#[automatically_derived]
-#[allow(unused_qualifications)]
-#[allow(non_camel_case_types)]
-impl ::core::cmp::PartialEq for Origin {
-    #[inline]
-    fn eq(&self, other: &Origin) -> bool {
-        {
-            let __self_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*self) } as
-                    isize;
-            let __arg_1_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*other) } as
-                    isize;
-            if true && __self_vi == __arg_1_vi {
-                match (&*self, &*other) {
-                    (&Origin::system(ref __self_0),
-                     &Origin::system(ref __arg_1_0)) =>
-                    (*__self_0) == (*__arg_1_0),
-                    (&Origin::Void(ref __self_0),
-                     &Origin::Void(ref __arg_1_0)) =>
-                    (*__self_0) == (*__arg_1_0),
-                    _ => unsafe { ::core::intrinsics::unreachable() }
-                }
-            } else { false }
-        }
-    }
-    #[inline]
-    fn ne(&self, other: &Origin) -> bool {
-        {
-            let __self_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*self) } as
-                    isize;
-            let __arg_1_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*other) } as
-                    isize;
-            if true && __self_vi == __arg_1_vi {
-                match (&*self, &*other) {
-                    (&Origin::system(ref __self_0),
-                     &Origin::system(ref __arg_1_0)) =>
-                    (*__self_0) != (*__arg_1_0),
-                    (&Origin::Void(ref __self_0),
-                     &Origin::Void(ref __arg_1_0)) =>
-                    (*__self_0) != (*__arg_1_0),
-                    _ => unsafe { ::core::intrinsics::unreachable() }
-                }
-            } else { true }
-        }
-    }
-}
-#[automatically_derived]
-#[allow(unused_qualifications)]
-#[allow(non_camel_case_types)]
-impl ::core::cmp::Eq for Origin {
-    #[inline]
-    #[doc(hidden)]
-    fn assert_receiver_is_total_eq(&self) -> () {
-        {
-            let _: ::core::cmp::AssertParamIsEq<system::Origin<Runtime>>;
-            let _: ::core::cmp::AssertParamIsEq<::srml_support::Void>;
-        }
-    }
-}
-#[allow(dead_code)]
-impl Origin {
-    pub const
-    INHERENT:
-    Self
-    =
-    Origin::system(system::RawOrigin::Inherent);
-    pub const
-    ROOT:
-    Self
-    =
-    Origin::system(system::RawOrigin::Root);
-    pub fn signed(by: <Runtime as system::Trait>::AccountId) -> Self {
-        Origin::system(system::RawOrigin::Signed(by))
-    }
-}
-impl From<system::Origin<Runtime>> for Origin {
-    fn from(x: system::Origin<Runtime>) -> Self { Origin::system(x) }
-}
-impl Into<Option<system::Origin<Runtime>>> for Origin {
-    fn into(self) -> Option<system::Origin<Runtime>> {
-        if let Origin::system(l) = self { Some(l) } else { None }
-    }
-}
-impl From<Option<<Runtime as system::Trait>::AccountId>> for Origin {
-    fn from(x: Option<<Runtime as system::Trait>::AccountId>) -> Self {
-        <system::Origin<Runtime>>::from(x).into()
-    }
-}
 
 /// Wrapper for all possible log entries for the `$trait` runtime. Provides binary-compatible
 /// `Encode`/`Decode` implementations with the corresponding `generic::DigestItem`.
@@ -456,23 +343,20 @@ impl system::Trait for Runtime {
 	/// The ubiquitous origin type.
 	type Origin = Origin;
 }
-/*
-// TODO: get rid of Aura here
-pub type Aura = aura::Module<Runtime>;
 
-impl aura::Trait for Runtime {
-	type HandleReport = ();
-}
-*/
-impl timestamp::Trait for Runtime {}
-/*
+impl timestamp::Trait for Runtime {
 	/// A timestamp: seconds since the unix epoch.
 	type Moment = u64;
-	//type OnTimestampSet = Aura;
 	type OnTimestampSet = ();
 }
-*/
 
 impl contract::Trait for Runtime {
-
+	type Currency = Balances;
+	type Call = Call;
+	type Event = Event;
+	type Gas = u64;
+	type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
+	type ComputeDispatchFee = contract::DefaultDispatchFeeComputor<Runtime>;
+	type TrieIdGenerator = contract::TrieIdFromParentCounter<Runtime>;
+	type GasPayment = ();
 }
