@@ -35,18 +35,19 @@ blake2-rfc = { version = "0.2.18", default-features = false}
 #schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
 
 #only listed to get no_global_allocator feature in
-rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator"]}
+rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false, features=["no_global_allocator"]}
 #only listed to get no_panic_handler and no_oom  features in
-runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_panic_handler", "no_oom"]}
+runtime_io = { package = "sr-io", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false, features=["no_panic_handler", "no_oom"]}
 
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
+primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 #my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
 my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
-#keyring = { package = "substrate-keyring",git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
-#node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+#keyring = { package = "substrate-keyring",git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false}
+#node-primitives = { git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3" }
 
 contract = { package = "substratee-contract", path = "./contract/", default-features = false}
-timestamp = { package = "srml-timestamp", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-system = { package = "srml-system", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-srml_support = { package = "srml-support", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
+timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
+system = { package = "srml-system", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
+srml_support = { package = "srml-support", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
+#aura = { package = "srml-aura", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
