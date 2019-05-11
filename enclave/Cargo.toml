@@ -45,3 +45,5 @@ runtime_primitives = { package = "sr-primitives", git = "https://github.com/bren
 my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] , branch="marcel-ed25519" }
 #keyring = { package = "substrate-keyring",git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
 #node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+
+contract = { package = "substratee-contract", path = "./contract/", default-features = false}

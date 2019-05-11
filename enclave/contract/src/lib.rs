@@ -92,7 +92,6 @@ mod tests;
 #[macro_use]
 extern crate alloc;
 
-
 use crate::exec::ExecutionContext;
 use crate::account_db::{AccountDb, DirectAccountDb};
 
