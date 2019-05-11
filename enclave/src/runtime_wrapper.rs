@@ -9,7 +9,10 @@
 //!
 //! you might have to repeat this procedure for runtime updates
 
-use my_node_runtime::{AccountId, Indices, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event};
+use my_node_runtime::{AccountId, Indices, Hash, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event};
+use runtime_primitives::generic;
+use runtime_primitives::traits::BlakeTwo256;
+use std::vec::Vec;
 
 
 #[structural_match]
