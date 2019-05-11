@@ -46,6 +46,7 @@ my_node_runtime = { package = "substratee-node-runtime", git = "https://github.c
 #keyring = { package = "substrate-keyring",git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false}
 #node-primitives = { git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3" }
 
+#contract
 #contract = { package = "substratee-contract", path = "./contract/", default-features = false, features = ["core"]}
 contract = { package = "srml-contract", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false, features = ["core"]}
 timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
@@ -53,3 +54,7 @@ system = { package = "srml-system", git = "https://github.com/paritytech/substra
 srml_support = { package = "srml-support", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 #aura = { package = "srml-aura", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
 
+indices = { package = "srml-indices", git = "https://github.com/paritytech/substrate.git", rev="6e67eff0653677d3d01980ca822c4b8a227914a3", default-features = false }
+
+#executor
+#state_machine = { package = "substrate-state-machine", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract", default-features = false }

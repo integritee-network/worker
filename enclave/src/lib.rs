@@ -84,6 +84,7 @@ mod constants;
 mod utils;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 mod runtime_wrapper;
+//mod executor_wrapper;
 
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
@@ -362,8 +363,22 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
     )
 }
 /////////////////////////////////////////////////////////////////////////////
+
+use srml_support::Dispatchable;
+use runtime_wrapper::Runtime;
+
 pub fn init_runtime() {
-	let rt = runtime_wrapper::Runtime;
+	let rt = Runtime;
+
+	let origin = my_node_runtime::Origin::ROOT;
+	let address = indices::Address::<Runtime>::default();
+	//let callable = ::srml_support::dispatch::CallableCallFor<Contract>;
+	
+	//tests to call into the contract module
+
+	let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin.clone());
+
+	let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin.clone());  //dispatch(origin);
 
 	// TODO: provide wasm ink contract to runtime and call some contract method
 
