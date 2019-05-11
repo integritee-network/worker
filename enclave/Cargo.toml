@@ -42,8 +42,11 @@ runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git
 primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
 runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
 #my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] , branch="marcel-ed25519" }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
 #keyring = { package = "substrate-keyring",git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
 #node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
 
 contract = { package = "substratee-contract", path = "./contract/", default-features = false}
+timestamp = { package = "srml-timestamp", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
+system = { package = "srml-system", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
+srml_support = { package = "srml-support", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
