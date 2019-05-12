@@ -157,6 +157,9 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
 	pubkey_slice.clone_from_slice(&_pubkey);
 
+	// FIXME: this is just to have a quick way in. move to its own extern function
+	init_runtime();
+	
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -368,10 +371,14 @@ use srml_support::Dispatchable;
 use runtime_wrapper::Runtime;
 
 pub fn init_runtime() {
+	println!("[??] asking runtime out");
+	
 	let rt = Runtime;
-
+	//let () = my_node_runtime::api::Core_version;
+	
 	let origin = my_node_runtime::Origin::ROOT;
 	let address = indices::Address::<Runtime>::default();
+
 	//let callable = ::srml_support::dispatch::CallableCallFor<Contract>;
 	
 	//tests to call into the contract module
@@ -379,6 +386,10 @@ pub fn init_runtime() {
 	let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin.clone());
 
 	let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin.clone());  //dispatch(origin);
+
+	println!("[++] finished playing with runtime")
+
+
 
 	// TODO: provide wasm ink contract to runtime and call some contract method
 
