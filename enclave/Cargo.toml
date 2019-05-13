@@ -1,7 +1,7 @@
 [package]
-name = "SealedKeyEnclave"
+name = "substratee_worker_enclave"
 version = "1.0.0"
-authors = ["Alain Brenzikofer"]
+authors = ["Supercomputing Systems AG <info@scs.ch>"]
 
 [lib]
 name = "sealedkeyenclave"
@@ -11,10 +11,10 @@ crate-type = ["staticlib"]
 default = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk"}
-sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_rand = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk"}
+sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tcrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58 = { git = "https://github.com/baidu/rust-sgx-sdk" }
@@ -25,23 +25,54 @@ sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/ba
 sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
-serde_json = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_serialize_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
+blake2-rfc = { version = "0.2.18", default-features = false}
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
-blake2-rfc = { version = "0.2.18", default-features = false}
+
+[dependencies.my_node_runtime]
+git = "https://github.com/scs/substraTEE-node"
+branch = "brenzi-v200"
+package = "substratee-node-runtime"
+default-features = false
+features = ["no_global_allocator"]
+
+[dependencies.serde_json]
+git = "https://github.com/baidu/rust-sgx-sdk"
+
+[dependencies.sgx_serialize_derive]
+git = "https://github.com/baidu/rust-sgx-sdk"
 
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
-#schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
+# [dependencies.schnorrkel]
+# git = "https://github.com/scs/schnorrkel.git"
+# default-features = false
+# features=["alloc", "u64_backend"]
+
+[dependencies.primitives]
+git = 'https://github.com/paritytech/substrate'
+rev = '6e67eff0653677d3d01980ca822c4b8a227914a3'
+package = "substrate-primitives"
+default-features = false
 
 #only listed to get no_global_allocator feature in
-rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_global_allocator"]}
-#only listed to get no_panic_handler and no_oom  features in
-runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false, features=["no_panic_handler", "no_oom"]}
+[dependencies.rstd]
+git = 'https://github.com/paritytech/substrate'
+rev = '6e67eff0653677d3d01980ca822c4b8a227914a3'
+package = "sr-std"
+default-features = false
+features = ["no_global_allocator"]
 
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-#my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] , branch="marcel-ed25519" }
-#keyring = { package = "substrate-keyring",git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false}
-#node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+#only listed to get no_panic_handler and no_oom features in
+[dependencies.runtime_io]
+git = 'https://github.com/paritytech/substrate'
+rev = '6e67eff0653677d3d01980ca822c4b8a227914a3'
+package = "sr-io"
+default-features = false
+features = ["no_panic_handler", "no_oom"]
+
+[dependencies.runtime_primitives]
+git = 'https://github.com/paritytech/substrate'
+rev = '6e67eff0653677d3d01980ca822c4b8a227914a3'
+package = "sr-primitives"
+default-features = false
+
