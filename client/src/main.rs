@@ -23,6 +23,7 @@ extern crate primitives;
 extern crate hex_literal;
 extern crate sgx_crypto_helper;
 extern crate env_logger;
+extern crate log;
 
 use parity_codec::{Encode};
 use substrate_api_client::{Api};
@@ -36,8 +37,6 @@ use substratee_client::*;
 extern crate clap;
 use clap::App;
 
-pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
-
 fn main() {
 	env_logger::init();
 
@@ -46,7 +45,7 @@ fn main() {
 	let matches = App::from_yaml(yml).get_matches();
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		let user = "Alice";
-		println!("* Getting the counter value of {} from the substraTEE-worker", user);
+		println!("*** Getting the counter value of '{}' from the substraTEE-worker", user);
 		get_counter(user);
 		return;
 	}

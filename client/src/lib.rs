@@ -17,6 +17,7 @@
 
 extern crate system;
 
+use log::info;
 use std::thread;
 use std::fs;
 use primitive_types::U256;
@@ -52,7 +53,6 @@ pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 
 // function to get the free balance of a user
 pub fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
-	println!("");
 	println!("[>] Get {}'s free balance", user);
 
 	let accountid = ed25519::Public::from_string(user).ok().or_else(||
@@ -68,7 +68,6 @@ pub fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
 
 // function to get the account nonce of a user
 pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
-	println!("");
 	println!("[>] Get {}'s account nonce", user);
 
 	let accountid = ed25519::Public::from_string(user).ok().or_else(||
@@ -85,9 +84,9 @@ pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
 // function to get the ED25519 public key from the enclave
 pub fn get_enclave_ecc_pub_key() -> ed25519::Public {
 	let mut key = [0; 32];
-	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
+	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
 	key.copy_from_slice(&ecc_key[..]);
-	// println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
+	info!("[+] Got ECC public key of TEE = {:?}\n\n", key);
 
 	ed25519::Public::from_raw(key)
 }
@@ -97,7 +96,7 @@ pub fn get_enclave_rsa_pub_key() -> Rsa3072PubKey {
 
 	let data = fs::read_to_string(RSA_PUB_KEY).expect("Unable to open rsa pubkey file");
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&data).unwrap();
-	// println!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
+	info!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
 
 	rsa_pubkey
 }
@@ -111,7 +110,8 @@ pub fn get_counter(user: &'static str)
 			out.send(format!("{}", user)).unwrap();
 
 			move |msg| {
-				println!("Client got message '{}'. ", msg);
+				println!("[+] Client got message '{}'. ", msg);
+				println!("");
 				out.close(CloseCode::Normal)
 			}
 
@@ -122,7 +122,6 @@ pub fn get_counter(user: &'static str)
 
 // function to fund an account
 pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
-	println!("");
 	println!("[>] Fund {}'s account with {}", user, amount);
 
 	// build the extrinsic for funding
@@ -156,7 +155,7 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
 		signer.sign(&blake2_256(payload)[..])
 	} else {
-		println!("signing {}", HexDisplay::from(&payload));
+		info!("signing {}", HexDisplay::from(&payload));
 		signer.sign(payload)
 	});
 
@@ -170,7 +169,6 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 }
 
 pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
-	println!("");
 	println!("[>] Transfer {} from '{}' to '{}'", amount, from, to);
 
 	// build the extrinsic for transfer
