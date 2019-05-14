@@ -5,14 +5,14 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 
 [dependencies]
-ws = "*"
+ws = "0.7"
 hex = "0.3"
 dirs = "1.0.2"
 clap = { version = "2.33", features = [ "yaml" ] }
-env_logger = "*"
+env_logger = "0.6"
 serde_json = "1.0"
-rust-base58 = "*"
-rust-crypto = "*"
+rust-base58 = "0.0.4"
+rust-crypto = "0.2"
 
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
@@ -24,11 +24,11 @@ sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-fea
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-branch = 'marcel-preparationM1'
+tag = 'M1'
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "brenzi-v200"
+tag = "M1"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]

@@ -30,7 +30,7 @@ use substrate_api_client::{Api};
 use primitive_types::U256;
 use blake2_rfc::blake2s::{blake2s};
 
-use substratee_client_example::*;
+use substratee_client::*;
 
 #[macro_use]
 extern crate clap;

@@ -1,15 +1,15 @@
 [package]
-name = "substratee_client_example"
+name = "substratee_client"
 version = "1.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
 [dependencies]
-ws = "*"
+ws = "0.7"
 hex = "0.3"
 rand = "0.6"
 clap = { version = "2.33", features = [ "yaml" ] }
-env_logger = "*"
+env_logger = "0.6"
 schnorrkel = "0.1"
 serde_json = "1.0"
 tiny-bip39 = "0.6.0"
@@ -22,13 +22,13 @@ substrate_bip39 = { package="substrate-bip39", git = "https://github.com/parityt
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "brenzi-v200"
+tag = "M1"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-branch = "marcel-preparationM1"
+tag = "M1"
 default-features = false
 
 [dependencies.system]

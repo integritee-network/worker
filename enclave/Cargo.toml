@@ -31,7 +31,7 @@ primitive-types = { version = "0.2", default-features = false, features = ["code
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "brenzi-v200"
+tag = "M1"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]
@@ -44,7 +44,7 @@ git = "https://github.com/baidu/rust-sgx-sdk"
 
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
 # [dependencies.schnorrkel]
-# git = "https://github.com/scs/schnorrkel.git"
+# git = "https://github.com/scs/schnorrkel"
 # default-features = false
 # features=["alloc", "u64_backend"]
 
