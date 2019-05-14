@@ -33,6 +33,7 @@ extern crate system;
 extern crate rust_base58;
 extern crate ws;
 extern crate env_logger;
+extern crate log;
 
 mod constants;
 mod utils;
@@ -42,6 +43,7 @@ mod ws_server;
 mod enclave_wrappers;
 mod tests;
 
+use log::*;
 use std::str;
 use std::fs;
 use sgx_types::*;
@@ -66,7 +68,7 @@ fn main() {
     let matches = App::from_yaml(yml).get_matches();
 
 	let port = matches.value_of("port").unwrap_or("9944");
-	println!("Intercating with port {}", port);
+	info!("Interacting with port {}", port);
 
     if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("* Starting substraTEE-worker");

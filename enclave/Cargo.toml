@@ -19,15 +19,15 @@ sgx_tcrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58 = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [target.'cfg(target_env = "sgx")'.dependencies]
-sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
+log = { git = "https://github.com/baidu/rust-sgx-sdk" }
 blake2-rfc = { version = "0.2.18", default-features = false}
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
+sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"

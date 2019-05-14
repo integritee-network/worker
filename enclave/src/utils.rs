@@ -19,6 +19,7 @@
 
 extern crate sgx_types;
 
+use log::*;
 use std::sgxfs::SgxFile;
 use std::io::{Read, Write};
 use std::vec::Vec;
@@ -63,11 +64,11 @@ pub fn read_file(mut keyvec: &mut Vec<u8>, filepath: &str) -> sgx_status_t {
 	match SgxFile::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut keyvec) {
 			Ok(len) => {
-				println!("[Enclave] Read {} bytes from key file", len);
+				info!("[Enclave] Read {} bytes from key file", len);
 				return sgx_status_t::SGX_SUCCESS;
 			}
 			Err(x) => {
-				println!("[Enclave] Read key file failed {}", x);
+				error!("[Enclave] Read key file failed {}", x);
 				return sgx_status_t::SGX_ERROR_UNEXPECTED;
 			}
 		},

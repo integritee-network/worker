@@ -35,6 +35,8 @@ extern crate sgx_crypto_helper;
 
 extern crate sgx_serialize;
 
+extern crate log;
+
 extern crate primitives;
 use primitives::{ed25519};
 
@@ -55,6 +57,7 @@ use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 #[macro_use]
 extern crate sgx_serialize_derive;
 
+use log::*;
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
@@ -79,7 +82,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
 		Err(x) => {
-			println!("[Enclave] Keyfile not found, creating new! {}", x);
+			info!("[Enclave] Keyfile not found, creating new! {}", x);
 			retval = create_sealed_rsa3072_keypair();
 		},
 		_ => ()
@@ -127,7 +130,7 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
 		Ok(_k) => (),
 		Err(x) => {
-			println!("[Enclave] Keyfile not found, creating new! {}", x);
+			info!("[Enclave] Keyfile not found, creating new! {}", x);
 			retval = create_sealed_ed25519_seed();
 		},
 	}
@@ -139,7 +142,7 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 
 	let _seed = _get_ecc_seed_file(&mut retval);
 	let (_privkey, _pubkey) = keypair(&_seed);
-	println!("[Enclave] restored ecc pubkey: {:?}", _pubkey.to_base58());
+	info!("[Enclave] Restored ECC pubkey: {:?}", _pubkey.to_base58());
 
 	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
 	pubkey_slice.clone_from_slice(&_pubkey);
@@ -287,7 +290,7 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
     //restore ed25519 keypair from seed
     let (_privkey, _pubkey) = keypair(seed);
 
-    println!("[Enclave]: restored sealed keyair with pubkey: {:?}", _pubkey.to_base58());
+    println!("[Enclave]: Restored sealed key pair with pubkey: {:?}", _pubkey.to_base58());
 
     // sign message
     let msg_slice = unsafe {

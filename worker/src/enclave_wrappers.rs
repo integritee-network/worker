@@ -15,6 +15,7 @@
 */
 use std::str;
 use std::fs;
+use log::*;
 use sgx_types::*;
 use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
 use constants::*;
@@ -86,19 +87,21 @@ pub fn get_signing_key_tee() {
 	println!("*** Get the signing key from the TEE");
 
 	println!("");
-	println!("*** Starting enclave");
+	println!("*** Start the enclave");
 	let enclave = match init_enclave() {
 		Ok(r) => {
 			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
 			r
 		},
 		Err(x) => {
-			println!("[-] Init Enclave Failed {}!", x);
+			error!("[-] Init Enclave Failed {}!", x);
 			return;
 		},
 	};
 
-	// define the size
+	// request the key
+	println!("");
+	println!("*** Ask the signing key from the TEE");
 	let pubkey_size = 32;
 	let mut pubkey = [0u8; 32];
 
@@ -114,15 +117,17 @@ pub fn get_signing_key_tee() {
 	match result {
 		sgx_status_t::SGX_SUCCESS => {},
 		_ => {
-			println!("[-] ECALL Enclave Failed {}!", result.as_str());
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
 			return;
 		}
 	}
 
-	// Fixme: create string, and write to file
-	println!("[+] ECC public key from TEE = {:?}", pubkey);
+	println!("[+] Signing key: {:?}", pubkey);
+
+	println!("");
+	println!("*** Write the ECC signing key to a file");
 	match fs::write(ECC_PUB_KEY, pubkey) {
-		Err(x) => { println!("[-] Failed to write '{}'. {}", ECC_PUB_KEY, x); },
+		Err(x) => { error!("[-] Failed to write '{}'. {}", ECC_PUB_KEY, x); },
 		_      => { println!("[+] File '{}' written successfully", ECC_PUB_KEY); }
 	}
 
@@ -134,19 +139,21 @@ pub fn get_public_key_tee()
 	println!("*** Get the public key from the TEE");
 
 	println!("");
-	println!("*** Starting enclave");
+	println!("*** Start the enclave");
 	let enclave = match init_enclave() {
 		Ok(r) => {
 			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
 			r
 		},
 		Err(x) => {
-			println!("[-] Init Enclave Failed {}!", x);
+			error!("[-] Init Enclave Failed {}!", x);
 			return;
 		},
 	};
 
-	// define the size
+	// request the key
+	println!("");
+	println!("*** Ask the public key from the TEE");
 	let pubkey_size = 8192;
 	let mut pubkey = vec![0u8; pubkey_size as usize];
 
@@ -162,18 +169,20 @@ pub fn get_public_key_tee()
 	match result {
 		sgx_status_t::SGX_SUCCESS => {},
 		_ => {
-			println!("[-] ECALL Enclave Failed {}!", result.as_str());
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
 			return;
 		}
 	}
 
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+	println!("[+] {:?}", rsa_pubkey);
 
-	println!("[+] RSA3072 public key from TEE = {:?}", rsa_pubkey);
+	println!("");
+	println!("*** Write the RSA3072 public key to a file");
 
 	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
 	match fs::write(RSA_PUB_KEY, rsa_pubkey_json) {
-		Err(x) => { println!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
+		Err(x) => { error!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
 		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}
 }

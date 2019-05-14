@@ -30,6 +30,7 @@ extern crate sgx_types;
 extern crate sgx_urts;
 
 use std::fs;
+use log::*;
 use std::io::{Read, Write};
 use std::path;
 use sgx_types::*;
@@ -48,12 +49,12 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut home_dir = path::PathBuf::new();
     let use_token = match dirs::home_dir() {
         Some(path) => {
-            println!("[+] Home dir is {}", path.display());
+            info!("[+] Home dir is {}", path.display());
             home_dir = path;
             true
         }
         None => {
-            println!("[-] Cannot get home dir");
+            error!("[-] Cannot get home dir");
             false
         }
     };
@@ -61,18 +62,18 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
     if use_token == true {
         match fs::File::open(&token_file) {
             Err(_) => {
-                println!(
-                    "[-] Open token file {} error! Will create one.",
+                info!(
+                    "[-] Token file {} not found! Will create one.",
                     token_file.as_path().to_str().unwrap()
                 );
             }
             Ok(mut f) => {
-                println!("[+] Open token file success! ");
+                info!("[+] Open token file success! ");
                 match f.read(&mut launch_token) {
                     Ok(1024) => {
-                        println!("[+] Token file valid!");
+                        info!("[+] Token file valid!");
                     }
-                    _ => println!("[+] Token file invalid, will create new token file"),
+                    _ => info!("[+] Token file invalid, will create new token file"),
                 }
             }
         }
@@ -98,11 +99,11 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
         // reopen the file with write capablity
         match fs::File::create(&token_file) {
             Ok(mut f) => match f.write_all(&launch_token) {
-                Ok(()) => println!("[+] Saved updated launch token!"),
-                Err(_) => println!("[-] Failed to save updated launch token!"),
+                Ok(()) => info!("[+] Saved updated launch token!"),
+                Err(_) => error!("[-] Failed to save updated launch token!"),
             },
             Err(_) => {
-                println!("[-] Failed to save updated enclave token, but doesn't matter");
+                warn!("[-] Failed to save updated enclave token, but doesn't matter");
             }
         }
     }
