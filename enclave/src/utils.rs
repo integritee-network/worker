@@ -14,7 +14,7 @@
    limitations under the License.
 
 */
-#![cfg_attr(not(target_env = "sgx"), no_std)]
+// #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate sgx_types;
@@ -45,16 +45,16 @@ pub fn write_file(bytes: &[u8] ,filepath: &str) -> sgx_status_t {
 	match SgxFile::create(filepath) {
 		Ok(mut f) => match f.write_all(bytes) {
 			Ok(()) => {
-				println!("[Enclave +] Writing keyfile '{}' successful", filepath);
+				info!("[Enclave] Writing keyfile '{}' successful", filepath);
 				sgx_status_t::SGX_SUCCESS
 			}
 			Err(x) => {
-				println!("[Enclave -] Writing keyfile '{}' failed! {}", filepath, x);
+				error!("[Enclave -] Writing keyfile '{}' failed! {}", filepath, x);
 				sgx_status_t::SGX_ERROR_UNEXPECTED
 			}
 		},
 		Err(x) => {
-			println!("[Enclave !] Creating keyfile '{}' error! {}", filepath, x);
+			error!("[Enclave !] Creating keyfile '{}' error! {}", filepath, x);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	}
@@ -73,7 +73,7 @@ pub fn read_file(mut keyvec: &mut Vec<u8>, filepath: &str) -> sgx_status_t {
 			}
 		},
 		Err(x) => {
-			println!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
+			error!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
@@ -85,16 +85,16 @@ pub fn read_counterstate(mut state_vec: &mut Vec<u8>, filepath: &str) -> sgx_sta
 	match SgxFile::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
 			Ok(len) => {
-				println!("[Enclave] Read {} bytes from counter file", len);
+				info!("[Enclave] Read {} bytes from counter file", len);
 				return sgx_status_t::SGX_SUCCESS;
 			}
 			Err(x) => {
-				println!("[Enclave] Read counter file failed {}", x);
+				error!("[Enclave] Read counter file failed {}", x);
 				return sgx_status_t::SGX_ERROR_UNEXPECTED;
 			}
 		},
 		Err(x) => {
-			println!("[Enclave] can't get counter file! {}", x);
+			error!("[Enclave] can't get counter file! {}", x);
 			state_vec.push(0);
 			return sgx_status_t::SGX_SUCCESS;
 		}
@@ -105,11 +105,11 @@ pub fn get_plaintext_from_encrypted_data(ciphertext_slice: &[u8], rsa_pair: &Rsa
 	let mut plaintext = Vec::new();
 	rsa_pair.decrypt_buffer(ciphertext_slice, &mut plaintext).unwrap();
 	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
-	println!("[Enclave] Decrypted data = {}", decrypted_string);
+	info!("[Enclave] Decrypted data = {}", decrypted_string);
 	plaintext
 }
 
-pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, u8) {
+pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, u32) {
 	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
 	// this is UGLY!!
 	// todo: implement properly when interface is defined
@@ -120,7 +120,7 @@ pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, 
 	let number: Vec<u8> = v.iter().filter_map(|x| x.parse().ok()).collect();
 	// println!("v[1] = {}", v[1]);
 	// println!("number = {:?}", number);
-	(v[0].to_string(), number[0])
+	(v[0].to_string(), number[0].into())
 }
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {

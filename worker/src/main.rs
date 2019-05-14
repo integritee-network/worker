@@ -36,21 +36,17 @@ extern crate env_logger;
 extern crate log;
 
 mod constants;
-mod utils;
 mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
-mod tests;
 
 use log::*;
 use std::str;
-use std::fs;
 use sgx_types::*;
 use init_enclave::init_enclave;
 use enclave_wrappers::*;
 use ws_server::start_ws_server;
-use tests::{test_pipeline, test_get_counter};
 
 use substrate_api_client::{Api,  hexstr_to_vec};
 use my_node_runtime::Event;
@@ -71,16 +67,13 @@ fn main() {
 	info!("Interacting with port {}", port);
 
     if let Some(_matches) = matches.subcommand_matches("worker") {
-		println!("* Starting substraTEE-worker");
-		println!("");
+		println!("*** Starting substraTEE-worker\n");
 		worker(port);
-		println!("* Worker finished");
-	} else if let Some(_matches) = matches.subcommand_matches("tests") {
-//		test_pipeline(port);
-//		test_get_counter();
 	} else if matches.is_present("getpublickey") {
+		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
 	} else if matches.is_present("getsignkey") {
+		println!("*** Get the signing key from the TEE\n");
 		get_signing_key_tee();
 	} else {
         println!("For options: use --help");
@@ -90,15 +83,14 @@ fn main() {
 fn worker(port: &str) -> () {
     // ------------------------------------------------------------------------
     // initialize the enclave
-    println!("");
     println!("*** Starting enclave");
     let enclave = match init_enclave() {
         Ok(r) => {
-            println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
+            println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
             r
         },
         Err(x) => {
-            println!("[-] Init Enclave Failed {}!", x);
+            error!("[-] Init Enclave Failed {}!\n", x);
             return;
         },
     };
@@ -110,7 +102,6 @@ fn worker(port: &str) -> () {
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
-    println!("");
     println!("*** Subscribing to events");
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
@@ -124,6 +115,8 @@ fn worker(port: &str) -> () {
 		})
 		.unwrap();
 
+	println!("[+] Subscribed, waiting for event...");
+	println!("");
 	loop {
 		let event_str = events_out.recv().unwrap();
 
@@ -133,42 +126,52 @@ fn worker(port: &str) -> () {
 		match _events {
 			Some(evts) => {
 				for evr in &evts {
-					println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
+					debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
 					match &evr.event {
 						Event::balances(be) => {
-							println!("\n>>>>>>>>>> balances event: {:?}\n", be);
+							println!("[+] Received balances event");
+							debug!("{:?}", be);
 							match &be {
 								balances::RawEvent::Transfer(transactor, dest, value, fee) => {
-									println!("Transactor: {:?}", transactor);
-									println!("Destination: {:?}", dest);
-									println!("Value: {:?}", value);
-									println!("Fee: {:?}", fee);
+									println!("    Transactor:  {:?}", transactor);
+									println!("    Destination: {:?}", dest);
+									println!("    Value:       {:?}", value);
+									println!("    Fee:         {:?}", fee);
+									println!("");
 								},
 								_ => {
-									println!("ignoring unsupported balances event");
+									info!("Ignoring unsupported balances event");
 								},
 							}},
 						Event::substratee_proxy(pe) => {
-							println!("\n>>>>>>>>>> substratee_Proxy event: {:?}", pe);
+							println!("[+] Received substratee_proxy event");
+							debug!("{:?}", pe);
 							match &pe {
 								my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
-									println!("received forward call from {:?} with payload {}", sender, hex::encode(payload));
-									test_pipeline(enclave.geteid(), payload.to_vec(), &mut status, port);
+									println!("[+] Received Forwarded event");
+									debug!("    From:    {:?}", sender);
+									debug!("    Payload: {:?}", hex::encode(payload));
+									println!("");
 
+									// process the payload and send extrinsic
+									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, port);
 								},
 								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
-									println!("received confirm call from {:?} with payload {}", sender, hex::encode(payload));
+									println!("[+] Received CallConfirmed event");
+									debug!("    From:    {:?}", sender);
+									debug!("    Payload: {:?}", hex::encode(payload));
+									println!("");
 								},
 							}
 						}
 						_ => {
-							println!("ignoring unsupported module event: {:?}", evr)
+							debug!("event = {:?}", evr);
+							info!("Ignoring event\n");
 						},
 					}
-
 				}
 			}
-			None => println!("couldn't decode event record list")
+			None => error!("Couldn't decode event record list")
 		}
 	}
 }

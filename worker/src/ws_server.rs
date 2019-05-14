@@ -21,6 +21,7 @@ use sgx_types::*;
 use ws::{listen, CloseCode, Sender, Handler, Message, Result};
 use std::thread;
 use enclave_api::get_counter;
+use log::*;
 
 pub fn start_ws_server(eid: sgx_enclave_id_t) {
     // Server WebSocket handler
@@ -31,7 +32,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
 
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
-            println!("[WS Server] Got message '{}'. ", msg);
+            info!("[WS Server] Got message '{}'. ", msg);
 
             let mut retval = sgx_status_t::SGX_SUCCESS;
             let account = msg.clone().into_data();
@@ -47,7 +48,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
 
             match result {
                 sgx_status_t::SGX_SUCCESS => {},
-                _ => { println!("[-] ECALL Enclave failed {}!", result.as_str())}
+                _ => { error!("[-] ECALL Enclave failed {}!", result.as_str())}
             }
 
             let answer = Message::text(format!("Counter of {} = {}", msg, value));
@@ -55,11 +56,12 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
         }
 
         fn on_close(&mut self, code: CloseCode, reason: &str) {
-            println!("[WS Server] WebSocket closing for ({:?}) {}", code, reason);
+            info!("[WS Server] WebSocket closing for ({:?}) {}", code, reason);
         }
     }
 
     // Server thread
+    info!("Starting WebSocket server on port 2019");
     thread::spawn(move || {
         listen("127.0.0.1:2019", |out| {
             Server { out: out, eid: eid }

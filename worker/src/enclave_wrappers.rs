@@ -29,35 +29,58 @@ use my_node_runtime::{UncheckedExtrinsic};
 use parity_codec::{Decode, Encode};
 use primitive_types::U256;
 
-// only used for testing purposes
-// FIXME: move to dedicated testing file
-pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str) -> UncheckedExtrinsic {
-	// encoded message 'b"Alice, 42"'
-	println!("");
-	println!("*** Decrypt and process the payload");
-	let extrinsic_size = 137;
-	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
+// function to get the account nonce of a user
+pub fn get_account_nonce(api: &substrate_api_client::Api, user: [u8; 32]) -> U256 {
+	info!("[>] Get account nonce");
 
+	let accountid = ed25519::Public::from_raw(user);
+	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
+	let nonce = hexstr_to_u256(result_str);
+
+	info!("[<] Account nonce of {:?} is {}\n", accountid, nonce);
+	nonce
+}
+
+// decrypt and process the payload (in the enclave)
+// then compose the extrinsic (in the enclave)
+// and send an extrinsic back to the substraTEE-node
+pub fn process_forwarded_payload(eid: sgx_enclave_id_t, ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str) {
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+	api.init();
+
+	// decrypt and process the payload. we will get an extrinsic back
+	let xt = decryt_and_process_payload(eid, ciphertext, retval, port);
+
+	let mut _xthex = hex::encode(xt.encode());
+	_xthex.insert_str(0, "0x");
+
+	// sending the extrinsic
+	info!("[+] Send the extrinsic");
+	let tx_hash = api.send_extrinsic(_xthex).unwrap();
+	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+}
+
+pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str, ) -> UncheckedExtrinsic {
+	println!("[>] Decrypt and process the payload");
+
+	// initiate the api and get the genesis hash
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
 
-	let mut key = [0; 32];
 	// get the public signing key of the TEE
-	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ecc pubkey file");
+	let mut key = [0; 32];
+	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
 	key.copy_from_slice(&ecc_key[..]);
-	println!("\n\n[+] Got ECC public key of TEE = {:?}\n\n", key);
+	info!("[+] Got ECC public key of TEE = {:?}", key);
 
-	// get enclaves's AccountNonce
-	let accountid = ed25519::Public::from_raw(key);
-	println!("Enclaves account id: {:?}", accountid);
+	// get enclaves's account nonce
+	let nonce = get_account_nonce(&api, key);
+	let nonce_bytes = U256::encode(&nonce);
 
-	let nonce_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	println!("");
-	println!("[+] Tee's account nonce is {}", nonce_str);
-	let nonce_u = hexstr_to_u256(nonce_str);
-	let nonce_bytes = U256::encode(&nonce_u);
-
+	// update the counter and compose the extrinsic
+	let extrinsic_size = 137;
+	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
 	let result = unsafe {
 		call_counter(eid,
 					 retval,
@@ -73,19 +96,15 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 	};
 
 	match result {
-		sgx_status_t::SGX_SUCCESS => println!("[+] Message decoded and processed in the enclave."),
+		sgx_status_t::SGX_SUCCESS => println!("[<] Message decoded and processed in the enclave"),
 		_ => {
-			println!("[-] ECALL Enclave Failed {}!", result.as_str());
-//			return;
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
 		}
 	}
 	UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap()
 }
 
 pub fn get_signing_key_tee() {
-	println!("");
-	println!("*** Get the signing key from the TEE");
-
 	println!("");
 	println!("*** Start the enclave");
 	let enclave = match init_enclave() {
@@ -135,9 +154,6 @@ pub fn get_signing_key_tee() {
 
 pub fn get_public_key_tee()
 {
-	println!("");
-	println!("*** Get the public key from the TEE");
-
 	println!("");
 	println!("*** Start the enclave");
 	let enclave = match init_enclave() {

@@ -1,7 +1,7 @@
 name: "substraTEE-worker"
-version: "0.1.0"
+version: "1.0.0"
 about: Worker using Intel SGX TEE for SubstraTEE-node
-author: Decentralized Systems @ SCS
+authors: "Supercomputing Systems AG <info@scs.ch>"
 
 # AppSettings can be defined as a list and are **not** ascii case sensitive
 settings:
@@ -21,15 +21,7 @@ args:
 subcommands:
     - worker:
         about: Start the substraTEE-worker
-        version: "0.1"
-        author: Marcel Frei
-    - tests:
-        about: Run tests that interact with enclave.
-        version: "0.1"
-        author: "Christian Langenbacher"
     - getpublickey:
-        about: Get the public key from the TEE
-        version: "0.1"
+        about: Get the public RSA3072 key from the TEE
     - getsignkey:
-        about: get the public signing key from the TEE
-        version: "0.1"
+        about: Get the public signing key from the TEE

@@ -167,7 +167,6 @@ fn create_sealed_ed25519_seed() -> sgx_status_t {
 	utils::write_file(&seed, ED25519_SEALED_KEY_FILE)
 }
 
-
 #[no_mangle]
 pub extern "C" fn call_counter(ciphertext: * mut u8,
 							   ciphertext_size: u32,
@@ -188,14 +187,15 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
-
 		return retval;
 	}
 
+	// decode the message
 	let plaintext = utils::get_plaintext_from_encrypted_data(&ciphertext_slice, &rsa_keypair);
 	let (account, increment) = utils::get_account_and_increment_from_plaintext(plaintext.clone());
 
-    let mut state_vec: Vec<u8> = Vec::new();
+    // read the counter state
+	let mut state_vec: Vec<u8> = Vec::new();
 	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
 
 	if retval != sgx_status_t::SGX_SUCCESS {
@@ -205,16 +205,16 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
     let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
     let mut counter = helper.decode().unwrap();
 
-    //FIXME: borrow checker trouble, -> should be fixed, untested
+	// increment or create the counter and write state
 	increment_or_insert_counter(&mut counter, &account, increment);
     retval = write_counter_state(counter);
 
+	// get information for composing the extrinsic
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let _seed = _get_ecc_seed_file(&mut retval);
-
 	let genesis_hash = utils::hash_from_slice(hash_slice);
 	let call_hash = utils::blake2s(&plaintext);
-//	println!("[Enclave]: Call hash {:?}", call_hash);
+	debug!("[Enclave]: Call hash {:?}", call_hash);
 
 	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
 
@@ -224,7 +224,7 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 }
 
 #[no_mangle]
-pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u8) -> sgx_status_t {
+pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
 	let mut state_vec: Vec<u8> = Vec::new();
 
 	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
@@ -245,15 +245,15 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut
 	retval
 }
 
-fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u8) {
+fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u32) {
 	{
 		let c = counter.entries.entry(name.to_string()).or_insert(0);
 		*c += value;
 	}
 	if counter.entries.get(name).unwrap() == &value {
-		println!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
+		info!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
 	} else {
-		println!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name).unwrap());
+		info!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name).unwrap());
 	}
 }
 
@@ -290,7 +290,7 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
     //restore ed25519 keypair from seed
     let (_privkey, _pubkey) = keypair(seed);
 
-    println!("[Enclave]: Restored sealed key pair with pubkey: {:?}", _pubkey.to_base58());
+    info!("[Enclave]: Restored sealed key pair with pubkey: {:?}", _pubkey.to_base58());
 
     // sign message
     let msg_slice = unsafe {
@@ -307,7 +307,7 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
 
 #[derive(Serializable, DeSerializable, Debug)]
 struct AllCounts {
-    entries: HashMap<String, u8>
+    entries: HashMap<String, u32>
 }
 
 // fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
@@ -334,7 +334,7 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 
     let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
 		// should not be thrown as we calculate a 32 byte hash ourselves
-        println!("unsupported payload size");
+        error!("unsupported payload size");
         signature(&[0u8; 64], &_privkey)
     } else {
         //println!("signing {}", HexDisplay::from(&payload));
