@@ -11,8 +11,7 @@ Cargo.lock
 
 # binaries
 bin/*.so
-bin/app
-bin/substratee_client_example
+bin/substratee_*
 
 # sealed data
 bin/*.bin
@@ -29,8 +28,8 @@ bin/ecc_pubkey.txt
 *.iml
 
 # generated enclave files
-app/Enclave_u.*
-app/libEnclave_u.*
+worker/Enclave_u.*
+worker/libEnclave_u.*
 enclave/Enclave_t.*
 enclave/enclave.so
 lib/libEnclave_u.*
