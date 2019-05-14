@@ -1,3 +1,5 @@
+# helper script to update the files in rust-sgx-sdk to the lastest version
+
 GIT = git
 CP  = cp
 

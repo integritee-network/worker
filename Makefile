@@ -27,16 +27,17 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-########################## WARNING ###########################
-# THIS FILE CONTAINS MODIFICATIONS FOR THE SUBSTRATEE-WORKER #
-# DON'T OVERWRITE THE CONTENT BLINDLY                        #
-##############################################################
+# +----------------------------------------------------------------------------+
+# |                                                                            |
+# |                 THIS FILE CONTAINS MODIFICATIONS                           |
+# |                DON'T OVERWRITE THE CONTENT BLINDLY                         |
+# |                                                                            |
+# +----------------------------------------------------------------------------+
 
 ######## Update SGX SDK ########
 include UpdateRustSGXSDK.mk
 
 ######## SGX SDK Settings ########
-
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
@@ -65,49 +66,44 @@ $(error Cannot set SGX_DEBUG and SGX_PRERELEASE at the same time!!)
 endif
 endif
 
-
 ifeq ($(SGX_DEBUG), 1)
 	SGX_COMMON_CFLAGS += -O0 -g
 else
 	SGX_COMMON_CFLAGS += -O2
 endif
 
-######## CUSTOM Settings ########
-
+######## CUSTOM settings ########
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
 CUSTOM_EDL_PATH := ./rust-sgx-sdk/edl
 CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 
-######## EDL Settings ########
+######## EDL settings ########
+Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h worker/Enclave_u.c worker/Enclave_u.h
 
-Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app/Enclave_u.h
+######## SubstraTEE-worker settings ########
+Worker_Rust_Flags := --release
+Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find worker/ -type f -name 'Cargo.toml')
+Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
+Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
-######## APP Settings ########
+Worker_Rust_Path := ./worker/target/release
+Worker_Enclave_u_Object :=worker/libEnclave_u.a
+Worker_Name := bin/app
 
-App_Rust_Flags := --release
-App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
-App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
-
-App_Rust_Path := ./app/target/release
-App_Enclave_u_Object :=app/libEnclave_u.a
-App_Name := bin/app
-
-######## SubstraTEE-client Settings ########
+######## SubstraTEE-client settings ########
 Client_SRC_Path := client
 Client_Rust_Flags := --release
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
-Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
+Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
 Client_Rust_Path := ./$(Client_SRC_Path)/target/release
 Client_Path := bin
-Client_Binary := substratee_client_example
+Client_Binary := substratee_client
 Client_Name := $(Client_Path)/$(Client_Binary)
 
-######## Enclave Settings ########
-
+######## Enclave settings ########
 ifneq ($(SGX_MODE), HW)
 	Trts_Library_Name := sgx_trts_sim
 	Service_Library_Name := sgx_tservice_sim
@@ -137,40 +133,41 @@ RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nod
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
+######## Targets ########
 .PHONY: all
-all: $(Client_Name) $(App_Name) $(Signed_RustEnclave_Name)
+all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
+worker:  $(Worker_Name)
+client:  $(Client_Name)
 
-######## EDL Objects ########
-
+######## EDL objects ########
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
 	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir enclave
-	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir app
+	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir worker
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
-######## App Objects ########
-
-app/Enclave_u.o: $(Enclave_EDL_Files)
-	@$(CC) $(App_C_Flags) -c app/Enclave_u.c -o $@
+######## SubstraTEE-worker objects ########
+worker/Enclave_u.o: $(Enclave_EDL_Files)
+	@$(CC) $(Worker_C_Flags) -c worker/Enclave_u.c -o $@
 	@echo "CC   <=  $<"
 
-$(App_Enclave_u_Object): app/Enclave_u.o
+$(Worker_Enclave_u_Object): worker/Enclave_u.o
 	$(AR) rcsD $@ $^
-	cp $(App_Enclave_u_Object) ./lib
+	cp $(Worker_Enclave_u_Object) ./lib
 
-$(App_Name): $(App_Enclave_u_Object) $(App_SRC_Files)
-	@cd app && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
+$(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
+	@echo "Building the substraTEE-worker"
+	@cd worker && SGX_SDK=$(SGX_SDK) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
-	cp $(App_Rust_Path)/app ./bin
+	cp $(Worker_Rust_Path)/substratee_worker ./bin
 
-######## Client Objects ########
-
+######## SubstraTEE-client objects ########
 $(Client_Name): $(Client_SRC_Files)
+	@echo "Building the substraTEE-client"
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 
-######## Enclave Objects ########
-
+######## Enclave objects ########
 enclave/Enclave_t.o: $(Enclave_EDL_Files)
 	@$(CC) $(RustEnclave_Compile_Flags) -c enclave/Enclave_t.c -o $@
 	@echo "CC   <=  $<"
@@ -181,6 +178,7 @@ $(RustEnclave_Name): enclave compiler-rt enclave/Enclave_t.o
 	@echo "LINK =>  $@"
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
+	@echo "Building the enclave"
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
 	@echo "SIGN =>  $@"
 
@@ -194,7 +192,16 @@ compiler-rt:
 
 .PHONY: clean
 clean:
-	@rm -f $(Client_Name) $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a bin/*.bin
+	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
 	@cd enclave && cargo clean && rm -f Cargo.lock
-	@cd app && cargo clean && rm -f Cargo.lock
+	@cd worker && cargo clean && rm -f Cargo.lock
+	@cd client && cargo clean && rm -f Cargo.lock
 
+.PHONY: help
+help:
+	@echo "Available targets"
+	@echo "  all     - builds all targets (default)"
+	@echo "  worker  - builds the substraTEE-worker"
+	@echo "  client  - builds the substraTEE-client"
+	@echo ""
+	@echo "  clean   - cleanup"
