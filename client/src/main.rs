@@ -91,8 +91,6 @@ fn main() {
 	println!("[>] Subscribe to callConfirmed event");
 	let act_hash = subscribe_to_call_confirmed(api);
 	println!("[<] callConfirmed event received");
-
-	println!("");
-	println!("Expected Hash: {:?}", blake2s(32, &[0; 32], &plaintext).as_bytes());
-	println!("Actual Hash:   {:?}", act_hash);
+	println!("[+] Expected Hash: {:?}", blake2s(32, &[0; 32], &plaintext).as_bytes());
+	println!("[+] Actual Hash:   {:?}", act_hash);
 }
