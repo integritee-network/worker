@@ -42,14 +42,16 @@ extern crate sgx_crypto_helper;
 
 extern crate sgx_serialize;
 
+extern crate environmental;
 extern crate primitives;
 use primitives::{ed25519};
 
 extern crate my_node_runtime;
-use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
+use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall, AccountId};
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
-
+//extern crate schnorrkel;
+//use schnorrkel::{Keypair,Signature};
 extern crate parity_codec;
 use parity_codec::{Decode, Encode, Compact};
 extern crate primitive_types;
@@ -370,24 +372,54 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 use srml_support::Dispatchable;
 use runtime_wrapper::Runtime;
 
+
 pub fn init_runtime() {
 	println!("[??] asking runtime out");
 	
 	let rt = Runtime;
-	//let () = my_node_runtime::api::Core_version;
 	
-	let origin = my_node_runtime::Origin::ROOT;
+	let accountid = AccountId::default();
+	let origin = my_node_runtime::Origin::signed(accountid);
+	//let origin = my_node_runtime::Origin::ROOT;
+	
 	let address = indices::Address::<Runtime>::default();
+/*
+	use environmental::environmental;
+	use std::collections::HashMap;
 
-	//let callable = ::srml_support::dispatch::CallableCallFor<Contract>;
-	
-	//tests to call into the contract module
+	environmental!(hm: HashMap<Vec<u8>, Vec<u8>>);
+	hm::with(|hm|
+			hm.insert(vec!(0,1,2), vec!(4,5,6))
+	);
+	*/
+	// test runtime state access
+	let key = runtime_io::twox_128(&String::from("dummy").as_bytes().to_vec());
+	println!("key of dummy is {:?}", key);
 
-	let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin.clone());
+	//let mut _hm: HashMap<Vec<u8>, Vec<u8>> = HashMap::new();
+	let mut ext = runtime_io::SgxExternalities::new();
 
-	let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin.clone());  //dispatch(origin);
+	//println!("HashMap raw: {:?}", _hm);
+	ext.insert(key.to_vec(),vec!(4,5,6));
+	println!("HashMap raw: {:?}", ext);
 
-	println!("[++] finished playing with runtime")
+	runtime_io::with_externalities(&mut ext, || {
+		let res = runtime_io::storage(&key);
+		println!("read back key {:?}: {:?}", key, runtime_io::storage(&key));
+		//tests to call into the contract module
+		println!("calling put_code");
+		let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin.clone());
+		println!("put_code: {:?}", res);
+		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin.clone());  //dispatch(origin);
+		println!("call: {:?}", res);
+		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
+		//println!("storage_size_offset = {:?}", res);
+
+	});
+
+
+
+	println!("[++] finished playing with runtime");
 
 
 

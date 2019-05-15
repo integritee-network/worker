@@ -30,14 +30,14 @@ sgx_serialize_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 blake2-rfc = { version = "0.2.18", default-features = false}
-
+environmental = { version = "1.0.1", default-features= false}
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
-#schnorrkel = { git = "https://github.com/scs/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
+#schnorrkel = { git = "https://github.com/w3f/schnorrkel.git", default-features = false, features=["alloc", "u64_backend"] }
 
 #only listed to get no_global_allocator feature in
 rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_global_allocator"]}
 #only listed to get no_panic_handler and no_oom  features in
-runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_panic_handler", "no_oom", "no_std_host"]}
+runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_panic_handler", "no_oom", "sgx"]}
 #only listed to get features in
 sandbox = { package = "sr-sandbox", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_std_host"]}
 
