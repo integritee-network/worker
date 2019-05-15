@@ -47,7 +47,7 @@ extern crate primitives;
 use primitives::{ed25519};
 
 extern crate my_node_runtime;
-use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall, AccountId};
+use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall, AccountId, AuthorityId};
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
 //extern crate schnorrkel;
@@ -66,6 +66,7 @@ use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 extern crate sgx_serialize_derive;
 
 extern crate contract;
+extern crate balances;
 extern crate srml_support;
 
 use std::sgxfs::SgxFile;
@@ -371,18 +372,43 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 
 use srml_support::Dispatchable;
 use runtime_wrapper::Runtime;
+mod genesis;
+use contract::Schedule;
+extern crate runtime_io;
+use runtime_io::SgxExternalities;
+type Gas = u64;
 
+
+fn set_storage_value(ext: &mut SgxExternalities, key_name: String, value: Vec<u8>) {
+	let key = runtime_io::twox_128(&String::from(key_name).as_bytes().to_vec());
+	ext.insert(key.to_vec(),value);
+}
 
 pub fn init_runtime() {
 	println!("[??] asking runtime out");
+
+	let mut ext = SgxExternalities::new();	
+
+//	let rt = Runtime;
 	
-	let rt = Runtime;
-	
-	let accountid = AccountId::default();
-	let origin = my_node_runtime::Origin::signed(accountid);
+	let tina = AccountId::default();
+	let origin_tina = my_node_runtime::Origin::signed(tina.clone());
 	//let origin = my_node_runtime::Origin::ROOT;
 	
 	let address = indices::Address::<Runtime>::default();
+
+	// create a "shadow genesis". for enclave use only
+	let genesis = genesis::testnet_genesis(
+		vec!(AuthorityId::from(tina.clone())),
+		vec!(tina.clone()),
+		tina.clone(),
+	);
+
+	set_storage_value(&mut ext, "Contract Schedule".to_string(), Schedule::<Gas>::default().encode());
+	set_storage_value(&mut ext, "Contract BlockGasLimit".to_string(), 10_000_000u64.encode());
+	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
+	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 0u64.encode());
+	println!("encoding 1u64 is: {:?}", 1u64.encode());
 /*
 	use environmental::environmental;
 	use std::collections::HashMap;
@@ -396,21 +422,22 @@ pub fn init_runtime() {
 	let key = runtime_io::twox_128(&String::from("dummy").as_bytes().to_vec());
 	println!("key of dummy is {:?}", key);
 
-	//let mut _hm: HashMap<Vec<u8>, Vec<u8>> = HashMap::new();
-	let mut ext = runtime_io::SgxExternalities::new();
+
 
 	//println!("HashMap raw: {:?}", _hm);
-	ext.insert(key.to_vec(),vec!(4,5,6));
+	//ext.insert(key.to_vec(),vec!(4,5,6));
 	println!("HashMap raw: {:?}", ext);
 
 	runtime_io::with_externalities(&mut ext, || {
 		let res = runtime_io::storage(&key);
 		println!("read back key {:?}: {:?}", key, runtime_io::storage(&key));
 		//tests to call into the contract module
-		println!("calling put_code");
-		let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin.clone());
-		println!("put_code: {:?}", res);
-		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin.clone());  //dispatch(origin);
+		//println!("calling put_code");
+		//let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin_tina.clone());
+		//println!("put_code: {:?}", res);
+
+		println!("calling contractCall::call()");
+		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
 		println!("call: {:?}", res);
 		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
 		//println!("storage_size_offset = {:?}", res);

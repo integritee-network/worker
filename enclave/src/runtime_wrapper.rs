@@ -32,6 +32,9 @@ use runtime_primitives::traits::BlakeTwo256;
 use srml_support::traits::Currency;
 use std::vec::Vec;
 
+pub trait Trait: balances::Trait {
+}
+    
 
 #[structural_match]
 #[rustc_copy_clone_marker]
@@ -333,7 +336,20 @@ impl From<system::Log<Runtime>> for InternalLog {
 
 
 
+impl balances::Trait for Runtime {
+	/// The type for recording an account's balance.
+	type Balance = u128;
+	/// What to do if an account's free balance gets zeroed.
+	type OnFreeBalanceZero = ();
+	/// What to do if a new account is created.
+	type OnNewAccount = Indices;
+	/// The uniquitous event type.
+	type Event = Event;
 
+	type TransactionPayment = ();
+	type DustRemoval = ();
+	type TransferPayment = ();
+}
 
 
 impl system::Trait for Runtime {

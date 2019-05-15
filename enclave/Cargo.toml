@@ -51,6 +51,7 @@ my_node_runtime = { package = "substratee-node-runtime", git = "https://github.c
 
 #contract
 #contract = { package = "substratee-contract", path = "./contract/", default-features = false, features = ["core"]}
+balances = { package = "srml-balances", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false}
 contract = { package = "srml-contract", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features = ["core"]}
 timestamp = { package = "srml-timestamp", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false }
 system = { package = "srml-system", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false }
