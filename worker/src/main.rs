@@ -40,6 +40,7 @@ mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
+mod enclave_wasm;
 
 use log::*;
 use std::str;
@@ -48,13 +49,15 @@ use init_enclave::init_enclave;
 use enclave_wrappers::*;
 use ws_server::start_ws_server;
 
-use substrate_api_client::{Api,  hexstr_to_vec};
+use substrate_api_client::{Api, hexstr_to_vec};
 use my_node_runtime::Event;
 
 use parity_codec::Decode;
 use std::sync::mpsc::channel;
 
 use std::thread;
+
+use enclave_wasm::sgx_enclave_wasm_init;
 
 fn main() {
 	// Setup logging
@@ -69,6 +72,9 @@ fn main() {
     if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
 		worker(port);
+	} else if matches.is_present("wasm") {
+		println!("*** Run WASM (WIP)\n");
+		run_wasm();
 	} else if matches.is_present("getpublickey") {
 		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
@@ -78,6 +84,26 @@ fn main() {
 	} else {
         println!("For options: use --help");
     }
+}
+
+fn run_wasm() -> () {
+	// init the enclave
+	let enclave = match init_enclave() {
+        Ok(r) => {
+            println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
+            r
+        },
+        Err(x) => {
+            println!("[-] Init Enclave Failed {}!", x.as_str());
+            return;
+        },
+    };
+
+    // init the sgxwasm spec driver engine
+    match sgx_enclave_wasm_init(&enclave) {
+		Ok(_r) => { println!("[+] Init Wasm in Enclave Successful"); },
+		Err(x) => { error!("[-] Init Wasm in Enclave Failed. {}", x); }
+	};
 }
 
 fn worker(port: &str) -> () {

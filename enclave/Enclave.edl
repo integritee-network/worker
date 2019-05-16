@@ -41,6 +41,7 @@ enclave {
         public sgx_status_t get_ecc_signing_pubkey(
             [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
+        public sgx_status_t sgxwasm_init();
     };
 
     untrusted {

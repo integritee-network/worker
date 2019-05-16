@@ -25,3 +25,5 @@ subcommands:
         about: Get the public RSA3072 key from the TEE
     - getsignkey:
         about: Get the public signing key from the TEE
+    - wasm:
+        about: Run WASM code in the enclave (WIP)

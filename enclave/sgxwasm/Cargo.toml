@@ -1,0 +1,14 @@
+[package]
+name = "sgxwasm"
+version = "0.1.0"
+authors = ["Baidu"]
+
+[dependencies]
+wasmi = { git = "https://github.com/baidu/rust-sgx-sdk" }
+wabt-core = { git = "https://github.com/baidu/rust-sgx-sdk" }
+serde = { git = "https://github.com/baidu/rust-sgx-sdk" }
+serde_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk" }

@@ -40,6 +40,9 @@ extern crate log;
 extern crate primitives;
 use primitives::{ed25519};
 
+extern crate wasmi;
+extern crate sgxwasm;
+
 extern crate my_node_runtime;
 use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
 extern crate runtime_primitives;
@@ -57,6 +60,9 @@ use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 #[macro_use]
 extern crate sgx_serialize_derive;
 
+#[macro_use]
+extern crate lazy_static;
+
 use log::*;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -64,17 +70,32 @@ use std::string::String;
 use std::vec::Vec;
 use std::collections::HashMap;
 use std::string::ToString;
+use std::sync::SgxMutex;
 
 use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
+use sgxwasm::{SpecDriver, boundary_value_to_runtime_value, result_covert};
+
 type Index = u64;
 
 mod constants;
 mod utils;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
+
+lazy_static!{
+    static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
+}
+
+#[no_mangle]
+pub extern "C"
+fn sgxwasm_init() -> sgx_status_t {
+    let mut sd = SPECDRIVER.lock().unwrap();
+    *sd = SpecDriver::new();
+    sgx_status_t::SGX_SUCCESS
+}
 
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
