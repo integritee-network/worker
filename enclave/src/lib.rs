@@ -414,7 +414,7 @@ pub fn init_runtime() {
 
 
 	set_storage_value(&mut ext, "Contract Schedule".to_string(), Schedule::<Gas>::default().encode());
-	set_storage_value(&mut ext, "Contract BlockGasLimit".to_string(), 10_000_000u64.encode());
+	set_storage_value(&mut ext, "Contract BlockGasLimit".to_string(), 10_000_000_000_000u64.encode());
 	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
 	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 0u128.encode());
 	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
@@ -432,7 +432,15 @@ pub fn init_runtime() {
 	set_storage_value(&mut ext, "Contract CallBaseFee".to_string(), 1000u128.encode());
 	set_storage_value(&mut ext, "Contract CreateBaseFee".to_string(), 1000u128.encode());
 	set_storage_value(&mut ext, "Contract MaxDepth".to_string(), 1024u32.encode());
-			
+
+
+
+	// read contract wasm file
+	// FIXME: error handling
+	let mut code: Vec<u8> = Vec::new();
+	utils::read_file_cleartext(&mut code, "flipper-pruned.wasm");
+		
+
 	// test runtime state access
 	let key = runtime_io::twox_128(&String::from("dummy").as_bytes().to_vec());
 	println!("key of dummy is {:?}", key);
@@ -448,9 +456,9 @@ pub fn init_runtime() {
 		let res = runtime_io::storage(&key);
 		println!("read back key {:?}: {:?}", key, runtime_io::storage(&key));
 		//tests to call into the contract module
-		//println!("calling put_code");
-		//let res = runtime_wrapper::contractCall::<Runtime>::put_code(42, vec![0, 2, 3]).dispatch(origin_tina.clone());
-		//println!("put_code: {:?}", res);
+		println!("calling put_code");
+		let res = runtime_wrapper::contractCall::<Runtime>::put_code(500_000, code).dispatch(origin_tina.clone());
+		println!("put_code: {:?}", res);
 
 		println!("calling contractCall::call()");
 		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 10_000_000, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);

@@ -20,6 +20,7 @@
 extern crate sgx_types;
 
 use std::sgxfs::SgxFile;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::vec::Vec;
 use std::string::String;
@@ -59,6 +60,28 @@ pub fn write_file(bytes: &[u8] ,filepath: &str) -> sgx_status_t {
 	}
 }
 
+// FIXME: we probably never need this and should prevent untrusted write out of the enclave
+pub fn write_file_cleartext(bytes: &[u8] ,filepath: &str) -> sgx_status_t {
+	match File::create(filepath) {
+		Ok(mut f) => match f.write_all(bytes) {
+			Ok(()) => {
+				println!("[Enclave +] Writing cleartext file '{}' successful", filepath);
+				sgx_status_t::SGX_SUCCESS
+			}
+			Err(x) => {
+				println!("[Enclave -] Writing cleartext file '{}' failed! {}", filepath, x);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			}
+		},
+		Err(x) => {
+			println!("[Enclave !] Creating cleartext file '{}' error! {}", filepath, x);
+			sgx_status_t::SGX_ERROR_UNEXPECTED
+		}
+	}
+}
+
+
+
 pub fn read_file(mut keyvec: &mut Vec<u8>, filepath: &str) -> sgx_status_t {
 	match SgxFile::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut keyvec) {
@@ -73,6 +96,25 @@ pub fn read_file(mut keyvec: &mut Vec<u8>, filepath: &str) -> sgx_status_t {
 		},
 		Err(x) => {
 			println!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
+}
+
+pub fn read_file_cleartext(mut keyvec: &mut Vec<u8>, filepath: &str) -> sgx_status_t {
+	match File::open(filepath) {
+		Ok(mut f) => match f.read_to_end(&mut keyvec) {
+			Ok(len) => {
+				println!("[Enclave] Read {} bytes from cleartext file", len);
+				return sgx_status_t::SGX_SUCCESS;
+			}
+			Err(x) => {
+				println!("[Enclave] Read cleartext file failed {}", x);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED;
+			}
+		},
+		Err(x) => {
+			println!("[Enclave] cannot open cleartext file {}", x);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
