@@ -12,6 +12,7 @@ Cargo.lock
 # binaries
 bin/*.so
 bin/substratee_*
+bin/*.wasm
 
 # sealed data
 bin/*.bin

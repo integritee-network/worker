@@ -133,11 +133,14 @@ RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nod
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
+######## WASM settings ########
+Wasm_Name := bin/runtime.compact.wasm
+
 ######## Targets ########
 .PHONY: all
-all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
-worker:  $(Worker_Name)
-client:  $(Client_Name)
+all: $(Client_Name) $(Worker_Name) $(Wasm_Name) $(Signed_RustEnclave_Name)
+worker: $(Worker_Name)
+client: $(Client_Name)
 
 ######## EDL objects ########
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
@@ -155,6 +158,7 @@ $(Worker_Enclave_u_Object): worker/Enclave_u.o
 	cp $(Worker_Enclave_u_Object) ./lib
 
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
+	@echo
 	@echo "Building the substraTEE-worker"
 	@cd worker && SGX_SDK=$(SGX_SDK) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
@@ -162,6 +166,7 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 
 ######## SubstraTEE-client objects ########
 $(Client_Name): $(Client_SRC_Files)
+	@echo
 	@echo "Building the substraTEE-client"
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
@@ -178,16 +183,28 @@ $(RustEnclave_Name): enclave compiler-rt enclave/Enclave_t.o
 	@echo "LINK =>  $@"
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
-	@echo "Building the enclave"
+	@echo
+	@echo "Signing the enclave"
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
 	@echo "SIGN =>  $@"
 
+######## Wasm objects ########
+.PHONY: $(Wasm_Name)
+$(Wasm_Name):
+	@echo
+	@echo "Building the WASM"
+	@cd wasm-runtime && ./build.sh
+
 .PHONY: enclave
 enclave:
+	@echo
+	@echo "Building the enclave"
 	$(MAKE) -C ./enclave/
 
 .PHONY: compiler-rt
 compiler-rt:
+	@echo
+	@echo "Building the compiler"
 	$(MAKE) -C ./rust-sgx-sdk/compiler-rt/ 2> /dev/null
 
 .PHONY: clean
