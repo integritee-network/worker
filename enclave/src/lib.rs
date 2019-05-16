@@ -47,7 +47,7 @@ extern crate primitives;
 use primitives::{ed25519};
 
 extern crate my_node_runtime;
-use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall, AccountId, AuthorityId};
+use my_node_runtime::{UncheckedExtrinsic, Call, Hash, Event, SubstraTEEProxyCall, AccountId, AuthorityId};
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
 //extern crate schnorrkel;
@@ -376,6 +376,8 @@ mod genesis;
 use contract::Schedule;
 extern crate runtime_io;
 use runtime_io::SgxExternalities;
+extern crate parity_wasm;
+use parity_wasm::elements;
 type Gas = u64;
 //extern crate blake2_rfc;
 
@@ -384,6 +386,11 @@ fn set_storage_value(ext: &mut SgxExternalities, key_name: String, value: Vec<u8
 	let key = runtime_io::twox_128(&String::from(key_name).as_bytes().to_vec());
 	ext.insert(key.to_vec(),value);
 }
+fn get_storage_value(ext: &mut SgxExternalities, key_name: String) -> Option<&Vec<u8>> {
+	let key = runtime_io::twox_128(&String::from(key_name).as_bytes().to_vec());
+	ext.get(&key.to_vec())
+}
+
 
 pub fn init_runtime() {
 	println!("[??] asking runtime out");
@@ -410,10 +417,11 @@ pub fn init_runtime() {
 	set_storage_value(&mut ext, "Balances Balances".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
 	//set_storage_value(&mut ext, "Balances ".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
 
+	let mut schedule = Schedule::<Gas>::default();
+	schedule.enable_println = true;
 
 
-
-	set_storage_value(&mut ext, "Contract Schedule".to_string(), Schedule::<Gas>::default().encode());
+	set_storage_value(&mut ext, "Contract CurrentSchedule".to_string(), schedule.encode());
 	set_storage_value(&mut ext, "Contract BlockGasLimit".to_string(), 10_000_000_000_000u64.encode());
 	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
 	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 0u128.encode());
@@ -438,8 +446,8 @@ pub fn init_runtime() {
 	// read contract wasm file
 	// FIXME: error handling
 	let mut code: Vec<u8> = Vec::new();
-	utils::read_file_cleartext(&mut code, "flipper-pruned.wasm");
-		
+	utils::read_file_cleartext(&mut code, "./bin/flipper-pruned.wasm");
+	//let code_ser = elements::serialize(code);	
 
 	// test runtime state access
 	let key = runtime_io::twox_128(&String::from("dummy").as_bytes().to_vec());
@@ -459,7 +467,52 @@ pub fn init_runtime() {
 		println!("calling put_code");
 		let res = runtime_wrapper::contractCall::<Runtime>::put_code(500_000, code).dispatch(origin_tina.clone());
 		println!("put_code: {:?}", res);
-
+	});
+	let code_hash = match get_storage_value(&mut ext, "System Events".to_string()) {
+		Some(ev) => {
+			//println!("reading events: {:?}", ev);
+			let mut _er_enc = ev.as_slice();
+			let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+			match _events {
+            Some(evts) => {
+				let mut code_hash = None;
+                for evr in &evts {
+                    //println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
+                    match &evr.event {
+                        Event::contract(be) => {
+                            //println!(">>>>>>>>>> contract event: {:?}", be);
+                            match &be {
+                                contract::RawEvent::CodeStored(ch) => {
+                                    println!("code_hash: {:?}", ch);
+									code_hash = Some(ch.clone());
+                                    },
+                                _ => { 
+                                    println!("ignoring unsupported contract event");
+                                    },
+                            }},
+                        _ => println!("ignoring unsupported module event"),
+                   }
+                    
+                } 
+				code_hash
+            }
+            None => {
+				println!("couldn't decode event record list");
+				None
+			}
+        }
+		},
+		None => {
+			println!("reading events failed. Has the contract really been deployed?");
+			None
+		},
+	}.unwrap();
+	println!("our code hash is {:?}", code_hash);
+	//now we have a code_hash. let's deploy a contract instance
+	
+	// TODO
+/*	
+	runtime_io::with_externalities(&mut ext, || {
 		println!("calling contractCall::call()");
 		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 10_000_000, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
 		println!("call: {:?}", res);
@@ -467,7 +520,20 @@ pub fn init_runtime() {
 		//println!("storage_size_offset = {:?}", res);
 
 	});
+*/
 
+	// now we have a contract instance. let's call it
+
+/*
+	runtime_io::with_externalities(&mut ext, || {
+		println!("calling contractCall::call()");
+		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 10_000_000, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
+		println!("call: {:?}", res);
+		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
+		//println!("storage_size_offset = {:?}", res);
+
+	});
+*/
 
 
 	println!("[++] finished playing with runtime");

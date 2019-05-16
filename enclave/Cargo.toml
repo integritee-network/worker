@@ -63,3 +63,4 @@ indices = { package = "srml-indices", git = "https://github.com/brenzi/substrate
 #executor
 #state_machine = { package = "substrate-state-machine", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract", default-features = false }
 
+parity-wasm = { version = "0.31", default-features = false }
