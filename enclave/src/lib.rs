@@ -377,6 +377,7 @@ use contract::Schedule;
 extern crate runtime_io;
 use runtime_io::SgxExternalities;
 type Gas = u64;
+//extern crate blake2_rfc;
 
 
 fn set_storage_value(ext: &mut SgxExternalities, key_name: String, value: Vec<u8>) {
@@ -388,36 +389,50 @@ pub fn init_runtime() {
 	println!("[??] asking runtime out");
 
 	let mut ext = SgxExternalities::new();	
-
 //	let rt = Runtime;
-	
+	//let _todel = blake2_rfc::blake2b::blake2b(64, &[], &[0; 64]).as_bytes();
 	let tina = AccountId::default();
 	let origin_tina = my_node_runtime::Origin::signed(tina.clone());
 	//let origin = my_node_runtime::Origin::ROOT;
 	
 	let address = indices::Address::<Runtime>::default();
 
-	// create a "shadow genesis". for enclave use only
+/*	// create a "shadow genesis". for enclave use only
 	let genesis = genesis::testnet_genesis(
 		vec!(AuthorityId::from(tina.clone())),
 		vec!(tina.clone()),
 		tina.clone(),
 	);
+	*/
+	const MILLICENTS: u128 = 1_000_000_000;
+	const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
+
+	set_storage_value(&mut ext, "Balances Balances".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
+	//set_storage_value(&mut ext, "Balances ".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
+
+
+
 
 	set_storage_value(&mut ext, "Contract Schedule".to_string(), Schedule::<Gas>::default().encode());
 	set_storage_value(&mut ext, "Contract BlockGasLimit".to_string(), 10_000_000u64.encode());
 	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
-	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 0u64.encode());
-	println!("encoding 1u64 is: {:?}", 1u64.encode());
-/*
-	use environmental::environmental;
-	use std::collections::HashMap;
-
-	environmental!(hm: HashMap<Vec<u8>, Vec<u8>>);
-	hm::with(|hm|
-			hm.insert(vec!(0,1,2), vec!(4,5,6))
-	);
-	*/
+	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 0u128.encode());
+	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
+	set_storage_value(&mut ext, "Contract SignedClaimHandicap".to_string(), 2u32.encode());
+	set_storage_value(&mut ext, "Contract RentBytePrice".to_string(), 4u32.encode());
+	set_storage_value(&mut ext, "Contract RentDepositOffset".to_string(), 1000u32.encode());
+	set_storage_value(&mut ext, "Contract StorageSizeOffset".to_string(), 8u32.encode());
+	set_storage_value(&mut ext, "Contract SurchargeReward".to_string(), 150u128.encode());
+	set_storage_value(&mut ext, "Contract TombstoneDeposit".to_string(), 16u128.encode());
+	set_storage_value(&mut ext, "Contract TransactionBaseFee".to_string(), (1 * CENTS as u128).encode());
+	set_storage_value(&mut ext, "Contract TransactionByteFee".to_string(), (10 * MILLICENTS as u128).encode());
+	set_storage_value(&mut ext, "Contract TransferFee".to_string(), (1 * CENTS as u128).encode());
+	set_storage_value(&mut ext, "Contract CreationFee".to_string(), (1 * CENTS as u128).encode());
+	set_storage_value(&mut ext, "Contract ContractFee".to_string(), (1 * CENTS as u128).encode());
+	set_storage_value(&mut ext, "Contract CallBaseFee".to_string(), 1000u128.encode());
+	set_storage_value(&mut ext, "Contract CreateBaseFee".to_string(), 1000u128.encode());
+	set_storage_value(&mut ext, "Contract MaxDepth".to_string(), 1024u32.encode());
+			
 	// test runtime state access
 	let key = runtime_io::twox_128(&String::from("dummy").as_bytes().to_vec());
 	println!("key of dummy is {:?}", key);
@@ -426,7 +441,8 @@ pub fn init_runtime() {
 
 	//println!("HashMap raw: {:?}", _hm);
 	//ext.insert(key.to_vec(),vec!(4,5,6));
-	println!("HashMap raw: {:?}", ext);
+	
+	//println!("HashMap raw: {:?}", ext);
 
 	runtime_io::with_externalities(&mut ext, || {
 		let res = runtime_io::storage(&key);
@@ -437,7 +453,7 @@ pub fn init_runtime() {
 		//println!("put_code: {:?}", res);
 
 		println!("calling contractCall::call()");
-		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 0, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
+		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 10_000_000, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
 		println!("call: {:?}", res);
 		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
 		//println!("storage_size_offset = {:?}", res);
