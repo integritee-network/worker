@@ -408,3 +408,4 @@ impl indices::Trait for Runtime {
 
 
 pub use contract::Call as contractCall;
+pub use balances::Call as balancesCall;

@@ -20,7 +20,7 @@
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
 #![feature(rustc_attrs)]
-
+#![feature(type_alias_enum_variants)]
 
 #![crate_name = "sealedkeyenclave"]
 #![crate_type = "staticlib"]
@@ -370,6 +370,7 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 }
 /////////////////////////////////////////////////////////////////////////////
 
+
 use srml_support::Dispatchable;
 use runtime_wrapper::Runtime;
 mod genesis;
@@ -414,18 +415,18 @@ pub fn init_runtime() {
 	const MILLICENTS: u128 = 1_000_000_000;
 	const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
 
-	set_storage_value(&mut ext, "Balances Balances".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
 	//set_storage_value(&mut ext, "Balances ".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
 
 	let mut schedule = Schedule::<Gas>::default();
 	schedule.enable_println = true;
 
+	// FIXME: initial balances don't work. have to set_balance() later
+	set_storage_value(&mut ext, "Balances Balances".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
 
 	set_storage_value(&mut ext, "Contract CurrentSchedule".to_string(), schedule.encode());
 	set_storage_value(&mut ext, "Contract BlockGasLimit".to_string(), 10_000_000_000_000u64.encode());
 	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
-	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 0u128.encode());
-	set_storage_value(&mut ext, "Contract GasSpent".to_string(), 0u64.encode());
+	set_storage_value(&mut ext, "Contract GasPrice".to_string(), 1u128.encode());
 	set_storage_value(&mut ext, "Contract SignedClaimHandicap".to_string(), 2u32.encode());
 	set_storage_value(&mut ext, "Contract RentBytePrice".to_string(), 4u32.encode());
 	set_storage_value(&mut ext, "Contract RentDepositOffset".to_string(), 1000u32.encode());
@@ -434,53 +435,43 @@ pub fn init_runtime() {
 	set_storage_value(&mut ext, "Contract TombstoneDeposit".to_string(), 16u128.encode());
 	set_storage_value(&mut ext, "Contract TransactionBaseFee".to_string(), (1 * CENTS as u128).encode());
 	set_storage_value(&mut ext, "Contract TransactionByteFee".to_string(), (10 * MILLICENTS as u128).encode());
-	set_storage_value(&mut ext, "Contract TransferFee".to_string(), (1 * CENTS as u128).encode());
-	set_storage_value(&mut ext, "Contract CreationFee".to_string(), (1 * CENTS as u128).encode());
-	set_storage_value(&mut ext, "Contract ContractFee".to_string(), (1 * CENTS as u128).encode());
+	set_storage_value(&mut ext, "Contract TransferFee".to_string(), 1u128.encode());
+	set_storage_value(&mut ext, "Contract CreationFee".to_string(), 1u128.encode());
+	set_storage_value(&mut ext, "Contract ContractFee".to_string(), 1u128.encode());
 	set_storage_value(&mut ext, "Contract CallBaseFee".to_string(), 1000u128.encode());
 	set_storage_value(&mut ext, "Contract CreateBaseFee".to_string(), 1000u128.encode());
 	set_storage_value(&mut ext, "Contract MaxDepth".to_string(), 1024u32.encode());
 
-
+	// need to purge events that have already been processed during the last call
+	let key = runtime_io::twox_128(&String::from("System Events").as_bytes().to_vec());
+	ext.remove(&key.to_vec());
 
 	// read contract wasm file
 	// FIXME: error handling
 	let mut code: Vec<u8> = Vec::new();
 	utils::read_file_cleartext(&mut code, "./bin/flipper-pruned.wasm");
-	//let code_ser = elements::serialize(code);	
-
-	// test runtime state access
-	let key = runtime_io::twox_128(&String::from("dummy").as_bytes().to_vec());
-	println!("key of dummy is {:?}", key);
-
-
-
-	//println!("HashMap raw: {:?}", _hm);
-	//ext.insert(key.to_vec(),vec!(4,5,6));
-	
-	//println!("HashMap raw: {:?}", ext);
 
 	runtime_io::with_externalities(&mut ext, || {
-		let res = runtime_io::storage(&key);
-		println!("read back key {:?}: {:?}", key, runtime_io::storage(&key));
-		//tests to call into the contract module
+		println!("pre-funding tina");
+		let res = runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina), 1_000_000_000_000_000_000, 0).dispatch(my_node_runtime::Origin::ROOT);
 		println!("calling put_code");
 		let res = runtime_wrapper::contractCall::<Runtime>::put_code(500_000, code).dispatch(origin_tina.clone());
 		println!("put_code: {:?}", res);
 	});
+
+
+
+	// scan events
 	let code_hash = match get_storage_value(&mut ext, "System Events".to_string()) {
 		Some(ev) => {
-			//println!("reading events: {:?}", ev);
 			let mut _er_enc = ev.as_slice();
 			let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
 			match _events {
             Some(evts) => {
 				let mut code_hash = None;
                 for evr in &evts {
-                    //println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
                     match &evr.event {
                         Event::contract(be) => {
-                            //println!(">>>>>>>>>> contract event: {:?}", be);
                             match &be {
                                 contract::RawEvent::CodeStored(ch) => {
                                     println!("code_hash: {:?}", ch);
@@ -511,16 +502,16 @@ pub fn init_runtime() {
 	//now we have a code_hash. let's deploy a contract instance
 	
 	// TODO
-/*	
+
 	runtime_io::with_externalities(&mut ext, || {
-		println!("calling contractCall::call()");
-		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 10_000_000, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
-		println!("call: {:?}", res);
+		println!("calling contractCall::create()");
+		let res = runtime_wrapper::contractCall::<Runtime>::create(1000, 500_000, code_hash, String::from("deploy()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
+		println!("create: {:?}", res);
 		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
 		//println!("storage_size_offset = {:?}", res);
 
 	});
-*/
+
 
 	// now we have a contract instance. let's call it
 
