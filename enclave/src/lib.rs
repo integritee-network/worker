@@ -430,7 +430,7 @@ pub fn init_runtime() {
 	set_storage_value(&mut ext, "Contract SignedClaimHandicap".to_string(), 2u32.encode());
 	set_storage_value(&mut ext, "Contract RentBytePrice".to_string(), 4u32.encode());
 	set_storage_value(&mut ext, "Contract RentDepositOffset".to_string(), 1000u32.encode());
-	set_storage_value(&mut ext, "Contract StorageSizeOffset".to_string(), 8u32.encode());
+	set_storage_value(&mut ext, "Contract StorageSizeOffset".to_string(), 8u64.encode());
 	set_storage_value(&mut ext, "Contract SurchargeReward".to_string(), 150u128.encode());
 	set_storage_value(&mut ext, "Contract TombstoneDeposit".to_string(), 16u128.encode());
 	set_storage_value(&mut ext, "Contract TransactionBaseFee".to_string(), (1 * CENTS as u128).encode());
@@ -512,19 +512,58 @@ pub fn init_runtime() {
 
 	});
 
+	// scan events
+	let instance_address = match get_storage_value(&mut ext, "System Events".to_string()) {
+		Some(ev) => {
+			let mut _er_enc = ev.as_slice();
+			let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+			match _events {
+				Some(evts) => {
+					let mut instance_address = None;
+					for evr in &evts {
+						match &evr.event {
+							Event::contract(be) => {
+								match &be {
+									contract::RawEvent::Instantiated(accnt, dst) => {
+										//let dst = AccountId::from(*dst);
+										println!("found event 'Instantiated'");
+										instance_address = Some(dst.clone());
+									},
+									_ => {
+										println!("ignoring unsupported contract event");
+									},
+								}},
+							_ => println!("ignoring unsupported module event"),
+						}
+
+					}
+					instance_address
+				}
+				None => {
+					println!("couldn't decode event record list");
+					None
+				}
+			}
+		},
+		None => {
+			println!("reading events failed. Has the contract really been deployed?");
+			None
+		},
+	}.unwrap();
+	// println!("our code instance address is {}", instance_address);
 
 	// now we have a contract instance. let's call it
 
-/*
+
 	runtime_io::with_externalities(&mut ext, || {
-		println!("calling contractCall::call()");
-		let res = runtime_wrapper::contractCall::<Runtime>::call(address, 0, 10_000_000, vec![0, 2, 3]).dispatch(origin_tina.clone());  //dispatch(origin);
+		println!("calling contractCall::call(<flipper_instance>, 'get()')");
+		let res = runtime_wrapper::contractCall::<Runtime>::call(indices::Address::<Runtime>::Id(instance_address), 0, 10_000_000, String::from("get()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
 		println!("call: {:?}", res);
 		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
 		//println!("storage_size_offset = {:?}", res);
 
 	});
-*/
+
 
 
 	println!("[++] finished playing with runtime");

@@ -37,7 +37,7 @@ environmental = { version = "1.0.1", default-features= false}
 #only listed to get no_global_allocator feature in
 rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_global_allocator"]}
 #only listed to get no_panic_handler and no_oom  features in
-runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_panic_handler", "no_oom", "sgx"]}
+runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_panic_handler", "no_oom", "sgx"]}#, "debug"]}
 #only listed to get features in
 sandbox = { package = "sr-sandbox", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_std_host"]}
 
