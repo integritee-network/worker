@@ -39,7 +39,7 @@ rstd = { package = "sr-std", git = "https://github.com/brenzi/substrate.git", br
 #only listed to get no_panic_handler and no_oom  features in
 runtime_io = { package = "sr-io", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_panic_handler", "no_oom", "sgx"]}#, "debug"]}
 #only listed to get features in
-sandbox = { package = "sr-sandbox", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["no_std_host"]}
+sandbox = { package = "sr-sandbox", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false, features=["sgx"]}
 
 
 primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch = "brenzi-contract-replace-sr-io", default-features = false }

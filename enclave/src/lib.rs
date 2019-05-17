@@ -499,10 +499,8 @@ pub fn init_runtime() {
 		},
 	}.unwrap();
 	println!("our code hash is {:?}", code_hash);
-	//now we have a code_hash. let's deploy a contract instance
-	
-	// TODO
 
+	//now we have a code_hash. let's deploy a contract instance
 	runtime_io::with_externalities(&mut ext, || {
 		println!("calling contractCall::create()");
 		let res = runtime_wrapper::contractCall::<Runtime>::create(1000, 500_000, code_hash, String::from("deploy()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
@@ -524,6 +522,19 @@ pub fn init_runtime() {
 						match &evr.event {
 							Event::contract(be) => {
 								match &be {
+									contract::RawEvent::Dispatched(who, res) => {
+										println!("found event 'Dispatched() result is {:?}'", res);
+									},
+									contract::RawEvent::Transfer(a, b, c) => {
+										println!("found event 'Transfer'");
+									},
+									contract::RawEvent::ScheduleUpdated(v) => {
+										println!("found event 'ScheduleUpdated'");
+									},
+									contract::RawEvent::CodeStored(ch) => {
+										println!("found event 'CodeStored'");
+									},
+
 									contract::RawEvent::Instantiated(accnt, dst) => {
 										//let dst = AccountId::from(*dst);
 										println!("found event 'Instantiated'");
@@ -557,12 +568,62 @@ pub fn init_runtime() {
 
 	runtime_io::with_externalities(&mut ext, || {
 		println!("calling contractCall::call(<flipper_instance>, 'get()')");
-		let res = runtime_wrapper::contractCall::<Runtime>::call(indices::Address::<Runtime>::Id(instance_address), 0, 10_000_000, String::from("get()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
+		let res = runtime_wrapper::contractCall::<Runtime>::call(
+			indices::Address::<Runtime>::Id(instance_address), 
+			1, 
+			100_000, 
+			String::from("get(): bool").as_bytes().to_vec()
+		).dispatch(origin_tina.clone());
 		println!("call: {:?}", res);
 		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
 		//println!("storage_size_offset = {:?}", res);
 
 	});
+
+	// scan events
+	match get_storage_value(&mut ext, "System Events".to_string()) {
+		Some(ev) => {
+			let mut _er_enc = ev.as_slice();
+			let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+			match _events {
+				Some(evts) => {
+					for evr in &evts {
+						match &evr.event {
+							Event::contract(be) => {
+								match &be {
+									contract::RawEvent::Instantiated(accnt, dst) => {
+										println!("found event 'Instantiated'");
+									},
+									contract::RawEvent::Dispatched(who, res) => {
+										println!("found event 'Dispatched() result is {:?}'", res);
+									},
+									contract::RawEvent::Transfer(a, b, c) => {
+										println!("found event 'Transfer'");
+									},
+									contract::RawEvent::ScheduleUpdated(v) => {
+										println!("found event 'ScheduleUpdated'");
+									},
+									contract::RawEvent::CodeStored(ch) => {
+										println!("found event 'CodeStored'");
+									},
+									_ => {
+										println!("ignoring unsupported contract event");
+									},
+								}},
+							_ => println!("ignoring unsupported module event"),
+						}
+
+					}
+				}
+				None => {
+					println!("couldn't decode event record list");
+				}
+			}
+		},
+		None => {
+			println!("reading events failed. Has the contract really been deployed?");
+		},
+	};
 
 
 
