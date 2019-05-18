@@ -39,6 +39,6 @@ ifeq ($(XARGO_SGX), 1)
 	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx --release
 	cp ./target/x86_64-unknown-linux-sgx/release/libsealedkeyenclave.a ../lib/libenclave.a
 else
-	cargo build --release
-	cp ./target/release/libsealedkeyenclave.a ../lib/libenclave.a
+	cargo build 
+	cp ./target/debug/libsealedkeyenclave.a ../lib/libenclave.a
 endif

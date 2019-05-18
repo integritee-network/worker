@@ -49,12 +49,12 @@ else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
 endif
 
 ifeq ($(SGX_ARCH), x86)
-	SGX_COMMON_CFLAGS := -m32
+	SGX_COMMON_CFLAGS := -m32 -ggdb
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
 else
-	SGX_COMMON_CFLAGS := -m64
+	SGX_COMMON_CFLAGS := -m64 -ggdb
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
@@ -86,12 +86,12 @@ Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app
 
 ######## APP Settings ########
 
-App_Rust_Flags := --release
+App_Rust_Flags := 
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
 App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-App_Rust_Path := ./app/target/release
+App_Rust_Path := ./app/target/debug
 App_Enclave_u_Object :=app/libEnclave_u.a
 App_Name := bin/app
 
