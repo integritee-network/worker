@@ -138,7 +138,7 @@ Wasm_Name := bin/runtime.compact.wasm
 
 ######## Targets ########
 .PHONY: all
-all: $(Client_Name) $(Worker_Name) $(Wasm_Name) $(Signed_RustEnclave_Name)
+all: $(Wasm_Name) $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
 worker: $(Worker_Name)
 client: $(Client_Name)
 
