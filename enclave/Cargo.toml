@@ -13,7 +13,7 @@ default = []
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk"}
 sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk", features=["untrusted_fs"] }
+sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk", features=["untrusted_fs", "backtrace"] }
 sgx_rand = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tcrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }

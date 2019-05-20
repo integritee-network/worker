@@ -381,7 +381,8 @@ extern crate parity_wasm;
 use parity_wasm::elements;
 type Gas = u64;
 //extern crate blake2_rfc;
-
+use std::backtrace::{self, PrintFormat};
+use std::panic;
 
 fn set_storage_value(ext: &mut SgxExternalities, key_name: String, value: Vec<u8>) {
 	let key = runtime_io::twox_128(&String::from(key_name).as_bytes().to_vec());
@@ -500,15 +501,23 @@ pub fn init_runtime() {
 	}.unwrap();
 	println!("our code hash is {:?}", code_hash);
 
-	//now we have a code_hash. let's deploy a contract instance
-	runtime_io::with_externalities(&mut ext, || {
-		println!("calling contractCall::create()");
-		let res = runtime_wrapper::contractCall::<Runtime>::create(1000, 500_000, code_hash, String::from("deploy()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
-		println!("create: {:?}", res);
-		//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
-		//println!("storage_size_offset = {:?}", res);
+	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Full);
+    panic::catch_unwind(||{
+		panic!("enclave panicked.");
+	}).ok();
 
-	});
+    //panic::catch_unwind(||{
+		//now we have a code_hash. let's deploy a contract instance
+		runtime_io::with_externalities(&mut ext, || {
+			println!("calling contractCall::create()");
+			let res = runtime_wrapper::contractCall::<Runtime>::create(1000, 500_000, code_hash, String::from("deploy()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
+			println!("create: {:?}", res);
+			//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
+			//println!("storage_size_offset = {:?}", res);
+
+		});
+	//}).ok();
+
 
 	// scan events
 	let instance_address = match get_storage_value(&mut ext, "System Events".to_string()) {
