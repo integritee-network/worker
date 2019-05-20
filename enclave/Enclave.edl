@@ -42,6 +42,10 @@ enclave {
             [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
         public sgx_status_t sgxwasm_init();
+
+        public sgx_status_t sgxwasm_run_action(
+            [in, size=req_len] const uint8_t* req_bin, size_t req_len,
+            [out, size=out_max_len] uint8_t* output_bin, size_t out_max_len);
     };
 
     untrusted {

@@ -34,13 +34,21 @@ extern crate rust_base58;
 extern crate ws;
 extern crate env_logger;
 extern crate log;
+extern crate wabt;
+
+extern crate serde;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
+extern crate nan_preserving_float;
 
 mod constants;
 mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
-mod enclave_wasm;
+mod wasm_def;
+mod wasm;
 
 use log::*;
 use std::str;
@@ -57,7 +65,10 @@ use std::sync::mpsc::channel;
 
 use std::thread;
 
-use enclave_wasm::sgx_enclave_wasm_init;
+use wasm::{SgxWasmAction, BoundaryValue, sgx_enclave_wasm_init, sgx_enclave_wasm_invoke, answer_convert};
+use wasm_def::{RuntimeValue, Error as InterpreterError};
+
+static MAXOUTPUT:usize = 4096;
 
 fn main() {
 	// Setup logging
@@ -84,26 +95,6 @@ fn main() {
 	} else {
         println!("For options: use --help");
     }
-}
-
-fn run_wasm() -> () {
-	// init the enclave
-	let enclave = match init_enclave() {
-        Ok(r) => {
-            println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
-            r
-        },
-        Err(x) => {
-            println!("[-] Init Enclave Failed {}!", x.as_str());
-            return;
-        },
-    };
-
-    // init the sgxwasm spec driver engine
-    match sgx_enclave_wasm_init(&enclave) {
-		Ok(_r) => { println!("[+] Init Wasm in Enclave Successful"); },
-		Err(x) => { error!("[-] Init Wasm in Enclave Failed. {}", x); }
-	};
 }
 
 fn worker(port: &str) -> () {
@@ -200,4 +191,61 @@ fn worker(port: &str) -> () {
 			None => error!("Couldn't decode event record list")
 		}
 	}
+}
+
+fn run_wasm() {
+	// init the enclave
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful {}!", r.geteid());
+			r
+		},
+		Err(x) => {
+			error!("[-] Init Enclave Failed {}!", x.as_str());
+			return;
+		},
+	};
+
+	// init the sgxwasm spec driver engine
+	let result = sgx_enclave_wasm_init(&enclave);
+	match result {
+		Ok(_r) => {
+			println!("[+] Init Wasm in enclave successful");
+		},
+		Err(x) => {
+			error!("[-] Init Wasm in enclave failed {}!", x.as_str());
+			return;
+		},
+	}
+
+	// read wasm file to string
+	let module = include_bytes!("../../bin/runtime.compact.wasm").to_vec();
+
+	// prepare the request
+	let req = SgxWasmAction::Invoke {
+					module : Some(module),
+					field  : "add_one".to_string(),
+					args   : vec![BoundaryValue::I32(42)],
+	};
+
+	// invoke the request
+	let result = sgx_enclave_wasm_invoke(serde_json::to_string(&req).unwrap(),
+												 MAXOUTPUT,
+												 &enclave);
+	match result {
+		(result, sgx_status_t::SGX_SUCCESS) => {
+			let result_obj : Result<Option<RuntimeValue>, InterpreterError> = answer_convert(result);
+			println!("result: {:?}", result_obj);
+		},
+		(result, sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR) => {
+			let result_obj : Result<Option<RuntimeValue>, InterpreterError> = answer_convert(result);
+			println!("result: {:?}", result_obj);
+		},
+		(_, _) => {
+			error!("sgx_enclave_wasm_run_action::Invoke returned unknown error!");
+		},
+	}
+
+	enclave.destroy();
+	println!("[+] run_wasm success...");
 }

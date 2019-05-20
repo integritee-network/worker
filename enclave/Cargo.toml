@@ -20,17 +20,19 @@ rust-crypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58 = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize = { git = "https://github.com/baidu/rust-sgx-sdk" }
 
-[target.'cfg(target_env = "sgx")'.dependencies]
-
 [dependencies]
 log = { git = "https://github.com/baidu/rust-sgx-sdk" }
-wasmi = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgxwasm = { path = "sgxwasm" }
 blake2-rfc = { version = "0.2.18", default-features = false}
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
+
+# for wasm code
+wasmi = { git = "https://github.com/baidu/rust-sgx-sdk" }
+serde = { git = "https://github.com/baidu/rust-sgx-sdk" }
+serde_json = { git = "https://github.com/baidu/rust-sgx-sdk"}
+sgxwasm = { path = "sgxwasm" }
+lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
@@ -38,9 +40,6 @@ tag = "M1"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]
-
-[dependencies.serde_json]
-git = "https://github.com/baidu/rust-sgx-sdk"
 
 [dependencies.sgx_serialize_derive]
 git = "https://github.com/baidu/rust-sgx-sdk"

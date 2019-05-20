@@ -8,12 +8,19 @@ build = "build.rs"
 ws = "0.7"
 hex = "0.3"
 log = "0.4"
-dirs = "1.0.2"
 clap = { version = "2.33", features = [ "yaml" ] }
 env_logger = "0.6"
-serde_json = "1.0"
 rust-base58 = "0.0.4"
 rust-crypto = "0.2"
+
+# for wasm
+wabt = "0.4.0"
+dirs = "1.0.2"
+wasmi = "*"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+nan-preserving-float = "0.1.0"
 
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }

@@ -77,7 +77,7 @@ use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
-use sgxwasm::{SpecDriver, boundary_value_to_runtime_value, result_covert};
+use std::ptr;
 
 type Index = u64;
 
@@ -85,17 +85,7 @@ mod constants;
 mod utils;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 
-lazy_static!{
-    static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
-}
-
-#[no_mangle]
-pub extern "C"
-fn sgxwasm_init() -> sgx_status_t {
-    let mut sd = SPECDRIVER.lock().unwrap();
-    *sd = SpecDriver::new();
-    sgx_status_t::SGX_SUCCESS
-}
+mod wasm;
 
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {

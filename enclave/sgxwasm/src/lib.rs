@@ -416,3 +416,4 @@ pub fn load_module(wasm: &[u8], name: &Option<String>, spec_driver: &mut SpecDri
 
     Ok(instance)
 }
+
