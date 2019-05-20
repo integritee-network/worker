@@ -42,15 +42,19 @@ use primitives::{ed25519};
 
 extern crate wasmi;
 use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Module, NopExternals};
+
 extern crate sgxwasm;
 use sgxwasm::result_convert;
 
 extern crate my_node_runtime;
 use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
+
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
+
 extern crate parity_codec;
 use parity_codec::{Decode, Encode, Compact};
+
 extern crate primitive_types;
 use primitive_types::U256;
 
@@ -59,6 +63,7 @@ use sgx_types::marker::ContiguousMemory;
 use sgx_tseal::{SgxSealedData};
 use sgx_rand::{Rng, StdRng};
 use sgx_serialize::{SerializeHelper, DeSerializeHelper};
+
 #[macro_use]
 extern crate sgx_serialize_derive;
 
@@ -72,22 +77,18 @@ use std::string::String;
 use std::vec::Vec;
 use std::collections::HashMap;
 use std::string::ToString;
-// use std::sync::SgxMutex;
 
 use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
-// use std::ptr;
-
 type Index = u64;
 
 mod constants;
-mod utils;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 
-
+mod utils;
 mod wasm;
 
 #[no_mangle]
@@ -247,7 +248,7 @@ pub extern "C" fn call_counter_wasm(
 			let args = vec![	RuntimeValue::I32(counter_value_old as i32),
 								RuntimeValue::I32(increment as i32)
 						   ];
-			println!("Calling WAM with arguments = {:?}", args);
+			println!("Calling WASM with arguments = {:?}", args);
 
 			let r = instance.invoke_export(&function, &args, &mut NopExternals);
 			println!("[Enclave] wasm_invoke successful");
@@ -282,7 +283,6 @@ pub extern "C" fn call_counter_wasm(
 	extrinsic_slize.clone_from_slice(&encoded);
 	retval
 }
-
 
 #[no_mangle]
 pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
