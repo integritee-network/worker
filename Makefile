@@ -134,7 +134,7 @@ RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## WASM settings ########
-Wasm_Name := bin/runtime.compact.wasm
+Wasm_Name := bin/worker_enclave.compact.wasm
 
 ######## Targets ########
 .PHONY: all
@@ -193,7 +193,7 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 $(Wasm_Name):
 	@echo
 	@echo "Building the WASM"
-	@cd wasm-runtime && ./build.sh
+	@cd enclave/wasm && ./build.sh
 
 .PHONY: enclave
 enclave:
@@ -210,6 +210,7 @@ compiler-rt:
 .PHONY: clean
 clean:
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
+	@cd enclave/wasm && cargo clean && rm -f Cargo.lock
 	@cd enclave && cargo clean && rm -f Cargo.lock
 	@cd worker && cargo clean && rm -f Cargo.lock
 	@cd client && cargo clean && rm -f Cargo.lock

@@ -15,7 +15,7 @@
 
 */
 
-#![crate_name = "sealedkeyenclave"]
+#![crate_name = "substratee_worker_enclave"]
 #![crate_type = "staticlib"]
 
 #![cfg_attr(not(target_env = "sgx"), no_std)]
