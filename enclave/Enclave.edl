@@ -1,64 +1,55 @@
 /*
-   Copyright 2019 Supercomputing Systems AG
+	Copyright 2019 Supercomputing Systems AG
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+		http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 */
 
 enclave {
-    from "sgx_tstd.edl" import *;
-    from "sgx_stdio.edl" import *;
-    from "sgx_backtrace.edl" import *;
-    from "sgx_tstdc.edl" import *;
-    from "sgx_tprotected_fs.edl" import *;
-    from "sgx_fs.edl" import *;
+	from "sgx_tstd.edl" import *;
+	from "sgx_stdio.edl" import *;
+	from "sgx_backtrace.edl" import *;
+	from "sgx_tstdc.edl" import *;
+	from "sgx_tprotected_fs.edl" import *;
+	from "sgx_fs.edl" import *;
 
 	trusted {
-        /* define ECALLs here. */
-        public sgx_status_t call_counter(
-            [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size,
-            [in, size=hash_size] uint8_t* hash, uint32_t hash_size,
-          	[in, size=index_size] uint8_t* index, uint32_t index_size,
-            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
-        );
+		/* define ECALLs here. */
+		public sgx_status_t call_counter_wasm(
+			[in, size=req_len] const uint8_t* req_bin, size_t req_len,
+			[in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size,
+			[in, size=hash_size] uint8_t* hash, uint32_t hash_size,
+			[in, size=index_size] uint8_t* index, uint32_t index_size,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
 
-        public sgx_status_t call_counter_wasm(
-            [in, size=req_len] const uint8_t* req_bin, size_t req_len,
-            [in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size,
-            [in, size=hash_size] uint8_t* hash, uint32_t hash_size,
-          	[in, size=index_size] uint8_t* index, uint32_t index_size,
-            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
-        );
+		public sgx_status_t get_counter(
+			[in, size=account_size] uint8_t* account, uint32_t account_size,
+			[out] uint8_t* counter_value);
 
-        public sgx_status_t get_counter(
-        	[in, size=account_size] uint8_t* account, uint32_t account_size,
-        	[out] uint8_t* counter_value);
+		public sgx_status_t get_rsa_encryption_pubkey(
+			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
-        public sgx_status_t get_rsa_encryption_pubkey(
-            [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
+		public sgx_status_t get_ecc_signing_pubkey(
+			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
-        public sgx_status_t get_ecc_signing_pubkey(
-            [out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
+		public sgx_status_t sgxwasm_init();
 
-        public sgx_status_t sgxwasm_init();
+		public sgx_status_t sgxwasm_run_action(
+			[in, size=req_len] const uint8_t* req_bin, size_t req_len,
+			[out, size=out_max_len] uint8_t* output_bin, size_t out_max_len);
+	};
 
-        public sgx_status_t sgxwasm_run_action(
-            [in, size=req_len] const uint8_t* req_bin, size_t req_len,
-            [out, size=out_max_len] uint8_t* output_bin, size_t out_max_len);
-    };
+	untrusted {
 
-    untrusted {
-
-    };
-
-
+	};
 };

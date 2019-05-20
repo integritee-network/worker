@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,44 +19,20 @@ extern crate sgx_types;
 use sgx_types::*;
 
 extern {
-    // fn sign(
-    //     eid: sgx_enclave_id_t,
-    //     retval: *mut sgx_status_t,
-    //     sealed_seed: * mut u8,
-    //     sealed_seed_size: u32,
-    //     msg: * mut u8,
-    //     msg_size: u32,
-    //     signature: * mut u8,
-    //     signature_size: u32
-    // ) -> sgx_status_t;
-
-    pub fn call_counter(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        ciphertext: * mut u8,
-        ciphertext_size: u32,
-		hash: * const u8,
-		hash_size: u32,
-		index: * const u8,
-		index_size: u32,
-		unchecked_extrinsic: * mut u8,
-		unchecked_extrinsic_size: u32
-    ) -> sgx_status_t;
-
-    pub fn call_counter_wasm(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        req_bin : *const u8,
-        req_len: usize,
-        ciphertext: *mut u8,
-        ciphertext_size: u32,
+	pub fn call_counter_wasm(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		req_bin : *const u8,
+		req_len: usize,
+		ciphertext: *mut u8,
+		ciphertext_size: u32,
 		hash: *const u8,
 		hash_size: u32,
 		index: *const u8,
 		index_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32
-    ) -> sgx_status_t;
+	) -> sgx_status_t;
 
 	pub fn get_counter(
 		eid: sgx_enclave_id_t,
@@ -66,12 +42,12 @@ extern {
 		counter_value: *mut u8
 	) -> sgx_status_t;
 
-    pub fn get_rsa_encryption_pubkey(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        pubkey: * mut u8,
-        pubkey_size: u32
-    ) -> sgx_status_t;
+	pub fn get_rsa_encryption_pubkey(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		pubkey: * mut u8,
+		pubkey_size: u32
+	) -> sgx_status_t;
 
 	pub fn get_ecc_signing_pubkey(
 		eid: sgx_enclave_id_t,
@@ -79,13 +55,4 @@ extern {
 		pubkey: * mut u8,
 		pubkey_size: u32
 	) -> sgx_status_t;
-
-    pub fn sgxwasm_run_action(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-		req_bin : *const u8,
-        req_len: usize,
-		result_bin : *mut u8,
-		result_max_len : usize
-    ) -> sgx_status_t;
 }

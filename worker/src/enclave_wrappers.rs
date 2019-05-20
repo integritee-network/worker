@@ -29,8 +29,8 @@ use my_node_runtime::{UncheckedExtrinsic};
 use parity_codec::{Decode, Encode};
 use primitive_types::U256;
 
-use wasm::{SgxWasmAction, BoundaryValue, sgx_enclave_wasm_init, sgx_enclave_wasm_invoke, answer_convert};
-use wasm_def::{RuntimeValue, Error as InterpreterError};
+use wasm::SgxWasmAction;
+// use wasm_def::{RuntimeValue, Error as InterpreterError};
 
 // function to get the account nonce of a user
 pub fn get_account_nonce(api: &substrate_api_client::Api, user: [u8; 32]) -> U256 {
@@ -81,40 +81,21 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 	let nonce = get_account_nonce(&api, key);
 	let nonce_bytes = U256::encode(&nonce);
 
-	// -----------------------------------------------------------------------------------------------
 	// read wasm file to string
 	let module = include_bytes!("../../bin/runtime.compact.wasm").to_vec();
 
 	// prepare the request
-	let req = SgxWasmAction::Invoke {
+	let req = SgxWasmAction::Call {
 					module : Some(module),
-					field  : "add_one".to_string(),
-					args   : vec![BoundaryValue::I32(42)],
+					function  : "update_counter".to_string(),
 	};
-
 	println!("req = {:?}", req);
-
-	let     req_str = serde_json::to_string(&req).unwrap();
-	let     req_bin = req_str.as_ptr() as * const u8;
-	let     req_len = req_str.len();
-	// -----------------------------------------------------------------------------------------------
+	let req_str = serde_json::to_string(&req).unwrap();
 
 	// update the counter and compose the extrinsic
 	let extrinsic_size = 137;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
-	// let result = unsafe {
-	// 	call_counter(eid,
-	// 				 retval,
-	// 				 ciphertext.as_mut_ptr(),
-	// 				 ciphertext.len() as u32,
-	// 				 genesis_hash.as_ptr(),
-	// 				 genesis_hash.len() as u32,
-	// 				 nonce_bytes.as_ptr(),
-	// 				 nonce_bytes.len() as u32,
-	// 				 unchecked_extrinsic.as_mut_ptr(),
-	// 				 extrinsic_size as u32
-	// 	)
-	// };
+
 	let result = unsafe {
 		call_counter_wasm(eid,
 					 retval,

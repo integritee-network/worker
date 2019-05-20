@@ -4,10 +4,10 @@
 use std::prelude::v1::*;
 use std::sync::SgxMutex;
 use std::ptr;
-use sgxwasm::{SpecDriver, boundary_value_to_runtime_value, result_covert};
+use sgxwasm::{SpecDriver, boundary_value_to_runtime_value, result_convert};
 use sgx_types::*;
 use std::slice;
-use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Error as InterpreterError, Module, NopExternals};
+use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Module, NopExternals};
 
 lazy_static!{
     static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
@@ -53,8 +53,8 @@ fn sgxwasm_run_action(
             let r = instance.invoke_export(&field, &args, &mut NopExternals);
 
             println!("[Enclave] wasm_invoke successful");
-            let r = result_covert(r);
-            println!("[Enclave] result_covert successful");
+            let r = result_convert(r);
+            println!("[Enclave] result_convert successful");
             response = serde_json::to_string(&r).unwrap();
             println!("[Enclave] serialization successful");
             match r {
@@ -66,73 +66,10 @@ fn sgxwasm_run_action(
                }
             }
         },
-
-        sgxwasm::SgxWasmAction::Get{module,field} => {
-            /*
-            let r = wasm_get(module, field);
-            let r = result_covert(r);
-            response = serde_json::to_string(&r).unwrap();
-            match r {
-                Ok(_v) => {
-                    return_status = sgx_status_t::SGX_SUCCESS;
-                },
-                Err(_x) => {
-                    return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
-                }
-            }
-            */
+        sgxwasm::SgxWasmAction::Call{ module: _, function: _ } => {
             return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
             response = "not supported".to_string();
         },
-        sgxwasm::SgxWasmAction::LoadModule{name,module} => {
-            /*
-            let r = wasm_load_module(name.clone(), module);
-            response = serde_json::to_string(&r).unwrap();
-            match r {
-                Ok(_) => {
-                    return_status = sgx_status_t::SGX_SUCCESS;
-                },
-                Err(_x) => {
-                    return_status = sgx_status_t::SGX_ERROR_WASM_LOAD_MODULE_ERROR;
-                }
-            }
-            */
-            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
-            response = "not supported".to_string();
-        },
-        sgxwasm::SgxWasmAction::TryLoad{module} => {
-            /*
-            let r = wasm_try_load(module);
-            response = serde_json::to_string(&r).unwrap();
-            match r {
-                Ok(()) => {
-                    return_status = sgx_status_t::SGX_SUCCESS;
-                },
-                Err(_x) => {
-                    return_status = sgx_status_t::SGX_ERROR_WASM_TRY_LOAD_ERROR;
-                }
-            }
-            */
-            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
-            response = "not supported".to_string();
-        },
-        sgxwasm::SgxWasmAction::Register{name, as_name} => {
-            /*
-            let r = wasm_register(&name, as_name.clone());
-            response = serde_json::to_string(&r).unwrap();
-            match r {
-                Ok(()) => {
-                    return_status = sgx_status_t::SGX_SUCCESS;
-                },
-                Err(_x) => {
-                    return_status = sgx_status_t::SGX_ERROR_WASM_REGISTER_ERROR;
-                }
-            }
-            */
-            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
-            response = "not supported".to_string();
-        }
-
     }
 
     println!("len = {}, Response = {:?}", response.len(), response);

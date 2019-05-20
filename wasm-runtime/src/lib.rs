@@ -1,9 +1,4 @@
-/*
-extern {
-    fn get_offset() -> u32;
-}
-*/
 #[no_mangle]
-pub extern fn add_one(x: u32) -> u32 {
-    x + 10
+pub extern fn update_counter(x: u32, y: u32) -> u32 {
+    x + y + 10
 }

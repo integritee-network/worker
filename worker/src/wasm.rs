@@ -39,20 +39,9 @@ pub enum SgxWasmAction {
 		field: String,
 		args: Vec<BoundaryValue>
 	},
-	Get {
-		module: Option<String>,
-		field: String,
-	},
-	LoadModule {
-		name: Option<String>,
-		module: Vec<u8>,
-	},
-	TryLoad {
-		module: Vec<u8>,
-	},
-	Register {
-		name: Option<String>,
-		as_name: String,
+	Call {
+		module: Option<Vec<u8>>,
+		function: String,
 	},
 }
 

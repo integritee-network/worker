@@ -84,21 +84,10 @@ pub enum SgxWasmAction {
         field: String,
         args: Vec<BoundaryValue>
     },
-    Get {
-        module: Option<String>,
-        field: String,
-    },
-    LoadModule {
-        name: Option<String>,
-        module: Vec<u8>,
-    },
-    TryLoad {
-        module: Vec<u8>,
-    },
-    Register {
-        name: Option<String>,
-        as_name: String,
-    },
+    Call {
+		module: Option<Vec<u8>>,
+		function: String,
+	},
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -127,7 +116,7 @@ pub fn boundary_value_to_runtime_value(rv: BoundaryValue) -> RuntimeValue {
     }
 }
 
-pub fn result_covert(res : Result<Option<RuntimeValue>, InterpreterError>)
+pub fn result_convert(res : Result<Option<RuntimeValue>, InterpreterError>)
                      -> Result<Option<BoundaryValue>, InterpreterError>
 {
     match res {
