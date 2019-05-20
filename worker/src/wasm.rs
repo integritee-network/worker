@@ -15,7 +15,6 @@
 */
 
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
 
 // use std::io::{Read, Write};
 // use std::{fs, path};
@@ -84,10 +83,10 @@ pub fn answer_convert(res : Result<Option<BoundaryValue>, InterpreterError>)
 	}
 }
 
-pub fn sgx_enclave_wasm_init(enclave : &SgxEnclave) -> Result<(),String> {
+pub fn sgx_enclave_wasm_init(eid: sgx_enclave_id_t) -> Result<(),String> {
 	let mut retval:sgx_status_t = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
-		sgxwasm_init(enclave.geteid(),
+		sgxwasm_init(eid,
 					 &mut retval)
 	};
 
@@ -112,8 +111,7 @@ pub fn sgx_enclave_wasm_init(enclave : &SgxEnclave) -> Result<(),String> {
 
 pub fn sgx_enclave_wasm_invoke(req_str : String,
 						   result_max_len : usize,
-						   enclave : &SgxEnclave) -> (Result<Option<BoundaryValue>, InterpreterError>, sgx_status_t) {
-	let enclave_id = enclave.geteid();
+						   eid: sgx_enclave_id_t) -> (Result<Option<BoundaryValue>, InterpreterError>, sgx_status_t) {
 	let mut ret_val = sgx_status_t::SGX_SUCCESS;
 	let     req_bin = req_str.as_ptr() as * const u8;
 	let     req_len = req_str.len();
@@ -121,12 +119,12 @@ pub fn sgx_enclave_wasm_invoke(req_str : String,
 	let mut result_vec:Vec<u8> = vec![0; result_max_len];
 	let     result_slice = &mut result_vec[..];
 
-	let sgx_ret = unsafe{sgxwasm_run_action(enclave_id,
+	let sgx_ret = unsafe { sgxwasm_run_action(eid,
 									 &mut ret_val,
 									 req_bin,
 									 req_len,
 									 result_slice.as_mut_ptr(),
-									 result_max_len)};
+									 result_max_len) };
 
 	match sgx_ret {
 		// sgx_ret falls in range of Intel's Error code set

@@ -23,8 +23,12 @@ fn sgxwasm_init() -> sgx_status_t {
 
 #[no_mangle]
 pub extern "C"
-fn sgxwasm_run_action(req_bin : *const u8, req_length: usize,
-                      result_bin : *mut u8, result_max_len: usize) -> sgx_status_t {
+fn sgxwasm_run_action(
+        req_bin : *const u8,
+        req_length: usize,
+        result_bin : *mut u8,
+        result_max_len: usize
+    ) -> sgx_status_t {
     println!("[Enclave] sgxwasm_run_action() called");
     let req_slice = unsafe { slice::from_raw_parts(req_bin, req_length) };
     let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
@@ -33,7 +37,7 @@ fn sgxwasm_run_action(req_bin : *const u8, req_length: usize,
     let return_status;
 
     match action_req {
-        sgxwasm::SgxWasmAction::Invoke{module,field,args}=> {
+        sgxwasm::SgxWasmAction::Invoke{module, field, args} => {
             let args = args.into_iter()
                            .map(|x| boundary_value_to_runtime_value(x))
                            .collect::<Vec<RuntimeValue>>();
@@ -48,7 +52,6 @@ fn sgxwasm_run_action(req_bin : *const u8, req_length: usize,
 
             let r = instance.invoke_export(&field, &args, &mut NopExternals);
 
-            //let r = wasm_invoke(module, field, args);
             println!("[Enclave] wasm_invoke successful");
             let r = result_covert(r);
             println!("[Enclave] result_covert successful");
@@ -132,7 +135,7 @@ fn sgxwasm_run_action(req_bin : *const u8, req_length: usize,
 
     }
 
-    //println!("len = {}, Response = {:?}", response.len(), response);
+    println!("len = {}, Response = {:?}", response.len(), response);
 
     if response.len() < result_max_len {
         unsafe {

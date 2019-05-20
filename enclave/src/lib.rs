@@ -41,7 +41,9 @@ extern crate primitives;
 use primitives::{ed25519};
 
 extern crate wasmi;
+use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Error as InterpreterError, Module, NopExternals};
 extern crate sgxwasm;
+use sgxwasm::{SpecDriver, boundary_value_to_runtime_value, result_covert};
 
 extern crate my_node_runtime;
 use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
@@ -84,6 +86,7 @@ type Index = u64;
 mod constants;
 mod utils;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
+
 
 mod wasm;
 
@@ -233,6 +236,127 @@ pub extern "C" fn call_counter(ciphertext: * mut u8,
 	extrinsic_slize.clone_from_slice(&encoded);
     retval
 }
+
+#[no_mangle]
+pub extern "C" fn call_counter_wasm(
+						req_bin : *const u8,
+						req_length: usize,
+						ciphertext: * mut u8,
+						ciphertext_size: u32,
+						hash: * const u8,
+						hash_size: u32,
+						nonce: * const u8,
+						nonce_size: u32,
+						unchechecked_extrinsic: * mut u8,
+						unchecked_extrinsic_size: u32
+					) -> sgx_status_t {
+
+    let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
+	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
+	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
+	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+
+	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
+
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
+
+	// decode the message
+	let plaintext = utils::get_plaintext_from_encrypted_data(&ciphertext_slice, &rsa_keypair);
+	let (account, increment) = utils::get_account_and_increment_from_plaintext(plaintext.clone());
+
+    // read the counter state
+	let mut state_vec: Vec<u8> = Vec::new();
+	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
+
+	if retval != sgx_status_t::SGX_SUCCESS {
+		return retval;
+	}
+
+    let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+    let mut counter = helper.decode().unwrap();
+
+	// START WASM
+	println!("[Enclave] sgxwasm_run_action() called");
+    let req_slice = unsafe { slice::from_raw_parts(req_bin, req_length) };
+    let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
+
+	let response;
+    let return_status;
+
+    match action_req {
+        sgxwasm::SgxWasmAction::Invoke{module, field, args} => {
+            let args = args.into_iter()
+                           .map(|x| boundary_value_to_runtime_value(x))
+                           .collect::<Vec<RuntimeValue>>();
+            let _module = Module::from_buffer(module.unwrap()).unwrap();
+            let instance =
+                ModuleInstance::new(
+                    &_module,
+                    &ImportsBuilder::default()
+                )
+                .expect("failed to instantiate wasm module")
+                .assert_no_start();
+
+            let r = instance.invoke_export(&field, &args, &mut NopExternals);
+
+            println!("[Enclave] wasm_invoke successful");
+            let r = result_covert(r);
+            println!("[Enclave] result_covert successful");
+            response = serde_json::to_string(&r).unwrap();
+            println!("[Enclave] serialization successful");
+            match r {
+                Ok(_) => {
+                    return_status = sgx_status_t::SGX_SUCCESS;
+                },
+                Err(_) => {
+                    return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
+               }
+            }
+        },
+        sgxwasm::SgxWasmAction::Get{module,field} => {
+            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
+            response = "not supported".to_string();
+        },
+        sgxwasm::SgxWasmAction::LoadModule{name,module} => {
+            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
+            response = "not supported".to_string();
+        },
+        sgxwasm::SgxWasmAction::TryLoad{module} => {
+            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
+            response = "not supported".to_string();
+        },
+        sgxwasm::SgxWasmAction::Register{name, as_name} => {
+            return_status = sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR;
+            response = "not supported".to_string();
+        }
+	}
+
+    println!("len = {}, Response = {:?}", response.len(), response);
+
+	// END WASM
+
+	// increment or create the counter and write state
+	increment_or_insert_counter(&mut counter, &account, increment);
+    retval = write_counter_state(counter);
+
+	// get information for composing the extrinsic
+	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let _seed = _get_ecc_seed_file(&mut retval);
+	let genesis_hash = utils::hash_from_slice(hash_slice);
+	let call_hash = utils::blake2s(&plaintext);
+	debug!("[Enclave]: Call hash {:?}", call_hash);
+
+	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
+
+	let encoded = ex.encode();
+	extrinsic_slize.clone_from_slice(&encoded);
+    retval
+}
+
 
 #[no_mangle]
 pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {

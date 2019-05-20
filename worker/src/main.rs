@@ -115,6 +115,19 @@ fn worker(port: &str) -> () {
 	// start the websocket server
 	start_ws_server(enclave.geteid());
 
+    // ------------------------------------------------------------------------
+    // initialize the sgxwasm specific driver engine
+	let result = sgx_enclave_wasm_init(enclave.geteid());
+	match result {
+		Ok(_r) => {
+			println!("[+] Init Wasm in enclave successful");
+		},
+		Err(x) => {
+			error!("[-] Init Wasm in enclave failed {}!", x.as_str());
+			return;
+		},
+	}
+
 	let mut status = sgx_status_t::SGX_SUCCESS;
 
     // ------------------------------------------------------------------------
@@ -207,7 +220,7 @@ fn run_wasm() {
 	};
 
 	// init the sgxwasm spec driver engine
-	let result = sgx_enclave_wasm_init(&enclave);
+	let result = sgx_enclave_wasm_init(enclave.geteid());
 	match result {
 		Ok(_r) => {
 			println!("[+] Init Wasm in enclave successful");
@@ -231,7 +244,7 @@ fn run_wasm() {
 	// invoke the request
 	let result = sgx_enclave_wasm_invoke(serde_json::to_string(&req).unwrap(),
 												 MAXOUTPUT,
-												 &enclave);
+												 enclave.geteid());
 	match result {
 		(result, sgx_status_t::SGX_SUCCESS) => {
 			let result_obj : Result<Option<RuntimeValue>, InterpreterError> = answer_convert(result);
