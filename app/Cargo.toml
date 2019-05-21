@@ -17,17 +17,17 @@ sgx_urts = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
-#substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "marcel-ed25519" }
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch="marcel-fix-features" }
-#substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "substratee-runtime" }
-balances = { package = "srml-balances", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", default-features = false, features=["no_global_allocator"] }
+#substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "marcel-ed25519" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client"}
+#substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "substratee-runtime" }
+balances = { package = "srml-balances", git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node", default-features = false, features=["no_global_allocator"] }
 parity-codec = { version = "3.0", default-features = false }
-substrate-keyring = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+substrate-keyring = { git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
+node-primitives = { git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
-system = { package = "srml-system", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+system = { package = "srml-system", git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
+primitives = { package = "substrate-primitives", git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
 
 [features]
 default = ["std"]

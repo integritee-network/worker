@@ -501,6 +501,10 @@ pub fn init_runtime() {
 	}.unwrap();
 	println!("our code hash is {:?}", code_hash);
 
+	// purge events that have already been processed during the last call
+	let key = runtime_io::twox_128(&String::from("System Events").as_bytes().to_vec());
+	ext.remove(&key.to_vec());
+
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Full);
     panic::catch_unwind(||{
 		panic!("enclave panicked.");
@@ -572,9 +576,12 @@ pub fn init_runtime() {
 	}.unwrap();
 	// println!("our code instance address is {}", instance_address);
 
+
+	// purge events that have already been processed during the last call
+	let key = runtime_io::twox_128(&String::from("System Events").as_bytes().to_vec());
+	ext.remove(&key.to_vec());
+
 	// now we have a contract instance. let's call it
-
-
 	runtime_io::with_externalities(&mut ext, || {
 		println!("calling contractCall::call(<flipper_instance>, 'get()')");
 		let res = runtime_wrapper::contractCall::<Runtime>::call(

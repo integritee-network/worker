@@ -18,15 +18,15 @@ parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 blake2-rfc = { version = "0.2.18", default-features = false}
 
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", default-features = false }
-my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node.git", features=["no_global_allocator"] }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", default-features = false }
+my_node_runtime = { package = "substratee-node-runtime", git = "https://github.com/scs/substraTEE-node", features=["no_global_allocator"] }
 
 substrate_bip39 = { package="substrate-bip39", git = "https://github.com/paritytech/substrate-bip39" }
 
-node-primitives = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-substrate-keyring = { git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature", default-features = false }
-primitives = { package = "substrate-primitives", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+node-primitives = { git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
+substrate-keyring = { git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
+runtime_primitives = { package = "sr-primitives", git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3', default-features = false }
+primitives = { package = "substrate-primitives", git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
 
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
-system = { package = "srml-system", git = "https://github.com/brenzi/substrate.git", branch="global-allocator-feature" }
+system = { package = "srml-system", git = 'https://github.com/paritytech/substrate', rev = '6e67eff0653677d3d01980ca822c4b8a227914a3' }
