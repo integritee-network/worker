@@ -34,6 +34,7 @@ extern crate serde_json;
 extern crate sgx_crypto_helper;
 
 extern crate sgx_serialize;
+extern crate sgxwasm;
 
 extern crate log;
 
@@ -42,9 +43,6 @@ use primitives::{ed25519};
 
 extern crate wasmi;
 use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Module, NopExternals};
-
-extern crate sgxwasm;
-use sgxwasm::result_convert;
 
 extern crate my_node_runtime;
 use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
@@ -90,6 +88,8 @@ use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 
 mod utils;
 mod wasm;
+
+// FIXME: Log does not work in enclave
 
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
@@ -203,36 +203,41 @@ pub extern "C" fn call_counter_wasm(
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
+	debug!("[Enclave] Read RSA keypair");
+	// FIXME: This will panic if no key file is found
 	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
+	debug!("[Enclave] Read RSA keypair done");
 
 	if retval != sgx_status_t::SGX_SUCCESS {
 		return retval;
 	}
 
 	// decode the message
+	debug!("[Enclave] Decode the message");
 	let plaintext = utils::get_plaintext_from_encrypted_data(&ciphertext_slice, &rsa_keypair);
 	let (account, increment) = utils::get_account_and_increment_from_plaintext(plaintext.clone());
+	debug!("[Enclave] Message decoded. account = {}, increment = {}", account, increment);
 
 	// read the counter state
 	let mut state_vec: Vec<u8> = Vec::new();
 	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
+	debug!("[Enclave] Counterstate read");
 
 	if retval != sgx_status_t::SGX_SUCCESS {
+		error!("Failed to read file '{}'", COUNTERSTATE);
 		return retval;
 	}
 
 	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
 	let mut counter = helper.decode().unwrap();
 
-	println!("[Enclave] RUNNING WASM CODE");
+	// get the current counter value of the account or initialize with 0
+	let counter_value_old: u32 = *counter.entries.entry(account.to_string()).or_insert(0);
+	info!("[Enclave] Current counter state of '{}' = {}", account, counter_value_old);
+
+	println!("[Enclave] Executing WASM code");
 	let req_slice = unsafe { slice::from_raw_parts(req_bin, req_length) };
 	let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
-
-	let response;
-
-	// get the current counter value of the account
-	let counter_value_old: u32 = *counter.entries.entry(account.to_string()).or_insert(0);
-	println!("counter_value_old of '{}' = {}", account, counter_value_old);
 
 	match action_req {
 		sgxwasm::SgxWasmAction::Call { module, function } => {
@@ -245,26 +250,28 @@ pub extern "C" fn call_counter_wasm(
 				.expect("failed to instantiate wasm module")
 				.assert_no_start();
 
-			let args = vec![	RuntimeValue::I32(counter_value_old as i32),
-								RuntimeValue::I32(increment as i32)
+			let args = vec![RuntimeValue::I32(counter_value_old as i32),
+							RuntimeValue::I32(increment as i32)
 						   ];
-			println!("Calling WASM with arguments = {:?}", args);
+			debug!("[Enclave] Calling WASM with arguments = {:?}", args);
 
 			let r = instance.invoke_export(&function, &args, &mut NopExternals);
-			println!("[Enclave] wasm_invoke successful");
+			debug!("[Enclave] invoke_export successful. r = {:?}", r);
 
-			let r = result_convert(r);
-			println!("[Enclave] result_convert successful");
-
-			response = serde_json::to_string(&r).unwrap();
-			println!("[Enclave] serialization successful");
-
-			println!("Response length = {}, Response = {:?}", response.len(), response);
+			match r {
+				Ok(Some(RuntimeValue::I32(v))) => {
+					info!("[Enclave] Add {} to '{}'", v, account);
+					counter.entries.insert(account.to_string(), v as u32);
+					println!("[Enclave] WASM executed and counter updated\n");
+				},
+				_ => {
+					error!("[Enclave] Could not decode result");
+				}
+			};
 		},
 		sgxwasm::SgxWasmAction::Invoke{ module: _, field: _, args: _ } => {
-			println!("unsupported action");
+			error!("unsupported action");
 		},
-
 	}
 
 	// write the counter state
@@ -304,18 +311,6 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut
 		*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
 	}
 	retval
-}
-
-fn increment_or_insert_counter(counter: &mut AllCounts, name: &str, value: u32) {
-	{
-		let c = counter.entries.entry(name.to_string()).or_insert(0);
-		*c += value;
-	}
-	if counter.entries.get(name).unwrap() == &value {
-		info!("[Enclave] No counter found for '{}', adding new with initial value {}", name, value);
-	} else {
-		info!("[Enclave] Incremented counter for '{}'. New value: {:?}", name, counter.entries.get(name).unwrap());
-	}
 }
 
 fn write_counter_state(value: AllCounts) -> sgx_status_t {

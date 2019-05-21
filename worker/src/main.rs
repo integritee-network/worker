@@ -120,10 +120,10 @@ fn worker(port: &str) -> () {
 	let result = sgx_enclave_wasm_init(enclave.geteid());
 	match result {
 		Ok(_r) => {
-			println!("[+] Init Wasm in enclave successful");
+			println!("[+] Init Wasm in enclave successful\n");
 		},
 		Err(x) => {
-			error!("[-] Init Wasm in enclave failed {}!", x.as_str());
+			error!("[-] Init Wasm in enclave failed {}!\n", x.as_str());
 			return;
 		},
 	}
@@ -232,7 +232,7 @@ fn run_wasm() {
 	}
 
 	// read wasm file to string
-	let module = include_bytes!("../../bin/runtime.compact.wasm").to_vec();
+	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
 
 	// prepare the request
 	let req = SgxWasmAction::Invoke {

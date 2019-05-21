@@ -82,14 +82,14 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 	let nonce_bytes = U256::encode(&nonce);
 
 	// read wasm file to string
-	let module = include_bytes!("../../bin/runtime.compact.wasm").to_vec();
+	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
 
 	// prepare the request
 	let req = SgxWasmAction::Call {
 					module : Some(module),
 					function  : "update_counter".to_string(),
 	};
-	println!("req = {:?}", req);
+	debug!("Request for WASM = {:?}", req);
 	let req_str = serde_json::to_string(&req).unwrap();
 
 	// update the counter and compose the extrinsic
