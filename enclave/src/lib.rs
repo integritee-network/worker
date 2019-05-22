@@ -505,16 +505,20 @@ pub fn init_runtime() {
 	let key = runtime_io::twox_128(&String::from("System Events").as_bytes().to_vec());
 	ext.remove(&key.to_vec());
 
-	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Full);
+/*	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Full);
     panic::catch_unwind(||{
 		panic!("enclave panicked.");
 	}).ok();
-
+*/
     //panic::catch_unwind(||{
 		//now we have a code_hash. let's deploy a contract instance
 		runtime_io::with_externalities(&mut ext, || {
 			println!("calling contractCall::create()");
-			let res = runtime_wrapper::contractCall::<Runtime>::create(1000, 500_000, code_hash, String::from("deploy()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
+			let res = runtime_wrapper::contractCall::<Runtime>::create(
+				1000, 
+				500_000, 
+				code_hash, 
+				String::from("doesntmatterwhatwewritehere()").as_bytes().to_vec()).dispatch(origin_tina.clone());  //dispatch(origin);
 			println!("create: {:?}", res);
 			//let res = runtime_wrapper::contractCall::<Runtime>::storage_size_offset().dispatch(origin.clone());
 			//println!("storage_size_offset = {:?}", res);
@@ -574,7 +578,8 @@ pub fn init_runtime() {
 			None
 		},
 	}.unwrap();
-	// println!("our code instance address is {}", instance_address);
+	
+	//println!("our code instance address is {:?}", instance_address);
 
 
 	// purge events that have already been processed during the last call
