@@ -35,7 +35,8 @@ fn main () {
     let is_sim = env::var("SGX_MODE")
                     .unwrap_or_else(|_| "HW".to_string());
 
-    println!("cargo:rustc-link-search=native=../lib");
+	// NOTE: if the crate is a workspace member rustc-paths are relative from the root directory
+    println!("cargo:rustc-link-search=native=./lib");
     println!("cargo:rustc-link-lib=static=Enclave_u");
 
     println!("cargo:rustc-link-search=native={}/lib64", sdk_dir);

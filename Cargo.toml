@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+	"worker",
+	"client",
+	"enclave",
+	"enclave/wasm"
+]
