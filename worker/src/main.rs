@@ -51,6 +51,7 @@ mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
 mod wasm;
+mod attestation_ocalls;
 
 use log::*;
 use std::str;
