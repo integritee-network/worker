@@ -46,19 +46,12 @@ use std::io::{Write, Read, BufReader};
 use std::untrusted::fs;
 use std::vec::Vec;
 use itertools::Itertools;
+use core::default::Default;
 
 pub const DEV_HOSTNAME:&'static str = "test-as.sgx.trustedservices.intel.com";
 //pub const PROD_HOSTNAME:&'static str = "as.sgx.trustedservices.intel.com";
 pub const SIGRL_SUFFIX:&'static str = "/attestation/sgx/v3/sigrl/";
 pub const REPORT_SUFFIX:&'static str = "/attestation/sgx/v3/report";
-
-// we want to override the type definition from 
-// sgx_types because we'd include a block header hash along the enclave's signing key
-pub struct sgx_report_data_t {
-        pub d: [::uint8_t; 256],
-}
-
-
 
 extern "C" {
     pub fn ocall_sgx_init_quote ( ret_val : *mut sgx_status_t,
@@ -332,14 +325,24 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 
     // (2) Generate the report
     // Fill ecc256 public key into report_data
-    // TODO: block hash would guarantee that the quote is recent. add it as well
+    
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
     let mut pub_k_gx = pub_k.gx.clone();
     pub_k_gx.reverse();
     let mut pub_k_gy = pub_k.gy.clone();
     pub_k_gy.reverse();
-    report_data.d[..32].clone_from_slice(&pub_k_gx);
-    report_data.d[32..].clone_from_slice(&pub_k_gy);
+ //   report_data.d[..32].clone_from_slice(&pub_k_gx);
+ //   report_data.d[32..].clone_from_slice(&pub_k_gy);
+
+    // TODO: block hash would guarantee that the quote is recent. add it as well
+    // report_data = hash{pub_k_gx||pub_k_gy||block_hash}
+    let mut context = [0;96];
+    let block_hash_slice = [0;32]; 
+    context[..32].clone_from_slice(&pub_k_gx);
+    context[32..64].clone_from_slice(&pub_k_gy);
+    context[64..].clone_from_slice(&block_hash_slice);
+    
+    report_data.d.clone_from_slice(&rsgx_sha256_slice(&context[..]).unwrap());
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) =>{
@@ -477,6 +480,8 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 
     let (attn_report, sig, cert) = get_report_from_intel(ias_sock, quote_vec);
     Ok((attn_report, sig, cert))
+
+    //TODO: return context as well
 }
 
 fn load_spid(filename: &str) -> sgx_spid_t {
