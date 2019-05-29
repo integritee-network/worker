@@ -217,6 +217,15 @@ clean:
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
 	@cargo clean && rm -f Cargo.lock
 
+mrenclave: $(Signed_Enclave_Name)
+	@$(SGX_ENCLAVE_SIGNER) dump -enclave $(Signed_Enclave_Name) -dumpfile df.out && ./extract-identity < df.out && rm df.out
+
+mrsigner: $(Signed_Enclave_Name)
+	@$(SGX_ENCLAVE_SIGNER) dump -enclave $(Signed_Enclave_Name) -dumpfile df.out && ./extract-identity --mrsigner < df.out && rm df.out
+
+.PHONY: identity
+identity: mrenclave mrsigner
+
 .PHONY: help
 help:
 	@echo "Available targets"
@@ -225,3 +234,4 @@ help:
 	@echo "  client  - builds the substraTEE-client"
 	@echo ""
 	@echo "  clean   - cleanup"
+
