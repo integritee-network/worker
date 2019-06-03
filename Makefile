@@ -41,6 +41,7 @@ include UpdateRustSGXSDK.mk
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
+SGX_DEBUG ?= 0
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -67,9 +68,13 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-	SGX_COMMON_CFLAGS += -O0 -g
+	SGX_COMMON_CFLAGS += -O0 -g -ggdb
+	OUTPUT_PATH := debug
+	CARGO_TARGET :=
 else
 	SGX_COMMON_CFLAGS += -O2
+	OUTPUT_PATH := release
+	CARGO_TARGET := --release
 endif
 
 ######## CUSTOM settings ########
@@ -82,23 +87,23 @@ CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h worker/Enclave_u.c worker/Enclave_u.h
 
 ######## SubstraTEE-worker settings ########
-Worker_Rust_Flags := --release
+Worker_Rust_Flags := $(CARGO_TARGET)
 Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find worker/ -type f -name 'Cargo.toml')
 Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
-Worker_Rust_Path := target/release
+Worker_Rust_Path := target/$(OUTPUT_PATH)
 Worker_Enclave_u_Object :=worker/libEnclave_u.a
 Worker_Name := bin/app
 
 ######## SubstraTEE-client settings ########
 Client_SRC_Path := client
-Client_Rust_Flags := --release
+Client_Rust_Flags := $(CARGO_TARGET)
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
-Client_Rust_Path := target/release
+Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
 Client_Binary := substratee_client
 Client_Name := $(Client_Path)/$(Client_Binary)
@@ -193,7 +198,7 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 $(Wasm_Name):
 	@echo
 	@echo "Building the WASM"
-	@cd enclave/wasm && ./build.sh
+	@cd enclave/wasm && SGX_DEBUG=$(SGX_DEBUG) ./build.sh
 
 .PHONY: enclave
 enclave:

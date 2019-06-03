@@ -30,15 +30,23 @@ Rust_Enclave_Name := libenclave.a
 Rust_Enclave_Files := $(wildcard src/*.rs)
 Rust_Target_Path := $(CURDIR)/../../../xargo
 
+ifeq ($(SGX_DEBUG), 1)
+	OUTPUT_PATH := debug
+	CARGO_TARGET :=
+else
+	OUTPUT_PATH := release
+	CARGO_TARGET := --release
+endif
+
 .PHONY: all
 
 all: $(Rust_Enclave_Name)
 
 $(Rust_Enclave_Name): $(Rust_Enclave_Files)
 ifeq ($(XARGO_SGX), 1)
-	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx --release
-	cp ../target/x86_64-unknown-linux-sgx/release/libsubstratee_worker_enclave.a ../lib/libenclave.a
+	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx $(CARGO_TARGET)
+	cp ../target/x86_64-unknown-linux-sgx/$(OUTPUT_PATH)/libsubstratee_worker_enclave.a ../lib/libenclave.a
 else
-	cargo build --release
-	cp ../target/release/libsubstratee_worker_enclave.a ../lib/libenclave.a
+	cargo build $(CARGO_TARGET)
+	cp ../target/$(OUTPUT_PATH)/libsubstratee_worker_enclave.a ../lib/libenclave.a
 endif
