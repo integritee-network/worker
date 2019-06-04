@@ -12,14 +12,18 @@ rand = "0.6"
 clap = { version = "2.33", features = [ "yaml" ] }
 env_logger = "0.6"
 schnorrkel = "0.1"
+serde = "1.0"
 serde_json = "1.0"
 tiny-bip39 = "0.6.0"
 blake2-rfc = { version = "0.2.18", default-features = false}
 hex-literal = "0.2.0"
+serde_derive = "1.0"
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 
 substrate_bip39 = { package="substrate-bip39", git = "https://github.com/paritytech/substrate-bip39" }
+
+sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"

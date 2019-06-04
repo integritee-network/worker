@@ -25,6 +25,11 @@ args:
         long: message
         help: Set the message to be sent to the substraTEE-worker
         takes_value: true
+    - sha256wasm:
+        short: w
+        long: sha256wasm
+        help: Sha256 hash of the WASM code
+        takes_value: true
 
 subcommands:
     - getcounter:

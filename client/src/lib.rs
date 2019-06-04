@@ -102,8 +102,7 @@ pub fn get_enclave_rsa_pub_key() -> Rsa3072PubKey {
 }
 
 // function to get the counter from the substraTEE-worker
-pub fn get_counter(user: &'static str)
-{
+pub fn get_counter(user: &'static str) {
 	// Client thread
 	let client = thread::spawn(move || {
 		connect("ws://127.0.0.1:2019", |out| {
@@ -276,4 +275,12 @@ pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
 			_ => {},
 		}
 	}
+}
+
+// convert from vec to array
+pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
+	let mut array = [0; 32];
+	let bytes = &bytes[..array.len()]; // panics if not enough data
+	array.copy_from_slice(bytes);
+	array
 }

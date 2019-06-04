@@ -24,6 +24,7 @@ extern crate hex_literal;
 extern crate sgx_crypto_helper;
 extern crate env_logger;
 extern crate log;
+use log::*;
 
 use parity_codec::{Encode};
 use substrate_api_client::{Api};
@@ -33,11 +34,27 @@ use blake2_rfc::blake2s::{blake2s};
 
 use substratee_client::*;
 
+extern crate serde;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
+
 #[macro_use]
 extern crate clap;
 use clap::App;
 
+extern crate sgx_types;
+use sgx_types::*;
+
 fn main() {
+	// message structure
+	#[derive(Debug, Serialize, Deserialize)]
+	struct Message {
+		account: String,
+		amount: u32,
+		sha256: sgx_sha256_hash_t
+	}
+
 	env_logger::init();
 
 	let yml = load_yaml!("cli.yml");
@@ -49,6 +66,18 @@ fn main() {
 		get_counter(user);
 		return;
 	}
+
+	// check integrity of sha256 of WASM
+	let sha256input = hex::decode(matches.value_of("sha256wasm").unwrap()).unwrap();
+
+	if sha256input.len() != 32
+	{
+		error!("Length of SHA256 hash of WASM is wrong: 32 != {}", sha256input.len());
+		return;
+	}
+
+	// convert to [u8; 32]
+	let sha256: sgx_sha256_hash_t = from_slice(&sha256input);
 
 	let port = matches.value_of("port").unwrap_or("9944");
 	let server = matches.value_of("server").unwrap_or("127.0.0.1");
@@ -71,11 +100,13 @@ fn main() {
 
 	// compose extrinsic with encrypted payload
 	let rsa_pubkey = get_enclave_rsa_pub_key();
+	let account: String = matches.value_of("account").unwrap_or("Alice").to_string();
+	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
+	let message = Message { account, amount, sha256 };
+	let plaintext = serde_json::to_vec(&message).unwrap();
 	let mut payload_encrypted: Vec<u8> = Vec::new();
-	let message = matches.value_of("message").unwrap_or("Alice,42");
-	let plaintext = message.as_bytes();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	println!("[>] Sending message {:?} to substraTEE-worker", message);
+	println!("[>] Sending message '{:?}' to substraTEE-worker", message);
 	nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 	let mut _xthex = hex::encode(xt.encode());
