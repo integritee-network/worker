@@ -49,12 +49,18 @@ pub fn get_account_nonce(api: &substrate_api_client::Api, user: [u8; 32]) -> U25
 // decrypt and process the payload (in the enclave)
 // then compose the extrinsic (in the enclave)
 // and send an extrinsic back to the substraTEE-node
-pub fn process_forwarded_payload(eid: sgx_enclave_id_t, ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str) {
+pub fn process_forwarded_payload(
+		eid: sgx_enclave_id_t,
+		ciphertext: Vec<u8>,
+		retval: &mut sgx_status_t,
+		port: &str) {
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
 	// decrypt and process the payload. we will get an extrinsic back
 	let xt = decryt_and_process_payload(eid, ciphertext, retval, port);
+
+	println!("RETVAL = {:?}", retval);
 
 	let mut _xthex = hex::encode(xt.encode());
 	_xthex.insert_str(0, "0x");
@@ -65,7 +71,11 @@ pub fn process_forwarded_payload(eid: sgx_enclave_id_t, ciphertext: Vec<u8>, ret
 	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
 }
 
-pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>, retval: &mut sgx_status_t, port: &str, ) -> UncheckedExtrinsic {
+pub fn decryt_and_process_payload(
+		eid: sgx_enclave_id_t,
+		mut ciphertext: Vec<u8>,
+		retval: &mut sgx_status_t,
+		port: &str, ) -> UncheckedExtrinsic {
 	println!("[>] Decrypt and process the payload");
 
 	// initiate the api and get the genesis hash
@@ -87,8 +97,10 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
 
 	// calculate the SHA256 of the WASM
-	let hash = rsgx_sha256_slice(&module).unwrap();
-	debug!("hash = {:?}", hash);
+	let wasm_hash = rsgx_sha256_slice(&module).unwrap();
+	debug!("** wasm_hash = {:?}", wasm_hash);
+	let wasm_hash_str = serde_json::to_string(&wasm_hash).unwrap();
+	debug!("** wasm_hash_str = {:?}", wasm_hash_str);
 
 	// prepare the request
 	let req = SgxWasmAction::Call {
@@ -99,8 +111,8 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 	let req_str = serde_json::to_string(&req).unwrap();
 
 	// update the counter and compose the extrinsic
-	let extrinsic_size = 137;
-	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; extrinsic_size as usize];
+	let unchecked_extrinsic_size = 137;
+	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
 	let result = unsafe {
 		call_counter_wasm(eid,
@@ -113,15 +125,30 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 					 genesis_hash.len() as u32,
 					 nonce_bytes.as_ptr(),
 					 nonce_bytes.len() as u32,
+					 wasm_hash_str.as_ptr(),
+					 wasm_hash_str.len() as u32,
 					 unchecked_extrinsic.as_mut_ptr(),
-					 extrinsic_size as u32
+					 unchecked_extrinsic_size as u32
 		)
 	};
 
+	println!("result = {:?}", result);
+	println!("retval = {:?}", retval);
+
 	match result {
-		sgx_status_t::SGX_SUCCESS => println!("[<] Message decoded and processed in the enclave"),
+		sgx_status_t::SGX_SUCCESS => debug!("[+] ECALL Enclave successful"),
 		_ => {
 			error!("[-] ECALL Enclave Failed {}!", result.as_str());
+		}
+	}
+
+	match retval {
+		sgx_status_t::SGX_SUCCESS => {
+			println!("[<] Message decoded and processed in the enclave");
+
+		},
+		_ => {
+			error!("[<] Error processing message in the enclave");
 		}
 	}
 

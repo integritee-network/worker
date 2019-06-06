@@ -28,8 +28,10 @@ extern {
 		ciphertext_size: u32,
 		hash: *const u8,
 		hash_size: u32,
-		index: *const u8,
-		index_size: u32,
+		nonce: *const u8,
+		nonce_size: u32,
+		wasm_hash: *const u8,
+		wasm_hash_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;

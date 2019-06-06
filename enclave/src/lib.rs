@@ -195,7 +195,9 @@ pub extern "C" fn call_counter_wasm(
 						hash_size: u32,
 						nonce: * const u8,
 						nonce_size: u32,
-						unchechecked_extrinsic: * mut u8,
+						wasm_hash: *const u8,
+						wasm_hash_size: u32,
+						unchecked_extrinsic: * mut u8,
 						unchecked_extrinsic_size: u32
 					) -> sgx_status_t {
 
@@ -209,7 +211,7 @@ pub extern "C" fn call_counter_wasm(
 	let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
 	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
 	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
-	let extrinsic_slize = unsafe { slice::from_raw_parts_mut(unchechecked_extrinsic, unchecked_extrinsic_size as usize) };
+	let extrinsic_slice = unsafe { slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize) };
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -237,6 +239,18 @@ pub extern "C" fn call_counter_wasm(
 	let increment = message.amount;
 	let sha256 = message.sha256;
 	println!("[Enclave] Message decoded. account = {}, increment = {}, sha256 = {:?}", account, increment, sha256);
+
+	// get the expected SHA256 hash
+	let wasm_hash_slice = unsafe { slice::from_raw_parts(wasm_hash, wasm_hash_size as usize) };
+	let wasm_hash_expected: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
+	println!("wasm_hash_expected = {:?}", wasm_hash_expected);
+
+	// compare the hashes
+	if wasm_hash_expected != sha256 {
+		println!("[Enclave] SHA256 of WASM code not matching -> abort");
+		retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		return retval;
+	}
 
 	// read the counter state
 	let mut state_vec: Vec<u8> = Vec::new();
@@ -307,7 +321,7 @@ pub extern "C" fn call_counter_wasm(
 	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
 
 	let encoded = ex.encode();
-	extrinsic_slize.clone_from_slice(&encoded);
+	extrinsic_slice.clone_from_slice(&encoded);
 	retval
 }
 
