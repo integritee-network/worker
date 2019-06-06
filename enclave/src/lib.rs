@@ -225,40 +225,43 @@ pub extern "C" fn call_counter_wasm(
 	}
 
 	// decode the payload
-	println!("[Enclave] Decode the payload");
+	println!("    [Enclave] Decode the payload");
 	let plaintext_vec = utils::decode_payload(&ciphertext_slice, &rsa_keypair);
-	println!("[Enclave] Plaintext_vec = {:?}", plaintext_vec);
-
 	let plaintext_string = String::from_utf8(plaintext_vec.clone()).unwrap();
-	println!("[Enclave] plaintext_string = {}", plaintext_string);
-
 	let message: Message = serde_json::from_str(&plaintext_string).unwrap();
-	println!("message = {:?}", message);
 
+	// get the elements
 	let account = message.account;
 	let increment = message.amount;
 	let sha256 = message.sha256;
-	println!("[Enclave] Message decoded. account = {}, increment = {}, sha256 = {:?}", account, increment, sha256);
+	println!("    [Enclave] Message decoded:");
+	println!("    [Enclave]   account   = {}", account);
+	println!("    [Enclave]   increment = {}", increment);
+	println!("    [Enclave]   sha256    = {:?}", sha256);
 
-	// get the expected SHA256 hash
+	// get the calculated SHA256 hash
 	let wasm_hash_slice = unsafe { slice::from_raw_parts(wasm_hash, wasm_hash_size as usize) };
-	let wasm_hash_expected: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
-	println!("wasm_hash_expected = {:?}", wasm_hash_expected);
+	let wasm_hash_calculated: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
 
-	// compare the hashes
-	if wasm_hash_expected != sha256 {
-		println!("[Enclave] SHA256 of WASM code not matching -> abort");
-		retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		return retval;
+	// compare the hashes and return error if not matching
+	if wasm_hash_calculated != sha256 {
+		println!("    [Enclave] SHA256 of WASM code not matching");
+		println!("    [Enclave]   Wanted by client    : {:?}", sha256);
+		println!("    [Enclave]   Calculated by worker: {:?}", wasm_hash_calculated);
+		println!("    [Enclave] Returning ERROR_UNEXPECTED and not updating STF");
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
+	}
+	else {
+		println!("    [Enclave] SHA256 of WASM code identical");
 	}
 
 	// read the counter state
 	let mut state_vec: Vec<u8> = Vec::new();
 	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
-	debug!("[Enclave] Counterstate read");
+	debug!("    [Enclave] Counterstate read");
 
 	if retval != sgx_status_t::SGX_SUCCESS {
-		error!("Failed to read file '{}'", COUNTERSTATE);
+		error!("    [Enclave] Failed to read file '{}'", COUNTERSTATE);
 		return retval;
 	}
 
@@ -267,9 +270,9 @@ pub extern "C" fn call_counter_wasm(
 
 	// get the current counter value of the account or initialize with 0
 	let counter_value_old: u32 = *counter.entries.entry(account.to_string()).or_insert(0);
-	info!("[Enclave] Current counter state of '{}' = {}", account, counter_value_old);
+	info!("    [Enclave] Current counter state of '{}' = {}", account, counter_value_old);
 
-	println!("[Enclave] Executing WASM code");
+	println!("    [Enclave] Executing WASM code");
 	let req_slice = unsafe { slice::from_raw_parts(req_bin, req_length) };
 	let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
 
@@ -287,24 +290,24 @@ pub extern "C" fn call_counter_wasm(
 			let args = vec![RuntimeValue::I32(counter_value_old as i32),
 							RuntimeValue::I32(increment as i32)
 						   ];
-			debug!("[Enclave] Calling WASM with arguments = {:?}", args);
+			debug!("    [Enclave] Calling WASM with arguments = {:?}", args);
 
 			let r = instance.invoke_export(&function, &args, &mut NopExternals);
-			debug!("[Enclave] invoke_export successful. r = {:?}", r);
+			debug!("    [Enclave] invoke_export successful. r = {:?}", r);
 
 			match r {
 				Ok(Some(RuntimeValue::I32(v))) => {
-					info!("[Enclave] Add {} to '{}'", v, account);
+					info!("    [Enclave] Add {} to '{}'", v, account);
 					counter.entries.insert(account.to_string(), v as u32);
-					println!("[Enclave] WASM executed and counter updated\n");
+					println!("    [Enclave] WASM executed and counter updated");
 				},
 				_ => {
-					error!("[Enclave] Could not decode result");
+					error!("    [Enclave] Could not decode result");
 				}
 			};
 		},
 		sgxwasm::SgxWasmAction::Invoke{ module: _, field: _, args: _ } => {
-			error!("unsupported action");
+			error!("    [Enclave] Unsupported action");
 		},
 	}
 
