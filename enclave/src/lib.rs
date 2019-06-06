@@ -84,8 +84,6 @@ use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
-type Index = u64;
-
 mod constants;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 
@@ -206,9 +204,9 @@ pub extern "C" fn call_counter_wasm(
 	}
 
 	let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
-	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
-	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
-	let extrinsic_slice = unsafe { slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize) };
+	let hash_slice       = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
+	let mut nonce_slice  = unsafe { slice::from_raw_parts(nonce, nonce_size as usize)};
+	let extrinsic_slice  = unsafe { slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize) };
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -383,12 +381,8 @@ pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
 	info!("[Enclave]: Restored sealed key pair with pubkey: {:?}", _pubkey.to_base58());
 
 	// sign message
-	let msg_slice = unsafe {
-		slice::from_raw_parts_mut(msg, msg_size as usize)
-	};
-	let sig_slice = unsafe {
-		slice::from_raw_parts_mut(sig, sig_size as usize)
-	};
+	let msg_slice = unsafe { slice::from_raw_parts_mut(msg, msg_size as usize) };
+	let sig_slice = unsafe { slice::from_raw_parts_mut(sig, sig_size as usize) };
 	let _sig = signature(&msg_slice, &_privkey);
 	sig_slice.clone_from_slice(&_sig);
 
@@ -400,18 +394,11 @@ struct AllCounts {
 	entries: HashMap<String, u32>
 }
 
-// fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: * mut u8, sealed_log_size: u32) -> Option<* mut sgx_sealed_data_t> {
-//     unsafe {
-//         sealed_data.to_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
-//     }
-// }
-
 fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
 	unsafe {
 		SgxSealedData::<T>::from_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
 	}
 }
-
 
 pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let (_privkey, _pubkey) = keypair(&seed);
@@ -419,7 +406,7 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	let era = Era::immortal();
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
-	let index = Index::from(nonce.low_u64());
+	let index = nonce.low_u64();
 	let raw_payload = (Compact(index), function, era, genesis_hash);
 
 	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
@@ -432,13 +419,13 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	});
 
 	let signerpub = ed25519::Public::from_raw(_pubkey);
-	let signature =  ed25519::Signature::from_raw(sign);
+	let signature = ed25519::Signature::from_raw(sign);
 
 	UncheckedExtrinsic::new_signed(
 		index,
 		raw_payload.1,
 		signerpub.into(),
-		signature.into(),
+		signature,
 		era,
 	)
 }

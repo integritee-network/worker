@@ -62,18 +62,18 @@ pub fn read_file(mut keyvec: &mut Vec<u8>, filepath: &str) -> sgx_status_t {
 		Ok(mut f) => match f.read_to_end(&mut keyvec) {
 			Ok(len) => {
 				info!("[Enclave] Read {} bytes from key file", len);
-				return sgx_status_t::SGX_SUCCESS;
+				sgx_status_t::SGX_SUCCESS
 			}
 			Err(x) => {
 				error!("[Enclave] Read key file failed {}", x);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED;
+				sgx_status_t::SGX_ERROR_UNEXPECTED
 			}
 		},
 		Err(x) => {
 			error!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+			sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
-	};
+	}
 }
 
 // FIXME: think about how statevec should be handled in case no counter exist such that we
@@ -83,19 +83,19 @@ pub fn read_counterstate(mut state_vec: &mut Vec<u8>, filepath: &str) -> sgx_sta
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
 			Ok(len) => {
 				info!("[Enclave] Read {} bytes from counter file", len);
-				return sgx_status_t::SGX_SUCCESS;
+				sgx_status_t::SGX_SUCCESS
 			}
 			Err(x) => {
 				error!("[Enclave] Read counter file failed {}", x);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED;
+				sgx_status_t::SGX_ERROR_UNEXPECTED
 			}
 		},
 		Err(x) => {
 			error!("[Enclave] can't get counter file! {}", x);
 			state_vec.push(0);
-			return sgx_status_t::SGX_SUCCESS;
+			sgx_status_t::SGX_SUCCESS
 		}
-	};
+	}
 }
 
 pub fn decode_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {

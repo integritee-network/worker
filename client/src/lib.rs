@@ -146,7 +146,7 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 	).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
 
 	let era = Era::immortal();
-	let index = Index::from(index.low_u64());
+	let index = index.low_u64();
 
 	let function = Call::Balances(BalancesCall::set_balance(to.into(), free, reserved));
 	let raw_payload = (Compact(index), function, era, genesis_hash);
@@ -162,7 +162,7 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 		index,
 		raw_payload.1,
 		signer.public().into(),
-		signature.into(),
+		signature,
 		era,
 	)
 }
@@ -255,24 +255,15 @@ pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
 		let _unhex = hexstr_to_vec(event_str);
 		let mut _er_enc = _unhex.as_slice();
 		let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
-		match _events {
-			Some(evts) => {
-				for evr in &evts {
-					match &evr.event {
-						Event::substratee_proxy(pe) => {
-							match &pe {
-								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
-									println!("[+] Received confirm call from {}", sender);
-									return payload.to_vec().clone();
-								},
-								_ => {},
-							}
-						}
-						_ => {},
+		if let Some(evts) = _events {
+			for evr in &evts {
+				if let Event::substratee_proxy(pe) = &evr.event {
+					if let my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) = &pe {
+						println!("[+] Received confirm call from {}", sender);
+						return payload.to_vec().clone();
 					}
 				}
 			}
-			_ => {},
 		}
 	}
 }
