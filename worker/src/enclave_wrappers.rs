@@ -25,7 +25,7 @@ use init_enclave::init_enclave;
 use primitives::{ed25519};
 
 use substrate_api_client::{Api, hexstr_to_u256};
-use my_node_runtime::{UncheckedExtrinsic};
+use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEEProxyCall};
 use parity_codec::{Decode, Encode};
 use primitive_types::U256;
 
@@ -57,25 +57,35 @@ pub fn process_forwarded_payload(
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
+	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(vec![0; 32])));
+
 	// decrypt and process the payload. we will get an extrinsic back
-	let xt = decryt_and_process_payload(eid, ciphertext, retval, port);
+	let result = decryt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);
 
-	println!("RETVAL = {:?}", retval);
+	match result {
+		sgx_status_t::SGX_SUCCESS => {
+			let mut _xthex = hex::encode(unchecked_extrinsic.encode());
+			_xthex.insert_str(0, "0x");
 
-	let mut _xthex = hex::encode(xt.encode());
-	_xthex.insert_str(0, "0x");
-
-	// sending the extrinsic
-	info!("[+] Send the extrinsic");
-	let tx_hash = api.send_extrinsic(_xthex).unwrap();
-	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+			// sending the extrinsic
+			println!();
+			println!("[+] Send the extrinsic");
+			let tx_hash = api.send_extrinsic(_xthex).unwrap();
+			println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+		},
+		_ => {
+			println!();
+			error!("Payload not processed due to errors.");
+		}
+	}
 }
 
 pub fn decryt_and_process_payload(
 		eid: sgx_enclave_id_t,
 		mut ciphertext: Vec<u8>,
+		ue: &mut UncheckedExtrinsic,
 		retval: &mut sgx_status_t,
-		port: &str, ) -> UncheckedExtrinsic {
+		port: &str, ) -> sgx_status_t {
 	println!("[>] Decrypt and process the payload");
 
 	// initiate the api and get the genesis hash
@@ -98,9 +108,7 @@ pub fn decryt_and_process_payload(
 
 	// calculate the SHA256 of the WASM
 	let wasm_hash = rsgx_sha256_slice(&module).unwrap();
-	debug!("** wasm_hash = {:?}", wasm_hash);
 	let wasm_hash_str = serde_json::to_string(&wasm_hash).unwrap();
-	debug!("** wasm_hash_str = {:?}", wasm_hash_str);
 
 	// prepare the request
 	let req = SgxWasmAction::Call {
@@ -132,9 +140,6 @@ pub fn decryt_and_process_payload(
 		)
 	};
 
-	println!("result = {:?}", result);
-	println!("retval = {:?}", retval);
-
 	match result {
 		sgx_status_t::SGX_SUCCESS => debug!("[+] ECALL Enclave successful"),
 		_ => {
@@ -145,14 +150,14 @@ pub fn decryt_and_process_payload(
 	match retval {
 		sgx_status_t::SGX_SUCCESS => {
 			println!("[<] Message decoded and processed in the enclave");
-
+			*ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
+			return sgx_status_t::SGX_SUCCESS;
 		},
 		_ => {
 			error!("[<] Error processing message in the enclave");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	}
-
-	UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap()
 }
 
 pub fn get_signing_key_tee() {
