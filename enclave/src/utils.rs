@@ -28,7 +28,7 @@ use std::string::ToString;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
-use sgx_types::sgx_status_t;
+use sgx_types::{sgx_status_t};
 use my_node_runtime::Hash;
 use crypto::blake2s::Blake2s;
 
@@ -101,14 +101,13 @@ pub fn read_counterstate(mut state_vec: &mut Vec<u8>, filepath: &str) -> sgx_sta
 	};
 }
 
-pub fn get_plaintext_from_encrypted_data(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
-	let mut plaintext = Vec::new();
-	rsa_pair.decrypt_buffer(ciphertext_slice, &mut plaintext).unwrap();
-	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
-	info!("[Enclave] Decrypted data = {}", decrypted_string);
-	plaintext
+pub fn decode_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
+	let mut decrypted_buffer = Vec::new();
+	rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer).unwrap();
+	decrypted_buffer
 }
 
+/*
 pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, u32) {
 	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
 	// this is UGLY!!
@@ -122,6 +121,7 @@ pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, 
 	// println!("number = {:?}", number);
 	(v[0].to_string(), number[0].into())
 }
+*/
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];

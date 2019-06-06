@@ -56,7 +56,7 @@ use parity_codec::{Decode, Encode, Compact};
 extern crate primitive_types;
 use primitive_types::U256;
 
-use sgx_types::{sgx_status_t, sgx_sealed_data_t};
+use sgx_types::{sgx_status_t, sgx_sealed_data_t, sgx_sha256_hash_t};
 use sgx_types::marker::ContiguousMemory;
 use sgx_tseal::{SgxSealedData};
 use sgx_rand::{Rng, StdRng};
@@ -64,6 +64,9 @@ use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 
 #[macro_use]
 extern crate sgx_serialize_derive;
+
+#[macro_use]
+extern crate serde_derive;
 
 #[macro_use]
 extern crate lazy_static;
@@ -196,6 +199,13 @@ pub extern "C" fn call_counter_wasm(
 						unchecked_extrinsic_size: u32
 					) -> sgx_status_t {
 
+	#[derive(Debug, Serialize, Deserialize)]
+	struct Message {
+		account: String,
+		amount: u32,
+		sha256: sgx_sha256_hash_t
+	}
+
 	let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
 	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
 	let mut nonce_slice = unsafe {slice::from_raw_parts(nonce, nonce_size as usize)};
@@ -212,11 +222,21 @@ pub extern "C" fn call_counter_wasm(
 		return retval;
 	}
 
-	// decode the message
-	debug!("[Enclave] Decode the message");
-	let plaintext = utils::get_plaintext_from_encrypted_data(&ciphertext_slice, &rsa_keypair);
-	let (account, increment) = utils::get_account_and_increment_from_plaintext(plaintext.clone());
-	debug!("[Enclave] Message decoded. account = {}, increment = {}", account, increment);
+	// decode the payload
+	println!("[Enclave] Decode the payload");
+	let plaintext_vec = utils::decode_payload(&ciphertext_slice, &rsa_keypair);
+	println!("[Enclave] Plaintext_vec = {:?}", plaintext_vec);
+
+	let plaintext_string = String::from_utf8(plaintext_vec.clone()).unwrap();
+	println!("[Enclave] plaintext_string = {}", plaintext_string);
+
+	let message: Message = serde_json::from_str(&plaintext_string).unwrap();
+	println!("message = {:?}", message);
+
+	let account = message.account;
+	let increment = message.amount;
+	let sha256 = message.sha256;
+	println!("[Enclave] Message decoded. account = {}, increment = {}, sha256 = {:?}", account, increment, sha256);
 
 	// read the counter state
 	let mut state_vec: Vec<u8> = Vec::new();
@@ -281,7 +301,7 @@ pub extern "C" fn call_counter_wasm(
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let _seed = _get_ecc_seed_file(&mut retval);
 	let genesis_hash = utils::hash_from_slice(hash_slice);
-	let call_hash = utils::blake2s(&plaintext);
+	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
 	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
