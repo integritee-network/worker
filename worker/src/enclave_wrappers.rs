@@ -32,6 +32,8 @@ use primitive_types::U256;
 use wasm::SgxWasmAction;
 // use wasm_def::{RuntimeValue, Error as InterpreterError};
 
+use crypto::*;
+
 // function to get the account nonce of a user
 pub fn get_account_nonce(api: &substrate_api_client::Api, user: [u8; 32]) -> U256 {
 	info!("[>] Get account nonce");
@@ -83,6 +85,10 @@ pub fn decryt_and_process_payload(eid: sgx_enclave_id_t, mut ciphertext: Vec<u8>
 
 	// read wasm file to string
 	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
+
+	// calculate the SHA256 of the WASM
+	let hash = rsgx_sha256_slice(&module).unwrap();
+	debug!("hash = {:?}", hash);
 
 	// prepare the request
 	let req = SgxWasmAction::Call {

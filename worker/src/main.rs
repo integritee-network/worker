@@ -42,6 +42,8 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate nan_preserving_float;
 
+extern crate sgx_ucrypto as crypto;
+
 mod constants;
 mod enclave_api;
 mod init_enclave;
@@ -84,6 +86,7 @@ fn main() {
 		println!("*** Starting substraTEE-worker\n");
 		worker(port);
 	} else if matches.is_present("wasm") {
+		// TODO: Must be removed for M2
 		println!("*** Run WASM (WIP)\n");
 		run_wasm();
 	} else if matches.is_present("getpublickey") {

@@ -28,6 +28,7 @@ primitive-types = { version = "0.2", default-features = false, features = ["code
 sgx_urts = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_ucrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 
 [dependencies.substrate-api-client]
