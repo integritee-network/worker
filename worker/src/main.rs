@@ -85,10 +85,6 @@ fn main() {
     if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
 		worker(port);
-	} else if matches.is_present("wasm") {
-		// TODO: Must be removed for M2
-		println!("*** Run WASM (WIP)\n");
-		run_wasm();
 	} else if matches.is_present("getpublickey") {
 		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
@@ -207,61 +203,4 @@ fn worker(port: &str) -> () {
 			None => error!("Couldn't decode event record list")
 		}
 	}
-}
-
-fn run_wasm() {
-	// init the enclave
-	let enclave = match init_enclave() {
-		Ok(r) => {
-			println!("[+] Init Enclave Successful {}!", r.geteid());
-			r
-		},
-		Err(x) => {
-			error!("[-] Init Enclave Failed {}!", x.as_str());
-			return;
-		},
-	};
-
-	// init the sgxwasm spec driver engine
-	let result = sgx_enclave_wasm_init(enclave.geteid());
-	match result {
-		Ok(_r) => {
-			println!("[+] Init Wasm in enclave successful");
-		},
-		Err(x) => {
-			error!("[-] Init Wasm in enclave failed {}!", x.as_str());
-			return;
-		},
-	}
-
-	// read wasm file to string
-	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
-
-	// prepare the request
-	let req = SgxWasmAction::Invoke {
-					module : Some(module),
-					field  : "add_one".to_string(),
-					args   : vec![BoundaryValue::I32(42)],
-	};
-
-	// invoke the request
-	let result = sgx_enclave_wasm_invoke(serde_json::to_string(&req).unwrap(),
-												 MAXOUTPUT,
-												 enclave.geteid());
-	match result {
-		(result, sgx_status_t::SGX_SUCCESS) => {
-			let result_obj : Result<Option<RuntimeValue>, InterpreterError> = answer_convert(result);
-			println!("result: {:?}", result_obj);
-		},
-		(result, sgx_status_t::SGX_ERROR_WASM_INTERPRETER_ERROR) => {
-			let result_obj : Result<Option<RuntimeValue>, InterpreterError> = answer_convert(result);
-			println!("result: {:?}", result_obj);
-		},
-		(_, _) => {
-			error!("sgx_enclave_wasm_run_action::Invoke returned unknown error!");
-		},
-	}
-
-	enclave.destroy();
-	println!("[+] run_wasm success...");
 }
