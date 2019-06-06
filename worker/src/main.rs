@@ -1,17 +1,18 @@
 /*
-   Copyright 2019 Supercomputing Systems AG
+	Copyright 2019 Supercomputing Systems AG
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+		http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
 */
 
 #[macro_use]
@@ -49,7 +50,6 @@ mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
-mod wasm_def;
 mod wasm;
 
 use log::*;
@@ -67,10 +67,7 @@ use std::sync::mpsc::channel;
 
 use std::thread;
 
-use wasm::{SgxWasmAction, BoundaryValue, sgx_enclave_wasm_init, sgx_enclave_wasm_invoke, answer_convert};
-use wasm_def::{RuntimeValue, Error as InterpreterError};
-
-static MAXOUTPUT:usize = 4096;
+use wasm::{sgx_enclave_wasm_init};
 
 fn main() {
 	// Setup logging

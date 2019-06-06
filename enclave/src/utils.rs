@@ -1,20 +1,19 @@
 /*
-   Copyright 2019 Supercomputing Systems AG
+	Copyright 2019 Supercomputing Systems AG
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+		http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 
 */
-// #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate sgx_types;
@@ -23,8 +22,6 @@ use log::*;
 use std::sgxfs::SgxFile;
 use std::io::{Read, Write};
 use std::vec::Vec;
-use std::string::String;
-use std::string::ToString;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
@@ -106,22 +103,6 @@ pub fn decode_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec
 	rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer).unwrap();
 	decrypted_buffer
 }
-
-/*
-pub fn get_account_and_increment_from_plaintext(plaintext: Vec<u8>) -> (String, u32) {
-	let decrypted_string = String::from_utf8(plaintext.clone()).unwrap();
-	// this is UGLY!!
-	// todo: implement properly when interface is defined
-	let v: Vec<_> = decrypted_string.split(',').collect();
-	// println!("v = {:?}", v);
-	// println!("v[0] = {}", v[0]);
-
-	let number: Vec<u8> = v.iter().filter_map(|x| x.parse().ok()).collect();
-	// println!("v[1] = {}", v[1]);
-	// println!("number = {:?}", number);
-	(v[0].to_string(), number[0].into())
-}
-*/
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];

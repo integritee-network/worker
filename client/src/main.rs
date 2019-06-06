@@ -116,7 +116,7 @@ fn main() {
 	let tx_hash = api.send_extrinsic(_xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("[<] Message sent successfully");
-	println!("");
+	println!();
 
 	// subsribe to callConfirmed event
 	println!("[>] Subscribe to callConfirmed event");

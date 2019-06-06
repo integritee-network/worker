@@ -23,9 +23,9 @@ pipeline {
     }
     stage('Lint') {
       steps {
-        sh 'cd client  && cargo +nightly-2019-05-21 clippy --message-format short 2>&1 | tee ../clippy_client.log'
-        sh 'cd worker  && cargo +nightly-2019-05-21 clippy --message-format short 2>&1 | tee ../clippy_worker.log'
-        sh 'cd enclave && cargo +nightly-2019-05-21 clippy --message-format short 2>&1 | tee ../clippy_enclave.log'
+        sh 'cd client  && cargo +nightly-2019-05-21 clippy 2>&1 | tee ../clippy_client.log'
+        sh 'cd worker  && cargo +nightly-2019-05-21 clippy 2>&1 | tee ../clippy_worker.log'
+        sh 'cd enclave && cargo +nightly-2019-05-21 clippy 2>&1 | tee ../clippy_enclave.log'
       }
     }
     stage('CheckLog') {

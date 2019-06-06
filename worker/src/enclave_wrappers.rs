@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+
 use std::str;
 use std::fs;
 use log::*;
@@ -30,7 +31,6 @@ use parity_codec::{Decode, Encode};
 use primitive_types::U256;
 
 use wasm::SgxWasmAction;
-// use wasm_def::{RuntimeValue, Error as InterpreterError};
 
 use crypto::*;
 

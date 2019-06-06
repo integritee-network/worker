@@ -63,7 +63,7 @@ pub fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
 	let result = hexstr_to_u256(result_str);
 
 	println!("[<] {}'s free balance is {}", user, result);
-	println!("");
+	println!();
 }
 
 // function to get the account nonce of a user
@@ -77,7 +77,7 @@ pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
 	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
 	let nonce = hexstr_to_u256(result_str);
 	println!("[<] {}'s account nonce is {}", user, nonce);
-	println!("");
+	println!();
 	nonce
 }
 
@@ -106,11 +106,11 @@ pub fn get_counter(user: &'static str) {
 	// Client thread
 	let client = thread::spawn(move || {
 		connect("ws://127.0.0.1:2019", |out| {
-			out.send(format!("{}", user)).unwrap();
+			out.send(user).unwrap();
 
 			move |msg| {
 				println!("[+] Client got message '{}'. ", msg);
-				println!("");
+				println!();
 				out.close(CloseCode::Normal)
 			}
 
@@ -134,7 +134,7 @@ pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, n
 	let tx_hash = api.send_extrinsic(xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("[<] Fund completed");
-	println!("");
+	println!();
 }
 
 // function to compose the extrinsic for a Balance::set_balance call
@@ -181,7 +181,7 @@ pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519:
 	let tx_hash = api.send_extrinsic(xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("[<] Transfer completed");
-	println!("");
+	println!();
 }
 
 // function to compose the extrinsic for a Balance::transfer call
