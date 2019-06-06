@@ -161,7 +161,7 @@ pub fn decryt_and_process_payload(
 }
 
 pub fn get_signing_key_tee() {
-	println!("");
+	println!();
 	println!("*** Start the enclave");
 	let enclave = match init_enclave() {
 		Ok(r) => {
@@ -175,7 +175,7 @@ pub fn get_signing_key_tee() {
 	};
 
 	// request the key
-	println!("");
+	println!();
 	println!("*** Ask the signing key from the TEE");
 	let pubkey_size = 32;
 	let mut pubkey = [0u8; 32];
@@ -199,7 +199,7 @@ pub fn get_signing_key_tee() {
 
 	println!("[+] Signing key: {:?}", pubkey);
 
-	println!("");
+	println!();
 	println!("*** Write the ECC signing key to a file");
 	match fs::write(ECC_PUB_KEY, pubkey) {
 		Err(x) => { error!("[-] Failed to write '{}'. {}", ECC_PUB_KEY, x); },
@@ -210,7 +210,7 @@ pub fn get_signing_key_tee() {
 
 pub fn get_public_key_tee()
 {
-	println!("");
+	println!();
 	println!("*** Start the enclave");
 	let enclave = match init_enclave() {
 		Ok(r) => {
@@ -224,7 +224,7 @@ pub fn get_public_key_tee()
 	};
 
 	// request the key
-	println!("");
+	println!();
 	println!("*** Ask the public key from the TEE");
 	let pubkey_size = 8192;
 	let mut pubkey = vec![0u8; pubkey_size as usize];
@@ -249,7 +249,7 @@ pub fn get_public_key_tee()
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
 	println!("[+] {:?}", rsa_pubkey);
 
-	println!("");
+	println!();
 	println!("*** Write the RSA3072 public key to a file");
 
 	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();

@@ -221,7 +221,7 @@ impl ModuleImportResolver for SpecModule {
         }
 
         let func = FuncInstance::alloc_host(func_type.clone(), index);
-        return Ok(func);
+        Ok(func)
     }
     fn resolve_global(
         &self,

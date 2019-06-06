@@ -98,12 +98,9 @@ mod wasm;
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	match SgxFile::open(RSA3072_SEALED_KEY_FILE) {
-		Err(x) => {
-			info!("[Enclave] Keyfile not found, creating new! {}", x);
-			retval = create_sealed_rsa3072_keypair();
-		},
-		_ => ()
+	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
+		info!("[Enclave] Keyfile not found, creating new! {}", x);
+		retval = create_sealed_rsa3072_keypair();
 	}
 
 	if retval != sgx_status_t::SGX_SUCCESS {
@@ -306,7 +303,7 @@ pub extern "C" fn call_counter_wasm(
 				}
 			};
 		},
-		sgxwasm::SgxWasmAction::Invoke{ module: _, field: _, args: _ } => {
+		_ => {
 			error!("    [Enclave] Unsupported action");
 		},
 	}

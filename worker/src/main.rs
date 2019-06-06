@@ -142,7 +142,7 @@ fn worker(port: &str) -> () {
 		.unwrap();
 
 	println!("[+] Subscribed, waiting for event...");
-	println!("");
+	println!();
 	loop {
 		let event_str = events_out.recv().unwrap();
 
@@ -163,7 +163,7 @@ fn worker(port: &str) -> () {
 									println!("    Destination: {:?}", dest);
 									println!("    Value:       {:?}", value);
 									println!("    Fee:         {:?}", fee);
-									println!("");
+									println!();
 								},
 								_ => {
 									info!("Ignoring unsupported balances event");
@@ -177,7 +177,7 @@ fn worker(port: &str) -> () {
 									println!("[+] Received Forwarded event");
 									debug!("    From:    {:?}", sender);
 									debug!("    Payload: {:?}", hex::encode(payload));
-									println!("");
+									println!();
 
 									// process the payload and send extrinsic
 									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, port);
@@ -186,7 +186,7 @@ fn worker(port: &str) -> () {
 									println!("[+] Received CallConfirmed event");
 									debug!("    From:    {:?}", sender);
 									debug!("    Payload: {:?}", hex::encode(payload));
-									println!("");
+									println!();
 								},
 							}
 						}

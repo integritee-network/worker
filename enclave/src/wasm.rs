@@ -14,11 +14,11 @@
 	limitations under the License.
 
 */
-#![cfg_attr(not(target_env = "sgx"), no_std)]
+
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 use std::sync::SgxMutex;
-use sgxwasm::{SpecDriver, boundary_value_to_runtime_value, result_convert};
+use sgxwasm::SpecDriver;
 use sgx_types::*;
 
 lazy_static!{

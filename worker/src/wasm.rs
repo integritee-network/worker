@@ -15,7 +15,6 @@
 */
 
 use sgx_types::*;
-// use wasm_def::{RuntimeValue};
 
 extern {
 	fn sgxwasm_init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t ;
@@ -23,11 +22,6 @@ extern {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SgxWasmAction {
-	Invoke {
-		module: Option<Vec<u8>>,
-		field: String,
-		args: Vec<BoundaryValue>
-	},
 	Call {
 		module: Option<Vec<u8>>,
 		function: String,
@@ -42,13 +36,10 @@ pub enum BoundaryValue {
 	F64(u64),
 }
 
-
-
 pub fn sgx_enclave_wasm_init(eid: sgx_enclave_id_t) -> Result<(),String> {
 	let mut retval:sgx_status_t = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
-		sgxwasm_init(eid,
-					 &mut retval)
+		sgxwasm_init(eid, &mut retval)
 	};
 
 	match result {

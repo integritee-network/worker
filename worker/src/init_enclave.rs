@@ -59,7 +59,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
         }
     };
     let token_file: path::PathBuf = home_dir.join(ENCLAVE_TOKEN);;
-    if use_token == true {
+    if use_token {
         match fs::File::open(&token_file) {
             Err(_) => {
                 info!(
@@ -95,7 +95,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
     ))?;
 
     // Step 3: save the launch token if it is updated
-    if use_token == true && launch_token_updated != 0 {
+    if use_token && launch_token_updated != 0 {
         // reopen the file with write capablity
         match fs::File::create(&token_file) {
             Ok(mut f) => match f.write_all(&launch_token) {

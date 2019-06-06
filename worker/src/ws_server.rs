@@ -65,7 +65,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
     info!("Starting WebSocket server on port 2019");
     thread::spawn(move || {
         listen("127.0.0.1:2019", |out| {
-            Server { out: out, eid: eid }
+            Server { out, eid }
         }).unwrap()
     });
 }
