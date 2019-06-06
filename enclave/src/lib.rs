@@ -36,6 +36,7 @@ extern crate sgx_crypto_helper;
 extern crate sgx_serialize;
 extern crate sgxwasm;
 
+#[macro_use]
 extern crate log;
 
 extern crate primitives;
@@ -71,7 +72,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
 
-use log::*;
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
