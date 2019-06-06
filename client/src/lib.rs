@@ -1,17 +1,17 @@
 /*
-   Copyright 2019 Supercomputing Systems AG
+	Copyright 2019 Supercomputing Systems AG
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-	   http://www.apache.org/licenses/LICENSE-2.0
+		http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 
 */
 
@@ -23,7 +23,6 @@ use std::fs;
 use primitive_types::U256;
 use std::sync::mpsc::channel;
 use ws::{connect, CloseCode};
-use node_primitives::{Index,Balance};
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -189,8 +188,8 @@ pub fn extrinsic_transfer(from: &str, to: ed25519::Public, amount: U256, index: 
 	let signer = pair_from_suri(from, Some(""));
 
 	let era = Era::immortal();
-	let amount = Balance::from(amount.low_u128());
-	let index = Index::from(index.low_u64());
+	let amount = amount.low_u128();
+	let index = index.low_u64();
 
 	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
 	let raw_payload = (Compact(index), function, era, genesis_hash);
@@ -205,7 +204,7 @@ pub fn extrinsic_transfer(from: &str, to: ed25519::Public, amount: U256, index: 
 		index,
 		raw_payload.1,
 		signer.public().into(),
-		signature.into(),
+		signature,
 		era,
 	)
 }
@@ -219,7 +218,7 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 	let payload_encrypted_str = payload_encrypted;
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::call_worker(payload_encrypted_str));
 
-	let index = Index::from(index.low_u64());
+	let index = index.low_u64();
 	let raw_payload = (Compact(index), function, era, genesis_hash);
 
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
@@ -232,7 +231,7 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 		index,
 		raw_payload.1,
 		signer.public().into(),
-		signature.into(),
+		signature,
 		era,
 	)
 }

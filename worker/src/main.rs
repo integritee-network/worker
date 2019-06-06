@@ -93,7 +93,7 @@ fn main() {
     }
 }
 
-fn worker(port: &str) -> () {
+fn worker(port: &str) {
     // ------------------------------------------------------------------------
     // initialize the enclave
     println!("*** Starting enclave");
