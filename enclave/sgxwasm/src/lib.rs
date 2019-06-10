@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2018 Baidu, Inc. All Rights Reserved.
+// Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -80,14 +80,25 @@ extern crate serde_derive;
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SgxWasmAction {
     Invoke {
-        module: Option<Vec<u8>>,
+        module: Option<String>,
         field: String,
         args: Vec<BoundaryValue>
     },
-    Call {
-		module: Option<Vec<u8>>,
-		function: String,
-	},
+    Get {
+        module: Option<String>,
+        field: String,
+    },
+    LoadModule {
+        name: Option<String>,
+        module: Vec<u8>,
+    },
+    TryLoad {
+        module: Vec<u8>,
+    },
+    Register {
+        name: Option<String>,
+        as_name: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -116,7 +127,7 @@ pub fn boundary_value_to_runtime_value(rv: BoundaryValue) -> RuntimeValue {
     }
 }
 
-pub fn result_convert(res : Result<Option<RuntimeValue>, InterpreterError>)
+pub fn result_covert(res : Result<Option<RuntimeValue>, InterpreterError>)
                      -> Result<Option<BoundaryValue>, InterpreterError>
 {
     match res {
@@ -221,7 +232,7 @@ impl ModuleImportResolver for SpecModule {
         }
 
         let func = FuncInstance::alloc_host(func_type.clone(), index);
-        Ok(func)
+        return Ok(func);
     }
     fn resolve_global(
         &self,
