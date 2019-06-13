@@ -18,18 +18,17 @@
 
 extern crate sgx_types;
 
-use log::*;
-use std::sgxfs::SgxFile;
-use std::io::{Read, Write};
-use std::vec::Vec;
-use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
-
-use sgx_types::{sgx_status_t};
-use my_node_runtime::Hash;
 use crypto::blake2s::Blake2s;
+use log::*;
+use my_node_runtime::Hash;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto_helper::RsaKeyPair;
+use sgx_types::sgx_status_t;
 
 use constants::RSA3072_SEALED_KEY_FILE;
+use std::io::{Read, Write};
+use std::sgxfs::SgxFile;
+use std::vec::Vec;
 
 pub fn read_rsa_keypair(status: &mut sgx_status_t) -> Rsa3072KeyPair {
 	let mut keyvec: Vec<u8> = Vec::new();
@@ -38,7 +37,7 @@ pub fn read_rsa_keypair(status: &mut sgx_status_t) -> Rsa3072KeyPair {
 	serde_json::from_str(&key_json_str).unwrap()
 }
 
-pub fn write_file(bytes: &[u8] ,filepath: &str) -> sgx_status_t {
+pub fn write_file(bytes: &[u8], filepath: &str) -> sgx_status_t {
 	match SgxFile::create(filepath) {
 		Ok(mut f) => match f.write_all(bytes) {
 			Ok(()) => {
@@ -110,7 +109,7 @@ pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	Hash::from(&mut g)
 }
 
-pub fn blake2s(plaintext: &[u8]) ->  [u8; 32] {
+pub fn blake2s(plaintext: &[u8]) -> [u8; 32] {
 	let mut call_hash: [u8; 32] = Default::default();
 	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
 	call_hash

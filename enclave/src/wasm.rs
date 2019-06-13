@@ -17,11 +17,12 @@
 
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-use std::sync::SgxMutex;
-use sgxwasm::SpecDriver;
 use sgx_types::*;
 
-lazy_static!{
+use sgxwasm::SpecDriver;
+use std::sync::SgxMutex;
+
+lazy_static! {
 	static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
 }
 
