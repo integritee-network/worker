@@ -23,7 +23,7 @@ sgx_serialize = { git = "https://github.com/baidu/rust-sgx-sdk" }
 [dependencies]
 log = { git = "https://github.com/baidu/rust-sgx-sdk" }
 blake2-rfc = { version = "0.2.18", default-features = false}
-parity-codec = { version = "3.0", default-features = false }
+parity-codec = { version = "3.3", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
 
