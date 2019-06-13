@@ -37,8 +37,7 @@ lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "update_substrate"
-package = "substratee-node-runtime"
+package = "substratee-node-fruntime"
 default-features = false
 features = ["no_global_allocator"]
 
