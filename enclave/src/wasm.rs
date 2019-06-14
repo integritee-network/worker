@@ -44,13 +44,13 @@ pub fn compare_hashes(act: sgx_sha256_hash_t, client: sgx_sha256_hash_t) -> Resu
 	// compare the hashes and return error if not matching
 	if act == client {
 		println!("    [Enclave] SHA256 of WASM code identical");
-		return Ok(sgx_status_t::SGX_SUCCESS);
+		Ok(sgx_status_t::SGX_SUCCESS)
 	} else {
 		println!("    [Enclave] SHA256 of WASM code not matching");
 		println!("    [Enclave]   Wanted by client    : {:?}", client);
 		println!("    [Enclave]   Calculated by worker: {:?}", act);
 		println!("    [Enclave] Returning ERROR_UNEXPECTED and not updating oSTF");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+		Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 	}
 }
 
@@ -74,7 +74,7 @@ pub fn invoke_wasm_action(action: sgxwasm::SgxWasmAction, msg: Message, counter:
 			let r = instance.invoke_export(&function, &args, &mut NopExternals);
 			debug!("    [Enclave] invoke_export successful. r = {:?}", r);
 
-			return match r {
+			match r {
 				Ok(Some(RuntimeValue::I32(v))) => {
 					info!("    [Enclave] Add {} to '{}'", v, msg.account);
 					counter.entries.insert(msg.account.to_string(), v as u32);
@@ -85,7 +85,7 @@ pub fn invoke_wasm_action(action: sgxwasm::SgxWasmAction, msg: Message, counter:
 					error!("    [Enclave] Could not decode result");
 					Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 				}
-			};
+			}
 		},
 		_ => {
 			error!("    [Enclave] Unsupported action");

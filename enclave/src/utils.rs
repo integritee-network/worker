@@ -43,7 +43,7 @@ pub fn read_rsa_pubkey() -> SgxResult<Rsa3072PubKey> {
 	let pair = r#try!(read_rsa_keypair());
 	let pubkey = pair.export_pubkey().unwrap();
 
-	return Ok(pubkey);
+	Ok(pubkey)
 }
 
 pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {

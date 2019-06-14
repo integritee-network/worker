@@ -86,7 +86,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -
 		}
 	}
 
-	let rsa_pubkey=match  utils::read_rsa_pubkey() {
+	let rsa_pubkey = match  utils::read_rsa_pubkey() {
 		Ok(key) => key,
 		Err(status) => return status,
 	};
@@ -129,7 +129,7 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> s
 		},
 	}
 
-	let _seed = match utils::_get_ecc_seed_file() {
+	let _seed = match utils::get_ecc_seed() {
 		Ok(seed) => seed,
 		Err(status) => return status,
 	};
@@ -216,7 +216,7 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 	}
 
 	// get information for composing the extrinsic
-	let _seed = match utils::_get_ecc_seed_file() {
+	let _seed = match utils::get_ecc_seed() {
 		Ok(seed) => seed,
 		Err(status) => return status,
 	};
