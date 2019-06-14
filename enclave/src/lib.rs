@@ -55,13 +55,12 @@ use primitive_types::U256;
 use primitives::ed25519;
 use runtime_primitives::generic::Era;
 use rust_base58::ToBase58;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tseal::SgxSealedData;
 use sgx_types::{sgx_sealed_data_t, sgx_sha256_hash_t, sgx_status_t};
 use sgx_types::marker::ContiguousMemory;
-use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue};
 
 use constants::{COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::collections::HashMap;
@@ -158,12 +157,7 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 									unchecked_extrinsic: *mut u8,
 									unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
-	#[derive(Debug, Serialize, Deserialize)]
-	struct Message {
-		account: String,
-		amount: u32,
-		sha256: sgx_sha256_hash_t
-	}
+
 
 	let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
 	let hash_slice = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
@@ -182,30 +176,19 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 	println!("    [Enclave] Decode the payload");
 	let plaintext_vec = utils::decode_payload(&ciphertext_slice, &rsa_keypair);
 	let plaintext_string = String::from_utf8(plaintext_vec.clone()).unwrap();
-	let message: Message = serde_json::from_str(&plaintext_string).unwrap();
+	let msg: Message = serde_json::from_str(&plaintext_string).unwrap();
 
-	// get the elements
-	let account = message.account;
-	let increment = message.amount;
-	let sha256 = message.sha256;
 	println!("    [Enclave] Message decoded:");
-	println!("    [Enclave]   account   = {}", account);
-	println!("    [Enclave]   increment = {}", increment);
-	println!("    [Enclave]   sha256    = {:?}", sha256);
+	println!("    [Enclave]   account   = {}", msg.account);
+	println!("    [Enclave]   increment = {}", msg.amount);
+	println!("    [Enclave]   sha256    = {:?}", msg.sha256);
 
 	// get the calculated SHA256 hash
 	let wasm_hash_slice = unsafe { slice::from_raw_parts(wasm_hash, wasm_hash_size as usize) };
 	let wasm_hash_calculated: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
 
-	// compare the hashes and return error if not matching
-	if wasm_hash_calculated != sha256 {
-		println!("    [Enclave] SHA256 of WASM code not matching");
-		println!("    [Enclave]   Wanted by client    : {:?}", sha256);
-		println!("    [Enclave]   Calculated by worker: {:?}", wasm_hash_calculated);
-		println!("    [Enclave] Returning ERROR_UNEXPECTED and not updating STF");
-		return sgx_status_t::SGX_ERROR_UNEXPECTED;
-	} else {
-		println!("    [Enclave] SHA256 of WASM code identical");
+	if let Err(status) = wasm::compare_hashes(wasm_hash_calculated, msg.sha256) {
+		return status;
 	}
 
 	let state = match utils::read_counterstate(COUNTERSTATE) {
@@ -217,49 +200,17 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 	let mut counter = helper.decode().unwrap();
 
 	// get the current counter value of the account or initialize with 0
-	let counter_value_old: u32 = *counter.entries.entry(account.to_string()).or_insert(0);
-	info!("    [Enclave] Current counter state of '{}' = {}", account, counter_value_old);
+	let counter_value_old: u32 = *counter.entries.entry(msg.account.to_string()).or_insert(0);
+	info!("    [Enclave] Current counter state of '{}' = {}", msg.account, counter_value_old);
 
 	println!("    [Enclave] Executing WASM code");
 	let req_slice = unsafe { slice::from_raw_parts(req_bin, req_length) };
 	let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
 
-	match action_req {
-		sgxwasm::SgxWasmAction::Call { module, function } => {
-			let _module = Module::from_buffer(module.unwrap()).unwrap();
-			let instance =
-				ModuleInstance::new(
-					&_module,
-					&ImportsBuilder::default()
-				)
-					.expect("failed to instantiate wasm module")
-					.assert_no_start();
-
-			let args = vec![RuntimeValue::I32(counter_value_old as i32),
-							RuntimeValue::I32(increment as i32)
-			];
-			debug!("    [Enclave] Calling WASM with arguments = {:?}", args);
-
-			let r = instance.invoke_export(&function, &args, &mut NopExternals);
-			debug!("    [Enclave] invoke_export successful. r = {:?}", r);
-
-			match r {
-				Ok(Some(RuntimeValue::I32(v))) => {
-					info!("    [Enclave] Add {} to '{}'", v, account);
-					counter.entries.insert(account.to_string(), v as u32);
-					println!("    [Enclave] WASM executed and counter updated");
-				},
-				_ => {
-					error!("    [Enclave] Could not decode result");
-				}
-			};
-		},
-		_ => {
-			error!("    [Enclave] Unsupported action");
-		},
+	if let Err(status) = wasm::invoke_wasm_action(action_req, msg, &mut counter) {
+		return status;
 	}
 
-	// write the counter state
 	if let Err(status) = write_counter_state(counter) {
 		return status;
 	}
@@ -345,8 +296,15 @@ pub extern "C" fn sign(sealed_seed: *mut u8, sealed_seed_size: u32,
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
-struct AllCounts {
+pub struct AllCounts {
 	entries: HashMap<String, u32>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Message {
+	account: String,
+	amount: u32,
+	sha256: sgx_sha256_hash_t
 }
 
 fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: *mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
