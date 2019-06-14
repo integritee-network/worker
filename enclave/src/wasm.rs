@@ -26,8 +26,7 @@ lazy_static!{
 }
 
 #[no_mangle]
-pub extern "C"
-fn sgxwasm_init() -> sgx_status_t {
+pub extern "C" fn sgxwasm_init() -> sgx_status_t {
 	let mut sd = SPECDRIVER.lock().unwrap();
 	*sd = SpecDriver::new();
 	sgx_status_t::SGX_SUCCESS

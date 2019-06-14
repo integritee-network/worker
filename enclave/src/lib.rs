@@ -57,9 +57,7 @@ use parity_codec::{Decode, Encode, Compact};
 extern crate primitive_types;
 use primitive_types::U256;
 
-use sgx_types::{sgx_status_t, sgx_sealed_data_t, sgx_sha256_hash_t};
-use sgx_types::marker::ContiguousMemory;
-use sgx_tseal::{SgxSealedData};
+use sgx_types::{sgx_status_t, sgx_sha256_hash_t};
 use sgx_rand::{Rng, StdRng};
 use sgx_serialize::{SerializeHelper, DeSerializeHelper};
 
@@ -93,7 +91,7 @@ mod wasm;
 // FIXME: Log does not work in enclave
 
 #[no_mangle]
-pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
@@ -118,7 +116,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -
 		}
 	};
 
-	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
+	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 
 	// split the pubkey_slice at the length of the rsa_pubkey_json
 	// and fill the right side with whitespace so that the json can be decoded later on
@@ -137,7 +135,7 @@ fn create_sealed_rsa3072_keypair() -> sgx_status_t {
 }
 
 #[no_mangle]
-pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
@@ -157,7 +155,7 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> 
 	let (_privkey, _pubkey) = keypair(&_seed);
 	info!("[Enclave] Restored ECC pubkey: {:?}", _pubkey.to_base58());
 
-	let pubkey_slice = unsafe { slice::from_raw_parts_mut(pubkey, pubkey_size as usize) };
+	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(&_pubkey);
 
 	sgx_status_t::SGX_SUCCESS
@@ -181,7 +179,7 @@ fn create_sealed_ed25519_seed() -> sgx_status_t {
 }
 
 #[no_mangle]
-pub extern "C" fn call_counter_wasm(
+pub unsafe extern "C" fn call_counter_wasm(
 						req_bin : *const u8,
 						req_length: usize,
 						ciphertext: * mut u8,
@@ -203,10 +201,10 @@ pub extern "C" fn call_counter_wasm(
 		sha256: sgx_sha256_hash_t
 	}
 
-	let ciphertext_slice = unsafe { slice::from_raw_parts(ciphertext, ciphertext_size as usize) };
-	let hash_slice       = unsafe { slice::from_raw_parts(hash, hash_size as usize) };
-	let mut nonce_slice  = unsafe { slice::from_raw_parts(nonce, nonce_size as usize)};
-	let extrinsic_slice  = unsafe { slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize) };
+	let ciphertext_slice = slice::from_raw_parts(ciphertext, ciphertext_size as usize);
+	let hash_slice       = slice::from_raw_parts(hash, hash_size as usize);
+	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
+	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -235,7 +233,7 @@ pub extern "C" fn call_counter_wasm(
 	println!("    [Enclave]   sha256    = {:?}", sha256);
 
 	// get the calculated SHA256 hash
-	let wasm_hash_slice = unsafe { slice::from_raw_parts(wasm_hash, wasm_hash_size as usize) };
+	let wasm_hash_slice = slice::from_raw_parts(wasm_hash, wasm_hash_size as usize);
 	let wasm_hash_calculated: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
 
 	// compare the hashes and return error if not matching
@@ -268,7 +266,7 @@ pub extern "C" fn call_counter_wasm(
 	info!("    [Enclave] Current counter state of '{}' = {}", account, counter_value_old);
 
 	println!("    [Enclave] Executing WASM code");
-	let req_slice = unsafe { slice::from_raw_parts(req_bin, req_length) };
+	let req_slice = slice::from_raw_parts(req_bin, req_length);
 	let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
 
 	match action_req {
@@ -324,10 +322,10 @@ pub extern "C" fn call_counter_wasm(
 }
 
 #[no_mangle]
-pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
+pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
 	let mut state_vec: Vec<u8> = Vec::new();
 
-	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
+	let account_slice = slice::from_raw_parts(account, account_size as usize);
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
 	let retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
@@ -338,10 +336,9 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut
 
 	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
 	let mut counter = helper.decode().unwrap();
-	unsafe {
-		let ref_mut = &mut *value;
-		*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
-	}
+	let ref_mut = &mut *value;
+	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
+
 	retval
 }
 
@@ -351,53 +348,9 @@ fn write_counter_state(value: AllCounts) -> sgx_status_t {
 	utils::write_file( &c, COUNTERSTATE)
 }
 
-#[no_mangle]
-pub extern "C" fn sign(sealed_seed: * mut u8, sealed_seed_size: u32,
-						msg: * mut u8, msg_size: u32,
-						sig: * mut u8, sig_size: u32) -> sgx_status_t {
-
-	// runseal seed
-	let opt = from_sealed_log::<[u8; 32]>(sealed_seed, sealed_seed_size);
-	let sealed_data = match opt {
-		Some(x) => x,
-		None => {
-			return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-		},
-	};
-
-	let result = sealed_data.unseal_data();
-	let unsealed_data = match result {
-		Ok(x) => x,
-		Err(ret) => {
-			return ret;
-		},
-	};
-
-	let seed = unsealed_data.get_decrypt_txt();
-
-	//restore ed25519 keypair from seed
-	let (_privkey, _pubkey) = keypair(seed);
-
-	info!("[Enclave]: Restored sealed key pair with pubkey: {:?}", _pubkey.to_base58());
-
-	// sign message
-	let msg_slice = unsafe { slice::from_raw_parts_mut(msg, msg_size as usize) };
-	let sig_slice = unsafe { slice::from_raw_parts_mut(sig, sig_size as usize) };
-	let _sig = signature(&msg_slice, &_privkey);
-	sig_slice.clone_from_slice(&_sig);
-
-	sgx_status_t::SGX_SUCCESS
-}
-
 #[derive(Serializable, DeSerializable, Debug)]
 struct AllCounts {
 	entries: HashMap<String, u32>
-}
-
-fn from_sealed_log<'a, T: Copy + ContiguousMemory>(sealed_log: * mut u8, sealed_log_size: u32) -> Option<SgxSealedData<'a, T>> {
-	unsafe {
-		SgxSealedData::<T>::from_raw_sealed_data_t(sealed_log as * mut sgx_sealed_data_t, sealed_log_size)
-	}
 }
 
 pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
