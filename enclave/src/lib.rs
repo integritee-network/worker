@@ -55,9 +55,8 @@ use primitive_types::U256;
 use primitives::ed25519;
 use runtime_primitives::generic::Era;
 use rust_base58::ToBase58;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 use sgx_crypto_helper::RsaKeyPair;
-use sgx_rand::{Rng, StdRng};
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tseal::SgxSealedData;
 use sgx_types::{sgx_sealed_data_t, sgx_sha256_hash_t, sgx_status_t};
@@ -80,20 +79,18 @@ mod wasm;
 
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+
 	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
 		info!("[Enclave] Keyfile not found, creating new! {}", x);
-		retval = create_sealed_rsa3072_keypair();
+		if let Err(status) = create_sealed_rsa3072_keypair() {
+			return status
+		}
 	}
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		// detailed error msgs are already printed in utils::write file
-		return retval;
-	}
-
-	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
-	let rsa_pubkey = rsa_keypair.export_pubkey().unwrap();
-	// println!("rsa_pubkey = {:?}", rsa_pubkey);
+	let rsa_pubkey=match  utils::read_rsa_pubkey() {
+		Ok(key) => key,
+		Err(status) => return status,
+	};
 
 	let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
 		Ok(k) => k,
@@ -114,7 +111,7 @@ pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_sealed_rsa3072_keypair() -> sgx_status_t {
+fn create_sealed_rsa3072_keypair() -> Result<sgx_status_t, sgx_status_t> {
 	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
 	let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
 	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
@@ -123,22 +120,21 @@ fn create_sealed_rsa3072_keypair() -> sgx_status_t {
 
 #[no_mangle]
 pub extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-
 	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
 		Ok(_k) => (),
 		Err(x) => {
 			info!("[Enclave] Keyfile not found, creating new! {}", x);
-			retval = create_sealed_ed25519_seed();
+			if let Err(status) = utils::create_sealed_ed25519_seed() {
+				return status;
+			}
 		},
 	}
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		// detailed error msgs are already printed in utils::write file
-		return retval;
-	}
+	let _seed = match utils::_get_ecc_seed_file() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
 
-	let _seed = _get_ecc_seed_file(&mut retval);
 	let (_privkey, _pubkey) = keypair(&_seed);
 	info!("[Enclave] Restored ECC pubkey: {:?}", _pubkey.to_base58());
 
@@ -146,23 +142,6 @@ pub extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> s
 	pubkey_slice.clone_from_slice(&_pubkey);
 
 	sgx_status_t::SGX_SUCCESS
-}
-
-fn _get_ecc_seed_file(status: &mut sgx_status_t) -> (Vec<u8>) {
-	let mut seed_vec: Vec<u8> = Vec::new();
-	*status = utils::read_file(&mut seed_vec, ED25519_SEALED_KEY_FILE);
-	seed_vec
-}
-
-fn create_sealed_ed25519_seed() -> sgx_status_t {
-	let mut seed = [0u8; 32];
-	let mut rand = match StdRng::new() {
-		Ok(rng) => rng,
-		Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
-	};
-	rand.fill_bytes(&mut seed);
-
-	utils::write_file(&seed, ED25519_SEALED_KEY_FILE)
 }
 
 #[no_mangle]
@@ -191,16 +170,13 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 	let mut nonce_slice = unsafe { slice::from_raw_parts(nonce, nonce_size as usize) };
 	let extrinsic_slice = unsafe { slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize) };
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-
 	debug!("[Enclave] Read RSA keypair");
-	// FIXME: This will panic if no key file is found
-	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
-	debug!("[Enclave] Read RSA keypair done");
+	let rsa_keypair = match utils::read_rsa_keypair() {
+		Ok(pair) => pair,
+		Err(status) => return status,
+	};
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		return retval;
-	}
+	debug!("[Enclave] Read RSA keypair done");
 
 	// decode the payload
 	println!("    [Enclave] Decode the payload");
@@ -232,17 +208,12 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 		println!("    [Enclave] SHA256 of WASM code identical");
 	}
 
-	// read the counter state
-	let mut state_vec: Vec<u8> = Vec::new();
-	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
-	debug!("    [Enclave] Counterstate read");
+	let state = match utils::read_counterstate(COUNTERSTATE) {
+		Ok(state) => state,
+		Err(status) => return status,
+	};
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		error!("    [Enclave] Failed to read file '{}'", COUNTERSTATE);
-		return retval;
-	}
-
-	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let helper = DeSerializeHelper::<AllCounts>::new(state);
 	let mut counter = helper.decode().unwrap();
 
 	// get the current counter value of the account or initialize with 0
@@ -289,11 +260,16 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 	}
 
 	// write the counter state
-	retval = write_counter_state(counter);
+	if let Err(status) = write_counter_state(counter) {
+		return status;
+	}
 
 	// get information for composing the extrinsic
+	let _seed = match utils::_get_ecc_seed_file() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
-	let _seed = _get_ecc_seed_file(&mut retval);
 	let genesis_hash = utils::hash_from_slice(hash_slice);
 	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
@@ -302,21 +278,18 @@ pub extern "C" fn call_counter_wasm(req_bin: *const u8,
 
 	let encoded = ex.encode();
 	extrinsic_slice.clone_from_slice(&encoded);
-	retval
+	sgx_status_t::SGX_SUCCESS
 }
 
 #[no_mangle]
 pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
-	let mut state_vec: Vec<u8> = Vec::new();
-
 	let account_slice = unsafe { slice::from_raw_parts(account, account_size as usize) };
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
-
-	if retval != sgx_status_t::SGX_SUCCESS {
-		return retval;
-	}
+	let state_vec = match utils::read_counterstate(COUNTERSTATE) {
+		Ok(state) => state,
+		Err(status) => return status,
+	};
 
 	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
 	let mut counter = helper.decode().unwrap();
@@ -324,10 +297,10 @@ pub extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut
 		let ref_mut = &mut *value;
 		*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
 	}
-	retval
+	sgx_status_t::SGX_SUCCESS
 }
 
-fn write_counter_state(value: AllCounts) -> sgx_status_t {
+fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let c = helper.encode(value).unwrap();
 	utils::write_file(&c, COUNTERSTATE)
