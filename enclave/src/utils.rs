@@ -24,14 +24,14 @@ use my_node_runtime::Hash;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
-use sgx_types::sgx_status_t;
+use sgx_types::*;
 
 use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 use std::vec::Vec;
 
-pub fn read_rsa_keypair() -> Result<Rsa3072KeyPair, sgx_status_t> {
+pub fn read_rsa_keypair() -> SgxResult<Rsa3072KeyPair> {
 	let keyvec = r#try!(read_file(RSA3072_SEALED_KEY_FILE));
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
 	let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
@@ -39,19 +39,18 @@ pub fn read_rsa_keypair() -> Result<Rsa3072KeyPair, sgx_status_t> {
 	Ok(pair)
 }
 
-
-pub fn read_rsa_pubkey() -> Result<Rsa3072PubKey, sgx_status_t> {
+pub fn read_rsa_pubkey() -> SgxResult<Rsa3072PubKey> {
 	let pair = r#try!(read_rsa_keypair());
 	let pubkey = pair.export_pubkey().unwrap();
 
 	return Ok(pubkey);
 }
 
-pub fn _get_ecc_seed_file() -> Result<Vec<u8>, sgx_status_t> {
+pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {
 	read_file(ED25519_SEALED_KEY_FILE)
 }
 
-pub fn create_sealed_ed25519_seed() -> Result<sgx_status_t, sgx_status_t> {
+pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 	let mut seed = [0u8; 32];
 	let mut rand = match StdRng::new() {
 		Ok(rng) => rng,
@@ -62,7 +61,7 @@ pub fn create_sealed_ed25519_seed() -> Result<sgx_status_t, sgx_status_t> {
 	write_file(&seed, ED25519_SEALED_KEY_FILE)
 }
 
-pub fn write_file(bytes: &[u8], filepath: &str) -> Result<sgx_status_t, sgx_status_t> {
+pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 	match SgxFile::create(filepath) {
 		Ok(mut f) => match f.write_all(bytes) {
 			Ok(()) => {
@@ -81,7 +80,7 @@ pub fn write_file(bytes: &[u8], filepath: &str) -> Result<sgx_status_t, sgx_stat
 	}
 }
 
-pub fn read_file(filepath: &str) -> Result<Vec<u8>, sgx_status_t> {
+pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 	let mut keyvec: Vec<u8> = Vec::new();
 	match SgxFile::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut keyvec) {
@@ -103,7 +102,7 @@ pub fn read_file(filepath: &str) -> Result<Vec<u8>, sgx_status_t> {
 
 // FIXME: think about how statevec should be handled in case no counter exist such that we
 // only need one read function. Maybe search and init COUNTERSTATE file upon enclave init?
-pub fn read_counterstate(filepath: &str) -> Result<Vec<u8>, sgx_status_t> {
+pub fn read_counterstate(filepath: &str) -> SgxResult<Vec<u8>> {
 	let mut state_vec: Vec<u8> = Vec::new();
 	match SgxFile::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
