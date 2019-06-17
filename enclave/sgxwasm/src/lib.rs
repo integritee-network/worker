@@ -146,6 +146,12 @@ impl SpecModule {
     }
 }
 
+impl Default for SpecModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn spec_to_runtime_value(value: Value) -> RuntimeValue {
     match value {
         Value::I32(v) => RuntimeValue::I32(v),
@@ -270,6 +276,7 @@ impl ModuleImportResolver for SpecModule {
     }
 }
 
+#[derive(Default)]
 pub struct SpecDriver {
     spec_module: SpecModule,
     instances: HashMap<String, ModuleRef>,
@@ -389,7 +396,7 @@ pub fn try_load(wasm: &[u8], spec_driver: &mut SpecDriver) -> Result<(), Error> 
     let instance = ModuleInstance::new(&module, &ImportsBuilder::default())?;
     instance
         .run_start(spec_driver.spec_module())
-        .map_err(|trap| Error::Start(trap))?;
+        .map_err(Error::Start)?;
     Ok(())
 }
 
@@ -398,7 +405,7 @@ pub fn load_module(wasm: &[u8], name: &Option<String>, spec_driver: &mut SpecDri
     let instance = ModuleInstance::new(&module, spec_driver)
         .map_err(|e| Error::Load(e.to_string()))?
         .run_start(spec_driver.spec_module())
-        .map_err(|trap| Error::Start(trap))?;
+        .map_err(Error::Start)?;
 
     let module_name = name.clone();
     spec_driver.add_module(module_name, instance.clone());
