@@ -39,7 +39,9 @@ pipeline {
       recordIssues(
         enabledForFailure: true,
         aggregatingResults: true,
-        qualityGates: [ [ threshold: 0, type: 'TOTAL', unstable: true ] ],
+        qualityGates: [
+          [ threshold: 1, type: 'TOTAL', unstable: true ]
+        ],
         tools: [
           groovyScript(parserId:'clippy-warnings', pattern:'**/clippy_*.log', reportEncoding:'UTF-8'),
         ]
