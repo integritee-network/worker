@@ -304,9 +304,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 		},
 	}
 
-	// write the counter state
-	retval = write_counter_state(counter);
-
 	// get information for composing the extrinsic
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let _seed = _get_ecc_seed_file(&mut retval);
@@ -318,6 +315,10 @@ pub unsafe extern "C" fn call_counter_wasm(
 
 	let encoded = ex.encode();
 	extrinsic_slice.clone_from_slice(&encoded);
+
+	// write the counter state
+	retval = write_counter_state(counter);
+
 	retval
 }
 
