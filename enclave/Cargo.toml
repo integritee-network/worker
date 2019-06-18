@@ -12,48 +12,51 @@ default = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tse       = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tstd      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", features = ["net","backtrace"]  }
+sgx_tstd      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", features = ["net","backtrace"] }
 sgx_rand      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_trts      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types     = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk"}
+sgx_types     = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tseal     = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_tcrypto   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-crypto   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-# rust-base58   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+rust-base58   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
-log = { git = "https://github.com/mesalock-linux/log-sgx" }
-blake2-rfc = { version = "0.2.18", default-features = false}
-parity-codec = { version = "3.3", default-features = false }
-primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
-sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/mesalock-linux/sgx_tcrypto_helper" }
+log                 = { git = "https://github.com/mesalock-linux/log-sgx" }
+blake2-rfc          = { version = "0.2.18", default-features = false }
+parity-codec        = { version = "3.3", default-features = false }
+primitive-types     = { version = "0.2", default-features = false, features = ["codec"] }
+sgx_crypto_helper   = { git = "https://github.com/mesalock-linux/sgx_tcrypto_helper", package = "sgx_tcrypto_helper" }
 
 # for wasm code
-wasmi = { git = "https://github.com/mesalock-linux/wasmi-sgx" }
-serde = { rev = "v1.0.8", git = "https://github.com/mesalock-linux/serde-sgx" }
-serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx"}
-sgxwasm = { path = "sgxwasm" }
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
+wasmi           = { git = "https://github.com/mesalock-linux/wasmi-sgx" }
+serde           = { git = "https://github.com/mesalock-linux/serde-sgx" }
+serde_json      = { git = "https://github.com/mesalock-linux/serde-json-sgx"}
+sgxwasm         = { path = "sgxwasm" }
+lazy_static     = { version = "1.1.0", features = ["spin_no_std"] }
+
 # for attestation
-chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
-webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
-base64 = { git = "https://github.com/mesalock-linux/rust-base64-sgx" }
-yasna = { git = "https://github.com/mesalock-linux/yasna.rs-sgx" }
-num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
-#bit-vec = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
-httparse = { version = "1.3.2", default-features=false }
-itertools = { version = "0.7.8", default-features = false, features = []}
-untrusted = "0.6.2"
-webpki-roots= { git = "https://github.com/mesalock-linux/webpki-roots.git", branch = "mesalock_sgx" }
+chrono          = { git = "https://github.com/mesalock-linux/chrono-sgx" }
+webpki          = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx", default-features = false, features = ["mesalock_sgx"]  }
+base64          = { git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+yasna           = { git = "https://github.com/mesalock-linux/yasna.rs-sgx", features = ["bit-vec", "num-bigint", "chrono"] }
+num-bigint      = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
+webpki-roots    = { git = "https://github.com/mesalock-linux/webpki-roots.git", branch = "mesalock_sgx" }
+serde_derive    = { git = "https://github.com/mesalock-linux/serde-sgx" }
+# bit-vec         = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+httparse        = { version = "1.3.2", default-features=false }
+itertools       = { version = "0.7.8", default-features = false, features = []}
+bit-vec         = { version = "0.6", default-features = false }
+untrusted       = "0.6.2"
 
 [dependencies.rustls]
-git = "https://github.com/mesalock-linux/rustls"
-branch = "mesalock_sgx"
+git      = "https://github.com/mesalock-linux/rustls"
+branch   = "mesalock_sgx"
 features = ["dangerous_configuration"]
 
 # to get features in
-ring = { git ="https://github.com/scs/ring-sgx", features = ["mesalock_sgx"] }
+# ring = { git ="https://github.com/scs/ring-sgx", features = ["mesalock_sgx"] }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
@@ -64,6 +67,7 @@ features = ["no_global_allocator"]
 [dependencies.sgx_serialize_derive]
 git = "https://github.com/baidu/rust-sgx-sdk"
 rev = "v1.0.8"
+
 # !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
 # [dependencies.schnorrkel]
 # git = "https://github.com/scs/schnorrkel"

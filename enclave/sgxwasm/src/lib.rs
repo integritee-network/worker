@@ -79,26 +79,30 @@ extern crate serde_derive;
 //use serde::{Serialize, Serializer, Deserialize, Deserializer};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SgxWasmAction {
-    Invoke {
-        module: Option<String>,
-        field: String,
-        args: Vec<BoundaryValue>
+    Call {
+		module: Option<Vec<u8>>,
+		function: String,
     },
-    Get {
-        module: Option<String>,
-        field: String,
-    },
-    LoadModule {
-        name: Option<String>,
-        module: Vec<u8>,
-    },
-    TryLoad {
-        module: Vec<u8>,
-    },
-    Register {
-        name: Option<String>,
-        as_name: String,
-    },
+    // Invoke {
+    //     module: Option<String>,
+    //     field: String,
+    //     args: Vec<BoundaryValue>
+    // },
+    // Get {
+    //     module: Option<String>,
+    //     field: String,
+    // },
+    // LoadModule {
+    //     name: Option<String>,
+    //     module: Vec<u8>,
+    // },
+    // TryLoad {
+    //     module: Vec<u8>,
+    // },
+    // Register {
+    //     name: Option<String>,
+    //     as_name: String,
+    // },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -86,8 +86,8 @@ extern crate sgx_serialize_derive;
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
-extern crate lazy_static;
+// #[macro_use]
+// extern crate lazy_static;
 
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -95,15 +95,15 @@ use std::string::String;
 use std::vec::Vec;
 use std::collections::HashMap;
 use std::string::ToString;
-use std::backtrace::{self, PrintFormat};
+// use std::backtrace::{self, PrintFormat};
 
 use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
-use sgx_tcrypto::*;
-use sgx_types::*;
+// use sgx_tcrypto::*;
+// use sgx_types::*;
 
 type Index = u64;
 

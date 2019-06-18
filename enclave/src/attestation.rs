@@ -39,7 +39,7 @@ use std::prelude::v1::*;
 use std::sync::Arc;
 use std::net::TcpStream;
 use std::string::String;
-use std::io;
+// use std::io;
 use std::ptr;
 use std::str;
 use std::io::{Write, Read, BufReader};
@@ -325,7 +325,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 
     // (2) Generate the report
     // Fill ecc256 public key into report_data
-    
+
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
     let mut pub_k_gx = pub_k.gx.clone();
     pub_k_gx.reverse();
@@ -337,11 +337,11 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     // TODO: block hash would guarantee that the quote is recent. add it as well
     // report_data = hash{pub_k_gx||pub_k_gy||block_hash}
     let mut context = [0;96];
-    let block_hash_slice = [0;32]; 
+    let block_hash_slice = [0;32];
     context[..32].clone_from_slice(&pub_k_gx);
     context[32..64].clone_from_slice(&pub_k_gy);
     context[64..].clone_from_slice(&block_hash_slice);
-    
+
     report_data.d.clone_from_slice(&rsgx_sha256_slice(&context[..]).unwrap());
 
     let rep = match rsgx_create_report(&ti, &report_data) {
