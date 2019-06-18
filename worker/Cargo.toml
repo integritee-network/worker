@@ -4,13 +4,21 @@ version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 
+# make this an independant workspace
+[workspace]
+
+# we need to use the "official" untrusted crate here
+# or else "official" packages cannot build any more
+[patch.'https://github.com/briansmith/untrusted']
+untrusted = "0.6.2"
+
 [dependencies]
 ws = "0.7"
 hex = "0.3"
 log = "0.4"
 clap = { version = "2.33", features = [ "yaml" ] }
 env_logger = "0.6"
-# rust-base58 = "0.0.4"
+rust-base58 = "0.0.4"
 rust-crypto = "0.2"
 
 # for wasm

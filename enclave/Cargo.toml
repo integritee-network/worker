@@ -44,11 +44,12 @@ yasna           = { git = "https://github.com/mesalock-linux/yasna.rs-sgx", feat
 num-bigint      = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
 webpki-roots    = { git = "https://github.com/mesalock-linux/webpki-roots.git", branch = "mesalock_sgx" }
 serde_derive    = { git = "https://github.com/mesalock-linux/serde-sgx" }
-# bit-vec         = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 httparse        = { version = "1.3.2", default-features=false }
 itertools       = { version = "0.7.8", default-features = false, features = []}
 bit-vec         = { version = "0.6", default-features = false }
-untrusted       = "0.6.2"
+
+# untrusted       = "0.6.2"
+untrusted 		= { git = "https://github.com/briansmith/untrusted", tag = "ring-master" }
 
 [dependencies.rustls]
 git      = "https://github.com/mesalock-linux/rustls"
@@ -102,4 +103,3 @@ git = 'https://github.com/paritytech/substrate'
 rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "sr-primitives"
 default-features = false
-
