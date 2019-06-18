@@ -21,13 +21,14 @@ use std::sync::SgxMutex;
 use sgxwasm::SpecDriver;
 use sgx_types::*;
 
-lazy_static!{
-	static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
-}
+// lazy_static!{
+	// static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
+// }
 
 #[no_mangle]
 pub extern "C"
 fn sgxwasm_init() -> sgx_status_t {
+	static SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
 	let mut sd = SPECDRIVER.lock().unwrap();
 	*sd = SpecDriver::new();
 	sgx_status_t::SGX_SUCCESS
