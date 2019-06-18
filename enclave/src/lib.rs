@@ -117,6 +117,8 @@ mod attestation;
 pub mod cert;
 pub mod hex;
 
+pub const CERTEXPIRYDAYS: i64 = 90i64;
+
 // FIXME: Log does not work in enclave
 #[no_mangle]
 pub extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
