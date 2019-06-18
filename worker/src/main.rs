@@ -141,6 +141,8 @@ fn remote_attestation() {
 		},
 	};
 
+	// ------------------------------------------------------------------------
+	// perform a remote attestation
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 	let result = unsafe {
@@ -156,6 +158,11 @@ fn remote_attestation() {
 			return;
 		}
 	}
+
+	// ------------------------------------------------------------------------
+	// register the enclave
+
+
 }
 
 fn worker(port: &str) {

@@ -77,7 +77,6 @@ extern "C" {
         p_quote_len        : *mut u32) -> sgx_status_t;
 }
 
-
 fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
     println!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];

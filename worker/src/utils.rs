@@ -22,27 +22,24 @@ pub fn check_files() -> u8 {
 	debug!("*** Check files");
 
 	let mut missing_files = 0;
-	missing_files += file_exists(ENCLAVE_FILE);
-	missing_files += file_exists(RSA_PUB_KEY);
-	missing_files += file_exists(ECC_PUB_KEY);
+	missing_files += file_missing(ENCLAVE_FILE);
+	missing_files += file_missing(RSA_PUB_KEY);
+	missing_files += file_missing(ECC_PUB_KEY);
 
 	// remote attestation files
-	missing_files += file_exists(RA_SPID);
-	missing_files += file_exists(RA_CERT);
-	missing_files += file_exists(RA_KEY);
+	missing_files += file_missing(RA_SPID);
+	missing_files += file_missing(RA_CERT);
+	missing_files += file_missing(RA_KEY);
 
 	return missing_files;
 }
 
-fn file_exists(path: &str) -> u8 {
-	match Path::new(path).exists() {
-		false => {
-			error!("File '{}' not found", path);
-			return 1;
-		},
-		true => {
-			debug!("File '{}' found", path);
-			return 0;
-		}
+fn file_missing(path: &str) -> u8 {
+	if Path::new(path).exists() {
+		debug!("File '{}' found", path);
+		return 0;
+	} else {
+		error!("File '{}' not found", path);
+		return 1;
 	}
 }
