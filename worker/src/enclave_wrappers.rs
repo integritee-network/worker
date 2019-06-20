@@ -16,7 +16,7 @@
 */
 
 use std::str;
-use std::fs;
+use std::fs::{self, File};
 use log::*;
 use sgx_types::*;
 use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
@@ -247,14 +247,14 @@ pub fn get_public_key_tee()
 		}
 	}
 
-	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(&pubkey[..]).unwrap();
 	println!("[+] {:?}", rsa_pubkey);
 
 	println!();
 	println!("*** Write the RSA3072 public key to a file");
 
-	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
-	match fs::write(RSA_PUB_KEY, rsa_pubkey_json) {
+	let file = File::create(RSA_PUB_KEY).unwrap();
+	match serde_json::to_writer(file, &rsa_pubkey) {
 		Err(x) => { error!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
 		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}

@@ -42,7 +42,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
             let result = unsafe {
                 get_counter(self.eid,
                             &mut retval,
-                            account.to_vec().as_ptr(),
+                            account.as_ptr(),
                             account.len() as u32,
                             &mut value)
             };
