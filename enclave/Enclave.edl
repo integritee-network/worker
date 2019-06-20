@@ -54,9 +54,7 @@ enclave {
 			[in, size=req_len] const uint8_t* req_bin, size_t req_len,
 			[out, size=out_max_len] uint8_t* output_bin, size_t out_max_len);
 
-		// public sgx_status_t perform_ra(int fd,sgx_quote_sign_type_t quote_type);
-
-		public sgx_status_t run_server(sgx_quote_sign_type_t quote_type);
+		public sgx_status_t perform_ra(sgx_quote_sign_type_t quote_type);
 	};
 
     untrusted {
