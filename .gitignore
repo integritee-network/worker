@@ -36,3 +36,9 @@ enclave/enclave.so
 lib/libEnclave_u.*
 lib/libcompiler-rt-patch.a
 lib/libenclave.a
+
+# certificate, key, spid and generated report for remote attestation
+bin/client.crt
+bin/client.key
+bin/spid.txt
+bin/attestation_report.json
