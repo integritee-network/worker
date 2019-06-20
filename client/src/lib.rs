@@ -43,8 +43,8 @@ use primitives::{
 	blake2_256,
 };
 
-pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
-pub static ECC_PUB_KEY: &'static str = "./bin/ecc_pubkey.txt";
+pub static RSA_PUB_KEY: &str = "./bin/rsa_pubkey.txt";
+pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
