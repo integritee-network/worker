@@ -61,7 +61,7 @@ pub fn process_forwarded_payload(
 	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(vec![0; 32])));
 
 	// decrypt and process the payload. we will get an extrinsic back
-	let result = decryt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);
+	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);
 
 	match result {
 		sgx_status_t::SGX_SUCCESS => {
@@ -81,7 +81,7 @@ pub fn process_forwarded_payload(
 	}
 }
 
-pub fn decryt_and_process_payload(
+pub fn decrypt_and_process_payload(
 		eid: sgx_enclave_id_t,
 		mut ciphertext: Vec<u8>,
 		ue: &mut UncheckedExtrinsic,
