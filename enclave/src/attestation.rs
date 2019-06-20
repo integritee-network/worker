@@ -48,6 +48,8 @@ use std::vec::Vec;
 use itertools::Itertools;
 use core::default::Default;
 
+use constants::{RA_SPID, RA_CERT, RA_KEY};
+
 pub const DEV_HOSTNAME:&'static str = "test-as.sgx.trustedservices.intel.com";
 //pub const PROD_HOSTNAME:&'static str = "as.sgx.trustedservices.intel.com";
 pub const SIGRL_SUFFIX:&'static str = "/attestation/sgx/v3/sigrl/";
@@ -185,8 +187,8 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 
     config.root_store.add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
 
-    let certs = load_certs("client.crt");
-    let privkey = load_private_key("client.key");
+    let certs = load_certs(RA_CERT);
+    let privkey = load_private_key(RA_KEY);
     config.set_single_client_cert(certs, privkey);
 
     config
@@ -384,7 +386,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     let p_report = (&rep.unwrap()) as * const sgx_report_t;
     let quote_type = sign_type;
 
-    let spid : sgx_spid_t = load_spid("spid.txt");
+    let spid : sgx_spid_t = load_spid(RA_SPID);
 
     let p_spid = &spid as *const sgx_spid_t;
     let p_nonce = &quote_nonce as * const sgx_quote_nonce_t;
@@ -529,6 +531,8 @@ fn load_private_key(filename: &str) -> rustls::PrivateKey {
 }
 
 
+
+/*
 #[no_mangle]
 pub extern "C" fn perform_ra(socket_fd : c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
     let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
@@ -558,4 +562,65 @@ pub extern "C" fn perform_ra(socket_fd : c_int, sign_type: sgx_quote_sign_type_t
     ecc_handle.close().unwrap();
     sgx_status_t::SGX_SUCCESS
 }
+*/
 
+// TODO: probably the same as perform_ra
+#[no_mangle]
+pub extern "C" fn run_server(sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
+
+	println!("[Enclave] Entering run_server");
+
+    // Generate Keypair
+    println!("  Generate keypair");
+    let ecc_handle = SgxEccHandle::new();
+    let _result = ecc_handle.open();
+    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+    println!("  Generate keypair successful");
+
+    println!("create_attestation_report");
+    let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
+        Ok(r) => r,
+        Err(e) => {
+            println!("Error in create_attestation_report: {:?}", e);
+            return e;
+        }
+    };
+
+
+/*
+    let payload = attn_report + "|" + &sig + "|" + &cert;
+    let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
+        Ok(r) => r,
+        Err(e) => {
+            println!("Error in gen_ecc_cert: {:?}", e);
+            return e;
+        }
+    };
+    let _result = ecc_handle.close();
+
+
+    let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true)));
+    let mut certs = Vec::new();
+    certs.push(rustls::Certificate(cert_der));
+    let privkey = rustls::PrivateKey(key_der);
+
+    cfg.set_single_cert_with_ocsp_and_sct(certs, privkey, vec![], vec![]).unwrap();
+
+    let mut sess = rustls::ServerSession::new(&Arc::new(cfg));
+    let mut conn = TcpStream::new(socket_fd).unwrap();
+
+    let mut tls = rustls::Stream::new(&mut sess, &mut conn);
+    let mut plaintext = [0u8;1024]; //Vec::new();
+    match tls.read(&mut plaintext) {
+        Ok(_) => println!("Client said: {}", str::from_utf8(&plaintext).unwrap()),
+        Err(e) => {
+            println!("Error in read_to_end: {:?}", e);
+            panic!("");
+        }
+    };
+
+    tls.write("hello back".as_bytes()).unwrap();
+*/
+
+    sgx_status_t::SGX_SUCCESS
+}
