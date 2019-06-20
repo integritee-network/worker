@@ -29,10 +29,9 @@
 extern crate sgx_types;
 extern crate sgx_urts;
 
-use std::fs;
-use log::*;
+use std::{fs::File, path::PathBuf};
 use std::io::{Read, Write};
-use std::path;
+use log::*;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
@@ -47,7 +46,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
     //         if there is no token, then create a new one.
     //
     // try to get the token saved in $HOME */
-    let mut home_dir = path::PathBuf::new();
+    let mut home_dir = PathBuf::new();
     let use_token = match dirs::home_dir() {
         Some(path) => {
             info!("[+] Home dir is {}", path.display());
@@ -59,9 +58,9 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
             false
         }
     };
-    let token_file: path::PathBuf = home_dir.join(ENCLAVE_TOKEN);;
+    let token_file = home_dir.join(ENCLAVE_TOKEN);;
     if use_token {
-        match fs::File::open(&token_file) {
+        match File::open(&token_file) {
             Err(_) => {
                 info!(
                     "[-] Token file {} not found! Will create one.",
@@ -98,7 +97,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
     // Step 3: save the launch token if it is updated
     if use_token && launch_token_updated != 0 {
         // reopen the file with write capablity
-        match fs::File::create(&token_file) {
+        match File::create(&token_file) {
             Ok(mut f) => match f.write_all(&launch_token) {
                 Ok(()) => info!("[+] Saved updated launch token!"),
                 Err(_) => error!("[-] Failed to save updated launch token!"),
