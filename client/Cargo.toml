@@ -27,6 +27,7 @@ sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
+branch = "substratee_registry_module"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
@@ -36,25 +37,25 @@ default-features = false
 
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "srml-system"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "substrate-primitives"
 
 [dependencies.node-primitives]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 
 [dependencies.substrate-keyring]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 
 [dependencies.runtime_primitives]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "sr-primitives"
 default-features = false
 
