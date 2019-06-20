@@ -27,7 +27,7 @@ log = { git = "https://github.com/baidu/rust-sgx-sdk" }
 blake2-rfc = { version = "0.2.18", default-features = false}
 parity-codec = { version = "3.3", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
-sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper   = { git = "https://github.com/mesalock-linux/sgx_tcrypto_helper", package = "sgx_tcrypto_helper" }
 
 # for wasm code
 wasmi           = { git = "https://github.com/mesalock-linux/wasmi-sgx" }
