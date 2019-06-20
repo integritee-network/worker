@@ -26,7 +26,7 @@ use ws::{connect, CloseCode};
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use substrate_api_client::{hexstr_to_u256, hexstr_to_vec};
+use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
@@ -51,7 +51,7 @@ pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 }
 
 // function to get the free balance of a user
-pub fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
+pub fn get_free_balance(api: &Api, user: &str) {
 	println!("[>] Get {}'s free balance", user);
 
 	let accountid = ed25519::Public::from_string(user).ok().or_else(||
@@ -66,7 +66,7 @@ pub fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
 }
 
 // function to get the account nonce of a user
-pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
+pub fn get_account_nonce(api: &Api, user: &str) -> U256 {
 	println!("[>] Get {}'s account nonce", user);
 
 	let accountid = ed25519::Public::from_string(user).ok().or_else(||
@@ -119,7 +119,7 @@ pub fn get_counter(user: &'static str) {
 }
 
 // function to fund an account
-pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
+pub fn fund_account(api: &Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
 	println!("[>] Fund {}'s account with {}", user, amount);
 
 	// build the extrinsic for funding
@@ -166,7 +166,7 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 	)
 }
 
-pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
+pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
 	println!("[>] Transfer {} from '{}' to '{}'", amount, from, to);
 
 	// build the extrinsic for transfer
@@ -237,7 +237,7 @@ pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted:
 }
 
 // subscribes to he substratee_proxy events of type CallConfirmed
-pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
+pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 	let (events_in, events_out) = channel();
 
 	let _eventsubscriber = thread::Builder::new()

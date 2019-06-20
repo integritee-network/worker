@@ -81,7 +81,7 @@ fn main() {
 
 	let port = matches.value_of("port").unwrap_or("9944");
 	let server = matches.value_of("server").unwrap_or("127.0.0.1");
-	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
+	let mut api = Api::new(format!("ws://{}:{}", server, port));
 	api.init();
 
 	// get Alice's free balance
