@@ -39,8 +39,9 @@ use sgx_urts::SgxEnclave;
 use constants::{ENCLAVE_TOKEN, ENCLAVE_FILE};
 
 pub fn init_enclave() -> SgxResult<SgxEnclave> {
-    let mut launch_token: sgx_launch_token_t = [0; 1024];
-    let mut launch_token_updated: i32 = 0;
+    const LEN: usize = 1024;
+    let mut launch_token = [0; LEN];
+    let mut launch_token_updated = 0;
 
     // Step 1: try to retrieve the launch token saved by last transaction
     //         if there is no token, then create a new one.
@@ -70,7 +71,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
             Ok(mut f) => {
                 info!("[+] Open token file success! ");
                 match f.read(&mut launch_token) {
-                    Ok(1024) => {
+                    Ok(LEN) => {
                         info!("[+] Token file valid!");
                     }
                     _ => info!("[+] Token file invalid, will create new token file"),
