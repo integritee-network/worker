@@ -60,7 +60,7 @@ use enclave_wrappers::*;
 use ws_server::start_ws_server;
 
 use substrate_api_client::{Api, hexstr_to_vec};
-use my_node_runtime::{Event, Hash};
+use my_node_runtime::{Event};
 
 use parity_codec::Decode;
 use std::sync::mpsc::channel;
@@ -148,7 +148,7 @@ fn worker(port: &str) {
 
 		let _unhex = hexstr_to_vec(event_str);
 		let mut _er_enc = _unhex.as_slice();
-		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
+		let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
 		match _events {
 			Some(evts) => {
 				for evr in &evts {

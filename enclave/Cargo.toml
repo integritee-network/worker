@@ -23,7 +23,7 @@ sgx_serialize = { git = "https://github.com/baidu/rust-sgx-sdk" }
 [dependencies]
 log = { git = "https://github.com/baidu/rust-sgx-sdk" }
 blake2-rfc = { version = "0.2.18", default-features = false}
-parity-codec = { version = "3.3", default-features = false }
+parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 sgx_crypto_helper = { package="sgx_tcrypto_helper", git = "https://github.com/baidu/rust-sgx-sdk" }
 
@@ -37,6 +37,7 @@ lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
+tag = "M1"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]
@@ -52,14 +53,14 @@ git = "https://github.com/baidu/rust-sgx-sdk"
 
 [dependencies.primitives]
 git = 'https://github.com/paritytech/substrate'
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "substrate-primitives"
 default-features = false
 
 #only listed to get no_global_allocator feature in
 [dependencies.rstd]
 git = 'https://github.com/paritytech/substrate'
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "sr-std"
 default-features = false
 features = ["no_global_allocator"]
@@ -67,14 +68,14 @@ features = ["no_global_allocator"]
 #only listed to get no_panic_handler and no_oom features in
 [dependencies.runtime_io]
 git = 'https://github.com/paritytech/substrate'
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "sr-io"
 default-features = false
 features = ["no_panic_handler", "no_oom"]
 
 [dependencies.runtime_primitives]
 git = 'https://github.com/paritytech/substrate'
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "sr-primitives"
 default-features = false
 

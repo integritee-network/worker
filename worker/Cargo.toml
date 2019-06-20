@@ -22,7 +22,7 @@ serde_json = "1.0"
 serde_derive = "1.0"
 nan-preserving-float = "0.1.0"
 
-parity-codec = { version = "3.3", default-features = false }
+parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 
 sgx_urts = { git = "https://github.com/baidu/rust-sgx-sdk" }
@@ -33,34 +33,36 @@ sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-fea
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+tag = "M1"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
+tag = "M1"
 default-features = false
 features = ["no_global_allocator"]
 
 [dependencies.balances]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "srml-balances"
 
 [dependencies.node-primitives]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "substrate-primitives"
 
 [dependencies.substrate-keyring]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
-rev = '56b0273fd48b4e742e9da7317bc8e132a740b684'
+rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
 package = "srml-system"
 
 [features]
