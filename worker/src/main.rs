@@ -74,7 +74,10 @@ use std::thread;
 use wasm::{sgx_enclave_wasm_init};
 use utils::check_files;
 
+use enclave_api::get_ecc_signing_pubkey;
 use constants::ATTN_REPORT_FILE;
+use primitive_types::U256;
+use parity_codec::Encode;
 
 fn main() {
 	// Setup logging
@@ -97,7 +100,7 @@ fn main() {
 		get_signing_key_tee();
 	} else if matches.is_present("ra") {
 		println!("*** Request a Remote Attestation\n");
-		remote_attestation();
+		remote_attestation(port);
 	} else {
 		println!("For options: use --help");
 	}
@@ -111,7 +114,7 @@ extern {
 	) -> sgx_status_t;
 }
 
-fn remote_attestation() {
+fn remote_attestation(port: &str) {
 	// ------------------------------------------------------------------------
 	// check for required files
 	let missing_files = check_files();
@@ -165,7 +168,51 @@ fn remote_attestation() {
 	// ------------------------------------------------------------------------
 	// register the enclave
 
+	// get the attestation report
+	let attn_report_json = fs::read_to_string(ATTN_REPORT_FILE).expect("Unable to open attestation report file");
+	let attn_report: String = serde_json::from_str(&attn_report_json).unwrap();
+	println!("attn_report = {:?}", attn_report);
+	println!("attn_report.to_vec = {:?}", attn_report.as_bytes().to_vec());
+
+	// request the key
+	println!();
+	println!("*** Ask the signing key from the TEE");
+	let pubkey_size = 32;
+	let mut pubkey = [0u8; 32];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_ecc_signing_pubkey(enclave.geteid(),
+							   &mut retval,
+							   pubkey.as_mut_ptr(),
+							   pubkey_size
+		)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}
+
+	println!("[+] Signing key: {:?}", pubkey);
+
+	// initialize the API to talk to the substraTEE-node
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+	api.init();
+
+	// get enclave's account nonce
+	let nonce = get_account_nonce(&api, pubkey);
+	let nonce_bytes = U256::encode(&nonce);
+	println!("nonce of TEE = {:?}", nonce);
+	println!("nonce_bytes = {:?}", nonce_bytes);
+
+
+
 }
+
 
 fn worker(port: &str) {
 	// ------------------------------------------------------------------------
