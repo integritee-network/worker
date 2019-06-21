@@ -2,15 +2,10 @@
 #![allow(unused_assignments)]
 
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
 
-use std::os::unix::io::{IntoRawFd, AsRawFd};
-use std::fs;
-use std::env;
-use std::path;
-use std::net::{TcpListener, TcpStream, SocketAddr};
+use std::os::unix::io::IntoRawFd;
+use std::net::{TcpStream, SocketAddr};
 use std::str;
-use std::io::{Read, Write};
 
 #[no_mangle]
 pub extern "C"

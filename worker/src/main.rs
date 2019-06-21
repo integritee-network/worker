@@ -57,7 +57,6 @@ mod attestation_ocalls;
 use log::*;
 use std::fs;
 use std::str;
-use std::path::Path;
 use sgx_types::*;
 use init_enclave::init_enclave;
 use enclave_wrappers::*;
@@ -78,7 +77,7 @@ use enclave_api::get_ecc_signing_pubkey;
 use constants::ATTN_REPORT_FILE;
 use primitive_types::U256;
 use parity_codec::Encode;
-use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEEProxyCall};
+use my_node_runtime::{UncheckedExtrinsic};
 
 
 extern {

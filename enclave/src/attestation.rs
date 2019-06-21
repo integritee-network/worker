@@ -26,12 +26,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-
-use std::backtrace::{self, PrintFormat};
 use sgx_types::*;
 use sgx_tse::*;
-//use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence};
 use sgx_tcrypto::*;
 use sgx_rand::*;
 
@@ -564,7 +560,7 @@ pub extern "C" fn perform_ra(sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
     println!("  Generate keypair");
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
-    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+    let (_prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
     println!("  Generate keypair successful");
 
     println!("  Create_attestation_report");
