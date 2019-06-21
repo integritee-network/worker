@@ -23,6 +23,11 @@
 
 extern crate sgx_types;
 extern crate sgx_tseal;
+extern crate sgx_tcrypto;
+extern crate sgx_trts;
+extern crate sgx_tse;
+
+
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
@@ -38,6 +43,18 @@ extern crate sgxwasm;
 
 #[macro_use]
 extern crate log;
+
+extern crate untrusted;
+extern crate rustls;
+extern crate webpki;
+extern crate itertools;
+extern crate base64;
+extern crate httparse;
+extern crate yasna;
+extern crate bit_vec;
+extern crate num_bigint;
+extern crate chrono;
+extern crate webpki_roots;
 
 extern crate primitives;
 use primitives::{ed25519};
@@ -67,8 +84,8 @@ extern crate sgx_serialize_derive;
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
-extern crate lazy_static;
+// #[macro_use]
+// extern crate lazy_static;
 
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -76,20 +93,31 @@ use std::string::String;
 use std::vec::Vec;
 use std::collections::HashMap;
 use std::string::ToString;
+// use std::backtrace::{self, PrintFormat};
 
 use crypto::ed25519::{keypair, signature};
 use rust_base58::{ToBase58};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
+// use sgx_tcrypto::*;
+// use sgx_types::*;
+
+type Index = u64;
+
 mod constants;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 
 mod utils;
 mod wasm;
+mod attestation;
+
+pub mod cert;
+pub mod hex;
+
+pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 // FIXME: Log does not work in enclave
-
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 

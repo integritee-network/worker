@@ -45,15 +45,18 @@ extern crate nan_preserving_float;
 
 extern crate sgx_ucrypto as crypto;
 
+mod utils;
 mod constants;
 mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
 mod wasm;
+mod attestation_ocalls;
 
 use log::*;
 use std::str;
+use std::path::Path;
 use sgx_types::*;
 use init_enclave::init_enclave;
 use enclave_wrappers::*;
@@ -68,18 +71,19 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use wasm::{sgx_enclave_wasm_init};
+use utils::check_files;
 
 fn main() {
 	// Setup logging
-    env_logger::init();
+	env_logger::init();
 
-    let yml = load_yaml!("cli.yml");
-    let matches = App::from_yaml(yml).get_matches();
+	let yml = load_yaml!("cli.yml");
+	let matches = App::from_yaml(yml).get_matches();
 
 	let port = matches.value_of("port").unwrap_or("9944");
 	info!("Interacting with port {}", port);
 
-    if let Some(_matches) = matches.subcommand_matches("worker") {
+	if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
 		worker(port);
 	} else if matches.is_present("getpublickey") {
@@ -88,31 +92,99 @@ fn main() {
 	} else if matches.is_present("getsignkey") {
 		println!("*** Get the signing key from the TEE\n");
 		get_signing_key_tee();
+	} else if matches.is_present("ra") {
+		println!("*** Request a Remote Attestation\n");
+		remote_attestation();
 	} else {
-        println!("For options: use --help");
-    }
+		println!("For options: use --help");
+	}
+}
+
+extern {
+	fn perform_ra(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		sign_type: sgx_quote_sign_type_t
+	) -> sgx_status_t;
+}
+
+fn remote_attestation() {
+	// ------------------------------------------------------------------------
+	// check for required files
+	let missing_files = check_files();
+
+	match missing_files {
+		0  => {
+			debug!("All files found\n");
+		},
+		1 => {
+			error!("Stopping as 1 required file is missing\n");
+			return;
+		},
+		_ => {
+			error!("Stopping as {} required files are missing\n", missing_files);
+			return;
+		}
+	};
+
+	// ------------------------------------------------------------------------
+	// initialize the enclave
+	println!("*** Starting enclave");
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
+			r
+		},
+		Err(x) => {
+			error!("[-] Init Enclave Failed {}!\n", x);
+			return;
+		},
+	};
+
+	// ------------------------------------------------------------------------
+	// perform a remote attestation
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+	let result = unsafe {
+		perform_ra(enclave.geteid(), &mut retval, sign_type)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {
+			println!("ECALL success!");
+		},
+		_ => {
+			println!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}
+
+	// ------------------------------------------------------------------------
+	// register the enclave
+
+
 }
 
 fn worker(port: &str) {
-    // ------------------------------------------------------------------------
-    // initialize the enclave
-    println!("*** Starting enclave");
-    let enclave = match init_enclave() {
-        Ok(r) => {
-            println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
-            r
-        },
-        Err(x) => {
-            error!("[-] Init Enclave Failed {}!\n", x);
-            return;
-        },
-    };
+	// ------------------------------------------------------------------------
+	// initialize the enclave
+	println!("*** Starting enclave");
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
+			r
+		},
+		Err(x) => {
+			error!("[-] Init Enclave Failed {}!\n", x);
+			return;
+		},
+	};
 
 	// start the websocket server
 	start_ws_server(enclave.geteid());
 
-    // ------------------------------------------------------------------------
-    // initialize the sgxwasm specific driver engine
+	// ------------------------------------------------------------------------
+	// initialize the sgxwasm specific driver engine
 	let result = sgx_enclave_wasm_init(enclave.geteid());
 	match result {
 		Ok(_r) => {
@@ -126,9 +198,9 @@ fn worker(port: &str) {
 
 	let mut status = sgx_status_t::SGX_SUCCESS;
 
-    // ------------------------------------------------------------------------
-    // subscribe to events and react on firing
-    println!("*** Subscribing to events");
+	// ------------------------------------------------------------------------
+	// subscribe to events and react on firing
+	println!("*** Subscribing to events");
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 

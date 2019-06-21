@@ -25,3 +25,5 @@ subcommands:
         about: Get the public RSA3072 key from the TEE
     - getsignkey:
         about: Get the public signing key from the TEE
+    - ra:
+        about: Request a remote attestion from Intel Attestation Service
