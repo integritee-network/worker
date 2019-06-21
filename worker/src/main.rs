@@ -55,6 +55,7 @@ mod wasm;
 mod attestation_ocalls;
 
 use log::*;
+use std::fs;
 use std::str;
 use std::path::Path;
 use sgx_types::*;
@@ -63,7 +64,7 @@ use enclave_wrappers::*;
 use ws_server::start_ws_server;
 
 use substrate_api_client::{Api, hexstr_to_vec};
-use my_node_runtime::{Event};
+use my_node_runtime::{Event, Hash};
 
 use parity_codec::Decode;
 use std::sync::mpsc::channel;
@@ -72,6 +73,8 @@ use std::thread;
 
 use wasm::{sgx_enclave_wasm_init};
 use utils::check_files;
+
+use constants::ATTN_REPORT_FILE;
 
 fn main() {
 	// Setup logging
@@ -162,7 +165,6 @@ fn remote_attestation() {
 	// ------------------------------------------------------------------------
 	// register the enclave
 
-
 }
 
 fn worker(port: &str) {
@@ -220,7 +222,7 @@ fn worker(port: &str) {
 
 		let _unhex = hexstr_to_vec(event_str);
 		let mut _er_enc = _unhex.as_slice();
-		let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
 		match _events {
 			Some(evts) => {
 				for evr in &evts {

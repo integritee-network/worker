@@ -26,8 +26,10 @@ use sgx_types::*;
 // }
 
 #[no_mangle]
-pub extern "C" fn sgxwasm_init() -> sgx_status_t {
-	let mut sd = SPECDRIVER.lock().unwrap();
+pub extern "C"
+fn sgxwasm_init() -> sgx_status_t {
+	let spec_driver: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
+	let mut sd = spec_driver.lock().unwrap();
 	*sd = SpecDriver::new();
 	sgx_status_t::SGX_SUCCESS
 }

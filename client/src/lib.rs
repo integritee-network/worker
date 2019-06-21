@@ -253,7 +253,7 @@ pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
 
 		let _unhex = hexstr_to_vec(event_str);
 		let mut _er_enc = _unhex.as_slice();
-		let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
 		if let Some(evts) = _events {
 			for evr in &evts {
 				if let Event::substratee_proxy(pe) = &evr.event {
