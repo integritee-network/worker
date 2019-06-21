@@ -63,7 +63,13 @@ extern crate wasmi;
 use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Module, NopExternals};
 
 extern crate my_node_runtime;
-use my_node_runtime::{UncheckedExtrinsic, Call, Hash, SubstraTEEProxyCall};
+use my_node_runtime::{
+	UncheckedExtrinsic,
+	Call,
+	Hash,
+	SubstraTEEProxyCall,
+	SubstraTEERegistryCall
+};
 
 extern crate runtime_primitives;
 use runtime_primitives::generic::Era;
@@ -118,6 +124,7 @@ pub mod hex;
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 // FIXME: Log does not work in enclave
+
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
@@ -412,3 +419,78 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	)
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn compose_extrinsic_register_enclave(
+						attn_report_vec : *const u8,
+						attn_report_size: usize,
+						genesis_hash: * const u8,
+						genesis_hash_size: u32,
+						nonce: * const u8,
+						nonce_size: u32,
+						unchecked_extrinsic: * mut u8,
+						unchecked_extrinsic_size: u32
+					) -> sgx_status_t {
+
+
+	println!();
+	println!("----------------------------------");
+	println!("compose_extrinsic_register_enclave");
+
+	let attn_report_slice   = slice::from_raw_parts(attn_report_vec, attn_report_size as usize);
+	let genesis_hash_slice  = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
+	let extrinsic_slice     = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+
+	// get information for composing the extrinsic
+	let seed = _get_ecc_seed_file(&mut retval);
+	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let genesis_hash = utils::hash_from_slice(genesis_hash_slice);
+
+	println!("seed              = {:?}", seed);
+	println!("nonce             = {:?}", nonce);
+	println!("genesis_hash      = {:?}", genesis_hash);
+	println!("attn_report_slice = {:?}", attn_report_slice);
+
+	// compose the extrinsic
+	let era = Era::immortal();
+
+	// TODO: Include attestation report. Currently, an empty vec is used as the report is > 256 bytes
+	// let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(attn_report_slice.to_vec()));
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(Vec::new()));
+	let index = nonce.low_u64();
+
+	let raw_payload = (Compact(index), function, era, genesis_hash);
+
+	let (privkey, pubkey) = keypair(&seed);
+
+	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+		// should not be thrown as we calculate a 32 byte hash ourselves
+		println!("!!! unsupported payload size");
+		signature(&[0u8; 64], &privkey)
+	} else {
+		//println!("signing {}", HexDisplay::from(&payload));
+		signature(payload, &privkey)
+	});
+
+	let signerpub = ed25519::Public::from_raw(pubkey);
+	let signature = ed25519::Signature::from_raw(sign);
+
+	let ex = UncheckedExtrinsic::new_signed(
+		index,
+		raw_payload.1,
+		signerpub.into(),
+		signature,
+		era,
+	);
+
+	let encoded = ex.encode();
+	println!("encoded = {:?}", encoded);
+	println!("encoded.len = {:?}", encoded.len());
+
+	extrinsic_slice.clone_from_slice(&encoded);
+	println!("extrinsic_slice = {:?}", extrinsic_slice);
+
+	retval
+}

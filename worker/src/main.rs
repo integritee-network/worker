@@ -78,6 +78,23 @@ use enclave_api::get_ecc_signing_pubkey;
 use constants::ATTN_REPORT_FILE;
 use primitive_types::U256;
 use parity_codec::Encode;
+use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEEProxyCall};
+
+
+extern {
+	pub fn compose_extrinsic_register_enclave(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		attn_report : *const u8,
+		attn_report_len: usize,
+		genesis_hash: *const u8,
+		genesis_hash_size: u32,
+		nonce: *const u8,
+		nonce_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32
+	) -> sgx_status_t;
+}
 
 fn main() {
 	// Setup logging
@@ -170,12 +187,18 @@ fn remote_attestation(port: &str) {
 
 	// get the attestation report
 	let attn_report_json = fs::read_to_string(ATTN_REPORT_FILE).expect("Unable to open attestation report file");
-	let attn_report: String = serde_json::from_str(&attn_report_json).unwrap();
-	println!("attn_report = {:?}", attn_report);
-	println!("attn_report.to_vec = {:?}", attn_report.as_bytes().to_vec());
+	let attn_report_string: String = serde_json::from_str(&attn_report_json).unwrap();
+	let attn_report_vec = attn_report_string.as_bytes().to_vec();
 
-	// request the key
-	println!();
+	println!("------------------------------------------");
+	println!("attn_report_string  = {:?}", attn_report_string);
+	println!("attn_report_vec     = {:?}", attn_report_vec);
+	println!("attn_report_vec_len = {:?}", attn_report_vec.len());
+
+	// initialize the API to talk to the substraTEE-node
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+	api.init();
+
 	println!("*** Ask the signing key from the TEE");
 	let pubkey_size = 32;
 	let mut pubkey = [0u8; 32];
@@ -199,20 +222,56 @@ fn remote_attestation(port: &str) {
 
 	println!("[+] Signing key: {:?}", pubkey);
 
-	// initialize the API to talk to the substraTEE-node
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
-	api.init();
-
 	// get enclave's account nonce
 	let nonce = get_account_nonce(&api, pubkey);
 	let nonce_bytes = U256::encode(&nonce);
 	println!("nonce of TEE = {:?}", nonce);
-	println!("nonce_bytes = {:?}", nonce_bytes);
 
+	let mut retval = sgx_status_t::SGX_SUCCESS;
 
+	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
+
+	// let unchecked_extrinsic_size = attn_report_vec.len() + 106;
+	let unchecked_extrinsic_size = 105;
+	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+
+	let result = unsafe {
+		compose_extrinsic_register_enclave(enclave.geteid(),
+					 &mut retval,
+					 attn_report_vec.as_ptr() as * const u8,
+					 attn_report_vec.len(),
+					 genesis_hash.as_ptr(),
+					 genesis_hash.len() as u32,
+					 nonce_bytes.as_ptr(),
+					 nonce_bytes.len() as u32,
+					 unchecked_extrinsic.as_mut_ptr(),
+					 unchecked_extrinsic_size as u32
+		)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => println!("[+] ECALL Enclave successful"),
+		_ => {
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
+		}
+	}
+
+	println!("unchecked_extrinsic = {:?}", unchecked_extrinsic);
+
+	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
+	println!("-----------------------------------------------");
+	println!("ue = {:?}", ue);
+
+	let mut _xthex = hex::encode(ue.encode());
+	_xthex.insert_str(0, "0x");
+	println!("-----------------------------------------------");
+	println!("_xthex = {:?}", _xthex);
+
+	// sending the extrinsic
+	let tx_hash = api.send_extrinsic(_xthex).unwrap();
+	println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
 
 }
-
 
 fn worker(port: &str) {
 	// ------------------------------------------------------------------------
