@@ -4,6 +4,14 @@ version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 
+# make this an independant workspace
+[workspace]
+
+# we need to use the "official" untrusted crate here
+# or else "official" packages cannot build any more
+[patch.'https://github.com/briansmith/untrusted']
+untrusted = "0.6.2"
+
 [dependencies]
 ws = "0.7"
 hex = "0.3"
@@ -38,31 +46,31 @@ tag = "M1"
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
-tag = "M1"
+branch = "substratee_registry_module"
 default-features = false
 features = ["no_global_allocator"]
 
 [dependencies.balances]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "srml-balances"
 
 [dependencies.node-primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "substrate-primitives"
 
 [dependencies.substrate-keyring]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "srml-system"
 
 [features]

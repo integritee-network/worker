@@ -17,8 +17,9 @@ pipeline {
     }
     stage('Test') {
       steps {
-        echo 'Stage TEST'
-        echo 'Not implemented yet'
+        sh 'cd client  && cargo test 2>&1 | tee ${WORKSPACE}/test_client.log'
+        sh 'cd worker  && cargo test 2>&1 | tee ${WORKSPACE}/test_worker.log'
+        sh 'cd enclave && cargo test 2>&1 | tee ${WORKSPACE}/test_enclave.log'
       }
     }
     stage('Lint') {

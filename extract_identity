@@ -1,0 +1,28 @@
+#!/usr/bin/python3.6
+
+import argparse
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mrsigner', action="store_true")
+    args = parser.parse_args()
+
+    line = ""
+
+    searched_header = "enclave_hash.m"
+    output_header = "MRENCLAVE"
+    if args.mrsigner:
+        searched_header = "mrsigner->value"
+        output_header = "MRSIGNER"
+    while searched_header not in line:
+        line = input()
+    value = list()
+    line = input()
+    while line.startswith("0x"):
+        value += line.strip().split()
+        try:
+            line = input()
+        except:
+            break
+    value = "".join(map(lambda x: x.replace("0x",""), value))
+print("{}: {}".format(output_header, value))
