@@ -58,4 +58,15 @@ extern {
 		pubkey: * mut u8,
 		pubkey_size: u32
 	) -> sgx_status_t;
+
+	pub fn perform_ra(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		genesis_hash: *const u8,
+		genesis_hash_size: u32,
+		nonce: *const u8,
+		nonce_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32
+	) -> sgx_status_t;
 }
