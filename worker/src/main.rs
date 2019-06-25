@@ -79,6 +79,7 @@ use primitive_types::U256;
 use parity_codec::Encode;
 use my_node_runtime::{UncheckedExtrinsic};
 
+use primitives::blake2_256;
 
 extern {
 	pub fn compose_extrinsic_register_enclave(
@@ -230,8 +231,8 @@ fn remote_attestation(port: &str) {
 
 	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
 
-	// let unchecked_extrinsic_size = attn_report_vec.len() + 106;
-	let unchecked_extrinsic_size = 105; // for empty message
+	let unchecked_extrinsic_size = attn_report_vec.len() + 106;
+	// let unchecked_extrinsic_size = 105; // for empty message
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
 	let result = unsafe {
@@ -255,7 +256,7 @@ fn remote_attestation(port: &str) {
 		}
 	}
 
-	println!("unchecked_extrinsic = {:?}", unchecked_extrinsic);
+	// println!("unchecked_extrinsic = {:?}", unchecked_extrinsic);
 
 	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
 	println!("-----------------------------------------------");

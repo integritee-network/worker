@@ -55,6 +55,7 @@ extern crate bit_vec;
 extern crate num_bigint;
 extern crate chrono;
 extern crate webpki_roots;
+extern crate blake2_no_std;
 
 extern crate primitives;
 use primitives::{ed25519};
@@ -106,6 +107,7 @@ mod constants;
 use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
 
 mod utils;
+use utils::blake2_256;
 mod wasm;
 mod attestation;
 
@@ -439,17 +441,13 @@ pub unsafe extern "C" fn compose_extrinsic_register_enclave(
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = utils::hash_from_slice(genesis_hash_slice);
 
-	println!("seed              = {:?}", seed);
-	println!("nonce             = {:?}", nonce);
-	println!("genesis_hash      = {:?}", genesis_hash);
-	println!("attn_report_slice = {:?}", attn_report_slice);
+	// println!("attn_report_slice = {:?}", attn_report_slice);
 
 	// compose the extrinsic
 	let era = Era::immortal();
 
-	// TODO: Include attestation report. Currently, an empty vec is used as the report is > 256 bytes
-	// let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(attn_report_slice.to_vec()));
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(Vec::new()));
+	// TODO: Include complete attestation report
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(attn_report_slice.to_vec()));
 	let index = nonce.low_u64();
 
 	let raw_payload = (Compact(index), function, era, genesis_hash);
@@ -457,17 +455,18 @@ pub unsafe extern "C" fn compose_extrinsic_register_enclave(
 	let (privkey, pubkey) = keypair(&seed);
 
 	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		// should not be thrown as we calculate a 32 byte hash ourselves
-		println!("!!! unsupported payload size");
-		signature(&[0u8; 64], &privkey)
+		// include the blake2 hash of the payload
+		signature(&blake2_256(payload)[..], &privkey)
 	} else {
 		//println!("signing {}", HexDisplay::from(&payload));
 		signature(payload, &privkey)
 	});
 
+	// convert to valid signatures
 	let signerpub = ed25519::Public::from_raw(pubkey);
 	let signature = ed25519::Signature::from_raw(sign);
 
+	// build the extrinsic
 	let ex = UncheckedExtrinsic::new_signed(
 		index,
 		raw_payload.1,
@@ -477,11 +476,10 @@ pub unsafe extern "C" fn compose_extrinsic_register_enclave(
 	);
 
 	let encoded = ex.encode();
-	println!("encoded = {:?}", encoded);
-	println!("encoded.len = {:?}", encoded.len());
+	// println!("encoded = {:?}", encoded);
+	// println!("encoded.len = {:?}", encoded.len());
 
 	extrinsic_slice.clone_from_slice(&encoded);
-	println!("extrinsic_slice = {:?}", extrinsic_slice);
 
 	retval
 }
