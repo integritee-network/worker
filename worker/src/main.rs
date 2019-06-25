@@ -79,8 +79,6 @@ use primitive_types::U256;
 use parity_codec::Encode;
 use my_node_runtime::{UncheckedExtrinsic};
 
-use primitives::blake2_256;
-
 extern {
 	pub fn compose_extrinsic_register_enclave(
 		eid: sgx_enclave_id_t,
