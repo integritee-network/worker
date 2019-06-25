@@ -50,15 +50,11 @@ enclave {
 
 		public sgx_status_t sgxwasm_init();
 
-		public sgx_status_t perform_ra();
-
-		public sgx_status_t compose_extrinsic_register_enclave(
-			[in, size=attn_report_len] const uint8_t* attn_report, size_t attn_report_len,
+		public sgx_status_t perform_ra(
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
 			[in, size=nonce_size] uint8_t* nonce, uint32_t nonce_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
-
 	};
 
 	untrusted {

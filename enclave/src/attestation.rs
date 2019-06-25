@@ -35,7 +35,7 @@ use std::prelude::v1::*;
 use std::sync::Arc;
 use std::net::TcpStream;
 use std::string::String;
-// use std::io;
+use std::slice;
 use std::ptr;
 use std::str;
 use std::io::{Write, Read, BufReader};
@@ -43,6 +43,20 @@ use std::untrusted::fs;
 use std::vec::Vec;
 use itertools::Itertools;
 use core::default::Default;
+
+use runtime_primitives::generic::Era;
+use primitive_types::U256;
+use parity_codec::{Decode, Encode, Compact};
+use utils::{hash_from_slice};
+use _get_ecc_seed_file;
+use my_node_runtime::{
+	UncheckedExtrinsic,
+	Call,
+	SubstraTEERegistryCall
+};
+use primitives::{ed25519};
+use crypto::ed25519::{keypair, signature};
+use utils::blake2_256;
 
 use constants::{RA_SPID, RA_CERT, RA_KEY, NODE_PAYLOAD_FILE};
 
@@ -552,20 +566,31 @@ fn load_private_key(filename: &str) -> rustls::PrivateKey {
 }
 
 #[no_mangle]
-pub extern "C" fn perform_ra() -> sgx_status_t {
+pub unsafe extern "C" fn perform_ra(
+							genesis_hash: * const u8,
+							genesis_hash_size: u32,
+							nonce: * const u8,
+							nonce_size: u32,
+							unchecked_extrinsic: * mut u8,
+							unchecked_extrinsic_size: u32
+						) -> sgx_status_t {
 
+	println!("-----------------------------------------------------------------");
 	println!("[Enclave] Entering perform_ra");
 
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 	// Generate Keypair
+	println!("-----------------------------------------------------------------");
 	println!("  Generate keypair");
 	let ecc_handle = SgxEccHandle::new();
 	let _result = ecc_handle.open();
-	let (_prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+	let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 	println!("  Generate keypair successful");
+	println!("-----------------------------------------------------------------");
 
+	println!("-----------------------------------------------------------------");
 	println!("  Create_attestation_report");
 	let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
 		Ok(r) => r,
@@ -575,25 +600,18 @@ pub extern "C" fn perform_ra() -> sgx_status_t {
 		}
 	};
 	println!("  Create_attestation_report successful");
-
 	println!("    attn_report = {:?}", attn_report);
 	println!("    sig         = {:?}", sig);
 	println!("    cert        = {:?}", cert);
+	println!("-----------------------------------------------------------------");
 
 	// concat the information
 	let payload = attn_report + "|" + &sig + "|" + &cert;
 
-	// write payload to file for processing in worker
-	// TODO: should be done in the enclave without roundtrip to worker
-	match fs::write(NODE_PAYLOAD_FILE, &payload) {
-		Err(x) => { println!("[-] Failed to write '{}'. {}", NODE_PAYLOAD_FILE, x); },
-		_      => { println!("[+] File '{}' written successfully", NODE_PAYLOAD_FILE) }
-	};
-
-/*
 	// generate an ECC certificate
+	println!("-----------------------------------------------------------------");
 	println!("  Generate ECC Certificate");
-	let (key_der, cert_der) = match ::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
+	let (_key_der, cert_der) = match ::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
 		Ok(r) => r,
 		Err(e) => {
 			println!("Error in gen_ecc_cert: {:?}", e);
@@ -602,14 +620,78 @@ pub extern "C" fn perform_ra() -> sgx_status_t {
 	};
 	let _result = ecc_handle.close();
 	println!("  Generate ECC Certificate successful");
+	println!("-----------------------------------------------------------------");
 
-	// write ecc certificate to file for processing in worker
-	let cert_der_json = serde_json::to_string(&cert_der).unwrap();
-	match fs::write(ECC_REPORT_FILE, cert_der_json) {
-		Err(x) => { println!("[-] Failed to write '{}'. {}", ECC_REPORT_FILE, x); },
-		_      => { println!("[+] File '{}' written successfully", ECC_REPORT_FILE) }
+	// write payload to file for processing in worker
+	// TODO: should be done in the enclave without roundtrip to worker
+	match fs::write(NODE_PAYLOAD_FILE, &cert_der) {
+		Err(x) => { println!("[-] Failed to write '{}'. {}", NODE_PAYLOAD_FILE, x); },
+		_      => { println!("[+] File '{}' written successfully", NODE_PAYLOAD_FILE) }
 	};
-*/
+
+	println!("-----------------------------------------------------------------");
+	println!("cert_der.len = {:?}", cert_der.len());
+
+	println!("-----------------------------------------------------------------");
+	println!("compose extrinsic");
+	let genesis_hash_slice  = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
+	let extrinsic_slice     = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	println!("  get extrinsic ingredients");
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let seed = _get_ecc_seed_file(&mut retval);
+	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let genesis_hash = hash_from_slice(genesis_hash_slice);
+	let era = Era::immortal();
+
+	println!("  get function call");
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(cert_der.to_vec()));
+	let index = nonce.low_u64();
+
+	println!("  form raw_payload");
+	let raw_payload = (Compact(index), function, era, genesis_hash);
+
+	println!("  get keypair");
+	let (privkey, pubkey) = keypair(&seed);
+
+	println!("  sign the payload");
+	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
+		// include the blake2 hash of the payload
+		signature(&blake2_256(payload)[..], &privkey)
+	} else {
+		//println!("signing {}", HexDisplay::from(&payload));
+		signature(payload, &privkey)
+	});
+
+	// convert to valid signatures
+	println!("  convert signatures");
+	let signerpub = ed25519::Public::from_raw(pubkey);
+	let signature = ed25519::Signature::from_raw(sign);
+
+	// build the extrinsic
+	println!("  build the extrinsic");
+	let ex = UncheckedExtrinsic::new_signed(
+		index,
+		raw_payload.1,
+		signerpub.into(),
+		signature,
+		era,
+	);
+
+	println!("  encode the extrinsic");
+	let encoded = ex.encode();
+	println!("encoded = {:?}", encoded);
+	println!("encoded.len = {:?}", encoded.len());
+
+	// split the extrinsic_slice at the length of the encoded extrinsic
+	// and fill the right side with whitespace
+	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
+	left.clone_from_slice(&encoded);
+	right.iter_mut().for_each(|x| *x = 0x20);
+
+	println!("compose extrinsic finished");
+	println!("-----------------------------------------------------------------");
 
 	sgx_status_t::SGX_SUCCESS
 }
