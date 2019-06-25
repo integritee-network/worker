@@ -552,9 +552,12 @@ fn load_private_key(filename: &str) -> rustls::PrivateKey {
 }
 
 #[no_mangle]
-pub extern "C" fn perform_ra(sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
+pub extern "C" fn perform_ra() -> sgx_status_t {
 
 	println!("[Enclave] Entering perform_ra");
+
+	// our certificate is unlinkable
+	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 	// Generate Keypair
 	println!("  Generate keypair");

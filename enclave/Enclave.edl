@@ -50,7 +50,7 @@ enclave {
 
 		public sgx_status_t sgxwasm_init();
 
-		public sgx_status_t perform_ra(sgx_quote_sign_type_t quote_type);
+		public sgx_status_t perform_ra();
 
 		public sgx_status_t compose_extrinsic_register_enclave(
 			[in, size=attn_report_len] const uint8_t* attn_report, size_t attn_report_len,
