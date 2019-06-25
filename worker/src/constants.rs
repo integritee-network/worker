@@ -20,8 +20,6 @@ pub static ENCLAVE_FILE:		&str = "./bin/enclave.signed.so";
 pub static RSA_PUB_KEY:			&str = "./bin/rsa_pubkey.txt";
 pub static ECC_PUB_KEY:			&str = "./bin/ecc_pubkey.txt";
 
-pub static ATTN_REPORT_FILE:    &str = "./bin/attestation_report.json";
-
 pub static RA_SPID:				&str = "./bin/spid.txt";
 pub static RA_CERT:				&str = "./bin/client.crt";
 pub static RA_KEY:				&str = "./bin/client.key";

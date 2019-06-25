@@ -74,7 +74,6 @@ use wasm::{sgx_enclave_wasm_init};
 use utils::check_files;
 
 use enclave_api::get_ecc_signing_pubkey;
-use constants::ATTN_REPORT_FILE;
 use primitive_types::U256;
 use parity_codec::Encode;
 use my_node_runtime::{UncheckedExtrinsic};
@@ -183,16 +182,6 @@ fn remote_attestation(port: &str) {
 	// ------------------------------------------------------------------------
 	// register the enclave
 
-	// get the attestation report
-	let attn_report_json = fs::read_to_string(ATTN_REPORT_FILE).expect("Unable to open attestation report file");
-	let attn_report_string: String = serde_json::from_str(&attn_report_json).unwrap();
-	let attn_report_vec = attn_report_string.as_bytes().to_vec();
-
-	println!("------------------------------------------");
-	println!("attn_report_string  = {:?}", attn_report_string);
-	println!("attn_report_vec     = {:?}", attn_report_vec);
-	println!("attn_report_vec_len = {:?}", attn_report_vec.len());
-
 	// initialize the API to talk to the substraTEE-node
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
@@ -228,6 +217,9 @@ fn remote_attestation(port: &str) {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
+
+	// dummy entry
+	let attn_report_vec = vec![0u8; 32];
 
 	let unchecked_extrinsic_size = attn_report_vec.len() + 106;
 	// let unchecked_extrinsic_size = 105; // for empty message
