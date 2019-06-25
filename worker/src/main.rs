@@ -55,7 +55,6 @@ mod wasm;
 mod attestation_ocalls;
 
 use log::*;
-use std::fs;
 use std::str;
 use sgx_types::*;
 use init_enclave::init_enclave;
@@ -123,8 +122,7 @@ fn main() {
 extern {
 	fn perform_ra(
 		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		sign_type: sgx_quote_sign_type_t
+		retval: *mut sgx_status_t
 	) -> sgx_status_t;
 }
 
@@ -164,9 +162,8 @@ fn remote_attestation(port: &str) {
 	// ------------------------------------------------------------------------
 	// perform a remote attestation
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 	let result = unsafe {
-		perform_ra(enclave.geteid(), &mut retval, sign_type)
+		perform_ra(enclave.geteid(), &mut retval)
 	};
 
 	match result {
