@@ -23,6 +23,8 @@ rust-base58   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" 
 sgx_serialize = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
+aes               = { version = "0.3.2" }
+ofb               = { version = "0.1.1" }
 parity-codec      = { version = "3.0", default-features = false }
 primitive-types   = { version = "0.2", default-features = false, features = ["codec"] }
 sgx_crypto_helper = { git = "https://github.com/mesalock-linux/sgx_tcrypto_helper", package = "sgx_tcrypto_helper" }

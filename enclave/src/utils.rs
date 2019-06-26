@@ -117,9 +117,38 @@ pub fn read_counterstate(filepath: &str) -> SgxResult<Vec<u8>> {
 			}
 		},
 		Err(x) => {
-			error!("[Enclave] can't get counter file! {}", x);
+			error!("[Enclave] Can't get counter state '{}'! {}", COUNTERSTATE, x);
 			state_vec.push(0);
 			Ok(state_vec)
+		}
+	}
+}
+
+use std::sgxfs;
+
+/// write the encrypted counter state
+pub fn write_counterstate(bytes: &[u8]) -> sgx_status_t {
+	println!("data to be written: {:?}", bytes);
+
+	match sgxfs::write("./bin/sealed_counter_state2.bin", bytes) {
+		Err(x) => { error!("Failed to write sealed counter state 2"); },
+		_      => { println!("Sealed counter state 2 written"); }
+	}
+
+	match SgxFile::create(COUNTERSTATE) {
+		Ok(mut f) => match f.write_all(bytes) {
+			Ok(()) => {
+				info!("[Enclave] Writing counter state '{}' successful", COUNTERSTATE);
+				sgx_status_t::SGX_SUCCESS
+			}
+			Err(x) => {
+				error!("[Enclave] Writing counter state '{}' failed! {}", COUNTERSTATE, x);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			}
+		},
+		Err(x) => {
+			error!("[Enclave] Creating counter state '{}' error! {}", COUNTERSTATE, x);
+			sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	}
 }
