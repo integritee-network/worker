@@ -126,7 +126,7 @@ pub fn gen_ecc_cert(payload: String,
                 writer.next().write_tagged(yasna::Tag::context(3), |writer| {
                     writer.write_sequence(|writer| {
                         writer.next().write_sequence(|writer| {
-                            writer.next().write_oid(&ObjectIdentifier::from_slice(&[2,16,840,1,113730,1,13]));
+                            writer.next().write_oid(&ObjectIdentifier::from_slice(&[2,16,840,1,113_730,1,13]));
                             writer.next().write_bytes(&payload.into_bytes());
                         });
                     });

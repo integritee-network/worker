@@ -60,10 +60,10 @@ use utils::blake2_256;
 
 use constants::{RA_SPID, RA_CERT, RA_KEY};
 
-pub const DEV_HOSTNAME:&'static str = "test-as.sgx.trustedservices.intel.com";
-//pub const PROD_HOSTNAME:&'static str = "as.sgx.trustedservices.intel.com";
-pub const SIGRL_SUFFIX:&'static str = "/attestation/sgx/v3/sigrl/";
-pub const REPORT_SUFFIX:&'static str = "/attestation/sgx/v3/report";
+pub const DEV_HOSTNAME  :&str = "test-as.sgx.trustedservices.intel.com";
+//pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
+pub const SIGRL_SUFFIX  :&str = "/attestation/sgx/v3/sigrl/";
+pub const REPORT_SUFFIX :&str = "/attestation/sgx/v3/report";
 
 extern "C" {
 	pub fn ocall_sgx_init_quote (
@@ -524,7 +524,7 @@ fn load_certs(filename: &str) -> Vec<rustls::Certificate> {
 	let certfile = fs::File::open(filename).expect("cannot open certificate file");
 	let mut reader = BufReader::new(certfile);
 	match rustls::internal::pemfile::certs(&mut reader) {
-		Ok(r) => return r,
+		Ok(r) => r,
 		Err(e) => {
 			println!("Err in load_certs: {:?}", e);
 			panic!("");
