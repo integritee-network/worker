@@ -316,7 +316,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 
 			match r {
 				Ok(Some(RuntimeValue::I32(v))) => {
-					info!("    [Enclave] Add {} to '{}'", v, account);
+					info!("    [Enclave] New value of '{}': ", account, v);
 					counter.entries.insert(account.to_string(), v as u32);
 					println!("    [Enclave] WASM executed and counter updated");
 				},
