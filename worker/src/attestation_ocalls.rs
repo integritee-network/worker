@@ -25,11 +25,12 @@ use sgx_types::*;
 use std::os::unix::io::IntoRawFd;
 use std::net::{TcpStream, SocketAddr};
 use std::str;
+use log::*;
 
 #[no_mangle]
 pub extern "C" fn ocall_sgx_init_quote(ret_ti: *mut sgx_target_info_t,
 						ret_gid : *mut sgx_epid_group_id_t) -> sgx_status_t {
-	println!("Entering ocall_sgx_init_quote");
+	debug!("    Entering ocall_sgx_init_quote");
 	unsafe {sgx_init_quote(ret_ti, ret_gid)}
 }
 
@@ -48,6 +49,7 @@ pub fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
 
 #[no_mangle]
 pub extern "C" fn ocall_get_ias_socket(ret_fd : *mut c_int) -> sgx_status_t {
+	debug!("    Entering ocall_get_ias_socket");
 	let port = 443;
 	let hostname = "test-as.sgx.trustedservices.intel.com";
 	let addr = lookup_ipv4(hostname, port);
@@ -70,7 +72,7 @@ pub extern "C" fn ocall_get_quote (
 					p_quote            : *mut u8,
 					_maxlen            : u32,
 					p_quote_len        : *mut u32) -> sgx_status_t {
-	println!("Entering ocall_get_quote");
+	debug!("    Entering ocall_get_quote");
 
 	let mut real_quote_len : u32 = 0;
 
@@ -79,11 +81,11 @@ pub extern "C" fn ocall_get_quote (
 	};
 
 	if ret != sgx_status_t::SGX_SUCCESS {
-		println!("sgx_calc_quote_size returned {}", ret);
+		error!("   sgx_calc_quote_size failed. {}", ret);
 		return ret;
 	}
 
-	println!("quote size = {}", real_quote_len);
+	debug!("    Quote size = {}", real_quote_len);
 	unsafe { *p_quote_len = real_quote_len; }
 
 	let ret = unsafe {
@@ -99,11 +101,9 @@ pub extern "C" fn ocall_get_quote (
 	};
 
 	if ret != sgx_status_t::SGX_SUCCESS {
-		println!("sgx_calc_quote_size returned {}", ret);
+		error!("    sgx_calc_quote_size failed. {}", ret);
 		return ret;
 	}
-
-	println!("sgx_calc_quote_size returned {}", ret);
 	ret
 }
 

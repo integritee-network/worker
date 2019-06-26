@@ -43,6 +43,7 @@ extern crate sgxwasm;
 
 #[macro_use]
 extern crate log;
+extern crate env_logger;
 
 extern crate untrusted;
 extern crate rustls;
@@ -114,10 +115,11 @@ pub mod hex;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
-// FIXME: Log does not work in enclave
-
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
+
+	// initialize the logging environment in the enclave
+	env_logger::init();
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
@@ -162,6 +164,10 @@ fn create_sealed_rsa3072_keypair() -> sgx_status_t {
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
+
+	// initialize the logging environment in the enclave
+	env_logger::init();
+
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
