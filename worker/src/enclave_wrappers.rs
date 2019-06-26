@@ -70,9 +70,9 @@ pub fn process_forwarded_payload(
 
 			// sending the extrinsic
 			println!();
-			println!("[+] Send the extrinsic");
+			println!("[>] Confirm processing (send the extrinsic)");
 			let tx_hash = api.send_extrinsic(_xthex).unwrap();
-			println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+			println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 		},
 		_ => {
 			println!();

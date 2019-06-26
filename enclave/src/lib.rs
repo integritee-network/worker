@@ -233,8 +233,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 		sha256: sgx_sha256_hash_t
 	}
 
-	error!("testing loggin");
-
 	let ciphertext_slice = slice::from_raw_parts(ciphertext, ciphertext_size as usize);
 	let hash_slice       = slice::from_raw_parts(hash, hash_size as usize);
 	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);

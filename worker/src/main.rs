@@ -205,9 +205,9 @@ fn worker(port: &str) {
 			_xthex.insert_str(0, "0x");
 
 			// send the extrinsic and wait for confirmation
-			println!("[>] Send the transaction");
+			println!("[>] Register the enclave (send the extrinsic)");
 			let tx_hash = api.send_extrinsic(_xthex).unwrap();
-			println!("[<] Transaction got finalized. Hash: {:?}\n", tx_hash);
+			println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 		},
 		_ => {
 			println!("[-] ECALL 'perform_ra' failed {}!", result.as_str());

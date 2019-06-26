@@ -58,7 +58,7 @@ use primitives::{ed25519};
 use crypto::ed25519::{keypair, signature};
 use utils::blake2_256;
 
-use constants::{RA_SPID, RA_CERT, RA_KEY, NODE_PAYLOAD_FILE};
+use constants::{RA_SPID, RA_CERT, RA_KEY};
 
 pub const DEV_HOSTNAME:&'static str = "test-as.sgx.trustedservices.intel.com";
 //pub const PROD_HOSTNAME:&'static str = "as.sgx.trustedservices.intel.com";
@@ -607,13 +607,6 @@ pub unsafe extern "C" fn perform_ra(
 	};
 	let _result = ecc_handle.close();
 	println!("    [Enclave] Generate ECC Certificate successful");
-
-	// write payload to file for processing in worker
-	// FIXME: remove
-	match fs::write(NODE_PAYLOAD_FILE, &cert_der) {
-		Err(x) => { println!("[-] Failed to write '{}'. {}", NODE_PAYLOAD_FILE, x); },
-		_      => { println!("[+] File '{}' written successfully", NODE_PAYLOAD_FILE) }
-	};
 
 	info!("    [Enclave] Compose extrinsic");
 	let genesis_hash_slice  = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
