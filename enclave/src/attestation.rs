@@ -575,6 +575,9 @@ pub unsafe extern "C" fn perform_ra(
 							unchecked_extrinsic_size: u32
 						) -> sgx_status_t {
 
+	// initialize the logging environment in the enclave
+	env_logger::init();
+
 	println!("-----------------------------------------------------------------");
 	println!("[Enclave] Entering perform_ra");
 

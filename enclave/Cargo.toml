@@ -25,8 +25,9 @@ sgx_serialize = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" 
 [dependencies]
 parity-codec      = { version = "3.0", default-features = false }
 primitive-types   = { version = "0.2", default-features = false, features = ["codec"] }
-log               = { git = "https://github.com/mesalock-linux/log-sgx", default-features = false, features = ["mesalock_sgx"] }
 sgx_crypto_helper = { git = "https://github.com/mesalock-linux/sgx_tcrypto_helper", package = "sgx_tcrypto_helper" }
+log               = { git = "https://github.com/mesalock-linux/log-sgx" }
+env_logger        = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 
 # for wasm code
 wasmi           = { git = "https://github.com/mesalock-linux/wasmi-sgx" }
