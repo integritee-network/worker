@@ -30,10 +30,40 @@ use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 use std::vec::Vec;
+use std::slice;
+use sgx_crypto_helper::RsaKeyPair;
+use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
+
+use sgx_types::{sgx_status_t};
+use my_node_runtime::Hash;
+use crypto::blake2s::Blake2s;
 
 use blake2_no_std::blake2b::blake2b;
 
-pub fn read_rsa_keypair() -> SgxResult<Rsa3072KeyPair> {
+use constants::{RSA3072_SEALED_KEY_FILE, COUNTERSTATE};
+
+use aes::Aes128;
+use ofb::Ofb;
+use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
+
+extern "C" {
+	pub fn ocall_write_file(
+		ret_val            : *mut sgx_status_t,
+		p_content          : *const u8,
+		content_length     : u32,
+		p_filename         : *const u8,
+		filename_length    : u32) -> sgx_status_t;
+
+	pub fn ocall_read_file(
+		ret_val         : *mut sgx_status_t,
+		p_filename      : *const u8,
+		filename_len    : u32,
+		p_content       : *mut u8,
+		content_len     : u32,
+		return_len      : *mut u32) -> sgx_status_t;
+}
+
+pub fn read_rsa_keypair(status: &mut sgx_status_t) -> Rsa3072KeyPair {
 	let keyvec = read_file(RSA3072_SEALED_KEY_FILE)?;
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
 	let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
@@ -124,9 +154,35 @@ pub fn read_counterstate(filepath: &str) -> SgxResult<Vec<u8>> {
 	}
 }
 
-use std::sgxfs;
+	// OFB mode implementation is generic over block ciphers
+	// we will create a type alias for convenience
+	type AesOfb = Ofb<Aes128>;
 
-/// write the encrypted counter state
+	let key = b"very secret key.";	// 16 bytes
+	let iv  = b"unique init vect";	// 16 bytes
+	let plaintext = b"The quick brown fox jumps over the lazy dog.";
+
+	let mut buffer = plaintext.to_vec();
+
+	// apply keystream (encrypt)
+	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
+	println!("buffer encrypted = {:?}", buffer);
+
+	// and decrypt it back
+	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
+	println!("buffer decrypted = {:?}", buffer);
+
+	println!("ending encryption");
+	println!("--------------------------------------------------------------------");
+*/
+
+	let v = unsafe { slice::from_raw_parts(content_buf.as_ptr(), return_len as usize) };
+	*state_vec = v.to_vec();
+
+	result
+}
+
+// write the encrypted counter state
 pub fn write_counterstate(bytes: &[u8]) -> sgx_status_t {
 	println!("data to be written: {:?}", bytes);
 
