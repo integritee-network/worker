@@ -72,39 +72,17 @@ features = ["dangerous_configuration"]
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
 default-features = false
-features = ["no_global_allocator"]
+features = ["no_global_allocator", "no_panic_handler", "no_oom"]
 
 [dependencies.sgx_serialize_derive]
 git = "https://github.com/baidu/rust-sgx-sdk"
 rev = "v1.0.8"
-
-# !!!!!! no_std trouble https://github.com/w3f/schnorrkel/issues/31
-# [dependencies.schnorrkel]
-# git = "https://github.com/scs/schnorrkel"
-# default-features = false
-# features=["alloc", "u64_backend"]
 
 [dependencies.primitives]
 git = 'https://github.com/paritytech/substrate'
 rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "substrate-primitives"
 default-features = false
-
-#only listed to get no_global_allocator feature in
-[dependencies.rstd]
-git = 'https://github.com/paritytech/substrate'
-rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
-package = "sr-std"
-default-features = false
-features = ["no_global_allocator"]
-
-#only listed to get no_panic_handler and no_oom features in
-[dependencies.runtime_io]
-git = 'https://github.com/paritytech/substrate'
-rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
-package = "sr-io"
-default-features = false
-features = ["no_panic_handler", "no_oom"]
 
 [dependencies.runtime_primitives]
 git = 'https://github.com/paritytech/substrate'
