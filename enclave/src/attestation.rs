@@ -557,10 +557,6 @@ fn load_private_key(filename: &str) -> rustls::PrivateKey {
 	}
 }
 
-use aes::Aes128;
-use ofb::Ofb;
-use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
-
 #[no_mangle]
 pub unsafe extern "C" fn perform_ra(
 							genesis_hash: * const u8,
@@ -573,34 +569,6 @@ pub unsafe extern "C" fn perform_ra(
 
 	// initialize the logging environment in the enclave
 	env_logger::init();
-
-	println!("--------------------------------------------------------------------");
-	println!("starting encryption");
-
-	// OFB mode implementation is generic over block ciphers
-	// we will create a type alias for convenience
-	type AesOfb = Ofb<Aes128>;
-
-	let key = b"very secret key.";	// 16 bytes
-	let iv  = b"unique init vect";	// 16 bytes
-	let plaintext = b"The quick brown fox jumps over the lazy dog.";
-
-	let mut buffer = plaintext.to_vec();
-
-	// create cipher instance
-	// let mut cipher = ;
-
-	// apply keystream (encrypt)
-	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
-	println!("buffer encrypted = {:?}", buffer);
-
-	// and decrypt it back
-	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
-	println!("buffer decrypted = {:?}", buffer);
-
-	println!("ending encryption");
-	println!("--------------------------------------------------------------------");
-
 
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
