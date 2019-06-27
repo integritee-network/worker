@@ -249,9 +249,13 @@ pub unsafe extern "C" fn call_counter_wasm(
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
 	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
-
 	let encoded = ex.encode();
-	extrinsic_slice.clone_from_slice(&encoded);
+
+	// split the extrinsic_slice at the length of the encoded extrinsic
+	// and fill the right side with whitespace
+	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
+	left.clone_from_slice(&encoded);
+	right.iter_mut().for_each(|x| *x = 0x20);
 
 	// write the counter state
 	if let Err(status) = write_counter_state(counter) {
