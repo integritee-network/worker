@@ -35,7 +35,6 @@ sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "substratee_registry_module"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
@@ -70,3 +69,7 @@ default-features = false
 [dependencies.sgx_crypto_helper]
 git = "https://github.com/baidu/rust-sgx-sdk"
 default-features = false
+
+[patch.'https://github.com/paritytech/substrate']
+sr-io = { git = "https://github.com/scs/substraTEE-node" }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node" }

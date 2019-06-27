@@ -70,7 +70,6 @@ features = ["dangerous_configuration"]
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "substratee_registry_module"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]

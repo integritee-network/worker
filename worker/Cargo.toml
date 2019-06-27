@@ -45,7 +45,6 @@ git = "https://github.com/scs/substrate-api-client"
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
-branch = "substratee_registry_module"
 default-features = false
 features = ["no_global_allocator"]
 
@@ -79,3 +78,7 @@ std = [
 	"parity-codec/std",
 	"my_node_runtime/std",
 ]
+
+[patch.'https://github.com/paritytech/substrate']
+sr-io = { git = "https://github.com/scs/substraTEE-node" }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node" }
