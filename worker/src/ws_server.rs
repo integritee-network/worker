@@ -37,7 +37,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
 
             let mut retval = sgx_status_t::SGX_SUCCESS;
             let account = msg.clone().into_data();
-            let mut value = 0u8;
+            let mut value = 0u32;
 
             let result = unsafe {
                 get_counter(self.eid,

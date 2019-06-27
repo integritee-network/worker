@@ -42,7 +42,7 @@ extern {
 		retval: *mut sgx_status_t,
 		account: *const u8,
 		account_size: u32,
-		counter_value: *mut u8
+		counter_value: *mut u32
 	) -> sgx_status_t;
 
 	pub fn get_rsa_encryption_pubkey(
