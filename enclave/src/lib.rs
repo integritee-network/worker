@@ -217,7 +217,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status;
 	}
 
-	let state = match utils::read_counterstate(COUNTERSTATE) {
+	let state = match utils::read_counterfile() {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	let account_slice = slice::from_raw_parts(account, account_size as usize);
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let state_vec = match utils::read_counterstate(COUNTERSTATE) {
+	let state_vec = match utils::read_counterfile() {
 		Ok(state) => state,
 		Err(status) => return status,
 	};

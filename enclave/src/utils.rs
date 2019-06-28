@@ -15,12 +15,11 @@
 
 */
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
-
-use aes::Aes128;
-use blake2_no_std::blake2b::blake2b;
-use crypto::blake2s::Blake2s;
+extern crate aes;
+extern crate ofb;
 extern crate sgx_types;
 
+use blake2_no_std::blake2b::blake2b;
 use crypto::blake2s::Blake2s;
 use log::*;
 use my_node_runtime::Hash;
@@ -29,27 +28,19 @@ use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
-use std::io::{Read, Write};
-use std::sgxfs::SgxFile;
-use std::vec::Vec;
-use std::slice;
-use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
-
-use sgx_types::{sgx_status_t};
-use my_node_runtime::Hash;
-use ofb::Ofb;
-use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
-
-use constants::{COUNTERSTATE, RSA3072_SEALED_KEY_FILE};
+use constants::{COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::fs::File;
 use std::io::{Read, Write};
-use std::sgxfs;
 use std::sgxfs::SgxFile;
 use std::vec::Vec;
 
-pub fn read_rsa_keypair(status: &mut sgx_status_t) -> Rsa3072KeyPair {
+use self::aes::Aes128;
+use self::ofb::Ofb;
+use self::ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
+
+type AesOfb = Ofb<Aes128>;
+
+pub fn read_rsa_keypair() -> SgxResult<Rsa3072KeyPair> {
 	let keyvec = read_file(RSA3072_SEALED_KEY_FILE)?;
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
 	let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
@@ -145,48 +136,65 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 
 // FIXME: think about how statevec should be handled in case no counter exist such that we
 // only need one read function. Maybe search and init COUNTERSTATE file upon enclave init?
-pub fn read_counterstate(mut state_vec: &mut Vec<u8>) -> sgx_status_t {
-	match File::open(filepath) {
-		Ok(mut f) => match f.read_to_end(&mut keyvec) {
-			Ok(len) => {
-				println!("[Enclave] Read {} bytes from cleartext file", len);
-				return sgx_status_t::SGX_SUCCESS;
-			}
-			Err(x) => {
-				println!("[Enclave] Read cleartext file failed {}", x);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED;
-			}
-		},
-		Err(x) => {
-			println!("[Enclave] cannot open cleartext file {}", x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
-	};
+pub fn read_counterfile() -> SgxResult<Vec<u8>> {
+	let mut buffer = read_plaintext(COUNTERSTATE)?;
+
+	let key = b"very secret key.";	// 16 bytes
+	let iv  = b"unique init vect";	// 16 bytes
+
+	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
+	println!("buffer decrypted = {:?}", buffer);
+
+	Ok(buffer)
 }
 
-/// write the encrypted counter state
-pub fn write_counterstate(bytes: &[u8]) -> sgx_status_t {
+pub fn write_counterfile(bytes: &[u8]) -> SgxResult<sgx_status_t> {
 	println!("data to be written: {:?}", bytes);
+	let key = b"very secret key.";	// 16 bytes
+	let iv  = b"unique init vect";	// 16 bytes
 
-	match sgxfs::write("./bin/sealed_counter_state2.bin", bytes) {
-		Err(x) => { error!("Failed to write sealed counter state 2"); },
-		_ => { println!("Sealed counter state 2 written"); }
-	}
+	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut bytes.to_vec());
+	println!("buffer encrypted = {:?}", bytes);
 
-	match File::create(COUNTERSTATE) {
-		Ok(mut f) => match f.write_all(bytes) {
-			Ok(()) => {
-				println!("[Enclave +] Writing cleartext file '{}' successful", filepath);
-				sgx_status_t::SGX_SUCCESS
+	write_plaintext(bytes, COUNTERSTATE)
+}
+
+pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
+	let mut state_vec: Vec<u8> = Vec::new();
+	match File::open(filepath) {
+		Ok(mut f) => match f.read_to_end(&mut state_vec) {
+			Ok(len) => {
+				info!("[Enclave] Read {} bytes from counter file", len);
+				Ok(state_vec)
 			}
 			Err(x) => {
-				println!("[Enclave -] Writing cleartext file '{}' failed! {}", filepath, x);
-				sgx_status_t::SGX_ERROR_UNEXPECTED
+				error!("[Enclave] Read counter file failed {}", x);
+				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 			}
 		},
 		Err(x) => {
-			println!("[Enclave !] Creating cleartext file '{}' error! {}", filepath, x);
-			sgx_status_t::SGX_ERROR_UNEXPECTED
+			error!("[Enclave] can't get counter file, initializing new Counter! {}", x);
+			state_vec.push(0);
+			Ok(state_vec)
+		}
+	}
+}
+
+pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
+	match File::create(filepath) {
+		Ok(mut f) => match f.write_all(bytes) {
+			Ok(()) => {
+				info!("[Enclave] Writing to file '{}' successful", filepath);
+				Ok(sgx_status_t::SGX_SUCCESS)
+			}
+			Err(x) => {
+				error!("[Enclave] Writing to '{}' failed! {}", filepath, x);
+				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			}
+		},
+		Err(x) => {
+			error!("[Enclave] Creating file '{}' error! {}", filepath, x);
+			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 	}
 }
@@ -221,3 +229,16 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	blake2_256_into(data, &mut r);
 	r
 }
+//
+//#[cfg(test)]
+//mod tests {
+//	use super::{write_counterfile, read_counterfile};
+//	#[test]
+//	fn counterstate_io_works() {
+//		let plaintext = b"The quick brown fox jumps over the lazy dog.";
+//
+//		write_counterfile(plaintext);
+//		let mut state = read_counterfile().unwrap();
+//		assert_eq!(state.to_vec(), plaintext.to_vec());
+//	}
+//}
