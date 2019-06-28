@@ -16,6 +16,9 @@
 */
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
+use aes::Aes128;
+use blake2_no_std::blake2b::blake2b;
+use crypto::blake2s::Blake2s;
 extern crate sgx_types;
 
 use crypto::blake2s::Blake2s;
@@ -36,32 +39,15 @@ use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
 
 use sgx_types::{sgx_status_t};
 use my_node_runtime::Hash;
-use crypto::blake2s::Blake2s;
-
-use blake2_no_std::blake2b::blake2b;
-
-use constants::{RSA3072_SEALED_KEY_FILE, COUNTERSTATE};
-
-use aes::Aes128;
 use ofb::Ofb;
 use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 
-extern "C" {
-	pub fn ocall_write_file(
-		ret_val            : *mut sgx_status_t,
-		p_content          : *const u8,
-		content_length     : u32,
-		p_filename         : *const u8,
-		filename_length    : u32) -> sgx_status_t;
-
-	pub fn ocall_read_file(
-		ret_val         : *mut sgx_status_t,
-		p_filename      : *const u8,
-		filename_len    : u32,
-		p_content       : *mut u8,
-		content_len     : u32,
-		return_len      : *mut u32) -> sgx_status_t;
-}
+use constants::{COUNTERSTATE, RSA3072_SEALED_KEY_FILE};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::sgxfs;
+use std::sgxfs::SgxFile;
+use std::vec::Vec;
 
 pub fn read_rsa_keypair(status: &mut sgx_status_t) -> Rsa3072KeyPair {
 	let keyvec = read_file(RSA3072_SEALED_KEY_FILE)?;
@@ -131,28 +117,9 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 	}
 }
 
-// FIXME: think about how statevec should be handled in case no counter exist such that we
-// only need one read function. Maybe search and init COUNTERSTATE file upon enclave init?
-pub fn read_counterstate(filepath: &str) -> SgxResult<Vec<u8>> {
-	let mut state_vec: Vec<u8> = Vec::new();
-	match SgxFile::open(filepath) {
-		Ok(mut f) => match f.read_to_end(&mut state_vec) {
-			Ok(len) => {
-				info!("[Enclave] Read {} bytes from counter file", len);
-				Ok(state_vec)
-			}
-			Err(x) => {
-				error!("[Enclave] Read counter file failed {}", x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			error!("[Enclave] Can't get counter state '{}'! {}", COUNTERSTATE, x);
-			state_vec.push(0);
-			Ok(state_vec)
-		}
-	}
-}
+/* EXAMPLE FOR ENCRYPTION/DECRYPTION
+	println!("--------------------------------------------------------------------");
+	println!("starting encryption");
 
 	// OFB mode implementation is generic over block ciphers
 	// we will create a type alias for convenience
@@ -176,34 +143,49 @@ pub fn read_counterstate(filepath: &str) -> SgxResult<Vec<u8>> {
 	println!("--------------------------------------------------------------------");
 */
 
-	let v = unsafe { slice::from_raw_parts(content_buf.as_ptr(), return_len as usize) };
-	*state_vec = v.to_vec();
-
-	result
+// FIXME: think about how statevec should be handled in case no counter exist such that we
+// only need one read function. Maybe search and init COUNTERSTATE file upon enclave init?
+pub fn read_counterstate(mut state_vec: &mut Vec<u8>) -> sgx_status_t {
+	match File::open(filepath) {
+		Ok(mut f) => match f.read_to_end(&mut keyvec) {
+			Ok(len) => {
+				println!("[Enclave] Read {} bytes from cleartext file", len);
+				return sgx_status_t::SGX_SUCCESS;
+			}
+			Err(x) => {
+				println!("[Enclave] Read cleartext file failed {}", x);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED;
+			}
+		},
+		Err(x) => {
+			println!("[Enclave] cannot open cleartext file {}", x);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
 }
 
-// write the encrypted counter state
+/// write the encrypted counter state
 pub fn write_counterstate(bytes: &[u8]) -> sgx_status_t {
 	println!("data to be written: {:?}", bytes);
 
 	match sgxfs::write("./bin/sealed_counter_state2.bin", bytes) {
 		Err(x) => { error!("Failed to write sealed counter state 2"); },
-		_      => { println!("Sealed counter state 2 written"); }
+		_ => { println!("Sealed counter state 2 written"); }
 	}
 
-	match SgxFile::create(COUNTERSTATE) {
+	match File::create(COUNTERSTATE) {
 		Ok(mut f) => match f.write_all(bytes) {
 			Ok(()) => {
-				info!("[Enclave] Writing counter state '{}' successful", COUNTERSTATE);
+				println!("[Enclave +] Writing cleartext file '{}' successful", filepath);
 				sgx_status_t::SGX_SUCCESS
 			}
 			Err(x) => {
-				error!("[Enclave] Writing counter state '{}' failed! {}", COUNTERSTATE, x);
+				println!("[Enclave -] Writing cleartext file '{}' failed! {}", filepath, x);
 				sgx_status_t::SGX_ERROR_UNEXPECTED
 			}
 		},
 		Err(x) => {
-			error!("[Enclave] Creating counter state '{}' error! {}", COUNTERSTATE, x);
+			println!("[Enclave !] Creating cleartext file '{}' error! {}", filepath, x);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	}

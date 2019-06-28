@@ -59,17 +59,6 @@ enclave {
 	};
 
 	untrusted {
-		sgx_status_t ocall_write_file(
-			[in, size = content_length] uint8_t * p_content, uint32_t content_length,
-			[in, size = filename_length] uint8_t * p_filename, uint32_t filename_length
-		);
-
-		sgx_status_t ocall_read_file(
-			[in, size = filename_len] uint8_t * p_filename, uint32_t filename_len,
-			[out, size=content_len] uint8_t *p_content, uint32_t content_len,
-			[out] uint32_t *return_len
-		);
-
 		sgx_status_t ocall_sgx_init_quote(
 			[out] sgx_target_info_t *ret_ti,
 			[out] sgx_epid_group_id_t *ret_gid
