@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
 extern crate aes;
 extern crate ofb;
 extern crate sgx_types;
@@ -28,7 +27,7 @@ use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use constants::{COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{AES_KEY_FILE_AND_INIT_V, COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
@@ -67,6 +66,22 @@ pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 	rand.fill_bytes(&mut seed);
 
 	write_file(&seed, ED25519_SEALED_KEY_FILE)
+}
+
+pub fn read_aes_key_and_iv() -> SgxResult<Vec<u8>> {
+	read_file(AES_KEY_FILE_AND_INIT_V)
+}
+
+pub fn create_sealed_aes_key_and_iv() -> SgxResult<sgx_status_t> {
+	let mut key_iv = [0u8; 32];
+
+	let mut rand = match StdRng::new() {
+		Ok(rng) => rng,
+		Err(_) => { return Err(sgx_status_t::SGX_ERROR_UNEXPECTED); },
+	};
+
+	rand.fill_bytes(&mut key_iv);
+	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
@@ -108,55 +123,23 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 	}
 }
 
-/* EXAMPLE FOR ENCRYPTION/DECRYPTION
-	println!("--------------------------------------------------------------------");
-	println!("starting encryption");
-
-	// OFB mode implementation is generic over block ciphers
-	// we will create a type alias for convenience
-	type AesOfb = Ofb<Aes128>;
-
-	let key = b"very secret key.";	// 16 bytes
-	let iv  = b"unique init vect";	// 16 bytes
-	let plaintext = b"The quick brown fox jumps over the lazy dog.";
-
-	let mut buffer = plaintext.to_vec();
-
-	// apply keystream (encrypt)
-	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
-	println!("buffer encrypted = {:?}", buffer);
-
-	// and decrypt it back
-	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
-	println!("buffer decrypted = {:?}", buffer);
-
-	println!("ending encryption");
-	println!("--------------------------------------------------------------------");
-*/
-
-// FIXME: think about how statevec should be handled in case no counter exist such that we
-// only need one read function. Maybe search and init COUNTERSTATE file upon enclave init?
 pub fn read_counterfile() -> SgxResult<Vec<u8>> {
 	let mut buffer = read_plaintext(COUNTERSTATE)?;
 
-	let key = b"very secret key.";	// 16 bytes
-	let iv  = b"unique init vect";	// 16 bytes
-
-	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut buffer);
+	let key_iv = read_aes_key_and_iv()?;
+	AesOfb::new_var(&key_iv[..16], &key_iv[16..]).unwrap().apply_keystream(&mut buffer);
 	println!("buffer decrypted = {:?}", buffer);
 
 	Ok(buffer)
 }
 
-pub fn write_counterfile(bytes: &[u8]) -> SgxResult<sgx_status_t> {
+pub fn write_counterfile(mut bytes: Vec<u8>) -> SgxResult<sgx_status_t> {
 	println!("data to be written: {:?}", bytes);
-	let key = b"very secret key.";	// 16 bytes
-	let iv  = b"unique init vect";	// 16 bytes
 
-	AesOfb::new_var(key, iv).unwrap().apply_keystream(&mut bytes.to_vec());
-	println!("buffer encrypted = {:?}", bytes);
+	let key_iv = read_aes_key_and_iv()?;
+	AesOfb::new_var(&key_iv[..16], &key_iv[16..]).unwrap().apply_keystream(&mut bytes);
 
-	write_plaintext(bytes, COUNTERSTATE)
+	write_plaintext(&bytes, COUNTERSTATE)
 }
 
 pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
@@ -229,16 +212,13 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	blake2_256_into(data, &mut r);
 	r
 }
-//
-//#[cfg(test)]
-//mod tests {
-//	use super::{write_counterfile, read_counterfile};
-//	#[test]
-//	fn counterstate_io_works() {
-//		let plaintext = b"The quick brown fox jumps over the lazy dog.";
-//
-//		write_counterfile(plaintext);
-//		let mut state = read_counterfile().unwrap();
-//		assert_eq!(state.to_vec(), plaintext.to_vec());
-//	}
-//}
+
+pub fn test_counterstate_io_works() {
+	let plaintext = b"The quick brown fox jumps over the lazy dog.";
+	create_sealed_aes_key_and_iv();
+
+	write_counterfile(plaintext.to_vec());
+	let mut state: Vec<u8> = read_counterfile().unwrap();
+	assert_eq!(state, plaintext.to_vec());
+}
+

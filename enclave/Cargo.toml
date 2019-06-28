@@ -21,6 +21,7 @@ sgx_tcrypto   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" 
 rust-crypto   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tunittest = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
 aes               = { version = "0.3.2" }

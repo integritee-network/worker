@@ -55,6 +55,8 @@ extern crate sgx_tseal;
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+#[macro_use]
+extern crate sgx_tunittest;
 extern crate sgx_types;
 extern crate sgxwasm;
 extern crate untrusted;
@@ -74,9 +76,10 @@ use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
-use sgx_types::{sgx_sha256_hash_t, sgx_status_t};
+use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use sgx_tunittest::*;
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -285,7 +288,7 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let c = helper.encode(value).unwrap();
-	utils::write_file(&c, COUNTERSTATE)
+	utils::write_counterfile(c)
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
@@ -330,3 +333,9 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	)
 }
 
+#[no_mangle]
+pub extern "C" fn test_main_entrance() -> size_t {
+	rsgx_unit_tests!(
+		utils::test_counterstate_io_works,
+		)
+}

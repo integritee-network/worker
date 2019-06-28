@@ -17,33 +17,50 @@
 
 #[macro_use]
 extern crate clap;
-use clap::App;
-
-extern crate sgx_types;
-extern crate sgx_urts;
-extern crate sgx_crypto_helper;
-
-extern crate my_node_runtime;
-extern crate substrate_api_client;
-extern crate parity_codec;
-extern crate substrate_keyring;
-extern crate node_primitives;
-extern crate primitive_types;
-extern crate primitives;
-extern crate system;
-extern crate rust_base58;
-extern crate ws;
 extern crate env_logger;
 extern crate log;
-extern crate wabt;
-
+extern crate my_node_runtime;
+extern crate nan_preserving_float;
+extern crate node_primitives;
+extern crate parity_codec;
+extern crate primitive_types;
+extern crate primitives;
+extern crate rust_base58;
 extern crate serde;
-extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-extern crate nan_preserving_float;
-
+extern crate serde_json;
+extern crate sgx_crypto_helper;
+extern crate sgx_types;
 extern crate sgx_ucrypto as crypto;
+extern crate sgx_urts;
+extern crate substrate_api_client;
+extern crate substrate_keyring;
+extern crate system;
+extern crate wabt;
+extern crate ws;
+
+use clap::App;
+use constants::*;
+use enclave_api::{perform_ra, test_main_entrance};
+use enclave_wrappers::*;
+use init_enclave::init_enclave;
+use log::*;
+use my_node_runtime::{Event, Hash};
+use my_node_runtime::UncheckedExtrinsic;
+use parity_codec::Decode;
+use parity_codec::Encode;
+use primitive_types::U256;
+use sgx_types::*;
+use std::fs;
+use std::str;
+use std::sync::mpsc::channel;
+use std::thread;
+use substrate_api_client::{Api, hexstr_to_vec};
+use utils::check_files;
+use wasm::sgx_enclave_wasm_init;
+use ws_server::start_ws_server;
+
 
 mod utils;
 mod constants;
@@ -53,31 +70,6 @@ mod ws_server;
 mod enclave_wrappers;
 mod wasm;
 mod attestation_ocalls;
-
-use log::*;
-use std::fs;
-use std::str;
-use sgx_types::*;
-use init_enclave::init_enclave;
-use enclave_wrappers::*;
-use ws_server::start_ws_server;
-
-use substrate_api_client::{Api, hexstr_to_vec};
-use my_node_runtime::{Event, Hash};
-
-use parity_codec::Decode;
-use std::sync::mpsc::channel;
-
-use std::thread;
-
-use wasm::{sgx_enclave_wasm_init};
-use utils::check_files;
-
-use constants::*;
-use enclave_api::perform_ra;
-use primitive_types::U256;
-use parity_codec::Encode;
-use my_node_runtime::{UncheckedExtrinsic};
 
 fn main() {
 	// Setup logging
@@ -98,6 +90,9 @@ fn main() {
 	} else if matches.is_present("getsignkey") {
 		println!("*** Get the signing key from the TEE\n");
 		get_signing_key_tee();
+	} else if matches.is_present("test_enclave") {
+		println!("*** Running Enclave unit tests\n");
+		run_enclave_unit_tests();
 	} else {
 		println!("For options: use --help");
 	}
@@ -286,4 +281,40 @@ fn worker(port: &str) {
 			None => error!("Couldn't decode event record list")
 		}
 	}
+}
+
+fn run_enclave_unit_tests() {
+	// ------------------------------------------------------------------------
+	// initialize the enclave
+	println!("*** Starting enclave");
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
+			r
+		},
+		Err(x) => {
+			error!("[-] Init Enclave Failed {}!\n", x);
+			return;
+		},
+	};
+
+	let mut retval = 0usize;
+
+	let result = unsafe {
+		test_main_entrance(enclave.geteid(),
+						   &mut retval)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			println!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}
+
+	assert_eq!(retval, 0);
+	println!("[+] unit_test ended!");
+
+	enclave.destroy();
 }

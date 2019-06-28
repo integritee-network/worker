@@ -69,4 +69,9 @@ extern {
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;
+
+	pub fn test_main_entrance(
+		eid: sgx_enclave_id_t,
+		retval: *mut size_t
+	) -> sgx_status_t;
 }
