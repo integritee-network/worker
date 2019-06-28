@@ -21,91 +21,70 @@
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-extern crate sgx_types;
-extern crate sgx_tseal;
+extern crate base64;
+extern crate bit_vec;
+extern crate blake2_no_std;
+extern crate chrono;
+extern crate crypto;
+extern crate env_logger;
+extern crate httparse;
+extern crate itertools;
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
+extern crate my_node_runtime;
+extern crate num_bigint;
+extern crate parity_codec;
+extern crate primitive_types;
+extern crate primitives;
+extern crate runtime_primitives;
+extern crate rust_base58;
+extern crate rustls;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+extern crate sgx_crypto_helper;
+extern crate sgx_rand;
+extern crate sgx_serialize;
+#[macro_use]
+extern crate sgx_serialize_derive;
 extern crate sgx_tcrypto;
 extern crate sgx_trts;
 extern crate sgx_tse;
-
-
+extern crate sgx_tseal;
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-extern crate sgx_rand;
-
-extern crate crypto;
-extern crate rust_base58;
-extern crate serde_json;
-extern crate sgx_crypto_helper;
-
-extern crate sgx_serialize;
+extern crate sgx_types;
 extern crate sgxwasm;
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-
 extern crate untrusted;
-extern crate rustls;
-extern crate webpki;
-extern crate itertools;
-extern crate base64;
-extern crate httparse;
-extern crate yasna;
-extern crate bit_vec;
-extern crate num_bigint;
-extern crate chrono;
-extern crate webpki_roots;
-extern crate blake2_no_std;
-
-extern crate primitives;
-use primitives::{ed25519};
-
 extern crate wasmi;
-use wasmi::{ModuleInstance, ImportsBuilder, RuntimeValue, Module, NopExternals};
+extern crate webpki;
+extern crate webpki_roots;
+extern crate yasna;
 
-extern crate my_node_runtime;
-use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	Hash,
-	SubstraTEEProxyCall
-};
 
-extern crate runtime_primitives;
-use runtime_primitives::generic::Era;
-
-extern crate parity_codec;
-use parity_codec::{Decode, Encode, Compact};
-
-extern crate primitive_types;
+use crypto::ed25519::{keypair, signature};
+use my_node_runtime::{Call, Hash, SubstraTEEProxyCall, UncheckedExtrinsic};
+use parity_codec::{Compact, Decode, Encode};
 use primitive_types::U256;
+use primitives::ed25519;
+use runtime_primitives::generic::Era;
+use rust_base58::ToBase58;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto_helper::RsaKeyPair;
+use sgx_serialize::{DeSerializeHelper, SerializeHelper};
+use sgx_types::{sgx_sha256_hash_t, sgx_status_t};
 
-use sgx_types::{sgx_status_t, sgx_sha256_hash_t};
-use sgx_rand::{Rng, StdRng};
-use sgx_serialize::{SerializeHelper, DeSerializeHelper};
-
-#[macro_use]
-extern crate sgx_serialize_derive;
-
-#[macro_use]
-extern crate serde_derive;
-
+use constants::{COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
-use std::vec::Vec;
-use std::collections::HashMap;
 use std::string::ToString;
-
-use crypto::ed25519::{keypair, signature};
-use rust_base58::{ToBase58};
-use sgx_crypto_helper::RsaKeyPair;
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair};
+use std::vec::Vec;
 
 mod constants;
-use constants::{RSA3072_SEALED_KEY_FILE, ED25519_SEALED_KEY_FILE, COUNTERSTATE};
-
 mod utils;
 mod wasm;
 mod attestation;
@@ -121,20 +100,17 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size:
 	// initialize the logging environment in the enclave
 	env_logger::init();
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
 	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
 		info!("[Enclave] Keyfile not found, creating new! {}", x);
-		retval = create_sealed_rsa3072_keypair();
+		if let Err(status) = create_sealed_rsa3072_keypair() {
+			return status
+		}
 	}
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		// detailed error msgs are already printed in utils::write file
-		return retval;
-	}
-
-	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
-	let rsa_pubkey = rsa_keypair.export_pubkey().unwrap();
-	// println!("rsa_pubkey = {:?}", rsa_pubkey);
+	let rsa_pubkey = match utils::read_rsa_pubkey() {
+		Ok(key) => key,
+		Err(status) => return status,
+	};
 
 	let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
 		Ok(k) => k,
@@ -155,7 +131,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size:
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_sealed_rsa3072_keypair() -> sgx_status_t {
+fn create_sealed_rsa3072_keypair() -> Result<sgx_status_t, sgx_status_t> {
 	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
 	let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
 	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
@@ -168,22 +144,21 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 	// initialize the logging environment in the enclave
 	env_logger::init();
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-
 	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
 		Ok(_k) => (),
 		Err(x) => {
 			info!("[Enclave] Keyfile not found, creating new! {}", x);
-			retval = create_sealed_ed25519_seed();
+			if let Err(status) = utils::create_sealed_ed25519_seed() {
+				return status;
+			}
 		},
 	}
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		// detailed error msgs are already printed in utils::write file
-		return retval;
-	}
+	let _seed = match utils::get_ecc_seed() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
 
-	let _seed = _get_ecc_seed_file(&mut retval);
 	let (_privkey, _pubkey) = keypair(&_seed);
 	info!("[Enclave] Restored ECC pubkey: {:?}", _pubkey.to_base58());
 
@@ -193,152 +168,82 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 	sgx_status_t::SGX_SUCCESS
 }
 
-pub fn _get_ecc_seed_file(status: &mut sgx_status_t) -> (Vec<u8>) {
-	let mut seed_vec: Vec<u8> = Vec::new();
-	*status = utils::read_file(&mut seed_vec, ED25519_SEALED_KEY_FILE);
-	seed_vec
-}
-
-fn create_sealed_ed25519_seed() -> sgx_status_t {
-	let mut seed = [0u8; 32];
-	let mut rand = match StdRng::new() {
-		Ok(rng) => rng,
-		Err(_) => { return sgx_status_t::SGX_ERROR_UNEXPECTED; },
-	};
-	rand.fill_bytes(&mut seed);
-
-	utils::write_file(&seed, ED25519_SEALED_KEY_FILE)
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn call_counter_wasm(
-						req_bin : *const u8,
-						req_length: usize,
-						ciphertext: * mut u8,
-						ciphertext_size: u32,
-						hash: * const u8,
-						hash_size: u32,
-						nonce: * const u8,
-						nonce_size: u32,
-						wasm_hash: *const u8,
-						wasm_hash_size: u32,
-						unchecked_extrinsic: * mut u8,
-						unchecked_extrinsic_size: u32
-					) -> sgx_status_t {
+	req_bin: *const u8,
+	req_length: usize,
+	ciphertext: *mut u8,
+	ciphertext_size: u32,
+	hash: *const u8,
+	hash_size: u32,
+	nonce: *const u8,
+	nonce_size: u32,
+	wasm_hash: *const u8,
+	wasm_hash_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32
+) -> sgx_status_t {
 
-	#[derive(Debug, Serialize, Deserialize)]
-	struct Message {
-		account: String,
-		amount: u32,
-		sha256: sgx_sha256_hash_t
-	}
 
 	let ciphertext_slice = slice::from_raw_parts(ciphertext, ciphertext_size as usize);
 	let hash_slice       = slice::from_raw_parts(hash, hash_size as usize);
 	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-
 	debug!("[Enclave] Read RSA keypair");
-	// FIXME: This will panic if no key file is found
-	let rsa_keypair = utils::read_rsa_keypair(&mut retval);
-	debug!("[Enclave] Read RSA keypair done");
+	let rsa_keypair = match utils::read_rsa_keypair() {
+		Ok(pair) => pair,
+		Err(status) => return status,
+	};
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		return retval;
-	}
+	debug!("[Enclave] Read RSA keypair done");
 
 	// decode the payload
 	println!("    [Enclave] Decode the payload");
 	let plaintext_vec = utils::decode_payload(&ciphertext_slice, &rsa_keypair);
 	let plaintext_string = String::from_utf8(plaintext_vec.clone()).unwrap();
-	let message: Message = serde_json::from_str(&plaintext_string).unwrap();
+	let msg: Message = serde_json::from_str(&plaintext_string).unwrap();
 
-	// get the elements
-	let account = message.account;
-	let increment = message.amount;
-	let sha256 = message.sha256;
 	println!("    [Enclave] Message decoded:");
-	println!("    [Enclave]   account   = {}", account);
-	println!("    [Enclave]   increment = {}", increment);
-	println!("    [Enclave]   sha256    = {:?}", sha256);
+	println!("    [Enclave]   account   = {}", msg.account);
+	println!("    [Enclave]   increment = {}", msg.amount);
+	println!("    [Enclave]   sha256    = {:?}", msg.sha256);
 
 	// get the calculated SHA256 hash
 	let wasm_hash_slice = slice::from_raw_parts(wasm_hash, wasm_hash_size as usize);
 	let wasm_hash_calculated: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
 
-	// compare the hashes and return error if not matching
-	if wasm_hash_calculated != sha256 {
-		println!("    [Enclave] SHA256 of WASM code not matching");
-		println!("    [Enclave]   Wanted by client    : {:?}", sha256);
-		println!("    [Enclave]   Calculated by worker: {:?}", wasm_hash_calculated);
-		println!("    [Enclave] Returning ERROR_UNEXPECTED and not updating STF");
-		return sgx_status_t::SGX_ERROR_UNEXPECTED;
-	}
-	else {
-		println!("    [Enclave] SHA256 of WASM code identical");
+	if let Err(status) = wasm::compare_hashes(wasm_hash_calculated, msg.sha256) {
+		return status;
 	}
 
-	// read the counter state
-	let mut state_vec: Vec<u8> = Vec::new();
-	retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
-	debug!("    [Enclave] Counterstate read");
+	let state = match utils::read_counterstate(COUNTERSTATE) {
+		Ok(state) => state,
+		Err(status) => return status,
+	};
 
-	if retval != sgx_status_t::SGX_SUCCESS {
-		error!("    [Enclave] Failed to read file '{}'", COUNTERSTATE);
-		return retval;
-	}
-
-	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let helper = DeSerializeHelper::<AllCounts>::new(state);
 	let mut counter = helper.decode().unwrap();
 
 	// get the current counter value of the account or initialize with 0
-	let counter_value_old: u32 = *counter.entries.entry(account.to_string()).or_insert(0);
-	info!("    [Enclave] Current counter state of '{}' = {}", account, counter_value_old);
+	let counter_value_old: u32 = *counter.entries.entry(msg.account.to_string()).or_insert(0);
+	info!("    [Enclave] Current counter state of '{}' = {}", msg.account, counter_value_old);
 
 	println!("    [Enclave] Executing WASM code");
 	let req_slice = slice::from_raw_parts(req_bin, req_length);
 	let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
 
-	match action_req {
-		sgxwasm::SgxWasmAction::Call { module, function } => {
-			let _module = Module::from_buffer(module.unwrap()).unwrap();
-			let instance =
-				ModuleInstance::new(
-					&_module,
-					&ImportsBuilder::default()
-				)
-				.expect("failed to instantiate wasm module")
-				.assert_no_start();
-
-			let args = vec![RuntimeValue::I32(counter_value_old as i32),
-							RuntimeValue::I32(increment as i32)
-						   ];
-			debug!("    [Enclave] Calling WASM with arguments = {:?}", args);
-
-			let r = instance.invoke_export(&function, &args, &mut NopExternals);
-			debug!("    [Enclave] invoke_export successful. r = {:?}", r);
-
-			match r {
-				Ok(Some(RuntimeValue::I32(v))) => {
-					info!("    [Enclave] New value of '{}': {}", account, v);
-					counter.entries.insert(account.to_string(), v as u32);
-					println!("    [Enclave] WASM executed and counter updated");
-				},
-				_ => {
-					error!("    [Enclave] Could not decode result");
-				}
-			};
-		},
-		// _ => {
-		// 	error!("    [Enclave] Unsupported action");
-		// },
+	if let Err(status) = wasm::invoke_wasm_action(action_req, msg, &mut counter) {
+		return status;
 	}
 
+
 	// get information for composing the extrinsic
+	let _seed = match utils::get_ecc_seed() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
-	let _seed = _get_ecc_seed_file(&mut retval);
 	let genesis_hash = utils::hash_from_slice(hash_slice);
 	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
@@ -349,41 +254,46 @@ pub unsafe extern "C" fn call_counter_wasm(
 	extrinsic_slice.clone_from_slice(&encoded);
 
 	// write the counter state
-	retval = write_counter_state(counter);
+	if let Err(status) = write_counter_state(counter) {
+		return status;
+	}
 
-	retval
+	sgx_status_t::SGX_SUCCESS
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
-	let mut state_vec: Vec<u8> = Vec::new();
-
 	let account_slice = slice::from_raw_parts(account, account_size as usize);
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let retval = utils::read_counterstate(&mut state_vec, COUNTERSTATE);
-
-	if retval != sgx_status_t::SGX_SUCCESS {
-		return retval;
-	}
+	let state_vec = match utils::read_counterstate(COUNTERSTATE) {
+		Ok(state) => state,
+		Err(status) => return status,
+	};
 
 	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
 	let mut counter = helper.decode().unwrap();
 	let ref_mut = &mut *value;
 	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
-
-	retval
+	sgx_status_t::SGX_SUCCESS
 }
 
-fn write_counter_state(value: AllCounts) -> sgx_status_t {
+fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let c = helper.encode(value).unwrap();
-	utils::write_file( &c, COUNTERSTATE)
+	utils::write_file(&c, COUNTERSTATE)
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
-struct AllCounts {
+pub struct AllCounts {
 	entries: HashMap<String, u32>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Message {
+	account: String,
+	amount: u32,
+	sha256: sgx_sha256_hash_t
 }
 
 pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
@@ -415,3 +325,4 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 		era,
 	)
 }
+

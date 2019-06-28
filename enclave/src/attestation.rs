@@ -48,7 +48,7 @@ use runtime_primitives::generic::Era;
 use primitive_types::U256;
 use parity_codec::{Decode, Encode, Compact};
 use utils::{hash_from_slice};
-use _get_ecc_seed_file;
+use utils::get_ecc_seed;
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
@@ -613,8 +613,10 @@ pub unsafe extern "C" fn perform_ra(
 	let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
 	let extrinsic_slice     = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let seed = _get_ecc_seed_file(&mut retval);
+	let seed = match get_ecc_seed() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let era = Era::immortal();
