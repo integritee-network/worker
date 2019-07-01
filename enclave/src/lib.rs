@@ -55,6 +55,8 @@ extern crate sgx_tseal;
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+#[macro_use]
+extern crate sgx_tunittest;
 extern crate sgx_types;
 extern crate sgxwasm;
 extern crate untrusted;
@@ -74,9 +76,10 @@ use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
-use sgx_types::{sgx_sha256_hash_t, sgx_status_t};
+use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use sgx_tunittest::*;
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -217,7 +220,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status;
 	}
 
-	let state = match utils::read_counterstate(COUNTERSTATE) {
+	let state = match utils::read_state_from_file() {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -249,9 +252,13 @@ pub unsafe extern "C" fn call_counter_wasm(
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
 	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
-
 	let encoded = ex.encode();
-	extrinsic_slice.clone_from_slice(&encoded);
+
+	// split the extrinsic_slice at the length of the encoded extrinsic
+	// and fill the right side with whitespace
+	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
+	left.clone_from_slice(&encoded);
+	right.iter_mut().for_each(|x| *x = 0x20);
 
 	// write the counter state
 	if let Err(status) = write_counter_state(counter) {
@@ -266,12 +273,12 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	let account_slice = slice::from_raw_parts(account, account_size as usize);
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let state_vec = match utils::read_counterstate(COUNTERSTATE) {
+	let state = match utils::read_state_from_file() {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let helper = DeSerializeHelper::<AllCounts>::new(state);
 	let mut counter = helper.decode().unwrap();
 	let ref_mut = &mut *value;
 	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
@@ -281,7 +288,7 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let c = helper.encode(value).unwrap();
-	utils::write_file(&c, COUNTERSTATE)
+	utils::write_state_to_file(c)
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
@@ -326,3 +333,9 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	)
 }
 
+#[no_mangle]
+pub extern "C" fn test_main_entrance() -> size_t {
+	rsgx_unit_tests!(
+		utils::test_encrypted_state_io_works,
+		)
+}

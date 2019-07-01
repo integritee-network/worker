@@ -31,15 +31,15 @@ pub fn check_files() -> u8 {
 	missing_files += file_missing(RA_CERT);
 	missing_files += file_missing(RA_KEY);
 
-	return missing_files;
+	missing_files
 }
 
 fn file_missing(path: &str) -> u8 {
 	if Path::new(path).exists() {
 		debug!("File '{}' found", path);
-		return 0;
+		0
 	} else {
 		error!("File '{}' not found", path);
-		return 1;
+		1
 	}
 }

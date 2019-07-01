@@ -12,7 +12,7 @@ default = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tse       = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tstd      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", features = ["net","backtrace"] }
+sgx_tstd      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", features = ["untrusted_fs","net","backtrace"] }
 sgx_rand      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_trts      = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_types     = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
@@ -21,8 +21,11 @@ sgx_tcrypto   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" 
 rust-crypto   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 rust-base58   = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_serialize = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tunittest = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
+aes               = { version = "0.3.2" }
+ofb               = { version = "0.1.1" }
 parity-codec      = { version = "3.0", default-features = false }
 primitive-types   = { version = "0.2", default-features = false, features = ["codec"] }
 sgx_crypto_helper = { git = "https://github.com/mesalock-linux/sgx_tcrypto_helper", package = "sgx_tcrypto_helper" }
