@@ -27,7 +27,7 @@ use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use constants::{AES_KEY_FILE_AND_INIT_V, COUNTERSTATE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{AES_KEY_FILE_AND_INIT_V, ENCRYPTED_STATE_FILE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
@@ -123,8 +123,14 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 	}
 }
 
-pub fn read_counterfile() -> SgxResult<Vec<u8>> {
-	let mut buffer = read_plaintext(COUNTERSTATE)?;
+pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
+	let mut buffer = match read_plaintext(ENCRYPTED_STATE_FILE) {
+		Ok(vec) => match vec.len() {
+			0 => return Ok(vec),
+			_ => vec,
+		},
+		Err(e) => return Err(e),
+	};
 
 	let key_iv = read_aes_key_and_iv()?;
 	AesOfb::new_var(&key_iv[..16], &key_iv[16..]).unwrap().apply_keystream(&mut buffer);
@@ -133,13 +139,13 @@ pub fn read_counterfile() -> SgxResult<Vec<u8>> {
 	Ok(buffer)
 }
 
-pub fn write_counterfile(mut bytes: Vec<u8>) -> SgxResult<sgx_status_t> {
+pub fn write_state_to_file(mut bytes: Vec<u8>) -> SgxResult<sgx_status_t> {
 	println!("data to be written: {:?}", bytes);
 
 	let key_iv = read_aes_key_and_iv()?;
 	AesOfb::new_var(&key_iv[..16], &key_iv[16..]).unwrap().apply_keystream(&mut bytes);
 
-	write_plaintext(&bytes, COUNTERSTATE)
+	write_plaintext(&bytes, ENCRYPTED_STATE_FILE)
 }
 
 pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
@@ -151,13 +157,12 @@ pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
 				Ok(state_vec)
 			}
 			Err(x) => {
-				error!("[Enclave] Read counter file failed {}", x);
+				error!("[Enclave] Read encrypted state file failed {}", x);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 			}
 		},
 		Err(x) => {
-			error!("[Enclave] can't get counter file, initializing new Counter! {}", x);
-			state_vec.push(0);
+			info!("[Enclave] no encrypted state file found! {}", x);
 			Ok(state_vec)
 		}
 	}
@@ -213,12 +218,12 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	r
 }
 
-pub fn test_counterstate_io_works() {
+pub fn test_encrypted_state_io_works() {
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";
-	create_sealed_aes_key_and_iv();
+	create_sealed_aes_key_and_iv().unwrap();
 
-	write_counterfile(plaintext.to_vec());
-	let mut state: Vec<u8> = read_counterfile().unwrap();
+	write_state_to_file(plaintext.to_vec()).unwrap();
+	let state: Vec<u8> = read_state_from_file().unwrap();
 	assert_eq!(state, plaintext.to_vec());
 }
 

@@ -220,7 +220,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status;
 	}
 
-	let state = match utils::read_counterfile() {
+	let state = match utils::read_state_from_file() {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -273,12 +273,12 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	let account_slice = slice::from_raw_parts(account, account_size as usize);
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let state_vec = match utils::read_counterfile() {
+	let state = match utils::read_state_from_file() {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let helper = DeSerializeHelper::<AllCounts>::new(state_vec);
+	let helper = DeSerializeHelper::<AllCounts>::new(state);
 	let mut counter = helper.decode().unwrap();
 	let ref_mut = &mut *value;
 	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
@@ -288,7 +288,7 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let c = helper.encode(value).unwrap();
-	utils::write_counterfile(c)
+	utils::write_state_to_file(c)
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
@@ -336,6 +336,6 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
-		utils::test_counterstate_io_works,
+		utils::test_encrypted_state_io_works,
 		)
 }
