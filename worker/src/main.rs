@@ -151,6 +151,7 @@ fn worker(port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
+	let url = format!("ws://127.0.0.1:{}", port);
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
@@ -185,6 +186,8 @@ fn worker(port: &str) {
 			genesis_hash.len() as u32,
 			nonce_bytes.as_ptr(),
 			nonce_bytes.len() as u32,
+			url.as_ptr(),
+			url.len() as u32,
 			unchecked_extrinsic.as_mut_ptr(),
 			unchecked_extrinsic_size as u32
 		)

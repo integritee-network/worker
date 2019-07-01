@@ -66,6 +66,8 @@ extern {
 		genesis_hash_size: u32,
 		nonce: *const u8,
 		nonce_size: u32,
+		url: *const u8,
+		url_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;
