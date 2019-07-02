@@ -67,6 +67,19 @@ fn main() {
 		return;
 	}
 
+	let port = matches.value_of("port").unwrap_or("9944");
+	let server = matches.value_of("server").unwrap_or("127.0.0.1");
+	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
+	api.init();
+
+	if let Some(_matches) = matches.subcommand_matches("get_worker_info") {
+		println!("*** Getting the amount of the registered workers");
+		get_worker_amount(&api);
+		println!("*** Getting the Info of the first worker from the substraTEE-node");
+		get_worker_info(&api, 0);
+		return;
+	}
+
 	// check integrity of sha256 of WASM
 	let sha256input = hex::decode(matches.value_of("sha256wasm").unwrap()).unwrap();
 
@@ -78,11 +91,6 @@ fn main() {
 
 	// convert to [u8; 32]
 	let sha256: sgx_sha256_hash_t = from_slice(&sha256input);
-
-	let port = matches.value_of("port").unwrap_or("9944");
-	let server = matches.value_of("server").unwrap_or("127.0.0.1");
-	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
-	api.init();
 
 	// get Alice's free balance
 	get_free_balance(&api, "//Alice");

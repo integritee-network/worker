@@ -35,3 +35,7 @@ subcommands:
     - getcounter:
         about: Get the counter from the substraTEE-worker
         version: "0.1"
+    - get_worker_info:
+        about: Ask the SubstraTEE-node for the worker's url
+        version: "0.1"
+
