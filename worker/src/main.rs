@@ -61,7 +61,6 @@ use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 
-
 mod utils;
 mod constants;
 mod enclave_api;
@@ -252,7 +251,8 @@ fn worker(port: &str) {
 								_ => {
 									info!("Ignoring unsupported balances event");
 								},
-							}},
+							}
+						},
 						Event::substratee_proxy(pe) => {
 							println!("[+] Received substratee_proxy event");
 							debug!("{:?}", pe);
@@ -273,7 +273,22 @@ fn worker(port: &str) {
 									println!();
 								},
 							}
-						}
+						},
+						Event::substratee_registry(re) => {
+							println!("[+] Received substratee_registry event");
+							debug!("{:?}", re);
+							match &re {
+								my_node_runtime::substratee_registry::RawEvent::AddedEnclave(sender, worker_url) => {
+									println!("[+] Received AddedEnclave event");
+									println!("    Sender (Worker):  {:?}", sender);
+									println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
+									println!();
+								},
+								_ => {
+									info!("Ignoring unsupported substratee_registry event");
+								},
+							}
+						},
 						_ => {
 							debug!("event = {:?}", evr);
 							info!("Ignoring event\n");
