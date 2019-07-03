@@ -28,6 +28,7 @@ use log::*;
 
 use parity_codec::{Encode};
 use substrate_api_client::{Api};
+use substratee_node_calls::{get_worker_amount, get_worker_info};
 
 use primitive_types::U256;
 use blake2_rfc::blake2s::{blake2s};
