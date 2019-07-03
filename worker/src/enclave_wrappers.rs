@@ -16,7 +16,7 @@
 */
 
 use std::str;
-use std::fs;
+use std::fs::{self, File};
 use log::*;
 use sgx_types::*;
 use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
@@ -36,7 +36,7 @@ use wasm::SgxWasmAction;
 use crypto::*;
 
 // function to get the account nonce of a user
-pub fn get_account_nonce(api: &substrate_api_client::Api, user: [u8; 32]) -> U256 {
+pub fn get_account_nonce(api: &Api, user: [u8; 32]) -> U256 {
 	info!("[>] Get account nonce");
 
 	let accountid = ed25519::Public::from_raw(user);
@@ -61,7 +61,7 @@ pub fn process_forwarded_payload(
 	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(vec![0; 32])));
 
 	// decrypt and process the payload. we will get an extrinsic back
-	let result = decryt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);
+	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);
 
 	match result {
 		sgx_status_t::SGX_SUCCESS => {
@@ -81,7 +81,7 @@ pub fn process_forwarded_payload(
 	}
 }
 
-pub fn decryt_and_process_payload(
+pub fn decrypt_and_process_payload(
 		eid: sgx_enclave_id_t,
 		mut ciphertext: Vec<u8>,
 		ue: &mut UncheckedExtrinsic,
@@ -248,14 +248,14 @@ pub fn get_public_key_tee()
 		}
 	}
 
-	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(&pubkey[..]).unwrap();
 	println!("[+] {:?}", rsa_pubkey);
 
 	println!();
 	println!("*** Write the RSA3072 public key to a file");
 
-	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
-	match fs::write(RSA_PUB_KEY, rsa_pubkey_json) {
+	let file = File::create(RSA_PUB_KEY).unwrap();
+	match serde_json::to_writer(file, &rsa_pubkey) {
 		Err(x) => { error!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
 		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}

@@ -29,24 +29,24 @@
 extern crate sgx_types;
 extern crate sgx_urts;
 
-use std::fs;
-use log::*;
+use std::{fs::File, path::PathBuf};
 use std::io::{Read, Write};
-use std::path;
+use log::*;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
 use constants::{ENCLAVE_TOKEN, ENCLAVE_FILE};
 
 pub fn init_enclave() -> SgxResult<SgxEnclave> {
-    let mut launch_token: sgx_launch_token_t = [0; 1024];
-    let mut launch_token_updated: i32 = 0;
+    const LEN: usize = 1024;
+    let mut launch_token = [0; LEN];
+    let mut launch_token_updated = 0;
 
     // Step 1: try to retrieve the launch token saved by last transaction
     //         if there is no token, then create a new one.
     //
     // try to get the token saved in $HOME */
-    let mut home_dir = path::PathBuf::new();
+    let mut home_dir = PathBuf::new();
     let use_token = match dirs::home_dir() {
         Some(path) => {
             info!("[+] Home dir is {}", path.display());
@@ -58,9 +58,9 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
             false
         }
     };
-    let token_file: path::PathBuf = home_dir.join(ENCLAVE_TOKEN);;
+    let token_file = home_dir.join(ENCLAVE_TOKEN);;
     if use_token {
-        match fs::File::open(&token_file) {
+        match File::open(&token_file) {
             Err(_) => {
                 info!(
                     "[-] Token file {} not found! Will create one.",
@@ -70,7 +70,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
             Ok(mut f) => {
                 info!("[+] Open token file success! ");
                 match f.read(&mut launch_token) {
-                    Ok(1024) => {
+                    Ok(LEN) => {
                         info!("[+] Token file valid!");
                     }
                     _ => info!("[+] Token file invalid, will create new token file"),
@@ -97,7 +97,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
     // Step 3: save the launch token if it is updated
     if use_token && launch_token_updated != 0 {
         // reopen the file with write capablity
-        match fs::File::create(&token_file) {
+        match File::create(&token_file) {
             Ok(mut f) => match f.write_all(&launch_token) {
                 Ok(()) => info!("[+] Saved updated launch token!"),
                 Err(_) => error!("[-] Failed to save updated launch token!"),

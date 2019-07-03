@@ -93,6 +93,7 @@ fn main() {
 	// convert to [u8; 32]
 	let sha256: sgx_sha256_hash_t = from_slice(&sha256input);
 
+
 	// get Alice's free balance
 	get_free_balance(&api, "//Alice");
 

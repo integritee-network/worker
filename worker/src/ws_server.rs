@@ -69,7 +69,7 @@ fn handle_get_counter_msg(eid: sgx_enclave_id_t, msg: Message) -> Message {
 	let result = unsafe {
 		get_counter(eid,
 					&mut retval,
-					account.to_vec().as_ptr(),
+					account.as_ptr(),
 					account.len() as u32,
 					&mut value)
 	};

@@ -26,7 +26,7 @@ use ws::{connect, CloseCode, Message};
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use substrate_api_client::{hexstr_to_u256, hexstr_to_vec};
+use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
@@ -43,41 +43,38 @@ use primitives::{
 	blake2_256,
 };
 
-pub static RSA_PUB_KEY: &'static str = "./bin/rsa_pubkey.txt";
-pub static ECC_PUB_KEY: &'static str = "./bin/ecc_pubkey.txt";
+pub static RSA_PUB_KEY: &str = "./bin/rsa_pubkey.txt";
+pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
 }
 
-// function to get the free balance of a user
-pub fn get_free_balance(api: &substrate_api_client::Api, user: &str) {
-	println!("[>] Get {}'s free balance", user);
+pub fn user_to_pubkey(user: &str) -> ed25519::Public {
+	ed25519::Public::from_string(user).ok()
+	.or_else(|| ed25519::Pair::from_string(user, Some("")).ok().map(|p| p.public()))
+	.expect("Invalid 'to' URI; expecting either a secret URI or a public URI.")
+}
 
-	let accountid = ed25519::Public::from_string(user).ok().or_else(||
-		ed25519::Pair::from_string(user, Some("")).ok().map(|p| p.public())
-	).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
+pub fn get_from_storage(api: &Api, user: &str, category: &str, item: &str) -> U256 {
+	println!("[>] Get {}'s {}", user, item);
 
-	let result_str = api.get_storage("Balances", "FreeBalance", Some(accountid.encode())).unwrap();
+	let accountid = user_to_pubkey(user);
+	let result_str = api.get_storage(category, item, Some(accountid.encode())).unwrap();
 	let result = hexstr_to_u256(result_str);
-
-	println!("[<] {}'s free balance is {}", user, result);
+	println!("[<] {}'s {} is {}", user, item, result);
 	println!();
+	result
+}
+
+// function to get the free balance of a user
+pub fn get_free_balance(api: &Api, user: &str) -> U256 {
+	get_from_storage(api, user, "Balances", "FreeBalance")
 }
 
 // function to get the account nonce of a user
-pub fn get_account_nonce(api: &substrate_api_client::Api, user: &str) -> U256 {
-	println!("[>] Get {}'s account nonce", user);
-
-	let accountid = ed25519::Public::from_string(user).ok().or_else(||
-		ed25519::Pair::from_string(user, Some("")).ok().map(|p| p.public())
-	).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
-
-	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	let nonce = hexstr_to_u256(result_str);
-	println!("[<] {}'s account nonce is {}", user, nonce);
-	println!();
-	nonce
+pub fn get_account_nonce(api: &Api, user: &str) -> U256 {
+	get_from_storage(api, user, "System", "AccountNonce")
 }
 
 // function to get the ED25519 public key from the enclave
@@ -153,7 +150,7 @@ pub fn get_worker_amount(api: &substrate_api_client::Api) {
 }
 
 // function to fund an account
-pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
+pub fn fund_account(api: &Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
 	println!("[>] Fund {}'s account with {}", user, amount);
 
 	// build the extrinsic for funding
@@ -170,18 +167,11 @@ pub fn fund_account(api: &substrate_api_client::Api, user: &str, amount: u128, n
 	println!();
 }
 
-// function to compose the extrinsic for a Balance::set_balance call
-pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn compose_extrinsic(from: &str, function: Call, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let signer = pair_from_suri(from, Some(""));
-
-	let to = ed25519::Public::from_string(to).ok().or_else(||
-		ed25519::Pair::from_string(to, Some("")).ok().map(|p| p.public())
-	).expect("Invalid 'to' URI; expecting either a secret URI or a public URI.");
-
 	let era = Era::immortal();
-	let index = index.low_u64();
 
-	let function = Call::Balances(BalancesCall::set_balance(to.into(), free, reserved));
+	let index = index.low_u64();
 	let raw_payload = (Compact(index), function, era, genesis_hash);
 
 	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
@@ -200,7 +190,14 @@ pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U
 	)
 }
 
-pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
+// function to compose the extrinsic for a Balance::set_balance call
+pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let to = user_to_pubkey(to);
+	let function = Call::Balances(BalancesCall::set_balance(to.into(), free, reserved));
+	compose_extrinsic(from, function, index, genesis_hash)
+}
+
+pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
 	println!("[>] Transfer {} from '{}' to '{}'", amount, from, to);
 
 	// build the extrinsic for transfer
@@ -219,59 +216,20 @@ pub fn transfer_amount(api: &substrate_api_client::Api, from: &str, to: ed25519:
 
 // function to compose the extrinsic for a Balance::transfer call
 pub fn extrinsic_transfer(from: &str, to: ed25519::Public, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let signer = pair_from_suri(from, Some(""));
-
-	let era = Era::immortal();
 	let amount = amount.low_u128();
-	let index = index.low_u64();
-
 	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
-	let raw_payload = (Compact(index), function, era, genesis_hash);
-
-	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		signer.sign(&blake2_256(payload)[..])
-	} else {
-		signer.sign(payload)
-	});
-
-	UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signer.public().into(),
-		signature,
-		era,
-	)
+	compose_extrinsic(from, function, index, genesis_hash)
 }
 
 // function to compose the extrinsic for a SubstraTEEProxy::call_worker call
-pub fn compose_extrinsic_substratee_call_worker(sender: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let signer = pair_from_suri(sender, Some(""));
-	let era = Era::immortal();
-
-	// let payload_encrypted_str = payload_encrypted.as_bytes().to_vec();
+pub fn compose_extrinsic_substratee_call_worker(from: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let payload_encrypted_str = payload_encrypted;
 	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::call_worker(payload_encrypted_str));
-
-	let index = index.low_u64();
-	let raw_payload = (Compact(index), function, era, genesis_hash);
-
-	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		signer.sign(&blake2_256(payload)[..])
-	} else {
-		signer.sign(payload)
-	});
-
-	UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signer.public().into(),
-		signature,
-		era,
-	)
+	compose_extrinsic(from, function, index, genesis_hash)
 }
 
 // subscribes to he substratee_proxy events of type CallConfirmed
-pub fn subscribe_to_call_confirmed(api: substrate_api_client::Api) -> Vec<u8>{
+pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 	let (events_in, events_out) = channel();
 
 	let _eventsubscriber = thread::Builder::new()
