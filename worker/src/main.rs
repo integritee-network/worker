@@ -60,6 +60,7 @@ use substrate_api_client::{Api, hexstr_to_vec};
 use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
+use enclave_tls::Mode;
 
 mod utils;
 mod constants;
@@ -67,6 +68,7 @@ mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
+mod enclave_tls;
 mod wasm;
 mod attestation_ocalls;
 
@@ -89,6 +91,12 @@ fn main() {
 	} else if matches.is_present("getsignkey") {
 		println!("*** Get the signing key from the TEE\n");
 		get_signing_key_tee();
+	} else if matches.is_present("run_server") {
+		println!("*** Running Enclave TLS server\n");
+		enclave_tls::run(Mode::Server);
+	} else if matches.is_present("run_client") {
+		println!("*** Running Enclave TLS client\n");
+		enclave_tls::run(Mode::Client);
 	} else if matches.is_present("test_enclave") {
 		println!("*** Running Enclave unit tests\n");
 		run_enclave_unit_tests();

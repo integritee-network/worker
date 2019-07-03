@@ -25,5 +25,9 @@ subcommands:
         about: Get the public RSA3072 key from the TEE
     - getsignkey:
         about: Get the public signing key from the TEE
+    - run_server:
+        about: Run TEE server for RA
+    - run_client:
+        about: Run TEE client for RA
     - test_enclave:
           about: Run all the unit tests in the enclave
