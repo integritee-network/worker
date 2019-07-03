@@ -35,6 +35,7 @@ extern crate sgx_types;
 extern crate sgx_ucrypto as crypto;
 extern crate sgx_urts;
 extern crate substrate_api_client;
+extern crate substratee_node_calls;
 extern crate substrate_keyring;
 extern crate system;
 extern crate wabt;
@@ -61,6 +62,7 @@ use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 use enclave_tls::Mode;
+use substratee_node_calls::{get_worker_amount, get_worker_info};
 
 mod utils;
 mod constants;
@@ -219,6 +221,15 @@ fn worker(port: &str) {
 			return;
 		}
 	}
+
+	match get_worker_amount(&api) {
+		0 => {
+			error!("No worker in registry!");
+			return;
+		},
+		1 => info!("one worker registered"),
+		_ => info!("There are already workers registered, fetching keys from first one."),
+	};
 
 	// ------------------------------------------------------------------------
 	// subscribe to events and react on firing

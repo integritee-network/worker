@@ -42,6 +42,9 @@ features = ["no_global_allocator"]
 git = "https://github.com/scs/substrate-api-client"
 default-features = false
 
+[dependencies.substratee-node-calls]
+path = "../substratee-node-calls"
+
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
 rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
