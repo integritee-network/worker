@@ -612,7 +612,7 @@ pub unsafe extern "C" fn perform_ra(
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let (key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
+	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
 		Ok(r) => r,
 		Err(e) => return e,
 	};

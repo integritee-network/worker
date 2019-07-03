@@ -68,8 +68,9 @@ pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 	write_file(&seed, ED25519_SEALED_KEY_FILE)
 }
 
-pub fn read_aes_key_and_iv() -> SgxResult<Vec<u8>> {
-	read_file(AES_KEY_FILE_AND_INIT_V)
+pub fn read_aes_key_and_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
+	let key_iv = read_file(AES_KEY_FILE_AND_INIT_V)?;
+	Ok((key_iv[..16].to_vec(), key_iv[16..].to_vec()))
 }
 
 pub fn create_sealed_aes_key_and_iv() -> SgxResult<sgx_status_t> {
@@ -132,8 +133,8 @@ pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
 		Err(e) => return Err(e),
 	};
 
-	let key_iv = read_aes_key_and_iv()?;
-	AesOfb::new_var(&key_iv[..16], &key_iv[16..]).unwrap().apply_keystream(&mut buffer);
+	let (key, iv) = read_aes_key_and_iv()?;
+	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(&mut buffer);
 	println!("buffer decrypted = {:?}", buffer);
 
 	Ok(buffer)
@@ -142,8 +143,8 @@ pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
 pub fn write_state_to_file(mut bytes: Vec<u8>) -> SgxResult<sgx_status_t> {
 	println!("data to be written: {:?}", bytes);
 
-	let key_iv = read_aes_key_and_iv()?;
-	AesOfb::new_var(&key_iv[..16], &key_iv[16..]).unwrap().apply_keystream(&mut bytes);
+	let (key, iv) = read_aes_key_and_iv()?;
+	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(&mut bytes);
 
 	write_plaintext(&bytes, ENCRYPTED_STATE_FILE)
 }

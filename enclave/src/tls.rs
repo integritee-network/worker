@@ -5,11 +5,12 @@ use attestation::create_ra_report_and_signature;
 use cert;
 use std::backtrace::{self, PrintFormat};
 use std::io::{Read, Write};
-use std::io;
 use std::net::TcpStream;
 use std::str;
 use std::sync::Arc;
 use std::vec::Vec;
+
+use utils::{read_rsa_pubkey, read_aes_key_and_iv};
 
 struct ClientAuth {
 	outdated_ok: bool,
@@ -117,7 +118,16 @@ pub extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		}
 	};
 
-	tls.write("hello back".as_bytes()).unwrap();
+	let shielding_key = read_rsa_pubkey().unwrap();
+	let (key, iv) = read_aes_key_and_iv().unwrap();
+	let sh_json = serde_json::to_string(&shielding_key).unwrap();
+	println!("shielding key len: {:?}", sh_json);
+	println!("shielding key len: {:?}", sh_json.as_bytes().len());
+	println!("AES key {:?}\niv: {:?}\n", key, iv);
+
+	tls.write(sh_json.as_bytes()).unwrap();
+	tls.write(&key[..]).unwrap();
+	tls.write(&iv[..]).unwrap();
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -147,18 +157,36 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	let mut conn = TcpStream::new(socket_fd).unwrap();
 
 	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
-	tls.write("hello".as_bytes()).unwrap();
 
-	let mut plaintext = Vec::new();
-	match tls.read_to_end(&mut plaintext) {
-		Ok(_) => {
-			println!("Server replied: {}", str::from_utf8(&plaintext).unwrap());
+	tls.write("Hello Sir, mind passing me the shielding and encryption keys?".as_bytes()).unwrap();
+
+	let mut plaintext = [0u8; 1394]; //Vec::new();
+	match tls.read(&mut plaintext) {
+		Ok(_) => println!("Received Shielding key: {}", str::from_utf8(&plaintext).unwrap()),
+		Err(e) => {
+			println!("Error in read: {:?}", e);
+			panic!("");
 		}
-		Err(ref err) if err.kind() == io::ErrorKind::ConnectionAborted => {
-			println!("EOF (tls)");
+	};
+
+	let mut plaintext = [0u8; 16]; //Vec::new();
+	match tls.read(&mut plaintext) {
+		Ok(_) => println!("Received AES key: {:?}", &plaintext[..]),
+		Err(e) => {
+			println!("Error in read: {:?}", e);
+			panic!("");
 		}
-		Err(e) => println!("Error in read_to_end: {:?}", e),
-	}
+	};
+
+	let mut plaintext = [0u8; 16]; //Vec::new();
+	match tls.read(&mut plaintext) {
+		Ok(_) => println!("Received AES IV: {:?}", &plaintext[..]),
+		Err(e) => {
+			println!("Error in read: {:?}", e);
+			panic!("");
+		}
+	};
+
 
 	sgx_status_t::SGX_SUCCESS
 }
