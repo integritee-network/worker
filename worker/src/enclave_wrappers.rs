@@ -70,9 +70,9 @@ pub fn process_forwarded_payload(
 
 			// sending the extrinsic
 			println!();
-			println!("[+] Send the extrinsic");
+			println!("[>] Confirm processing (send the extrinsic)");
 			let tx_hash = api.send_extrinsic(_xthex).unwrap();
-			println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+			println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 		},
 		_ => {
 			println!();
@@ -120,7 +120,8 @@ pub fn decrypt_and_process_payload(
 	let req_str = serde_json::to_string(&req).unwrap();
 
 	// update the counter and compose the extrinsic
-	let unchecked_extrinsic_size = 137;
+	// the extrinsic size will be determined in the function call_counter_wasm
+	let unchecked_extrinsic_size = 500;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
 	let result = unsafe {

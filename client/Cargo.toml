@@ -4,6 +4,14 @@ version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
+# make this an independant workspace
+[workspace]
+
+# we need to use the "official" untrusted crate here
+# or else "official" packages cannot build any more
+[patch.'https://github.com/briansmith/untrusted']
+untrusted = "0.6.2"
+
 [dependencies]
 ws = "0.7"
 hex = "0.3"
@@ -27,39 +35,41 @@ sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "M1"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "M1"
 default-features = false
 
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "srml-system"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "substrate-primitives"
 
 [dependencies.node-primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 
 [dependencies.substrate-keyring]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 
 [dependencies.runtime_primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "6e67eff0653677d3d01980ca822c4b8a227914a3"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "sr-primitives"
 default-features = false
 
 [dependencies.sgx_crypto_helper]
 git = "https://github.com/baidu/rust-sgx-sdk"
 default-features = false
+
+[patch.'https://github.com/paritytech/substrate']
+sr-io = { git = "https://github.com/scs/substraTEE-node" }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node" }

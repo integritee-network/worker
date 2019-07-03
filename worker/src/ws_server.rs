@@ -18,11 +18,15 @@
 extern crate sgx_types;
 extern crate ws;
 
-use sgx_types::*;
-use ws::{listen, CloseCode, Sender, Handler, Message, Result};
-use std::thread;
-use enclave_api::get_counter;
+use enclave_api::{get_counter, get_rsa_encryption_pubkey};
 use log::*;
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use sgx_types::*;
+use std::thread;
+use ws::{CloseCode, Handler, listen, Message, Result, Sender};
+use std::str;
+
+const MSG_GET_PUB_KEY_WORKER: &'static str = "get_pub_key_worker";
 
 pub fn start_ws_server(eid: sgx_enclave_id_t) {
     // Server WebSocket handler
@@ -35,24 +39,11 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
         fn on_message(&mut self, msg: Message) -> Result<()> {
             info!("[WS Server] Got message '{}'. ", msg);
 
-            let mut retval = sgx_status_t::SGX_SUCCESS;
-            let account = msg.clone().into_data();
-            let mut value = 0u8;
+			let answer = match &msg.clone().into_text().unwrap()[..] {
+				MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
+				_ => handle_get_counter_msg(self.eid, msg),
+			};
 
-            let result = unsafe {
-                get_counter(self.eid,
-                            &mut retval,
-                            account.as_ptr(),
-                            account.len() as u32,
-                            &mut value)
-            };
-
-            match result {
-                sgx_status_t::SGX_SUCCESS => {},
-                _ => { error!("[-] ECALL Enclave failed {}!", result.as_str())}
-            }
-
-            let answer = Message::text(format!("Counter of {} = {}", msg, value));
             self.out.send(answer)
         }
 
@@ -68,4 +59,54 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
             Server { out, eid }
         }).unwrap()
     });
+}
+
+fn handle_get_counter_msg(eid: sgx_enclave_id_t, msg: Message) -> Message {
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let account = msg.clone().into_data();
+	let mut value = 0u32;
+
+	let result = unsafe {
+		get_counter(eid,
+					&mut retval,
+					account.as_ptr(),
+					account.len() as u32,
+					&mut value)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => { error!("[-] ECALL Enclave failed {}!", result.as_str()) }
+	}
+
+	Message::text(format!("Counter of {} = {}", msg, value))
+}
+
+fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
+	// request the key
+	println!();
+	println!("*** Ask the public key from the TEE");
+	let pubkey_size = 8192;
+	let mut pubkey = vec![0u8; pubkey_size as usize];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_rsa_encryption_pubkey(eid,
+								  &mut retval,
+								  pubkey.as_mut_ptr(),
+								  pubkey_size
+		)
+	};
+
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => { error!("[-] ECALL Enclave failed {}!", result.as_str()) }
+	}
+
+
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+	println!("[+] RSA pubkey{:?}", rsa_pubkey);
+
+	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
+	Message::text(format!("{}", rsa_pubkey_json))
 }

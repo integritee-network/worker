@@ -17,4 +17,9 @@
 
 pub const RSA3072_SEALED_KEY_FILE: &str = "./bin/rsa3072_key_sealed.bin";
 pub const ED25519_SEALED_KEY_FILE: &str = "./bin/ed25519_key_sealed.bin";
-pub const COUNTERSTATE:            &str = "./bin/sealed_counter_state.bin";
+pub const ENCRYPTED_STATE_FILE:            &str = "./bin/sealed_counter_state.bin";
+pub const AES_KEY_FILE_AND_INIT_V: &str = "./bin/aes_key_sealed.bin";
+
+pub static RA_SPID:       &'static str = "./bin/spid.txt";
+pub static RA_CERT:       &'static str = "./bin/client.crt";
+pub static RA_KEY:        &'static str = "./bin/client.key";

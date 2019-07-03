@@ -15,8 +15,11 @@
 
 */
 
-// pub const SECRET_KEY_SIZE: usize = 32;
-pub static ENCLAVE_TOKEN: &str = "./bin/enclave.token";
-pub static ENCLAVE_FILE:  &str = "./bin/enclave.signed.so";
-pub static RSA_PUB_KEY:   &str = "./bin/rsa_pubkey.txt";
-pub static ECC_PUB_KEY:   &str = "./bin/ecc_pubkey.txt";
+pub static ENCLAVE_TOKEN:		&str = "./bin/enclave.token";
+pub static ENCLAVE_FILE:		&str = "./bin/enclave.signed.so";
+pub static RSA_PUB_KEY:			&str = "./bin/rsa_pubkey.txt";
+pub static ECC_PUB_KEY:			&str = "./bin/ecc_pubkey.txt";
+
+pub static RA_SPID:				&str = "./bin/spid.txt";
+pub static RA_CERT:				&str = "./bin/client.crt";
+pub static RA_KEY:				&str = "./bin/client.key";

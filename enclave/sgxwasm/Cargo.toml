@@ -4,11 +4,12 @@ version = "0.1.0"
 authors = ["Baidu"]
 
 [dependencies]
-wasmi = { git = "https://github.com/baidu/rust-sgx-sdk" }
-wabt-core = { git = "https://github.com/baidu/rust-sgx-sdk" }
-serde = { git = "https://github.com/baidu/rust-sgx-sdk" }
-serde_derive = { git = "https://github.com/baidu/rust-sgx-sdk" }
+wasmi        = { git = "https://github.com/mesalock-linux/wasmi-sgx", default-features = false, features = ["core", "mesalock_sgx"] }
+# wabt         = { git = "https://github.com/mesalock-linux/wabt-rs-sgx" }
+wabt-core    = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+serde        = { git = "https://github.com/mesalock-linux/serde-sgx", default-features = false, features = ["mesalock_sgx"] }
+serde_derive = { git = "https://github.com/mesalock-linux/serde-sgx"}
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types    = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tstd     = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
