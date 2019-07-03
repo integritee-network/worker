@@ -2,7 +2,7 @@ use rustls;
 use sgx_tcrypto::*;
 use sgx_types::*;
 
-use attestation::create_attestation_report;
+use attestation::create_ra_report_and_signature;
 use cert;
 use std::backtrace::{self, PrintFormat};
 use std::io::{Read, Write};
@@ -93,29 +93,10 @@ pub extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	env_logger::init();
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	// Generate Keypair
-	let ecc_handle = SgxEccHandle::new();
-	let _result = ecc_handle.open();
-	let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
-
-	let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
+	let (key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
 		Ok(r) => r,
-		Err(e) => {
-			println!("Error in create_attestation_report: {:?}", e);
-			return e;
-		}
+		Err(e) => return e,
 	};
-	println!("Created attestation report");
-	let payload = attn_report + "|" + &sig + "|" + &cert;
-	let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
-		Ok(r) => r,
-		Err(e) => {
-			println!("Error in gen_ecc_cert: {:?}", e);
-			return e;
-		}
-	};
-	let _result = ecc_handle.close();
-
 
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true)));
 	let mut certs = Vec::new();
@@ -147,30 +128,10 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	env_logger::init();
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	// Generate Keypair
-	let ecc_handle = SgxEccHandle::new();
-	ecc_handle.open().unwrap();
-	let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
-
-	let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
+	let (key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
 		Ok(r) => r,
-		Err(e) => {
-			println!("Error in create_attestation_report: {:?}", e);
-			return e;
-		}
+		Err(e) => return e,
 	};
-
-	let payload = attn_report + "|" + &sig + "|" + &cert;
-
-	let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
-		Ok(r) => r,
-		Err(e) => {
-			println!("Error in gen_ecc_cert: {:?}", e);
-			return e;
-		}
-	};
-	ecc_handle.close().unwrap();
-
 
 	let mut cfg = rustls::ClientConfig::new();
 	let mut certs = Vec::new();

@@ -557,25 +557,7 @@ fn load_private_key(filename: &str) -> rustls::PrivateKey {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn perform_ra(
-							genesis_hash: * const u8,
-							genesis_hash_size: u32,
-							nonce: * const u8,
-							nonce_size: u32,
-							url: * const u8,
-							url_size: u32,
-							unchecked_extrinsic: * mut u8,
-							unchecked_extrinsic_size: u32
-						) -> sgx_status_t {
-
-	// initialize the logging environment in the enclave
-	env_logger::init();
-
-	// our certificate is unlinkable
-	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-	// Generate Keypair
+pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
 	info!("    [Enclave] Generate keypair");
 	let ecc_handle = SgxEccHandle::new();
 	let _result = ecc_handle.open();
@@ -609,6 +591,31 @@ pub unsafe extern "C" fn perform_ra(
 	};
 	let _result = ecc_handle.close();
 	println!("    [Enclave] Generate ECC Certificate successful");
+	(key_der, cer_der)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn perform_ra(
+							genesis_hash: * const u8,
+							genesis_hash_size: u32,
+							nonce: * const u8,
+							nonce_size: u32,
+							url: * const u8,
+							url_size: u32,
+							unchecked_extrinsic: * mut u8,
+							unchecked_extrinsic_size: u32
+						) -> sgx_status_t {
+
+	// initialize the logging environment in the enclave
+	env_logger::init();
+
+	// our certificate is unlinkable
+	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+	let (key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
+		Ok(r) => r,
+		Err(e) => return e,
+	};
 
 	info!("    [Enclave] Compose extrinsic");
 	let genesis_hash_slice  = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
