@@ -100,8 +100,9 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
-	// initialize the logging environment in the enclave
-	env_logger::init();
+//  If this is called when already initialised, the enclave panics
+//  initialize the logging environment in the enclaved
+//	env_logger::init();
 
 	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
 		info!("[Enclave] Keyfile not found, creating new! {}", x);

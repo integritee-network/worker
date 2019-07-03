@@ -22,7 +22,7 @@ use std::thread;
 use std::fs;
 use primitive_types::{U256, H256};
 use std::sync::mpsc::channel;
-use ws::{connect, CloseCode};
+use ws::{connect, CloseCode, Message};
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -116,6 +116,24 @@ pub fn get_counter(user: &'static str) {
 		}).unwrap()
 	});
 	let _ = client.join();
+}
+
+// function to get the counter from the substraTEE-worker
+pub fn get_worker_encryption_key() {
+	// Client thread
+	let client = thread::spawn(move || {
+		 connect("ws://127.0.0.1:2019", |out| {
+			out.send("get_pub_key_worker").unwrap();
+
+			move |msg: Message| {
+				println!("[+] Client got encryption key '{}'. ", &msg);
+				println!();
+				out.close(CloseCode::Normal)
+			}
+		}).unwrap();
+	});
+	let val = client.join().unwrap();
+
 }
 
 pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) {
@@ -314,7 +332,7 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 	}
 }
 
-// Tests require a running node
+// Tests require a running node and running worker
 #[cfg(test)]
 mod tests {
 	use substrate_api_client::{Api};
@@ -328,5 +346,10 @@ mod tests {
 		api.init();
 		get_worker_amount(&api);
 		get_worker_info(&api, 0);
+	}
+
+	#[test]
+	fn get_worker_encryption_key_should_work() {
+		get_worker_encryption_key();
 	}
 }

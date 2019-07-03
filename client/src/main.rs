@@ -77,6 +77,7 @@ fn main() {
 		get_worker_amount(&api);
 		println!("*** Getting the Info of the first worker from the substraTEE-node");
 		get_worker_info(&api, 0);
+		get_worker_encryption_key();
 		return;
 	}
 
