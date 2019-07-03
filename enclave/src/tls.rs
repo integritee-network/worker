@@ -1,5 +1,4 @@
 use rustls;
-use sgx_tcrypto::*;
 use sgx_types::*;
 
 use attestation::create_ra_report_and_signature;
