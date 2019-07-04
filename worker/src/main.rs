@@ -61,7 +61,7 @@ use substrate_api_client::{Api, hexstr_to_vec};
 use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
-use enclave_tls::Mode;
+use enclave_tls_ra::Mode;
 use substratee_node_calls::get_worker_amount;
 
 mod utils;
@@ -70,7 +70,7 @@ mod enclave_api;
 mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
-mod enclave_tls;
+mod enclave_tls_ra;
 mod wasm;
 mod attestation_ocalls;
 
@@ -98,10 +98,10 @@ fn main() {
 		get_signing_key_tee();
 	} else if matches.is_present("run_server") {
 		println!("*** Running Enclave TLS server\n");
-		enclave_tls::run(Mode::Server);
+		enclave_tls_ra::run(Mode::Server);
 	} else if matches.is_present("run_client") {
 		println!("*** Running Enclave TLS client\n");
-		enclave_tls::run(Mode::Client);
+		enclave_tls_ra::run(Mode::Client);
 	} else if matches.is_present("test_enclave") {
 		println!("*** Running Enclave unit tests\n");
 		run_enclave_unit_tests();
@@ -235,7 +235,7 @@ fn worker(port: &str, w_port: &str) {
 		},
 		_ => {
 			info!("There are already workers registered, fetching keys from first one.");
-			enclave_tls::run(Mode::Client);
+			enclave_tls_ra::run(Mode::Client);
 			return;
 		},
 	};
