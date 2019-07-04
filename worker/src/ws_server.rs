@@ -28,7 +28,7 @@ use std::str;
 
 const MSG_GET_PUB_KEY_WORKER: &'static str = "get_pub_key_worker";
 
-pub fn start_ws_server(eid: sgx_enclave_id_t) {
+pub fn start_ws_server(eid: sgx_enclave_id_t, addr: &'static str) {
     // Server WebSocket handler
     struct Server {
         out: Sender,
@@ -53,9 +53,9 @@ pub fn start_ws_server(eid: sgx_enclave_id_t) {
     }
 
     // Server thread
-    info!("Starting WebSocket server on port 2019");
+    info!("Starting WebSocket server on {}", addr);
     thread::spawn(move || {
-        listen("127.0.0.1:2019", |out| {
+        listen(addr, |out| {
             Server { out, eid }
         }).unwrap()
     });

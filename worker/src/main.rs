@@ -62,7 +62,7 @@ use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 use enclave_tls::Mode;
-use substratee_node_calls::{get_worker_amount, get_worker_info};
+use substratee_node_calls::get_worker_amount;
 
 mod utils;
 mod constants;
@@ -82,11 +82,14 @@ fn main() {
 	let matches = App::from_yaml(yml).get_matches();
 
 	let port = matches.value_of("port").unwrap_or("9944");
-	info!("Interacting with port {}", port);
+	info!("Interacting with node on  port {}", port);
+
+	let w_port = matches.value_of("port").unwrap_or("2000");
+	info!("Worker listening on  port {}", w_port);
 
 	if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
-		worker(port);
+		worker(port, w_port);
 	} else if matches.is_present("getpublickey") {
 		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
@@ -107,7 +110,7 @@ fn main() {
 	}
 }
 
-fn worker(port: &str) {
+fn worker(port: &str, w_port: &str) {
 	let mut status = sgx_status_t::SGX_SUCCESS;
 
 	// ------------------------------------------------------------------------
@@ -141,9 +144,6 @@ fn worker(port: &str) {
 		},
 	};
 
-	// ------------------------------------------------------------------------
-	// start the websocket server
-	start_ws_server(enclave.geteid());
 
 	// ------------------------------------------------------------------------
 	// initialize the sgxwasm specific driver engine
@@ -159,8 +159,11 @@ fn worker(port: &str) {
 	}
 
 	// ------------------------------------------------------------------------
+	// start the ws server to listen for worker requests
+	let w_url = format!("ws://127.0.0.1:{}", w_port);
+
+	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
-	let url = format!("ws://127.0.0.1:{}", port);
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
@@ -195,8 +198,8 @@ fn worker(port: &str) {
 			genesis_hash.len() as u32,
 			nonce_bytes.as_ptr(),
 			nonce_bytes.len() as u32,
-			url.as_ptr(),
-			url.len() as u32,
+			w_url.as_ptr(),
+			w_url.len() as u32,
 			unchecked_extrinsic.as_mut_ptr(),
 			unchecked_extrinsic_size as u32
 		)
@@ -227,8 +230,14 @@ fn worker(port: &str) {
 			error!("No worker in registry!");
 			return;
 		},
-		1 => info!("one worker registered"),
-		_ => info!("There are already workers registered, fetching keys from first one."),
+		1 => {
+			info!("one worker registered.");
+		},
+		_ => {
+			info!("There are already workers registered, fetching keys from first one.");
+			enclave_tls::run(Mode::Client);
+			return;
+		},
 	};
 
 	// ------------------------------------------------------------------------

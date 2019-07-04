@@ -14,9 +14,15 @@ settings:
 args:
     - port:
         short: p
-        long: ws-port
+        long: node-port
         help: Set the websocket port to listen for substrate events
         takes_value: true
+    - w-port:
+        short: w
+        long: worker-port
+        help: Set the websocket port to listen for worker requests
+        takes_value: true
+
 
 subcommands:
     - worker:
