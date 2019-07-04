@@ -9,6 +9,7 @@ use std::net::TcpStream;
 use std::str;
 use std::sync::Arc;
 use std::vec::Vec;
+use rustls::{ClientSession, Stream};
 
 use utils::{read_rsa_pubkey, read_aes_key_and_iv};
 
@@ -114,16 +115,15 @@ pub extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		Ok(_) => println!("Client said: {}", str::from_utf8(&plaintext).unwrap()),
 		Err(e) => {
 			println!("Error in read_to_end: {:?}", e);
-			panic!("");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	};
 
 	let shielding_key = read_rsa_pubkey().unwrap();
 	let (key, iv) = read_aes_key_and_iv().unwrap();
 	let sh_json = serde_json::to_string(&shielding_key).unwrap();
-	println!("shielding key len: {:?}", sh_json);
-	println!("shielding key len: {:?}", sh_json.as_bytes().len());
-	println!("AES key {:?}\niv: {:?}\n", key, iv);
+	println!("Sending Shielding Key: {:?}", sh_json);
+	println!("Sending AES key {:?}\nIV: {:?}\n", key, iv);
 
 	tls.write(sh_json.as_bytes()).unwrap();
 	tls.write(&key[..]).unwrap();
@@ -165,7 +165,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		Ok(_) => println!("Received Shielding key: {}", str::from_utf8(&plaintext).unwrap()),
 		Err(e) => {
 			println!("Error in read: {:?}", e);
-			panic!("");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
 
@@ -174,7 +174,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		Ok(_) => println!("Received AES key: {:?}", &plaintext[..]),
 		Err(e) => {
 			println!("Error in read: {:?}", e);
-			panic!("");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	};
 
@@ -183,10 +183,21 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		Ok(_) => println!("Received AES IV: {:?}", &plaintext[..]),
 		Err(e) => {
 			println!("Error in read: {:?}", e);
-			panic!("");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	};
-
-
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn read_tls_stream(tls: &mut Stream<ClientSession, TcpStream>, buff: &mut Vec<u8>, msg: &str) -> SgxResult<Vec<u8>> {
+	match tls.read(buff) {
+		Ok(_) => {
+			println!("{}: {:?}", msg, &buff[..]);
+			Ok(buff.to_vec())
+		},
+		Err(e) => {
+			println!("Error in read: {:?}", e);
+			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		}
+	}
 }

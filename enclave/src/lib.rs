@@ -94,7 +94,7 @@ mod attestation;
 
 pub mod cert;
 pub mod hex;
-pub mod tls;
+pub mod tls_ra;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
