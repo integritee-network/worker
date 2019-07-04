@@ -41,6 +41,13 @@ extern crate system;
 extern crate wabt;
 extern crate ws;
 
+extern crate cid;
+extern crate futures;
+extern crate hyper;
+extern crate ipfs_api;
+extern crate multihash;
+extern crate sha2;
+
 use clap::App;
 use constants::*;
 use enclave_api::{perform_ra, test_main_entrance};
@@ -73,6 +80,7 @@ mod enclave_wrappers;
 mod enclave_tls_ra;
 mod wasm;
 mod attestation_ocalls;
+mod ipfs;
 
 fn main() {
 	// Setup logging
