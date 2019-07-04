@@ -140,13 +140,14 @@ pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
 	Ok(buffer)
 }
 
-pub fn write_state_to_file(mut bytes: Vec<u8>) -> SgxResult<sgx_status_t> {
+pub fn write_state_to_file(mut bytes: Vec<u8>) -> SgxResult<Vec<u8>> {
 	println!("data to be written: {:?}", bytes);
 
 	let (key, iv) = read_aes_key_and_iv()?;
 	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(&mut bytes);
 
-	write_plaintext(&bytes, ENCRYPTED_STATE_FILE)
+	write_plaintext(&bytes, ENCRYPTED_STATE_FILE)?;
+	Ok(bytes)
 }
 
 pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {

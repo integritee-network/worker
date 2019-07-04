@@ -76,10 +76,10 @@ use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
+use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
 use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
-use sgx_tunittest::*;
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -262,10 +262,19 @@ pub unsafe extern "C" fn call_counter_wasm(
 	left.clone_from_slice(&encoded);
 	right.iter_mut().for_each(|x| *x = 0x20);
 
-	// write the counter state
-	if let Err(status) = write_counter_state(counter) {
-		return status;
-	}
+	// write the counter state and return
+	let enc_state = match write_counter_state(counter) {
+		Ok(s) => s,
+		Err(sgx_status) => return sgx_status,
+	};
+
+	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+	let mut cid_buf: [u8; 36] = [0; 36];
+	let res = ocall_write_ipfs(&mut rt as *mut sgx_status_t,
+						 enc_state.as_ptr() as * const u8,
+						 enc_state.len() as u32,
+						 cid_buf.as_mut_ptr() as * mut u8,
+						 cid_buf.len() as u32);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -287,7 +296,7 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
+fn write_counter_state(value: AllCounts) -> Result<Vec<u8>, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let c = helper.encode(value).unwrap();
 	utils::write_state_to_file(c)
@@ -335,9 +344,38 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	)
 }
 
+extern "C" {
+	pub fn ocall_write_ipfs(
+		ret_val			: *mut sgx_status_t,
+		enc_state		: *const u8,
+		enc_state_size	: u32,
+		cid				: *const u8,
+		cid_size		: u32,
+	) -> sgx_status_t;
+}
+
+
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		utils::test_encrypted_state_io_works,
+		test_ocall_write_ipfs
 		)
+}
+
+fn test_ocall_write_ipfs() {
+	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+	let mut cid_buf: Vec<u8> = vec![0; 36];
+	let enc_state: Vec<u8> = vec![1; 36];
+
+	let res = unsafe {
+		ocall_write_ipfs(&mut rt as *mut sgx_status_t,
+						 enc_state.as_ptr(),
+						 enc_state.len() as u32,
+						 cid_buf.as_mut_ptr(),
+						 cid_buf.len() as u32)
+	};
+
+	println!("Cid Returned: {:?}", cid_buf)
+
 }

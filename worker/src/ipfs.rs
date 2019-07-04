@@ -18,13 +18,16 @@
 use cid::{Cid, Codec, Prefix, Version};
 use futures::Future;
 use ipfs_api::IpfsClient;
+use log::*;
 use multihash::{decode, encode, Hash, Multihash, to_hex};
 use rust_base58::{FromBase58, ToBase58};
+use sgx_types::*;
 use sha2::{Digest, Sha256};
 use std::io::{self, Cursor, Write};
+use std::slice;
 use std::str;
 
-fn write_to_ipfs() {
+fn write_to_ipfs(data: &'static [u8]) -> Cid {
 	println!("connecting to localhost:5001...");
 	let client = IpfsClient::default();
 
@@ -34,27 +37,23 @@ fn write_to_ipfs() {
 
 	hyper::rt::run(req.map_err(|e| eprintln!("{}", e)));
 
-	// write data to ipfs
-	let data = b"awesome test content\n";
-	//let msg = b"Hello World!";
+	println!("Data {:?}", data);
 	let datac = Cursor::new(data);
-	println!("{:?}", data);
-
 
 	let req = client
 		.add(datac)
 		.map(|res| {
-			println!("{}", res.hash);
+			println!("Result Hash {}", res.hash);
+			println!("Result Hash {:?}", res.hash.as_bytes());
 
-			//let addrmh = decode(res.hash.as_bytes()).unwrap();
-			//let hash = addrmh.digest;
-			//println!("digest: {}", str::from_utf8(hash).unwrap())
-			//println!("digest: {:?}", to_hex(hash))
+//			let addrmh = decode(&res.hash.as_bytes()).unwrap();
+//			let hash = addrmh.digest;
+//			println!("digest: {}", str::from_utf8(hash).unwrap());
+//			println!("digest: {:?}", to_hex(hash));
 		})
 		.map_err(|e| eprintln!("{}", e));
 
 	hyper::rt::run(req);
-
 
 	/*
     let req = client
@@ -69,9 +68,8 @@ fn write_to_ipfs() {
     hyper::rt::run(req);
     */
 
-	// test cid
-
 	let h = multihash::encode(multihash::Hash::SHA2256, data).unwrap();
+	println!("MultiHash: {:?}", h);
 
 	let cid = Cid::new(Codec::Raw, Version::V1, &h);
 	let prefix = cid.prefix();
@@ -85,15 +83,28 @@ fn write_to_ipfs() {
         zb2rhgCbaGmTcdZVRpZi3Z8CsdtAbFv7PRdRD9s6mKtef6LK9
     */
 
-	let cid3 = Cid::from("zb2rhgCbaGmTcdZVRpZi3Z8CsdtAbFv7PRdRD9s6mKtef6LK9").unwrap();
-
 	let prefix_bytes = prefix.as_bytes();
 	let prefix2 = Prefix::new_from_bytes(&prefix_bytes).unwrap();
 
-
-	println!("cid1: {} codec:  prefix: {:x?}", cid.to_string(), prefix.as_bytes());
+	println!("cid1: {:?} codec:  prefix: {:x?}", cid.to_string(), prefix.as_bytes());
 	println!("cid2: {} codec:  prefix: {:x?}", cid2.to_string(), prefix2.as_bytes());
-	println!("cid3: {} codec:  prefix: {:x?}", cid3.to_string(), cid3.prefix().as_bytes());
+
+	cid
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_write_ipfs(enc_state: *const u8,
+										  enc_state_size: u32,
+										  cid: *mut u8,
+										  cid_size: u32) -> sgx_status_t {
+	let state = slice::from_raw_parts(enc_state, enc_state_size as usize);
+	let cid = slice::from_raw_parts_mut(cid, cid_size as usize);
+
+	println!("    Entering ocall_write_ipfs");
+
+	let _cid = write_to_ipfs(state);
+	cid.clone_from_slice(_cid.to_bytes().as_slice());
+	sgx_status_t::SGX_SUCCESS
 }
 
 #[cfg(test)]
@@ -102,6 +113,7 @@ mod tests {
 
 	#[test]
 	fn ipfs_works() {
-		write_to_ipfs();
+		let data = b"awesome test content\n";
+		write_to_ipfs(data.as_slice());
 	}
 }
