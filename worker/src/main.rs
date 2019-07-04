@@ -161,7 +161,7 @@ fn worker(port: &str, w_port: &str) {
 	// ------------------------------------------------------------------------
 	// start the ws server to listen for worker requests
 	let w_url = format!("ws://127.0.0.1:{}", w_port);
-	start_ws_server(enclave.geteid(), w_url);
+	start_ws_server(enclave.geteid(), w_url.clone());
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node

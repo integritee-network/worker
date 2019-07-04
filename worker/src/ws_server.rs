@@ -28,7 +28,7 @@ use std::str;
 
 const MSG_GET_PUB_KEY_WORKER: &'static str = "get_pub_key_worker";
 
-pub fn start_ws_server(eid: sgx_enclave_id_t, addr: &'static str) {
+pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String) {
     // Server WebSocket handler
     struct Server {
         out: Sender,
@@ -51,11 +51,10 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: &'static str) {
             info!("[WS Server] WebSocket closing for ({:?}) {}", code, reason);
         }
     }
-
     // Server thread
     info!("Starting WebSocket server on {}", addr);
     thread::spawn(move || {
-        listen(addr, |out| {
+        listen(&addr, |out| {
             Server { out, eid }
         }).unwrap()
     });
