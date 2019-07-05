@@ -125,7 +125,7 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 }
 
 pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
-	let mut buffer = match read_plaintext(ENCRYPTED_STATE_FILE) {
+	let mut bytes = match read_plaintext(ENCRYPTED_STATE_FILE) {
 		Ok(vec) => match vec.len() {
 			0 => return Ok(vec),
 			_ => vec,
@@ -133,21 +133,26 @@ pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
 		Err(e) => return Err(e),
 	};
 
-	let (key, iv) = read_aes_key_and_iv()?;
-	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(&mut buffer);
-	println!("buffer decrypted = {:?}", buffer);
+	aes_de_or_encrypt(&mut bytes)?;
+	println!("buffer decrypted = {:?}", bytes);
 
-	Ok(buffer)
+	Ok(bytes)
 }
 
-pub fn write_state_to_file(mut bytes: Vec<u8>) -> SgxResult<Vec<u8>> {
+pub fn write_state_to_file(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
 	println!("data to be written: {:?}", bytes);
 
-	let (key, iv) = read_aes_key_and_iv()?;
-	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(&mut bytes);
+	aes_de_or_encrypt(bytes)?;
 
 	write_plaintext(&bytes, ENCRYPTED_STATE_FILE)?;
-	Ok(bytes)
+	Ok(sgx_status_t::SGX_SUCCESS)
+}
+
+/// If AES actes on the encrypted data it decrypts and vice versa
+pub fn aes_de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
+	let (key, iv) = read_aes_key_and_iv()?;
+	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(bytes);
+	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
@@ -224,8 +229,8 @@ pub fn test_encrypted_state_io_works() {
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";
 	create_sealed_aes_key_and_iv().unwrap();
 
-	write_state_to_file(plaintext.to_vec()).unwrap();
+	write_state_to_file(&mut plaintext.to_vec()).unwrap();
 	let state: Vec<u8> = read_state_from_file().unwrap();
-	assert_eq!(state, plaintext.to_vec());
+	assert_eq!(state.to_vec(), plaintext.to_vec());
 }
 

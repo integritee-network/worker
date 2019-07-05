@@ -79,7 +79,7 @@ use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE};
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -263,10 +263,14 @@ pub unsafe extern "C" fn call_counter_wasm(
 	right.iter_mut().for_each(|x| *x = 0x20);
 
 	// write the counter state and return
-	let enc_state = match write_counter_state(counter) {
+	let enc_state = match encrypt_counter_state(counter) {
 		Ok(s) => s,
 		Err(sgx_status) => return sgx_status,
 	};
+
+	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+		return status
+	}
 
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let mut cid_buf: [u8; 36] = [0; 36];
@@ -296,10 +300,11 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn write_counter_state(value: AllCounts) -> Result<Vec<u8>, sgx_status_t> {
+fn encrypt_counter_state(value: AllCounts) -> Result<Vec<u8>, sgx_status_t> {
 	let helper = SerializeHelper::new();
-	let c = helper.encode(value).unwrap();
-	utils::write_state_to_file(c)
+	let mut c = helper.encode(value).unwrap();
+	utils::aes_de_or_encrypt(&mut c)?;
+	Ok(c)
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
