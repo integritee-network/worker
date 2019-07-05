@@ -67,7 +67,7 @@ extern crate yasna;
 
 
 use crypto::ed25519::{keypair, signature};
-use my_node_runtime::{Call, Hash, SubstraTEEProxyCall, UncheckedExtrinsic};
+use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
 use parity_codec::{Compact, Decode, Encode};
 use primitive_types::U256;
 use primitives::ed25519;
@@ -242,26 +242,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status;
 	}
 
-
-	// get information for composing the extrinsic
-	let _seed = match utils::get_ecc_seed() {
-		Ok(seed) => seed,
-		Err(status) => return status,
-	};
-	let nonce = U256::decode(&mut nonce_slice).unwrap();
-	let genesis_hash = utils::hash_from_slice(hash_slice);
-	let call_hash = utils::blake2s(&plaintext_vec);
-	debug!("[Enclave]: Call hash {:?}", call_hash);
-
-	let ex = confirm_call_extrinsic(_seed, &call_hash, nonce, genesis_hash);
-	let encoded = ex.encode();
-
-	// split the extrinsic_slice at the length of the encoded extrinsic
-	// and fill the right side with whitespace
-	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
-	left.clone_from_slice(&encoded);
-	right.iter_mut().for_each(|x| *x = 0x20);
-
 	// write the counter state and return
 	let enc_state = match encrypt_counter_state(counter) {
 		Ok(s) => s,
@@ -273,7 +253,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 	}
 
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-	let mut cid_buf: [u8; 36] = [0; 36];
+	let mut cid_buf: [u8; 46] = [0; 46];
 	let res = ocall_write_ipfs(&mut rt as *mut sgx_status_t,
 						 enc_state.as_ptr() as * const u8,
 						 enc_state.len() as u32,
@@ -283,6 +263,25 @@ pub unsafe extern "C" fn call_counter_wasm(
 	if res == sgx_status_t::SGX_ERROR_UNEXPECTED || rt == sgx_status_t::SGX_ERROR_UNEXPECTED {
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
+
+	// get information for composing the extrinsic
+	let _seed = match utils::get_ecc_seed() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
+	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let genesis_hash = utils::hash_from_slice(hash_slice);
+	let call_hash = utils::blake2s(&plaintext_vec);
+	debug!("[Enclave]: Call hash {:?}", call_hash);
+
+	let ex = confirm_call_extrinsic(_seed, &call_hash, &cid_buf, nonce, genesis_hash);
+	let encoded = ex.encode();
+
+	// split the extrinsic_slice at the length of the encoded extrinsic
+	// and fill the right side with whitespace
+	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
+	left.clone_from_slice(&encoded);
+	right.iter_mut().for_each(|x| *x = 0x20);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -323,8 +322,8 @@ pub struct Message {
 	sha256: sgx_sha256_hash_t
 }
 
-pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
+pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], ipfs_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), ipfs_hash.to_vec()));
 	compose_extrinsic(seed, function, nonce, genesis_hash)
 }
 
