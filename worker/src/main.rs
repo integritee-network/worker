@@ -84,7 +84,7 @@ fn main() {
 	let port = matches.value_of("port").unwrap_or("9944");
 	info!("Interacting with node on  port {}", port);
 
-	let w_port = matches.value_of("port").unwrap_or("2000");
+	let w_port = matches.value_of("w-port").unwrap_or("2000");
 	info!("Worker listening on  port {}", w_port);
 
 	if let Some(_matches) = matches.subcommand_matches("worker") {
