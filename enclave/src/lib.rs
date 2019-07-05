@@ -365,10 +365,10 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 fn test_ocall_write_ipfs() {
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-	let mut cid_buf: Vec<u8> = vec![0; 36];
+	let mut cid_buf: Vec<u8> = vec![0; 46];
 	let enc_state: Vec<u8> = vec![1; 36];
 
-	let res = unsafe {
+	let _res = unsafe {
 		ocall_write_ipfs(&mut rt as *mut sgx_status_t,
 						 enc_state.as_ptr(),
 						 enc_state.len() as u32,
@@ -376,6 +376,5 @@ fn test_ocall_write_ipfs() {
 						 cid_buf.len() as u32)
 	};
 
-	println!("Cid Returned: {:?}", cid_buf)
-
+	println!("Cid Returned: {:?}", std::str::from_utf8(&cid_buf));
 }
