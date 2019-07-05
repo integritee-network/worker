@@ -253,7 +253,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
-	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
+	let ex = confirm_call_extrinsic(_seed, &call_hash, nonce, genesis_hash);
 	let encoded = ex.encode();
 
 	// split the extrinsic_slice at the length of the encoded extrinsic
@@ -319,11 +319,15 @@ pub struct Message {
 	sha256: sgx_sha256_hash_t
 }
 
-pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
+	compose_extrinsic(seed, function, nonce, genesis_hash)
+}
+
+pub fn compose_extrinsic(seed: Vec<u8>, function: Call, nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let (_privkey, _pubkey) = keypair(&seed);
 
 	let era = Era::immortal();
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
 	let index = nonce.low_u64();
 	let raw_payload = (Compact(index), function, era, genesis_hash);
