@@ -280,6 +280,10 @@ pub unsafe extern "C" fn call_counter_wasm(
 						 cid_buf.as_mut_ptr() as * mut u8,
 						 cid_buf.len() as u32);
 
+	if res == sgx_status_t::SGX_ERROR_UNEXPECTED || rt == sgx_status_t::SGX_ERROR_UNEXPECTED {
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
+	}
+
 	sgx_status_t::SGX_SUCCESS
 }
 
