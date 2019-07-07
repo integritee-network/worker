@@ -26,6 +26,7 @@ use Message;
 use sgxwasm::SpecDriver;
 use std::string::ToString;
 use std::sync::SgxMutex;
+use log::*;
 
 // lazy_static!{
 	// static ref SPECDRIVER: SgxMutex<SpecDriver> = SgxMutex::new(SpecDriver::new());
@@ -77,7 +78,7 @@ pub fn invoke_wasm_action(action: sgxwasm::SgxWasmAction, msg: Message, counter:
 
 			match r {
 				Ok(Some(RuntimeValue::I32(v))) => {
-					info!("    [Enclave] Add {} to '{}'", v, msg.account);
+					info!("    [Enclave] Counter Value of {}: '{}'", msg.account, v);
 					counter.entries.insert(msg.account.to_string(), v as u32);
 					println!("    [Enclave] WASM executed and counter updated");
 					Ok(sgx_status_t::SGX_SUCCESS)
