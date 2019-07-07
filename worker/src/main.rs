@@ -81,7 +81,7 @@ mod enclave_tls_ra;
 mod wasm;
 mod attestation_ocalls;
 mod ipfs;
-mod test_enclave;
+mod tests;
 
 fn main() {
 	// Setup logging
@@ -113,7 +113,7 @@ fn main() {
 		enclave_tls_ra::run(Mode::Client);
 	} else if matches.is_present("test_enclave") {
 		println!("*** Running Enclave unit tests\n");
-		test_enclave::run_enclave_tests();
+		tests::run_enclave_tests();
 	} else {
 		println!("For options: use --help");
 	}
