@@ -227,8 +227,14 @@ pub unsafe extern "C" fn call_counter_wasm(
 		Err(status) => return status,
 	};
 
-	let helper = DeSerializeHelper::<AllCounts>::new(state);
-	let mut counter = helper.decode().unwrap();
+	let mut counter: AllCounts = match state.len() {
+		0 => AllCounts { entries: HashMap::new() },
+		_ => {
+			debug!("    [Enclave] State read, deserializing...");
+			let helper = DeSerializeHelper::<AllCounts>::new(state);
+			helper.decode().unwrap()
+		}
+	};
 
 	// get the current counter value of the account or initialize with 0
 	let counter_value_old: u32 = *counter.entries.entry(msg.account.to_string()).or_insert(0);
