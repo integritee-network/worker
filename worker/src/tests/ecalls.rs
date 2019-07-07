@@ -33,14 +33,6 @@ pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
 	// ---------------------------------------------------------
 	// Mock Client Actions
 	// ---------------------------------------------------------
-	let hash: Vec<String> = utils::get_wasm_hash();
-	println!("Wasm Hash: {:?}", hash[0]);
-	println!("Wasm Binary : {:?}", hash[1]);
-
-	let sha = hex::decode(hash[0].clone()).unwrap();
-	let sha256: sgx_sha256_hash_t = from_slice(&sha);
-
-
 	let pubkey_size = 8192;
 	let mut pubkey = vec![0u8; pubkey_size as usize];
 
@@ -53,17 +45,8 @@ pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
 		);
 	};
 
-
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
-
-	let account: String = "Alice".to_string();
-	let amount = 42;
-	let nonce_bytes = U256::encode(&U256::from("1"));
-
-	let message = Message { account, amount, sha256 };
-	let plaintext = serde_json::to_vec(&message).unwrap();
-	let mut payload_encrypted: Vec<u8> = Vec::new();
-	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
+	let mut payload_encrypted = get_encrypted_msg(rsa_pubkey);
 
 	// ------------------------------------------------------------------------
 	// Worker Actions
@@ -83,7 +66,7 @@ pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
 
 	let unchecked_extrinsic_size = 500;
 	let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
-
+	let nonce_bytes = U256::encode(&U256::from("1"));
 	let genesis_hash: [u8; 32] = [0; 32];
 
 	let result = unsafe {
