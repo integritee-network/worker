@@ -17,6 +17,7 @@
 
 use sgx_types::*;
 use enclave_api::*;
+use enclave_wrappers::*;
 use log::*;
 use constants::*;
 use substrate_api_client::Api;
@@ -25,7 +26,9 @@ use primitive_types::U256;
 use enclave_wrappers::get_account_nonce;
 use parity_codec::Encode;
 
-fn perform_ra_works(eid: sgx_enclave_id_t) {
+use tests::commons::*;
+
+pub fn perform_ra_works(eid: sgx_enclave_id_t) {
 	// start the substrate-api-client to communicate with the node
 	let mut api = Api::new(format!("ws://127.0.0.1:9991"));
 	api.init();
@@ -72,4 +75,10 @@ fn perform_ra_works(eid: sgx_enclave_id_t) {
 	}
 
 	info!("RA works");
+}
+
+pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t) {
+	let mut payload_encrypted = get_encrypted_msg(eid);
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	process_forwarded_payload(eid, payload_encrypted, &mut retval, "9991");
 }

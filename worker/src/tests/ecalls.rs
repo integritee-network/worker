@@ -17,13 +17,10 @@
 
 use sgx_types::*;
 use enclave_api::*;
-use utils;
 use log::*;
-use std::str;
 use primitive_types::U256;
 use parity_codec::Encode;
 use wasm::SgxWasmAction;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use crypto::rsgx_sha256_slice;
 
 use tests::commons::*;
@@ -47,28 +44,9 @@ pub fn get_counter_works(eid: sgx_enclave_id_t) {
 
 pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
 
-	// ---------------------------------------------------------
-	// Mock Client Actions
-	// ---------------------------------------------------------
-	let pubkey_size = 8192;
-	let mut pubkey = vec![0u8; pubkey_size as usize];
-
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let result = unsafe {
-		get_rsa_encryption_pubkey(eid,
-								  &mut retval,
-								  pubkey.as_mut_ptr(),
-								  pubkey_size
-		);
-	};
 
-	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
-	let mut payload_encrypted = get_encrypted_msg(rsa_pubkey);
-
-	// ------------------------------------------------------------------------
-	// Worker Actions
-	// ------------------------------------------------------------------------
-
+	let mut payload_encrypted = get_encrypted_msg(eid);
 	let module = include_bytes!("../../../bin/worker_enclave.compact.wasm").to_vec();
 	let wasm_hash = rsgx_sha256_slice(&module).unwrap();
 	let wasm_hash_str = serde_json::to_string(&wasm_hash).unwrap();

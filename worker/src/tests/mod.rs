@@ -21,7 +21,6 @@ use wasm::sgx_enclave_wasm_init;
 use init_enclave::init_enclave;
 use self::ecalls::*;
 use self::integration_tests::*;
-use self::commons::*;
 
 pub mod commons;
 pub mod ecalls;
@@ -34,6 +33,7 @@ pub fn run_enclave_tests() {
 
 //	run_enclave_unit_tests(enclave.geteid());
 	run_ecalls(enclave.geteid());
+	run_integration_tests(enclave.geteid());
 
 	println!("[+] All tests ended!");
 
@@ -71,4 +71,5 @@ pub fn run_ecalls(eid: sgx_enclave_id_t) {
 
 pub fn run_integration_tests(eid: sgx_enclave_id_t) {
 	//	perform_ra_works(eid);
+	process_forwarded_payload_works(eid);
 }

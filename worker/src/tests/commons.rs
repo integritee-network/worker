@@ -15,8 +15,12 @@
 
 */
 
-use sgx_types::sgx_sha256_hash_t;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use enclave_api::*;
+use serde_json;
+use std::str;
+use sgx_types::*;
+
 
 use utils;
 
@@ -34,7 +38,24 @@ pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
 	array
 }
 
-pub fn get_encrypted_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
+pub fn get_encrypted_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
+	let pubkey_size = 8192;
+	let mut pubkey = vec![0u8; pubkey_size as usize];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_rsa_encryption_pubkey(eid,
+								  &mut retval,
+								  pubkey.as_mut_ptr(),
+								  pubkey_size
+		);
+	};
+
+	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+	encrypt_msg(rsa_pubkey)
+}
+
+pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
 	let hash: Vec<String> = utils::get_wasm_hash();
 	println!("Wasm Hash: {:?}", hash[0]);
 	println!("Wasm Binary : {:?}", hash[1]);
