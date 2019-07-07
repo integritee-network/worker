@@ -189,6 +189,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	sgx_status_t::SGX_SUCCESS
 }
 
+#[allow(dead_code)]
 fn read_tls_stream(tls: &mut Stream<ClientSession, TcpStream>, buff: &mut Vec<u8>, msg: &str) -> SgxResult<Vec<u8>> {
 	match tls.read(buff) {
 		Ok(_) => {
