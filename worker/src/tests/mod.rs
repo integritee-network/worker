@@ -21,22 +21,32 @@ use wasm::sgx_enclave_wasm_init;
 use init_enclave::init_enclave;
 use self::ecalls::*;
 use self::integration_tests::*;
+use clap::ArgMatches;
 
 pub mod commons;
 pub mod ecalls;
 pub mod integration_tests;
 
-pub fn run_enclave_tests() {
-	println!("*** Starting enclave");
+pub fn run_enclave_tests(matches: &ArgMatches) {
+	println!("*** Starting Test enclave");
 	let enclave = init_enclave().unwrap();
 	sgx_enclave_wasm_init(enclave.geteid()).unwrap();
 
-//	run_enclave_unit_tests(enclave.geteid());
-	run_ecalls(enclave.geteid());
-	run_integration_tests(enclave.geteid());
+	if matches.is_present("all") || matches.is_present("unit") {
+		println!("Running unit Tests");
+		run_enclave_unit_tests(enclave.geteid());
+	}
 
+	if matches.is_present("all") || matches.is_present("ecall") {
+		println!("Running ecall Tests");
+		run_ecalls(enclave.geteid());
+	}
+
+	if matches.is_present("all") || matches.is_present("integration") {
+		println!("Running integration Tests");
+		run_integration_tests(enclave.geteid());
+	}
 	println!("[+] All tests ended!");
-
 }
 
 fn run_enclave_unit_tests(eid: sgx_enclave_id_t) {

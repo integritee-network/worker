@@ -111,9 +111,9 @@ fn main() {
 	} else if matches.is_present("run_client") {
 		println!("*** Running Enclave TLS client\n");
 		enclave_tls_ra::run(Mode::Client);
-	} else if matches.is_present("test_enclave") {
+	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
 		println!("*** Running Enclave unit tests\n");
-		tests::run_enclave_tests();
+		tests::run_enclave_tests(m);
 	} else {
 		println!("For options: use --help");
 	}
