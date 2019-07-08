@@ -15,13 +15,14 @@
 
 */
 
-use sgx_types::*;
+use clap::ArgMatches;
 use enclave_api::*;
-use wasm::sgx_enclave_wasm_init;
 use init_enclave::init_enclave;
+use sgx_types::*;
+use wasm::sgx_enclave_wasm_init;
+
 use self::ecalls::*;
 use self::integration_tests::*;
-use clap::ArgMatches;
 
 pub mod commons;
 pub mod ecalls;

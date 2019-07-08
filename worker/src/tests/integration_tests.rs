@@ -15,17 +15,16 @@
 
 */
 
-use sgx_types::*;
+use constants::*;
 use enclave_api::*;
 use enclave_wrappers::*;
-use log::*;
-use constants::*;
-use substrate_api_client::Api;
-use std::fs;
-use primitive_types::U256;
 use enclave_wrappers::get_account_nonce;
+use log::*;
 use parity_codec::Encode;
-
+use primitive_types::U256;
+use sgx_types::*;
+use std::fs;
+use substrate_api_client::Api;
 use tests::commons::*;
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t) {

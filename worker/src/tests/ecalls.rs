@@ -15,15 +15,14 @@
 
 */
 
-use sgx_types::*;
+use crypto::rsgx_sha256_slice;
 use enclave_api::*;
 use log::*;
-use primitive_types::U256;
 use parity_codec::Encode;
-use wasm::SgxWasmAction;
-use crypto::rsgx_sha256_slice;
-
+use primitive_types::U256;
+use sgx_types::*;
 use tests::commons::*;
+use wasm::SgxWasmAction;
 
 pub fn get_counter_works(eid: sgx_enclave_id_t) {
 
