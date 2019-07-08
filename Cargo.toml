@@ -13,7 +13,7 @@ members = [
 ring = { git = "https://github.com/mesalock-linux/ring-sgx" }
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node" , branch = "cl-merge-runtime-modules"}
+sr-io = { git = "https://github.com/scs/substraTEE-node" }
 
 ## BACKUP - TO BE DELETED LATER
 # untrusted 		= { git = "https://github.com/briansmith/untrusted", tag = "ring-master" }
