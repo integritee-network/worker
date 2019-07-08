@@ -31,7 +31,6 @@ use sgx_tse::*;
 use sgx_tcrypto::*;
 use sgx_rand::*;
 
-use std::backtrace::{self, PrintFormat};
 use std::prelude::v1::*;
 use std::sync::Arc;
 use std::net::TcpStream;
@@ -577,7 +576,6 @@ pub unsafe extern "C" fn perform_ra(
 							unchecked_extrinsic: * mut u8,
 							unchecked_extrinsic_size: u32
 						) -> sgx_status_t {
-	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 	// initialize the logging environment in the enclave
 	env_logger::init();
 

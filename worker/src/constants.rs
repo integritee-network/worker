@@ -21,4 +21,4 @@ pub static RSA_PUB_KEY:			&str = "./bin/rsa_pubkey.txt";
 pub static ECC_PUB_KEY:			&str = "./bin/ecc_pubkey.txt";
 
 pub static RA_SPID:				&str = "./bin/spid.txt";
-pub static RA_API_KEY:	  		&str = "./bin/key.txt";
+pub static RA_API_KEY:			&str = "./bin/key.txt";

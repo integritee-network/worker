@@ -140,7 +140,7 @@ pub fn read_state_from_file(path: &str) -> SgxResult<Vec<u8>> {
 }
 
 pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
-	println!("data to be written: {:?}", bytes);
+	println!("plaintext data to be written: {:?}", bytes);
 
 	aes_de_or_encrypt(bytes)?;
 
@@ -148,7 +148,7 @@ pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_sta
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-/// If AES actes on the encrypted data it decrypts and vice versa
+/// If AES acts on the encrypted data it decrypts and vice versa
 pub fn aes_de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
 	let (key, iv) = read_aes_key_and_iv()?;
 	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(bytes);

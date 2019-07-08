@@ -371,7 +371,6 @@ extern "C" {
 	) -> sgx_status_t;
 }
 
-
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
