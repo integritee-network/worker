@@ -124,8 +124,8 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 	}
 }
 
-pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
-	let mut bytes = match read_plaintext(ENCRYPTED_STATE_FILE) {
+pub fn read_state_from_file(path: &str) -> SgxResult<Vec<u8>> {
+	let mut bytes = match read_plaintext(path) {
 		Ok(vec) => match vec.len() {
 			0 => return Ok(vec),
 			_ => vec,
@@ -139,12 +139,12 @@ pub fn read_state_from_file() -> SgxResult<Vec<u8>> {
 	Ok(bytes)
 }
 
-pub fn write_state_to_file(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
+pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
 	println!("data to be written: {:?}", bytes);
 
 	aes_de_or_encrypt(bytes)?;
 
-	write_plaintext(&bytes, ENCRYPTED_STATE_FILE)?;
+	write_plaintext(&bytes, path)?;
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
@@ -226,11 +226,12 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 }
 
 pub fn test_encrypted_state_io_works() {
+	let path = "./bin/test_state_file.bin";
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";
 	create_sealed_aes_key_and_iv().unwrap();
 
-	write_state_to_file(&mut plaintext.to_vec()).unwrap();
-	let state: Vec<u8> = read_state_from_file().unwrap();
+	write_state_to_file(&mut plaintext.to_vec(), path).unwrap();
+	let state: Vec<u8> = read_state_from_file(path).unwrap();
 	assert_eq!(state.to_vec(), plaintext.to_vec());
 }
 
