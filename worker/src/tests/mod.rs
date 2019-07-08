@@ -75,7 +75,7 @@ fn run_enclave_unit_tests(eid: sgx_enclave_id_t) {
 
 pub fn run_ecalls(eid: sgx_enclave_id_t) {
 //	get_counter_works(eid);
-//	perform_ra_works(eid);
+	perform_ra_works(eid);
 	call_counter_wasm_works(eid);
 	println!("[+] Ecall tests ended!");
 }

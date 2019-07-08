@@ -29,8 +29,7 @@ pub fn check_files() -> u8 {
 
 	// remote attestation files
 	missing_files += file_missing(RA_SPID);
-	missing_files += file_missing(RA_CERT);
-	missing_files += file_missing(RA_KEY);
+	missing_files += file_missing(RA_API_KEY);
 
 	missing_files
 }
