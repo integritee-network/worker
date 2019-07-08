@@ -28,7 +28,7 @@ pub mod commons;
 pub mod ecalls;
 pub mod integration_tests;
 
-pub fn run_enclave_tests(matches: &ArgMatches) {
+pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 	println!("*** Starting Test enclave");
 	let enclave = init_enclave().unwrap();
 	sgx_enclave_wasm_init(enclave.geteid()).unwrap();
@@ -45,7 +45,7 @@ pub fn run_enclave_tests(matches: &ArgMatches) {
 
 	if matches.is_present("all") || matches.is_present("integration") {
 		println!("Running integration Tests");
-		run_integration_tests(enclave.geteid());
+		run_integration_tests(enclave.geteid(), port);
 	}
 	println!("[+] All tests ended!");
 }
@@ -75,12 +75,13 @@ fn run_enclave_unit_tests(eid: sgx_enclave_id_t) {
 
 pub fn run_ecalls(eid: sgx_enclave_id_t) {
 //	get_counter_works(eid);
-	perform_ra_works(eid);
 	call_counter_wasm_works(eid);
 	println!("[+] Ecall tests ended!");
 }
 
-pub fn run_integration_tests(eid: sgx_enclave_id_t) {
-	//	perform_ra_works(eid);
-	process_forwarded_payload_works(eid);
+// Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
+// running the tests.
+pub fn run_integration_tests(eid: sgx_enclave_id_t, port: &str) {
+	perform_ra_works(eid, port);
+	process_forwarded_payload_works(eid, port);
 }

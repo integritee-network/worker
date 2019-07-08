@@ -113,7 +113,7 @@ fn main() {
 		enclave_tls_ra::run(Mode::Client);
 	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
 		println!("*** Running Enclave unit tests\n");
-		tests::run_enclave_tests(m);
+		tests::run_enclave_tests(m, port);
 	} else {
 		println!("For options: use --help");
 	}

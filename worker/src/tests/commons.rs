@@ -81,8 +81,8 @@ pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
 	payload_encrypted
 }
 
-pub fn register_enclave() {
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", "9991"));
+pub fn register_enclave(port: &str) {
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
 	let tee_ecc_seed = [244, 96, 170, 60, 77, 239, 28, 64, 51, 180, 208, 145, 76, 154, 198, 174,
@@ -95,10 +95,9 @@ pub fn register_enclave() {
 pub fn evaluate_result(result: sgx_status_t) {
 	match result {
 		sgx_status_t::SGX_SUCCESS => {
-			println!("[<] Message decoded and processed in the enclave");
 		},
 		_ => {
-			error!("[<] Error processing message in the enclave");
+			error!("[<] Error processing in enclave enclave");
 			panic!("");
 		}
 	}

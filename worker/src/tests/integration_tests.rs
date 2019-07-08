@@ -27,9 +27,9 @@ use std::fs;
 use substrate_api_client::Api;
 use tests::commons::*;
 
-pub fn perform_ra_works(eid: sgx_enclave_id_t) {
+pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 	// start the substrate-api-client to communicate with the node
-	let mut api = Api::new(format!("ws://127.0.0.1:9991"));
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
 	let w_url = "ws://127.0.0.1:2001";
@@ -72,9 +72,9 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t) {
 	evaluate_result(retval);
 }
 
-pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t) {
+pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
 	let payload_encrypted = get_encrypted_msg(eid);
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	process_forwarded_payload(eid, payload_encrypted, &mut retval, "9991");
+	process_forwarded_payload(eid, payload_encrypted, &mut retval, port);
 	evaluate_result(retval);
 }
