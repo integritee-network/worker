@@ -278,11 +278,11 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
 	(attn_report, sig, cert)
 }
 
-fn as_u32_le(array: &[u8; 4]) -> u32 {
-	((array[0] as u32) <<  0) +
-	((array[1] as u32) <<  8) +
-	((array[2] as u32) << 16) +
-	((array[3] as u32) << 24)
+fn as_u32_le(array: [u8; 4]) -> u32 {
+	u32::from(array[0]) +
+	u32::from(array[1]) <<  8 +
+	u32::from(array[2]) << 16 +
+	u32::from(array[3]) << 24
 }
 
 #[allow(const_err)]
@@ -314,7 +314,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 		return Err(rt);
 	}
 
-	let eg_num = as_u32_le(&eg);
+	let eg_num = as_u32_le(eg);
 
 	// (1.5) get sigrl
 	let mut ias_sock : i32 = 0;
@@ -342,9 +342,9 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 
 /* Code von Baidu */
 	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-	let mut pub_k_gx = pub_k.gx.clone();
+	let mut pub_k_gx = pub_k.gx;
 	pub_k_gx.reverse();
-	let mut pub_k_gy = pub_k.gy.clone();
+	let mut pub_k_gy = pub_k.gy;
 	pub_k_gy.reverse();
 	report_data.d[..32].clone_from_slice(&pub_k_gx);
 	report_data.d[32..].clone_from_slice(&pub_k_gy);
@@ -411,7 +411,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 	//       8. [out]p_quote
 	//       9. quote_size
 	let (p_sigrl, sigrl_len) =
-		if sigrl_vec.len() == 0 {
+		if sigrl_vec.is_empty() {
 			(ptr::null(), 0)
 		} else {
 			(sigrl_vec.as_ptr(), sigrl_vec.len() as u32)

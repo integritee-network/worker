@@ -26,7 +26,7 @@ use std::thread;
 use ws::{CloseCode, Handler, listen, Message, Result, Sender};
 use std::str;
 
-const MSG_GET_PUB_KEY_WORKER: &'static str = "get_pub_key_worker";
+const MSG_GET_PUB_KEY_WORKER: &str = "get_pub_key_worker";
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String) {
     // Server WebSocket handler
@@ -107,5 +107,5 @@ fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
 	println!("[+] RSA pubkey{:?}", rsa_pubkey);
 
 	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
-	Message::text(format!("{}", rsa_pubkey_json))
+	Message::text(rsa_pubkey_json.to_string())
 }

@@ -55,7 +55,6 @@ extern crate sgx_tseal;
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-#[macro_use]
 extern crate sgx_tunittest;
 extern crate sgx_types;
 extern crate sgxwasm;
