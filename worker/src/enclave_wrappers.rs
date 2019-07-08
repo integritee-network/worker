@@ -27,7 +27,7 @@ use init_enclave::init_enclave;
 use primitives::{ed25519};
 
 use substrate_api_client::{Api, hexstr_to_u256};
-use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEEProxyCall};
+use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
 use parity_codec::{Decode, Encode};
 use primitive_types::U256;
 
@@ -58,7 +58,7 @@ pub fn process_forwarded_payload(
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();
 
-	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(vec![0; 32])));
+	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(vec![0; 32], vec![0; 46])));
 
 	// decrypt and process the payload. we will get an extrinsic back
 	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);

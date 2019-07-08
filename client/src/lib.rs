@@ -30,7 +30,7 @@ use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 use my_node_runtime::{
 	UncheckedExtrinsic,
 	Call,
-	SubstraTEEProxyCall,
+	SubstraTEERegistryCall,
 	BalancesCall,
 	Hash,
 	Event,
@@ -204,14 +204,14 @@ pub fn extrinsic_transfer(from: &str, to: ed25519::Public, amount: U256, index: 
 	compose_extrinsic(from, function, index, genesis_hash)
 }
 
-// function to compose the extrinsic for a SubstraTEEProxy::call_worker call
+// function to compose the extrinsic for a SubstraTEERegistry::call_worker call
 pub fn compose_extrinsic_substratee_call_worker(from: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let payload_encrypted_str = payload_encrypted;
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::call_worker(payload_encrypted_str));
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::call_worker(payload_encrypted_str));
 	compose_extrinsic(from, function, index, genesis_hash)
 }
 
-// subscribes to he substratee_proxy events of type CallConfirmed
+// subscribes to he substratee_registry events of type CallConfirmed
 pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 	let (events_in, events_out) = channel();
 
@@ -231,8 +231,8 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
 		if let Some(evts) = _events {
 			for evr in &evts {
-				if let Event::substratee_proxy(pe) = &evr.event {
-					if let my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) = &pe {
+				if let Event::substratee_registry(pe) = &evr.event {
+					if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(sender, payload) = &pe {
 						println!("[+] Received confirm call from {}", sender);
 						return payload.to_vec().clone();
 					}

@@ -51,7 +51,7 @@ pub fn decode_hex(hex: &str) -> Vec<u8> {
 
 #[allow(unused)]
 fn encode_hex_digit(digit: u8) -> char {
-    match char::from_digit(digit as u32, 16) {
+    match char::from_digit(u32::from(digit), 16) {
         Some(c) => c,
         _ => panic!(),
     }
@@ -66,7 +66,7 @@ fn encode_hex_byte(byte: u8) -> [char; 2] {
 pub fn encode_hex(bytes: &[u8]) -> String {
     let strs: Vec<String> = bytes
         .iter()
-        .map(|byte| encode_hex_byte(*byte).iter().map(|c| *c).collect())
+        .map(|byte| encode_hex_byte(*byte).iter().copied().collect())
         .collect();
     strs.join(" ")
 }

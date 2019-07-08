@@ -30,6 +30,14 @@ serde_json = "1.0"
 serde_derive = "1.0"
 nan-preserving-float = "0.1.0"
 
+# ipfs
+ipfs-api = "0.5.0-alpha2"
+futures = "0.1"
+hyper = "0.12"
+sha2 = { version = "0.7", default-features = false }
+multihash = { git = "https://github.com/multiformats/rust-multihash.git"}
+cid = { git ="https://github.com/multiformats/rust-cid.git"}
+
 parity-codec = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 

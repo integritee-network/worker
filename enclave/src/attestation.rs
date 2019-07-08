@@ -38,7 +38,7 @@ use std::string::String;
 use std::slice;
 use std::ptr;
 use std::str;
-use std::io::{Write, Read, BufReader};
+use std::io::{Write, Read};
 use std::untrusted::fs;
 use std::vec::Vec;
 use itertools::Itertools;
@@ -58,12 +58,12 @@ use primitives::{ed25519};
 use crypto::ed25519::{keypair, signature};
 use utils::blake2_256;
 
-use constants::{RA_SPID, RA_CERT, RA_KEY};
+use constants::{RA_SPID, RA_API_KEY};
 
-pub const DEV_HOSTNAME  :&str = "test-as.sgx.trustedservices.intel.com";
 //pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
-pub const SIGRL_SUFFIX  :&str = "/attestation/sgx/v3/sigrl/";
-pub const REPORT_SUFFIX :&str = "/attestation/sgx/v3/report";
+pub const DEV_HOSTNAME		:&'static str = "api.trustedservices.intel.com";
+pub const SIGRL_SUFFIX		:&'static str = "/sgx/dev/attestation/v3/sigrl/";
+pub const REPORT_SUFFIX		:&'static str = "/sgx/dev/attestation/v3/report";
 
 extern "C" {
 	pub fn ocall_sgx_init_quote (
@@ -119,13 +119,13 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
 		let h = respp.headers[i];
 		//println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
 		match h.name{
-			"content-length" => {
+			"Content-Length" => {
 				let len_str = String::from_utf8(h.value.to_vec()).unwrap();
 				len_num = len_str.parse::<u32>().unwrap();
 				debug!("    [Enclave] Content length = {}", len_num);
 			}
-			"x-iasreport-signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
-			"x-iasreport-signing-certificate" => cert = str::from_utf8(h.value).unwrap().to_string(),
+			"X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
+			"X-IASReport-Signing-Certificate" => cert = str::from_utf8(h.value).unwrap().to_string(),
 			_ => (),
 		}
 	}
@@ -198,11 +198,6 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 	let mut config = rustls::ClientConfig::new();
 
 	config.root_store.add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-
-	let certs = load_certs(RA_CERT);
-	let privkey = load_private_key(RA_KEY);
-	config.set_single_client_cert(certs, privkey);
-
 	config
 }
 
@@ -212,11 +207,13 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
 	let config = make_ias_client_config();
 	//let sigrl_arg = SigRLArg { group_id : gid };
 	//let sigrl_req = sigrl_arg.to_httpreq();
+	let ias_key = get_ias_api_key();
 
-	let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\n\r\n",
-						SIGRL_SUFFIX,
-						gid,
-						SIGRL_SUFFIX);
+	let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
+					  SIGRL_SUFFIX,
+					  gid,
+					  DEV_HOSTNAME,
+					  ias_key);
 	debug!("    [Enclave] request = {}", req);
 
 	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
@@ -250,11 +247,14 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
 	let encoded_quote = base64::encode(&quote[..]);
 	let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
 
-	let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\n\r\n{}",
-						   REPORT_SUFFIX,
-						   DEV_HOSTNAME,
-						   encoded_json.len(),
-						   encoded_json);
+	let ias_key = get_ias_api_key();
+
+	let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+					  REPORT_SUFFIX,
+					  DEV_HOSTNAME,
+					  ias_key,
+					  encoded_json.len(),
+					  encoded_json);
 	debug!("    [Enclave] Req = {}", req);
 	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
 	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
@@ -277,11 +277,11 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
 	(attn_report, sig, cert)
 }
 
-fn as_u32_le(array: &[u8; 4]) -> u32 {
-	((array[0] as u32) <<  0) +
-	((array[1] as u32) <<  8) +
-	((array[2] as u32) << 16) +
-	((array[3] as u32) << 24)
+fn as_u32_le(array: [u8; 4]) -> u32 {
+	u32::from(array[0]) +
+	u32::from(array[1]) <<  8 +
+	u32::from(array[2]) << 16 +
+	u32::from(array[3]) << 24
 }
 
 #[allow(const_err)]
@@ -313,7 +313,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 		return Err(rt);
 	}
 
-	let eg_num = as_u32_le(&eg);
+	let eg_num = as_u32_le(eg);
 
 	// (1.5) get sigrl
 	let mut ias_sock : i32 = 0;
@@ -341,9 +341,9 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 
 /* Code von Baidu */
 	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-	let mut pub_k_gx = pub_k.gx.clone();
+	let mut pub_k_gx = pub_k.gx;
 	pub_k_gx.reverse();
-	let mut pub_k_gy = pub_k.gy.clone();
+	let mut pub_k_gy = pub_k.gy;
 	pub_k_gy.reverse();
 	report_data.d[..32].clone_from_slice(&pub_k_gx);
 	report_data.d[32..].clone_from_slice(&pub_k_gy);
@@ -410,7 +410,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 	//       8. [out]p_quote
 	//       9. quote_size
 	let (p_sigrl, sigrl_len) =
-		if sigrl_vec.len() == 0 {
+		if sigrl_vec.is_empty() {
 			(ptr::null(), 0)
 		} else {
 			(sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
@@ -520,41 +520,12 @@ fn load_spid(filename: &str) -> sgx_spid_t {
 	::hex::decode_spid(&contents)
 }
 
-fn load_certs(filename: &str) -> Vec<rustls::Certificate> {
-	let certfile = fs::File::open(filename).expect("cannot open certificate file");
-	let mut reader = BufReader::new(certfile);
-	match rustls::internal::pemfile::certs(&mut reader) {
-		Ok(r) => r,
-		Err(e) => {
-			println!("Err in load_certs: {:?}", e);
-			panic!("");
-		}
-	}
-}
+fn get_ias_api_key() -> String {
+	let mut keyfile = fs::File::open(RA_API_KEY).expect("cannot open ias key file");
+	let mut key = String::new();
+	keyfile.read_to_string(&mut key).expect("cannot read the ias key file");
 
-fn load_private_key(filename: &str) -> rustls::PrivateKey {
-	let rsa_keys = {
-	let keyfile = fs::File::open(filename)
-		.expect("cannot open private key file");
-	let mut reader = BufReader::new(keyfile);
-	rustls::internal::pemfile::rsa_private_keys(&mut reader)
-		.expect("file contains invalid rsa private key")
-	};
-
-	let pkcs8_keys = {
-	let keyfile = fs::File::open(filename)
-		.expect("cannot open private key file");
-	let mut reader = BufReader::new(keyfile);
-	rustls::internal::pemfile::pkcs8_private_keys(&mut reader)
-		.expect("file contains invalid pkcs8 private key (encrypted keys not supported)")
-	};
-
-	if !pkcs8_keys.is_empty() {
-		pkcs8_keys[0].clone()
-	} else {
-		assert!(!rsa_keys.is_empty());
-		rsa_keys[0].clone()
-	}
+	key.trim_end().to_owned()
 }
 
 pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
@@ -605,7 +576,6 @@ pub unsafe extern "C" fn perform_ra(
 							unchecked_extrinsic: * mut u8,
 							unchecked_extrinsic_size: u32
 						) -> sgx_status_t {
-
 	// initialize the logging environment in the enclave
 	env_logger::init();
 

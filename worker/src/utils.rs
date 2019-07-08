@@ -17,6 +17,7 @@
 use log::*;
 use std::path::Path;
 use constants::*;
+use std::process::Command;
 
 pub fn check_files() -> u8 {
 	debug!("*** Check files");
@@ -28,8 +29,7 @@ pub fn check_files() -> u8 {
 
 	// remote attestation files
 	missing_files += file_missing(RA_SPID);
-	missing_files += file_missing(RA_CERT);
-	missing_files += file_missing(RA_KEY);
+	missing_files += file_missing(RA_API_KEY);
 
 	missing_files
 }
@@ -42,4 +42,16 @@ fn file_missing(path: &str) -> u8 {
 		error!("File '{}' not found", path);
 		1
 	}
+}
+
+pub fn get_wasm_hash() -> Vec<String> {
+	let sha_cmd = Command::new("sha256sum")
+		.arg("./bin/worker_enclave.compact.wasm")
+		.output()
+		.expect("Failed to get sha256sum of worker_enclave.wasm");
+
+	std::str::from_utf8(&sha_cmd.stdout).unwrap()
+		.split("  ")
+		.map(|s| s.to_string())
+		.collect()
 }

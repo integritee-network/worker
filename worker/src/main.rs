@@ -41,9 +41,16 @@ extern crate system;
 extern crate wabt;
 extern crate ws;
 
+extern crate cid;
+extern crate futures;
+extern crate hyper;
+extern crate ipfs_api;
+extern crate multihash;
+extern crate sha2;
+
 use clap::App;
 use constants::*;
-use enclave_api::{perform_ra, test_main_entrance};
+use enclave_api::perform_ra;
 use enclave_wrappers::*;
 use init_enclave::init_enclave;
 use log::*;
@@ -73,6 +80,8 @@ mod enclave_wrappers;
 mod enclave_tls_ra;
 mod wasm;
 mod attestation_ocalls;
+mod ipfs;
+mod tests;
 
 fn main() {
 	// Setup logging
@@ -102,9 +111,9 @@ fn main() {
 	} else if matches.is_present("run_client") {
 		println!("*** Running Enclave TLS client\n");
 		enclave_tls_ra::run(Mode::Client);
-	} else if matches.is_present("test_enclave") {
+	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
 		println!("*** Running Enclave unit tests\n");
-		run_enclave_unit_tests();
+		tests::run_enclave_tests(m, port);
 	} else {
 		println!("For options: use --help");
 	}
@@ -282,27 +291,6 @@ fn worker(port: &str, w_port: &str) {
 								},
 							}
 						},
-						Event::substratee_proxy(pe) => {
-							println!("[+] Received substratee_proxy event");
-							debug!("{:?}", pe);
-							match &pe {
-								my_node_runtime::substratee_proxy::RawEvent::Forwarded(sender, payload) => {
-									println!("[+] Received Forwarded event");
-									debug!("    From:    {:?}", sender);
-									debug!("    Payload: {:?}", hex::encode(payload));
-									println!();
-
-									// process the payload and send extrinsic
-									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, port);
-								},
-								my_node_runtime::substratee_proxy::RawEvent::CallConfirmed(sender, payload) => {
-									println!("[+] Received CallConfirmed event");
-									debug!("    From:    {:?}", sender);
-									debug!("    Payload: {:?}", hex::encode(payload));
-									println!();
-								},
-							}
-						},
 						Event::substratee_registry(re) => {
 							println!("[+] Received substratee_registry event");
 							debug!("{:?}", re);
@@ -311,6 +299,21 @@ fn worker(port: &str, w_port: &str) {
 									println!("[+] Received AddedEnclave event");
 									println!("    Sender (Worker):  {:?}", sender);
 									println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
+									println!();
+								},
+								my_node_runtime::substratee_registry::RawEvent::Forwarded(sender, payload) => {
+									println!("[+] Received Forwarded event");
+									debug!("    From:    {:?}", sender);
+									debug!("    Payload: {:?}", hex::encode(payload));
+									println!();
+
+									// process the payload and send extrinsic
+									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, port);
+								},
+								my_node_runtime::substratee_registry::RawEvent::CallConfirmed(sender, payload) => {
+									println!("[+] Received CallConfirmed event");
+									debug!("    From:    {:?}", sender);
+									debug!("    Payload: {:?}", hex::encode(payload));
 									println!();
 								},
 								_ => {
@@ -328,40 +331,4 @@ fn worker(port: &str, w_port: &str) {
 			None => error!("Couldn't decode event record list")
 		}
 	}
-}
-
-fn run_enclave_unit_tests() {
-	// ------------------------------------------------------------------------
-	// initialize the enclave
-	println!("*** Starting enclave");
-	let enclave = match init_enclave() {
-		Ok(r) => {
-			println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
-			r
-		},
-		Err(x) => {
-			error!("[-] Init Enclave Failed {}!\n", x);
-			return;
-		},
-	};
-
-	let mut retval = 0usize;
-
-	let result = unsafe {
-		test_main_entrance(enclave.geteid(),
-						   &mut retval)
-	};
-
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			println!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
-		}
-	}
-
-	assert_eq!(retval, 0);
-	println!("[+] unit_test ended!");
-
-	enclave.destroy();
 }

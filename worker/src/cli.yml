@@ -37,3 +37,26 @@ subcommands:
         about: Run TEE client for RA
     - test_enclave:
           about: Run all the unit tests in the enclave
+          takes_value: true
+          args:
+                - all:
+                    short: a
+                    long: all
+                    help: Run all tests
+                    takes_value: false
+                - unit:
+                    short: u
+                    long: unit
+                    help: Run unit tests
+                    takes_value: false
+                - ecall:
+                    short: e
+                    long: ecall
+                    help: Run enclave ecall tests
+                    takes_value: false
+                - integration:
+                    short: i
+                    long: integration
+                    help: Run integration tests
+                    takes_value: false
+

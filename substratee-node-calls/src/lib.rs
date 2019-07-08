@@ -1,8 +1,8 @@
 use log::info;
 use my_node_runtime::Hash;
 use parity_codec::{Decode, Encode};
-use primitive_types::{H256, U256};
-use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
+use primitive_types::{H256};
+use substrate_api_client::{hexstr_to_vec};
 
 pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) {
 	info!("[>] Get worker's URL");

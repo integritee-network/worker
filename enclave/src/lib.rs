@@ -55,7 +55,6 @@ extern crate sgx_tseal;
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-#[macro_use]
 extern crate sgx_tunittest;
 extern crate sgx_types;
 extern crate sgxwasm;
@@ -67,7 +66,7 @@ extern crate yasna;
 
 
 use crypto::ed25519::{keypair, signature};
-use my_node_runtime::{Call, Hash, SubstraTEEProxyCall, UncheckedExtrinsic};
+use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
 use parity_codec::{Compact, Decode, Encode};
 use primitive_types::U256;
 use primitives::ed25519;
@@ -76,10 +75,10 @@ use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
+use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
-use sgx_tunittest::*;
+use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE};
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -222,13 +221,19 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status;
 	}
 
-	let state = match utils::read_state_from_file() {
+	let state = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let helper = DeSerializeHelper::<AllCounts>::new(state);
-	let mut counter = helper.decode().unwrap();
+	let mut counter: AllCounts = match state.len() {
+		0 => AllCounts { entries: HashMap::new() },
+		_ => {
+			debug!("    [Enclave] State read, deserializing...");
+			let helper = DeSerializeHelper::<AllCounts>::new(state);
+			helper.decode().unwrap()
+		}
+	};
 
 	// get the current counter value of the account or initialize with 0
 	let counter_value_old: u32 = *counter.entries.entry(msg.account.to_string()).or_insert(0);
@@ -242,6 +247,27 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status;
 	}
 
+	// write the counter state and return
+	let enc_state = match encrypt_counter_state(counter) {
+		Ok(s) => s,
+		Err(sgx_status) => return sgx_status,
+	};
+
+	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+		return status
+	}
+
+	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+	let mut cid_buf: [u8; 46] = [0; 46];
+	let res = ocall_write_ipfs(&mut rt as *mut sgx_status_t,
+						 enc_state.as_ptr() as * const u8,
+						 enc_state.len() as u32,
+						 cid_buf.as_mut_ptr() as * mut u8,
+						 cid_buf.len() as u32);
+
+	if res == sgx_status_t::SGX_ERROR_UNEXPECTED || rt == sgx_status_t::SGX_ERROR_UNEXPECTED {
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
+	}
 
 	// get information for composing the extrinsic
 	let _seed = match utils::get_ecc_seed() {
@@ -253,7 +279,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
-	let ex = compose_extrinsic(_seed, &call_hash, nonce, genesis_hash);
+	let ex = confirm_call_extrinsic(_seed, &call_hash, &cid_buf, nonce, genesis_hash);
 	let encoded = ex.encode();
 
 	// split the extrinsic_slice at the length of the encoded extrinsic
@@ -261,11 +287,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
 	left.clone_from_slice(&encoded);
 	right.iter_mut().for_each(|x| *x = 0x20);
-
-	// write the counter state
-	if let Err(status) = write_counter_state(counter) {
-		return status;
-	}
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -275,7 +296,7 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	let account_slice = slice::from_raw_parts(account, account_size as usize);
 	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let state = match utils::read_state_from_file() {
+	let state = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -287,10 +308,11 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn write_counter_state(value: AllCounts) -> Result<sgx_status_t, sgx_status_t> {
+fn encrypt_counter_state(value: AllCounts) -> Result<Vec<u8>, sgx_status_t> {
 	let helper = SerializeHelper::new();
-	let c = helper.encode(value).unwrap();
-	utils::write_state_to_file(c)
+	let mut c = helper.encode(value).unwrap();
+	utils::aes_de_or_encrypt(&mut c)?;
+	Ok(c)
 }
 
 #[derive(Serializable, DeSerializable, Debug)]
@@ -305,11 +327,15 @@ pub struct Message {
 	sha256: sgx_sha256_hash_t
 }
 
-pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], ipfs_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), ipfs_hash.to_vec()));
+	compose_extrinsic(seed, function, nonce, genesis_hash)
+}
+
+pub fn compose_extrinsic(seed: Vec<u8>, function: Call, nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
 	let (_privkey, _pubkey) = keypair(&seed);
 
 	let era = Era::immortal();
-	let function = Call::SubstraTEEProxy(SubstraTEEProxyCall::confirm_call(call_hash.to_vec()));
 
 	let index = nonce.low_u64();
 	let raw_payload = (Compact(index), function, era, genesis_hash);
@@ -335,9 +361,36 @@ pub fn compose_extrinsic(seed: Vec<u8>, call_hash: &[u8], nonce: U256, genesis_h
 	)
 }
 
+extern "C" {
+	pub fn ocall_write_ipfs(
+		ret_val			: *mut sgx_status_t,
+		enc_state		: *const u8,
+		enc_state_size	: u32,
+		cid				: *const u8,
+		cid_size		: u32,
+	) -> sgx_status_t;
+}
+
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		utils::test_encrypted_state_io_works,
+		test_ocall_write_ipfs
 		)
+}
+
+fn test_ocall_write_ipfs() {
+	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+	let mut cid_buf: Vec<u8> = vec![0; 46];
+	let enc_state: Vec<u8> = vec![1; 36];
+
+	let _res = unsafe {
+		ocall_write_ipfs(&mut rt as *mut sgx_status_t,
+						 enc_state.as_ptr(),
+						 enc_state.len() as u32,
+						 cid_buf.as_mut_ptr(),
+						 cid_buf.len() as u32)
+	};
+
+	println!("Cid Returned: {:?}", std::str::from_utf8(&cid_buf));
 }

@@ -19,7 +19,7 @@ struct ClientAuth {
 
 impl ClientAuth {
 	fn new(outdated_ok: bool) -> ClientAuth {
-		ClientAuth { outdated_ok: outdated_ok }
+		ClientAuth { outdated_ok }
 	}
 }
 
@@ -39,13 +39,13 @@ impl rustls::ClientCertVerifier for ClientAuth {
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 				if self.outdated_ok {
 					println!("outdated_ok is set, overriding outdated error");
-					return Ok(rustls::ClientCertVerified::assertion());
+					Ok(rustls::ClientCertVerified::assertion())
 				} else {
-					return Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid));
+					Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
 				}
 			}
 			Err(_) => {
-				return Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid));
+				Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
 			}
 		}
 	}
@@ -57,7 +57,7 @@ struct ServerAuth {
 
 impl ServerAuth {
 	fn new(outdated_ok: bool) -> ServerAuth {
-		ServerAuth { outdated_ok: outdated_ok }
+		ServerAuth { outdated_ok }
 	}
 }
 
@@ -71,18 +71,18 @@ impl rustls::ServerCertVerifier for ServerAuth {
 		// This call will automatically verify cert is properly signed
 		match cert::verify_mra_cert(&_certs[0].0) {
 			Ok(()) => {
-				return Ok(rustls::ServerCertVerified::assertion());
+				Ok(rustls::ServerCertVerified::assertion())
 			}
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 				if self.outdated_ok {
 					println!("outdated_ok is set, overriding outdated error");
-					return Ok(rustls::ServerCertVerified::assertion());
+					Ok(rustls::ServerCertVerified::assertion())
 				} else {
-					return Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid));
+					Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
 				}
 			}
 			Err(_) => {
-				return Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid));
+				Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
 			}
 		}
 	}
@@ -158,7 +158,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
 
-	tls.write("Hello Sir, mind passing me the shielding and encryption keys?".as_bytes()).unwrap();
+	tls.write(b"Hello Sir, mind passing me the shielding and encryption keys?").unwrap();
 
 	let mut plaintext = [0u8; 1394]; //Vec::new();
 	match tls.read(&mut plaintext) {
@@ -189,6 +189,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	sgx_status_t::SGX_SUCCESS
 }
 
+#[allow(dead_code)]
 fn read_tls_stream(tls: &mut Stream<ClientSession, TcpStream>, buff: &mut Vec<u8>, msg: &str) -> SgxResult<Vec<u8>> {
 	match tls.read(buff) {
 		Ok(_) => {

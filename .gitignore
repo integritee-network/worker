@@ -41,4 +41,5 @@ lib/libenclave.a
 bin/client.crt
 bin/client.key
 bin/spid.txt
+bin/key.txt
 bin/attestation_report.json
