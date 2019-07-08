@@ -16,6 +16,11 @@
 */
 
 use enclave_api::*;
+//use enclave_wrappers::get_account_nonce;
+use log::*;
+//use parity_codec::{Compact, Encode};
+//use primitive_types::U256;
+use primitives::{ed25519, Pair};
 use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
@@ -47,8 +52,11 @@ pub fn get_encrypted_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
 								  &mut retval,
 								  pubkey.as_mut_ptr(),
 								  pubkey_size
-		);
+		)
 	};
+
+	evaluate_result(retval);
+	evaluate_result(result);
 
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
 	encrypt_msg(rsa_pubkey)
@@ -71,4 +79,27 @@ pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
 
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
 	payload_encrypted
+}
+
+pub fn register_enclave() {
+	let mut api = Api::new(format!("ws://127.0.0.1:{}", "9991"));
+	api.init();
+
+	let tee_ecc_seed = [244, 96, 170, 60, 77, 239, 28, 64, 51, 180, 208, 145, 76, 154, 198, 174,
+		236, 162, 18, 135, 190, 84, 216, 155, 142, 175, 237, 238, 60, 219, 134, 184];
+	let _pair = ed25519::Pair::from_seed(tee_ecc_seed);
+
+//	let tx_hash = api.send_extrinsic(xthex).unwrap();
+}
+
+pub fn evaluate_result(result: sgx_status_t) {
+	match result {
+		sgx_status_t::SGX_SUCCESS => {
+			println!("[<] Message decoded and processed in the enclave");
+		},
+		_ => {
+			error!("[<] Error processing message in the enclave");
+			panic!("");
+		}
+	}
 }

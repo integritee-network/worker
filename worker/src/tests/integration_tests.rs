@@ -50,14 +50,14 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t) {
 	// the size is determined in the enclave
 	let unchecked_extrinsic_size = 5000;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
-	let mut status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+	let mut retval = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	// ------------------------------------------------------------------------
 	// perform a remote attestation and get an unchecked extrinsic back
 	println!("*** Perform a remote attestation of the enclave");
 	let result = unsafe {
 		perform_ra(
 			eid,
-			&mut status,
+			&mut retval,
 			genesis_hash.as_ptr(),
 			genesis_hash.len() as u32,
 			nonce_bytes.as_ptr(),
@@ -68,16 +68,13 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t) {
 			unchecked_extrinsic_size as u32
 		)
 	};
-
-	if result != sgx_status_t::SGX_SUCCESS {
-		error!("RA not successfull");
-	}
-
-	info!("RA works");
+	evaluate_result(result);
+	evaluate_result(retval);
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t) {
-	let mut payload_encrypted = get_encrypted_msg(eid);
+	let payload_encrypted = get_encrypted_msg(eid);
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	process_forwarded_payload(eid, payload_encrypted, &mut retval, "9991");
+	evaluate_result(retval);
 }

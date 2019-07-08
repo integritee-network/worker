@@ -39,6 +39,7 @@ pub fn get_counter_works(eid: sgx_enclave_id_t) {
 	};
 
 	println!("{} value: {}", account, value);
+	evaluate_result(result);
 }
 
 pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
@@ -81,13 +82,5 @@ pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
 		)
 	};
 
-	match result {
-		sgx_status_t::SGX_SUCCESS => {
-			println!("[<] Message decoded and processed in the enclave");
-		},
-		_ => {
-			error!("[<] Error processing message in the enclave");
-			panic!("");
-		}
-	}
+	evaluate_result(result);
 }

@@ -27,7 +27,7 @@ use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use constants::{AES_KEY_FILE_AND_INIT_V, ENCRYPTED_STATE_FILE, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{AES_KEY_FILE_AND_INIT_V, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
