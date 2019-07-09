@@ -50,7 +50,7 @@ extern crate sha2;
 
 use clap::App;
 use constants::*;
-use enclave_api::perform_ra;
+use enclave_api::{perform_ra, save_encrypted_state};
 use enclave_wrappers::*;
 use init_enclave::init_enclave;
 use log::*;
@@ -69,7 +69,7 @@ use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 use enclave_tls_ra::Mode;
-use substratee_node_calls::get_worker_amount;
+use substratee_node_calls::{get_worker_amount, get_latest_state};
 
 mod utils;
 mod constants;
@@ -241,11 +241,26 @@ fn worker(port: &str, w_port: &str) {
 			return;
 		},
 		1 => {
-			info!("one worker registered.");
+			info!("one worker registered, should be me");
 		},
 		_ => {
-			info!("There are already workers registered, fetching keys from first one.");
+			println!("There are already workers registered, fetching keys from first one...");
 			enclave_tls_ra::run(Mode::Client);
+			println!("[+] Got keys, fetching newest state from from ipfs...");
+			let cid = get_latest_state(&api);
+			let state = ipfs::read_from_ipfs(cid);
+			println!("[+] Got got latest state from ipfs.");
+			let result = unsafe {
+				save_encrypted_state(enclave.geteid(), &mut status, state.as_ptr(), state.len() as u32)
+			};
+
+			match result {
+				sgx_status_t::SGX_SUCCESS => println!("[+] Stored state in enclave."),
+				_ => {
+					println!("[+] Storing state in enclave failed");
+					return;
+				}
+			};
 			return;
 		},
 	};

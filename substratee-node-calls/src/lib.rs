@@ -21,6 +21,14 @@ pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	amount
 }
 
+pub fn get_latest_state(api: &substrate_api_client::Api) -> [u8; 46] {
+	let result_str = api.get_storage("substraTEERegistry", "LatestIPFSHash", None).unwrap();
+	let unhex = hexstr_to_vec(result_str);
+	let mut h : [u8; 46] = [0; 46];
+	h.clone_from_slice(&unhex);
+	h
+}
+
 fn hexstr_to_enclave(hexstr: String) -> Enclave {
 	let mut unhex = hexstr_to_vec(hexstr);
 	let (h, url) = unhex.split_at_mut(32 as usize);

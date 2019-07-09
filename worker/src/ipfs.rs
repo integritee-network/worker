@@ -25,7 +25,9 @@ use std::sync::mpsc::channel;
 use std::str;
 use futures::Stream;
 
-fn write_to_ipfs(data: &'static [u8]) -> [u8; 46] {
+pub type Cid = [u8; 46];
+
+fn write_to_ipfs(data: &'static [u8]) -> Cid {
 	println!("IPFS: \n...connecting to localhost:5001...");
 	let client = IpfsClient::default();
 
@@ -48,12 +50,12 @@ fn write_to_ipfs(data: &'static [u8]) -> [u8; 46] {
 
 	hyper::rt::run(req);
 
-	let mut cid: [u8; 46] = [0; 46];
+	let mut cid: Cid = [0; 46];
 	cid.clone_from_slice(&rx.recv().unwrap());
 	cid
 }
 
-fn read_from_ipfs(cid: [u8; 46]) -> Vec<u8> {
+pub fn read_from_ipfs(cid: Cid) -> Vec<u8> {
 	let client = IpfsClient::default();
 	let h = str::from_utf8(&cid).unwrap();
 
