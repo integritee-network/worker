@@ -36,6 +36,8 @@ pub enum Mode {
 	Server,
 }
 
+pub const PORT :&str = "3443";
+
 pub fn run(mode: Mode) {
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
@@ -52,7 +54,7 @@ pub fn run(mode: Mode) {
 
 	match mode {
 		Mode::Server => run_enclave_server(enclave.geteid(), sign_type),
-		Mode::Client => run_enclave_client(enclave.geteid(), sign_type),
+		Mode::Client => run_enclave_client(enclave.geteid(), sign_type, &format!("localhost:{}", PORT) ),
 	}
 
 
@@ -63,7 +65,7 @@ pub fn run(mode: Mode) {
 
 pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t) {
 	println!("Running as server...");
-	let listener = TcpListener::bind("0.0.0.0:3443").unwrap();
+	let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).unwrap();
 	//loop{
 	match listener.accept() {
 		Ok((socket, addr)) => {
@@ -86,9 +88,9 @@ pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_
 	}
 }
 
-pub fn run_enclave_client(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t) {
+pub fn run_enclave_client(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
 	println!("Running as client...");
-	let socket = TcpStream::connect("localhost:3443").unwrap();
+	let socket = TcpStream::connect(addr).unwrap();
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		run_client(eid, &mut retval, socket.as_raw_fd(), sign_type)

@@ -91,7 +91,6 @@ impl rustls::ServerCertVerifier for ServerAuth {
 
 #[no_mangle]
 pub extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
-	env_logger::init();
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
 	let (key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
@@ -134,7 +133,6 @@ pub extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 #[no_mangle]
 pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
-	env_logger::init();
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
 	let (key_der, cert_der) = match create_ra_report_and_signature(sign_type) {

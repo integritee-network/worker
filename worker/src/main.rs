@@ -68,8 +68,8 @@ use substrate_api_client::{Api, hexstr_to_vec};
 use utils::check_files;
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
-use enclave_tls_ra::Mode;
-use substratee_node_calls::{get_worker_amount, get_latest_state};
+use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client, PORT};
+use substratee_node_calls::{get_worker_amount, get_latest_state, get_worker_info};
 
 mod utils;
 mod constants;
@@ -237,31 +237,44 @@ fn worker(port: &str, w_port: &str) {
 
 	match get_worker_amount(&api) {
 		0 => {
-			error!("No worker in registry!");
+			error!("No worker in registry after registering!");
 			return;
 		},
 		1 => {
 			info!("one worker registered, should be me");
+			info!("Starting Enclave MU-RA Ra server");
+			let eid = enclave.geteid();
+			thread::spawn(move || {
+				run_enclave_server(eid, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
+			});
 		},
 		_ => {
 			println!("There are already workers registered, fetching keys from first one...");
-			enclave_tls_ra::run(Mode::Client);
+			let w1 = get_worker_info(&api, 0);
+			let _url = w1.url.replace("ws://", "");
+			let w1_url_port: Vec<&str> = _url.split(':').collect();
+			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], PORT));
 			println!("[+] Got keys, fetching newest state from from ipfs...");
-			let cid = get_latest_state(&api);
-			let state = ipfs::read_from_ipfs(cid);
-			println!("[+] Got got latest state from ipfs.");
-			let result = unsafe {
-				save_encrypted_state(enclave.geteid(), &mut status, state.as_ptr(), state.len() as u32)
-			};
 
-			match result {
-				sgx_status_t::SGX_SUCCESS => println!("[+] Stored state in enclave."),
-				_ => {
-					println!("[+] Storing state in enclave failed");
-					return;
-				}
+			match get_latest_state(&api) {
+				Some(cid) => {
+					println!("[+] Got got latest state from ipfs.");
+
+					let state = ipfs::read_from_ipfs(cid);
+					let result = unsafe {
+						save_encrypted_state(enclave.geteid(), &mut status, state.as_ptr(), state.len() as u32)
+					};
+
+					match result {
+						sgx_status_t::SGX_SUCCESS => println!("[+] Stored state in enclave."),
+						_ => {
+							println!("[+] Storing state in enclave failed");
+							return;
+						}
+					};
+				},
+				None => println!("[+] No state update happened yet, no sync neccessary"),
 			};
-			return;
 		},
 	};
 

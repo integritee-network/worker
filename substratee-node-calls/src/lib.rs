@@ -4,14 +4,15 @@ use parity_codec::{Decode, Encode};
 use primitive_types::{H256};
 use substrate_api_client::{hexstr_to_vec};
 
-pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) {
+pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 	info!("[>] Get worker's URL");
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveRegistry", Some((index).encode())).unwrap();
-	info!("Storage hex_str: {}", result_str);
+	debug!("Storage hex_str: {}", result_str);
 
 	let enc = hexstr_to_enclave(result_str);
-	println!("[+]: Workers Pubkey is {:?}", &enc.pubkey);
-	println!("[+]: Workers URL is {:?}", std::str::from_utf8(&enc.url).unwrap());
+	info!("[+]: W1 Pubkey is {:?}", &enc.pubkey);
+	info!("[+]: W1 URL is {:?}", enc.url);
+	enc
 }
 
 pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
@@ -21,12 +22,22 @@ pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	amount
 }
 
-pub fn get_latest_state(api: &substrate_api_client::Api) -> [u8; 46] {
+pub fn get_latest_state(api: &substrate_api_client::Api) -> Option<[u8; 46]> {
 	let result_str = api.get_storage("substraTEERegistry", "LatestIPFSHash", None).unwrap();
 	let unhex = hexstr_to_vec(result_str);
+	info!("State hash vec: {:?}", unhex);
 	let mut h : [u8; 46] = [0; 46];
-	h.clone_from_slice(&unhex);
-	h
+
+	match unhex.len() {
+		1 => {
+			info!("No state update happened yet");
+			None
+		},
+		_ => {
+			h.clone_from_slice(&unhex);
+			Some(h)
+		}
+	}
 }
 
 fn hexstr_to_enclave(hexstr: String) -> Enclave {
@@ -40,7 +51,7 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 		pubkey: key,
 		// Fixme: There are some bytes left that contain metadata about the linkable map.
 		// This may be the reason I was not able to do automated deserialization.
-		url: url[1..url.len() - 10].to_vec()
+		url: std::str::from_utf8(&url[1..url.len() - 10]).unwrap().to_string()
 	}
 }
 
@@ -55,9 +66,9 @@ pub fn hexstr_to_u64(hexstr: String) -> u64 {
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Enclave {
-	pubkey: H256,
+	pub pubkey: H256,
 	// utf8 encoded url
-	url: Vec<u8>
+	pub url: String
 }
 
 #[cfg(test)]
