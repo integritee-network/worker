@@ -134,13 +134,13 @@ pub fn read_state_from_file(path: &str) -> SgxResult<Vec<u8>> {
 	};
 
 	aes_de_or_encrypt(&mut bytes)?;
-	println!("buffer decrypted = {:?}", bytes);
+	debug!("buffer decrypted = {:?}", bytes);
 
 	Ok(bytes)
 }
 
 pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
-	println!("plaintext data to be written: {:?}", bytes);
+	debug!("plaintext data to be written: {:?}", bytes);
 
 	aes_de_or_encrypt(bytes)?;
 

@@ -28,12 +28,12 @@ use futures::Stream;
 pub type Cid = [u8; 46];
 
 fn write_to_ipfs(data: &'static [u8]) -> Cid {
-	println!("IPFS: \n...connecting to localhost:5001...");
+	info!("IPFS: \n...connecting to localhost:5001...");
 	let client = IpfsClient::default();
 
 	let req = client
 		.version()
-		.map(|version| println!("version: {:?}", version.version));
+		.map(|version| info!("version: {:?}", version.version));
 
 	hyper::rt::run(req.map_err(|e| eprintln!("{}", e)));
 

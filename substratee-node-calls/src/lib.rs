@@ -1,4 +1,4 @@
-use log::info;
+use log::*;
 use my_node_runtime::Hash;
 use parity_codec::{Decode, Encode};
 use primitive_types::{H256};
