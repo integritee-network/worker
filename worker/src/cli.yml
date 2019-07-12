@@ -22,6 +22,11 @@ args:
         long: worker-port
         help: Set the websocket port to listen for worker requests
         takes_value: true
+    - mu-ra-port:
+        short: r
+        long: mu-ra-port
+        help: Set the websocket port to listen for mu-ra requests
+        takes_value: true
 
 
 subcommands:

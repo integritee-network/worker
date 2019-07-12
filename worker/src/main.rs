@@ -65,11 +65,11 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, hexstr_to_vec};
-use utils::{check_files, get_first_worker_that_is_not_equal_to_equal_to_self};
+use utils::{check_files, get_first_worker_that_is_not_equal_to_self, get_mu_ra_port_from_worker};
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
-use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client, PORT};
-use substratee_node_calls::{get_worker_amount, get_latest_state, get_worker_info};
+use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
+use substratee_node_calls::{get_worker_amount, get_latest_state};
 
 mod utils;
 mod constants;
@@ -96,9 +96,12 @@ fn main() {
 	let w_port = matches.value_of("w-port").unwrap_or("2000");
 	info!("Worker listening on  port {}", w_port);
 
+	let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
+	info!("MU-RA server on port {}", mu_ra_port);
+
 	if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
-		worker(port, w_port);
+		worker(port, w_port, mu_ra_port);
 	} else if matches.is_present("getpublickey") {
 		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
@@ -107,10 +110,10 @@ fn main() {
 		get_signing_key_tee();
 	} else if matches.is_present("run_server") {
 		println!("*** Running Enclave TLS server\n");
-		enclave_tls_ra::run(Mode::Server);
+		enclave_tls_ra::run(Mode::Server, mu_ra_port);
 	} else if matches.is_present("run_client") {
 		println!("*** Running Enclave TLS client\n");
-		enclave_tls_ra::run(Mode::Client);
+		enclave_tls_ra::run(Mode::Client, mu_ra_port);
 	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
 		tests::run_enclave_tests(m, port);
 	} else {
@@ -118,7 +121,7 @@ fn main() {
 	}
 }
 
-fn worker(port: &str, w_port: &str) {
+fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 	let mut status = sgx_status_t::SGX_SUCCESS;
 
 	// ------------------------------------------------------------------------
@@ -168,8 +171,16 @@ fn worker(port: &str, w_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the ws server to listen for worker requests
-	let w_url = format!("ws://127.0.0.1:{}", w_port);
-	start_ws_server(enclave.geteid(), w_url.clone());
+	let w_url = format!("127.0.0.1:{}", w_port);
+	start_ws_server(enclave.geteid(), w_url.clone(), mu_ra_port.to_string());
+
+	// ------------------------------------------------------------------------
+	println!("Starting Enclave MU-RA Ra server");
+	let eid = enclave.geteid();
+	let p = mu_ra_port.to_string().clone();
+	thread::spawn(move || {
+		run_enclave_server(eid, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &p)
+	});
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
@@ -241,18 +252,18 @@ fn worker(port: &str, w_port: &str) {
 		},
 		1 => {
 			info!("one worker registered, should be me");
-			info!("Starting Enclave MU-RA Ra server");
-			let eid = enclave.geteid();
-			thread::spawn(move || {
-				run_enclave_server(eid, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
-			});
 		},
 		_ => {
 			println!("There are already workers registered, fetching keys from first one...");
-			let w1 = get_first_worker_that_is_not_equal_to_equal_to_self(&api, ecc_key).unwrap();
+			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
+			let w1_url = w1.url.clone();
+			let ra_port = get_mu_ra_port_from_worker(w1_url).unwrap();
+			info!("Got Port for MU-RA from other worker: {}", ra_port);
+
+
 			let _url = w1.url.replace("ws://", "");
 			let w1_url_port: Vec<&str> = _url.split(':').collect();
-			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], PORT));
+			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], ra_port));
 			println!("[+] Got keys, fetching newest state from from ipfs...");
 
 			match get_latest_state(&api) {

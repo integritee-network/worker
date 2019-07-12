@@ -21,6 +21,10 @@ use std::process::Command;
 use my_node_runtime::Hash;
 use primitive_types::{H256};
 use substratee_node_calls::{get_worker_amount, get_latest_state, get_worker_info, Enclave};
+use std::sync::mpsc::channel;
+use std::thread;
+use ws_server::{MSG_MU_RA_PORT, WsClient};
+use ws::connect;
 
 pub fn check_files() -> u8 {
 	debug!("*** Check files");
@@ -76,6 +80,35 @@ pub fn get_first_worker_that_is_not_equal_to_self(api: &substrate_api_client::Ap
 		}
 	}
 	Err("No worker not equal to self found")
+}
+
+pub fn get_mu_ra_port_from_worker(w_url: String) -> Result<String, ()>{
+
+	let (port_in, port_out) = channel();
+	let client = thread::spawn(move || {
+		match connect(format!("ws://{}",  w_url), |out| {
+			WsClient {
+				out: out,
+				request: MSG_MU_RA_PORT.to_string(),
+				result: port_in.clone()
+			}
+		}) {
+			Ok(c) => c,
+			Err(_) => {
+				error!("Could not connect to primary worker");
+				return;
+			}
+		}
+	});
+	client.join().unwrap();
+
+	match port_out.recv() {
+		Ok(p) => Ok(p),
+		Err(e) => {
+			error!("[-] Could not connect to primary worker, returning");
+			return Err(())
+		},
+	}
 }
 
 pub fn vec_to_h256(vec: Vec<u8>) -> H256 {

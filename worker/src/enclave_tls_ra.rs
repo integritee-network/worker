@@ -36,9 +36,7 @@ pub enum Mode {
 	Server,
 }
 
-pub const PORT :&str = "3443";
-
-pub fn run(mode: Mode) {
+pub fn run(mode: Mode, port: &str) {
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 	let enclave = match init_enclave() {
@@ -53,8 +51,8 @@ pub fn run(mode: Mode) {
 	};
 
 	match mode {
-		Mode::Server => run_enclave_server(enclave.geteid(), sign_type),
-		Mode::Client => run_enclave_client(enclave.geteid(), sign_type, &format!("localhost:{}", PORT) ),
+		Mode::Server => run_enclave_server(enclave.geteid(), sign_type, port),
+		Mode::Client => run_enclave_client(enclave.geteid(), sign_type, &format!("localhost:{}", port) ),
 	}
 
 
@@ -63,9 +61,9 @@ pub fn run(mode: Mode) {
 }
 
 
-pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t) {
+pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
 	println!("Running as server...");
-	let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).unwrap();
+	let listener = TcpListener::bind(format!("0.0.0.0:{}", addr)).unwrap();
 	//loop{
 	match listener.accept() {
 		Ok((socket, addr)) => {
