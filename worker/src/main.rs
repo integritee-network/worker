@@ -65,7 +65,7 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, hexstr_to_vec};
-use utils::check_files;
+use utils::{check_files, get_first_worker_that_is_not_equal_to_equal_to_self};
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client, PORT};
@@ -249,7 +249,7 @@ fn worker(port: &str, w_port: &str) {
 		},
 		_ => {
 			println!("There are already workers registered, fetching keys from first one...");
-			let w1 = get_worker_info(&api, 0);
+			let w1 = get_first_worker_that_is_not_equal_to_equal_to_self(&api, ecc_key).unwrap();
 			let _url = w1.url.replace("ws://", "");
 			let w1_url_port: Vec<&str> = _url.split(':').collect();
 			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], PORT));

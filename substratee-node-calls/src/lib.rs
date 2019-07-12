@@ -10,15 +10,15 @@ pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 	debug!("Storage hex_str: {}", result_str);
 
 	let enc = hexstr_to_enclave(result_str);
-	info!("[+]: W1 Pubkey is {:?}", &enc.pubkey);
-	info!("[+]: W1 URL is {:?}", enc.url);
+	info!("[+]: W{} Pubkey is {:?}", index, &enc.pubkey);
+	info!("[+]: W{} URL is {:?}", index, enc.url);
 	enc
 }
 
 pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveCount", None).unwrap();
 	let amount = hexstr_to_u64(result_str);
-	println!("[+]: Amount of Registered Workers {:?}", amount);
+	info!("[+]: Amount of Registered Workers {:?}", amount);
 	amount
 }
 
