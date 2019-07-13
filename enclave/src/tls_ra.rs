@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::vec::Vec;
 use rustls::{ClientSession, Stream};
 
-use utils::{read_rsa_pubkey, read_aes_key_and_iv};
+use utils::{read_aes_key_and_iv, store_aes_key_and_iv, read_rsa_keypair, store_rsa_key_pair};
 
 struct ClientAuth {
 	outdated_ok: bool,
@@ -118,10 +118,10 @@ pub extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		}
 	};
 
-	let shielding_key = read_rsa_pubkey().unwrap();
+	let shielding_key = read_rsa_keypair().unwrap();
 	let (key, iv) = read_aes_key_and_iv().unwrap();
 	let sh_json = serde_json::to_string(&shielding_key).unwrap();
-	println!("Sending Shielding Key: {:?}", sh_json);
+	println!("Sending Shielding Key: {:?}", sh_json.as_bytes().len());
 	println!("Sending AES key {:?}\nIV: {:?}\n", key, iv);
 
 	tls.write(sh_json.as_bytes()).unwrap();
@@ -158,32 +158,40 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 	tls.write(b"Hello Sir, mind passing me the shielding and encryption keys?").unwrap();
 
-	let mut plaintext = [0u8; 1394]; //Vec::new();
-	match tls.read(&mut plaintext) {
-		Ok(_) => println!("Received Shielding key: {}", str::from_utf8(&plaintext).unwrap()),
+	let mut rsa_pair = [0u8; 6245]; //Vec::new();
+	match tls.read(&mut rsa_pair) {
+		Ok(_) => println!("Received Shielding key: {}", str::from_utf8(&rsa_pair).unwrap()),
 		Err(e) => {
 			println!("Error in read: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
+	if let Err(e) = store_rsa_key_pair(&rsa_pair) {
+		return e;
+	}
 
-	let mut plaintext = [0u8; 16]; //Vec::new();
-	match tls.read(&mut plaintext) {
-		Ok(_) => println!("Received AES key: {:?}", &plaintext[..]),
+	let mut aes_key = [0u8; 16]; //Vec::new();
+	match tls.read(&mut aes_key) {
+		Ok(_) => println!("Received AES key: {:?}", &aes_key[..]),
 		Err(e) => {
 			println!("Error in read: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	};
 
-	let mut plaintext = [0u8; 16]; //Vec::new();
-	match tls.read(&mut plaintext) {
-		Ok(_) => println!("Received AES IV: {:?}", &plaintext[..]),
+	let mut aes_iv = [0u8; 16]; //Vec::new();
+	match tls.read(&mut aes_iv) {
+		Ok(_) => println!("Received AES IV: {:?}", &aes_iv[..]),
 		Err(e) => {
 			println!("Error in read: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	};
+
+	if let Err(e) = store_aes_key_and_iv(aes_key, aes_iv) {
+		return e;
+	}
+
 	sgx_status_t::SGX_SUCCESS
 }
 
