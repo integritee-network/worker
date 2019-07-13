@@ -78,7 +78,7 @@ use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE};
+use constants::{ED25519_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -371,11 +371,21 @@ pub unsafe extern "C" fn save_encrypted_state(enc_state: * const u8, state_size:
 }
 
 extern "C" {
+	pub fn ocall_read_ipfs(
+		ret_val			: *mut sgx_status_t,
+		enc_state		: *mut u8,
+		enc_state_size	: u32,
+		cid				: *const u8,
+		cid_size		: u32,
+	) -> sgx_status_t;
+}
+
+extern "C" {
 	pub fn ocall_write_ipfs(
 		ret_val			: *mut sgx_status_t,
 		enc_state		: *const u8,
 		enc_state_size	: u32,
-		cid				: *const u8,
+		cid				: *mut u8,
 		cid_size		: u32,
 	) -> sgx_status_t;
 }
@@ -384,14 +394,14 @@ extern "C" {
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		utils::test_encrypted_state_io_works,
-		test_ocall_write_ipfs
+		test_ocall_read_write_ipfs
 		)
 }
 
-fn test_ocall_write_ipfs() {
+fn test_ocall_read_write_ipfs() {
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let mut cid_buf: Vec<u8> = vec![0; 46];
-	let enc_state: Vec<u8> = vec![1; 36];
+	let enc_state: Vec<u8> = vec![20; 36];
 
 	let _res = unsafe {
 		ocall_write_ipfs(&mut rt as *mut sgx_status_t,
@@ -401,5 +411,15 @@ fn test_ocall_write_ipfs() {
 						 cid_buf.len() as u32)
 	};
 
+	let mut ret_state= vec![0; 36];
+	let _res = unsafe {
+		ocall_read_ipfs(&mut rt as *mut sgx_status_t,
+						ret_state.as_mut_ptr(),
+						ret_state.len() as u32,
+						cid_buf.as_ptr(),
+		cid_buf.len() as u32)
+	};
+
+	assert_eq!(enc_state, ret_state);
 	println!("Cid Returned: {:?}", std::str::from_utf8(&cid_buf));
 }

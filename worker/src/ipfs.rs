@@ -16,14 +16,14 @@
 */
 
 use futures::Future;
+use futures::Stream;
 use ipfs_api::IpfsClient;
 use log::*;
 use sgx_types::*;
 use std::io::Cursor;
 use std::slice;
-use std::sync::mpsc::channel;
 use std::str;
-use futures::Stream;
+use std::sync::mpsc::channel;
 
 pub type Cid = [u8; 46];
 
@@ -86,6 +86,25 @@ pub unsafe extern "C" fn ocall_write_ipfs(enc_state: *const u8,
 
 	let _cid = write_to_ipfs(state);
 	cid.clone_from_slice(&_cid);
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_read_ipfs(enc_state: *mut u8,
+										 enc_state_size: u32,
+										 cid: *const u8,
+										 cid_size: u32) -> sgx_status_t {
+	debug!("Entering ocall_read_ipfs");
+
+	let state = slice::from_raw_parts_mut(enc_state, enc_state_size as usize);
+	let _cid = slice::from_raw_parts(cid, cid_size as usize);
+
+	let mut cid = [0; 46];
+	cid.clone_from_slice(_cid);
+
+	let res = read_from_ipfs(cid);
+	state.clone_from_slice(&res);
+
 	sgx_status_t::SGX_SUCCESS
 }
 
