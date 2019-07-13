@@ -236,13 +236,15 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 }
 
 pub fn test_encrypted_state_io_works() {
-	let path = "./bin/test_state_file.bin";
+	let path = "test_state_file.bin";
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";
 	create_sealed_aes_key_and_iv().unwrap();
 
+	aes_de_or_encrypt(&mut plaintext.to_vec()).unwrap();
 	write_state_to_file(&mut plaintext.to_vec(), path).unwrap();
 	let state: Vec<u8> = read_state_from_file(path).unwrap();
-	assert_eq!(state.to_vec(), plaintext.to_vec());
-	std::fs::remove_file(path);
+
+	assert_eq!(state, plaintext.to_vec());
+	std::fs::remove_file(path).unwrap();
 }
 
