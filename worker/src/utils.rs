@@ -20,7 +20,7 @@ use constants::*;
 use std::process::Command;
 use my_node_runtime::Hash;
 use primitive_types::{H256};
-use substratee_node_calls::{get_worker_amount, get_latest_state, get_worker_info, Enclave};
+use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
 use std::sync::mpsc::channel;
 use std::thread;
 use ws_server::{MSG_MU_RA_PORT, WsClient};
@@ -104,7 +104,7 @@ pub fn get_mu_ra_port_from_worker(w_url: String) -> Result<String, ()>{
 
 	match port_out.recv() {
 		Ok(p) => Ok(p),
-		Err(e) => {
+		Err(_) => {
 			error!("[-] Could not connect to primary worker, returning");
 			return Err(())
 		},

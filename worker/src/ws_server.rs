@@ -140,9 +140,4 @@ impl Handler for WsClient {
 		self.out.close(CloseCode::Normal).unwrap();
 		Ok(())
 	}
-
-	fn on_error(&mut self, err: Error) {
-		error!("WS Error encountered while connecting..");
-		return;
-	}
 }

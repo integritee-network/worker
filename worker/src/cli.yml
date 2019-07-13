@@ -41,13 +41,13 @@ subcommands:
     - run_client:
         about: Run TEE client for RA
     - test_enclave:
-          about: Run all the unit tests in the enclave
+          about: Run tests involving the enclave
           takes_value: true
           args:
                 - all:
                     short: a
                     long: all
-                    help: Run all tests
+                    help: Run all tests (beware, all corrupts the counter state for some whatever reason...)
                     takes_value: false
                 - unit:
                     short: u
