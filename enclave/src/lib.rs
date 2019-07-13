@@ -64,7 +64,6 @@ extern crate webpki;
 extern crate webpki_roots;
 extern crate yasna;
 
-
 use crypto::ed25519::{keypair, signature};
 use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
 use parity_codec::{Compact, Decode, Encode};
@@ -75,6 +74,7 @@ use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
+use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
@@ -253,6 +253,8 @@ pub unsafe extern "C" fn call_counter_wasm(
 		Err(sgx_status) => return sgx_status,
 	};
 
+	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
+
 	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
 	}
@@ -267,7 +269,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
-	let ex = confirm_call_extrinsic(_seed, &call_hash, &cid_buf, nonce, genesis_hash);
+	let ex = confirm_call_extrinsic(_seed, &call_hash, &state_hash, nonce, genesis_hash);
 	let encoded = ex.encode();
 
 	// split the extrinsic_slice at the length of the encoded extrinsic
@@ -315,8 +317,8 @@ pub struct Message {
 	sha256: sgx_sha256_hash_t
 }
 
-pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], ipfs_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), ipfs_hash.to_vec()));
+pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], state_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), state_hash.to_vec()));
 	compose_extrinsic(seed, function, nonce, genesis_hash)
 }
 
