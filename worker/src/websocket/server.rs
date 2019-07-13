@@ -22,26 +22,22 @@ use enclave_api::{get_counter, get_rsa_encryption_pubkey};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
-use std::thread;
-use ws::{CloseCode, Handler, listen, Message, Result, Sender, Handshake, Error};
 use std::str;
-use std::sync::mpsc::Sender as ThreadOut;
-
-
-const MSG_GET_PUB_KEY_WORKER: &str = "get_pub_key_worker";
-pub const MSG_MU_RA_PORT: &str = "get_mu_ra_port";
+use std::thread;
+use websocket::requests::*;
+use ws::{CloseCode, Handler, listen, Message, Result, Sender};
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
-    // Server WebSocket handler
-    struct Server {
-        out: Sender,
-        eid: sgx_enclave_id_t,
+	// Server WebSocket handler
+	struct Server {
+		out: Sender,
+		eid: sgx_enclave_id_t,
 		mu_ra_port: String,
-    }
+	}
 
-    impl Handler for Server {
-        fn on_message(&mut self, msg: Message) -> Result<()> {
-            info!("[WS Server] Got message '{}'. ", msg);
+	impl Handler for Server {
+		fn on_message(&mut self, msg: Message) -> Result<()> {
+			info!("[WS Server] Got message '{}'. ", msg);
 
 			let answer = match &msg.clone().into_text().unwrap()[..] {
 				MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
@@ -49,20 +45,20 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 				_ => handle_get_counter_msg(self.eid, msg),
 			};
 
-            self.out.send(answer)
-        }
+			self.out.send(answer)
+		}
 
-        fn on_close(&mut self, code: CloseCode, reason: &str) {
-            info!("[WS Server] WebSocket closing for ({:?}) {}", code, reason);
-        }
-    }
-    // Server thread
-    info!("Starting WebSocket server on {}", addr);
-    thread::spawn(move || {
-        listen(addr, |out| {
-            Server { out, eid, mu_ra_port: mu_ra_port.clone() }
-        }).unwrap()
-    });
+		fn on_close(&mut self, code: CloseCode, reason: &str) {
+			info!("[WS Server] WebSocket closing for ({:?}) {}", code, reason);
+		}
+	}
+	// Server thread
+	info!("Starting WebSocket server on {}", addr);
+	thread::spawn(move || {
+		listen(addr, |out| {
+			Server { out, eid, mu_ra_port: mu_ra_port.clone() }
+		}).unwrap()
+	});
 }
 
 fn handle_get_counter_msg(eid: sgx_enclave_id_t, msg: Message) -> Message {
@@ -115,29 +111,3 @@ fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
 	Message::text(rsa_pubkey_json.to_string())
 }
 
-pub struct WsClient {
-	pub out: Sender,
-	pub request: String,
-	pub result: ThreadOut<String>
-}
-
-impl Handler for WsClient {
-	fn on_open(&mut self, _: Handshake) -> Result<()> {
-
-		info!("sending request: {}", self.request);
-
-		match self.out.send(self.request.clone()) {
-			Ok(_) => Ok(()),
-			Err(e) => return Err(e),
-		}
-	}
-	fn on_message(&mut self, msg: Message) -> Result<()> {
-		info!("got message");
-		debug!("{}", msg);
-		let retstr = msg.as_text().unwrap();
-
-		self.result.send(retstr.to_string()).unwrap();
-		self.out.close(CloseCode::Normal).unwrap();
-		Ok(())
-	}
-}

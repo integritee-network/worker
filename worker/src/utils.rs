@@ -23,7 +23,8 @@ use primitive_types::{H256};
 use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
 use std::sync::mpsc::channel;
 use std::thread;
-use ws_server::{MSG_MU_RA_PORT, WsClient};
+use websocket::client::WsClient;
+use websocket::requests::*;
 use ws::connect;
 
 pub fn check_files() -> u8 {

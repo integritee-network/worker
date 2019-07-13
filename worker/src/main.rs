@@ -67,15 +67,15 @@ use std::thread;
 use substrate_api_client::{Api, hexstr_to_vec};
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self, get_mu_ra_port_from_worker};
 use wasm::sgx_enclave_wasm_init;
-use ws_server::start_ws_server;
+use websocket::server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
-use substratee_node_calls::{get_worker_amount, get_latest_state};
+use substratee_node_calls::get_worker_amount;
 
 mod utils;
 mod constants;
 mod enclave_api;
 mod init_enclave;
-mod ws_server;
+mod websocket;
 mod enclave_wrappers;
 mod enclave_tls_ra;
 mod wasm;
