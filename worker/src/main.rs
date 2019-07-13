@@ -50,7 +50,7 @@ extern crate sha2;
 
 use clap::App;
 use constants::*;
-use enclave_api::{perform_ra, save_encrypted_state};
+use enclave_api::{perform_ra};
 use enclave_wrappers::*;
 use init_enclave::init_enclave;
 use log::*;
@@ -65,11 +65,12 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, hexstr_to_vec};
-use utils::{check_files, get_first_worker_that_is_not_equal_to_self, get_mu_ra_port_from_worker};
+use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use wasm::sgx_enclave_wasm_init;
 use websocket::server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
+use api::Api as WorkerApi;
 
 mod utils;
 mod constants;
@@ -82,6 +83,7 @@ mod wasm;
 mod attestation_ocalls;
 mod ipfs;
 mod tests;
+mod api;
 
 fn main() {
 	// Setup logging
@@ -256,12 +258,13 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 		_ => {
 			println!("There are already workers registered, fetching keys from first one...");
 			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
-			let w1_url = w1.url.clone();
-			let ra_port = get_mu_ra_port_from_worker(w1_url.clone()).unwrap();
-			info!("Got Port for MU-RA from other worker: {}", ra_port);
-			info!("Performing MU-RA");
 
-			let w1_url_port: Vec<&str> = w1_url.split(':').collect();
+			let w_api = WorkerApi::new(w1.url.clone());
+			let ra_port = w_api.get_pub_key().unwrap();
+			info!("Got Port for MU-RA from other worker: {}", ra_port);
+
+			info!("Performing MU-RA");
+			let w1_url_port: Vec<&str> = w1.url.split(':').collect();
 			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], ra_port));
 			println!("[+] MU-RA successfully performed");
 		},
