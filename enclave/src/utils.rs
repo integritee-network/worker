@@ -80,7 +80,7 @@ pub fn read_aes_key_and_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
 pub fn store_aes_key_and_iv(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t>{
 	let mut key_iv = key.to_vec();
 	key_iv.extend_from_slice(&iv);
-	write_file(&key, AES_KEY_FILE_AND_INIT_V)
+	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 pub fn create_sealed_aes_key_and_iv() -> SgxResult<sgx_status_t> {
