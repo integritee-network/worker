@@ -291,8 +291,15 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 		Err(status) => return status,
 	};
 
-	let helper = DeSerializeHelper::<AllCounts>::new(state);
-	let mut counter = helper.decode().unwrap();
+	let mut counter: AllCounts = match state.len() {
+		0 => AllCounts { entries: HashMap::new() },
+		_ => {
+			debug!("    [Enclave] State read, deserializing...");
+			let helper = DeSerializeHelper::<AllCounts>::new(state);
+			helper.decode().unwrap()
+		}
+	};
+
 	let ref_mut = &mut *value;
 	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
 	sgx_status_t::SGX_SUCCESS
