@@ -257,18 +257,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 		return status
 	}
 
-	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-	let mut cid_buf: [u8; 46] = [0; 46];
-	let res = ocall_write_ipfs(&mut rt as *mut sgx_status_t,
-						 enc_state.as_ptr() as * const u8,
-						 enc_state.len() as u32,
-						 cid_buf.as_mut_ptr() as * mut u8,
-						 cid_buf.len() as u32);
-
-	if res == sgx_status_t::SGX_ERROR_UNEXPECTED || rt == sgx_status_t::SGX_ERROR_UNEXPECTED {
-		return sgx_status_t::SGX_ERROR_UNEXPECTED;
-	}
-
 	// get information for composing the extrinsic
 	let _seed = match utils::get_ecc_seed() {
 		Ok(seed) => seed,
@@ -421,5 +409,4 @@ fn test_ocall_read_write_ipfs() {
 	};
 
 	assert_eq!(enc_state, ret_state);
-	println!("Cid Returned: {:?}", std::str::from_utf8(&cid_buf));
 }

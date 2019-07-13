@@ -257,34 +257,13 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 			println!("There are already workers registered, fetching keys from first one...");
 			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
 			let w1_url = w1.url.clone();
-			let ra_port = get_mu_ra_port_from_worker(w1_url).unwrap();
+			let ra_port = get_mu_ra_port_from_worker(w1_url.clone()).unwrap();
 			info!("Got Port for MU-RA from other worker: {}", ra_port);
+			info!("Performing MU-RA");
 
-
-			let _url = w1.url.replace("ws://", "");
-			let w1_url_port: Vec<&str> = _url.split(':').collect();
+			let w1_url_port: Vec<&str> = w1_url.split(':').collect();
 			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], ra_port));
-			println!("[+] Got keys, fetching newest state from from ipfs...");
-
-			match get_latest_state(&api) {
-				Some(cid) => {
-					println!("[+] Got got latest state from ipfs.");
-
-					let state = ipfs::read_from_ipfs(cid);
-					let result = unsafe {
-						save_encrypted_state(enclave.geteid(), &mut status, state.as_ptr(), state.len() as u32)
-					};
-
-					match result {
-						sgx_status_t::SGX_SUCCESS => println!("[+] Stored state in enclave."),
-						_ => {
-							println!("[+] Storing state in enclave failed");
-							return;
-						}
-					};
-				},
-				None => println!("[+] No state update happened yet, no sync neccessary"),
-			};
+			println!("[+] MU-RA successfully performed");
 		},
 	};
 
