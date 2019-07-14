@@ -73,20 +73,17 @@ fn main() {
 
 
 	println!("*** Getting the amount of the registered workers");
-	let rsa_pubkey = match get_worker_amount(&api) {
+	let worker = match get_worker_amount(&api) {
 		0 => {
 			println!("No worker in registry, returning...");
 			return;
 		}
 		_ => {
 			println!("*** Getting the Info of the first worker from the substraTEE-node");
-			let enc = get_worker_info(&api, 0);
-			let worker = WorkerApi::new(enc.url.clone());
-			worker.get_rsa_pubkey().unwrap()
+			get_worker_info(&api, 0)
 		}
 	};
 
-	println!("Got worker shielding key {:?}", rsa_pubkey);
 	// check integrity of sha256 of WASM
 	let sha256input = hex::decode(matches.value_of("sha256wasm").unwrap()).unwrap();
 
@@ -111,10 +108,14 @@ fn main() {
 
 	// transfer from Alice to TEE
 	nonce = get_account_nonce(&api, "//Alice");
-	let tee_pub = get_enclave_ecc_pub_key();
-	transfer_amount(&api, "//Alice", tee_pub, U256::from(1000), nonce, api.genesis_hash.unwrap());
+//	let tee_pub = get_enclave_ecc_pub_key();
+	transfer_amount(&api, "//Alice", worker.pubkey, U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// compose extrinsic with encrypted payload
+	let worker_api = WorkerApi::new(worker.url.clone());
+	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
+	println!("Got worker shielding key {:?}", rsa_pubkey);
+
 	let account: String = matches.value_of("account").unwrap_or("Alice").to_string();
 	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
 	let message = Message { account, amount, sha256 };

@@ -20,7 +20,7 @@ extern crate system;
 use log::info;
 use std::thread;
 use std::fs;
-use primitive_types::{U256, H256};
+use primitive_types::U256;
 use std::sync::mpsc::channel;
 use ws::{connect, CloseCode, Message};
 use runtime_primitives::generic::Era;
