@@ -72,13 +72,6 @@ extern {
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;
 
-	pub fn save_encrypted_state(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		enc_state: * const u8,
-		state_size: u32,
-	) -> sgx_status_t;
-
 	pub fn test_main_entrance(
 		eid: sgx_enclave_id_t,
 		retval: *mut size_t

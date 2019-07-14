@@ -358,15 +358,6 @@ pub fn compose_extrinsic(seed: Vec<u8>, function: Call, nonce: U256, genesis_has
 	)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn save_encrypted_state(enc_state: * const u8, state_size: u32) -> sgx_status_t {
-	let state = slice::from_raw_parts(enc_state, state_size as usize);
-	match utils::write_plaintext(state, ENCRYPTED_STATE_FILE) {
-		Ok(status) => status,
-		Err(status) => status,
-	}
-}
-
 extern "C" {
 	pub fn ocall_read_ipfs(
 		ret_val			: *mut sgx_status_t,

@@ -61,8 +61,6 @@ enclave {
 		public sgx_status_t run_server(int fd,sgx_quote_sign_type_t quote_type);
         public sgx_status_t run_client(int fd,sgx_quote_sign_type_t quote_type);
 
-        public sgx_status_t save_encrypted_state([in, size = state_size] uint8_t* enc_state, uint32_t state_size);
-
 		public size_t test_main_entrance();
 	};
 
