@@ -18,8 +18,7 @@ use log::*;
 use std::path::Path;
 use constants::*;
 use std::process::Command;
-use my_node_runtime::Hash;
-use primitive_types::{H256};
+use primitives::ed25519;
 use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
 
 pub fn check_files() -> u8 {
@@ -61,7 +60,7 @@ pub fn get_wasm_hash() -> Vec<String> {
 
 pub fn get_first_worker_that_is_not_equal_to_self(api: &substrate_api_client::Api, pubkey: Vec<u8>) -> Result<Enclave, &str> {
 	let w_amount = get_worker_amount(api);
-	let key = vec_to_h256(pubkey);
+	let key = vec_to_ed25519_pub(pubkey);
 
 	match w_amount {
 		0 => error!("No worker registered. Can't get worker info from node!"),
@@ -78,8 +77,8 @@ pub fn get_first_worker_that_is_not_equal_to_self(api: &substrate_api_client::Ap
 	Err("No worker not equal to self found")
 }
 
-pub fn vec_to_h256(vec: Vec<u8>) -> H256 {
-	let mut hash: [u8; 32] = Default::default();
-	hash.copy_from_slice(&vec);
-	Hash::from(hash)
+pub fn vec_to_ed25519_pub(vec: Vec<u8>) -> ed25519::Public {
+	let mut raw: [u8; 32] = Default::default();
+	raw.copy_from_slice(&vec);
+	ed25519::Public::from_raw(raw)
 }

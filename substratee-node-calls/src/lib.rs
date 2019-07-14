@@ -1,8 +1,7 @@
 use log::*;
-use my_node_runtime::Hash;
 use parity_codec::{Decode, Encode};
-use primitive_types::{H256};
 use substrate_api_client::{hexstr_to_vec};
+use primitives::ed25519;
 
 pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 	info!("[>] Get worker's URL");
@@ -43,9 +42,9 @@ pub fn get_latest_state(api: &substrate_api_client::Api) -> Option<[u8; 46]> {
 fn hexstr_to_enclave(hexstr: String) -> Enclave {
 	let mut unhex = hexstr_to_vec(hexstr);
 	let (h, url) = unhex.split_at_mut(32 as usize);
-	let mut hash: [u8; 32] = Default::default();
-	hash.copy_from_slice(&h);
-	let key = Hash::from(hash);
+	let mut raw: [u8; 32] = Default::default();
+	raw.copy_from_slice(&h);
+	let key = ed25519::Public::from_raw(raw);
 
 	Enclave {
 		pubkey: key,
@@ -66,7 +65,7 @@ pub fn hexstr_to_u64(hexstr: String) -> u64 {
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Enclave {
-	pub pubkey: H256,
+	pub pubkey: ed25519::Public,
 	// utf8 encoded url
 	pub url: String
 }
