@@ -41,7 +41,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 
 			let answer = match &msg.clone().into_text().unwrap()[..] {
 				MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
-				MSG_MU_RA_PORT => Message::text(self.mu_ra_port.clone()),
+				MSG_GET_MU_RA_PORT => Message::text(self.mu_ra_port.clone()),
 				_ => handle_get_counter_msg(self.eid, msg),
 			};
 

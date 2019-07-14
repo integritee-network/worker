@@ -260,7 +260,7 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
 
 			let w_api = WorkerApi::new(w1.url.clone());
-			let ra_port = w_api.get_pub_key().unwrap();
+			let ra_port = w_api.get_mu_ra_port().unwrap();
 			info!("Got Port for MU-RA from other worker: {}", ra_port);
 
 			info!("Performing MU-RA");
