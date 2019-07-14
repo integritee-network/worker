@@ -24,7 +24,7 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use std::str;
 use std::thread;
-use websocket::requests::*;
+use substratee_worker_api::requests::*;
 use ws::{CloseCode, Handler, listen, Message, Result, Sender};
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {

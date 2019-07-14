@@ -36,6 +36,7 @@ extern crate sgx_ucrypto as crypto;
 extern crate sgx_urts;
 extern crate substrate_api_client;
 extern crate substratee_node_calls;
+extern crate substratee_worker_api;
 extern crate substrate_keyring;
 extern crate system;
 extern crate wabt;
@@ -67,23 +68,22 @@ use std::thread;
 use substrate_api_client::{Api, hexstr_to_vec};
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use wasm::sgx_enclave_wasm_init;
-use websocket::server::start_ws_server;
+use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
-use api::Api as WorkerApi;
+use substratee_worker_api::Api as WorkerApi;
 
 mod utils;
 mod constants;
 mod enclave_api;
 mod init_enclave;
-mod websocket;
+mod ws_server;
 mod enclave_wrappers;
 mod enclave_tls_ra;
 mod wasm;
 mod attestation_ocalls;
 mod ipfs;
 mod tests;
-mod api;
 
 fn main() {
 	// Setup logging
