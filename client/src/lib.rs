@@ -25,7 +25,6 @@ use std::sync::mpsc::channel;
 use ws::{connect, CloseCode, Message};
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 use my_node_runtime::{
 	UncheckedExtrinsic,
@@ -43,7 +42,6 @@ use primitives::{
 	blake2_256,
 };
 
-pub static RSA_PUB_KEY: &str = "./bin/rsa_pubkey.txt";
 pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
@@ -85,16 +83,6 @@ pub fn get_enclave_ecc_pub_key() -> ed25519::Public {
 	info!("[+] Got ECC public key of TEE = {:?}\n\n", key);
 
 	ed25519::Public::from_raw(key)
-}
-
-// function to get the RSA3072 public key from the enclave
-pub fn get_enclave_rsa_pub_key() -> Rsa3072PubKey {
-
-	let data = fs::read_to_string(RSA_PUB_KEY).expect("Unable to open rsa pubkey file");
-	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&data).unwrap();
-	info!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
-
-	rsa_pubkey
 }
 
 // function to get the counter from the substraTEE-worker

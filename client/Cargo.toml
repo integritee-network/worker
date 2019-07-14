@@ -45,6 +45,9 @@ default-features = false
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
 
+[dependencies.substratee_worker_api]
+path = "../worker/worker-api"
+
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
 rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
