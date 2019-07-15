@@ -71,22 +71,25 @@ fn main() {
 			println!("No worker in registry, returning...");
 			return;
 		}
-		_ => {
-			println!("*** Getting the Info of the first worker from the substraTEE-node");
+		x => {
+			println!("[<] Found {}  workers\n", x);
+			println!("[>] Getting the first worker's from the substraTEE-node");
 			get_worker_info(&api, 0)
 		}
 	};
+	println!("[<] Got first worker's coordinates:");
+	println!("    W1's public key : {:?}", worker.pubkey.to_string());
+	println!("    W1's url: {:?}\n", worker.url);
 
 	let worker_api = WorkerApi::new(worker.url.clone());
 
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		let user = pair_from_suri("//Alice", Some(""));
-		println!("Am I new1");
 		println!("*** Getting the counter value of '{:?}' from the substraTEE-worker", user.public());
 		let sign = user.sign(user.public().as_slice());
 		let value = worker_api.get_counter(user.public(), sign).unwrap();
 
-		println!("*** Got counter value {}", value);
+		println!("[<] Got counter value {}", value);
 		return;
 	}
 
@@ -115,14 +118,14 @@ fn main() {
 	// transfer from Alice to TEE
 	nonce = get_account_nonce(&api, "//Alice");
 //	let tee_pub = get_enclave_ecc_pub_key();
-	transfer_amount(&api, "//Alice", worker.pubkey, U256::from(1000), nonce, api.genesis_hash.unwrap());
+	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// compose extrinsic with encrypted payload
+	println!("[>] Get the encryption key from W1 (={})", worker.pubkey.to_string());
 	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
-	println!("Got worker shielding key {:?}", rsa_pubkey);
+	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
 
 	let account = user_to_pubkey("//Alice").to_string();
-//	let account: String = matches.value_of("account").unwrap_or().to_string();
 	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
 	let message = Message { account, amount, sha256 };
 	let plaintext = serde_json::to_vec(&message).unwrap();
