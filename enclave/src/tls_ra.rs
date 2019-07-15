@@ -119,7 +119,7 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 	};
 
 	let shielding_key = read_rsa_keypair().unwrap();
-	let (key, iv) = read_aes_key_and_iv().unwrap();
+	let (key, iv) = read_or_create_aes_key_iv().unwrap();
 	let sh_json = serde_json::to_string(&shielding_key).unwrap();
 	println!("Sending Shielding Key: {:?}", sh_json.as_bytes().len());
 	println!("Sending AES key {:?}\nIV: {:?}\n", key, iv);
@@ -224,16 +224,24 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		}
 	};
 
-	let mut state_len = [0u8; 8];
-	match tls.read(&mut state_len) {
-		Ok(_) => info!("Received enc_state_len: {:?}", &state_len.to_vec()),
+	let mut state_len_arr = [0u8; 8];
+	let state_len = match tls.read(&mut state_len_arr) {
+		Ok(_) => {
+			info!("Received enc_state_len: {:?}", &state_len_arr.to_vec());
+			usize::from_le_bytes(state_len_arr)
+		}
 		Err(e) => {
 			error!("Error in read: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
+	};
+
+	if state_len == 0 {
+		println!("[Enclave]: The state is empty, nothing to fetch from ipfs");
+		return sgx_status_t::SGX_SUCCESS;
 	}
 
-	let mut enc_state = vec![0u8; usize::from_le_bytes(state_len)];
+	let mut enc_state = vec![0u8; state_len];
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let _res = unsafe {
 		ocall_read_ipfs(&mut rt as *mut sgx_status_t,

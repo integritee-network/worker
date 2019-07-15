@@ -72,6 +72,16 @@ pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 	write_file(&seed, ED25519_SEALED_KEY_FILE)
 }
 
+pub fn read_or_create_aes_key_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
+	match read_aes_key_and_iv() {
+		Ok((k,i)) => Ok((k, i)),
+		Err(_) => {
+			create_sealed_aes_key_and_iv()?;
+			read_aes_key_and_iv()
+		},
+	}
+}
+
 pub fn read_aes_key_and_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
 	let key_iv = read_file(AES_KEY_FILE_AND_INIT_V)?;
 	Ok((key_iv[..16].to_vec(), key_iv[16..].to_vec()))
@@ -128,7 +138,7 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 			}
 		},
 		Err(x) => {
-			error!("[Enclave] get_sealed_pcl_key cannot open key file, please check if key is provisioned successfully! {}", x);
+			info!("[Enclave] Can't find sealed file {} Err: {}" , filepath, x);
 			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 	}
@@ -160,7 +170,7 @@ pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_sta
 
 /// If AES acts on the encrypted data it decrypts and vice versa
 pub fn aes_de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
-	let (key, iv) = read_aes_key_and_iv()?;
+	let (key, iv) = read_or_create_aes_key_iv()?;
 	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(bytes);
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
