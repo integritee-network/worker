@@ -4,14 +4,6 @@ version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
-# make this an independant workspace
-[workspace]
-
-# we need to use the "official" untrusted crate here
-# or else "official" packages cannot build any more
-[patch.'https://github.com/briansmith/untrusted']
-untrusted = "0.6.2"
-
 [dependencies]
 ws = "0.7"
 hex = "0.3"
@@ -75,7 +67,3 @@ default-features = false
 [dependencies.sgx_crypto_helper]
 git = "https://github.com/baidu/rust-sgx-sdk"
 default-features = false
-
-[patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node" }
-substrate-executor = { git = "https://github.com/scs/substraTEE-node" }

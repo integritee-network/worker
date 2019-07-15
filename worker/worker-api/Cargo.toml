@@ -3,7 +3,6 @@ name = "substratee_worker_api"
 version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 
-
 [dependencies]
 ws = "0.7"
 log = "0.4"

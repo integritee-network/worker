@@ -92,7 +92,7 @@ Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find work
 Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
-Worker_Rust_Path := ./worker/target/$(OUTPUT_PATH)
+Worker_Rust_Path := target/$(OUTPUT_PATH)
 Worker_Enclave_u_Object :=worker/libEnclave_u.a
 Worker_Name := bin/app
 
@@ -103,7 +103,7 @@ Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(she
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
-Client_Rust_Path := ./$(Client_SRC_Path)/target/$(OUTPUT_PATH)
+Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
 Client_Binary := substratee_client
 Client_Name := $(Client_Path)/$(Client_Binary)
@@ -216,6 +216,7 @@ compiler-rt:
 .PHONY: clean
 clean:
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
+	@cd enclave && cargo clean && rm -f Cargo.lock
 	@cargo clean && rm -f Cargo.lock
 
 mrenclave: $(Signed_Enclave_Name)
