@@ -4,14 +4,6 @@ version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 
-# make this an independant workspace
-[workspace]
-
-# we need to use the "official" untrusted crate here
-# or else "official" packages cannot build any more
-[patch.'https://github.com/briansmith/untrusted']
-untrusted = "0.6.2"
-
 [dependencies]
 ws = "0.7"
 hex = "0.3"
@@ -93,6 +85,3 @@ std = [
 	"my_node_runtime/std",
 ]
 
-[patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node" }
-substrate-executor = { git = "https://github.com/scs/substraTEE-node" }

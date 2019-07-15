@@ -3,6 +3,9 @@ name = "substratee_worker_enclave"
 version = "2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 
+[workspace]
+members = ["wasm"]
+
 [lib]
 name = "substratee_worker_enclave"
 crate-type = ["staticlib"]
@@ -68,9 +71,6 @@ git      = "https://github.com/mesalock-linux/rustls"
 branch   = "mesalock_sgx"
 features = ["dangerous_configuration"]
 
-# to get features in
-# ring = { git ="https://github.com/scs/ring-sgx", features = ["mesalock_sgx"] }
-
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
@@ -92,3 +92,9 @@ git = 'https://github.com/paritytech/substrate'
 rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
 package = "sr-primitives"
 default-features = false
+
+[patch.crates-io]
+ring = { git = "https://github.com/mesalock-linux/ring-sgx" }
+
+[patch.'https://github.com/paritytech/substrate']
+sr-io = { git = "https://github.com/scs/substraTEE-node" }
