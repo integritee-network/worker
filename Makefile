@@ -216,7 +216,6 @@ compiler-rt:
 .PHONY: clean
 clean:
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
-	@cd enclave/wasm && cargo clean && rm -f Cargo.lock
 	@cd enclave && cargo clean && rm -f Cargo.lock
 	@cargo clean && rm -f Cargo.lock
 

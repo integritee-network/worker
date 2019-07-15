@@ -1,34 +1,12 @@
 [workspace]
 
 members = [
-	 "worker",		# worker removed to have patching possibility
+	 "worker",
 	 "worker/worker-api",
 	 "substratee-node-calls",
-	 "client",  	# client removed to have patching possiblity
-#	"enclave",
-#	"enclave/wasm"
+	 "client",
 ]
-
 
 [patch.'https://github.com/paritytech/substrate']
 sr-io = { git = "https://github.com/scs/substraTEE-node" }
 substrate-executor = { git = "https://github.com/scs/substraTEE-node" }
-
-# Patch leftovers from trying to have only one workspace root - to be deleted:
-#[patch.crates-io]
-#ring 				= { git = "https://github.com/mesalock-linux/ring-sgx" }
-# untrusted 		= { git = "https://github.com/briansmith/untrusted", tag = "ring-master" }
-
-# uncommenting this breaks the client
-# serde_json 		= { git = "https://github.com/mesalock-linux/serde-json-sgx", default-features = false, features = ["mesalock_sgx"] }
-
-
-# serde           = { git = "https://github.com/mesalock-linux/serde-sgx", default-features = false, features = ["mesalock_sgx"] }
-# serde_derive 	= { git = "https://github.com/mesalock-linux/serde-sgx", default-features = false, features = ["mesalock_sgx"] }
-# itertools		= { git = "https://github.com/mesalock-linux/rust-itertools-sgx" }
-
-#  [patch.'https://github.com/mesalock-linux/itoa-sgx.git']
-# itoa = { git = "https://github.com/mesalock-linux/itoa-sgx", default-features = false, features = ["mesalock_sgx"] }
-
-# [patch.'https://github.com/mesalock-linux/ring-sgx']
-# ring = { git ="https://github.com/scs/ring-sgx" }
