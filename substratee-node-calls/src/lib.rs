@@ -1,38 +1,56 @@
-use log::info;
-use my_node_runtime::Hash;
+use log::*;
 use parity_codec::{Decode, Encode};
-use primitive_types::{H256};
 use substrate_api_client::{hexstr_to_vec};
+use primitives::ed25519;
 
-pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) {
+pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 	info!("[>] Get worker's URL");
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveRegistry", Some((index).encode())).unwrap();
-	info!("Storage hex_str: {}", result_str);
+	debug!("Storage hex_str: {}", result_str);
 
 	let enc = hexstr_to_enclave(result_str);
-	println!("[+]: Workers Pubkey is {:?}", &enc.pubkey);
-	println!("[+]: Workers URL is {:?}", std::str::from_utf8(&enc.url).unwrap());
+	info!("[+]: W{} Pubkey is {:?}", index, &enc.pubkey);
+	info!("[+]: W{} URL is {:?}", index, enc.url);
+	enc
 }
 
 pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveCount", None).unwrap();
 	let amount = hexstr_to_u64(result_str);
-	println!("[+]: Amount of Registered Workers {:?}", amount);
+	info!("[+]: Amount of Registered Workers {:?}", amount);
 	amount
+}
+
+pub fn get_latest_state(api: &substrate_api_client::Api) -> Option<[u8; 46]> {
+	let result_str = api.get_storage("substraTEERegistry", "LatestIPFSHash", None).unwrap();
+	let unhex = hexstr_to_vec(result_str);
+	info!("State hash vec: {:?}", unhex);
+	let mut h : [u8; 46] = [0; 46];
+
+	match unhex.len() {
+		1 => {
+			info!("No state update happened yet");
+			None
+		},
+		_ => {
+			h.clone_from_slice(&unhex);
+			Some(h)
+		}
+	}
 }
 
 fn hexstr_to_enclave(hexstr: String) -> Enclave {
 	let mut unhex = hexstr_to_vec(hexstr);
 	let (h, url) = unhex.split_at_mut(32 as usize);
-	let mut hash: [u8; 32] = Default::default();
-	hash.copy_from_slice(&h);
-	let key = Hash::from(hash);
+	let mut raw: [u8; 32] = Default::default();
+	raw.copy_from_slice(&h);
+	let key = ed25519::Public::from_raw(raw);
 
 	Enclave {
 		pubkey: key,
 		// Fixme: There are some bytes left that contain metadata about the linkable map.
 		// This may be the reason I was not able to do automated deserialization.
-		url: url[1..url.len() - 10].to_vec()
+		url: std::str::from_utf8(&url[1..url.len() - 2]).unwrap().to_string()
 	}
 }
 
@@ -47,9 +65,9 @@ pub fn hexstr_to_u64(hexstr: String) -> u64 {
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Enclave {
-	pubkey: H256,
+	pub pubkey: ed25519::Public,
 	// utf8 encoded url
-	url: Vec<u8>
+	pub url: String
 }
 
 #[cfg(test)]

@@ -45,13 +45,13 @@ fn sgxwasm_init() -> sgx_status_t {
 pub fn compare_hashes(act: sgx_sha256_hash_t, client: sgx_sha256_hash_t) -> Result<sgx_status_t, sgx_status_t> {
 	// compare the hashes and return error if not matching
 	if act == client {
-		println!("    [Enclave] SHA256 of WASM code identical");
+		info!("    [Enclave] SHA256 of WASM code identical");
 		Ok(sgx_status_t::SGX_SUCCESS)
 	} else {
-		println!("    [Enclave] SHA256 of WASM code not matching");
-		println!("    [Enclave]   Wanted by client    : {:?}", client);
-		println!("    [Enclave]   Calculated by worker: {:?}", act);
-		println!("    [Enclave] Returning ERROR_UNEXPECTED and not updating oSTF");
+		warn!("    [Enclave] SHA256 of WASM code not matching");
+		warn!("    [Enclave]   Wanted by client    : {:?}", client);
+		warn!("    [Enclave]   Calculated by worker: {:?}", act);
+		warn!("    [Enclave] Returning ERROR_UNEXPECTED and not updating oSTF");
 		Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 	}
 }
@@ -80,7 +80,7 @@ pub fn invoke_wasm_action(action: sgxwasm::SgxWasmAction, msg: Message, counter:
 				Ok(Some(RuntimeValue::I32(v))) => {
 					info!("    [Enclave] Counter Value of {}: '{}'", msg.account, v);
 					counter.entries.insert(msg.account.to_string(), v as u32);
-					println!("    [Enclave] WASM executed and counter updated");
+					info!("    [Enclave] WASM executed and counter updated");
 					Ok(sgx_status_t::SGX_SUCCESS)
 				},
 				_ => {

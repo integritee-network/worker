@@ -36,6 +36,7 @@ extern crate sgx_ucrypto as crypto;
 extern crate sgx_urts;
 extern crate substrate_api_client;
 extern crate substratee_node_calls;
+extern crate substratee_worker_api;
 extern crate substrate_keyring;
 extern crate system;
 extern crate wabt;
@@ -50,7 +51,7 @@ extern crate sha2;
 
 use clap::App;
 use constants::*;
-use enclave_api::perform_ra;
+use enclave_api::{perform_ra};
 use enclave_wrappers::*;
 use init_enclave::init_enclave;
 use log::*;
@@ -65,11 +66,12 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, hexstr_to_vec};
-use utils::check_files;
+use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
-use enclave_tls_ra::Mode;
+use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
+use substratee_worker_api::Api as WorkerApi;
 
 mod utils;
 mod constants;
@@ -96,9 +98,12 @@ fn main() {
 	let w_port = matches.value_of("w-port").unwrap_or("2000");
 	info!("Worker listening on  port {}", w_port);
 
+	let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
+	info!("MU-RA server on port {}", mu_ra_port);
+
 	if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
-		worker(port, w_port);
+		worker(port, w_port, mu_ra_port);
 	} else if matches.is_present("getpublickey") {
 		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
@@ -107,19 +112,18 @@ fn main() {
 		get_signing_key_tee();
 	} else if matches.is_present("run_server") {
 		println!("*** Running Enclave TLS server\n");
-		enclave_tls_ra::run(Mode::Server);
+		enclave_tls_ra::run(Mode::Server, mu_ra_port);
 	} else if matches.is_present("run_client") {
 		println!("*** Running Enclave TLS client\n");
-		enclave_tls_ra::run(Mode::Client);
+		enclave_tls_ra::run(Mode::Client, mu_ra_port);
 	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
-		println!("*** Running Enclave unit tests\n");
 		tests::run_enclave_tests(m, port);
 	} else {
 		println!("For options: use --help");
 	}
 }
 
-fn worker(port: &str, w_port: &str) {
+fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 	let mut status = sgx_status_t::SGX_SUCCESS;
 
 	// ------------------------------------------------------------------------
@@ -169,8 +173,16 @@ fn worker(port: &str, w_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the ws server to listen for worker requests
-	let w_url = format!("ws://127.0.0.1:{}", w_port);
-	start_ws_server(enclave.geteid(), w_url.clone());
+	let w_url = format!("127.0.0.1:{}", w_port);
+	start_ws_server(enclave.geteid(), w_url.clone(), mu_ra_port.to_string());
+
+	// ------------------------------------------------------------------------
+	println!("Starting Enclave MU-RA Ra server");
+	let eid = enclave.geteid();
+	let p = mu_ra_port.to_string().clone();
+	thread::spawn(move || {
+		run_enclave_server(eid, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &p)
+	});
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
@@ -237,16 +249,24 @@ fn worker(port: &str, w_port: &str) {
 
 	match get_worker_amount(&api) {
 		0 => {
-			error!("No worker in registry!");
+			error!("No worker in registry after registering!");
 			return;
 		},
 		1 => {
-			info!("one worker registered.");
+			info!("one worker registered, should be me");
 		},
 		_ => {
-			info!("There are already workers registered, fetching keys from first one.");
-			enclave_tls_ra::run(Mode::Client);
-			return;
+			println!("There are already workers registered, fetching keys from first one...");
+			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
+
+			let w_api = WorkerApi::new(w1.url.clone());
+			let ra_port = w_api.get_mu_ra_port().unwrap();
+			info!("Got Port for MU-RA from other worker: {}", ra_port);
+
+			info!("Performing MU-RA");
+			let w1_url_port: Vec<&str> = w1.url.split(':').collect();
+			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], ra_port));
+			println!("[+] MU-RA successfully performed");
 		},
 	};
 

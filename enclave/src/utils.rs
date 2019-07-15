@@ -47,10 +47,14 @@ pub fn read_rsa_keypair() -> SgxResult<Rsa3072KeyPair> {
 }
 
 pub fn read_rsa_pubkey() -> SgxResult<Rsa3072PubKey> {
-	let pair = r#try!(read_rsa_keypair());
+	let pair = (read_rsa_keypair())?;
 	let pubkey = pair.export_pubkey().unwrap();
 
 	Ok(pubkey)
+}
+
+pub fn store_rsa_key_pair(pair: &[u8]) -> SgxResult<sgx_status_t> {
+	write_file(pair, RSA3072_SEALED_KEY_FILE)
 }
 
 pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {
@@ -71,6 +75,12 @@ pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 pub fn read_aes_key_and_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
 	let key_iv = read_file(AES_KEY_FILE_AND_INIT_V)?;
 	Ok((key_iv[..16].to_vec(), key_iv[16..].to_vec()))
+}
+
+pub fn store_aes_key_and_iv(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t>{
+	let mut key_iv = key.to_vec();
+	key_iv.extend_from_slice(&iv);
+	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 pub fn create_sealed_aes_key_and_iv() -> SgxResult<sgx_status_t> {
@@ -134,13 +144,13 @@ pub fn read_state_from_file(path: &str) -> SgxResult<Vec<u8>> {
 	};
 
 	aes_de_or_encrypt(&mut bytes)?;
-	println!("buffer decrypted = {:?}", bytes);
+	debug!("buffer decrypted = {:?}", bytes);
 
 	Ok(bytes)
 }
 
 pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
-	println!("plaintext data to be written: {:?}", bytes);
+	debug!("plaintext data to be written: {:?}", bytes);
 
 	aes_de_or_encrypt(bytes)?;
 
@@ -226,12 +236,15 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 }
 
 pub fn test_encrypted_state_io_works() {
-	let path = "./bin/test_state_file.bin";
+	let path = "test_state_file.bin";
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";
 	create_sealed_aes_key_and_iv().unwrap();
 
+	aes_de_or_encrypt(&mut plaintext.to_vec()).unwrap();
 	write_state_to_file(&mut plaintext.to_vec(), path).unwrap();
 	let state: Vec<u8> = read_state_from_file(path).unwrap();
-	assert_eq!(state.to_vec(), plaintext.to_vec());
+
+	assert_eq!(state, plaintext.to_vec());
+	std::fs::remove_file(path).unwrap();
 }
 

@@ -15,37 +15,35 @@
 
 */
 
-extern crate substrate_api_client;
-extern crate runtime_primitives;
+#[macro_use]
+extern crate clap;
+extern crate env_logger;
+extern crate hex_literal;
+extern crate log;
 extern crate my_node_runtime;
 extern crate parity_codec;
 extern crate primitives;
-extern crate hex_literal;
-extern crate sgx_crypto_helper;
-extern crate env_logger;
-extern crate log;
-use log::*;
-
-use parity_codec::{Encode};
-use substrate_api_client::{Api};
-use substratee_node_calls::{get_worker_amount, get_worker_info};
-
-use primitive_types::U256;
-use blake2_rfc::blake2s::{blake2s};
-
-use substratee_client::*;
-
+extern crate runtime_primitives;
 extern crate serde;
-extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-
-#[macro_use]
-extern crate clap;
-use clap::App;
-
+extern crate serde_json;
+extern crate sgx_crypto_helper;
 extern crate sgx_types;
+extern crate substrate_api_client;
+
+use blake2_rfc::blake2s::blake2s;
+use clap::App;
+use log::*;
+use parity_codec::Encode;
+use primitives::Pair;
+use primitive_types::U256;
 use sgx_types::*;
+use substrate_api_client::Api;
+use substratee_client::*;
+use substratee_node_calls::{get_worker_amount, get_worker_info};
+use substratee_worker_api::Api as WorkerApi;
+
 
 fn main() {
 	// message structure
@@ -59,26 +57,36 @@ fn main() {
 	env_logger::init();
 
 	let yml = load_yaml!("cli.yml");
-
 	let matches = App::from_yaml(yml).get_matches();
-	if let Some(_matches) = matches.subcommand_matches("getcounter") {
-		let user = "Alice";
-		println!("*** Getting the counter value of '{}' from the substraTEE-worker", user);
-		get_counter(user);
-		return;
-	}
 
 	let port = matches.value_of("port").unwrap_or("9944");
 	let server = matches.value_of("server").unwrap_or("127.0.0.1");
 	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
 	api.init();
 
-	if let Some(_matches) = matches.subcommand_matches("get_worker_info") {
-		println!("*** Getting the amount of the registered workers");
-		get_worker_amount(&api);
-		println!("*** Getting the Info of the first worker from the substraTEE-node");
-		get_worker_info(&api, 0);
-		get_worker_encryption_key();
+
+	println!("*** Getting the amount of the registered workers");
+	let worker = match get_worker_amount(&api) {
+		0 => {
+			println!("No worker in registry, returning...");
+			return;
+		}
+		_ => {
+			println!("*** Getting the Info of the first worker from the substraTEE-node");
+			get_worker_info(&api, 0)
+		}
+	};
+
+	let worker_api = WorkerApi::new(worker.url.clone());
+
+	if let Some(_matches) = matches.subcommand_matches("getcounter") {
+		let user = pair_from_suri("//Alice", Some(""));
+		println!("Am I new1");
+		println!("*** Getting the counter value of '{:?}' from the substraTEE-worker", user.public());
+		let sign = user.sign(user.public().as_slice());
+		let value = worker_api.get_counter(user.public(), sign).unwrap();
+
+		println!("*** Got counter value {}", value);
 		return;
 	}
 
@@ -106,12 +114,15 @@ fn main() {
 
 	// transfer from Alice to TEE
 	nonce = get_account_nonce(&api, "//Alice");
-	let tee_pub = get_enclave_ecc_pub_key();
-	transfer_amount(&api, "//Alice", tee_pub, U256::from(1000), nonce, api.genesis_hash.unwrap());
+//	let tee_pub = get_enclave_ecc_pub_key();
+	transfer_amount(&api, "//Alice", worker.pubkey, U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// compose extrinsic with encrypted payload
-	let rsa_pubkey = get_enclave_rsa_pub_key();
-	let account: String = matches.value_of("account").unwrap_or("Alice").to_string();
+	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
+	println!("Got worker shielding key {:?}", rsa_pubkey);
+
+	let account = user_to_pubkey("//Alice").to_string();
+//	let account: String = matches.value_of("account").unwrap_or().to_string();
 	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
 	let message = Message { account, amount, sha256 };
 	let plaintext = serde_json::to_vec(&message).unwrap();

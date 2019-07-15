@@ -18,6 +18,8 @@ use log::*;
 use std::path::Path;
 use constants::*;
 use std::process::Command;
+use primitives::ed25519;
+use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
 
 pub fn check_files() -> u8 {
 	debug!("*** Check files");
@@ -46,7 +48,7 @@ fn file_missing(path: &str) -> u8 {
 
 pub fn get_wasm_hash() -> Vec<String> {
 	let sha_cmd = Command::new("sha256sum")
-		.arg("./bin/worker_enclave.compact.wasm")
+		.arg("worker_enclave.compact.wasm")
 		.output()
 		.expect("Failed to get sha256sum of worker_enclave.wasm");
 
@@ -54,4 +56,29 @@ pub fn get_wasm_hash() -> Vec<String> {
 		.split("  ")
 		.map(|s| s.to_string())
 		.collect()
+}
+
+pub fn get_first_worker_that_is_not_equal_to_self(api: &substrate_api_client::Api, pubkey: Vec<u8>) -> Result<Enclave, &str> {
+	let w_amount = get_worker_amount(api);
+	let key = vec_to_ed25519_pub(pubkey);
+
+	match w_amount {
+		0 => error!("No worker registered. Can't get worker info from node!"),
+		_ => {
+			for i in 0 .. w_amount {
+				let enc = get_worker_info(api, i);
+				if key != enc.pubkey {
+					info!("[+] Found worker to fetch keys from!");
+					return Ok(enc);
+				}
+			}
+		}
+	}
+	Err("No worker not equal to self found")
+}
+
+pub fn vec_to_ed25519_pub(vec: Vec<u8>) -> ed25519::Public {
+	let mut raw: [u8; 32] = Default::default();
+	raw.copy_from_slice(&vec);
+	ed25519::Public::from_raw(raw)
 }

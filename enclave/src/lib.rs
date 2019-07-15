@@ -64,7 +64,6 @@ extern crate webpki;
 extern crate webpki_roots;
 extern crate yasna;
 
-
 use crypto::ed25519::{keypair, signature};
 use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
 use parity_codec::{Compact, Decode, Encode};
@@ -75,10 +74,11 @@ use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
+use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE};
+use constants::{ED25519_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -253,20 +253,10 @@ pub unsafe extern "C" fn call_counter_wasm(
 		Err(sgx_status) => return sgx_status,
 	};
 
+	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
+
 	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
-	}
-
-	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-	let mut cid_buf: [u8; 46] = [0; 46];
-	let res = ocall_write_ipfs(&mut rt as *mut sgx_status_t,
-						 enc_state.as_ptr() as * const u8,
-						 enc_state.len() as u32,
-						 cid_buf.as_mut_ptr() as * mut u8,
-						 cid_buf.len() as u32);
-
-	if res == sgx_status_t::SGX_ERROR_UNEXPECTED || rt == sgx_status_t::SGX_ERROR_UNEXPECTED {
-		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	// get information for composing the extrinsic
@@ -279,7 +269,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 	let call_hash = utils::blake2s(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
-	let ex = confirm_call_extrinsic(_seed, &call_hash, &cid_buf, nonce, genesis_hash);
+	let ex = confirm_call_extrinsic(_seed, &call_hash, &state_hash, nonce, genesis_hash);
 	let encoded = ex.encode();
 
 	// split the extrinsic_slice at the length of the encoded extrinsic
@@ -301,8 +291,15 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 		Err(status) => return status,
 	};
 
-	let helper = DeSerializeHelper::<AllCounts>::new(state);
-	let mut counter = helper.decode().unwrap();
+	let mut counter: AllCounts = match state.len() {
+		0 => AllCounts { entries: HashMap::new() },
+		_ => {
+			debug!("    [Enclave] State read, deserializing...");
+			let helper = DeSerializeHelper::<AllCounts>::new(state);
+			helper.decode().unwrap()
+		}
+	};
+
 	let ref_mut = &mut *value;
 	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
 	sgx_status_t::SGX_SUCCESS
@@ -327,8 +324,8 @@ pub struct Message {
 	sha256: sgx_sha256_hash_t
 }
 
-pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], ipfs_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), ipfs_hash.to_vec()));
+pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], state_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
+	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), state_hash.to_vec()));
 	compose_extrinsic(seed, function, nonce, genesis_hash)
 }
 
@@ -362,11 +359,21 @@ pub fn compose_extrinsic(seed: Vec<u8>, function: Call, nonce: U256, genesis_has
 }
 
 extern "C" {
+	pub fn ocall_read_ipfs(
+		ret_val			: *mut sgx_status_t,
+		enc_state		: *mut u8,
+		enc_state_size	: u32,
+		cid				: *const u8,
+		cid_size		: u32,
+	) -> sgx_status_t;
+}
+
+extern "C" {
 	pub fn ocall_write_ipfs(
 		ret_val			: *mut sgx_status_t,
 		enc_state		: *const u8,
 		enc_state_size	: u32,
-		cid				: *const u8,
+		cid				: *mut u8,
 		cid_size		: u32,
 	) -> sgx_status_t;
 }
@@ -375,14 +382,14 @@ extern "C" {
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		utils::test_encrypted_state_io_works,
-		test_ocall_write_ipfs
+		test_ocall_read_write_ipfs
 		)
 }
 
-fn test_ocall_write_ipfs() {
+fn test_ocall_read_write_ipfs() {
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let mut cid_buf: Vec<u8> = vec![0; 46];
-	let enc_state: Vec<u8> = vec![1; 36];
+	let enc_state: Vec<u8> = vec![20; 36];
 
 	let _res = unsafe {
 		ocall_write_ipfs(&mut rt as *mut sgx_status_t,
@@ -392,5 +399,14 @@ fn test_ocall_write_ipfs() {
 						 cid_buf.len() as u32)
 	};
 
-	println!("Cid Returned: {:?}", std::str::from_utf8(&cid_buf));
+	let mut ret_state= vec![0; 36];
+	let _res = unsafe {
+		ocall_read_ipfs(&mut rt as *mut sgx_status_t,
+						ret_state.as_mut_ptr(),
+						ret_state.len() as u32,
+						cid_buf.as_ptr(),
+		cid_buf.len() as u32)
+	};
+
+	assert_eq!(enc_state, ret_state);
 }

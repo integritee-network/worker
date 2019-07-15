@@ -20,3 +20,8 @@ default-features = false
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
+
+[dependencies.primitives]
+git = "https://github.com/paritytech/substrate"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
+package = "substrate-primitives"

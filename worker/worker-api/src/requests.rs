@@ -15,10 +15,6 @@
 
 */
 
-pub const RSA3072_SEALED_KEY_FILE: 	&str = "rsa3072_key_sealed.bin";
-pub const ED25519_SEALED_KEY_FILE: 	&str = "ed25519_key_sealed.bin";
-pub const ENCRYPTED_STATE_FILE:		&str = "sealed_counter_state.bin";
-pub const AES_KEY_FILE_AND_INIT_V: 	&str = "aes_key_sealed.bin";
-
-pub static RA_SPID:       &str = "../bin/spid.txt";
-pub static RA_API_KEY:	  &str = "../bin/key.txt";
+pub const MSG_GET_PUB_KEY_WORKER: &str = "get_pub_key_worker";
+pub const MSG_GET_MU_RA_PORT: &str = "get_mu_ra_port";
+pub const MSG_GET_COUNTER: &str = "get_counter";

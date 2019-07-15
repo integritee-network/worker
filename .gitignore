@@ -43,3 +43,8 @@ bin/client.key
 bin/spid.txt
 bin/key.txt
 bin/attestation_report.json
+
+# in order to have 2 workers run and exchange keys
+bin2/substratee_worker
+bin2/*.bin
+bin2/*.txt

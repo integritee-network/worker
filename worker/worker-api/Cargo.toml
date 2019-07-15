@@ -1,0 +1,17 @@
+[package]
+name = "substratee_worker_api"
+version = "2.0.0"
+authors = ["Supercomputing Systems AG <info@scs.ch>"]
+
+
+[dependencies]
+ws = "0.7"
+log = "0.4"
+serde_json = "1.0"
+serde_derive = "1.0"
+sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+
+[dependencies.primitives]
+git = "https://github.com/paritytech/substrate"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
+package = "substrate-primitives"
