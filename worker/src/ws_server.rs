@@ -26,6 +26,7 @@ use std::str;
 use std::thread;
 use substratee_worker_api::requests::*;
 use ws::{CloseCode, Handler, listen, Message, Result, Sender};
+use primitives::{ed25519, Pair};
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
 	// Server WebSocket handler
@@ -39,10 +40,14 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 		fn on_message(&mut self, msg: Message) -> Result<()> {
 			info!("[WS Server] Got message '{}'. ", msg);
 
-			let answer = match &msg.clone().into_text().unwrap()[..] {
+			let msg_txt = msg.into_text().unwrap();
+			let args: Vec<&str> = msg_txt.split("::").collect();
+
+			let answer = match args[0] {
 				MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
 				MSG_GET_MU_RA_PORT => Message::text(self.mu_ra_port.clone()),
-				_ => handle_get_counter_msg(self.eid, msg),
+				MSG_GET_COUNTER => handle_get_counter_msg(self.eid, args[1], args[2]),
+				_ => Message::text("[WS Server]: unrecognized msg pattern"),
 			};
 
 			self.out.send(answer)
@@ -61,16 +66,33 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 	});
 }
 
-fn handle_get_counter_msg(eid: sgx_enclave_id_t, msg: Message) -> Message {
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let account = msg.clone().into_data();
-	let mut value = 0u32;
+fn handle_get_counter_msg(eid: sgx_enclave_id_t, mut account: &str, signature: &str) -> Message {
 
+	println!("[WS Server] Getting counter of: {}", account);
+	debug!("Signature: {}", signature);
+
+	let sig_vec:  Vec<u8> = serde_json::from_str(signature).unwrap();
+	let mut sig_arr = [0u8; 64];
+	sig_arr.clone_from_slice(&sig_vec);
+
+	let pubkey: ed25519::Public = serde_json::from_str(&mut account).unwrap();
+	let sign: ed25519::Signature = ed25519::Signature::from_raw(sig_arr);
+
+	match ed25519::Pair::verify(&sign, pubkey.clone().as_slice(), &pubkey.clone()) {
+		true => println!("[WS Server]: signature supplied in get counter is valid!"),
+		false => {
+			error!("[WS Server]: INVALID signature supplied in get counter!");
+			return Message::text("Invalid Signature");
+		}
+	}
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+
+	let mut value = 0u32;
 	let result = unsafe {
 		get_counter(eid,
 					&mut retval,
-					account.as_ptr(),
-					account.len() as u32,
+					pubkey.to_string().as_ptr(),
+					pubkey.to_string().len() as u32,
 					&mut value)
 	};
 
@@ -79,7 +101,7 @@ fn handle_get_counter_msg(eid: sgx_enclave_id_t, msg: Message) -> Message {
 		_ => { error!("[-] ECALL Enclave failed {}!", result.as_str()) }
 	}
 
-	Message::text(format!("Counter of {} = {}", msg, value))
+	Message::text(format!("Counter of {} = {}", account, value))
 }
 
 fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
@@ -111,3 +133,30 @@ fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
 	Message::text(rsa_pubkey_json.to_string())
 }
 
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn get_counter_signature_checking_works() {
+
+		let user = ed25519::Pair::from_string("//Alice", Some("")).expect("Invalid phrase");
+		let sign = user.sign(user.public().as_slice());
+
+		let sign_str = serde_json::to_string::<[u8]>(sign.as_ref()).unwrap();
+		let acc_str = serde_json::to_string(&user.public()).unwrap();
+
+		let request = format!("{}::{}::{}", MSG_GET_COUNTER, acc_str, sign_str);
+		let mut args: Vec<&str> = request.split("::").collect();
+
+		let mut sig_vec:  Vec<u8> = serde_json::from_str(args[2]).unwrap();
+		let mut sig_arr = [0u8; 64];
+		sig_arr.clone_from_slice(&sig_vec);
+
+		let pubkey: ed25519::Public = serde_json::from_str(&mut args[1]).unwrap();
+		let sign: ed25519::Signature = ed25519::Signature::from_raw(sig_arr);
+
+		assert!(ed25519::Pair::verify(&sign, pubkey.clone().as_slice(), &pubkey.clone()));
+	}
+}

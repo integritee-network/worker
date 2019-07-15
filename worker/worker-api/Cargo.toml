@@ -11,3 +11,7 @@ serde_json = "1.0"
 serde_derive = "1.0"
 sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 
+[dependencies.primitives]
+git = "https://github.com/paritytech/substrate"
+rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
+package = "substrate-primitives"

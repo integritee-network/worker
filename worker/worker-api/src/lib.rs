@@ -16,6 +16,7 @@
 */
 
 extern crate log;
+extern crate primitives;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate sgx_crypto_helper;
@@ -28,6 +29,7 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::sync::mpsc::channel;
 use std::thread;
 use ws::connect;
+use primitives::ed25519;
 
 pub mod client;
 pub mod requests;
@@ -56,14 +58,25 @@ impl Api {
 		Ok(rsa_pubkey)
 	}
 
-	fn get(&self, request: &'static str) -> Result<String, ()> {
+	pub fn get_counter(&self, account: ed25519::Public, signature: ed25519::Signature) -> Result<String, ()> {
+		let acc_str = serde_json::to_string(&account).unwrap();
+		let sign_str = serde_json::to_string::<[u8]>(signature.as_ref()).unwrap();
+
+		let request = format!("{}::{}::{}", MSG_GET_COUNTER, acc_str, sign_str);
+		Self::get(&self, &request)
+	}
+
+	fn get(&self, request: &str) -> Result<String, ()> {
 		let url = self.url.clone();
+		let req = request.to_string().clone();
 		let (port_in, port_out) = channel();
+
+		info!("[Worker Api]: Sending request: {}", req);
 		let client = thread::spawn(move || {
 			match connect(url, |out| {
 				WsClient {
 					out: out,
-					request: request.to_string(),
+					request: req.clone(),
 					result: port_in.clone()
 				}
 			}) {
@@ -79,7 +92,7 @@ impl Api {
 		match port_out.recv() {
 			Ok(p) => Ok(p),
 			Err(_) => {
-				error!("[-] Could not connect to worker, returning");
+				error!("[-] [WorkerApi]: error while handling request, returning");
 				return Err(())
 			},
 		}
