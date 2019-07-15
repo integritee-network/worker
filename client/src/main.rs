@@ -31,12 +31,12 @@ extern crate serde_json;
 extern crate sgx_crypto_helper;
 extern crate sgx_types;
 extern crate substrate_api_client;
-//extern crate substratee_worker;
 
 use blake2_rfc::blake2s::blake2s;
 use clap::App;
 use log::*;
 use parity_codec::Encode;
+use primitives::Pair;
 use primitive_types::U256;
 use sgx_types::*;
 use substrate_api_client::Api;
@@ -57,14 +57,7 @@ fn main() {
 	env_logger::init();
 
 	let yml = load_yaml!("cli.yml");
-
 	let matches = App::from_yaml(yml).get_matches();
-	if let Some(_matches) = matches.subcommand_matches("getcounter") {
-		let user = "Alice";
-		println!("*** Getting the counter value of '{}' from the substraTEE-worker", user);
-		get_counter(user);
-		return;
-	}
 
 	let port = matches.value_of("port").unwrap_or("9944");
 	let server = matches.value_of("server").unwrap_or("127.0.0.1");
@@ -83,6 +76,19 @@ fn main() {
 			get_worker_info(&api, 0)
 		}
 	};
+
+	let worker_api = WorkerApi::new(worker.url.clone());
+
+	if let Some(_matches) = matches.subcommand_matches("getcounter") {
+		let user = pair_from_suri("//Alice", Some(""));
+		println!("Am I new1");
+		println!("*** Getting the counter value of '{:?}' from the substraTEE-worker", user.public());
+		let sign = user.sign(user.public().as_slice());
+		let value = worker_api.get_counter(user.public(), sign).unwrap();
+
+		println!("*** Got counter value {}", value);
+		return;
+	}
 
 	// check integrity of sha256 of WASM
 	let sha256input = hex::decode(matches.value_of("sha256wasm").unwrap()).unwrap();
@@ -112,11 +118,11 @@ fn main() {
 	transfer_amount(&api, "//Alice", worker.pubkey, U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// compose extrinsic with encrypted payload
-	let worker_api = WorkerApi::new(worker.url.clone());
 	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("Got worker shielding key {:?}", rsa_pubkey);
 
-	let account: String = matches.value_of("account").unwrap_or("Alice").to_string();
+	let account = user_to_pubkey("//Alice").to_string();
+//	let account: String = matches.value_of("account").unwrap_or().to_string();
 	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
 	let message = Message { account, amount, sha256 };
 	let plaintext = serde_json::to_vec(&message).unwrap();

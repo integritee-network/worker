@@ -21,7 +21,6 @@ use log::info;
 use std::thread;
 use primitive_types::U256;
 use std::sync::mpsc::channel;
-use ws::{connect, CloseCode};
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
 use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
@@ -72,24 +71,6 @@ pub fn get_free_balance(api: &Api, user: &str) -> U256 {
 // function to get the account nonce of a user
 pub fn get_account_nonce(api: &Api, user: &str) -> U256 {
 	get_from_storage(api, user, "System", "AccountNonce")
-}
-
-// function to get the counter from the substraTEE-worker
-pub fn get_counter(user: &'static str) {
-	// Client thread
-	let client = thread::spawn(move || {
-		connect("ws://127.0.0.1:2019", |out| {
-			out.send(user).unwrap();
-
-			move |msg| {
-				println!("[+] Client got message '{}'. ", msg);
-				println!();
-				out.close(CloseCode::Normal)
-			}
-
-		}).unwrap()
-	});
-	let _ = client.join();
 }
 
 // function to fund an account
