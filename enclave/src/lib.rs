@@ -253,6 +253,8 @@ pub unsafe extern "C" fn call_counter_wasm(
 		Err(sgx_status) => return sgx_status,
 	};
 
+	println!("    [Enclave] Updated encrypted state: {:?}", enc_state.to_vec());
+
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
 
 	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {

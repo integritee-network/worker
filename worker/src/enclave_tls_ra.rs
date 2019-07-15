@@ -20,6 +20,7 @@ extern crate sgx_urts;
 extern crate dirs;
 use sgx_types::*;
 
+use log::*;
 use std::os::unix::io::{AsRawFd};
 use std::net::{TcpListener, TcpStream};
 use init_enclave::init_enclave;
@@ -62,7 +63,7 @@ pub fn run(mode: Mode, port: &str) {
 
 
 pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
-	println!("Running as server...");
+	info!("Starting MU-RA server on: {}", addr);
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", addr)).unwrap();
 	//loop{
 	match listener.accept() {
@@ -87,7 +88,7 @@ pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_
 }
 
 pub fn run_enclave_client(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
-	println!("Running as client...");
+	info!("Running MU-RA client on {}", addr);
 	let socket = TcpStream::connect(addr).unwrap();
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
