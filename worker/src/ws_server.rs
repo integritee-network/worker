@@ -38,7 +38,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 
 	impl Handler for Server {
 		fn on_message(&mut self, msg: Message) -> Result<()> {
-			info!("[WS Server] Got message '{}'. ", msg);
+			info!("     [WS Server] Got message '{}'. ", msg);
 
 			let msg_txt = msg.into_text().unwrap();
 			let args: Vec<&str> = msg_txt.split("::").collect();
@@ -68,7 +68,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 
 fn handle_get_counter_msg(eid: sgx_enclave_id_t, mut account: &str, signature: &str) -> Message {
 
-	println!("[WS Server] Getting counter of: {}", account);
+	println!("     [WS Server] Getting counter of: {}", account);
 	debug!("Signature: {}", signature);
 
 	let sig_vec:  Vec<u8> = serde_json::from_str(signature).unwrap();
@@ -79,7 +79,7 @@ fn handle_get_counter_msg(eid: sgx_enclave_id_t, mut account: &str, signature: &
 	let sign: ed25519::Signature = ed25519::Signature::from_raw(sig_arr);
 
 	match ed25519::Pair::verify(&sign, pubkey.clone().as_slice(), &pubkey.clone()) {
-		true => println!("[WS Server]: signature supplied in get counter is valid!"),
+		true => println!("     [WS Server]: signature supplied in getcounter  request is valid!"),
 		false => {
 			error!("[WS Server]: INVALID signature supplied in get counter!");
 			return Message::text("Invalid Signature");
@@ -127,7 +127,7 @@ fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
 
 
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
-	println!("[+] RSA pubkey{:?}", rsa_pubkey);
+	println!("     [WS Server] RSA pubkey{:?}\n", rsa_pubkey);
 
 	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
 	Message::text(rsa_pubkey_json.to_string())

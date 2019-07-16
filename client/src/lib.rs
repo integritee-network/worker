@@ -163,7 +163,7 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 		})
 		.unwrap();
 
-	println!("[+] Subscribed, waiting for event...");
+	println!("[+] Subscribed, waiting for event...\n");
 	loop {
 		let event_str = events_out.recv().unwrap();
 
