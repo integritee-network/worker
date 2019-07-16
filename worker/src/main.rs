@@ -227,11 +227,12 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 	};
 
 	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
-		println!("[-] Perform a remote attestation of the failed.\n");
+		println!("[-] Remote attestation of the enclave failed.\n");
 		return;
 	}
 
-	println!("[+] Perform a remote attestation of the enclave successful\n");
+	println!();
+	println!("[+] Remote attestation of the enclave successful\n");
 
 	// hex encode the extrinsic
 	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
@@ -253,7 +254,7 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 			info!("one worker registered, should be me");
 		},
 		_ => {
-			println!("There are already workers registered, fetching keys from first one...");
+			println!("*** There are already workers registered, fetching keys from first one...");
 			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
 
 			let w_api = WorkerApi::new(w1.url.clone());
@@ -263,7 +264,8 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 			info!("Performing MU-RA");
 			let w1_url_port: Vec<&str> = w1.url.split(':').collect();
 			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], ra_port));
-			println!("[+] MU-RA successfully performed");
+			println!();
+			println!("[+] MU-RA successfully performed.\n");
 		},
 	};
 

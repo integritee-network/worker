@@ -88,7 +88,7 @@ pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_
 }
 
 pub fn run_enclave_client(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
-	info!("Running MU-RA client on {}", addr);
+	info!("Starting MU-RA client on {}", addr);
 	let socket = TcpStream::connect(addr).unwrap();
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {

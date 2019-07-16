@@ -272,8 +272,8 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         &webpki::TLSServerTrustAnchors(&trust_anchors),
         &chain,
         now_func.unwrap()) {
-        Ok(_) => println!("Cert is good"),
-        Err(e) => println!("Cert verification error {:?}", e),
+        Ok(_) => info!("Cert is good"),
+        Err(e) => error!("Cert verification error {:?}", e),
     }
 
     // Verify the signature against the signing cert
@@ -281,9 +281,9 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         &webpki::RSA_PKCS1_2048_8192_SHA256,
         untrusted::Input::from(&attn_report_raw),
         untrusted::Input::from(&sig)) {
-        Ok(_) => println!("Signature good"),
+        Ok(_) => info!("Signature good"),
         Err(e) => {
-            println!("Signature verification error {:?}", e);
+            error!("Signature verification error {:?}", e);
             panic!();
         },
     }
@@ -295,15 +295,15 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         let time_fixed = time.clone() + "+0000";
         let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap().timestamp();
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-        println!("Time diff = {}", now - ts);
+        info!("Time diff = {}", now - ts);
     } else {
-        println!("Failed to fetch timestamp from attestation report");
+        error!("Failed to fetch timestamp from attestation report");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     // 2. Verify quote status (mandatory field)
     if let Value::String(quote_status) = &attn_report["isvEnclaveQuoteStatus"] {
-        println!("isvEnclaveQuoteStatus = {}", quote_status);
+        debug!("isvEnclaveQuoteStatus = {}", quote_status);
         match quote_status.as_ref() {
             "OK" => (),
             "GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => {
@@ -326,36 +326,36 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
                                               &mut update_info as * mut sgx_update_info_bit_t)
                     };
                     if res != sgx_status_t::SGX_SUCCESS {
-                        println!("res={:?}", res);
+                        error!("ocall_get_update_info failed. res={:?}", res);
                         return Err(res);
                     }
 
                     if rt != sgx_status_t::SGX_SUCCESS {
-                        println!("rt={:?}", rt);
+                        warn!("ocall_get_update_info unsuccessful. rt={:?}", rt);
                         // Borrow of packed field is unsafe in future Rust releases
                         unsafe{
-                            println!("update_info.pswUpdate: {}", update_info.pswUpdate);
-                            println!("update_info.csmeFwUpdate: {}", update_info.csmeFwUpdate);
-                            println!("update_info.ucodeUpdate: {}", update_info.ucodeUpdate);
+                            debug!("update_info.pswUpdate: {}", update_info.pswUpdate);
+                            debug!("update_info.csmeFwUpdate: {}", update_info.csmeFwUpdate);
+                            debug!("update_info.ucodeUpdate: {}", update_info.ucodeUpdate);
                         }
                         return Err(rt);
                     }
                 } else {
-                    println!("Failed to fetch platformInfoBlob from attestation report");
+                    error!("Failed to fetch platformInfoBlob from attestation report");
                     return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
                 }
             }
             _ => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
         }
     } else {
-        println!("Failed to fetch isvEnclaveQuoteStatus from attestation report");
+        error!("Failed to fetch isvEnclaveQuoteStatus from attestation report");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     // 3. Verify quote body
     if let Value::String(quote_raw) = &attn_report["isvEnclaveQuoteBody"] {
         let quote = base64::decode(&quote_raw).unwrap();
-        println!("Quote = {:?}", quote);
+        debug!("Quote = {:?}", quote);
         // TODO: lack security check here
         let sgx_quote: sgx_quote_t = unsafe{ptr::read(quote.as_ptr() as *const _)};
 
@@ -365,18 +365,18 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         // DO SECURITY CHECK ON DEMAND
         // DO SECURITY CHECK ON DEMAND
         unsafe{
-            println!("sgx quote version = {}", sgx_quote.version);
-            println!("sgx quote signature type = {}", sgx_quote.sign_type);
-            println!("sgx quote report_data = {:02x}", sgx_quote.report_body.report_data.d.iter().format(""));
-            println!("sgx quote mr_enclave = {:02x}", sgx_quote.report_body.mr_enclave.m.iter().format(""));
-            println!("sgx quote mr_signer = {:02x}", sgx_quote.report_body.mr_signer.m.iter().format(""));
+            debug!("sgx quote version = {}", sgx_quote.version);
+            debug!("sgx quote signature type = {}", sgx_quote.sign_type);
+            debug!("sgx quote report_data = {:02x}", sgx_quote.report_body.report_data.d.iter().format(""));
+            debug!("sgx quote mr_enclave = {:02x}", sgx_quote.report_body.mr_enclave.m.iter().format(""));
+            debug!("sgx quote mr_signer = {:02x}", sgx_quote.report_body.mr_signer.m.iter().format(""));
         }
-        println!("Anticipated public key = {:02x}", pub_k.iter().format(""));
+        debug!("Anticipated public key = {:02x}", pub_k.iter().format(""));
         if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
-            println!("Mutual RA done!");
+            info!("Mutual RA done!");
         }
     } else {
-        println!("Failed to fetch isvEnclaveQuoteBody from attestation report");
+        error!("Failed to fetch isvEnclaveQuoteBody from attestation report");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
