@@ -177,7 +177,6 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 	start_ws_server(enclave.geteid(), w_url.clone(), mu_ra_port.to_string());
 
 	// ------------------------------------------------------------------------
-	println!("Starting Enclave MU-RA Ra server");
 	let eid = enclave.geteid();
 	let p = mu_ra_port.to_string().clone();
 	thread::spawn(move || {
@@ -227,25 +226,23 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 		)
 	};
 
-	match result {
-		sgx_status_t::SGX_SUCCESS => {
-			println!("[+] Perform a remote attestation of the enclave successful\n");
-
-			// hex encode the extrinsic
-			let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
-			let mut _xthex = hex::encode(ue.encode());
-			_xthex.insert_str(0, "0x");
-
-			// send the extrinsic and wait for confirmation
-			println!("[>] Register the enclave (send the extrinsic)");
-			let tx_hash = api.send_extrinsic(_xthex).unwrap();
-			println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
-		},
-		_ => {
-			println!("[-] ECALL 'perform_ra' failed {}!", result.as_str());
-			return;
-		}
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] Perform a remote attestation of the failed.\n");
+		return;
 	}
+
+	println!("[+] Perform a remote attestation of the enclave successful\n");
+
+	// hex encode the extrinsic
+	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
+	let mut _xthex = hex::encode(ue.encode());
+	_xthex.insert_str(0, "0x");
+
+	// send the extrinsic and wait for confirmation
+	println!("[>] Register the enclave (send the extrinsic)");
+	let tx_hash = api.send_extrinsic(_xthex).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+
 
 	match get_worker_amount(&api) {
 		0 => {
