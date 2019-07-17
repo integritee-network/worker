@@ -112,7 +112,6 @@ fn main() {
 
 	// transfer from Alice to TEE
 	nonce = get_account_nonce(&api, "//Alice");
-//	let tee_pub = get_enclave_ecc_pub_key();
 	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000), nonce, api.genesis_hash.unwrap());
 
 	// compose extrinsic with encrypted payload
@@ -121,12 +120,13 @@ fn main() {
 	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
 
 	let account = user_to_pubkey("//Alice").to_string();
+	println!("[+] //Alice's Pubkey: {}\n", account);
 	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
 	let message = Message { account, amount, sha256 };
 	let plaintext = serde_json::to_vec(&message).unwrap();
 	let mut payload_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", message);
+	println!("[>] Sending message {:?}' to substraTEE-worker.\n", message);
 	nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 	let mut _xthex = hex::encode(xt.encode());
