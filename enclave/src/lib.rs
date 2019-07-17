@@ -188,7 +188,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
 
-
 	let ciphertext_slice = slice::from_raw_parts(ciphertext, ciphertext_size as usize);
 	let hash_slice       = slice::from_raw_parts(hash, hash_size as usize);
 	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
