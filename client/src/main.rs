@@ -96,7 +96,7 @@ fn main() {
 
 	let wasm_path = matches.value_of("wasm-path").unwrap_or(WASM_FILE);
 	let hash_hex = get_wasm_hash(wasm_path);
-	println!("[>] Calculating  WASM hash from {:?}", wasm_path);
+	println!("[>] Calculating  WASM hash of {:?}", wasm_path);
 	println!("[<] WASM Hash: {:?}\n", hash_hex[0]);
 	let hash = hex::decode(hash_hex[0].clone()).unwrap();
 	let sha256: sgx_sha256_hash_t = slice_to_hash(&hash);
@@ -126,7 +126,7 @@ fn main() {
 	let plaintext = serde_json::to_vec(&message).unwrap();
 	let mut payload_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	println!("[>] Sending message {:?}' to substraTEE-worker.\n", message);
+	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", message);
 	nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 	let mut _xthex = hex::encode(xt.encode());

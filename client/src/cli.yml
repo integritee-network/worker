@@ -28,7 +28,7 @@ args:
     - wasm-path:
         short: w
         long: wasm-path
-        help: Path to the WASM binary running that should be running in the enclave
+        help: Path to the WASM binary that should be running in the enclave
         takes_value: true
 
 subcommands:
