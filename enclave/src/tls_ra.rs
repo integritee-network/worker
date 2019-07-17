@@ -273,7 +273,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 
 
-	info!("Got encrypted state from ipfs: {:?}\n", enc_state);
+	println!("Got encrypted state from ipfs: {:?}\n", enc_state);
 	if let Err(e) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return e;
 	}
