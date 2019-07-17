@@ -113,11 +113,13 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 
 	let shielding_key = read_rsa_keypair().unwrap();
 	let (key, iv) = read_or_create_aes_key_iv().unwrap();
-	let sh_json = serde_json::to_string(&shielding_key).unwrap();
-	info!("Sending Shielding Key: {:?}", sh_json.as_bytes().len());
+	let rsa_pair = serde_json::to_string(&shielding_key).unwrap();
+	let rsa_len = rsa_pair.as_bytes().len();
+	info!("Sending Shielding Key: {:?}", rsa_len);
 	info!("Sending AES key {:?}\nIV: {:?}\n", key, iv);
 
-	tls.write(sh_json.as_bytes()).unwrap();
+	tls.write(&rsa_len.to_le_bytes()).unwrap();
+	tls.write(rsa_pair.as_bytes()).unwrap();
 	tls.write(&key[..]).unwrap();
 	tls.write(&iv[..]).unwrap();
 
@@ -182,7 +184,19 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	println!();
 	println!("    [Enclave] (MU-RA-Client) MU-RA successful waiting for keys...");
 
-	let mut rsa_pair = [0u8; 6245]; //Vec::new();
+	let mut key_len_arr = [0u8; 8];
+	let key_len = match tls.read(&mut key_len_arr) {
+		Ok(_) => {
+			info!("Received rsa key_len: {:?}", &key_len_arr.to_vec());
+			usize::from_le_bytes(key_len_arr)
+		}
+		Err(e) => {
+			error!("Error in read: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
+
+	let mut rsa_pair = vec![0u8; key_len]; //Vec::new();
 	match tls.read(&mut rsa_pair) {
 		Ok(_) => info!("Received Shielding key: {}", str::from_utf8(&rsa_pair).unwrap()),
 		Err(e) => {
