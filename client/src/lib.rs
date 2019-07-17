@@ -17,28 +17,30 @@
 
 extern crate system;
 
-use log::info;
-use std::thread;
-use primitive_types::U256;
+use std::process::Command;
 use std::sync::mpsc::channel;
-use runtime_primitives::generic::Era;
-use parity_codec::{Encode, Decode, Compact};
-use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
+use std::thread;
+
+use log::info;
 use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	SubstraTEERegistryCall,
 	BalancesCall,
-	Hash,
+	Call,
 	Event,
+	Hash,
+	SubstraTEERegistryCall,
+	UncheckedExtrinsic,
 };
+use parity_codec::{Compact, Decode, Encode};
+use primitive_types::U256;
 use primitives::{
+	blake2_256,
+	crypto::Ss58Codec,
 	ed25519,
 	hexdisplay::HexDisplay,
 	Pair,
-	crypto::Ss58Codec,
-	blake2_256,
 };
+use runtime_primitives::generic::Era;
+use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 
 pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
@@ -184,9 +186,21 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 }
 
 // convert from vec to array
-pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
+pub fn slice_to_hash(bytes: &[u8]) -> [u8; 32] {
 	let mut array = [0; 32];
 	let bytes = &bytes[..array.len()]; // panics if not enough data
 	array.copy_from_slice(bytes);
 	array
+}
+
+pub fn get_wasm_hash(path: &str) -> Vec<String> {
+	let sha_cmd = Command::new("sha256sum")
+		.arg(path)
+		.output()
+		.expect(&format!("Failed to get sha256sum of {}", path));
+
+	std::str::from_utf8(&sha_cmd.stdout).unwrap()
+		.split("  ")
+		.map(|s| s.to_string())
+		.collect()
 }

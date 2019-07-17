@@ -127,7 +127,7 @@ fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
 
 
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
-	println!("     [WS Server] RSA pubkey{:?}\n", rsa_pubkey);
+	println!("     [WS Server] RSA pubkey {:?}\n", rsa_pubkey);
 
 	let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
 	Message::text(rsa_pubkey_json.to_string())
