@@ -61,9 +61,9 @@ use utils::blake2_256;
 use constants::{RA_SPID, RA_API_KEY};
 
 //pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
-pub const DEV_HOSTNAME		:&'static str = "api.trustedservices.intel.com";
-pub const SIGRL_SUFFIX		:&'static str = "/sgx/dev/attestation/v3/sigrl/";
-pub const REPORT_SUFFIX		:&'static str = "/sgx/dev/attestation/v3/report";
+pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
+pub const SIGRL_SUFFIX		: &str = "/sgx/dev/attestation/v3/sigrl/";
+pub const REPORT_SUFFIX		: &str = "/sgx/dev/attestation/v3/report";
 
 extern "C" {
 	pub fn ocall_sgx_init_quote (
@@ -279,9 +279,9 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
 
 fn as_u32_le(array: [u8; 4]) -> u32 {
 	u32::from(array[0]) +
-	u32::from(array[1]) <<  8 +
-	u32::from(array[2]) << 16 +
-	u32::from(array[3]) << 24
+		(u32::from(array[1]) <<  8) +
+		(u32::from(array[2]) << 16) +
+		(u32::from(array[3]) << 24)
 }
 
 #[allow(const_err)]

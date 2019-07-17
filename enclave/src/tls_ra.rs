@@ -33,9 +33,7 @@ impl rustls::ClientCertVerifier for ClientAuth {
 		info!("client cert: {:?}", _certs);
 		// This call will automatically verify cert is properly signed
 		match cert::verify_mra_cert(&_certs[0].0) {
-			Ok(()) => {
-				return Ok(rustls::ClientCertVerified::assertion());
-			}
+			Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 				if self.outdated_ok {
 					warn!("outdated_ok is set, overriding outdated error");
@@ -133,7 +131,7 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 	info!("Sending encrypted state length");
 	tls.write(&enc_state.len().to_le_bytes()).unwrap();
 
-	if enc_state.len() == 0 {
+	if enc_state.is_empty() {
 		println!("    [Enclave] (MU-RA-Server) No state has been written yet. Nothing to write to ipfs.");
 		println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n");
 	}

@@ -197,7 +197,7 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
 	let sha_cmd = Command::new("sha256sum")
 		.arg(path)
 		.output()
-		.expect(&format!("Failed to get sha256sum of {}", path));
+		.unwrap_or_else(|_| panic!("Failed to get sha256sum of {}", path));
 
 	std::str::from_utf8(&sha_cmd.stdout).unwrap()
 		.split("  ")

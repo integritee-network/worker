@@ -31,7 +31,7 @@ impl Handler for WsClient {
 
 		match self.out.send(self.request.clone()) {
 			Ok(_) => Ok(()),
-			Err(e) => return Err(e),
+			Err(e) => Err(e),
 		}
 	}
 	fn on_message(&mut self, msg: Message) -> Result<()> {

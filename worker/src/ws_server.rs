@@ -18,15 +18,17 @@
 extern crate sgx_types;
 extern crate ws;
 
-use enclave_api::{get_counter, get_rsa_encryption_pubkey};
-use log::*;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use sgx_types::*;
 use std::str;
 use std::thread;
-use substratee_worker_api::requests::*;
-use ws::{CloseCode, Handler, listen, Message, Result, Sender};
+
+use log::*;
 use primitives::{ed25519, Pair};
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use sgx_types::*;
+use ws::{CloseCode, Handler, listen, Message, Result, Sender};
+
+use enclave_api::{get_counter, get_rsa_encryption_pubkey};
+use substratee_worker_api::requests::*;
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
 	// Server WebSocket handler
@@ -66,7 +68,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
 	});
 }
 
-fn handle_get_counter_msg(eid: sgx_enclave_id_t, mut account: &str, signature: &str) -> Message {
+fn handle_get_counter_msg(eid: sgx_enclave_id_t, account: &str, signature: &str) -> Message {
 
 	println!("     [WS Server] Getting counter of: {}", account);
 	debug!("Signature: {}", signature);
@@ -75,16 +77,16 @@ fn handle_get_counter_msg(eid: sgx_enclave_id_t, mut account: &str, signature: &
 	let mut sig_arr = [0u8; 64];
 	sig_arr.clone_from_slice(&sig_vec);
 
-	let pubkey: ed25519::Public = serde_json::from_str(&mut account).unwrap();
+	let pubkey: ed25519::Public = serde_json::from_str(account).unwrap();
 	let sign: ed25519::Signature = ed25519::Signature::from_raw(sig_arr);
 
-	match ed25519::Pair::verify(&sign, pubkey.clone().as_slice(), &pubkey.clone()) {
-		true => println!("     [WS Server]: signature supplied in getcounter  request is valid!"),
-		false => {
-			error!("[WS Server]: INVALID signature supplied in get counter!");
-			return Message::text("Invalid Signature");
-		}
+	if ed25519::Pair::verify(&sign, pubkey.clone().as_slice(), &pubkey.clone()) {
+		println!("     [WS Server]: signature supplied in getcounter  request is valid!");
+	} else {
+		error!("[WS Server]: INVALID signature supplied in get counter!");
+		return Message::text("Invalid Signature");
 	}
+
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let mut value = 0u32;

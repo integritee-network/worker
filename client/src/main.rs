@@ -86,7 +86,7 @@ fn main() {
 
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		let user = pair_from_suri("//Alice", Some(""));
-		println!("*** Getting the counter value of {:?} from the substraTEE-worker", user.public().to_string());
+		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
 		let sign = user.sign(user.public().as_slice());
 		let value = worker_api.get_counter(user.public(), sign).unwrap();
 

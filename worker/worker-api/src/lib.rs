@@ -75,7 +75,7 @@ impl Api {
 		let client = thread::spawn(move || {
 			match connect(url, |out| {
 				WsClient {
-					out: out,
+					out,
 					request: req.clone(),
 					result: port_in.clone()
 				}
@@ -93,7 +93,7 @@ impl Api {
 			Ok(p) => Ok(p),
 			Err(_) => {
 				error!("[-] [WorkerApi]: error while handling request, returning");
-				return Err(())
+				Err(())
 			},
 		}
 	}
