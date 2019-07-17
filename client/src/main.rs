@@ -85,11 +85,11 @@ fn main() {
 
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		let user = pair_from_suri("//Alice", Some(""));
-		println!("*** Getting the counter value of '{:?}' from the substraTEE-worker", user.public());
+		println!("*** Getting the counter value of {:?} from the substraTEE-worker", user.public().to_string());
 		let sign = user.sign(user.public().as_slice());
 		let value = worker_api.get_counter(user.public(), sign).unwrap();
 
-		println!("[<] Got counter value {}", value);
+		println!("[<] Received MSG: {}", value);
 		return;
 	}
 
@@ -131,7 +131,7 @@ fn main() {
 	let plaintext = serde_json::to_vec(&message).unwrap();
 	let mut payload_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	println!("[>] Sending message '{:?}' to substraTEE-worker", message);
+	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", message);
 	nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
 	let mut _xthex = hex::encode(xt.encode());

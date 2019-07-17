@@ -30,7 +30,7 @@ impl rustls::ClientCertVerifier for ClientAuth {
 
 	fn verify_client_cert(&self, _certs: &[rustls::Certificate])
 						  -> Result<rustls::ClientCertVerified, rustls::TLSError> {
-		println!("client cert: {:?}", _certs);
+		info!("client cert: {:?}", _certs);
 		// This call will automatically verify cert is properly signed
 		match cert::verify_mra_cert(&_certs[0].0) {
 			Ok(()) => {
@@ -38,7 +38,7 @@ impl rustls::ClientCertVerifier for ClientAuth {
 			}
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 				if self.outdated_ok {
-					println!("outdated_ok is set, overriding outdated error");
+					warn!("outdated_ok is set, overriding outdated error");
 					Ok(rustls::ClientCertVerified::assertion())
 				} else {
 					Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
@@ -67,7 +67,7 @@ impl rustls::ServerCertVerifier for ServerAuth {
 						  _certs: &[rustls::Certificate],
 						  _hostname: webpki::DNSNameRef,
 						  _ocsp: &[u8]) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-		println!("server cert: {:?}", _certs);
+		info!("server cert: {:?}", _certs);
 		// This call will automatically verify cert is properly signed
 		match cert::verify_mra_cert(&_certs[0].0) {
 			Ok(()) => {
@@ -75,7 +75,7 @@ impl rustls::ServerCertVerifier for ServerAuth {
 			}
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 				if self.outdated_ok {
-					println!("outdated_ok is set, overriding outdated error");
+					warn!("outdated_ok is set, overriding outdated error");
 					Ok(rustls::ServerCertVerified::assertion())
 				} else {
 					Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
@@ -107,31 +107,34 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 
 	let mut sess = rustls::ServerSession::new(&Arc::new(cfg));
 	let mut conn = TcpStream::new(socket_fd).unwrap();
-
 	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
-	let mut plaintext = [0u8; 1024]; //Vec::new();
-	match tls.read(&mut plaintext) {
-		Ok(_) => println!("Client said: {}", str::from_utf8(&plaintext).unwrap()),
-		Err(e) => {
-			println!("Error in read_to_end: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-	};
+
+	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
 	let shielding_key = read_rsa_keypair().unwrap();
 	let (key, iv) = read_or_create_aes_key_iv().unwrap();
 	let sh_json = serde_json::to_string(&shielding_key).unwrap();
-	println!("Sending Shielding Key: {:?}", sh_json.as_bytes().len());
-	println!("Sending AES key {:?}\nIV: {:?}\n", key, iv);
+	info!("Sending Shielding Key: {:?}", sh_json.as_bytes().len());
+	info!("Sending AES key {:?}\nIV: {:?}\n", key, iv);
 
 	tls.write(sh_json.as_bytes()).unwrap();
 	tls.write(&key[..]).unwrap();
 	tls.write(&iv[..]).unwrap();
 
+	println!("    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS");
+
 	let enc_state = match read_plaintext(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
+
+	info!("Sending encrypted state length");
+	tls.write(&enc_state.len().to_le_bytes()).unwrap();
+
+	if enc_state.len() == 0 {
+		println!("    [Enclave] (MU-RA-Server) No state has been written yet. Nothing to write to ipfs.");
+		println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n");
+	}
 
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let mut cid_buf: [u8; 46] = [0; 46];
@@ -145,12 +148,9 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
-	info!("Write to ipfs successful, sending CID");
+	println!("    [Enclave] (MU-RA-Server) Write to IPFS successful, sending CID");
 	tls.write(&cid_buf).unwrap();
-	info!("Write to ipfs successful, sending encrypted state length");
-	tls.write(&enc_state.len().to_le_bytes()).unwrap();
-
-
+	println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n");
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -179,7 +179,8 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
 
-	tls.write(b"Hello Sir, mind passing me the shielding and encryption keys?").unwrap();
+	println!();
+	println!("    [Enclave] (MU-RA-Client) MU-RA successful waiting for keys...");
 
 	let mut rsa_pair = [0u8; 6245]; //Vec::new();
 	match tls.read(&mut rsa_pair) {
@@ -215,14 +216,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		return e;
 	}
 
-	let mut cid = [0u8; 46];
-	match tls.read(&mut cid) {
-		Ok(_) => info!("Received ipfs CID: {:?}", &cid[..]),
-		Err(e) => {
-			error!("Error in read: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-	};
+	println!("    [Enclave] (MU-RA-Client) Received and stored keys, waiting for CID...");
 
 	let mut state_len_arr = [0u8; 8];
 	let state_len = match tls.read(&mut state_len_arr) {
@@ -237,9 +231,21 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 	};
 
 	if state_len == 0 {
-		println!("[Enclave]: The state is empty, nothing to fetch from ipfs");
+		println!("    [Enclave] (MU-RA-Client) No state has been written yet, nothing to fetch from IPFS");
+		println!("    [Enclave] (MU-RA-Client) Registration Procedure successful!\n");
 		return sgx_status_t::SGX_SUCCESS;
 	}
+
+	let mut cid = [0u8; 46];
+	match tls.read(&mut cid) {
+		Ok(_) => info!("Received ipfs CID: {:?}", &cid[..]),
+		Err(e) => {
+			error!("Error in read: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		}
+	};
+
+	println!("    [Enclave] (MU-RA-Client) Received IPFS CID, reading from IPFS...");
 
 	let mut enc_state = vec![0u8; state_len];
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -251,10 +257,15 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 						cid.len() as u32)
 	};
 
-	info!("Got encrypted state from ipfs: {:?}", enc_state);
+
+
+	info!("Got encrypted state from ipfs: {:?}\n", enc_state);
 	if let Err(e) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return e;
 	}
+
+	println!("    [Enclave] (MU-RA-Client) Successfully read state from IPFS");
+	println!("    [Enclave] (MU-RA-Client) Registration procedure successful!\n");
 
 	sgx_status_t::SGX_SUCCESS
 }

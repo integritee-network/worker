@@ -50,7 +50,7 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 		pubkey: key,
 		// Fixme: There are some bytes left that contain metadata about the linkable map.
 		// This may be the reason I was not able to do automated deserialization.
-		url: std::str::from_utf8(&url[1..url.len() - 2]).unwrap().to_string()
+		url: std::str::from_utf8(&url[1..15]).unwrap().to_string()
 	}
 }
 

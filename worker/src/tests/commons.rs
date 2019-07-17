@@ -81,6 +81,7 @@ pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
 	payload_encrypted
 }
 
+#[allow(dead_code)]
 pub fn register_enclave(port: &str) {
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
 	api.init();

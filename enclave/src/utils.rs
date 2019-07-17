@@ -113,12 +113,12 @@ pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 				Ok(sgx_status_t::SGX_SUCCESS)
 			}
 			Err(x) => {
-				error!("[Enclave -] Writing keyfile '{}' failed! {}", filepath, x);
+				error!("[Enclave -] Writing keyfile '{}' failed! Err: {}", filepath, x);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 			}
 		},
 		Err(x) => {
-			error!("[Enclave !] Creating keyfile '{}' error! {}", filepath, x);
+			error!("[Enclave !] Creating keyfile '{}' Err: {}", filepath, x);
 			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 	}
@@ -133,7 +133,7 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 				Ok(keyvec)
 			}
 			Err(x) => {
-				error!("[Enclave] Read key file failed {}", x);
+				error!("[Enclave] Read sealed file failed {}: Err {}", filepath, x);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 			}
 		},
@@ -189,7 +189,7 @@ pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
 			}
 		},
 		Err(x) => {
-			info!("[Enclave] no encrypted state file found! {}", x);
+			info!("[Enclave] No encrypted state file found! {} Err: {}", filepath, x);
 			Ok(state_vec)
 		}
 	}
