@@ -17,29 +17,30 @@
 
 extern crate system;
 
-use log::info;
-use std::thread;
-use primitive_types::U256;
-use std::sync::mpsc::channel;
-use runtime_primitives::generic::Era;
-use parity_codec::{Encode, Decode, Compact};
 use std::process::Command;
-use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
+use std::sync::mpsc::channel;
+use std::thread;
+
+use log::info;
 use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	SubstraTEERegistryCall,
 	BalancesCall,
-	Hash,
+	Call,
 	Event,
+	Hash,
+	SubstraTEERegistryCall,
+	UncheckedExtrinsic,
 };
+use parity_codec::{Compact, Decode, Encode};
+use primitive_types::U256;
 use primitives::{
+	blake2_256,
+	crypto::Ss58Codec,
 	ed25519,
 	hexdisplay::HexDisplay,
 	Pair,
-	crypto::Ss58Codec,
-	blake2_256,
 };
+use runtime_primitives::generic::Era;
+use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 
 pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 

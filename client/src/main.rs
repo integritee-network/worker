@@ -35,10 +35,11 @@ extern crate substrate_api_client;
 use blake2_rfc::blake2s::blake2s;
 use clap::App;
 use parity_codec::Encode;
-use primitives::Pair;
 use primitive_types::U256;
+use primitives::Pair;
 use sgx_types::*;
 use substrate_api_client::Api;
+
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
