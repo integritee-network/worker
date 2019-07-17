@@ -65,25 +65,26 @@ pub fn run(mode: Mode, port: &str) {
 pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
 	info!("Starting MU-RA server on: {}", addr);
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", addr)).unwrap();
-	//loop{
-	match listener.accept() {
-		Ok((socket, addr)) => {
-			println!("new client from {:?}", addr);
-			let mut retval = sgx_status_t::SGX_SUCCESS;
-			let result = unsafe {
-				run_server(eid, &mut retval, socket.as_raw_fd(), sign_type)
-			};
-			match result {
-				sgx_status_t::SGX_SUCCESS => {
-					println!("ECALL success!");
-				},
-				_ => {
-					println!("[-] ECALL Enclave Failed {}!", result.as_str());
-					return;
+	loop {
+		match listener.accept() {
+			Ok((socket, addr)) => {
+				println!("new client from {:?}", addr);
+				let mut retval = sgx_status_t::SGX_SUCCESS;
+				let result = unsafe {
+					run_server(eid, &mut retval, socket.as_raw_fd(), sign_type)
+				};
+				match result {
+					sgx_status_t::SGX_SUCCESS => {
+						println!("ECALL success!");
+					},
+					_ => {
+						println!("[-] ECALL Enclave Failed {}!", result.as_str());
+						return;
+					}
 				}
 			}
+			Err(e) => println!("couldn't get client: {:?}", e),
 		}
-		Err(e) => println!("couldn't get client: {:?}", e),
 	}
 }
 
