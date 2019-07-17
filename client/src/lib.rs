@@ -23,6 +23,7 @@ use primitive_types::U256;
 use std::sync::mpsc::channel;
 use runtime_primitives::generic::Era;
 use parity_codec::{Encode, Decode, Compact};
+use std::process::Command;
 use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
 use my_node_runtime::{
 	UncheckedExtrinsic,
@@ -184,9 +185,21 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 }
 
 // convert from vec to array
-pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
+pub fn slice_to_hash(bytes: &[u8]) -> [u8; 32] {
 	let mut array = [0; 32];
 	let bytes = &bytes[..array.len()]; // panics if not enough data
 	array.copy_from_slice(bytes);
 	array
+}
+
+pub fn get_wasm_hash(path: &str) -> Vec<String> {
+	let sha_cmd = Command::new("sha256sum")
+		.arg(path)
+		.output()
+		.expect(&format!("Failed to get sha256sum of {}", path));
+
+	std::str::from_utf8(&sha_cmd.stdout).unwrap()
+		.split("  ")
+		.map(|s| s.to_string())
+		.collect()
 }

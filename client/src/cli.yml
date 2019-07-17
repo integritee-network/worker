@@ -10,14 +10,14 @@ settings:
 # All Args must be defined in the 'args:' list where the name of the arg, is the
 # key to a Hash object
 args:
-    - port:
+    - node-port:
         short: p
-        long: ws-port
+        long: node-port
         help: Set the websocket port to connect to substraTEE-node
         takes_value: true
-    - server:
+    - node-server:
         short: s
-        long: ws-server
+        long: node-server
         help: Set the websocket server address to connect to substraTEE-node
         takes_value: true
     - message:
@@ -25,10 +25,10 @@ args:
         long: message
         help: Set the message to be sent to the substraTEE-worker
         takes_value: true
-    - sha256wasm:
+    - wasm-path:
         short: w
-        long: sha256wasm
-        help: Sha256 hash of the WASM code
+        long: wasm-path
+        help: Path to the WASM binary running that should be running in the enclave
         takes_value: true
 
 subcommands:

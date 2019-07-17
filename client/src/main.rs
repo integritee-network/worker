@@ -34,7 +34,6 @@ extern crate substrate_api_client;
 
 use blake2_rfc::blake2s::blake2s;
 use clap::App;
-use log::*;
 use parity_codec::Encode;
 use primitives::Pair;
 use primitive_types::U256;
@@ -44,6 +43,7 @@ use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 
+const WASM_FILE: &str = "worker_enclave.compact.wasm";
 
 fn main() {
 	// message structure
@@ -59,8 +59,8 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let port = matches.value_of("port").unwrap_or("9944");
-	let server = matches.value_of("server").unwrap_or("127.0.0.1");
+	let port = matches.value_of("node-port").unwrap_or("9944");
+	let server = matches.value_of("node-server").unwrap_or("127.0.0.1");
 	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
 	api.init();
 
@@ -93,18 +93,12 @@ fn main() {
 		return;
 	}
 
-	// check integrity of sha256 of WASM
-	let sha256input = hex::decode(matches.value_of("sha256wasm").unwrap()).unwrap();
-
-	if sha256input.len() != 32
-	{
-		error!("Length of SHA256 hash of WASM is wrong: 32 != {}", sha256input.len());
-		return;
-	}
-
-	// convert to [u8; 32]
-	let sha256: sgx_sha256_hash_t = from_slice(&sha256input);
-
+	let wasm_path = matches.value_of("wasm-path").unwrap_or(WASM_FILE);
+	let hash_hex = get_wasm_hash(wasm_path);
+	println!("[>] Calculating  WASM hash from {:?}", wasm_path);
+	println!("[<] WASM Hash: {:?}\n", hash_hex[0]);
+	let hash = hex::decode(hash_hex[0].clone()).unwrap();
+	let sha256: sgx_sha256_hash_t = slice_to_hash(&hash);
 
 	// get Alice's free balance
 	get_free_balance(&api, "//Alice");
