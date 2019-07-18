@@ -97,7 +97,7 @@ fn main() {
 	let n_url = format!("{}:{}", node_ip, node_port);
 	info!("Interacting with node on {}", n_url);
 
-	let w_ip = matches.value_of("worker-server").unwrap_or("127.0.0.1");
+	let w_ip = matches.value_of("w-server").unwrap_or("127.0.0.1");
 	let w_port = matches.value_of("w-port").unwrap_or("2000");
 	info!("Worker listening on {}:{}", w_ip, w_port);
 
