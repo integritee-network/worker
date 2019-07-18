@@ -68,7 +68,7 @@ pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_
 	loop {
 		match listener.accept() {
 			Ok((socket, addr)) => {
-				println!("    [MU-RA-Server] New client requesting MU-RA from {:?}", addr);
+				println!("    [MU-RA-Server] New client requesting mutual remote attestation from {:?}", addr);
 				let mut retval = sgx_status_t::SGX_SUCCESS;
 				let result = unsafe {
 					run_server(eid, &mut retval, socket.as_raw_fd(), sign_type)
@@ -89,7 +89,7 @@ pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_
 }
 
 pub fn run_enclave_client(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
-	println!("    [MU-RA-Client] Performing MU-RA with {}", addr);
+	println!("    [MU-RA-Client] Requesting mutual remote attestation with with {}", addr);
 	let socket = TcpStream::connect(addr).unwrap();
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {

@@ -121,7 +121,7 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 	tls.write(&key[..]).unwrap();
 	tls.write(&iv[..]).unwrap();
 
-	println!("    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS");
+	println!("    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS (= file hosting service)");
 
 	let enc_state = match read_plaintext(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
-	println!("    [Enclave] (MU-RA-Server) Write to IPFS successful, sending CID");
+	println!("    [Enclave] (MU-RA-Server) Write to IPFS successful, sending storage hash");
 	tls.write(&cid_buf).unwrap();
 	println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n");
 	sgx_status_t::SGX_SUCCESS
@@ -228,7 +228,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		return e;
 	}
 
-	println!("    [Enclave] (MU-RA-Client) Received and stored keys, waiting for CID...");
+	println!("    [Enclave] (MU-RA-Client) Received and stored keys, waiting for storage hash...");
 
 	let mut state_len_arr = [0u8; 8];
 	let state_len = match tls.read(&mut state_len_arr) {
@@ -257,7 +257,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		}
 	};
 
-	println!("    [Enclave] (MU-RA-Client) Received IPFS CID, reading from IPFS...");
+	println!("    [Enclave] (MU-RA-Client) Received IPFS storage hash, reading from IPFS...");
 
 	let mut enc_state = vec![0u8; state_len];
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;

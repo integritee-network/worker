@@ -535,7 +535,7 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  Resu
 	let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 	info!("    [Enclave] Generate keypair successful");
 
-	println!("    [Enclave] Create attestation report");
+	info!("    [Enclave] Create attestation report");
 	let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
 		Ok(r) => r,
 		Err(e) => {
@@ -552,7 +552,7 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  Resu
 	let payload = attn_report + "|" + &sig + "|" + &cert;
 
 	// generate an ECC certificate
-	println!("    [Enclave] Generate ECC Certificate");
+	info!("    [Enclave] Generate ECC Certificate");
 	let (key_der, cert_der) = match ::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
 		Ok(r) => r,
 		Err(e) => {
@@ -561,7 +561,7 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  Resu
 		}
 	};
 	let _result = ecc_handle.close();
-	println!("    [Enclave] Generate ECC Certificate successful");
+	info!("    [Enclave] Generate ECC Certificate successful");
 	Ok((key_der, cert_der))
 }
 
