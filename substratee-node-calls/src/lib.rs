@@ -49,13 +49,14 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 	raw.copy_from_slice(&h);
 	let key = ed25519::Public::from_raw(raw);
 
-	let re = Regex::new("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{4}").unwrap();
-	let m = re.find(std::str::from_utf8(&url).unwrap()).unwrap();
+	let url_str = std::str::from_utf8(&url[1..]).unwrap();
+	let re = Regex::new("[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[:][0-9]{4}").unwrap();
+	let m = re.find(url_str).unwrap();
 	Enclave {
 		pubkey: key,
 		// Fixme: There are some bytes left that contain metadata about the linkable map.
 		// This may be the reason I was not able to do automated deserialization.
-		url: std::str::from_utf8(&url[m.start()..m.end()]).unwrap().to_string(),
+		url: url_str[m.start()..m.end()].to_string(),
 	}
 }
 
@@ -87,18 +88,19 @@ mod tests {
 		let mut api: substrate_api_client::Api = Api::new(format!("ws://127.0.0.1:9991"));
 		api.init();
 		get_worker_amount(&api);
-		get_worker_info(&api, 0);
+		let enc = get_worker_info(&api, 0);
+
 	}
 
 	#[test]
 	fn regex_works() {
-		let url = "asdfadsf127.0.0.1:9991askdfhkajsd";
+		let url = "1192.168.10.21:9111askdfhkajsd";
 		let re = Regex::new("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{4}").unwrap();
 
 		println!("Regex {}", re.as_str());
 		let m = re.find(url).unwrap();
 
-		assert_eq!("127.0.0.1:9991", &url[m.start()..m.end()])
+		assert_eq!("192.168.10.21:9111", &url[m.start()..m.end()])
 	}
 }
 

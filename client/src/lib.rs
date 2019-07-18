@@ -185,6 +185,7 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 	}
 }
 
+
 // convert from vec to array
 pub fn slice_to_hash(bytes: &[u8]) -> [u8; 32] {
 	let mut array = [0; 32];
