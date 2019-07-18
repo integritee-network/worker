@@ -28,8 +28,8 @@ use std::sync::mpsc::channel;
 pub type Cid = [u8; 46];
 
 fn write_to_ipfs(data: &'static [u8]) -> Cid {
-	/// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
-   /// If not found, tries to connect to `localhost:5001`.
+	// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
+    // If not found, tries to connect to `localhost:5001`.
 	let client = IpfsClient::default();
 
 	let req = client
@@ -57,8 +57,8 @@ fn write_to_ipfs(data: &'static [u8]) -> Cid {
 }
 
 pub fn read_from_ipfs(cid: Cid) -> Vec<u8> {
-	/// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
-   /// If not found, tries to connect to `localhost:5001`.
+	// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
+    // If not found, tries to connect to `localhost:5001`.
 	let client = IpfsClient::default();
 	let h = str::from_utf8(&cid).unwrap();
 
