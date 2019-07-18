@@ -12,10 +12,12 @@ regex = "1"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+rev = "61bc5233582952a9ff13ab24fb93b08396758bf1"
 default-features = false
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
+tag = "M4"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 

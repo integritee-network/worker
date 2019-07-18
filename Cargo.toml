@@ -8,5 +8,5 @@ members = [
 ]
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node" }
-substrate-executor = { git = "https://github.com/scs/substraTEE-node" }
+sr-io = { git = "https://github.com/scs/substraTEE-node", tag = "M4" }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node", tag = "M4" }

@@ -5,42 +5,43 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 
 [dependencies]
-ws = "0.7"
-hex = "0.3"
-log = "0.4"
-clap = { version = "2.33", features = [ "yaml" ] }
-env_logger = "0.6"
-rust-base58 = "0.0.4"
-rust-crypto = "0.2"
+ws 						= "0.7"
+hex 					= "0.3"
+log 					= "0.4"
+env_logger 				= "0.6"
+rust-base58 			= "0.0.4"
+rust-crypto 			= "0.2"
+clap 					= { version = "2.33", features = [ "yaml" ] }
 
 # for wasm
-wabt = "0.4.0"
-dirs = "1.0.2"
-wasmi = "*"
-serde = "1.0"
-serde_json = "1.0"
-serde_derive = "1.0"
-nan-preserving-float = "0.1.0"
+wabt 					= "0.4.0"
+dirs 					= "1.0.2"
+wasmi 					= "0.4.5"
+serde 					= "1.0"
+serde_json 				= "1.0"
+serde_derive 			= "1.0"
+nan-preserving-float 	= "0.1.0"
 
 # ipfs
-ipfs-api = "0.5.0-alpha2"
-futures = "0.1"
-hyper = "0.12"
-sha2 = { version = "0.7", default-features = false }
-multihash = { git = "https://github.com/multiformats/rust-multihash.git"}
-cid = { git ="https://github.com/multiformats/rust-cid.git"}
+ipfs-api				= "0.5.0-alpha2"
+futures 				= "0.1"
+hyper 					= "0.12"
+multihash 				= "0.8"
+cid 					= "0.3"
+sha2 					= { version = "0.7", default-features = false }
 
-parity-codec = { version = "3.0", default-features = false }
-primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
+parity-codec 			= { version = "3.0", default-features = false }
+primitive-types 		= { version = "0.2", default-features = false, features = ["codec"] }
 
-sgx_urts = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tseal = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_ucrypto = { git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper = { git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+sgx_urts				= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types 				= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal				= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_ucrypto 			= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper 		= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+rev = "61bc5233582952a9ff13ab24fb93b08396758bf1"
 
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
@@ -50,6 +51,7 @@ path = "worker-api"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
+tag = "M4"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]
