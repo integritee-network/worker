@@ -12,11 +12,19 @@ settings:
 # the list is the name of the subcommand, and all settings for that command are
 # are part of a Hash
 args:
-    - port:
+    - node-server:
+        long: ns
+        help: Set the node server IP address
+        takes_value: true
+    - node-port:
         short: p
         long: node-port
         help: Set the websocket port to listen for substrate events
         takes_value: true
+    - w-server:
+          long: ws
+          help: Set the worker's IP address
+          takes_value: true
     - w-port:
         short: w
         long: worker-port

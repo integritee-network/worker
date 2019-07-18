@@ -54,14 +54,15 @@ pub fn process_forwarded_payload(
 		eid: sgx_enclave_id_t,
 		ciphertext: Vec<u8>,
 		retval: &mut sgx_status_t,
-		port: &str) {
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+		node_url: &str) {
+
+	let mut api = Api::new(format!("ws://{}", node_url));
 	api.init();
 
 	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(vec![0; 32], vec![0; 46])));
 
 	// decrypt and process the payload. we will get an extrinsic back
-	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, port);
+	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, &api);
 
 	match result {
 		sgx_status_t::SGX_SUCCESS => {
@@ -86,12 +87,9 @@ pub fn decrypt_and_process_payload(
 		mut ciphertext: Vec<u8>,
 		ue: &mut UncheckedExtrinsic,
 		retval: &mut sgx_status_t,
-		port: &str, ) -> sgx_status_t {
+		api: &Api) -> sgx_status_t {
 	println!("[>] Decrypt and process the payload");
 
-	// initiate the api and get the genesis hash
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
-	api.init();
 	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
 
 	// get the public signing key of the TEE

@@ -92,18 +92,21 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let port = matches.value_of("port").unwrap_or("9944");
-	info!("Interacting with node on  port {}", port);
+	let node_ip = matches.value_of("node-server").unwrap_or("127.0.0.1");
+	let node_port = matches.value_of("node-port").unwrap_or("9944");
+	let n_url = format!("{}:{}", node_ip, node_port);
+	info!("Interacting with node on {}", n_url);
 
+	let w_ip = matches.value_of("worker-server").unwrap_or("127.0.0.1");
 	let w_port = matches.value_of("w-port").unwrap_or("2000");
-	info!("Worker listening on  port {}", w_port);
+	info!("Worker listening on {}:{}", w_ip, w_port);
 
 	let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
 	info!("MU-RA server on port {}", mu_ra_port);
 
 	if let Some(_matches) = matches.subcommand_matches("worker") {
 		println!("*** Starting substraTEE-worker\n");
-		worker(port, w_port, mu_ra_port);
+		worker(&n_url, w_ip, w_port, mu_ra_port);
 	} else if matches.is_present("getpublickey") {
 		println!("*** Get the public key from the TEE\n");
 		get_public_key_tee();
@@ -117,13 +120,13 @@ fn main() {
 		println!("*** Running Enclave TLS client\n");
 		enclave_tls_ra::run(Mode::Client, mu_ra_port);
 	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
-		tests::run_enclave_tests(m, port);
+		tests::run_enclave_tests(m, node_port);
 	} else {
 		println!("For options: use --help");
 	}
 }
 
-fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
+fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	let mut status = sgx_status_t::SGX_SUCCESS;
 
 	// ------------------------------------------------------------------------
@@ -173,19 +176,19 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the ws server to listen for worker requests
-	let w_url = format!("127.0.0.1:{}", w_port);
+	let w_url = format!("{}:{}", w_ip, w_port);
 	start_ws_server(enclave.geteid(), w_url.clone(), mu_ra_port.to_string());
 
 	// ------------------------------------------------------------------------
 	let eid = enclave.geteid();
-	let p = mu_ra_port.to_string().clone();
+	let ra_url = format!("{}:{}", w_ip, mu_ra_port);
 	thread::spawn(move || {
-		run_enclave_server(eid, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &p)
+		run_enclave_server(eid, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &ra_url)
 	});
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
+	let mut api = Api::new(format!("ws://{}", node_url));
 	api.init();
 
 	// ------------------------------------------------------------------------
@@ -273,7 +276,6 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 	// subscribe to events and react on firing
 	println!("*** Subscribing to events");
 	let (events_in, events_out) = channel();
-
 	let _eventsubscriber = thread::Builder::new()
 		.name("eventsubscriber".to_owned())
 		.spawn(move || {
@@ -327,7 +329,7 @@ fn worker(port: &str, w_port: &str, mu_ra_port: &str) {
 									println!();
 
 									// process the payload and send extrinsic
-									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, port);
+									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, node_url);
 								},
 								my_node_runtime::substratee_registry::RawEvent::CallConfirmed(sender, payload) => {
 									println!("[+] Received CallConfirmed event");

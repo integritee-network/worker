@@ -52,7 +52,7 @@ pub fn run(mode: Mode, port: &str) {
 	};
 
 	match mode {
-		Mode::Server => run_enclave_server(enclave.geteid(), sign_type, port),
+		Mode::Server => run_enclave_server(enclave.geteid(), sign_type, &format!("localhost:{}", port)),
 		Mode::Client => run_enclave_client(enclave.geteid(), sign_type, &format!("localhost:{}", port) ),
 	}
 
@@ -64,7 +64,7 @@ pub fn run(mode: Mode, port: &str) {
 
 pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
 	info!("Starting MU-RA server on: {}", addr);
-	let listener = TcpListener::bind(format!("0.0.0.0:{}", addr)).unwrap();
+	let listener = TcpListener::bind(addr).unwrap();
 	loop {
 		match listener.accept() {
 			Ok((socket, addr)) => {
