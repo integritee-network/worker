@@ -11,8 +11,8 @@ Cargo.lock
 
 # binaries
 bin/*.so
-bin/app
-bin/substratee_client_example
+bin/substratee_*
+bin/*.wasm
 
 # sealed data
 bin/*.bin
@@ -29,10 +29,22 @@ bin/ecc_pubkey.txt
 *.iml
 
 # generated enclave files
-app/Enclave_u.*
-app/libEnclave_u.*
+worker/Enclave_u.*
+worker/libEnclave_u.*
 enclave/Enclave_t.*
 enclave/enclave.so
 lib/libEnclave_u.*
 lib/libcompiler-rt-patch.a
 lib/libenclave.a
+
+# certificate, key, spid and generated report for remote attestation
+bin/client.crt
+bin/client.key
+bin/spid.txt
+bin/key.txt
+bin/attestation_report.json
+
+# in order to have 2 workers run and exchange keys
+bin2/substratee_worker
+bin2/*.bin
+bin2/*.txt
