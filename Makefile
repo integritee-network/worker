@@ -174,6 +174,7 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 $(Client_Name): $(Client_SRC_Files)
 	@echo
 	@echo "Building the substraTEE-client"
+	@cp Cargo.lock.bip39-fix Cargo.lock
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
@@ -215,8 +216,11 @@ compiler-rt:
 
 .PHONY: clean
 clean:
+	@echo "Removing the compiled files"
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
+	@echo "cargo clean and remove Cargo.lock in enclave directory"
 	@cd enclave && cargo clean && rm -f Cargo.lock
+	@echo "cargo clean and remove Cargo.lock in root directory"
 	@cargo clean && rm -f Cargo.lock
 
 mrenclave: $(Signed_Enclave_Name)
