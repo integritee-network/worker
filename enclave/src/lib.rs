@@ -58,7 +58,6 @@ extern crate sgx_tstd as std;
 extern crate sgx_tunittest;
 extern crate sgx_types;
 extern crate sgxwasm;
-extern crate untrusted;
 extern crate wasmi;
 extern crate webpki;
 extern crate webpki_roots;
