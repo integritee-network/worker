@@ -240,4 +240,3 @@ help:
 	@echo "  client  - builds the substraTEE-client"
 	@echo ""
 	@echo "  clean   - cleanup"
-
