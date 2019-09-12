@@ -39,11 +39,11 @@ extern crate serde_derive;
 #[macro_use]
 extern crate sgx_tstd as std;
 extern crate sgx_types;
-extern crate wabt_core;
+extern crate wabt;
 extern crate wasmi;
 
-use wabt_core::script;
-use wabt_core::script::Value;
+use wabt::script;
+use wabt::script::Value;
 use wasmi::{Externals,
 			FuncInstance,
 			FuncRef,

@@ -33,11 +33,11 @@ sha2 					= { version = "0.7", default-features = false }
 parity-codec 			= { version = "3.0", default-features = false }
 primitive-types 		= { version = "0.2", default-features = false, features = ["codec"] }
 
-sgx_urts				= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types 				= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tseal				= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_ucrypto 			= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper 		= { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+sgx_urts				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types 				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_ucrypto 			= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper 		= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"

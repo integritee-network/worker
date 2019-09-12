@@ -18,13 +18,13 @@ hex-literal = "0.2.0"
 serde_derive = "1.0"
 substrate-bip39 = "0.2.2"
 
-clap 			= { version = "2.33", features = [ "yaml" ] }
-blake2-rfc 		= { version = "0.2.18", default-features = false}
-parity-codec	= { version = "3.0", default-features = false }
+clap            = { version = "2.33", features = [ "yaml" ] }
+blake2-rfc      = { version = "0.2.18", default-features = false}
+parity-codec    = { version = "3.0", default-features = false }
 primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 
-sgx_types 			= { rev = "v1.0.8",git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper 	= { rev = "v1.0.8",git = "https://github.com/baidu/rust-sgx-sdk", default-features = false }
+sgx_types           = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper   = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-sdk", default-features = false }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"

@@ -8,7 +8,7 @@ else
     OUTPUT_PATH="debug"
 fi
 
-cargo +nightly build --target wasm32-unknown-unknown ${BUILD_TARGET}
+cargo build --target wasm32-unknown-unknown ${BUILD_TARGET}
 
 wasm-gc ../target/wasm32-unknown-unknown/${OUTPUT_PATH}/substratee_worker_enclave_wasm.wasm ../target/wasm32-unknown-unknown/${OUTPUT_PATH}/worker_enclave.compact.wasm
 cp ../target/wasm32-unknown-unknown/${OUTPUT_PATH}/worker_enclave.compact.wasm ../../bin
