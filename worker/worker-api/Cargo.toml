@@ -12,5 +12,5 @@ sgx_crypto_helper = { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-s
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
+rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
 package = "substrate-primitives"

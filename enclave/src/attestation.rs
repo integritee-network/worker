@@ -46,7 +46,7 @@ use core::default::Default;
 
 use runtime_primitives::generic::Era;
 use primitive_types::U256;
-use parity_codec::{Decode, Encode, Compact};
+use codec::{Decode, Encode, Compact};
 use utils::{hash_from_slice};
 use utils::get_ecc_seed;
 use my_node_runtime::{

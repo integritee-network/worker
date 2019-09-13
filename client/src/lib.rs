@@ -28,9 +28,8 @@ use my_node_runtime::{
 	Event,
 	Hash,
 	SubstraTEERegistryCall,
-	UncheckedExtrinsic,
 };
-use parity_codec::{Compact, Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use primitive_types::U256;
 use primitives::{
 	blake2_256,
@@ -40,7 +39,9 @@ use primitives::{
 	Pair,
 };
 use runtime_primitives::generic::Era;
-use substrate_api_client::{Api, hexstr_to_u256, hexstr_to_vec};
+use substrate_api_client::{Api, compose_extrinsic, crypto::{AccountKey, CryptoKind},
+    extrinsic, utils::{hexstr_to_u256, hexstr_to_vec},
+	extrinsic::xt_primitives::UncheckedExtrinsicV3};
 
 pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
@@ -79,79 +80,38 @@ pub fn get_account_nonce(api: &Api, user: &str) -> U256 {
 pub fn fund_account(api: &Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
 	println!("[>] Fund {}'s account with {}", user, amount);
 
-	// build the extrinsic for funding
-	let xt = extrinsic_fund(user, user, amount, amount, nonce, genesis_hash);
+	let xt = compose_extrinsic!(
+        api.clone(),
+        "Balances",
+        "set_balance",
+        GenericAddress::from(user_to_pubkey(user)),
+        Compact(amount),
+		Compact(amount)
+    );
+	let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
 
-	// encode as hex
-	let mut xthex = hex::encode(xt.encode());
-	xthex.insert_str(0, "0x");
-
-	// send the extrinsic
-	let tx_hash = api.send_extrinsic(xthex).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("[<] Fund completed");
 	println!();
 }
 
-pub fn compose_extrinsic(from: &str, function: Call, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let signer = pair_from_suri(from, Some(""));
-	let era = Era::immortal();
-
-	let index = index.low_u64();
-	let raw_payload = (Compact(index), function, era, genesis_hash);
-
-	let signature = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		signer.sign(&blake2_256(payload)[..])
-	} else {
-		info!("signing {}", HexDisplay::from(&payload));
-		signer.sign(payload)
-	});
-
-	UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signer.public().into(),
-		signature,
-		era,
-	)
-}
-
-// function to compose the extrinsic for a Balance::set_balance call
-pub fn extrinsic_fund(from: &str, to: &str, free: u128, reserved: u128, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let to = user_to_pubkey(to);
-	let function = Call::Balances(BalancesCall::set_balance(to.into(), free, reserved));
-	compose_extrinsic(from, function, index, genesis_hash)
-}
-
-pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256, nonce: U256, genesis_hash: Hash) {
+pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256) {
 	println!("[>] Transfer {} from '{}' to '{}'", amount, from, to);
 
 	// build the extrinsic for transfer
-	let xt = extrinsic_transfer(from, to, amount, nonce, genesis_hash);
-
-	// encode as hex
-	let mut xthex = hex::encode(xt.encode());
-	xthex.insert_str(0, "0x");
+	let xt = compose_extrinsic!(
+        api.clone(),
+        "Balances",
+        "transfer",
+        GenericAddress::from(to),
+        Compact(amount.low_u128())
+    );
 
 	// send the extrinsic
-	let tx_hash = api.send_extrinsic(xthex).unwrap();
+	let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("[<] Transfer completed");
 	println!();
-}
-
-// function to compose the extrinsic for a Balance::transfer call
-pub fn extrinsic_transfer(from: &str, to: ed25519::Public, amount: U256, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let amount = amount.low_u128();
-	let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
-	compose_extrinsic(from, function, index, genesis_hash)
-}
-
-// function to compose the extrinsic for a SubstraTEERegistry::call_worker call
-pub fn compose_extrinsic_substratee_call_worker(from: &str, payload_encrypted: Vec<u8>, index: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let payload_encrypted_str = payload_encrypted;
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::call_worker(payload_encrypted_str));
-	compose_extrinsic(from, function, index, genesis_hash)
 }
 
 // subscribes to he substratee_registry events of type CallConfirmed

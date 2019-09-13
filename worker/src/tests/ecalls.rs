@@ -18,7 +18,7 @@
 use crypto::rsgx_sha256_slice;
 use enclave_api::*;
 use log::*;
-use parity_codec::Encode;
+use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use tests::commons::*;

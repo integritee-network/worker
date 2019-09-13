@@ -18,7 +18,7 @@
 use enclave_api::*;
 //use enclave_wrappers::get_account_nonce;
 use log::*;
-//use parity_codec::{Compact, Encode};
+//use codec::{Compact, Encode};
 //use primitive_types::U256;
 use primitives::{ed25519, Pair};
 use serde_json;

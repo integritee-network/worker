@@ -34,7 +34,7 @@ extern crate lazy_static;
 extern crate log;
 extern crate my_node_runtime;
 extern crate num_bigint;
-extern crate parity_codec;
+extern crate codec;
 extern crate primitive_types;
 extern crate primitives;
 extern crate runtime_primitives;
@@ -65,7 +65,7 @@ extern crate yasna;
 
 use crypto::ed25519::{keypair, signature};
 use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
-use parity_codec::{Compact, Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use primitive_types::U256;
 use primitives::ed25519;
 use runtime_primitives::generic::Era;

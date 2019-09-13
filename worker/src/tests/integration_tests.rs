@@ -20,7 +20,7 @@ use enclave_api::*;
 use enclave_wrappers::*;
 use enclave_wrappers::get_account_nonce;
 use log::*;
-use parity_codec::Encode;
+use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use std::fs;

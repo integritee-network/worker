@@ -1,8 +1,8 @@
 extern crate regex;
 
 use log::*;
-use parity_codec::{Decode, Encode};
-use substrate_api_client::{hexstr_to_vec};
+use codec::{Decode, Encode};
+use substrate_api_client::utils::{hexstr_to_vec};
 use primitives::ed25519;
 use regex::Regex;
 

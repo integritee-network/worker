@@ -21,7 +21,7 @@ extern crate env_logger;
 extern crate hex_literal;
 extern crate log;
 extern crate my_node_runtime;
-extern crate parity_codec;
+extern crate codec;
 extern crate primitives;
 extern crate runtime_primitives;
 extern crate serde;
@@ -34,7 +34,7 @@ extern crate substrate_api_client;
 
 use blake2_rfc::blake2s::blake2s;
 use clap::App;
-use parity_codec::Encode;
+use codec::Encode;
 use primitive_types::U256;
 use primitives::Pair;
 use sgx_types::*;
@@ -63,8 +63,6 @@ fn main() {
 	let port = matches.value_of("node-port").unwrap_or("9944");
 	let server = matches.value_of("node-server").unwrap_or("127.0.0.1");
 	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
-	api.init();
-
 
 	println!("*** Getting the amount of the registered workers");
 	let worker = match get_worker_amount(&api) {
@@ -108,11 +106,11 @@ fn main() {
 	let mut nonce = get_account_nonce(&api, "//Alice");
 
 	// fund the account of Alice
-	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash.unwrap());
+	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash);
 
 	// transfer from Alice to TEE
 	nonce = get_account_nonce(&api, "//Alice");
-	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000), nonce, api.genesis_hash.unwrap());
+	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000), nonce, api.genesis_hash);
 
 	// compose extrinsic with encrypted payload
 	println!("[>] Get the encryption key from W1 (={})", worker.pubkey.to_string());
@@ -128,12 +126,15 @@ fn main() {
 	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
 	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", message);
 	nonce = get_account_nonce(&api, "//Alice");
-	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
-	let mut _xthex = hex::encode(xt.encode());
-	_xthex.insert_str(0, "0x");
+	let xt = compose_extrinsic!(
+        api.clone(),
+        "SubstraTEERegistry",
+        "call_worker",
+		payload_encrypted
+    );
 
 	// send and watch extrinsic until finalized
-	let tx_hash = api.send_extrinsic(_xthex).unwrap();
+	let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
 	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
 	println!("[<] Message sent successfully");
 	println!();

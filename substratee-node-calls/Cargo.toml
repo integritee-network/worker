@@ -6,22 +6,22 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-parity-codec = { version = "3.0", default-features = false }
-primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+primitive-types = { version = "0.5.0", default-features = false, features = ["codec"] }
 regex = "1"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-rev = "61bc5233582952a9ff13ab24fb93b08396758bf1"
+rev = "b5ccb1df1f634d1551de7dd3549ddae63bf2a5b7"
 default-features = false
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "M4"
+branch = "cl-upstream-sync"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "56b0273fd48b4e742e9da7317bc8e132a740b684"
+rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
 package = "substrate-primitives"

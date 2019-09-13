@@ -28,7 +28,7 @@ use primitives::{ed25519};
 
 use substrate_api_client::{Api, hexstr_to_u256};
 use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
-use parity_codec::{Decode, Encode};
+use codec::{Decode, Encode};
 use primitive_types::U256;
 
 use wasm::SgxWasmAction;
