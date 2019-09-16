@@ -54,6 +54,9 @@ use my_node_runtime::{
 	Call,
 	SubstraTEERegistryCall
 };
+/*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
+    extrinsic,
+};*/
 use primitives::{ed25519};
 use crypto::ed25519::{keypair, signature};
 use utils::blake2_256;
@@ -602,28 +605,42 @@ pub unsafe extern "C" fn perform_ra(
 
 	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(cert_der.to_vec(), url_slice.to_vec()));
 	let index = nonce.low_u64();
+	//FIXME
+	let spec_version = 0;
+	let (privkey, pubkey) = keypair(&seed);
 
 	let raw_payload = (Compact(index), function, era, genesis_hash);
 
-	let (privkey, pubkey) = keypair(&seed);
+/*	use ed25519_dalek::{SecretKey, PublicKey};
 
-	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		// include the blake2 hash of the payload
-		signature(&blake2_256(payload)[..], &privkey)
-	} else {
-		//println!("signing {}", HexDisplay::from(&payload));
-		signature(payload, &privkey)
-	});
+	let sec = SecretKey::from_bytes(&privkey);
+	let publ = PublicKey::from_bytes(&pubkey);
 
+	let signer = AccountKey::Ed(
+		ed25519::Pair{
+			sec,
+			publ,
+		 });
+*/
 	// convert to valid signatures
-	let signerpub = ed25519::Public::from_raw(pubkey);
-	let signature = ed25519::Signature::from_raw(sign);
+//	let signerpub = ed25519::Public::from_raw(pubkey);
+//	let signature = ed25519::Signature::from_raw(sign);
 
 	// TODO: update to new extrinsic format (compose_extrinsic_offline! ??)
 	let ex = UncheckedExtrinsic {
 		signature: None,
 		function: raw_payload.1,
 	};
+
+/*
+let ex = compose_extrinsic_offline!(
+                    signer,
+                    call.clone(),
+                    nonce,
+                    genesis_hash,
+                    spec_version
+                );
+*/
 /*
 	// build the extrinsic
 	let ex = UncheckedExtrinsic::new_signed(

@@ -62,6 +62,8 @@ extern crate wasmi;
 extern crate webpki;
 extern crate webpki_roots;
 extern crate yasna;
+//extern crate ed25519_dalek;
+//extern crate substrate_api_client;
 
 use crypto::ed25519::{keypair, signature};
 use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
