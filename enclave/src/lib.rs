@@ -348,14 +348,19 @@ pub fn compose_extrinsic(seed: Vec<u8>, function: Call, nonce: U256, genesis_has
 
 	let signerpub = ed25519::Public::from_raw(_pubkey);
 	let signature = ed25519::Signature::from_raw(sign);
-
-	UncheckedExtrinsic::new_signed(
+	// TODO: update to new extrinsic format (compose_extrinsic_offline! ??)
+	UncheckedExtrinsic {
+		signature: None,
+		function: raw_payload.1,
+	}
+/*	UncheckedExtrinsic::new_signed(
 		index,
 		raw_payload.1,
 		signerpub.into(),
 		signature,
 		era,
 	)
+	*/
 }
 
 extern "C" {

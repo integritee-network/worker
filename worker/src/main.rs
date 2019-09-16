@@ -189,6 +189,9 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
 	let mut api = Api::new(format!("ws://{}", node_url));
+	// ------------------------------------------------------------------------
+	// get required fields for the extrinsic
+	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
 	// get the public signing key of the TEE
 	let mut key = [0; 32];
@@ -344,7 +347,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 					}
 				}
 			}
-			None => error!("Couldn't decode event record list")
+			Err(_) => error!("Couldn't decode event record list")
 		}
 	}
 }

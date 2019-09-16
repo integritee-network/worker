@@ -106,4 +106,4 @@ package = "sr-primitives"
 default-features = false
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", tag = "M4"}
+sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "cl-upstream-sync"}

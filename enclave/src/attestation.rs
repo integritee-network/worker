@@ -619,6 +619,12 @@ pub unsafe extern "C" fn perform_ra(
 	let signerpub = ed25519::Public::from_raw(pubkey);
 	let signature = ed25519::Signature::from_raw(sign);
 
+	// TODO: update to new extrinsic format (compose_extrinsic_offline! ??)
+	let ex = UncheckedExtrinsic {
+		signature: None,
+		function: raw_payload.1,
+	};
+/*
 	// build the extrinsic
 	let ex = UncheckedExtrinsic::new_signed(
 		index,
@@ -627,7 +633,7 @@ pub unsafe extern "C" fn perform_ra(
 		signature,
 		era,
 	);
-
+*/
 	let encoded = ex.encode();
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
 

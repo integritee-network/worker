@@ -30,10 +30,9 @@ use tests::commons::*;
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 	// start the substrate-api-client to communicate with the node
 	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
-	api.init();
-
+	
 	let w_url = "ws://127.0.0.1:2001";
-	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
+	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
 	// get the public signing key of the TEE
 	let mut key = [0; 32];

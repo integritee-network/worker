@@ -22,7 +22,7 @@ use std::str;
 use std::thread;
 
 use log::*;
-use primitives::{ed25519, Pair};
+use primitives::{ed25519, Pair, Public};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use ws::{CloseCode, Handler, listen, Message, Result, Sender};

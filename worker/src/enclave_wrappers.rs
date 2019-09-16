@@ -57,7 +57,6 @@ pub fn process_forwarded_payload(
 		node_url: &str) {
 
 	let mut api = Api::new(format!("ws://{}", node_url));
-	api.init();
 
 	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(vec![0; 32], vec![0; 46])));
 
@@ -90,7 +89,7 @@ pub fn decrypt_and_process_payload(
 		api: &Api) -> sgx_status_t {
 	println!("[>] Decrypt and process the payload");
 
-	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
+	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
 	// get the public signing key of the TEE
 	let mut key = [0; 32];
