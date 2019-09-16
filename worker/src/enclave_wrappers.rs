@@ -26,7 +26,7 @@ use init_enclave::init_enclave;
 
 use primitives::{ed25519};
 
-use substrate_api_client::{Api, hexstr_to_u256};
+use substrate_api_client::{Api, utils::hexstr_to_u256};
 use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
 use codec::{Decode, Encode};
 use primitive_types::U256;

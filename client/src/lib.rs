@@ -41,7 +41,7 @@ use primitives::{
 use runtime_primitives::generic::Era;
 use substrate_api_client::{Api, compose_extrinsic, crypto::{AccountKey, CryptoKind},
     extrinsic, utils::{hexstr_to_u256, hexstr_to_vec},
-	extrinsic::xt_primitives::UncheckedExtrinsicV3};
+};
 
 pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
@@ -84,7 +84,7 @@ pub fn fund_account(api: &Api, user: &str, amount: u128, nonce: U256, genesis_ha
         api.clone(),
         "Balances",
         "set_balance",
-        GenericAddress::from(user_to_pubkey(user)),
+        GenericAddress::from(AccountKey::public_from_suri(user, Some(""), CryptoKind::Ed25519)),
         Compact(amount),
 		Compact(amount)
     );
@@ -103,7 +103,7 @@ pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256)
         api.clone(),
         "Balances",
         "transfer",
-        GenericAddress::from(to),
+        GenericAddress::from(to.0),
         Compact(amount.low_u128())
     );
 
@@ -132,7 +132,7 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 		let _unhex = hexstr_to_vec(event_str);
 		let mut _er_enc = _unhex.as_slice();
 		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
-		if let Some(evts) = _events {
+		if let Ok(evts) = _events {
 			for evr in &evts {
 				if let Event::substratee_registry(pe) = &evr.event {
 					if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(sender, payload) = &pe {

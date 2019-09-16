@@ -36,9 +36,9 @@ use blake2_rfc::blake2s::blake2s;
 use clap::App;
 use codec::Encode;
 use primitive_types::U256;
-use primitives::Pair;
+use primitives::{Pair, Public};
 use sgx_types::*;
-use substrate_api_client::Api;
+use substrate_api_client::{Api, compose_extrinsic, extrinsic};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
@@ -110,7 +110,7 @@ fn main() {
 
 	// transfer from Alice to TEE
 	nonce = get_account_nonce(&api, "//Alice");
-	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000), nonce, api.genesis_hash);
+	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000));
 
 	// compose extrinsic with encrypted payload
 	println!("[>] Get the encryption key from W1 (={})", worker.pubkey.to_string());

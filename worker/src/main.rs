@@ -65,7 +65,7 @@ use std::fs;
 use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
-use substrate_api_client::{Api, hexstr_to_vec};
+use substrate_api_client::{Api, utils::hexstr_to_vec};
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
@@ -189,11 +189,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
 	let mut api = Api::new(format!("ws://{}", node_url));
-	api.init();
-
-	// ------------------------------------------------------------------------
-	// get required fields for the extrinsic
-	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
 
 	// get the public signing key of the TEE
 	let mut key = [0; 32];
@@ -292,7 +287,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		let mut _er_enc = _unhex.as_slice();
 		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
 		match _events {
-			Some(evts) => {
+			Ok(evts) => {
 				for evr in &evts {
 					debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
 					match &evr.event {
