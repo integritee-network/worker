@@ -108,7 +108,6 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-branch = "brenzi-forworker"
 default-features = false
 
 [patch.'https://github.com/paritytech/substrate']

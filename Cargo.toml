@@ -8,8 +8,8 @@ members = [
 ]
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "cl-upstream-sync" }
-substrate-executor = { git = "https://github.com/scs/substraTEE-node", branch = "cl-upstream-sync" }
+sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "cl-host-optional" }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node", branch = "cl-host-optional" }
 
 #[patch.crates-io]
 #rustls = { git = "https://github.com/mesalock-linux/rustls", rev="36995713775439e1a60a01cfa327e045a61020a6"}

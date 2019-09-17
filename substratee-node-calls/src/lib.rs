@@ -5,6 +5,7 @@ use codec::{Decode, Encode};
 use substrate_api_client::utils::{hexstr_to_vec};
 use primitives::ed25519;
 use regex::Regex;
+use srml_support::traits::Len;
 
 pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 	info!("[>] Get worker's URL");

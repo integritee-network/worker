@@ -28,13 +28,12 @@ sgx_crypto_helper   = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "cl-upstream-sync"
+branch = "cl-host-optional"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-rev = "07dbab253a11a8ddebb0210fed631a7dd2b625a0"
 default-features = false
 
 [dependencies.substratee-node-calls]
