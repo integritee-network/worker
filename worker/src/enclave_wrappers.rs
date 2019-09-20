@@ -41,7 +41,7 @@ pub fn get_account_nonce(api: &Api, user: [u8; 32]) -> U256 {
 
 	let accountid = ed25519::Public::from_raw(user);
 	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	let nonce = hexstr_to_u256(result_str);
+	let nonce = hexstr_to_u256(result_str).unwrap();
 
 	info!("[<] Account nonce of {:?} is {}\n", accountid, nonce);
 	nonce

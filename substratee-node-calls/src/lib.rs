@@ -27,7 +27,7 @@ pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 
 pub fn get_latest_state(api: &substrate_api_client::Api) -> Option<[u8; 46]> {
 	let result_str = api.get_storage("substraTEERegistry", "LatestIPFSHash", None).unwrap();
-	let unhex = hexstr_to_vec(result_str);
+	let unhex = hexstr_to_vec(result_str).unwrap();
 	info!("State hash vec: {:?}", unhex);
 	let mut h : [u8; 46] = [0; 46];
 
@@ -44,7 +44,7 @@ pub fn get_latest_state(api: &substrate_api_client::Api) -> Option<[u8; 46]> {
 }
 
 fn hexstr_to_enclave(hexstr: String) -> Enclave {
-	let mut unhex = hexstr_to_vec(hexstr);
+	let mut unhex = hexstr_to_vec(hexstr).unwrap();
 	let (h, url) = unhex.split_at_mut(32 as usize);
 	let mut raw: [u8; 32] = Default::default();
 	raw.copy_from_slice(&h);
@@ -62,7 +62,7 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 }
 
 pub fn hexstr_to_u64(hexstr: String) -> u64 {
-	let unhex = hexstr_to_vec(hexstr);
+	let unhex = hexstr_to_vec(hexstr).unwrap();
 	let mut gh: [u8; 8] = Default::default();
 	gh.copy_from_slice(&unhex);
 

@@ -60,7 +60,7 @@ pub fn get_from_storage(api: &Api, user: &str, category: &str, item: &str) -> U2
 
 	let accountid = user_to_pubkey(user);
 	let result_str = api.get_storage(category, item, Some(accountid.encode())).unwrap();
-	let result = hexstr_to_u256(result_str);
+	let result = hexstr_to_u256(result_str).unwrap();
 	println!("[<] {}'s {} is {}", user, item, result);
 	println!();
 	result
@@ -129,7 +129,7 @@ pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
 	loop {
 		let event_str = events_out.recv().unwrap();
 
-		let _unhex = hexstr_to_vec(event_str);
+		let _unhex = hexstr_to_vec(event_str).unwrap();
 		let mut _er_enc = _unhex.as_slice();
 		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
 		if let Ok(evts) = _events {
