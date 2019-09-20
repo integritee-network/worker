@@ -1,0 +1,32 @@
+[package]
+name = "substrate-application-crypto"
+version = "2.0.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+description = "Provides facilities for generating application specific crypto wrapper types."
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0", optional = true, features = ["derive"] }
+runtime-io = { package = "sr-io", git = "https://github.com/scs/substraTEE-node", branch = "cl-host-optional", default-features = false}
+
+[dependencies.rstd]
+git = 'https://github.com/paritytech/substrate'
+rev = '9b08e7ff938a45dbec7fcdb854063202e2b0cb48'
+package = "sr-std"
+default-features = false
+
+[dependencies.primitives]
+git = "https://github.com/scs/substrate-api-client"
+package = "substrate-primitives"
+branch = "no_std_rstd"
+default-features = false
+
+[dev-dependencies]
+test-client = { package = "substrate-test-runtime-client", path = "../test-runtime/client" }
+sr-primitives = { git = 'https://github.com/paritytech/substrate', rev = '9b08e7ff938a45dbec7fcdb854063202e2b0cb48'}
+
+
+[features]
+default = [ "std" ]
+std = [ "primitives/std", "codec/std", "serde", "rstd/std", "runtime-io/std" ]
