@@ -49,17 +49,18 @@ use primitive_types::U256;
 use codec::{Decode, Encode, Compact};
 use utils::{hash_from_slice};
 use utils::get_ecc_seed;
-use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	SubstraTEERegistryCall
-};
+use substrate_api_client::{
+	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
+	crypto::AccountKey,
+	extrinsic};
+use primitives::{ed25519, Pair};
+//use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
 /*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
     extrinsic,
 };*/
-use primitives::{ed25519};
-use crypto::ed25519::{keypair, signature};
-use utils::blake2_256;
+
+//use crypto::ed25519::{keypair, signature};
+//use utils::blake2_256;
 
 use constants::{RA_SPID, RA_API_KEY};
 
@@ -595,63 +596,37 @@ pub unsafe extern "C" fn perform_ra(
 	let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
 	let url_slice			= slice::from_raw_parts(url, url_size as usize);
 	let extrinsic_slice     = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let seed = match get_ecc_seed() {
+	let seedvec = match get_ecc_seed() {
 		Ok(seed) => seed,
 		Err(status) => return status,
 	};
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let era = Era::immortal();
 
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(cert_der.to_vec(), url_slice.to_vec()));
-	let index = nonce.low_u64();
-	//FIXME
-	let spec_version = 0;
-	let (privkey, pubkey) = keypair(&seed);
+	//let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(cert_der.to_vec(), url_slice.to_vec()));
+	type SubstraTEERegistryRegisterEnclaveFn = ([u8; 2], Vec<u8>, Vec<u8>);
+	let call = [7u8,0u8];
+	let function : SubstraTEERegistryRegisterEnclaveFn = (call, cert_der.to_vec(), url_slice.to_vec());
 
-	let raw_payload = (Compact(index), function, era, genesis_hash);
+	let index = nonce.low_u32();
+	//FIXME: define constant at client
+	let spec_version = 4;
 
-/*	use ed25519_dalek::{SecretKey, PublicKey};
+	let xt = compose_extrinsic_offline!(
+        signer,
+	    function,
+	    index,
+	    genesis_hash,
+	    spec_version
+    );	
 
-	let sec = SecretKey::from_bytes(&privkey);
-	let publ = PublicKey::from_bytes(&pubkey);
-
-	let signer = AccountKey::Ed(
-		ed25519::Pair{
-			sec,
-			publ,
-		 });
-*/
-	// convert to valid signatures
-//	let signerpub = ed25519::Public::from_raw(pubkey);
-//	let signature = ed25519::Signature::from_raw(sign);
-
-	// TODO: update to new extrinsic format (compose_extrinsic_offline! ??)
-	let ex = UncheckedExtrinsic {
-		signature: None,
-		function: raw_payload.1,
-	};
-
-/*
-let ex = compose_extrinsic_offline!(
-                    signer,
-                    call.clone(),
-                    nonce,
-                    genesis_hash,
-                    spec_version
-                );
-*/
-/*
-	// build the extrinsic
-	let ex = UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signerpub.into(),
-		signature,
-		era,
-	);
-*/
-	let encoded = ex.encode();
+	let encoded = xt.encode();
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
 
 	// split the extrinsic_slice at the length of the encoded extrinsic

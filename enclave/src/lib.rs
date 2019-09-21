@@ -23,16 +23,16 @@
 
 extern crate base64;
 extern crate bit_vec;
-extern crate blake2_no_std;
+//extern crate blake2_no_std;
 extern crate chrono;
-extern crate crypto;
+//extern crate crypto;
 extern crate env_logger;
 extern crate httparse;
 extern crate itertools;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate my_node_runtime;
+//extern crate my_node_runtime;
 extern crate num_bigint;
 extern crate codec;
 extern crate primitive_types;
@@ -63,13 +63,19 @@ extern crate webpki;
 extern crate webpki_roots;
 extern crate yasna;
 //extern crate ed25519_dalek;
-//extern crate substrate_api_client;
+#[macro_use]
+extern crate substrate_api_client;
 
-use crypto::ed25519::{keypair, signature};
-use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
+//use crypto::ed25519::{keypair, signature};
+use substrate_api_client::{
+	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
+	crypto::AccountKey,
+	extrinsic};
+
+//use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
 use codec::{Compact, Decode, Encode};
 use primitive_types::U256;
-use primitives::ed25519;
+use primitives::{ed25519, Pair, hashing::{blake2_256}};
 use runtime_primitives::generic::Era;
 use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -97,6 +103,8 @@ pub mod hex;
 pub mod tls_ra;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
+
+pub type Hash = primitives::H256;
 
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
@@ -159,16 +167,19 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 		},
 	}
 
-	let _seed = match utils::get_ecc_seed() {
+	let seedvec = match utils::get_ecc_seed() {
 		Ok(seed) => seed,
 		Err(status) => return status,
 	};
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
 
-	let (_privkey, _pubkey) = keypair(&_seed);
-	info!("[Enclave] Restored ECC pubkey: {:?}", _pubkey.to_base58());
+	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public().to_base58());
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-	pubkey_slice.clone_from_slice(&_pubkey);
+	pubkey_slice.clone_from_slice(&signer.public());
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -262,17 +273,44 @@ pub unsafe extern "C" fn call_counter_wasm(
 	}
 
 	// get information for composing the extrinsic
-	let _seed = match utils::get_ecc_seed() {
+	let seedvec = match utils::get_ecc_seed() {
 		Ok(seed) => seed,
 		Err(status) => return status,
 	};
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let index = nonce.low_u32();
+
 	let genesis_hash = utils::hash_from_slice(hash_slice);
-	let call_hash = utils::blake2s(&plaintext_vec);
+	//let call_hash = utils::blake2s(&plaintext_vec);
+	let call_hash = blake2_256(&plaintext_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
-	let ex = confirm_call_extrinsic(_seed, &call_hash, &state_hash, nonce, genesis_hash);
-	let encoded = ex.encode();
+	//let ex = confirm_call_extrinsic(_seed, &call_hash, &state_hash, nonce, genesis_hash);
+	let call = [7u8,3u8];
+	let function : SubstraTEERegistryConfirmCallFn = (call, call_hash.to_vec(), state_hash.to_vec());
+
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+	
+	//FIXME: define constant at client
+	let spec_version = 4;
+
+	let xt = compose_extrinsic_offline!(
+        signer,
+	    function,
+	    index,
+	    genesis_hash,
+	    spec_version
+    );	
+
+	let encoded = xt.encode();
 
 	// split the extrinsic_slice at the length of the encoded extrinsic
 	// and fill the right side with whitespace
@@ -326,45 +364,33 @@ pub struct Message {
 	sha256: sgx_sha256_hash_t
 }
 
-pub fn confirm_call_extrinsic(seed: Vec<u8>, call_hash: &[u8], state_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), state_hash.to_vec()));
-	compose_extrinsic(seed, function, nonce, genesis_hash)
+type Call = [u8; 2];
+type SubstraTEERegistryConfirmCallFn = (Call, Vec<u8>, Vec<u8>);
+
+/*
+pub fn confirm_call_extrinsic(seedvec: Vec<u8>, call_hash: &[u8], state_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsicV3<SubstraTEERegistryConfirmCallFn> {
+//	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), state_hash.to_vec()));
+	let call = [7u8,3u8];
+	let function : SubstraTEERegistryConfirmCallFn = (call, call_hash.to_vec(), state_hash.to_vec());
+
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+
+	let index = nonce.low_u32();
+	//FIXME: define constant at client
+	let spec_version = 4;
+
+	let xt = compose_extrinsic_offline!(
+        signer,
+	    function,
+	    index,
+	    genesis_hash,
+	    spec_version
+    );	
 }
-
-pub fn compose_extrinsic(seed: Vec<u8>, function: Call, nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsic {
-	let (_privkey, _pubkey) = keypair(&seed);
-
-	let era = Era::immortal();
-
-	let index = nonce.low_u64();
-	let raw_payload = (Compact(index), function, era, genesis_hash);
-
-	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		// should not be thrown as we calculate a 32 byte hash ourselves
-		error!("unsupported payload size");
-		signature(&[0u8; 64], &_privkey)
-	} else {
-		//println!("signing {}", HexDisplay::from(&payload));
-		signature(payload, &_privkey)
-	});
-
-	let signerpub = ed25519::Public::from_raw(_pubkey);
-	let signature = ed25519::Signature::from_raw(sign);
-	// TODO: update to new extrinsic format (compose_extrinsic_offline! ??)
-	UncheckedExtrinsic {
-		signature: None,
-		function: raw_payload.1,
-	}
-/*	UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signerpub.into(),
-		signature,
-		era,
-	)
-	*/
-}
-
+*/
 extern "C" {
 	pub fn ocall_read_ipfs(
 		ret_val			: *mut sgx_status_t,

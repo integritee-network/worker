@@ -18,10 +18,10 @@ extern crate aes;
 extern crate ofb;
 extern crate sgx_types;
 
-use blake2_no_std::blake2b::blake2b;
-use crypto::blake2s::Blake2s;
+//use blake2_no_std::blake2b::blake2b;
+//use crypto::blake2s::Blake2s;
 use log::*;
-use my_node_runtime::Hash;
+use crate::Hash;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
@@ -226,6 +226,7 @@ pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	Hash::from(&mut g)
 }
 
+/*
 pub fn blake2s(plaintext: &[u8]) -> [u8; 32] {
 	let mut call_hash: [u8; 32] = Default::default();
 	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
@@ -244,7 +245,7 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	blake2_256_into(data, &mut r);
 	r
 }
-
+*/
 pub fn test_encrypted_state_io_works() {
 	let path = "test_state_file.bin";
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";
