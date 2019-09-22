@@ -12,7 +12,8 @@ regex = "1"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-default-features = false
+branch = "no_std_rstd"
+#default-features = false
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
