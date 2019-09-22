@@ -16,7 +16,7 @@ default-features = false
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "cl-host-optional"
+branch = "brenzi-upstream-sync"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 

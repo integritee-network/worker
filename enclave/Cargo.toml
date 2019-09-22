@@ -78,20 +78,12 @@ features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"]
 [dependencies.rustls]
 git      = "https://github.com/mesalock-linux/rustls"
 rev      = "36995713775439e1a60a01cfa327e045a61020a6"
-# branch   = "mesalock_sgx"
 features = ["dangerous_configuration"]
-
-#[dependencies.my_node_runtime]
-#git = "https://github.com/scs/substraTEE-node"
-#branch = "cl-host-optional"
-#package = "substratee-node-runtime"
-#default-features = false
-#features = ["no_global_allocator", "no_panic_handler", "no_oom", "no_module"]
 
 [dependencies.sr-io]
 git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
-branch = "cl-host-optional"
+branch = "brenzi-upstream-sync"
 default-features=false
 features = ["no_oom", "no_panic_handler"]
 
@@ -124,12 +116,9 @@ branch = "no_std_rstd"
 default-features = false
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "cl-host-optional"}
+sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-upstream-sync"}
 substrate-primitives = { git = "https://github.com/scs/substrate-api-client", branch = "no_std_rstd"}
 substrate-application-crypto = { path = "../application-crypto"}
 
 [patch.crates-io]
 ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}
-
-#[patch.crates-io]
-#rustls = { git = "https://github.com/mesalock-linux/rustls", rev="36995713775439e1a60a01cfa327e045a61020a6"}
