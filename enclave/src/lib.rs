@@ -292,7 +292,6 @@ pub unsafe extern "C" fn call_counter_wasm(
 
 	//let ex = confirm_call_extrinsic(_seed, &call_hash, &state_hash, nonce, genesis_hash);
 	let call = [7u8,3u8];
-	let function : SubstraTEERegistryConfirmCallFn = (call, call_hash.to_vec(), state_hash.to_vec());
 
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
@@ -304,7 +303,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 
 	let xt = compose_extrinsic_offline!(
         signer,
-	    function,
+	    (call, call_hash.to_vec(), state_hash.to_vec()),
 	    index,
 	    genesis_hash,
 	    spec_version
@@ -365,7 +364,7 @@ pub struct Message {
 }
 
 type Call = [u8; 2];
-type SubstraTEERegistryConfirmCallFn = (Call, Vec<u8>, Vec<u8>);
+
 
 /*
 pub fn confirm_call_extrinsic(seedvec: Vec<u8>, call_hash: &[u8], state_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsicV3<SubstraTEERegistryConfirmCallFn> {

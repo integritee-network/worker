@@ -609,10 +609,8 @@ pub unsafe extern "C" fn perform_ra(
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let era = Era::immortal();
 
-	//let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(cert_der.to_vec(), url_slice.to_vec()));
-	type SubstraTEERegistryRegisterEnclaveFn = ([u8; 2], Vec<u8>, Vec<u8>);
+	//FIXME: define constants
 	let call = [7u8,0u8];
-	let function : SubstraTEERegistryRegisterEnclaveFn = (call, cert_der.to_vec(), url_slice.to_vec());
 
 	let index = nonce.low_u32();
 	//FIXME: define constant at client
@@ -620,7 +618,7 @@ pub unsafe extern "C" fn perform_ra(
 
 	let xt = compose_extrinsic_offline!(
         signer,
-	    function,
+	    (call, cert_der.to_vec(), url_slice.to_vec()),
 	    index,
 	    genesis_hash,
 	    spec_version
