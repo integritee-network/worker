@@ -17,7 +17,7 @@ branch = "no_std_rstd"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "brenzi-upstream-sync"
+branch = "brenzi-private-tx"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 

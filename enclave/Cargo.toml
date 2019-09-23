@@ -83,9 +83,9 @@ features = ["dangerous_configuration"]
 [dependencies.sr-io]
 git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
-branch = "brenzi-upstream-sync"
+branch = "brenzi-private-tx"
 default-features=false
-features = ["no_oom", "no_panic_handler"]
+features = ["no_oom", "no_panic_handler", "sgx"]
 
 [dependencies.sgx_serialize_derive]
 git = "https://github.com/baidu/rust-sgx-sdk"
@@ -116,7 +116,7 @@ branch = "no_std_rstd"
 default-features = false
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-upstream-sync"}
+sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx"}
 substrate-primitives = { git = "https://github.com/scs/substrate-api-client", branch = "no_std_rstd"}
 substrate-application-crypto = { path = "../application-crypto"}
 

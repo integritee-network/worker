@@ -8,7 +8,7 @@ members = [
 ]
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-upstream-sync", default-features=false }
-substrate-executor = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-upstream-sync", default-features=false }
+sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx", default-features=false }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx", default-features=false }
 substrate-primitives = { git = "https://github.com/scs/substrate-api-client", branch = "no_std_rstd"}
 substrate-application-crypto = { path = "application-crypto"}

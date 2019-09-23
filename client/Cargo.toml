@@ -28,7 +28,7 @@ sgx_crypto_helper   = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "brenzi-upstream-sync"
+branch = "brenzi-private-tx"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
