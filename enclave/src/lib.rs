@@ -14,6 +14,10 @@
 	limitations under the License.
 
 */
+#![feature(structural_match)]
+#![feature(rustc_attrs)]
+#![feature(core_intrinsics)]
+#![feature(derive_eq)]
 
 #![crate_name = "substratee_worker_enclave"]
 #![crate_type = "staticlib"]
@@ -66,6 +70,12 @@ extern crate yasna;
 #[macro_use]
 extern crate substrate_api_client;
 
+//extern crate contract;
+extern crate balances;
+extern crate srml_support;
+extern crate version;
+
+
 //use crypto::ed25519::{keypair, signature};
 use substrate_api_client::{
 	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
@@ -97,10 +107,12 @@ mod constants;
 mod utils;
 mod wasm;
 mod attestation;
+mod runtime_wrapper;
 
 pub mod cert;
 pub mod hex;
 pub mod tls_ra;
+
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -180,6 +192,9 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(&signer.public());
+
+	// FIXME: this is just to have a quick way in. move to its own extern function
+	init_runtime();
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -441,4 +456,108 @@ fn test_ocall_read_write_ipfs() {
 	};
 
 	assert_eq!(enc_state, ret_state);
+}
+/////////////////////////////////////////////////////////////////////////////
+
+use runtime_primitives::traits::Dispatchable;
+use runtime_wrapper::Runtime;
+mod genesis;
+extern crate sr_io;
+use sr_io::SgxExternalities;
+use std::backtrace::{self, PrintFormat};
+use std::panic;
+use genesis::{AccountId, AuthorityId};
+
+fn set_storage_value(ext: &mut SgxExternalities, key_name: String, value: Vec<u8>) {
+	let key = sr_io::twox_128(&String::from(key_name).as_bytes().to_vec());
+	ext.insert(key.to_vec(),value);
+}
+fn get_storage_value(ext: &mut SgxExternalities, key_name: String) -> Option<&Vec<u8>> {
+	let key = sr_io::twox_128(&String::from(key_name).as_bytes().to_vec());
+	ext.get(&key.to_vec())
+}
+
+
+pub fn init_runtime() {
+	println!("[??] asking runtime out");
+
+	let mut ext = SgxExternalities::new();	
+//	let rt = Runtime;
+	//let _todel = blake2_rfc::blake2b::blake2b(64, &[], &[0; 64]).as_bytes();
+	let tina = AccountId::default();
+	let origin_tina = runtime_wrapper::Origin::signed(tina.clone());
+	//let origin = runtime_wrapper::Origin::ROOT;
+	
+	let address = indices::Address::<Runtime>::default();
+
+/*	// create a "shadow genesis". for enclave use only
+	let genesis = genesis::testnet_genesis(
+		vec!(AuthorityId::from(tina.clone())),
+		vec!(tina.clone()),
+		tina.clone(),
+	);
+	*/
+	const MILLICENTS: u128 = 1_000_000_000;
+	const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
+
+	//set_storage_value(&mut ext, "Balances ".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
+	
+	// FIXME: initial balances don't work. have to set_balance() later
+	set_storage_value(&mut ext, "Balances Balances".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
+
+	// need to purge events that have already been processed during the last call
+	let key = sr_io::twox_128(&String::from("System Events").as_bytes().to_vec());
+	ext.remove(&key.to_vec());
+
+	sr_io::with_externalities(&mut ext, || {
+		println!("pre-funding tina");
+		let res = runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina), 1_000_000_000_000_000_000, 0).dispatch(runtime_wrapper::Origin::ROOT);
+	});
+
+
+/*
+	// scan events
+	let code_hash = match get_storage_value(&mut ext, "System Events".to_string()) {
+		Some(ev) => {
+			let mut _er_enc = ev.as_slice();
+			let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
+			match _events {
+            Some(evts) => {
+				let mut code_hash = None;
+                for evr in &evts {
+                    match &evr.event {
+                        Event::contract(be) => {
+                            match &be {
+                                contract::RawEvent::CodeStored(ch) => {
+                                    println!("code_hash: {:?}", ch);
+									code_hash = Some(ch.clone());
+                                    },
+                                _ => { 
+                                    println!("ignoring unsupported contract event");
+                                    },
+                            }},
+                        _ => println!("ignoring unsupported module event"),
+                   }
+                    
+                } 
+				code_hash
+            }
+            None => {
+				println!("couldn't decode event record list");
+				None
+			}
+        }
+		},
+		None => {
+			println!("reading events failed. Has the contract really been deployed?");
+			None
+		},
+	}.unwrap();
+	println!("our code hash is {:?}", code_hash);
+
+	// purge events that have already been processed during the last call
+	let key = sr_io::twox_128(&String::from("System Events").as_bytes().to_vec());
+	ext.remove(&key.to_vec());
+*/
+	println!("[++] finished playing with runtime");
 }

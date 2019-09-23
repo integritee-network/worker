@@ -1,10 +1,12 @@
 use std::vec::Vec;
 
-//use primitives::{ed25519, Pair};
-use my_node_runtime::{Hash, AccountId, AuthorityId};
-
-use contract::Schedule;
-type Gas = u64;
+//use my_node_runtime::{Hash, AccountId, AuthorityId};
+use runtime_primitives::{AnySignature, traits::Verify};
+//FIXME: move this to runtime_wrapper
+pub type Signature = AnySignature;
+pub type AuthorityId = <Signature as Verify>::Signer;
+pub type AccountId = <Signature as Verify>::Signer;
+pub type Hash = primitives::H256;
 
 use primitive_types::U128;
 
@@ -19,7 +21,6 @@ pub struct GenesisConfig {
  	timestamp: Option<TimestampConfig>,
 	balances: Option<BalancesConfig>,
 	indices: Option<IndicesConfig>,
-	contract: Option<ContractConfig>,
 	sudo: Option<SudoConfig>,
 	system: Option<()>,
 }
@@ -45,25 +46,6 @@ struct BalancesConfig {
 			vesting: Vec<u8>,
 		}
 
-struct ContractConfig {
-			signed_claim_handicap: u32,
-			rent_byte_price: u32,
-			rent_deposit_offset: u32,
-			storage_size_offset: u32,
-			surcharge_reward: u128,
-			tombstone_deposit: u128,
-			transaction_base_fee: u128,
-			transaction_byte_fee: u128,
-			transfer_fee: u128,
-			creation_fee: u128,
-			contract_fee: u128,
-			call_base_fee: u128,
-			create_base_fee: u128,
-			gas_price: u128,
-			max_depth: u32,
-			block_gas_limit: u128,
-			current_schedule: Schedule<Gas>,
-		}
 
 struct SudoConfig {
 			key: AccountId,
@@ -182,25 +164,6 @@ pub fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: 
 			creation_fee: 0,
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 			vesting: vec![],
-		}),
-		contract: Some(ContractConfig {
-			signed_claim_handicap: 2,
-			rent_byte_price: 4,
-			rent_deposit_offset: 1000,
-			storage_size_offset: 8,
-			surcharge_reward: 150,
-			tombstone_deposit: 16,
-			transaction_base_fee: 1 * CENTS,
-			transaction_byte_fee: 10 * MILLICENTS,
-			transfer_fee: 1 * CENTS,
-			creation_fee: 1 * CENTS,
-			contract_fee: 1 * CENTS,
-			call_base_fee: 1000,
-			create_base_fee: 1000,
-			gas_price: 1 * MILLICENTS,
-			max_depth: 1024,
-			block_gas_limit: 10_000_000,
-			current_schedule: Default::default(),
 		}),
 		sudo: Some(SudoConfig {
 			key: root_key,
