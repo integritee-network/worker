@@ -30,19 +30,17 @@ enclave {
 
 	trusted {
 		/* define ECALLs here. */
-		public sgx_status_t call_counter_wasm(
-			[in, size=req_len] const uint8_t* req_bin, size_t req_len,
-			[in, size=ciphertext_size] uint8_t* ciphertext, uint32_t ciphertext_size,
-			[in, size=hash_size] uint8_t* hash, uint32_t hash_size,
+		public sgx_status_t execute_stf(
+			[in, size=request_encrypted_size] uint8_t* request_encrypted, uint32_t request_encrypted,
+			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
 			[in, size=nonce_size] uint8_t* nonce, uint32_t nonce_size,
-			[in, size=wasm_hash_size] uint8_t* wasm_hash, uint32_t wasm_hash_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
-
+/*
 		public sgx_status_t get_counter(
 			[in, size=account_size] uint8_t* account, uint32_t account_size,
 			[out] uint32_t* counter_value);
-
+*/
 		public sgx_status_t get_rsa_encryption_pubkey(
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 

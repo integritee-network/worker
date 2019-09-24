@@ -214,7 +214,7 @@ pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> 
 	}
 }
 
-pub fn decode_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
+pub fn decrypt_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
 	let mut decrypted_buffer = Vec::new();
 	rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer).unwrap();
 	decrypted_buffer

@@ -71,7 +71,7 @@ extern crate yasna;
 extern crate substrate_api_client;
 extern crate substratee_stf;
 
-
+use substratee_stf::{Stf, TrustedCall, State};
 //use crypto::ed25519::{keypair, signature};
 use substrate_api_client::{
 	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
@@ -101,7 +101,7 @@ use std::vec::Vec;
 
 mod constants;
 mod utils;
-mod wasm;
+//mod wasm;
 mod attestation;
 
 pub mod cert;
@@ -192,23 +192,19 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn call_counter_wasm(
-	req_bin: *const u8,
-	req_length: usize,
-	ciphertext: *mut u8,
-	ciphertext_size: u32,
-	hash: *const u8,
-	hash_size: u32,
+pub unsafe extern "C" fn execute_stf(
+	request_encrypted: *mut u8,
+	request_encrypted_size: u32,
+	genesis_hash: *const u8,
+	genesis_hash_size: u32,
 	nonce: *const u8,
 	nonce_size: u32,
-	wasm_hash: *const u8,
-	wasm_hash_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
 
-	let ciphertext_slice = slice::from_raw_parts(ciphertext, ciphertext_size as usize);
-	let hash_slice       = slice::from_raw_parts(hash, hash_size as usize);
+	let request_encrypted_slice = slice::from_raw_parts(request_encrypted, request_encrypted_size as usize);
+	let genesis_hash_slice      = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
 	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
@@ -220,53 +216,31 @@ pub unsafe extern "C" fn call_counter_wasm(
 
 	debug!("[Enclave] Read RSA keypair done");
 
-	// decode the payload
+	// decrypt the payload
 	println!("    [Enclave] Decode the payload");
-	let plaintext_vec = utils::decode_payload(&ciphertext_slice, &rsa_keypair);
-	let plaintext_string = String::from_utf8(plaintext_vec.clone()).unwrap();
-	let msg: Message = serde_json::from_str(&plaintext_string).unwrap();
+	let request_vec = utils::decrypt_payload(&request_encrypted_slice, &rsa_keypair);
+	let stf_call = TrustedCall::decode(&mut request_vec.as_slice()).unwrap();
 
-	println!("    [Enclave] Message decoded:");
-	println!("    [Enclave]   account   = {}", msg.account);
-	println!("    [Enclave]   increment = {}", msg.amount);
-	println!("    [Enclave]   sha256    = {:?}", msg.sha256);
-
-	// get the calculated SHA256 hash
-	let wasm_hash_slice = slice::from_raw_parts(wasm_hash, wasm_hash_size as usize);
-	let wasm_hash_calculated: sgx_sha256_hash_t = serde_json::from_slice(wasm_hash_slice).unwrap();
-
-	if let Err(status) = wasm::compare_hashes(wasm_hash_calculated, msg.sha256) {
-		return status;
-	}
-
-	let state = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
+	// load last state
+	let state_enc = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let mut counter: AllCounts = match state.len() {
-		0 => AllCounts { entries: HashMap::new() },
+	let mut state : State = match state_enc.len() {
+		0 => Stf::init_state(),
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<AllCounts>::new(state);
+			let helper = DeSerializeHelper::<State>::new(state_enc);
 			helper.decode().unwrap()
 		}
 	};
 
-	// get the current counter value of the account or initialize with 0
-	let counter_value_old: u32 = *counter.entries.entry(msg.account.to_string()).or_insert(0);
-	info!("    [Enclave] Current counter state of '{}' = {}", msg.account, counter_value_old);
-
-	println!("    [Enclave] Executing WASM code");
-	let req_slice = slice::from_raw_parts(req_bin, req_length);
-	let action_req: sgxwasm::SgxWasmAction = serde_json::from_slice(req_slice).unwrap();
-
-	if let Err(status) = wasm::invoke_wasm_action(action_req, msg, &mut counter) {
-		return status;
-	}
+	debug!("    [Enclave] executing STF...");
+	Stf::execute(&mut state, stf_call);
 
 	// write the counter state and return
-	let enc_state = match encrypt_counter_state(counter) {
+	let enc_state = match encrypt_state(state) {
 		Ok(s) => s,
 		Err(sgx_status) => return sgx_status,
 	};
@@ -292,13 +266,11 @@ pub unsafe extern "C" fn call_counter_wasm(
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let index = nonce.low_u32();
 
-	let genesis_hash = utils::hash_from_slice(hash_slice);
-	//let call_hash = utils::blake2s(&plaintext_vec);
-	let call_hash = blake2_256(&plaintext_vec);
+	let genesis_hash = utils::hash_from_slice(genesis_hash_slice);
+	let call_hash = blake2_256(&request_vec);
 	debug!("[Enclave]: Call hash {:?}", call_hash);
 
-	//let ex = confirm_call_extrinsic(_seed, &call_hash, &state_hash, nonce, genesis_hash);
-	let call = [7u8,3u8];
+	let xt_call = [7u8,3u8];
 
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
@@ -310,7 +282,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 
 	let xt = compose_extrinsic_offline!(
         signer,
-	    (call, call_hash.to_vec(), state_hash.to_vec()),
+	    (xt_call, call_hash.to_vec(), state_hash.to_vec()),
 	    index,
 	    genesis_hash,
 	    spec_version
@@ -327,6 +299,7 @@ pub unsafe extern "C" fn call_counter_wasm(
 	sgx_status_t::SGX_SUCCESS
 }
 
+/*
 #[no_mangle]
 pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
 	let account_slice = slice::from_raw_parts(account, account_size as usize);
@@ -337,11 +310,11 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 		Err(status) => return status,
 	};
 
-	let mut counter: AllCounts = match state.len() {
-		0 => AllCounts { entries: HashMap::new() },
+	let mut counter: State = match state.len() {
+		0 => State { entries: HashMap::new() },
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<AllCounts>::new(state);
+			let helper = DeSerializeHelper::<State>::new(state);
 			helper.decode().unwrap()
 		}
 	};
@@ -350,27 +323,15 @@ pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, valu
 	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
 	sgx_status_t::SGX_SUCCESS
 }
-
-fn encrypt_counter_state(value: AllCounts) -> Result<Vec<u8>, sgx_status_t> {
+*/
+fn encrypt_state(value: State) -> Result<Vec<u8>, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let mut c = helper.encode(value).unwrap();
 	utils::aes_de_or_encrypt(&mut c)?;
 	Ok(c)
 }
 
-#[derive(Serializable, DeSerializable, Debug)]
-pub struct AllCounts {
-	entries: HashMap<String, u32>
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Message {
-	account: String,
-	amount: u32,
-	sha256: sgx_sha256_hash_t
-}
-
-type Call = [u8; 2];
+//type XtCall = [u8; 2];
 
 
 extern "C" {

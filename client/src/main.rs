@@ -43,8 +43,7 @@ use substrate_api_client::{Api, compose_extrinsic, extrinsic};
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
-
-const WASM_FILE: &str = "worker_enclave.compact.wasm";
+use substratee-stf::TrustedCall;
 
 fn main() {
 	// message structure
@@ -92,13 +91,6 @@ fn main() {
 		return;
 	}
 
-	let wasm_path = matches.value_of("wasm-path").unwrap_or(WASM_FILE);
-	let hash_hex = get_wasm_hash(wasm_path);
-	println!("[>] Calculating  WASM hash of {:?}", wasm_path);
-	println!("[<] WASM Hash: {:?}\n", hash_hex[0]);
-	let hash = hex::decode(hash_hex[0].clone()).unwrap();
-	let sha256: sgx_sha256_hash_t = slice_to_hash(&hash);
-
 	// get Alice's free balance
 	get_free_balance(&api, "//Alice");
 
@@ -109,7 +101,7 @@ fn main() {
 	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash);
 
 	// transfer from Alice to TEE
-	nonce = get_account_nonce(&api, "//Alice");
+	//nonce = get_account_nonce(&api, "//Alice");
 	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000));
 
 	// compose extrinsic with encrypted payload
@@ -117,20 +109,22 @@ fn main() {
 	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
 
-	let account = user_to_pubkey("//Alice").to_string();
-	println!("[+] //Alice's Pubkey: {}\n", account);
-	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
-	let message = Message { account, amount, sha256 };
-	let plaintext = serde_json::to_vec(&message).unwrap();
-	let mut payload_encrypted: Vec<u8> = Vec::new();
-	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", message);
-	nonce = get_account_nonce(&api, "//Alice");
+	let hidden_account = user_to_pubkey("//AliceHidden").to_string();
+	println!("[+] //Alice's Hidden Pubkey: {}\n", hidden_account);
+
+
+	let call = TrustedCall::balance_set_balance(hidden_account, 33,44)
+	let call_encoded = call.encode();
+	let mut call_encrypted: Vec<u8> = Vec::new();
+	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
+	
+	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", call);
+	//nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic!(
         api.clone(),
         "SubstraTEERegistry",
         "call_worker",
-		payload_encrypted
+		call_encrypted
     );
 
 	// send and watch extrinsic until finalized

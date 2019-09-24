@@ -31,6 +31,7 @@ extern crate sr_io;
 extern crate alloc;
 
 
+
 #[cfg(feature = "sgx")]
 #[macro_use]
 extern crate log;
@@ -72,8 +73,9 @@ pub type Balance = u128;
 #[cfg(feature = "sgx")]
 pub type State = SgxExternalities;
 
+#[derive(Encode, Decode)]
 pub enum TrustedCall {
-    balance_set_balance(AccountId, Balance, Balance ),
+    balance_set_balance(AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
 }
 

@@ -26,11 +26,11 @@ primitive-types = { version = "0.5.0", default-features = false, features = ["co
 sgx_types           = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-sdk" }
 sgx_crypto_helper   = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-sdk", default-features = false }
 
-[dependencies.my_node_runtime]
-git = "https://github.com/scs/substraTEE-node"
-branch = "brenzi-private-tx"
-package = "substratee-node-runtime"
-features = ["no_global_allocator"]
+#[dependencies.my_node_runtime]
+#git = "https://github.com/scs/substraTEE-node"
+#branch = "brenzi-private-tx"
+#package = "substratee-node-runtime"
+#features = ["no_global_allocator"]
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
@@ -72,3 +72,6 @@ git = 'https://github.com/paritytech/substrate'
 rev = '9b08e7ff938a45dbec7fcdb854063202e2b0cb48'
 package = "srml-indices"
 
+[dependencies.substratee-stf]
+path = "../stf"
+default-features = false

@@ -83,7 +83,7 @@ pub fn process_forwarded_payload(
 
 pub fn decrypt_and_process_payload(
 		eid: sgx_enclave_id_t,
-		mut ciphertext: Vec<u8>,
+		mut request_encrypted: Vec<u8>,
 		ue: &mut UncheckedExtrinsic,
 		retval: &mut sgx_status_t,
 		api: &Api) -> sgx_status_t {
@@ -101,39 +101,20 @@ pub fn decrypt_and_process_payload(
 	let nonce = get_account_nonce(&api, key);
 	let nonce_bytes = U256::encode(&nonce);
 
-	// read wasm file to string
-	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
-
-	// calculate the SHA256 of the WASM
-	let wasm_hash = rsgx_sha256_slice(&module).unwrap();
-	let wasm_hash_str = serde_json::to_string(&wasm_hash).unwrap();
-
-	// prepare the request
-	let req = SgxWasmAction::Call {
-					module : Some(module),
-					function  : "update_counter".to_string(),
-	};
-	debug!("Request for WASM = {:?}", req);
-	let req_str = serde_json::to_string(&req).unwrap();
-
 	// update the counter and compose the extrinsic
 	// the extrinsic size will be determined in the function call_counter_wasm
 	let unchecked_extrinsic_size = 500;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
 	let result = unsafe {
-		call_counter_wasm(eid,
+		execute_stf(eid,
 					 retval,
-					 req_str.as_ptr() as * const u8,
-					 req_str.len(),
-					 ciphertext.as_mut_ptr(),
-					 ciphertext.len() as u32,
+					 request_encrypted.as_mut_ptr(),
+					 request_encrypted.len() as u32,
 					 genesis_hash.as_ptr(),
 					 genesis_hash.len() as u32,
 					 nonce_bytes.as_ptr(),
 					 nonce_bytes.len() as u32,
-					 wasm_hash_str.as_ptr(),
-					 wasm_hash_str.len() as u32,
 					 unchecked_extrinsic.as_mut_ptr(),
 					 unchecked_extrinsic_size as u32
 		)
