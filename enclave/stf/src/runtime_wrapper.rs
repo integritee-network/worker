@@ -33,7 +33,7 @@ use version::RuntimeVersion;
 
 pub use runtime_primitives::OpaqueExtrinsic as UncheckedExtrinsic;
 
-pub use crate::genesis::{Signature, AuthorityId, AccountId, Hash};
+use crate::{Signature, AuthorityId, AccountId, Hash};
 pub type Call = [u8; 2];
 pub type Index = u32;
 pub type BlockNumber = u32;

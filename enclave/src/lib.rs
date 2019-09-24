@@ -69,11 +69,7 @@ extern crate yasna;
 //extern crate ed25519_dalek;
 #[macro_use]
 extern crate substrate_api_client;
-
-//extern crate contract;
-extern crate balances;
-extern crate srml_support;
-extern crate version;
+extern crate substratee_stf;
 
 
 //use crypto::ed25519::{keypair, signature};
@@ -107,7 +103,6 @@ mod constants;
 mod utils;
 mod wasm;
 mod attestation;
-mod runtime_wrapper;
 
 pub mod cert;
 pub mod hex;
@@ -192,9 +187,6 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(&signer.public());
-
-	// FIXME: this is just to have a quick way in. move to its own extern function
-	init_runtime();
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -381,30 +373,6 @@ pub struct Message {
 type Call = [u8; 2];
 
 
-/*
-pub fn confirm_call_extrinsic(seedvec: Vec<u8>, call_hash: &[u8], state_hash: &[u8], nonce: U256, genesis_hash: Hash) -> UncheckedExtrinsicV3<SubstraTEERegistryConfirmCallFn> {
-//	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(call_hash.to_vec(), state_hash.to_vec()));
-	let call = [7u8,3u8];
-	let function : SubstraTEERegistryConfirmCallFn = (call, call_hash.to_vec(), state_hash.to_vec());
-
-	let mut seed = [0u8; 32];
-    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
-
-	let index = nonce.low_u32();
-	//FIXME: define constant at client
-	let spec_version = 4;
-
-	let xt = compose_extrinsic_offline!(
-        signer,
-	    function,
-	    index,
-	    genesis_hash,
-	    spec_version
-    );	
-}
-*/
 extern "C" {
 	pub fn ocall_read_ipfs(
 		ret_val			: *mut sgx_status_t,
@@ -456,75 +424,4 @@ fn test_ocall_read_write_ipfs() {
 	};
 
 	assert_eq!(enc_state, ret_state);
-}
-/////////////////////////////////////////////////////////////////////////////
-
-use runtime_primitives::traits::Dispatchable;
-use runtime_wrapper::Runtime;
-mod genesis;
-extern crate sr_io;
-use sr_io::SgxExternalities;
-use std::backtrace::{self, PrintFormat};
-use std::panic;
-use genesis::{AccountId, AuthorityId};
-
-type Balance = u128;
-
-// FIXME: this could be imported from subatrate-api-client::utils (if would be provided publicly)
-pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
-	use primitives::twox_128;
-    let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
-    let mut keyhash;
-	debug!("storage_key_hash for: module: {} key: {} (and params?) ", module, storage_key_name);
-    match param {
-        Some(par) => {
-            key.append(&mut par.clone());
-            keyhash = blake2_256(&key).to_vec();
-        },
-        _ => {
-            keyhash = twox_128(&key).to_vec();
-        },
-    }
-	debug!("   is 0x{}", hex::encode_hex(&keyhash));
-    keyhash
-}
-
-
-pub fn init_runtime() {
-	info!("[??] asking runtime out");
-
-	let mut ext = SgxExternalities::new();	
-
-	let tina = AccountId::default();
-	let origin_tina = runtime_wrapper::Origin::signed(tina.clone());
-	//let origin = runtime_wrapper::Origin::ROOT;
-	
-	let address = indices::Address::<Runtime>::default();
-
-	sr_io::with_externalities(&mut ext, || {
-		// write Genesis 
-		info!("Prepare some Genesis values");
-		sr_io::set_storage(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
-		sr_io::set_storage(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
-		sr_io::set_storage(&storage_key_bytes("Balances", "TransferFee", None), &1u128.encode());
-		sr_io::set_storage(&storage_key_bytes("Balances", "TransactionBaseFee", None), &1u128.encode());
-		sr_io::set_storage(&storage_key_bytes("Balances", "TransfactionByteFee", None), &1u128.encode());
-		sr_io::set_storage(&storage_key_bytes("Balances", "ExistentialDeposit", None), &1u128.encode());
-		// prefund Tina
-		sr_io::set_storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())), & 13u128.encode());
-
-		// read storage
-		let _creation_fee = sr_io::storage(&storage_key_bytes("Balances", "ExistentialDeposit", None));
-		debug!("reading genesis storage ExistentialDeposit = {:?}", _creation_fee);
-
-		const MILLICENTS: u128 = 1_000_000_000;
-		const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
-
-		info!("re-funding tina: call set_balance");
-		let res = runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina.clone()), 42, 43).dispatch(runtime_wrapper::Origin::ROOT);
-		info!("reading Tina's FreeBalance");
-		let tina_balance = sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())));
-		info!("Tina's FreeBalance is {:?}", tina_balance);
-	});
-	info!("[++] finished playing with runtime");
 }

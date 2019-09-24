@@ -4,7 +4,10 @@ version = "4.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 
 [workspace]
-members = ["wasm"]
+members = [
+    "wasm",
+    "stf",
+]
 
 [lib]
 name = "substratee_worker_enclave"
@@ -115,48 +118,6 @@ git = "https://github.com/scs/substrate-api-client"
 branch = "no_std_rstd"
 default-features = false
 
-# runtime stuff
-[dependencies.balances]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "srml-balances"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
-
-[dependencies.timestamp]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "srml-timestamp"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
-
-[dependencies.system]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "srml-system"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
-
-[dependencies.srml-support]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "srml-support"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
-
-[dependencies.indices]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "srml-indices"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
-
-[dependencies.version]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "sr-version"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
-
-#[dependencies.node_runtime]
-#default-features = false
-#git = "https://github.com/paritytech/substrate"
-#package = "node-runtime"
-#rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
 
 [patch.'https://github.com/paritytech/substrate']
 sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx"}
