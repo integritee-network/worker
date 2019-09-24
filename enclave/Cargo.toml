@@ -85,7 +85,7 @@ git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
 branch = "brenzi-private-tx"
 default-features=false
-features = ["no_oom", "no_panic_handler", "sgx"]
+features = ["no_oom", "no_panic_handler", "sgx", "debug"]
 
 [dependencies.sgx_serialize_derive]
 git = "https://github.com/baidu/rust-sgx-sdk"
@@ -162,6 +162,7 @@ rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
 sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx"}
 substrate-primitives = { git = "https://github.com/scs/substrate-api-client", branch = "no_std_rstd"}
 substrate-application-crypto = { path = "../application-crypto"}
+srml-balances = { path = "./balances" }
 
 [patch.crates-io]
 ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}

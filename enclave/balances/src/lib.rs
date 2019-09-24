@@ -160,6 +160,9 @@
 
 use rstd::prelude::*;
 use rstd::{cmp, result, mem};
+
+use sgx_log::*;
+
 use codec::{Codec, Encode, Decode};
 use support::{
 	StorageValue, StorageMap, Parameter, decl_event, decl_storage, decl_module,
@@ -451,6 +454,7 @@ decl_module! {
 			dest: <T::Lookup as StaticLookup>::Source,
 			#[compact] value: T::Balance
 		) {
+			debug!("balances::transfer() called");
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
 			<Self as Currency<_>>::transfer(&transactor, &dest, value)?;
@@ -476,9 +480,10 @@ decl_module! {
 			#[compact] new_free: T::Balance,
 			#[compact] new_reserved: T::Balance
 		) {
+			debug!("set_balance called");
 			ensure_root(origin)?;
 			let who = T::Lookup::lookup(who)?;
-
+			debug!("query FreeBalance");
 			let current_free = <FreeBalance<T, I>>::get(&who);
 			if new_free > current_free {
 				mem::drop(PositiveImbalance::<T, I>::new(new_free - current_free));
@@ -538,11 +543,15 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	/// NOTE: LOW-LEVEL: This will not attempt to maintain total issuance. It is expected that
 	/// the caller will do this.
 	fn set_reserved_balance(who: &T::AccountId, balance: T::Balance) -> UpdateBalanceOutcome {
+		debug!("set_reserved_balance called");
 		if balance < T::ExistentialDeposit::get() {
+			debug!("below existential deposit");
+			debug!("calling ReservedBalance::insert");
 			<ReservedBalance<T, I>>::insert(who, balance);
 			Self::on_reserved_too_low(who);
 			UpdateBalanceOutcome::AccountKilled
 		} else {
+			debug!("calling ReservedBalance::insert");
 			<ReservedBalance<T, I>>::insert(who, balance);
 			UpdateBalanceOutcome::Updated
 		}
@@ -560,11 +569,15 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		// Commented out for now - but consider it instructive.
 		// assert!(!Self::total_balance(who).is_zero());
 		// assert!(Self::free_balance(who) > T::ExistentialDeposit::get());
+		debug!("set_free_balance called");
 		if balance < T::ExistentialDeposit::get() {
+			debug!("below existential deposit");
+			debug!("calling FreeBalance::insert");
 			<FreeBalance<T, I>>::insert(who, balance);
 			Self::on_free_too_low(who);
 			UpdateBalanceOutcome::AccountKilled
 		} else {
+			debug!("calling FreeBalance::insert");
 			<FreeBalance<T, I>>::insert(who, balance);
 			UpdateBalanceOutcome::Updated
 		}
@@ -591,6 +604,8 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	///
 	/// Will maintain total issuance.
 	fn on_free_too_low(who: &T::AccountId) {
+		debug!("on_free_too_low called");
+		debug!("FreeBalance::take");
 		let dust = <FreeBalance<T, I>>::take(who);
 		<Locks<T, I>>::remove(who);
 
@@ -611,6 +626,8 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	///
 	/// Will maintain total issuance.
 	fn on_reserved_too_low(who: &T::AccountId) {
+		debug!("on_reserved_too_low called");
+		debug!("ReservedBalance::take");
 		let dust = <ReservedBalance<T, I>>::take(who);
 
 		// underflow should never happen, but it if does, there's nothing to be done here.
@@ -632,6 +649,7 @@ mod imbalances {
 		StorageValue,
 	};
 	use rstd::mem;
+	use sgx_log::*;
 
 	/// Opaque, move-only struct with private fields that serves as a token denoting that
 	/// funds have been created without any equal and opposite accounting.
@@ -750,6 +768,7 @@ mod imbalances {
 	impl<T: Subtrait<I>, I: Instance> Drop for PositiveImbalance<T, I> {
 		/// Basic drop handler will just square up the total issuance.
 		fn drop(&mut self) {
+			debug!("drop() changing TotalIssuance PositiveImbalance");
 			<super::TotalIssuance<super::ElevatedTrait<T, I>, I>>::mutate(
 				|v| *v = v.saturating_add(self.0)
 			);
@@ -759,6 +778,7 @@ mod imbalances {
 	impl<T: Subtrait<I>, I: Instance> Drop for NegativeImbalance<T, I> {
 		/// Basic drop handler will just square up the total issuance.
 		fn drop(&mut self) {
+			debug!("drop() changing TotalIssuance NegativeImbalance");
 			<super::TotalIssuance<super::ElevatedTrait<T, I>, I>>::mutate(
 				|v| *v = v.saturating_sub(self.0)
 			);
@@ -849,6 +869,7 @@ where
 	}
 
 	fn burn(mut amount: Self::Balance) -> Self::PositiveImbalance {
+		debug!("burn() called");
 		<TotalIssuance<T, I>>::mutate(|issued| {
 			*issued = issued.checked_sub(&amount).unwrap_or_else(|| {
 				amount = *issued;
@@ -859,6 +880,7 @@ where
 	}
 
 	fn issue(mut amount: Self::Balance) -> Self::NegativeImbalance {
+		debug!("issue() called");
 		<TotalIssuance<T, I>>::mutate(|issued|
 			*issued = issued.checked_add(&amount).unwrap_or_else(|| {
 				amount = Self::Balance::max_value() - *issued;
@@ -903,9 +925,13 @@ where
 	}
 
 	fn transfer(transactor: &T::AccountId, dest: &T::AccountId, value: Self::Balance) -> Result {
+		debug!("balances::transfer() called");
+		debug!("get from_balance");
 		let from_balance = Self::free_balance(transactor);
+		debug!("get to_balance");
 		let to_balance = Self::free_balance(dest);
 		let would_create = to_balance.is_zero();
+		debug!("get fee");
 		let fee = if would_create { T::CreationFee::get() } else { T::TransferFee::get() };
 		let liability = match value.checked_add(&fee) {
 			Some(l) => l,
@@ -947,6 +973,7 @@ where
 		reason: WithdrawReason,
 		liveness: ExistenceRequirement,
 	) -> result::Result<Self::NegativeImbalance, &'static str> {
+		debug!("withdraw() called");
 		if let Some(new_balance) = Self::free_balance(who).checked_sub(&value) {
 			if liveness == ExistenceRequirement::KeepAlive && new_balance < T::ExistentialDeposit::get() {
 				return Err("payment would kill account")
@@ -1208,6 +1235,7 @@ impl<T: Trait<I>, I: Instance> TakeFees<T, I> {
 	///   - (optional) _tip_: if included in the transaction, it will be added on top. Only signed
 	///      transactions can have a tip.
 	fn compute_fee(len: usize, info: DispatchInfo, tip: T::Balance) -> T::Balance {
+		debug!("compute_fee() alled");
 		let len_fee = if info.pay_length_fee() {
 			let len = T::Balance::from(len as u32);
 			let base = T::TransactionBaseFee::get();

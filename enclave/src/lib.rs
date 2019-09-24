@@ -468,22 +468,33 @@ use std::backtrace::{self, PrintFormat};
 use std::panic;
 use genesis::{AccountId, AuthorityId};
 
-fn set_storage_value(ext: &mut SgxExternalities, key_name: String, value: Vec<u8>) {
-	let key = sr_io::twox_128(&String::from(key_name).as_bytes().to_vec());
-	ext.insert(key.to_vec(),value);
-}
-fn get_storage_value(ext: &mut SgxExternalities, key_name: String) -> Option<&Vec<u8>> {
-	let key = sr_io::twox_128(&String::from(key_name).as_bytes().to_vec());
-	ext.get(&key.to_vec())
+type Balance = u128;
+
+// FIXME: this could be imported from subatrate-api-client::utils (if would be provided publicly)
+pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
+	use primitives::twox_128;
+    let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
+    let mut keyhash;
+	debug!("storage_key_hash for: module: {} key: {} (and params?) ", module, storage_key_name);
+    match param {
+        Some(par) => {
+            key.append(&mut par.clone());
+            keyhash = blake2_256(&key).to_vec();
+        },
+        _ => {
+            keyhash = twox_128(&key).to_vec();
+        },
+    }
+	debug!("   is 0x{}", hex::encode_hex(&keyhash));
+    keyhash
 }
 
 
 pub fn init_runtime() {
-	println!("[??] asking runtime out");
+	info!("[??] asking runtime out");
 
 	let mut ext = SgxExternalities::new();	
-//	let rt = Runtime;
-	//let _todel = blake2_rfc::blake2b::blake2b(64, &[], &[0; 64]).as_bytes();
+
 	let tina = AccountId::default();
 	let origin_tina = runtime_wrapper::Origin::signed(tina.clone());
 	//let origin = runtime_wrapper::Origin::ROOT;
@@ -497,21 +508,30 @@ pub fn init_runtime() {
 		tina.clone(),
 	);
 	*/
-	const MILLICENTS: u128 = 1_000_000_000;
-	const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
-
-	//set_storage_value(&mut ext, "Balances ".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
-	
-	// FIXME: initial balances don't work. have to set_balance() later
-	set_storage_value(&mut ext, "Balances Balances".to_string(), vec!((tina.clone(), 1_000_000_000_000_000_000u128)).encode());
-
-	// need to purge events that have already been processed during the last call
-	let key = sr_io::twox_128(&String::from("System Events").as_bytes().to_vec());
-	ext.remove(&key.to_vec());
-
 	sr_io::with_externalities(&mut ext, || {
-		println!("pre-funding tina");
-		let res = runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina), 1_000_000_000_000_000_000, 0).dispatch(runtime_wrapper::Origin::ROOT);
+		// write Genesis 
+		info!("Prepare some Genesis values");
+		sr_io::set_storage(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
+		sr_io::set_storage(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
+		sr_io::set_storage(&storage_key_bytes("Balances", "TransferFee", None), &1u128.encode());
+		sr_io::set_storage(&storage_key_bytes("Balances", "TransactionBaseFee", None), &1u128.encode());
+		sr_io::set_storage(&storage_key_bytes("Balances", "TransfactionByteFee", None), &1u128.encode());
+		sr_io::set_storage(&storage_key_bytes("Balances", "ExistentialDeposit", None), &1u128.encode());
+		// prefund Tina
+		sr_io::set_storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())), & 13u128.encode());
+
+		// read storage
+		let _creation_fee = sr_io::storage(&storage_key_bytes("Balances", "ExistentialDeposit", None));
+		debug!("reading genesis storage ExistentialDeposit = {:?}", _creation_fee);
+
+		const MILLICENTS: u128 = 1_000_000_000;
+		const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
+
+		info!("re-funding tina: call set_balance");
+		let res = runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina.clone()), 42, 43).dispatch(runtime_wrapper::Origin::ROOT);
+		info!("reading Tina's FreeBalance");
+		let tina_balance = sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())));
+		info!("Tina's FreeBalance is {:?}", tina_balance);
 	});
 
 
@@ -559,5 +579,5 @@ pub fn init_runtime() {
 	let key = sr_io::twox_128(&String::from("System Events").as_bytes().to_vec());
 	ext.remove(&key.to_vec());
 */
-	println!("[++] finished playing with runtime");
+	info!("[++] finished playing with runtime");
 }
