@@ -501,13 +501,6 @@ pub fn init_runtime() {
 	
 	let address = indices::Address::<Runtime>::default();
 
-/*	// create a "shadow genesis". for enclave use only
-	let genesis = genesis::testnet_genesis(
-		vec!(AuthorityId::from(tina.clone())),
-		vec!(tina.clone()),
-		tina.clone(),
-	);
-	*/
 	sr_io::with_externalities(&mut ext, || {
 		// write Genesis 
 		info!("Prepare some Genesis values");
@@ -533,51 +526,5 @@ pub fn init_runtime() {
 		let tina_balance = sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())));
 		info!("Tina's FreeBalance is {:?}", tina_balance);
 	});
-
-
-/*
-	// scan events
-	let code_hash = match get_storage_value(&mut ext, "System Events".to_string()) {
-		Some(ev) => {
-			let mut _er_enc = ev.as_slice();
-			let _events = Vec::<system::EventRecord::<Event>>::decode(&mut _er_enc);
-			match _events {
-            Some(evts) => {
-				let mut code_hash = None;
-                for evr in &evts {
-                    match &evr.event {
-                        Event::contract(be) => {
-                            match &be {
-                                contract::RawEvent::CodeStored(ch) => {
-                                    println!("code_hash: {:?}", ch);
-									code_hash = Some(ch.clone());
-                                    },
-                                _ => { 
-                                    println!("ignoring unsupported contract event");
-                                    },
-                            }},
-                        _ => println!("ignoring unsupported module event"),
-                   }
-                    
-                } 
-				code_hash
-            }
-            None => {
-				println!("couldn't decode event record list");
-				None
-			}
-        }
-		},
-		None => {
-			println!("reading events failed. Has the contract really been deployed?");
-			None
-		},
-	}.unwrap();
-	println!("our code hash is {:?}", code_hash);
-
-	// purge events that have already been processed during the last call
-	let key = sr_io::twox_128(&String::from("System Events").as_bytes().to_vec());
-	ext.remove(&key.to_vec());
-*/
 	info!("[++] finished playing with runtime");
 }
