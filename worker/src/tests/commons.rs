@@ -27,6 +27,7 @@ use sgx_types::*;
 use std::str;
 use substrate_api_client::Api;
 use utils;
+use substratee_stf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -63,21 +64,9 @@ pub fn get_encrypted_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
 }
 
 pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
-	let hash: Vec<String> = utils::get_wasm_hash();
-	println!("Wasm Hash: {:?}", hash[0]);
-	println!("Wasm Binary : {:?}", hash[1]);
-
-	let sha = hex::decode(hash[0].clone()).unwrap();
-	let sha256: sgx_sha256_hash_t = from_slice(&sha);
-
-	let account: String = "Alice".to_string();
-	let amount = 42;
-
-	let message = Message { account, amount, sha256 };
-	let plaintext = serde_json::to_vec(&message).unwrap();
+	let payload = substratee_stf::tests::get_test_balance_set_balance_call();
 	let mut payload_encrypted: Vec<u8> = Vec::new();
-
-	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
+	rsa_pubkey.encrypt_buffer(&payload, &mut payload_encrypted).unwrap();
 	payload_encrypted
 }
 

@@ -46,7 +46,7 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
-	let mut payload_encrypted = get_encrypted_msg(eid);
+	let mut request_encrypted = get_encrypted_msg(eid);
 
 	let unchecked_extrinsic_size = 500;
 	let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
@@ -56,8 +56,8 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
 	let result = unsafe {
 		execute_stf(eid,
 						  &mut retval,
-						  payload_encrypted.as_mut_ptr(),
-						  payload_encrypted.len() as u32,
+						  request_encrypted.as_mut_ptr(),
+						  request_encrypted.len() as u32,
 						  genesis_hash.as_ptr(),
 						  genesis_hash.len() as u32,
 						  nonce_bytes.as_ptr(),

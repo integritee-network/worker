@@ -199,6 +199,8 @@ pub unsafe extern "C" fn execute_stf(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
+	// initialize the logging environment in the enclave
+	env_logger::init();
 
 	let request_encrypted_slice = slice::from_raw_parts(request_encrypted, request_encrypted_size as usize);
 	let genesis_hash_slice      = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
@@ -214,7 +216,7 @@ pub unsafe extern "C" fn execute_stf(
 	debug!("[Enclave] Read RSA keypair done");
 
 	// decrypt the payload
-	println!("    [Enclave] Decode the payload");
+	debug!("    [Enclave] Decode the payload");
 	let request_vec = utils::decrypt_payload(&request_encrypted_slice, &rsa_keypair);
 	let stf_call = TrustedCall::decode(&mut request_vec.as_slice()).unwrap();
 
@@ -242,9 +244,10 @@ pub unsafe extern "C" fn execute_stf(
 		Err(sgx_status) => return sgx_status,
 	};
 
-	println!("    [Enclave] Updated encrypted state: {:?}", enc_state.to_vec());
 
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
+
+	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
 	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
@@ -265,7 +268,7 @@ pub unsafe extern "C" fn execute_stf(
 
 	let genesis_hash = utils::hash_from_slice(genesis_hash_slice);
 	let call_hash = blake2_256(&request_vec);
-	debug!("[Enclave]: Call hash {:?}", call_hash);
+	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
 
 	let xt_call = [7u8,3u8];
 

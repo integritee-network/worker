@@ -30,8 +30,6 @@ extern crate version;
 extern crate sr_io;
 extern crate alloc;
 
-
-
 #[cfg(feature = "sgx")]
 #[macro_use]
 extern crate log;
@@ -40,6 +38,8 @@ extern crate env_logger;
 
 #[cfg(feature = "sgx")]
 mod runtime_wrapper;
+
+pub mod tests;
 
 #[cfg(feature = "sgx")]
 #[macro_use]

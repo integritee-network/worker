@@ -35,6 +35,7 @@ extern crate sgx_types;
 extern crate sgx_ucrypto as crypto;
 extern crate sgx_urts;
 extern crate substrate_api_client;
+extern crate substratee_stf;
 extern crate substratee_node_calls;
 extern crate substratee_worker_api;
 extern crate substrate_keyring;
