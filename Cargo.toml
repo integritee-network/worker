@@ -5,6 +5,7 @@ members = [
 	 "worker/worker-api",
 	 "substratee-node-calls",
 	 "client",
+	 "stf",
 ]
 
 [patch.'https://github.com/paritytech/substrate']

@@ -34,7 +34,7 @@ use primitive_types::U256;
 use primitives::{
 	blake2_256,
 	crypto::Ss58Codec,
-	ed25519,
+	ed25519, sr25519,
 	hexdisplay::HexDisplay,
 	Pair,
 };
@@ -47,6 +47,10 @@ pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
 	ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
+}
+
+pub fn pair_from_suri_sr(suri: &str, password: Option<&str>) -> sr25519::Pair {
+	sr25519::Pair::from_string(suri, password).expect("Invalid phrase")
 }
 
 pub fn user_to_pubkey(user: &str) -> ed25519::Public {

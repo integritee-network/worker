@@ -27,7 +27,8 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use ws::{CloseCode, Handler, listen, Message, Result, Sender};
 
-use enclave_api::{get_counter, get_rsa_encryption_pubkey};
+//use enclave_api::{get_counter, get_rsa_encryption_pubkey};
+use enclave_api::get_rsa_encryption_pubkey;
 use substratee_worker_api::requests::*;
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
@@ -90,6 +91,8 @@ fn handle_get_counter_msg(eid: sgx_enclave_id_t, account: &str, signature: &str)
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let mut value = 0u32;
+	let result = sgx_status_t::SGX_ERROR_UNEXPECTED;
+	/*
 	let result = unsafe {
 		get_counter(eid,
 					&mut retval,
@@ -97,7 +100,7 @@ fn handle_get_counter_msg(eid: sgx_enclave_id_t, account: &str, signature: &str)
 					pubkey.to_string().len() as u32,
 					&mut value)
 	};
-
+*/
 	match result {
 		sgx_status_t::SGX_SUCCESS => {},
 		_ => { error!("[-] ECALL Enclave failed {}!", result.as_str()) }

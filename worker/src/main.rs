@@ -67,7 +67,6 @@ use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, utils::hexstr_to_vec};
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
-use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
@@ -80,7 +79,6 @@ mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
 mod enclave_tls_ra;
-mod wasm;
 mod attestation_ocalls;
 mod ipfs;
 mod tests;
@@ -159,20 +157,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 			return;
 		},
 	};
-
-
-	// ------------------------------------------------------------------------
-	// initialize the sgxwasm specific driver engine
-	let result = sgx_enclave_wasm_init(enclave.geteid());
-	match result {
-		Ok(_r) => {
-			println!("[+] Init Wasm in enclave successful\n");
-		},
-		Err(x) => {
-			error!("[-] Init Wasm in enclave failed {}!\n", x.as_str());
-			return;
-		},
-	}
 
 	// ------------------------------------------------------------------------
 	// start the ws server to listen for worker requests

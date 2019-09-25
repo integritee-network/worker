@@ -22,14 +22,14 @@ use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use tests::commons::*;
-use wasm::SgxWasmAction;
 
 pub fn get_counter_works(eid: sgx_enclave_id_t) {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let account ="Alice";
 	let mut value = 0u32;
-
+	let result = sgx_status_t::SGX_ERROR_UNEXPECTED;
+/*
 	let result = unsafe {
 		get_counter(eid,
 					&mut retval,
@@ -37,46 +37,31 @@ pub fn get_counter_works(eid: sgx_enclave_id_t) {
 					account.len() as u32,
 					&mut value)
 	};
-
+*/
 	println!("{} value: {}", account, value);
 	evaluate_result(result);
 }
 
-pub fn call_counter_wasm_works(eid: sgx_enclave_id_t) {
+pub fn execute_stf_works(eid: sgx_enclave_id_t) {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let mut payload_encrypted = get_encrypted_msg(eid);
-	let module = include_bytes!("../../../bin/worker_enclave.compact.wasm").to_vec();
-	let wasm_hash = rsgx_sha256_slice(&module).unwrap();
-	let wasm_hash_str = serde_json::to_string(&wasm_hash).unwrap();
-
-	// prepare the request
-	let req = SgxWasmAction::Call {
-		module: Some(module),
-		function: "update_counter".to_string(),
-	};
-	debug!("Request for WASM = {:?}", req);
-	let req_str = serde_json::to_string(&req).unwrap();
 
 	let unchecked_extrinsic_size = 500;
 	let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 	let nonce_bytes = U256::encode(&U256::from("1"));
 	let genesis_hash: [u8; 32] = [0; 32];
-
+	//TODO: new payload
 	let result = unsafe {
-		call_counter_wasm(eid,
+		execute_stf(eid,
 						  &mut retval,
-						  req_str.as_ptr() as *const u8,
-						  req_str.len(),
 						  payload_encrypted.as_mut_ptr(),
 						  payload_encrypted.len() as u32,
 						  genesis_hash.as_ptr(),
 						  genesis_hash.len() as u32,
 						  nonce_bytes.as_ptr(),
 						  nonce_bytes.len() as u32,
-						  wasm_hash_str.as_ptr(),
-						  wasm_hash_str.len() as u32,
 						  unchecked_extrinsic.as_mut_ptr(),
 						  unchecked_extrinsic_size as u32
 		)

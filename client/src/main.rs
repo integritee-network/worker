@@ -43,7 +43,7 @@ use substrate_api_client::{Api, compose_extrinsic, extrinsic};
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
-use substratee-stf::TrustedCall;
+use substratee_stf::TrustedCall;
 
 fn main() {
 	// message structure
@@ -109,22 +109,22 @@ fn main() {
 	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
 
-	let hidden_account = user_to_pubkey("//AliceHidden").to_string();
-	println!("[+] //Alice's Hidden Pubkey: {}\n", hidden_account);
+	let hidden_pair = pair_from_suri_sr("//AliceHidden", Some(""));
+	println!("[+] //Alice's Hidden Pubkey: {}\n", hidden_pair.public());
 
 
-	let call = TrustedCall::balance_set_balance(hidden_account, 33,44)
+	let call = TrustedCall::balance_set_balance(hidden_pair.public(), 33,44);
 	let call_encoded = call.encode();
 	let mut call_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
 	
-	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", call);
+	println!("[>] Sending message to substraTEE-worker.\n");
 	//nonce = get_account_nonce(&api, "//Alice");
 	let xt = compose_extrinsic!(
         api.clone(),
         "SubstraTEERegistry",
         "call_worker",
-		call_encrypted
+		call_encrypted.clone()
     );
 
 	// send and watch extrinsic until finalized
@@ -137,6 +137,6 @@ fn main() {
 	println!("[>] Subscribe to callConfirmed event");
 	let act_hash = subscribe_to_call_confirmed(api);
 	println!("[<] callConfirmed event received");
-	println!("[+] Expected Hash: {:?}", blake2s(32, &[0; 32], &plaintext).as_bytes());
+	println!("[+] Expected Hash: {:?}", blake2s(32, &[0; 32], &call_encrypted).as_bytes());
 	println!("[+] Actual Hash:   {:?}", act_hash);
 }

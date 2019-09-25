@@ -31,8 +31,6 @@ use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
 use codec::{Decode, Encode};
 use primitive_types::U256;
 
-use wasm::SgxWasmAction;
-
 use crypto::*;
 
 // function to get the account nonce of a user
