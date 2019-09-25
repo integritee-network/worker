@@ -125,6 +125,8 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+	//FIXME remove this leak!
+	info!("[Enclave initialized] Ed25519 seed : 0x{}", hex::encode_hex(&seedvec));
     seed.copy_from_slice(seedvec); 
 	let signer_prim = ed25519::Pair::from_seed(&seed);
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer_prim.public().0);

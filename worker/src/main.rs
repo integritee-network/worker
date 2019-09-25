@@ -22,6 +22,7 @@ extern crate log;
 extern crate my_node_runtime;
 extern crate nan_preserving_float;
 extern crate node_primitives;
+extern crate runtime_primitives;
 extern crate codec;
 extern crate primitive_types;
 extern crate primitives;
@@ -57,7 +58,7 @@ use enclave_api::{init, perform_ra, get_ecc_signing_pubkey};
 use enclave_wrappers::{process_forwarded_payload,decrypt_and_process_payload,get_signing_key_tee,get_public_key_tee };
 use init_enclave::init_enclave;
 use log::*;
-use my_node_runtime::{Event, Hash, AccountId};
+use my_node_runtime::{Event, Hash};
 use my_node_runtime::UncheckedExtrinsic;
 use codec::Decode;
 use codec::Encode;
@@ -68,7 +69,7 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, utils::hexstr_to_vec, 
-	extrinsic::{balances::set_balance, xt_primitives::GenericAddress},
+	extrinsic::{balances::transfer, xt_primitives::GenericAddress},
 	crypto::{AccountKey, CryptoKind},
 	utils::hexstr_to_u256};
 
@@ -77,7 +78,11 @@ use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
-use primitives::{Pair, crypto::Ss58Codec, ed25519};
+use primitives::{Pair, crypto::Ss58Codec, ed25519, sr25519};
+
+use runtime_primitives::{AnySignature, traits::Verify};
+
+type AccountId = <AnySignature as Verify>::Signer;
 
 mod utils;
 mod constants;
@@ -199,6 +204,9 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	let mut api = Api::new(format!("ws://{}", node_url))
 	   	.set_signer(alicekey.clone());
 
+	info!("encoding Alice public 	= {:?}", alice.public().0.encode());
+	info!("encoding Alice AccountId = {:?}", AccountId::from(alice.public()).encode());
+
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	info!("Alice free balance = {:?}", funds);
@@ -231,29 +239,38 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 			return;
 		}
 	}	
-	let tee_public = ed25519::Public::from_raw(tee_pubkey);
+	// Attention: this HAS to be sr25519, although its a ed25519 key!
+	let tee_public = sr25519::Public::from_raw(tee_pubkey);
 	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
-	info!("[+] Got ed25519 public raw of  TEE = {:?}", tee_pubkey);
-
+	//info!("[+] Got ed25519 public raw of  TEE = {:?}", tee_pubkey);
+	let tee_accountid = AccountId::from(tee_public);
 
 	// check the enclave's account balance
-	let result_str = api.get_storage("Balances", "FreeBalance", Some(GenericAddress::from(tee_pubkey).encode())).unwrap();
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_accountid.encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	info!("TEE's free balance = {:?}", funds);
 
 	if funds < U256::from(10) {
 		info!("funding Enclave");
-		let xt = set_balance(api.clone(), GenericAddress::from(tee_pubkey), 999, 0);
+		//let xt = balances::set_balance(api.clone(), GenericAddress::from(tee_pubkey), 999, 0);
+		let xt = transfer(api.clone(), GenericAddress::from(tee_pubkey), 1000000);
 		let mut _xthex = hex::encode(xt.encode());
 		_xthex.insert_str(0, "0x");
 		let xt_hash = api.send_extrinsic(_xthex).unwrap();
 		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
+
+		//verify funds have arrived
+		let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_accountid.encode())).unwrap();
+		let funds = hexstr_to_u256(result_str).unwrap();
+		info!("TEE's NEW free balance = {:?}", funds);
 	}
+
+
 	// ------------------------------------------------------------------------
 	// perform a remote attestation and get an unchecked extrinsic back
 
 	// get enclaves's account nonce
-	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(tee_pubkey).encode())).unwrap();
+	let result_str = api.get_storage("System", "AccountNonce", Some(tee_accountid.encode())).unwrap();
     let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
 	info!("Enclave nonce = {:?}", nonce);
 	let nonce_bytes = nonce.encode();
