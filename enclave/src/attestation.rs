@@ -605,21 +605,20 @@ pub unsafe extern "C" fn perform_ra(
     seed.copy_from_slice(seedvec); 
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
 
-	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let era = Era::immortal();
 
 	//FIXME: define constants
 	let call = [7u8,0u8];
 
-	let index = nonce.low_u32();
 	//FIXME: define constant at client
 	let spec_version = 4;
 
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (call, cert_der.to_vec(), url_slice.to_vec()),
-	    index,
+	    nonce,
 	    genesis_hash,
 	    spec_version
     );	

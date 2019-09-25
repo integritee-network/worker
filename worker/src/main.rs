@@ -54,10 +54,10 @@ extern crate sha2;
 use clap::App;
 use constants::*;
 use enclave_api::{perform_ra};
-use enclave_wrappers::{get_account_nonce, get_free_balance, process_forwarded_payload,decrypt_and_process_payload,get_signing_key_tee,get_public_key_tee };
+use enclave_wrappers::{process_forwarded_payload,decrypt_and_process_payload,get_signing_key_tee,get_public_key_tee };
 use init_enclave::init_enclave;
 use log::*;
-use my_node_runtime::{Event, Hash};
+use my_node_runtime::{Event, Hash, AccountId};
 use my_node_runtime::UncheckedExtrinsic;
 use codec::Decode;
 use codec::Encode;
@@ -68,12 +68,16 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, utils::hexstr_to_vec, 
-	extrinsic::{balances::set_balance, xt_primitives::GenericAddress}};
+	extrinsic::{balances::set_balance, xt_primitives::GenericAddress},
+	crypto::{AccountKey, CryptoKind},
+	utils::hexstr_to_u256};
+
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
+use primitives::{Pair, crypto::Ss58Codec};
 
 mod utils;
 mod constants;
@@ -175,7 +179,21 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
-	let mut api = Api::new(format!("ws://{}", node_url));
+	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
+	info!("Alice account = {}", alice.public().to_ss58check());
+	let alicekey = AccountKey::Sr(alice.clone());
+	// alice is validator
+	let mut api = Api::new(format!("ws://{}", node_url))
+	   	.set_signer(alicekey.clone());
+
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let funds = hexstr_to_u256(result_str).unwrap();
+	info!("Alice free balance = {:?}", funds);
+    let result_str = api.get_storage("System", "AccountNonce", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let result = hexstr_to_u256(result_str).unwrap();
+    println!("[+] Alice's Account Nonce is {}", result.low_u32());
+
+
 	// ------------------------------------------------------------------------
 	// get required fields for the extrinsic
 	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
@@ -184,16 +202,14 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	let mut key = [0; 32];
 	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
 	key.copy_from_slice(&ecc_key[..]);
-	info!("[+] Got ECC public key of TEE = {:?}", key);
+	info!("[+] Got ECC public key of TEE = 0x{}", hex::encode(key));
 
-	// get enclaves's account nonce
-	let nonce = get_account_nonce(&api, key);
-	let nonce_bytes = U256::encode(&nonce);
-	info!("Enclave nonce = {:?}", nonce);
 
 	// check the enclave's account balance
-	let funds = get_free_balance(&api, key);
-	info!("Enclave free balance = {:?}", funds);
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(GenericAddress::from(key).encode())).unwrap();
+    let funds = hexstr_to_u256(result_str).unwrap();
+	info!("TEE's free balance = {:?}", funds);
+
 	if funds < U256::from(10) {
 		info!("funding Enclave");
 		let xt = set_balance(api.clone(), GenericAddress::from(key), 999, 0);
@@ -202,14 +218,20 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		let xt_hash = api.send_extrinsic(_xthex).unwrap();
 		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 	}
+	// ------------------------------------------------------------------------
+	// perform a remote attestation and get an unchecked extrinsic back
+
+	// get enclaves's account nonce
+	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(key).encode())).unwrap();
+    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
+	info!("Enclave nonce = {:?}", nonce);
+	let nonce_bytes = nonce.encode();
 
 	// prepare the unchecked extrinsic
 	// the size is determined in the enclave
 	let unchecked_extrinsic_size = 5000;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
-	// ------------------------------------------------------------------------
-	// perform a remote attestation and get an unchecked extrinsic back
 	println!("*** Perform a remote attestation of the enclave");
 	let result = unsafe {
 		perform_ra(

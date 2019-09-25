@@ -18,13 +18,13 @@
 use constants::*;
 use enclave_api::*;
 use enclave_wrappers::*;
-use enclave_wrappers::get_account_nonce;
 use log::*;
 use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use std::fs;
-use substrate_api_client::Api;
+use substrate_api_client::{Api, extrinsic::xt_primitives::GenericAddress,
+	utils::hexstr_to_u256};
 use tests::commons::*;
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
@@ -41,8 +41,10 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 	debug!("[+] Got ECC public key of TEE = {:?}", key);
 
 	// get enclaves's account nonce
-	let nonce = get_account_nonce(&api, key);
-	let nonce_bytes = U256::encode(&nonce);
+	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(key).encode())).unwrap();
+    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
+    debug!("  TEE nonce is  {}", nonce);
+	let nonce_bytes = nonce.encode();
 	debug!("Enclave nonce = {:?}", nonce);
 
 	// prepare the unchecked extrinsic

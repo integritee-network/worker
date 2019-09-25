@@ -24,39 +24,15 @@ use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
 
-use primitives::{ed25519};
+use primitives::{ed25519, sr25519};
 
-use substrate_api_client::{Api, utils::hexstr_to_u256};
+use substrate_api_client::{Api, extrinsic::xt_primitives::GenericAddress,
+	utils::hexstr_to_u256};
 use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
 use codec::{Decode, Encode};
 use primitive_types::U256;
 
 use crypto::*;
-
-//TODO: these functions don't belong here as they have nothing to do with the enclave!
-
-// function to get the account nonce of a user
-pub fn get_account_nonce(api: &Api, user: [u8; 32]) -> U256 {
-	info!("[>] Get account nonce");
-
-	let accountid = ed25519::Public::from_raw(user);
-	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	let nonce = hexstr_to_u256(result_str).unwrap();
-
-	info!("[<] Account nonce of {:?} is {}\n", accountid, nonce);
-	nonce
-}
-
-pub fn get_free_balance(api: &Api, user: [u8; 32]) -> U256 {
-	info!("[>] Get account nonce");
-
-	let accountid = ed25519::Public::from_raw(user);
-	let result_str = api.get_storage("Balance", "FreeBalance", Some(accountid.encode())).unwrap();
-	let value = hexstr_to_u256(result_str).unwrap();
-
-	info!("[<] Account free balance of {:?} is {}\n", accountid, value);
-	value
-}
 
 // decrypt and process the payload (in the enclave)
 // then compose the extrinsic (in the enclave)
@@ -109,8 +85,10 @@ pub fn decrypt_and_process_payload(
 	info!("[+] Got ECC public key of TEE = {:?}", key);
 
 	// get enclaves's account nonce
-	let nonce = get_account_nonce(&api, key);
-	let nonce_bytes = U256::encode(&nonce);
+	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(key).encode())).unwrap();
+    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
+    debug!("  TEE nonce is  {}", nonce);
+	let nonce_bytes = nonce.encode();
 
 	// update the counter and compose the extrinsic
 	// the extrinsic size will be determined in the function call_counter_wasm
