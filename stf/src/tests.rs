@@ -15,10 +15,14 @@
 
 */
 use alloc::prelude::v1::Vec;
-use crate::{TrustedCall, AccountId};
+use crate::{TrustedCall, TrustedGetter, AccountId};
 use codec::{Compact, Decode, Encode};
 
 
 pub fn get_test_balance_set_balance_call() -> Vec<u8> {
     TrustedCall::balance_set_balance(AccountId::default(), 33,44).encode()
+}
+
+pub fn get_test_getter_free_balance() -> Vec<u8> {
+	TrustedGetter::free_balance(AccountId::default()).encode()
 }

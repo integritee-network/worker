@@ -22,23 +22,32 @@ use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use tests::commons::*;
+use substratee_stf;
 
-pub fn get_counter_works(eid: sgx_enclave_id_t) {
+// TODO: test get_ecc_signing_pubkey
+// TODO: test get_rsa_encryption_pubkey
+
+pub fn get_state_works(eid: sgx_enclave_id_t) {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	let account ="Alice";
-	let mut value = 0u32;
+	let value_size = 16; //u128
+	let mut value: Vec<u8> = vec![0u8; value_size as usize];
+
+	let getter = substratee_stf::tests::get_test_getter_free_balance();
+
 	let result = sgx_status_t::SGX_ERROR_UNEXPECTED;
-/*
+
 	let result = unsafe {
-		get_counter(eid,
+		get_state(eid,
 					&mut retval,
-					account.as_ptr(),
-					account.len() as u32,
-					&mut value)
+					getter.as_ptr(),
+					getter.len() as u32,
+					value.as_mut_ptr(),
+					value_size as u32
+					)
 	};
-*/
-	println!("{} value: {}", account, value);
+	println!("{} value: {:?}", account, value);
 	evaluate_result(result);
 }
 

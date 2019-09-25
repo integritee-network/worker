@@ -36,19 +36,17 @@ enclave {
 			[in, size=nonce_size] uint8_t* nonce, uint32_t nonce_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
-/*
-		public sgx_status_t get_counter(
-			[in, size=account_size] uint8_t* account, uint32_t account_size,
-			[out] uint32_t* counter_value);
-*/
+
+		public sgx_status_t get_state(
+			[in, size=getter_size] uint8_t* getter, uint32_t getter_size,
+			[out, size=value_size] uint8_t* value, uint32_t value_size
+		);
+
 		public sgx_status_t get_rsa_encryption_pubkey(
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
 		public sgx_status_t get_ecc_signing_pubkey(
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
-/*
-		public sgx_status_t sgxwasm_init();
-*/
 		public sgx_status_t perform_ra(
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
 			[in, size=nonce_size] uint8_t* nonce, uint32_t nonce_size,

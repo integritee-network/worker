@@ -27,16 +27,13 @@
 
 extern crate base64;
 extern crate bit_vec;
-//extern crate blake2_no_std;
 extern crate chrono;
-//extern crate crypto;
 extern crate env_logger;
 extern crate httparse;
 extern crate itertools;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-//extern crate my_node_runtime;
 extern crate num_bigint;
 extern crate codec;
 extern crate primitive_types;
@@ -64,19 +61,16 @@ extern crate sgx_types;
 extern crate webpki;
 extern crate webpki_roots;
 extern crate yasna;
-//extern crate ed25519_dalek;
 #[macro_use]
 extern crate substrate_api_client;
 extern crate substratee_stf;
 
-use substratee_stf::{Stf, TrustedCall, State};
-//use crypto::ed25519::{keypair, signature};
+use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
 use substrate_api_client::{
 	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
 	crypto::AccountKey,
 	extrinsic};
 
-//use my_node_runtime::{Call, Hash, SubstraTEERegistryCall, UncheckedExtrinsic};
 use codec::{Compact, Decode, Encode};
 use primitive_types::U256;
 use primitives::{ed25519, Pair, hashing::{blake2_256}};
@@ -299,40 +293,53 @@ pub unsafe extern "C" fn execute_stf(
 	sgx_status_t::SGX_SUCCESS
 }
 
-/*
-#[no_mangle]
-pub unsafe extern "C" fn get_counter(account: *const u8, account_size: u32, value: *mut u32) -> sgx_status_t {
-	let account_slice = slice::from_raw_parts(account, account_size as usize);
-	let acc_str = std::str::from_utf8(account_slice).unwrap();
 
-	let state = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
+#[no_mangle]
+pub unsafe extern "C" fn get_state(
+	getter: *const u8, 
+	getter_size: u32, 
+	value: *mut u8,
+	value_size: u32
+	) -> sgx_status_t {
+	//env_logger::init();
+	
+	let mut getter_slice = slice::from_raw_parts(getter, getter_size as usize);
+	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
+
+	// load last state
+	let state_enc = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let mut counter: State = match state.len() {
-		0 => State { entries: HashMap::new() },
+	let mut state : State = match state_enc.len() {
+		0 => Stf::init_state(),
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<State>::new(state);
+			let helper = DeSerializeHelper::<State>::new(state_enc);
 			helper.decode().unwrap()
 		}
 	};
+	let _getter = TrustedGetter::decode(&mut getter_slice).unwrap();
+	let value_vec = match Stf::get_state(&mut state, _getter) {
+		Some(val) => val,
+		None => vec!(0),
+	};
 
-	let ref_mut = &mut *value;
-	*ref_mut = *counter.entries.entry(acc_str.to_string()).or_insert(0);
+	// split the extrinsic_slice at the length of the encoded extrinsic
+	// and fill the right side with whitespace
+	let (left, right) = value_slice.split_at_mut(value_vec.len());
+	left.clone_from_slice(&value_vec);
+	right.iter_mut().for_each(|x| *x = 0x20);
 	sgx_status_t::SGX_SUCCESS
 }
-*/
+
 fn encrypt_state(value: State) -> Result<Vec<u8>, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let mut c = helper.encode(value).unwrap();
 	utils::aes_de_or_encrypt(&mut c)?;
 	Ok(c)
 }
-
-//type XtCall = [u8; 2];
-
 
 extern "C" {
 	pub fn ocall_read_ipfs(

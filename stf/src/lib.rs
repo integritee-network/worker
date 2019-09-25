@@ -79,6 +79,12 @@ pub enum TrustedCall {
     balance_transfer(AccountId, AccountId, Balance),
 }
 
+#[derive(Encode, Decode)]
+pub enum TrustedGetter {
+	free_balance(AccountId),
+	reserved_balance(AccountId),
+}
+
 #[cfg(feature = "sgx")]
 pub struct Stf {
 }
@@ -112,6 +118,21 @@ impl Stf {
             };
         });
     }
+
+	pub fn get_state(mut ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
+		//FIXME: only account owner may get its own data. introduce signature verification!
+        sr_io::with_externalities(&mut ext, || {
+            let result = match getter {
+                TrustedGetter::free_balance(who) =>
+					sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(who.encode()))),
+                TrustedGetter::reserved_balance(who) =>
+					sr_io::storage(&storage_key_bytes("Balances", "ReservedBalance", Some(who.encode()))),
+                _ => None
+            };
+			result
+        })
+
+	}
 }
 
 #[cfg(feature = "sgx")]
