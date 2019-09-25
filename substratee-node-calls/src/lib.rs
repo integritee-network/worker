@@ -20,7 +20,11 @@ pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 
 pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveCount", None).unwrap();
-	let amount = hexstr_to_u64(result_str);
+	info!("get_worker_amount() ret {:?}", result_str);
+	let amount = match result_str.as_str() {
+		"null" => 0u64,
+		_ => hexstr_to_u64(result_str),
+	};
 	info!("[+]: Amount of Registered Workers {:?}", amount);
 	amount
 }

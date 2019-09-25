@@ -33,6 +33,8 @@ use primitive_types::U256;
 
 use crypto::*;
 
+//TODO: these functions don't belong here as they have nothing to do with the enclave!
+
 // function to get the account nonce of a user
 pub fn get_account_nonce(api: &Api, user: [u8; 32]) -> U256 {
 	info!("[>] Get account nonce");
@@ -43,6 +45,17 @@ pub fn get_account_nonce(api: &Api, user: [u8; 32]) -> U256 {
 
 	info!("[<] Account nonce of {:?} is {}\n", accountid, nonce);
 	nonce
+}
+
+pub fn get_free_balance(api: &Api, user: [u8; 32]) -> U256 {
+	info!("[>] Get account nonce");
+
+	let accountid = ed25519::Public::from_raw(user);
+	let result_str = api.get_storage("Balance", "FreeBalance", Some(accountid.encode())).unwrap();
+	let value = hexstr_to_u256(result_str).unwrap();
+
+	info!("[<] Account free balance of {:?} is {}\n", accountid, value);
+	value
 }
 
 // decrypt and process the payload (in the enclave)

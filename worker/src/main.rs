@@ -34,6 +34,7 @@ extern crate sgx_crypto_helper;
 extern crate sgx_types;
 extern crate sgx_ucrypto as crypto;
 extern crate sgx_urts;
+#[macro_use]
 extern crate substrate_api_client;
 extern crate substratee_stf;
 extern crate substratee_node_calls;
@@ -53,7 +54,7 @@ extern crate sha2;
 use clap::App;
 use constants::*;
 use enclave_api::{perform_ra};
-use enclave_wrappers::*;
+use enclave_wrappers::{get_account_nonce, get_free_balance, process_forwarded_payload,decrypt_and_process_payload,get_signing_key_tee,get_public_key_tee };
 use init_enclave::init_enclave;
 use log::*;
 use my_node_runtime::{Event, Hash};
@@ -66,7 +67,8 @@ use std::fs;
 use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
-use substrate_api_client::{Api, utils::hexstr_to_vec};
+use substrate_api_client::{Api, utils::hexstr_to_vec, 
+	extrinsic::{balances::set_balance, xt_primitives::GenericAddress}};
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
@@ -188,6 +190,18 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	let nonce = get_account_nonce(&api, key);
 	let nonce_bytes = U256::encode(&nonce);
 	info!("Enclave nonce = {:?}", nonce);
+
+	// check the enclave's account balance
+	let funds = get_free_balance(&api, key);
+	info!("Enclave free balance = {:?}", funds);
+	if funds < U256::from(10) {
+		info!("funding Enclave");
+		let xt = set_balance(api.clone(), GenericAddress::from(key), 999, 0);
+		let mut _xthex = hex::encode(xt.encode());
+		_xthex.insert_str(0, "0x");
+		let xt_hash = api.send_extrinsic(_xthex).unwrap();
+		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
+	}
 
 	// prepare the unchecked extrinsic
 	// the size is determined in the enclave

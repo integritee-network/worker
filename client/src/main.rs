@@ -40,10 +40,11 @@ use primitives::{Pair, Public};
 use sgx_types::*;
 use substrate_api_client::{Api, compose_extrinsic, extrinsic};
 
-use substratee_client::*;
+use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, transfer_amount, fund_account, get_free_balance, pair_from_suri};
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use substratee_stf::TrustedCall;
+use log::*;
 
 fn main() {
 	// message structure
@@ -59,8 +60,10 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let port = matches.value_of("node-port").unwrap_or("9944");
-	let server = matches.value_of("node-server").unwrap_or("127.0.0.1");
+	let port = matches.value_of("node-ws-port").unwrap_or("9944");
+	let server = matches.value_of("node-addr").unwrap_or("127.0.0.1");
+	
+	info!("initializing ws api to node");
 	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
 
 	println!("*** Getting the amount of the registered workers");
@@ -90,18 +93,21 @@ fn main() {
 		println!("[<] Received MSG: {}", value);
 		return;
 	}
-
+	info!("getting free_balance for Alice");
 	// get Alice's free balance
 	get_free_balance(&api, "//Alice");
 
 	// get Alice's account nonce
+	info!("getting nonce for Alice");
 	let mut nonce = get_account_nonce(&api, "//Alice");
 
 	// fund the account of Alice
+	info!("funding Alice");	
 	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash);
 
 	// transfer from Alice to TEE
 	//nonce = get_account_nonce(&api, "//Alice");
+	info!("transferring some money to TEE's account");		
 	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000));
 
 	// compose extrinsic with encrypted payload
@@ -109,11 +115,11 @@ fn main() {
 	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
 
-	let hidden_pair = pair_from_suri_sr("//AliceHidden", Some(""));
-	println!("[+] //Alice's Hidden Pubkey: {}\n", hidden_pair.public());
+	let alice_incognito_pair = pair_from_suri_sr("//AliceIncognito", Some(""));
+	println!("[+] //Alice's Incognito Pubkey: {}\n", alice_incognito_pair.public());
 
 
-	let call = TrustedCall::balance_set_balance(hidden_pair.public(), 33,44);
+	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 33,44);
 	let call_encoded = call.encode();
 	let mut call_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
