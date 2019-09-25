@@ -20,6 +20,11 @@ extern crate sgx_types;
 use sgx_types::*;
 
 extern {
+	pub fn init(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+	) -> sgx_status_t;
+
 	pub fn execute_stf(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -32,6 +37,7 @@ extern {
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;
+
 
 
 	pub fn get_state(

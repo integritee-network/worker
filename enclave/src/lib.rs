@@ -83,7 +83,7 @@ use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
 
-use constants::{ED25519_SEALED_KEY_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{SEALED_SIGNER_SEED_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
 use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
@@ -105,18 +105,42 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 pub type Hash = primitives::H256;
 
 #[no_mangle]
-pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn init() -> sgx_status_t {
+	// initialize the logging environment in the enclave
+	env_logger::init();
 
-//  If this is called when already initialised, the enclave panics
-//  initialize the logging environment in the enclaved
-//	env_logger::init();
+	match SgxFile::open(SEALED_SIGNER_SEED_FILE) {
+		Ok(_k) => (),
+		Err(x) => {
+			info!("[Enclave] Keyfile not found, creating new! {}", x);
+			if let Err(status) = utils::create_sealed_ed25519_seed() {
+				return status;
+			}
+		},
+	}
 
+	let seedvec = match utils::get_ecc_seed() {
+		Ok(seed) => seed,
+		Err(status) => return status,
+	};
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer_prim = ed25519::Pair::from_seed(&seed);
+	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer_prim.public().0);
+
+	//create RSA keypair if not existing
 	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
 		info!("[Enclave] Keyfile not found, creating new! {}", x);
 		if let Err(status) = create_sealed_rsa3072_keypair() {
 			return status
 		}
 	}
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
 	let rsa_pubkey = match utils::read_rsa_pubkey() {
 		Ok(key) => key,
@@ -149,13 +173,12 @@ fn create_sealed_rsa3072_keypair() -> Result<sgx_status_t, sgx_status_t> {
 	utils::write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
 }
 
+
+
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
 
-	// initialize the logging environment in the enclave
-	env_logger::init();
-
-	match SgxFile::open(ED25519_SEALED_KEY_FILE) {
+	match SgxFile::open(SEALED_SIGNER_SEED_FILE) {
 		Ok(_k) => (),
 		Err(x) => {
 			info!("[Enclave] Keyfile not found, creating new! {}", x);
@@ -174,7 +197,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
     seed.copy_from_slice(seedvec); 
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
 
-	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public().to_base58());
+	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(&signer.public());
@@ -193,8 +216,6 @@ pub unsafe extern "C" fn execute_stf(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
-	// initialize the logging environment in the enclave
-	env_logger::init();
 
 	let request_encrypted_slice = slice::from_raw_parts(request_encrypted, request_encrypted_size as usize);
 	let genesis_hash_slice      = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
@@ -256,6 +277,7 @@ pub unsafe extern "C" fn execute_stf(
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
     seed.copy_from_slice(seedvec); 
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+	info!("Restored ECC pubkey: {:?}", signer.public().to_base58());
 
 	let nonce = U256::decode(&mut nonce_slice).unwrap();
 	let index = nonce.low_u32();
@@ -266,11 +288,6 @@ pub unsafe extern "C" fn execute_stf(
 
 	let xt_call = [7u8,3u8];
 
-	let mut seed = [0u8; 32];
-    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
-	
 	//FIXME: define constant at client
 	let spec_version = 4;
 
@@ -301,7 +318,6 @@ pub unsafe extern "C" fn get_state(
 	value: *mut u8,
 	value_size: u32
 	) -> sgx_status_t {
-	//env_logger::init();
 	
 	let mut getter_slice = slice::from_raw_parts(getter, getter_size as usize);
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);

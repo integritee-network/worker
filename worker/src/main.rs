@@ -53,7 +53,7 @@ extern crate sha2;
 
 use clap::App;
 use constants::*;
-use enclave_api::{perform_ra};
+use enclave_api::{init, perform_ra, get_ecc_signing_pubkey};
 use enclave_wrappers::{process_forwarded_payload,decrypt_and_process_payload,get_signing_key_tee,get_public_key_tee };
 use init_enclave::init_enclave;
 use log::*;
@@ -77,7 +77,7 @@ use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
-use primitives::{Pair, crypto::Ss58Codec};
+use primitives::{Pair, crypto::Ss58Codec, ed25519};
 
 mod utils;
 mod constants;
@@ -165,6 +165,19 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		},
 	};
 
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
+	}
+
 	// ------------------------------------------------------------------------
 	// start the ws server to listen for worker requests
 	let w_url = format!("{}:{}", w_ip, w_port);
@@ -199,20 +212,38 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
 	// get the public signing key of the TEE
-	let mut key = [0; 32];
-	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
-	key.copy_from_slice(&ecc_key[..]);
-	info!("[+] Got ECC public key of TEE = 0x{}", hex::encode(key));
+	println!("*** Ask the signing key from the TEE");
+	let tee_pubkey_size = 32;
+	let mut tee_pubkey = [0u8; 32];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_ecc_signing_pubkey(enclave.geteid(),
+							   &mut retval,
+							   tee_pubkey.as_mut_ptr(),
+							   tee_pubkey_size
+		)
+	};
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}	
+	let tee_public = ed25519::Public::from_raw(tee_pubkey);
+	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
+	info!("[+] Got ed25519 public raw of  TEE = {:?}", tee_pubkey);
 
 
 	// check the enclave's account balance
-	let result_str = api.get_storage("Balances", "FreeBalance", Some(GenericAddress::from(key).encode())).unwrap();
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(GenericAddress::from(tee_pubkey).encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	info!("TEE's free balance = {:?}", funds);
 
 	if funds < U256::from(10) {
 		info!("funding Enclave");
-		let xt = set_balance(api.clone(), GenericAddress::from(key), 999, 0);
+		let xt = set_balance(api.clone(), GenericAddress::from(tee_pubkey), 999, 0);
 		let mut _xthex = hex::encode(xt.encode());
 		_xthex.insert_str(0, "0x");
 		let xt_hash = api.send_extrinsic(_xthex).unwrap();
@@ -222,7 +253,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	// perform a remote attestation and get an unchecked extrinsic back
 
 	// get enclaves's account nonce
-	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(key).encode())).unwrap();
+	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(tee_pubkey).encode())).unwrap();
     let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
 	info!("Enclave nonce = {:?}", nonce);
 	let nonce_bytes = nonce.encode();
@@ -277,7 +308,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		},
 		_ => {
 			println!("*** There are already workers registered, fetching keys from first one...");
-			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
+			let w1 = get_first_worker_that_is_not_equal_to_self(&api, tee_pubkey.to_vec()).unwrap();
 
 			let w_api = WorkerApi::new(w1.url.clone());
 			let ra_port = w_api.get_mu_ra_port().unwrap();

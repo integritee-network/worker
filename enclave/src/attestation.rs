@@ -580,8 +580,6 @@ pub unsafe extern "C" fn perform_ra(
 							unchecked_extrinsic: * mut u8,
 							unchecked_extrinsic_size: u32
 						) -> sgx_status_t {
-	// initialize the logging environment in the enclave
-	env_logger::init();
 
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
@@ -604,6 +602,7 @@ pub unsafe extern "C" fn perform_ra(
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
     seed.copy_from_slice(seedvec); 
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+	info!("Restored ECC pubkey: {:?}", signer.public());
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);

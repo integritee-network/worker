@@ -27,7 +27,7 @@ use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use constants::{AES_KEY_FILE_AND_INIT_V, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{AES_KEY_FILE_AND_INIT_V, SEALED_SIGNER_SEED_FILE, RSA3072_SEALED_KEY_FILE};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
@@ -58,7 +58,7 @@ pub fn store_rsa_key_pair(pair: &[u8]) -> SgxResult<sgx_status_t> {
 }
 
 pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {
-	read_file(ED25519_SEALED_KEY_FILE)
+	read_file(SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
@@ -69,7 +69,7 @@ pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 	};
 	rand.fill_bytes(&mut seed);
 
-	write_file(&seed, ED25519_SEALED_KEY_FILE)
+	write_file(&seed, SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn read_or_create_aes_key_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
