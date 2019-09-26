@@ -42,7 +42,13 @@ use runtime_primitives::generic::Era;
 use substrate_api_client::{Api, compose_extrinsic, crypto::{AccountKey, CryptoKind},
     extrinsic, utils::{hexstr_to_u256, hexstr_to_vec},
 };
+use substratee_stf::TrustedCall;
+use log::*;
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use blake2_rfc::blake2s::blake2s;
 
+// FIXME: most of these functions are redundant with substrate-api-client
+// but first resolve this: https://github.com/scs/substrate-api-client/issues/27
 pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
@@ -168,4 +174,28 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
 		.split("  ")
 		.map(|s| s.to_string())
 		.collect()
+}
+
+
+pub fn call_trusted_stf(api: Api, call: TrustedCall, rsa_pubkey: Rsa3072PubKey) {
+	let call_encoded = call.encode();
+	let mut call_encrypted: Vec<u8> = Vec::new();
+	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
+	
+	let xt = compose_extrinsic!(
+        api.clone(),
+        "SubstraTEERegistry",
+        "call_worker",
+		call_encrypted.clone()
+    );
+
+	// send and watch extrinsic until finalized
+	let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
+	info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
+	info!("waiting for confirmation of stf call");
+	let act_hash = subscribe_to_call_confirmed(api);
+	info!("callConfirmed event received");
+	debug!("Expected stf call Hash: {:?}", blake2s(32, &[0; 32], &call_encrypted).as_bytes());
+	debug!("confirmation stf call Hash:   {:?}", act_hash);
+
 }

@@ -39,6 +39,9 @@ use runtime_primitives::{AnySignature, traits::Verify};
 
 type AccountId = <AnySignature as Verify>::Signer;
 
+// FIXME: most of these functions use redundant code with is provided by substrate-api-client
+// but first resolve this: https://github.com/scs/substrate-api-client/issues/27
+
 pub fn get_signing_key_tee() {
 	println!();
 	println!("*** Start the enclave");

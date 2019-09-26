@@ -44,7 +44,8 @@ use substrate_api_client::{Api, compose_extrinsic, extrinsic,
 	extrinsic::{balances::transfer, xt_primitives::GenericAddress},
 	};
 
-use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, transfer_amount, fund_account, get_free_balance, pair_from_suri};
+use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, 
+	transfer_amount, fund_account, get_free_balance, pair_from_suri, call_trusted_stf};
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use substratee_stf::TrustedCall;
@@ -95,6 +96,7 @@ fn main() {
 
 	let worker_api = WorkerApi::new(worker.url.clone());
 	
+	//FIXME: this is outdated
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		let user = pair_from_suri("//Alice", Some(""));
 		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
@@ -104,48 +106,27 @@ fn main() {
 		println!("[<] Received MSG: {}", value);
 		return;
 	}
-	info!("getting free_balance for Alice");
-	// get Alice's free balance
 
+	info!("getting free_balance for Alice");
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	info!("Alice free balance = {:?}", funds);
     let result_str = api.get_storage("System", "AccountNonce", Some(AccountId::from(alice.public()).encode())).unwrap();
     let result = hexstr_to_u256(result_str).unwrap();
-    println!("[+] Alice's Account Nonce is {}", result.low_u32());
+    info!("Alice's Account Nonce is {}", result.low_u32());
 
 	// compose extrinsic with encrypted payload
 	println!("[>] Get the shielding key from W1 (={})", worker.pubkey.to_string());
-	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
-	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
+	let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+	println!("[<] Got worker shielding key {:?}\n", shielding_pubkey);
 
 	let alice_incognito_pair = pair_from_suri_sr("//AliceIncognito", Some(""));
-	println!("[+] //Alice's Incognito Pubkey: {}\n", alice_incognito_pair.public());
+	println!("[+] Alice's Incognito Pubkey: {}\n", alice_incognito_pair.public());
 
+	let bob_incognito_pair = pair_from_suri_sr("//BobIncognito", Some(""));
+	println!("[+] Bob's Incognito Pubkey: {}\n", bob_incognito_pair.public());
+
+	println!("[+] pre-funding Alice's Incognito account (ROOT call)");
 	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 33,44);
-	let call_encoded = call.encode();
-	let mut call_encrypted: Vec<u8> = Vec::new();
-	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
-	
-	println!("[>] Sending message to substraTEE-worker.\n");
-	//nonce = get_account_nonce(&api, "//Alice");
-	let xt = compose_extrinsic!(
-        api.clone(),
-        "SubstraTEERegistry",
-        "call_worker",
-		call_encrypted.clone()
-    );
-
-	// send and watch extrinsic until finalized
-	let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
-	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
-	println!("[<] Message sent successfully");
-	println!();
-
-	// subsribe to callConfirmed event
-	println!("[>] Subscribe to callConfirmed event");
-	let act_hash = subscribe_to_call_confirmed(api);
-	println!("[<] callConfirmed event received");
-	println!("[+] Expected Hash: {:?}", blake2s(32, &[0; 32], &call_encrypted).as_bytes());
-	println!("[+] Actual Hash:   {:?}", act_hash);
+	call_trusted_stf(api, call, shielding_pubkey);
 }

@@ -69,7 +69,7 @@ use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{Api, utils::hexstr_to_vec, 
-	extrinsic::{balances::transfer, xt_primitives::GenericAddress},
+	extrinsic::{balances::{transfer, set_balance}, xt_primitives::GenericAddress},
 	crypto::{AccountKey, CryptoKind},
 	utils::hexstr_to_u256};
 
@@ -198,7 +198,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
 	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
-	info!("Alice account = {}", alice.public().to_ss58check());
+	println!("   Alice's account = {}", alice.public().to_ss58check());
 	let alicekey = AccountKey::Sr(alice.clone());
 	// alice is validator
 	let mut api = Api::new(format!("ws://{}", node_url))
@@ -209,10 +209,10 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
-	info!("Alice free balance = {:?}", funds);
+	println!("    Alice's free balance = {:?}", funds);
     let result_str = api.get_storage("System", "AccountNonce", Some(AccountId::from(alice.public()).encode())).unwrap();
     let result = hexstr_to_u256(result_str).unwrap();
-    println!("[+] Alice's Account Nonce is {}", result.low_u32());
+    println!("    Alice's Account Nonce is {}", result.low_u32());
 
 
 	// ------------------------------------------------------------------------
@@ -251,8 +251,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	info!("TEE's free balance = {:?}", funds);
 
 	if funds < U256::from(10) {
-		info!("funding Enclave");
-		//let xt = balances::set_balance(api.clone(), GenericAddress::from(tee_pubkey), 999, 0);
+		println!("[+] bootstrap funding Enclave form Alice's funds");
 		let xt = transfer(api.clone(), GenericAddress::from(tee_pubkey), 1000000);
 		let mut _xthex = hex::encode(xt.encode());
 		_xthex.insert_str(0, "0x");

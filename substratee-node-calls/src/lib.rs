@@ -2,7 +2,7 @@ extern crate regex;
 
 use log::*;
 use codec::{Decode, Encode};
-use substrate_api_client::utils::{hexstr_to_vec};
+use substrate_api_client::utils::{hexstr_to_vec, hexstr_to_u64};
 use primitives::ed25519;
 use regex::Regex;
 use srml_support::traits::Len;
@@ -23,7 +23,7 @@ pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	info!("get_worker_amount() ret {:?}", result_str);
 	let amount = match result_str.as_str() {
 		"null" => 0u64,
-		_ => hexstr_to_u64(result_str),
+		_ => hexstr_to_u64(result_str).unwrap(),
 	};
 	info!("[+]: Amount of Registered Workers {:?}", amount);
 	amount
@@ -63,14 +63,6 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 		// This may be the reason I was not able to do automated deserialization.
 		url: url_str[m.start()..m.end()].to_string(),
 	}
-}
-
-pub fn hexstr_to_u64(hexstr: String) -> u64 {
-	let unhex = hexstr_to_vec(hexstr).unwrap();
-	let mut gh: [u8; 8] = Default::default();
-	gh.copy_from_slice(&unhex);
-
-	u64::from_le_bytes(gh)
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
