@@ -45,10 +45,10 @@ use substrate_api_client::{Api, compose_extrinsic, extrinsic,
 	};
 
 use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, 
-	transfer_amount, fund_account, get_free_balance, pair_from_suri, call_trusted_stf};
+	transfer_amount, fund_account, get_free_balance, pair_from_suri, call_trusted_stf, get_trusted_stf_state};
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
-use substratee_stf::TrustedCall;
+use substratee_stf::{TrustedCall, TrustedGetter};
 use log::*;
 
 use runtime_primitives::{AnySignature, traits::Verify};
@@ -98,6 +98,8 @@ fn main() {
 	
 	//FIXME: this is outdated
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
+		panic!("outdated implementation!");
+		/*
 		let user = pair_from_suri("//Alice", Some(""));
 		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
 		let sign = user.sign(user.public().as_slice());
@@ -105,6 +107,7 @@ fn main() {
 
 		println!("[<] Received MSG: {}", value);
 		return;
+		*/
 	}
 
 	info!("getting free_balance for Alice");
@@ -127,6 +130,27 @@ fn main() {
 	println!("[+] Bob's Incognito Pubkey: {}\n", bob_incognito_pair.public());
 
 	println!("[+] pre-funding Alice's Incognito account (ROOT call)");
-	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 33,44);
-	call_trusted_stf(api, call, shielding_pubkey);
+	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 1_000_000, 0);
+	call_trusted_stf(&api, call, shielding_pubkey);
+
+	println!("[+] query Alice's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+
+	println!("[+] query Bob's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+	
+	println!("*** incognito transfer from Alice to Bob");
+	let call = TrustedCall::balance_transfer(alice_incognito_pair.public(), bob_incognito_pair.public(), 100_000);
+	call_trusted_stf(&api, call, shielding_pubkey);
+
+	println!("[+] query Alice's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+
+	println!("[+] query Bob's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+
 }

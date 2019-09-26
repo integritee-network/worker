@@ -6,11 +6,17 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 [dependencies]
 ws = "0.7"
 log = "0.4"
+hex	= "0.3"
 serde_json = "1.0"
 serde_derive = "1.0"
 sgx_crypto_helper = { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
 rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
 package = "substrate-primitives"
+
+[dependencies.substratee-stf]
+path = "../../stf"
+default-features = false

@@ -180,7 +180,7 @@ pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
 	match File::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
 			Ok(len) => {
-				info!("[Enclave] Read {} bytes from counter file", len);
+				info!("[Enclave] Read {} bytes from state file", len);
 				Ok(state_vec)
 			}
 			Err(x) => {

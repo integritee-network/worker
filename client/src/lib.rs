@@ -42,10 +42,12 @@ use runtime_primitives::generic::Era;
 use substrate_api_client::{Api, compose_extrinsic, crypto::{AccountKey, CryptoKind},
     extrinsic, utils::{hexstr_to_u256, hexstr_to_vec},
 };
-use substratee_stf::TrustedCall;
+use substratee_stf::{TrustedCall, TrustedGetter};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use blake2_rfc::blake2s::blake2s;
+
+use substratee_worker_api::Api as WorkerApi;
 
 // FIXME: most of these functions are redundant with substrate-api-client
 // but first resolve this: https://github.com/scs/substrate-api-client/issues/27
@@ -177,7 +179,7 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
 }
 
 
-pub fn call_trusted_stf(api: Api, call: TrustedCall, rsa_pubkey: Rsa3072PubKey) {
+pub fn call_trusted_stf(api: &Api, call: TrustedCall, rsa_pubkey: Rsa3072PubKey) {
 	let call_encoded = call.encode();
 	let mut call_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
@@ -193,9 +195,16 @@ pub fn call_trusted_stf(api: Api, call: TrustedCall, rsa_pubkey: Rsa3072PubKey) 
 	let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
 	info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
 	info!("waiting for confirmation of stf call");
-	let act_hash = subscribe_to_call_confirmed(api);
+	let act_hash = subscribe_to_call_confirmed(api.clone());
 	info!("callConfirmed event received");
 	debug!("Expected stf call Hash: {:?}", blake2s(32, &[0; 32], &call_encrypted).as_bytes());
 	debug!("confirmation stf call Hash:   {:?}", act_hash);
 
+}
+
+pub fn get_trusted_stf_state(workerapi: &WorkerApi, getter: TrustedGetter) {
+	//TODO: encrypt and sign request
+	let ret = workerapi.get_stf_state(getter);
+	println!("    got getter response from worker: {:?}", ret);
+	//TODO: decrypt response and verify signature
 }

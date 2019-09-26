@@ -347,7 +347,10 @@ pub unsafe extern "C" fn get_state(
 	// and fill the right side with whitespace
 	let (left, right) = value_slice.split_at_mut(value_vec.len());
 	left.clone_from_slice(&value_vec);
-	right.iter_mut().for_each(|x| *x = 0x20);
+	//FIXME: now implicitly assuming we pass unsigned integer vecs, not strings terminated by 0x20
+	//FIXME: we should really pass an Option<Vec<u8>>
+	right.iter_mut().for_each(|x| *x = 0x00);
+	//right.iter_mut().for_each(|x| *x = 0x20);
 	sgx_status_t::SGX_SUCCESS
 }
 

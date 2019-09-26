@@ -454,7 +454,7 @@ decl_module! {
 			dest: <T::Lookup as StaticLookup>::Source,
 			#[compact] value: T::Balance
 		) {
-			debug!("balances::transfer() called");
+			debug!("balances::transfer() called. checking signature");
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
 			<Self as Currency<_>>::transfer(&transactor, &dest, value)?;
@@ -953,7 +953,7 @@ where
 			Some(b) => b,
 			None => return Err("destination balance too high to receive value"),
 		};
-
+		debug!("setting new balances");
 		if transactor != dest {
 			Self::set_free_balance(transactor, new_from_balance);
 			if !<FreeBalance<T, I>>::exists(dest) {

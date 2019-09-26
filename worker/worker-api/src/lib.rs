@@ -21,6 +21,8 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate sgx_crypto_helper;
 extern crate ws;
+extern crate substratee_stf;
+extern crate codec;
 
 use client::WsClient;
 use log::*;
@@ -30,10 +32,13 @@ use std::sync::mpsc::channel;
 use std::thread;
 use ws::connect;
 use primitives::ed25519;
+use substratee_stf::TrustedGetter;
+use codec::Encode;
 
 pub mod client;
 pub mod requests;
 
+#[derive(Clone)]
 pub struct Api {
 	url: String,
 }
@@ -58,11 +63,9 @@ impl Api {
 		Ok(rsa_pubkey)
 	}
 
-	pub fn get_counter(&self, account: ed25519::Public, signature: ed25519::Signature) -> Result<String, ()> {
-		let acc_str = serde_json::to_string(&account).unwrap();
-		let sign_str = serde_json::to_string::<[u8]>(signature.as_ref()).unwrap();
-
-		let request = format!("{}::{}::{}", MSG_GET_COUNTER, acc_str, sign_str);
+	pub fn get_stf_state(&self, getter: TrustedGetter) -> Result<String, ()> {
+		let getter_str = hex::encode(getter.encode());
+		let request = format!("{}::{}", MSG_GET_STF_STATE, getter_str);
 		Self::get(&self, &request)
 	}
 

@@ -17,4 +17,4 @@
 
 pub const MSG_GET_PUB_KEY_WORKER: &str = "get_pub_key_worker";
 pub const MSG_GET_MU_RA_PORT: &str = "get_mu_ra_port";
-pub const MSG_GET_COUNTER: &str = "get_counter";
+pub const MSG_GET_STF_STATE: &str = "get_stf_state";
