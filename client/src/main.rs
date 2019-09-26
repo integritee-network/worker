@@ -36,15 +36,22 @@ use blake2_rfc::blake2s::blake2s;
 use clap::App;
 use codec::Encode;
 use primitive_types::U256;
-use primitives::{Pair, Public};
+use primitives::{Pair, Public, crypto::Ss58Codec};
 use sgx_types::*;
-use substrate_api_client::{Api, compose_extrinsic, extrinsic};
+use substrate_api_client::{Api, compose_extrinsic, extrinsic,
+	utils::{hexstr_to_vec, hexstr_to_u256},
+	crypto::{AccountKey, CryptoKind},
+	extrinsic::{balances::transfer, xt_primitives::GenericAddress},
+	};
 
 use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, transfer_amount, fund_account, get_free_balance, pair_from_suri};
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use substratee_stf::TrustedCall;
 use log::*;
+
+use runtime_primitives::{AnySignature, traits::Verify};
+type AccountId = <AnySignature as Verify>::Signer;
 
 fn main() {
 	// message structure
@@ -64,7 +71,11 @@ fn main() {
 	let server = matches.value_of("node-addr").unwrap_or("127.0.0.1");
 	
 	info!("initializing ws api to node");
-	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
+	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
+	let alicekey = AccountKey::Sr(alice.clone());
+	info!("use Alice account as signer = {}", alice.public().to_ss58check());
+	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port))
+	   	.set_signer(alicekey.clone());
 
 	println!("*** Getting the amount of the registered workers");
 	let worker = match get_worker_amount(&api) {
@@ -83,7 +94,7 @@ fn main() {
 	println!("    W1's url: {:?}\n", worker.url);
 
 	let worker_api = WorkerApi::new(worker.url.clone());
-
+	
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		let user = pair_from_suri("//Alice", Some(""));
 		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
@@ -95,29 +106,21 @@ fn main() {
 	}
 	info!("getting free_balance for Alice");
 	// get Alice's free balance
-	get_free_balance(&api, "//Alice");
 
-	// get Alice's account nonce
-	info!("getting nonce for Alice");
-	let mut nonce = get_account_nonce(&api, "//Alice");
-
-	// fund the account of Alice
-	info!("funding Alice");	
-	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash);
-
-	// transfer from Alice to TEE
-	//nonce = get_account_nonce(&api, "//Alice");
-	info!("transferring some money to TEE's account");		
-	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000));
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let funds = hexstr_to_u256(result_str).unwrap();
+	info!("Alice free balance = {:?}", funds);
+    let result_str = api.get_storage("System", "AccountNonce", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let result = hexstr_to_u256(result_str).unwrap();
+    println!("[+] Alice's Account Nonce is {}", result.low_u32());
 
 	// compose extrinsic with encrypted payload
-	println!("[>] Get the encryption key from W1 (={})", worker.pubkey.to_string());
+	println!("[>] Get the shielding key from W1 (={})", worker.pubkey.to_string());
 	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
 
 	let alice_incognito_pair = pair_from_suri_sr("//AliceIncognito", Some(""));
 	println!("[+] //Alice's Incognito Pubkey: {}\n", alice_incognito_pair.public());
-
 
 	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 33,44);
 	let call_encoded = call.encode();

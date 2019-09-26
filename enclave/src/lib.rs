@@ -279,11 +279,10 @@ pub unsafe extern "C" fn execute_stf(
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
     seed.copy_from_slice(seedvec); 
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
-	info!("Restored ECC pubkey: {:?}", signer.public().to_base58());
+	debug!("Restored ECC pubkey: {:?}", signer.public());
 
-	let nonce = U256::decode(&mut nonce_slice).unwrap();
-	let index = nonce.low_u32();
-
+	let nonce = u32::decode(&mut nonce_slice).unwrap();
+	debug!("using nonce for confirmation extrinsic: {:?}", nonce);
 	let genesis_hash = utils::hash_from_slice(genesis_hash_slice);
 	let call_hash = blake2_256(&request_vec);
 	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
@@ -296,7 +295,7 @@ pub unsafe extern "C" fn execute_stf(
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (xt_call, call_hash.to_vec(), state_hash.to_vec()),
-	    index,
+	    nonce,
 	    genesis_hash,
 	    spec_version
     );	

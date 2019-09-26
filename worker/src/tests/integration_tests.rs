@@ -75,7 +75,5 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
 	let payload_encrypted = get_encrypted_msg(eid);
-	let mut retval = sgx_status_t::SGX_SUCCESS;
-	process_forwarded_payload(eid, payload_encrypted, &mut retval, port);
-	evaluate_result(retval);
+	process_request(eid, payload_encrypted, port);
 }

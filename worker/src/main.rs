@@ -54,8 +54,8 @@ extern crate sha2;
 
 use clap::App;
 use constants::*;
-use enclave_api::{init, perform_ra, get_ecc_signing_pubkey};
-use enclave_wrappers::{process_forwarded_payload,decrypt_and_process_payload,get_signing_key_tee,get_public_key_tee };
+use enclave_api::{init, perform_ra, get_ecc_signing_pubkey, execute_stf};
+use enclave_wrappers::{process_request, get_signing_key_tee, get_public_key_tee };
 use init_enclave::init_enclave;
 use log::*;
 use my_node_runtime::{Event, Hash};
@@ -352,6 +352,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	println!("[+] Subscribed, waiting for event...");
 	println!();
+
 	loop {
 		let event_str = events_out.recv().unwrap();
 
@@ -389,14 +390,12 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 									println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 									println!();
 								},
-								my_node_runtime::substratee_registry::RawEvent::Forwarded(sender, payload) => {
+								my_node_runtime::substratee_registry::RawEvent::Forwarded(sender, request) => {
 									println!("[+] Received Forwarded event");
 									debug!("    From:    {:?}", sender);
-									debug!("    Payload: {:?}", hex::encode(payload));
+									debug!("    Request: {:?}", hex::encode(request));
 									println!();
-
-									// process the payload and send extrinsic
-									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, node_url);
+									process_request(enclave.geteid(), request.to_vec(), node_url);
 								},
 								my_node_runtime::substratee_registry::RawEvent::CallConfirmed(sender, payload) => {
 									println!("[+] Received CallConfirmed event");

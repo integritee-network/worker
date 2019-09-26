@@ -25,6 +25,7 @@ use enclave_api::*;
 use init_enclave::init_enclave;
 
 use primitives::{ed25519, sr25519};
+use primitives::crypto::Ss58Codec;
 
 use substrate_api_client::{Api, extrinsic::xt_primitives::GenericAddress,
 	utils::hexstr_to_u256};
@@ -34,100 +35,9 @@ use primitive_types::U256;
 
 use crypto::*;
 
-// decrypt and process the payload (in the enclave)
-// then compose the extrinsic (in the enclave)
-// and send an extrinsic back to the substraTEE-node
-pub fn process_forwarded_payload(
-		eid: sgx_enclave_id_t,
-		ciphertext: Vec<u8>,
-		retval: &mut sgx_status_t,
-		node_url: &str) {
+use runtime_primitives::{AnySignature, traits::Verify};
 
-	let mut api = Api::new(format!("ws://{}", node_url));
-
-	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(vec![0; 32], vec![0; 46])));
-
-	// decrypt and process the payload. we will get an extrinsic back
-	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, &api);
-
-	match result {
-		sgx_status_t::SGX_SUCCESS => {
-			let mut _xthex = hex::encode(unchecked_extrinsic.encode());
-			_xthex.insert_str(0, "0x");
-
-			// sending the extrinsic
-			println!();
-			println!("[>] Confirm processing (send the extrinsic)");
-			let tx_hash = api.send_extrinsic(_xthex).unwrap();
-			println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
-		},
-		_ => {
-			println!();
-			error!("Payload not processed due to errors.");
-		}
-	}
-}
-
-pub fn decrypt_and_process_payload(
-		eid: sgx_enclave_id_t,
-		mut request_encrypted: Vec<u8>,
-		ue: &mut UncheckedExtrinsic,
-		retval: &mut sgx_status_t,
-		api: &Api) -> sgx_status_t {
-	println!("[>] Decrypt and process the payload");
-
-	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
-
-	// get the public signing key of the TEE
-	let mut key = [0; 32];
-	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
-	key.copy_from_slice(&ecc_key[..]);
-	info!("[+] Got ECC public key of TEE = {:?}", key);
-
-	// get enclaves's account nonce
-	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(key).encode())).unwrap();
-    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
-    debug!("  TEE nonce is  {}", nonce);
-	let nonce_bytes = nonce.encode();
-
-	// update the counter and compose the extrinsic
-	// the extrinsic size will be determined in the function call_counter_wasm
-	let unchecked_extrinsic_size = 500;
-	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
-
-	let result = unsafe {
-		execute_stf(eid,
-					 retval,
-					 request_encrypted.as_mut_ptr(),
-					 request_encrypted.len() as u32,
-					 genesis_hash.as_ptr(),
-					 genesis_hash.len() as u32,
-					 nonce_bytes.as_ptr(),
-					 nonce_bytes.len() as u32,
-					 unchecked_extrinsic.as_mut_ptr(),
-					 unchecked_extrinsic_size as u32
-		)
-	};
-
-	match result {
-		sgx_status_t::SGX_SUCCESS => debug!("[+] ECALL Enclave successful"),
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-		}
-	}
-
-	match retval {
-		sgx_status_t::SGX_SUCCESS => {
-			println!("[<] Message decoded and processed in the enclave");
-			*ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
-			sgx_status_t::SGX_SUCCESS
-		},
-		_ => {
-			error!("[<] Error processing message in the enclave");
-			sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-	}
-}
+type AccountId = <AnySignature as Verify>::Signer;
 
 pub fn get_signing_key_tee() {
 	println!();
@@ -226,4 +136,84 @@ pub fn get_public_key_tee()
 		Err(x) => { error!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
 		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}
+}
+
+pub fn process_request(
+		eid: sgx_enclave_id_t,
+		request: Vec<u8>,
+		node_url: &str
+) {
+
+	// new api client (the other on is busy listening to events)
+	let mut _api = Api::new(format!("ws://{}", node_url));
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	// FIXME: refactor to function
+	println!("*** Ask the signing key from the TEE");
+	let tee_pubkey_size = 32;
+	let mut tee_pubkey = [0u8; 32];
+
+	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_ecc_signing_pubkey(eid,
+							   &mut retval,
+							   tee_pubkey.as_mut_ptr(),
+							   tee_pubkey_size
+		)
+	};
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}	
+	// Attention: this HAS to be sr25519, although its a ed25519 key!
+	let tee_public = sr25519::Public::from_raw(tee_pubkey);
+	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
+	let tee_accountid = AccountId::from(tee_public);
+
+	let result_str = _api.get_storage("System", "AccountNonce", Some(tee_accountid.encode())).unwrap();
+
+	let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
+
+	let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
+	info!("Enclave nonce = {:?}", nonce);
+	let nonce_bytes = nonce.encode();
+
+	let unchecked_extrinsic_size = 500;
+	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+
+	let result = unsafe {
+		execute_stf(eid,
+					&mut status,
+					request.to_vec().as_mut_ptr(),
+					request.len() as u32,
+					genesis_hash.as_ptr(),
+					genesis_hash.len() as u32,
+					nonce_bytes.as_ptr(),
+					nonce_bytes.len() as u32,
+					unchecked_extrinsic.as_mut_ptr(),
+					unchecked_extrinsic_size as u32
+		)
+	};
+	match result {
+		sgx_status_t::SGX_SUCCESS => debug!("[+] ECALL Enclave successful"),
+		_ => {
+			warn!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return
+		}
+	}
+	
+	if status != sgx_status_t::SGX_SUCCESS {
+		error!("[<] Error processing message in the enclave");
+		return
+	}
+	println!("[<] Message decoded and processed in the enclave");
+	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
+	let mut _xthex = hex::encode(ue.encode());
+	_xthex.insert_str(0, "0x");
+	println!("[>] Confirm processing (send the extrinsic)");
+	let tx_hash = _api.send_extrinsic(_xthex).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+
 }
