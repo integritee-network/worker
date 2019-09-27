@@ -5,7 +5,7 @@ This is part of [substraTEE](https://github.com/scs/substraTEE)
 
 **Supports Rust nightly-2019-07-15**
  
-**Enclave is compiled with nightly-2019-05-22**
+**Enclave is compiled with nightly-2019-08-01**
 
 ## Private-tx demo
 To run a demo for private tokens do the following:
@@ -82,7 +82,7 @@ Then you should see this in terminal 3:
 
 Alice wants to transfer 100k tokens privately to Bob. She doesn't use her substraTEE-node account for this as the transfer would be publicly visible.
 
-Instead, She creates an *incognito* account and she keeps her account secret (also the public key). This account will never hit the substraTEE-node blockchain transparently.
+Instead, she creates an *incognito* account and she keeps her account secret (also the public key). This account will never hit the substraTEE-node blockchain transparently.
 
 The *Demo God* then gives Alice some initial Balance of 1M.
 
