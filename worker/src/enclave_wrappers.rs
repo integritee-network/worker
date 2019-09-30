@@ -62,21 +62,18 @@ pub fn get_signing_key_tee() {
 	let pubkey_size = 32;
 	let mut pubkey = [0u8; 32];
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let mut status = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		get_ecc_signing_pubkey(enclave.geteid(),
-							   &mut retval,
+							   &mut status,
 							   pubkey.as_mut_ptr(),
 							   pubkey_size
 		)
 	};
 
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
-		}
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
 	}
 
 	println!("[+] Signing key: {:?}", pubkey);
@@ -111,21 +108,18 @@ pub fn get_public_key_tee()
 	let pubkey_size = 8192;
 	let mut pubkey = vec![0u8; pubkey_size as usize];
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let mut status = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		get_rsa_encryption_pubkey(enclave.geteid(),
-								  &mut retval,
+								  &mut status,
 								  pubkey.as_mut_ptr(),
 								  pubkey_size
 		)
 	};
 
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
-		}
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
 	}
 
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(&pubkey[..]).unwrap();
@@ -155,21 +149,19 @@ pub fn process_request(
 	let tee_pubkey_size = 32;
 	let mut tee_pubkey = [0u8; 32];
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let mut status = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		get_ecc_signing_pubkey(eid,
-							   &mut retval,
+							   &mut status,
 							   tee_pubkey.as_mut_ptr(),
 							   tee_pubkey_size
 		)
 	};
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
-		}
-	}	
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
+	}
+
 	// Attention: this HAS to be sr25519, although its a ed25519 key!
 	let tee_public = sr25519::Public::from_raw(tee_pubkey);
 	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
@@ -199,18 +191,11 @@ pub fn process_request(
 					unchecked_extrinsic_size as u32
 		)
 	};
-	match result {
-		sgx_status_t::SGX_SUCCESS => debug!("[+] ECALL Enclave successful"),
-		_ => {
-			warn!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return
-		}
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
 	}
-	
-	if status != sgx_status_t::SGX_SUCCESS {
-		error!("[<] Error processing message in the enclave");
-		return
-	}
+
 	println!("[<] Message decoded and processed in the enclave");
 	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
 	let mut _xthex = hex::encode(ue.encode());

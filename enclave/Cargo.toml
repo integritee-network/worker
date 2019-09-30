@@ -5,7 +5,6 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 
 [workspace]
 members = [
-    "wasm",
 ]
 
 [lib]

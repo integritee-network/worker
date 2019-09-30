@@ -138,12 +138,9 @@ RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nod
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
-######## WASM settings ########
-Wasm_Name := bin/worker_enclave.compact.wasm
-
 ######## Targets ########
 .PHONY: all
-all: $(Wasm_Name) $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
+all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
 worker: $(Worker_Name)
 client: $(Client_Name)
 
@@ -195,12 +192,6 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
 	@echo "SIGN =>  $@"
 
-######## Wasm objects ########
-.PHONY: $(Wasm_Name)
-$(Wasm_Name):
-	@echo
-	@echo "Building the WASM"
-	@cd enclave/wasm && SGX_DEBUG=$(SGX_DEBUG) ./build.sh
 
 .PHONY: enclave
 enclave:

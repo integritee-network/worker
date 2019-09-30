@@ -224,10 +224,10 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	let tee_pubkey_size = 32;
 	let mut tee_pubkey = [0u8; 32];
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let mut status = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		get_ecc_signing_pubkey(enclave.geteid(),
-							   &mut retval,
+							   &mut status,
 							   tee_pubkey.as_mut_ptr(),
 							   tee_pubkey_size
 		)
@@ -253,9 +253,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	if funds < U256::from(10) {
 		println!("[+] bootstrap funding Enclave form Alice's funds");
 		let xt = transfer(api.clone(), GenericAddress::from(tee_pubkey), 1000000);
-		let mut _xthex = hex::encode(xt.encode());
-		_xthex.insert_str(0, "0x");
-		let xt_hash = api.send_extrinsic(_xthex).unwrap();
+		let xt_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
 		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
 		//verify funds have arrived
