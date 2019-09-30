@@ -114,7 +114,7 @@ fn main() {
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	info!("Alice free balance = {:?}", funds);
-    info!("Alice's Account Nonce is {}", api.get_nonce());
+    info!("Alice's Account Nonce is {}", api.get_nonce().unwrap());
 
 	// compose extrinsic with encrypted payload
 	println!("[>] Get the shielding key from W1 (={})", worker.pubkey.to_string());
