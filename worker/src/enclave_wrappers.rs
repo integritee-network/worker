@@ -55,6 +55,19 @@ pub fn get_signing_key_tee() {
 			return;
 		},
 	};
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
+	}
 
 	// request the key
 	println!();
@@ -101,6 +114,19 @@ pub fn get_public_key_tee()
 			return;
 		},
 	};
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
+	}
 
 	// request the key
 	println!();
