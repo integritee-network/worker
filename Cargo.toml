@@ -6,6 +6,7 @@ members = [
 	 "substratee-node-calls",
 	 "client",
 	 "stf",
+	 "application-crypto"
 ]
 
 [patch.'https://github.com/paritytech/substrate']
