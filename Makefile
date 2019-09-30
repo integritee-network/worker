@@ -171,7 +171,8 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 $(Client_Name): $(Client_SRC_Files)
 	@echo
 	@echo "Building the substraTEE-client"
-	@cp Cargo.lock.bip39-fix Cargo.lock
+	# remove next line when https://github.com/libp2p/rust-libp2p/issues/1259 is fixed
+	@cargo update -p protobuf --precise 2.8.1
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
