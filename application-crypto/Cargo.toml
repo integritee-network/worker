@@ -23,7 +23,7 @@ branch = "no_std_rstd"
 default-features = false
 
 [dev-dependencies]
-test-client = { package = "substrate-test-runtime-client", path = "../test-runtime/client" }
+#test-client = { package = "substrate-test-runtime-client", path = "../test-runtime/client" }
 sr-primitives = { git = 'https://github.com/paritytech/substrate', rev = '9b08e7ff938a45dbec7fcdb854063202e2b0cb48'}
 
 
