@@ -10,25 +10,20 @@ settings:
 # All Args must be defined in the 'args:' list where the name of the arg, is the
 # key to a Hash object
 args:
-    - node-port:
+    - node-ws-port:
         short: p
-        long: node-port
-        help: Set the websocket port to connect to substraTEE-node
+        long: node-ws-port
+        help: Set the websocket port to connect to substraTEE-node RPC
         takes_value: true
-    - node-server:
-        short: s
-        long: node-server
-        help: Set the websocket server address to connect to substraTEE-node
+    - node-addr:
+        short: a
+        long: node-addr
+        help: Set the websocket server IP address to connect to substraTEE-node
         takes_value: true
-    - message:
-        short: m
-        long: message
-        help: Set the message to be sent to the substraTEE-worker
-        takes_value: true
-    - wasm-path:
-        short: w
-        long: wasm-path
-        help: Path to the WASM binary that should be running in the enclave
+    - request:
+        short: r
+        long: request
+        help: Send custom request to the substraTEE-worker
         takes_value: true
 
 subcommands:

@@ -18,16 +18,16 @@ extern crate aes;
 extern crate ofb;
 extern crate sgx_types;
 
-use blake2_no_std::blake2b::blake2b;
-use crypto::blake2s::Blake2s;
+//use blake2_no_std::blake2b::blake2b;
+//use crypto::blake2s::Blake2s;
 use log::*;
-use my_node_runtime::Hash;
+use crate::Hash;
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use constants::{AES_KEY_FILE_AND_INIT_V, ED25519_SEALED_KEY_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{AES_KEY_FILE_AND_INIT_V, SEALED_SIGNER_SEED_FILE, RSA3072_SEALED_KEY_FILE};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
@@ -58,7 +58,7 @@ pub fn store_rsa_key_pair(pair: &[u8]) -> SgxResult<sgx_status_t> {
 }
 
 pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {
-	read_file(ED25519_SEALED_KEY_FILE)
+	read_file(SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
@@ -69,7 +69,7 @@ pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
 	};
 	rand.fill_bytes(&mut seed);
 
-	write_file(&seed, ED25519_SEALED_KEY_FILE)
+	write_file(&seed, SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn read_or_create_aes_key_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
@@ -180,7 +180,7 @@ pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
 	match File::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
 			Ok(len) => {
-				info!("[Enclave] Read {} bytes from counter file", len);
+				info!("[Enclave] Read {} bytes from state file", len);
 				Ok(state_vec)
 			}
 			Err(x) => {
@@ -214,7 +214,7 @@ pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> 
 	}
 }
 
-pub fn decode_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
+pub fn decrypt_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
 	let mut decrypted_buffer = Vec::new();
 	rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer).unwrap();
 	decrypted_buffer
@@ -226,6 +226,7 @@ pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	Hash::from(&mut g)
 }
 
+/*
 pub fn blake2s(plaintext: &[u8]) -> [u8; 32] {
 	let mut call_hash: [u8; 32] = Default::default();
 	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
@@ -244,7 +245,7 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	blake2_256_into(data, &mut r);
 	r
 }
-
+*/
 pub fn test_encrypted_state_io_works() {
 	let path = "test_state_file.bin";
 	let plaintext = b"The quick brown fox jumps over the lazy dog.";

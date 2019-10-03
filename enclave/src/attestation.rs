@@ -46,17 +46,21 @@ use core::default::Default;
 
 use runtime_primitives::generic::Era;
 use primitive_types::U256;
-use parity_codec::{Decode, Encode, Compact};
+use codec::{Decode, Encode, Compact};
 use utils::{hash_from_slice};
 use utils::get_ecc_seed;
-use my_node_runtime::{
-	UncheckedExtrinsic,
-	Call,
-	SubstraTEERegistryCall
-};
-use primitives::{ed25519};
-use crypto::ed25519::{keypair, signature};
-use utils::blake2_256;
+use substrate_api_client::{
+	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
+	crypto::AccountKey,
+	extrinsic};
+use primitives::{ed25519, Pair};
+//use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
+/*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
+    extrinsic,
+};*/
+
+//use crypto::ed25519::{keypair, signature};
+//use utils::blake2_256;
 
 use constants::{RA_SPID, RA_API_KEY};
 
@@ -576,8 +580,6 @@ pub unsafe extern "C" fn perform_ra(
 							unchecked_extrinsic: * mut u8,
 							unchecked_extrinsic_size: u32
 						) -> sgx_status_t {
-	// initialize the logging environment in the enclave
-	env_logger::init();
 
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
@@ -592,43 +594,35 @@ pub unsafe extern "C" fn perform_ra(
 	let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
 	let url_slice			= slice::from_raw_parts(url, url_size as usize);
 	let extrinsic_slice     = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let seed = match get_ecc_seed() {
+	let seedvec = match get_ecc_seed() {
 		Ok(seed) => seed,
 		Err(status) => return status,
 	};
-	let nonce = U256::decode(&mut nonce_slice).unwrap();
+	let mut seed = [0u8; 32];
+    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
+    seed.copy_from_slice(seedvec); 
+	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+	info!("Restored ECC pubkey: {:?}", signer.public());
+
+	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let era = Era::immortal();
 
-	let function = Call::SubstraTEERegistry(SubstraTEERegistryCall::register_enclave(cert_der.to_vec(), url_slice.to_vec()));
-	let index = nonce.low_u64();
+	//FIXME: define constants
+	let call = [7u8,0u8];
 
-	let raw_payload = (Compact(index), function, era, genesis_hash);
+	//FIXME: define constant at client
+	let spec_version = 4;
 
-	let (privkey, pubkey) = keypair(&seed);
+	let xt = compose_extrinsic_offline!(
+        signer,
+	    (call, cert_der.to_vec(), url_slice.to_vec()),
+	    nonce,
+	    genesis_hash,
+	    spec_version
+    );	
 
-	let sign = raw_payload.using_encoded(|payload| if payload.len() > 256 {
-		// include the blake2 hash of the payload
-		signature(&blake2_256(payload)[..], &privkey)
-	} else {
-		//println!("signing {}", HexDisplay::from(&payload));
-		signature(payload, &privkey)
-	});
-
-	// convert to valid signatures
-	let signerpub = ed25519::Public::from_raw(pubkey);
-	let signature = ed25519::Signature::from_raw(sign);
-
-	// build the extrinsic
-	let ex = UncheckedExtrinsic::new_signed(
-		index,
-		raw_payload.1,
-		signerpub.into(),
-		signature,
-		era,
-	);
-
-	let encoded = ex.encode();
+	let encoded = xt.encode();
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
 
 	// split the extrinsic_slice at the length of the encoded extrinsic

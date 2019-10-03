@@ -24,141 +24,23 @@ use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
 
-use primitives::{ed25519};
+use primitives::{ed25519, sr25519};
+use primitives::crypto::Ss58Codec;
 
-use substrate_api_client::{Api, hexstr_to_u256};
+use substrate_api_client::{Api, extrinsic::xt_primitives::GenericAddress,
+	utils::hexstr_to_u256};
 use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
-use parity_codec::{Decode, Encode};
+use codec::{Decode, Encode};
 use primitive_types::U256;
-
-use wasm::SgxWasmAction;
 
 use crypto::*;
 
-// function to get the account nonce of a user
-pub fn get_account_nonce(api: &Api, user: [u8; 32]) -> U256 {
-	info!("[>] Get account nonce");
+use runtime_primitives::{AnySignature, traits::Verify};
 
-	let accountid = ed25519::Public::from_raw(user);
-	let result_str = api.get_storage("System", "AccountNonce", Some(accountid.encode())).unwrap();
-	let nonce = hexstr_to_u256(result_str);
+type AccountId = <AnySignature as Verify>::Signer;
 
-	info!("[<] Account nonce of {:?} is {}\n", accountid, nonce);
-	nonce
-}
-
-// decrypt and process the payload (in the enclave)
-// then compose the extrinsic (in the enclave)
-// and send an extrinsic back to the substraTEE-node
-pub fn process_forwarded_payload(
-		eid: sgx_enclave_id_t,
-		ciphertext: Vec<u8>,
-		retval: &mut sgx_status_t,
-		node_url: &str) {
-
-	let mut api = Api::new(format!("ws://{}", node_url));
-	api.init();
-
-	let mut unchecked_extrinsic = UncheckedExtrinsic::new_unsigned(Call::SubstraTEERegistry(SubstraTEERegistryCall::confirm_call(vec![0; 32], vec![0; 46])));
-
-	// decrypt and process the payload. we will get an extrinsic back
-	let result = decrypt_and_process_payload(eid, ciphertext, &mut unchecked_extrinsic, retval, &api);
-
-	match result {
-		sgx_status_t::SGX_SUCCESS => {
-			let mut _xthex = hex::encode(unchecked_extrinsic.encode());
-			_xthex.insert_str(0, "0x");
-
-			// sending the extrinsic
-			println!();
-			println!("[>] Confirm processing (send the extrinsic)");
-			let tx_hash = api.send_extrinsic(_xthex).unwrap();
-			println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
-		},
-		_ => {
-			println!();
-			error!("Payload not processed due to errors.");
-		}
-	}
-}
-
-pub fn decrypt_and_process_payload(
-		eid: sgx_enclave_id_t,
-		mut ciphertext: Vec<u8>,
-		ue: &mut UncheckedExtrinsic,
-		retval: &mut sgx_status_t,
-		api: &Api) -> sgx_status_t {
-	println!("[>] Decrypt and process the payload");
-
-	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
-
-	// get the public signing key of the TEE
-	let mut key = [0; 32];
-	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
-	key.copy_from_slice(&ecc_key[..]);
-	info!("[+] Got ECC public key of TEE = {:?}", key);
-
-	// get enclaves's account nonce
-	let nonce = get_account_nonce(&api, key);
-	let nonce_bytes = U256::encode(&nonce);
-
-	// read wasm file to string
-	let module = include_bytes!("../../bin/worker_enclave.compact.wasm").to_vec();
-
-	// calculate the SHA256 of the WASM
-	let wasm_hash = rsgx_sha256_slice(&module).unwrap();
-	let wasm_hash_str = serde_json::to_string(&wasm_hash).unwrap();
-
-	// prepare the request
-	let req = SgxWasmAction::Call {
-					module : Some(module),
-					function  : "update_counter".to_string(),
-	};
-	debug!("Request for WASM = {:?}", req);
-	let req_str = serde_json::to_string(&req).unwrap();
-
-	// update the counter and compose the extrinsic
-	// the extrinsic size will be determined in the function call_counter_wasm
-	let unchecked_extrinsic_size = 500;
-	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
-
-	let result = unsafe {
-		call_counter_wasm(eid,
-					 retval,
-					 req_str.as_ptr() as * const u8,
-					 req_str.len(),
-					 ciphertext.as_mut_ptr(),
-					 ciphertext.len() as u32,
-					 genesis_hash.as_ptr(),
-					 genesis_hash.len() as u32,
-					 nonce_bytes.as_ptr(),
-					 nonce_bytes.len() as u32,
-					 wasm_hash_str.as_ptr(),
-					 wasm_hash_str.len() as u32,
-					 unchecked_extrinsic.as_mut_ptr(),
-					 unchecked_extrinsic_size as u32
-		)
-	};
-
-	match result {
-		sgx_status_t::SGX_SUCCESS => debug!("[+] ECALL Enclave successful"),
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-		}
-	}
-
-	match retval {
-		sgx_status_t::SGX_SUCCESS => {
-			println!("[<] Message decoded and processed in the enclave");
-			*ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
-			sgx_status_t::SGX_SUCCESS
-		},
-		_ => {
-			error!("[<] Error processing message in the enclave");
-			sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-	}
-}
+// FIXME: most of these functions use redundant code with is provided by substrate-api-client
+// but first resolve this: https://github.com/scs/substrate-api-client/issues/27
 
 pub fn get_signing_key_tee() {
 	println!();
@@ -173,6 +55,19 @@ pub fn get_signing_key_tee() {
 			return;
 		},
 	};
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
+	}
 
 	// request the key
 	println!();
@@ -180,21 +75,18 @@ pub fn get_signing_key_tee() {
 	let pubkey_size = 32;
 	let mut pubkey = [0u8; 32];
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let mut status = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		get_ecc_signing_pubkey(enclave.geteid(),
-							   &mut retval,
+							   &mut status,
 							   pubkey.as_mut_ptr(),
 							   pubkey_size
 		)
 	};
 
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
-		}
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
 	}
 
 	println!("[+] Signing key: {:?}", pubkey);
@@ -222,6 +114,19 @@ pub fn get_public_key_tee()
 			return;
 		},
 	};
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
+	}
 
 	// request the key
 	println!();
@@ -229,21 +134,18 @@ pub fn get_public_key_tee()
 	let pubkey_size = 8192;
 	let mut pubkey = vec![0u8; pubkey_size as usize];
 
-	let mut retval = sgx_status_t::SGX_SUCCESS;
+	let mut status = sgx_status_t::SGX_SUCCESS;
 	let result = unsafe {
 		get_rsa_encryption_pubkey(enclave.geteid(),
-								  &mut retval,
+								  &mut status,
 								  pubkey.as_mut_ptr(),
 								  pubkey_size
 		)
 	};
 
-	match result {
-		sgx_status_t::SGX_SUCCESS => {},
-		_ => {
-			error!("[-] ECALL Enclave Failed {}!", result.as_str());
-			return;
-		}
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
 	}
 
 	let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(&pubkey[..]).unwrap();
@@ -257,4 +159,75 @@ pub fn get_public_key_tee()
 		Err(x) => { error!("[-] Failed to write '{}'. {}", RSA_PUB_KEY, x); },
 		_      => { println!("[+] File '{}' written successfully", RSA_PUB_KEY); }
 	}
+}
+
+pub fn process_request(
+		eid: sgx_enclave_id_t,
+		request: Vec<u8>,
+		node_url: &str
+) {
+
+	// new api client (the other on is busy listening to events)
+	let mut _api = Api::new(format!("ws://{}", node_url));
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	// FIXME: refactor to function
+	println!("*** Ask the signing key from the TEE");
+	let tee_pubkey_size = 32;
+	let mut tee_pubkey = [0u8; 32];
+
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_ecc_signing_pubkey(eid,
+							   &mut status,
+							   tee_pubkey.as_mut_ptr(),
+							   tee_pubkey_size
+		)
+	};
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
+	}
+
+	// Attention: this HAS to be sr25519, although its a ed25519 key!
+	let tee_public = sr25519::Public::from_raw(tee_pubkey);
+	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
+	let tee_accountid = AccountId::from(tee_public);
+
+	let result_str = _api.get_storage("System", "AccountNonce", Some(tee_accountid.encode())).unwrap();
+
+	let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
+
+	let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
+	info!("Enclave nonce = {:?}", nonce);
+	let nonce_bytes = nonce.encode();
+
+	let unchecked_extrinsic_size = 500;
+	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+
+	let result = unsafe {
+		execute_stf(eid,
+					&mut status,
+					request.to_vec().as_mut_ptr(),
+					request.len() as u32,
+					genesis_hash.as_ptr(),
+					genesis_hash.len() as u32,
+					nonce_bytes.as_ptr(),
+					nonce_bytes.len() as u32,
+					unchecked_extrinsic.as_mut_ptr(),
+					unchecked_extrinsic_size as u32
+		)
+	};
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
+	}
+
+	println!("[<] Message decoded and processed in the enclave");
+	let ue = UncheckedExtrinsic::decode(&mut unchecked_extrinsic.as_slice()).unwrap();
+	let mut _xthex = hex::encode(ue.encode());
+	_xthex.insert_str(0, "0x");
+	println!("[>] Confirm processing (send the extrinsic)");
+	let tx_hash = _api.send_extrinsic(_xthex).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+
 }

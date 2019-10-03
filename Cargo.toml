@@ -5,8 +5,15 @@ members = [
 	 "worker/worker-api",
 	 "substratee-node-calls",
 	 "client",
+	 "stf",
+	 "application-crypto"
 ]
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", tag = "M4" }
-substrate-executor = { git = "https://github.com/scs/substraTEE-node", tag = "M4" }
+sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx", default-features=false }
+substrate-executor = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx", default-features=false }
+substrate-primitives = { git = "https://github.com/scs/substrate-api-client", branch = "no_std_rstd"}
+substrate-application-crypto = { path = "application-crypto"}
+
+[patch.crates-io]
+ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}

@@ -14,11 +14,15 @@
 	limitations under the License.
 
 */
+use alloc::prelude::v1::Vec;
+use crate::{TrustedCall, TrustedGetter, AccountId};
+use codec::{Compact, Decode, Encode};
 
-pub const RSA3072_SEALED_KEY_FILE: 	&str = "rsa3072_key_sealed.bin";
-pub const SEALED_SIGNER_SEED_FILE: 	&str = "ed25519_key_sealed.bin";
-pub const ENCRYPTED_STATE_FILE:		&str = "sealed_stf_state.bin";
-pub const AES_KEY_FILE_AND_INIT_V: 	&str = "aes_key_sealed.bin";
 
-pub static RA_SPID:       &str = "../bin/spid.txt";
-pub static RA_API_KEY:	  &str = "../bin/key.txt";
+pub fn get_test_balance_set_balance_call() -> Vec<u8> {
+    TrustedCall::balance_set_balance(AccountId::default(), 33,44).encode()
+}
+
+pub fn get_test_getter_free_balance() -> Vec<u8> {
+	TrustedGetter::free_balance(AccountId::default()).encode()
+}

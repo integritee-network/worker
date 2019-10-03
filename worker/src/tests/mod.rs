@@ -19,7 +19,6 @@ use clap::ArgMatches;
 use enclave_api::*;
 use init_enclave::init_enclave;
 use sgx_types::*;
-use wasm::sgx_enclave_wasm_init;
 
 use self::ecalls::*;
 use self::integration_tests::*;
@@ -31,7 +30,6 @@ pub mod integration_tests;
 pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 	println!("*** Starting Test enclave");
 	let enclave = init_enclave().unwrap();
-	sgx_enclave_wasm_init(enclave.geteid()).unwrap();
 
 	if matches.is_present("all") || matches.is_present("unit") {
 		println!("Running unit Tests");
@@ -74,8 +72,12 @@ fn run_enclave_unit_tests(eid: sgx_enclave_id_t) {
 
 
 pub fn run_ecalls(eid: sgx_enclave_id_t) {
-	get_counter_works(eid);
-	call_counter_wasm_works(eid);
+	println!("  testing execute_stf()");
+	execute_stf_works(eid);
+	println!("  testing get_state()");
+	get_state_works(eid);
+	
+
 	println!("[+] Ecall tests ended!");
 }
 

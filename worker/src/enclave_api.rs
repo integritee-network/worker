@@ -20,29 +20,33 @@ extern crate sgx_types;
 use sgx_types::*;
 
 extern {
-	pub fn call_counter_wasm(
+	pub fn init(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
-		req_bin : *const u8,
-		req_len: usize,
-		ciphertext: *mut u8,
-		ciphertext_size: u32,
+	) -> sgx_status_t;
+
+	pub fn execute_stf(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		request_encrypted: *mut u8,
+		request_encrypted_size: u32,
 		hash: *const u8,
 		hash_size: u32,
 		nonce: *const u8,
 		nonce_size: u32,
-		wasm_hash: *const u8,
-		wasm_hash_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;
 
-	pub fn get_counter(
+
+
+	pub fn get_state(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
-		account: *const u8,
-		account_size: u32,
-		counter_value: *mut u32
+		getter: *const u8,
+		getter_size: u32,
+		value: *mut u8,
+		value_size: u32		
 	) -> sgx_status_t;
 
 	pub fn get_rsa_encryption_pubkey(

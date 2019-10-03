@@ -138,12 +138,9 @@ RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nod
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
-######## WASM settings ########
-Wasm_Name := bin/worker_enclave.compact.wasm
-
 ######## Targets ########
 .PHONY: all
-all: $(Wasm_Name) $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
+all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
 worker: $(Worker_Name)
 client: $(Client_Name)
 
@@ -174,8 +171,8 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 $(Client_Name): $(Client_SRC_Files)
 	@echo
 	@echo "Building the substraTEE-client"
-	@cp Cargo.lock.bip39-fix Cargo.lock
-	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
+	# remove next line when https://github.com/libp2p/rust-libp2p/issues/1259 is fixed
+	@cd $(Client_SRC_Path) && cargo update -p protobuf --precise 2.8.1 && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 
@@ -195,12 +192,6 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
 	@echo "SIGN =>  $@"
 
-######## Wasm objects ########
-.PHONY: $(Wasm_Name)
-$(Wasm_Name):
-	@echo
-	@echo "Building the WASM"
-	@cd enclave/wasm && SGX_DEBUG=$(SGX_DEBUG) ./build.sh
 
 .PHONY: enclave
 enclave:

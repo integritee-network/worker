@@ -21,7 +21,7 @@ extern crate env_logger;
 extern crate hex_literal;
 extern crate log;
 extern crate my_node_runtime;
-extern crate parity_codec;
+extern crate codec;
 extern crate primitives;
 extern crate runtime_primitives;
 extern crate serde;
@@ -34,17 +34,25 @@ extern crate substrate_api_client;
 
 use blake2_rfc::blake2s::blake2s;
 use clap::App;
-use parity_codec::Encode;
+use codec::Encode;
 use primitive_types::U256;
-use primitives::Pair;
+use primitives::{Pair, Public, crypto::Ss58Codec};
 use sgx_types::*;
-use substrate_api_client::Api;
+use substrate_api_client::{Api, compose_extrinsic, extrinsic,
+	utils::{hexstr_to_vec, hexstr_to_u256},
+	crypto::{AccountKey, CryptoKind},
+	extrinsic::{balances::transfer, xt_primitives::GenericAddress},
+	};
 
-use substratee_client::*;
+use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, 
+	transfer_amount, fund_account, get_free_balance, pair_from_suri, call_trusted_stf, get_trusted_stf_state};
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
+use substratee_stf::{TrustedCall, TrustedGetter};
+use log::*;
 
-const WASM_FILE: &str = "worker_enclave.compact.wasm";
+use runtime_primitives::{AnySignature, traits::Verify};
+type AccountId = <AnySignature as Verify>::Signer;
 
 fn main() {
 	// message structure
@@ -60,11 +68,15 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let port = matches.value_of("node-port").unwrap_or("9944");
-	let server = matches.value_of("node-server").unwrap_or("127.0.0.1");
-	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port));
-	api.init();
-
+	let port = matches.value_of("node-ws-port").unwrap_or("9944");
+	let server = matches.value_of("node-addr").unwrap_or("127.0.0.1");
+	
+	info!("initializing ws api to node");
+	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
+	let alicekey = AccountKey::Sr(alice.clone());
+	info!("use Alice account as signer = {}", alice.public().to_ss58check());
+	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port))
+	   	.set_signer(alicekey.clone());
 
 	println!("*** Getting the amount of the registered workers");
 	let worker = match get_worker_amount(&api) {
@@ -83,8 +95,11 @@ fn main() {
 	println!("    W1's url: {:?}\n", worker.url);
 
 	let worker_api = WorkerApi::new(worker.url.clone());
-
+	
+	//FIXME: this is outdated
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
+		panic!("outdated implementation!");
+		/*
 		let user = pair_from_suri("//Alice", Some(""));
 		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
 		let sign = user.sign(user.public().as_slice());
@@ -92,56 +107,48 @@ fn main() {
 
 		println!("[<] Received MSG: {}", value);
 		return;
+		*/
 	}
 
-	let wasm_path = matches.value_of("wasm-path").unwrap_or(WASM_FILE);
-	let hash_hex = get_wasm_hash(wasm_path);
-	println!("[>] Calculating  WASM hash of {:?}", wasm_path);
-	println!("[<] WASM Hash: {:?}\n", hash_hex[0]);
-	let hash = hex::decode(hash_hex[0].clone()).unwrap();
-	let sha256: sgx_sha256_hash_t = slice_to_hash(&hash);
-
-	// get Alice's free balance
-	get_free_balance(&api, "//Alice");
-
-	// get Alice's account nonce
-	let mut nonce = get_account_nonce(&api, "//Alice");
-
-	// fund the account of Alice
-	fund_account(&api, "//Alice", 1_000_000, nonce, api.genesis_hash.unwrap());
-
-	// transfer from Alice to TEE
-	nonce = get_account_nonce(&api, "//Alice");
-	transfer_amount(&api, "//Alice", worker.pubkey.clone(), U256::from(1000), nonce, api.genesis_hash.unwrap());
+	info!("getting free_balance for Alice");
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let funds = hexstr_to_u256(result_str).unwrap();
+	info!("Alice free balance = {:?}", funds);
+    info!("Alice's Account Nonce is {}", api.get_nonce().unwrap());
 
 	// compose extrinsic with encrypted payload
-	println!("[>] Get the encryption key from W1 (={})", worker.pubkey.to_string());
-	let rsa_pubkey = worker_api.get_rsa_pubkey().unwrap();
-	println!("[<] Got worker shielding key {:?}\n", rsa_pubkey);
+	println!("[>] Get the shielding key from W1 (={})", worker.pubkey.to_string());
+	let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+	println!("[<] Got worker shielding key {:?}\n", shielding_pubkey);
 
-	let account = user_to_pubkey("//Alice").to_string();
-	println!("[+] //Alice's Pubkey: {}\n", account);
-	let amount = value_t!(matches.value_of("amount"), u32).unwrap_or(42);
-	let message = Message { account, amount, sha256 };
-	let plaintext = serde_json::to_vec(&message).unwrap();
-	let mut payload_encrypted: Vec<u8> = Vec::new();
-	rsa_pubkey.encrypt_buffer(&plaintext, &mut payload_encrypted).unwrap();
-	println!("[>] Sending message '{:?}' to substraTEE-worker.\n", message);
-	nonce = get_account_nonce(&api, "//Alice");
-	let xt = compose_extrinsic_substratee_call_worker("//Alice", payload_encrypted, nonce, api.genesis_hash.unwrap());
-	let mut _xthex = hex::encode(xt.encode());
-	_xthex.insert_str(0, "0x");
+	let alice_incognito_pair = pair_from_suri_sr("//AliceIncognito", Some(""));
+	println!("[+] Alice's Incognito Pubkey: {}\n", alice_incognito_pair.public());
 
-	// send and watch extrinsic until finalized
-	let tx_hash = api.send_extrinsic(_xthex).unwrap();
-	println!("[+] Transaction got finalized. Hash: {:?}", tx_hash);
-	println!("[<] Message sent successfully");
-	println!();
+	let bob_incognito_pair = pair_from_suri_sr("//BobIncognito", Some(""));
+	println!("[+] Bob's Incognito Pubkey: {}\n", bob_incognito_pair.public());
 
-	// subsribe to callConfirmed event
-	println!("[>] Subscribe to callConfirmed event");
-	let act_hash = subscribe_to_call_confirmed(api);
-	println!("[<] callConfirmed event received");
-	println!("[+] Expected Hash: {:?}", blake2s(32, &[0; 32], &plaintext).as_bytes());
-	println!("[+] Actual Hash:   {:?}", act_hash);
+	println!("[+] pre-funding Alice's Incognito account (ROOT call)");
+	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 1_000_000, 0);
+	call_trusted_stf(&api, call, shielding_pubkey);
+
+	println!("[+] query Alice's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+
+	println!("[+] query Bob's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+	
+	println!("*** incognito transfer from Alice to Bob");
+	let call = TrustedCall::balance_transfer(alice_incognito_pair.public(), bob_incognito_pair.public(), 100_000);
+	call_trusted_stf(&api, call, shielding_pubkey);
+
+	println!("[+] query Alice's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+
+	println!("[+] query Bob's Incognito account balance");	
+	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
+	get_trusted_stf_state(&worker_api, getter);
+
 }

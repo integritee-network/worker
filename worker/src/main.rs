@@ -22,7 +22,8 @@ extern crate log;
 extern crate my_node_runtime;
 extern crate nan_preserving_float;
 extern crate node_primitives;
-extern crate parity_codec;
+extern crate runtime_primitives;
+extern crate codec;
 extern crate primitive_types;
 extern crate primitives;
 extern crate rust_base58;
@@ -34,7 +35,9 @@ extern crate sgx_crypto_helper;
 extern crate sgx_types;
 extern crate sgx_ucrypto as crypto;
 extern crate sgx_urts;
+#[macro_use]
 extern crate substrate_api_client;
+extern crate substratee_stf;
 extern crate substratee_node_calls;
 extern crate substratee_worker_api;
 extern crate substrate_keyring;
@@ -51,27 +54,35 @@ extern crate sha2;
 
 use clap::App;
 use constants::*;
-use enclave_api::{perform_ra};
-use enclave_wrappers::*;
+use enclave_api::{init, perform_ra, get_ecc_signing_pubkey, execute_stf};
+use enclave_wrappers::{process_request, get_signing_key_tee, get_public_key_tee };
 use init_enclave::init_enclave;
 use log::*;
 use my_node_runtime::{Event, Hash};
 use my_node_runtime::UncheckedExtrinsic;
-use parity_codec::Decode;
-use parity_codec::Encode;
+use codec::Decode;
+use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use std::fs;
 use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
-use substrate_api_client::{Api, hexstr_to_vec};
+use substrate_api_client::{Api, utils::hexstr_to_vec, 
+	extrinsic::{balances::{transfer, set_balance}, xt_primitives::GenericAddress},
+	crypto::{AccountKey, CryptoKind},
+	utils::hexstr_to_u256};
+
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
-use wasm::sgx_enclave_wasm_init;
 use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
+use primitives::{Pair, crypto::Ss58Codec, ed25519, sr25519};
+
+use runtime_primitives::{AnySignature, traits::Verify};
+
+type AccountId = <AnySignature as Verify>::Signer;
 
 mod utils;
 mod constants;
@@ -80,7 +91,6 @@ mod init_enclave;
 mod ws_server;
 mod enclave_wrappers;
 mod enclave_tls_ra;
-mod wasm;
 mod attestation_ocalls;
 mod ipfs;
 mod tests;
@@ -160,18 +170,17 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		},
 	};
 
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
 
-	// ------------------------------------------------------------------------
-	// initialize the sgxwasm specific driver engine
-	let result = sgx_enclave_wasm_init(enclave.geteid());
-	match result {
-		Ok(_r) => {
-			println!("[+] Init Wasm in enclave successful\n");
-		},
-		Err(x) => {
-			error!("[-] Init Wasm in enclave failed {}!\n", x.as_str());
-			return;
-		},
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
 	}
 
 	// ------------------------------------------------------------------------
@@ -188,31 +197,86 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
-	let mut api = Api::new(format!("ws://{}", node_url));
-	api.init();
+	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
+	println!("   Alice's account = {}", alice.public().to_ss58check());
+	let alicekey = AccountKey::Sr(alice.clone());
+	// alice is validator
+	let mut api = Api::new(format!("ws://{}", node_url))
+	   	.set_signer(alicekey.clone());
+
+	info!("encoding Alice public 	= {:?}", alice.public().0.encode());
+	info!("encoding Alice AccountId = {:?}", AccountId::from(alice.public()).encode());
+
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let funds = hexstr_to_u256(result_str).unwrap();
+	println!("    Alice's free balance = {:?}", funds);
+    let result_str = api.get_storage("System", "AccountNonce", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let result = hexstr_to_u256(result_str).unwrap();
+    println!("    Alice's Account Nonce is {}", result.low_u32());
+
 
 	// ------------------------------------------------------------------------
 	// get required fields for the extrinsic
-	let genesis_hash = api.genesis_hash.unwrap().as_bytes().to_vec();
+	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
 	// get the public signing key of the TEE
-	let mut key = [0; 32];
-	let ecc_key = fs::read(ECC_PUB_KEY).expect("Unable to open ECC public key file");
-	key.copy_from_slice(&ecc_key[..]);
-	info!("[+] Got ECC public key of TEE = {:?}", key);
+	println!("*** Ask the signing key from the TEE");
+	let tee_pubkey_size = 32;
+	let mut tee_pubkey = [0u8; 32];
+
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		get_ecc_signing_pubkey(enclave.geteid(),
+							   &mut status,
+							   tee_pubkey.as_mut_ptr(),
+							   tee_pubkey_size
+		)
+	};
+	match result {
+		sgx_status_t::SGX_SUCCESS => {},
+		_ => {
+			error!("[-] ECALL Enclave Failed {}!", result.as_str());
+			return;
+		}
+	}	
+	// Attention: this HAS to be sr25519, although its a ed25519 key!
+	let tee_public = sr25519::Public::from_raw(tee_pubkey);
+	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
+	//info!("[+] Got ed25519 public raw of  TEE = {:?}", tee_pubkey);
+	let tee_accountid = AccountId::from(tee_public);
+
+	// check the enclave's account balance
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_accountid.encode())).unwrap();
+    let funds = hexstr_to_u256(result_str).unwrap();
+	info!("TEE's free balance = {:?}", funds);
+
+	if funds < U256::from(10) {
+		println!("[+] bootstrap funding Enclave form Alice's funds");
+		let xt = transfer(api.clone(), GenericAddress::from(tee_pubkey), 1000000);
+		let xt_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
+		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
+
+		//verify funds have arrived
+		let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_accountid.encode())).unwrap();
+		let funds = hexstr_to_u256(result_str).unwrap();
+		info!("TEE's NEW free balance = {:?}", funds);
+	}
+
+
+	// ------------------------------------------------------------------------
+	// perform a remote attestation and get an unchecked extrinsic back
 
 	// get enclaves's account nonce
-	let nonce = get_account_nonce(&api, key);
-	let nonce_bytes = U256::encode(&nonce);
+	let result_str = api.get_storage("System", "AccountNonce", Some(tee_accountid.encode())).unwrap();
+    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
 	info!("Enclave nonce = {:?}", nonce);
+	let nonce_bytes = nonce.encode();
 
 	// prepare the unchecked extrinsic
 	// the size is determined in the enclave
 	let unchecked_extrinsic_size = 5000;
 	let mut unchecked_extrinsic : Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
-	// ------------------------------------------------------------------------
-	// perform a remote attestation and get an unchecked extrinsic back
 	println!("*** Perform a remote attestation of the enclave");
 	let result = unsafe {
 		perform_ra(
@@ -258,7 +322,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		},
 		_ => {
 			println!("*** There are already workers registered, fetching keys from first one...");
-			let w1 = get_first_worker_that_is_not_equal_to_self(&api, ecc_key).unwrap();
+			let w1 = get_first_worker_that_is_not_equal_to_self(&api, tee_pubkey.to_vec()).unwrap();
 
 			let w_api = WorkerApi::new(w1.url.clone());
 			let ra_port = w_api.get_mu_ra_port().unwrap();
@@ -285,14 +349,15 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	println!("[+] Subscribed, waiting for event...");
 	println!();
+
 	loop {
 		let event_str = events_out.recv().unwrap();
 
-		let _unhex = hexstr_to_vec(event_str);
+		let _unhex = hexstr_to_vec(event_str).unwrap();
 		let mut _er_enc = _unhex.as_slice();
 		let _events = Vec::<system::EventRecord::<Event, Hash>>::decode(&mut _er_enc);
 		match _events {
-			Some(evts) => {
+			Ok(evts) => {
 				for evr in &evts {
 					debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
 					match &evr.event {
@@ -322,14 +387,12 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 									println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 									println!();
 								},
-								my_node_runtime::substratee_registry::RawEvent::Forwarded(sender, payload) => {
+								my_node_runtime::substratee_registry::RawEvent::Forwarded(sender, request) => {
 									println!("[+] Received Forwarded event");
 									debug!("    From:    {:?}", sender);
-									debug!("    Payload: {:?}", hex::encode(payload));
+									debug!("    Request: {:?}", hex::encode(request));
 									println!();
-
-									// process the payload and send extrinsic
-									process_forwarded_payload(enclave.geteid(), payload.to_vec(), &mut status, node_url);
+									process_request(enclave.geteid(), request.to_vec(), node_url);
 								},
 								my_node_runtime::substratee_registry::RawEvent::CallConfirmed(sender, payload) => {
 									println!("[+] Received CallConfirmed event");
@@ -349,7 +412,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 					}
 				}
 			}
-			None => error!("Couldn't decode event record list")
+			Err(_) => error!("Couldn't decode event record list")
 		}
 	}
 }
