@@ -75,7 +75,7 @@ features = ["dangerous_configuration"]
 [dependencies.sr-io]
 git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
-branch = "brenzi-private-tx"
+tag = "M5"
 default-features=false
 features = ["no_oom", "no_panic_handler", "sgx", "debug"]
 
@@ -86,7 +86,7 @@ rev = "v1.0.9"
 [dependencies.primitives]
 git = "https://github.com/scs/substrate-api-client"
 package = "substrate-primitives"
-branch = "no_std_rstd"
+tag = "api-M1.3"
 default-features = false
 
 [dependencies.runtime_primitives]
@@ -104,7 +104,7 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-branch = "no_std_rstd"
+tag = "api-M1.3"
 default-features = false
 
 [dependencies.substratee-stf]
@@ -114,8 +114,8 @@ features = ["sgx"]
 
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "brenzi-private-tx"}
-substrate-primitives = { git = "https://github.com/scs/substrate-api-client", branch = "no_std_rstd"}
+sr-io = { git = "https://github.com/scs/substraTEE-node", tag = "M5"}
+substrate-primitives = { git = "https://github.com/scs/substrate-api-client", tag = "api-M1.3"}
 substrate-application-crypto = { path = "../application-crypto"}
 srml-balances = { path = "./balances" }
 

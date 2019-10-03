@@ -19,7 +19,7 @@ in terminal 1 run a substraTEE-node
 ```
 git clone https://github.com/scs/substraTEE-node
 cd substraTEE-node
-git checkout brenzi-private-tx
+git checkout tags/M5
 cargo build --release
 ./target/release/substratee-node --dev --ws-port 9979 --rpc-port 9969
 ```
@@ -28,7 +28,7 @@ in terminal 2, run the worker
 ```
 git clone https://github.com/scs/substraTEE-worker
 cd substraTEE-worker
-git checkout brenzi-private-tx
+git checkout tags/M5
 make
 cd bin
 RUST_LOG=info ./substratee_worker -p 9979 worker
