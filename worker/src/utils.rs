@@ -46,18 +46,6 @@ fn file_missing(path: &str) -> u8 {
 	}
 }
 
-pub fn get_wasm_hash() -> Vec<String> {
-	let sha_cmd = Command::new("sha256sum")
-		.arg("worker_enclave.compact.wasm")
-		.output()
-		.expect("Failed to get sha256sum of worker_enclave.wasm");
-
-	std::str::from_utf8(&sha_cmd.stdout).unwrap()
-		.split("  ")
-		.map(|s| s.to_string())
-		.collect()
-}
-
 pub fn get_first_worker_that_is_not_equal_to_self(api: &substrate_api_client::Api, pubkey: Vec<u8>) -> Result<Enclave, &str> {
 	let w_amount = get_worker_amount(api);
 	let key = vec_to_ed25519_pub(pubkey);

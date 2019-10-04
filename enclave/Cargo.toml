@@ -33,12 +33,8 @@ primitive-types   = { version = "0.5.0", default-features = false, features = ["
 sgx-crypto-helper = { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk", package = "sgx_tcrypto_helper" }
 log               = { version = "0.4.7", git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger        = { version = "0.6.2", git = "https://github.com/mesalock-linux/env_logger-sgx" }
-
-# for wasm code
-wasmi           = { version = "0.5.0", git = "https://github.com/mesalock-linux/wasmi-sgx" }
 serde        	= { version = "1.0.97", git = "https://github.com/mesalock-linux/serde-sgx" }
 serde_json      = { version = "1.0.36", git = "https://github.com/mesalock-linux/serde-json-sgx"}
-sgxwasm         = { path = "sgxwasm" }
 lazy_static     = { version = "1.1.0", features = ["spin_no_std"] }
 
 # for attestation

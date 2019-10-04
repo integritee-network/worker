@@ -20,7 +20,6 @@ extern crate clap;
 extern crate env_logger;
 extern crate log;
 extern crate my_node_runtime;
-extern crate nan_preserving_float;
 extern crate node_primitives;
 extern crate runtime_primitives;
 extern crate codec;
@@ -42,7 +41,6 @@ extern crate substratee_node_calls;
 extern crate substratee_worker_api;
 extern crate substrate_keyring;
 extern crate system;
-extern crate wabt;
 extern crate ws;
 
 extern crate cid;
