@@ -117,5 +117,19 @@ substrate-application-crypto = { git = "https://github.com/scs//substrate", tag 
 sr-io = { git = "https://github.com/scs/substraTEE-node", rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f' }
 srml-balances = { path = "./balances" }
 
+# workaround for above workaround
+[patch.'https://github.com/scs//substrate']
+sr-io = { git = "https://github.com/scs/substraTEE-node", rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f' }
+#bricks all: primitives = { git = "https://github.com/scs/substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
+
+[patch.'https://github.com/scs/substrate-api-client']
+substrate-primitives = { git = "https://github.com/scs/substrate", tag = "substraTEE-M5.1" }
+
+[patch.'https://github.com/paritytech/substrate']
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
+substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1" }
+sr-io = { git = "https://github.com/scs/substraTEE-node", rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f' }
+srml-balances = { path = "./balances" }
+
 [patch.crates-io]
 ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}
