@@ -5,7 +5,7 @@ This is part of [substraTEE](https://github.com/scs/substraTEE)
 
 **Supports Rust nightly-2019-07-15**
  
-**Enclave is compiled with nightly-2019-08-01**
+**Enclave is compiled with nightly-2019-10-03**
 
 ## Private-tx demo
 To run a demo for private tokens do the following:
