@@ -71,8 +71,8 @@ features = ["dangerous_configuration"]
 [dependencies.sr-io]
 git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
-tag = "M5"
-default-features=false
+rev = 'd4a057c5841796994b46b6b35de922ec5777fec5'
+default-features = false
 features = ["no_oom", "no_panic_handler", "sgx", "debug"]
 
 [dependencies.sgx_serialize_derive]
@@ -81,26 +81,26 @@ rev = "v1.0.9"
 
 [dependencies.primitives]
 git = "https://github.com/scs/substrate-api-client"
+rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
 package = "substrate-primitives"
-tag = "api-M1.3"
 default-features = false
 
 [dependencies.runtime_primitives]
 git = 'https://github.com/paritytech/substrate'
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 default-features = false
 
 [dependencies.rstd]
 git = 'https://github.com/paritytech/substrate'
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-std"
 features = ["no_global_allocator"]
 default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "api-M1.3"
+rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
 default-features = false
 
 [dependencies.substratee-stf]
@@ -110,8 +110,8 @@ features = ["sgx"]
 
 
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", tag = "M5"}
-substrate-primitives = { git = "https://github.com/scs/substrate-api-client", tag = "api-M1.3"}
+sr-io = { git = "https://github.com/scs/substraTEE-node", rev = 'd4a057c5841796994b46b6b35de922ec5777fec5' }
+substrate-primitives = { git = "https://github.com/scs/substrate-api-client", rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'}
 substrate-application-crypto = { path = "../application-crypto"}
 srml-balances = { path = "./balances" }
 

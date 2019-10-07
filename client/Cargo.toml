@@ -28,13 +28,13 @@ sgx_crypto_helper   = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "M5"
+rev = "d4a057c5841796994b46b6b35de922ec5777fec5"
 package = "substratee-node-runtime"
 features = ["no_global_allocator"]
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "api-M1.3"
+rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
 
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
@@ -44,31 +44,31 @@ path = "../worker/worker-api"
 
 [dependencies.system]
 git = "https://github.com/paritytech/substrate"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "srml-system"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "substrate-primitives"
 
 [dependencies.node-primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.substrate-keyring]
 git = "https://github.com/paritytech/substrate"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.runtime_primitives]
 git = "https://github.com/paritytech/substrate"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 default-features = false
 
 [dependencies.indices]
 git = 'https://github.com/paritytech/substrate'
-rev = '9b08e7ff938a45dbec7fcdb854063202e2b0cb48'
+rev = 'f17d023bbe179f15678ac9989f471c9b18917e17'
 package = "srml-indices"
 
 [dependencies.substratee-stf]

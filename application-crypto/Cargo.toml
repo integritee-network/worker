@@ -11,7 +11,7 @@ serde = { version = "1.0.101", optional = true, features = ["derive"] }
 
 [dependencies.runtime-io]
 git = 'https://github.com/paritytech/substrate'
-rev='f17d023bbe179f15678ac9989f471c9b18917e17'
+rev = 'f17d023bbe179f15678ac9989f471c9b18917e17'
 package = "sr-io"
 default-features = false
 
@@ -22,12 +22,10 @@ package = "sr-std"
 default-features = false
 
 [dependencies.primitives]
-#path = '../../substrate-api-client/primitives'
-#package = 'substrate-primitives'
-default-features = false
-git = "https://github.com/scs/substrate-api-client"
+git = 'https://github.com/paritytech/substrate'
+rev = 'f17d023bbe179f15678ac9989f471c9b18917e17'
 package = "substrate-primitives"
-branch = "cl-update-substrate-f17d023bbe179f15678ac9989f471c9b18917e17"
+default-features = false
 
 [dev-dependencies]
 #test-client = { package = "substrate-test-runtime-client", path = "../test-runtime/client" }

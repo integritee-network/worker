@@ -15,14 +15,14 @@ sgx_log       = { package = "log", version = "0.4.7", git = "https://github.com/
 
 [dependencies.rstd]
 git = 'https://github.com/paritytech/substrate'
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-std"
 features = ["no_global_allocator"]
 default-features = false
 
 [dependencies.sr-primitives]
 git = 'https://github.com/paritytech/substrate'
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 default-features = false
 
@@ -30,13 +30,13 @@ default-features = false
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-support"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.system]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-system"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dev-dependencies]
 #runtime-io ={ package = "sr-io", path = "../../core/sr-io", default-features = false }
