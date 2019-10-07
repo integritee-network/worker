@@ -13,7 +13,7 @@ sgx_crypto_helper = { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-s
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 
 [dependencies.primitives]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "substrate-primitives"
 
