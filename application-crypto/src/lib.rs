@@ -49,16 +49,13 @@ pub use traits::*;
 /// // of value `b"fuba"`.
 /// app_crypto!(ed25519, KeyTypeId(*b"_uba"));
 /// ```
-
-
 #[macro_export]
 macro_rules! app_crypto {
-	
+
 	($module:ident, $key_type:expr) => {
 		$crate::app_crypto!($module::Pair, $module::Public, $module::Signature, $key_type);
 	};
 	($pair:ty, $public:ty, $sig:ty, $key_type:expr) => {
-		
 		$crate::app_crypto!($public, $sig, $key_type);
 
 		$crate::wrap!{
@@ -215,6 +212,7 @@ macro_rules! app_crypto {
 		}
 
 		impl $crate::RuntimeAppPublic for Public where $public: $crate::RuntimePublic<Signature=$sig> {
+			const ID: $crate::KeyTypeId = $key_type;
 			type Signature = Signature;
 
 			fn all() -> $crate::Vec<Self> {

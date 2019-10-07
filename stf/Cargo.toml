@@ -32,12 +32,11 @@ features = ["derive"]
 [dependencies.primitives]
 git = "https://github.com/scs/substrate-api-client"
 package = "substrate-primitives"
-tag = "api-M1.3"
 default-features = false
 
 [dependencies.runtime_primitives]
 git = 'https://github.com/paritytech/substrate'
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 default-features = false
 
@@ -45,42 +44,42 @@ default-features = false
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-balances"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.timestamp]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-timestamp"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.system]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-system"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.srml-support]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-support"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.indices]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "srml-indices"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.version]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "sr-version"
-rev = "9b08e7ff938a45dbec7fcdb854063202e2b0cb48"
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.sr-io]
 git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
-tag = "M5"
+rev = 'd4a057c5841796994b46b6b35de922ec5777fec5'
 default-features=false
 features = ["no_oom", "no_panic_handler", "debug"]
 

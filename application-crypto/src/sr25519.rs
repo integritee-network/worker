@@ -22,7 +22,7 @@ pub use primitives::sr25519::*;
 
 mod app {
 	use crate::Vec;
-	use crate::key_types::SR25519;
+	use primitives::testing::SR25519;
 	crate::app_crypto!(super, SR25519);
 }
 
@@ -42,7 +42,7 @@ impl RuntimePublic for Public {
 	}
 
 	fn sign<M: AsRef<[u8]>>(&self, key_type: KeyTypeId, msg: &M) -> Option<Self::Signature> {
-		runtime_io::sr25519_sign(key_type, self, msg)
+		runtime_io::sr25519_sign(key_type, self, msg.as_ref())
 	}
 
 	fn verify<M: AsRef<[u8]>>(&self, msg: &M, signature: &Self::Signature) -> bool {
@@ -53,7 +53,14 @@ impl RuntimePublic for Public {
 #[cfg(test)]
 mod tests {
 	use sr_primitives::{generic::BlockId, traits::ProvideRuntimeApi};
-	use primitives::{testing::KeyStore, crypto::Pair, traits::BareCryptoStore as _};
+	use primitives::{
+				testing::{
+						KeyStore,
+						SR25519,
+				},
+				crypto::Pair,
+				traits::BareCryptoStore as _,
+		};
 	use test_client::{
 		TestClientBuilder, DefaultTestClientBuilderExt, TestClientBuilderExt,
 		runtime::{TestAPI, app_crypto::sr25519::{AppPair, AppPublic}},
@@ -67,7 +74,7 @@ mod tests {
 			.test_sr25519_crypto(&BlockId::Number(0))
 			.expect("Tests `sr25519` crypto.");
 
-		let key_pair = keystore.read().sr25519_key_pair(crate::key_types::SR25519, public.as_ref())
+		let key_pair = keystore.read().sr25519_key_pair(SR25519, public.as_ref())
 			.expect("There should be at a `sr25519` key in the keystore for the given public key.");
 
 		assert!(AppPair::verify(&signature, "sr25519", &AppPublic::from(key_pair.public())));
