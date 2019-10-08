@@ -6,13 +6,20 @@ members = [
 	 "substratee-node-calls",
 	 "client",
 	 "stf",
-	 "application-crypto"
 ]
 
+# cargo bug https://github.com/rust-lang/cargo/issues/5478
+# forces us to add extra characters to github url, like introducing double slashes
+[patch.'https://github.com/scs/substrate']
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
+substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1" }
+
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", rev = 'd4a057c5841796994b46b6b35de922ec5777fec5' }
-primitives = { git = "https://github.com/scs/substrate-api-client", package = 'substrate-primitives', rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441' }
-substrate-application-crypto = { path = "application-crypto"}
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
+substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1" }
+
+[patch.'https://github.com/scs/substrate-api-client']
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
 
 [patch.crates-io]
 ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx" }

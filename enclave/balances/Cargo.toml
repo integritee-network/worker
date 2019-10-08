@@ -14,27 +14,27 @@ sgx_types     = { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk"}
 sgx_log       = { package = "log", version = "0.4.7", git = "https://github.com/mesalock-linux/log-sgx"}
 
 [dependencies.rstd]
-git = 'https://github.com/paritytech/substrate'
+git = 'https://github.com/scs/substrate'
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-std"
 features = ["no_global_allocator"]
 default-features = false
 
 [dependencies.sr-primitives]
-git = 'https://github.com/paritytech/substrate'
+git = 'https://github.com/scs/substrate'
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 default-features = false
 
 [dependencies.support]
 default-features = false
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 package = "srml-support"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.system]
 default-features = false
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 package = "srml-system"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 

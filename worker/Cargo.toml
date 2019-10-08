@@ -47,35 +47,36 @@ path = "worker-api"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
+rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
 package = "substratee-node-runtime"
 default-features = false
 features = ["no_global_allocator"]
 
 [dependencies.runtime_primitives]
-git = 'https://github.com/paritytech/substrate'
+git = 'https://github.com/scs/substrate'
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 
 [dependencies.balances]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "srml-balances"
 
 [dependencies.node-primitives]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.primitives]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "substrate-primitives"
 
 [dependencies.substrate-keyring]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 
 [dependencies.system]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "srml-system"
 

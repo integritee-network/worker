@@ -71,7 +71,7 @@ features = ["dangerous_configuration"]
 [dependencies.sr-io]
 git = "https://github.com/scs/substraTEE-node"
 package = 'sr-io'
-rev = 'd4a057c5841796994b46b6b35de922ec5777fec5'
+rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f'
 default-features = false
 features = ["no_oom", "no_panic_handler", "sgx", "debug"]
 
@@ -80,19 +80,19 @@ git = "https://github.com/baidu/rust-sgx-sdk"
 rev = "v1.0.9"
 
 [dependencies.primitives]
-git = "https://github.com/scs/substrate-api-client"
-rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
+git = 'https://github.com/scs/substrate'
+rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "substrate-primitives"
 default-features = false
 
 [dependencies.runtime_primitives]
-git = 'https://github.com/paritytech/substrate'
+git = 'https://github.com/scs/substrate'
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-primitives"
 default-features = false
 
 [dependencies.rstd]
-git = 'https://github.com/paritytech/substrate'
+git = 'https://github.com/scs/substrate'
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-std"
 features = ["no_global_allocator"]
@@ -109,11 +109,28 @@ default-features = false
 features = ["sgx"]
 
 
+# cargo bug https://github.com/rust-lang/cargo/issues/5478
+# forces us to add extra characters to github url, like introducing double slashes
+[patch.'https://github.com/scs/substrate']
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" , default-features = false }
+substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1", default-features = false }
+sr-io = { git = "https://github.com/scs/substraTEE-node", package = 'sr-io', rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f', default-features = false }
+sr-std = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1", default-features = false }
+
+
+[patch.'https://github.com/scs//substrate']
+sr-io = { git = "https://github.com/scs/substraTEE-node", package = 'sr-io', rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f', default-features = false }
+
 [patch.'https://github.com/paritytech/substrate']
-sr-io = { git = "https://github.com/scs/substraTEE-node", rev = 'd4a057c5841796994b46b6b35de922ec5777fec5' }
-substrate-primitives = { git = "https://github.com/scs/substrate-api-client", rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'}
-substrate-application-crypto = { path = "../application-crypto"}
-srml-balances = { path = "./balances" }
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" , default-features = false }
+substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1" , default-features = false }
+sr-io = { git = "https://github.com/scs/substraTEE-node", package = 'sr-io', rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f' , default-features = false }
+sr-std = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1", default-features = false }
+
+[patch.'https://github.com/scs/substrate-api-client']
+primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" , default-features = false }
+sr-io = { git = "https://github.com/scs/substraTEE-node", package = 'sr-io', rev = 'acd97f49be1f691c35f567dd79f7391ce9554a9f', default-features = false }
+sr-std = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1", default-features = false }
 
 [patch.crates-io]
 ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}

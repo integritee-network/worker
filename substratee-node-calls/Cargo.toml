@@ -15,10 +15,10 @@ git = "https://github.com/scs/substrate-api-client"
 rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
 
 [dependencies.primitives]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "substrate-primitives"
 
 [dependencies.srml-support]
-git = "https://github.com/paritytech/substrate"
+git = "https://github.com/scs/substrate"
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
