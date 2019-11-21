@@ -67,13 +67,12 @@ extern crate substratee_stf;
 
 use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
 use substrate_api_client::{
-	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
-	crypto::AccountKey,
+	extrinsic::xt_primitives::{UncheckedExtrinsicV4, GenericAddress, GenericExtra, SignedPayload},
 	extrinsic};
 
 use codec::{Compact, Decode, Encode};
 use primitive_types::U256;
-use primitives::{ed25519, Pair, hashing::{blake2_256}};
+use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};
 use runtime_primitives::generic::Era;
 use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -127,7 +126,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
 	//FIXME remove this leak!
 	info!("[Enclave initialized] Ed25519 seed : 0x{}", hex::encode_hex(&seedvec));
-    seed.copy_from_slice(seedvec); 
+    seed.copy_from_slice(seedvec);
 	let signer_prim = ed25519::Pair::from_seed(&seed);
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer_prim.public().0);
 
@@ -196,7 +195,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
+    seed.copy_from_slice(seedvec);
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
 
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
@@ -277,7 +276,7 @@ pub unsafe extern "C" fn execute_stf(
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
+    seed.copy_from_slice(seedvec);
 	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
@@ -298,7 +297,7 @@ pub unsafe extern "C" fn execute_stf(
 	    nonce,
 	    genesis_hash,
 	    spec_version
-    );	
+    );
 
 	let encoded = xt.encode();
 
@@ -314,12 +313,12 @@ pub unsafe extern "C" fn execute_stf(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_state(
-	getter: *const u8, 
-	getter_size: u32, 
+	getter: *const u8,
+	getter_size: u32,
 	value: *mut u8,
 	value_size: u32
 	) -> sgx_status_t {
-	
+
 	let mut getter_slice = slice::from_raw_parts(getter, getter_size as usize);
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 
