@@ -39,7 +39,7 @@ extern crate substrate_api_client;
 extern crate substratee_stf;
 extern crate substratee_node_calls;
 extern crate substratee_worker_api;
-extern crate substrate_keyring;
+extern crate keyring;
 extern crate system;
 extern crate ws;
 
@@ -51,9 +51,8 @@ extern crate multihash;
 extern crate sha2;
 
 use clap::App;
-use constants::*;
-use enclave_api::{init, perform_ra, get_ecc_signing_pubkey, execute_stf};
-use enclave_wrappers::{process_request, get_signing_key_tee, get_public_key_tee };
+use enclave_api::{init, perform_ra, get_ecc_signing_pubkey};
+use enclave_wrappers::{process_request, get_signing_key_tee, get_public_key_tee};
 use init_enclave::init_enclave;
 use log::*;
 use my_node_runtime::{Event, Hash};
@@ -62,13 +61,11 @@ use codec::Decode;
 use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
-use std::fs;
 use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
-use substrate_api_client::{Api, utils::hexstr_to_vec, 
-	extrinsic::{balances::{transfer, set_balance}, xt_primitives::GenericAddress},
-	crypto::{AccountKey, CryptoKind},
+use substrate_api_client::{Api, utils::hexstr_to_vec,
+	extrinsic::{xt_primitives::GenericAddress},
 	utils::hexstr_to_u256};
 
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
@@ -76,11 +73,8 @@ use ws_server::start_ws_server;
 use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
-use primitives::{Pair, crypto::Ss58Codec, ed25519, sr25519};
-
-use runtime_primitives::{AnySignature, traits::Verify};
-
-type AccountId = <AnySignature as Verify>::Signer;
+use primitives::{Pair, crypto::Ss58Codec, crypto::AccountId32, sr25519};
+use keyring::AccountKeyring;
 
 mod utils;
 mod constants;
@@ -195,20 +189,20 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
-	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
+	let alice = AccountKeyring::Alice.pair();
 	println!("   Alice's account = {}", alice.public().to_ss58check());
-	let alicekey = AccountKey::Sr(alice.clone());
 	// alice is validator
-	let mut api = Api::new(format!("ws://{}", node_url))
-	   	.set_signer(alicekey.clone());
+	let api = Api::new(format!("ws://{}", node_url))
+	   	.set_signer(alice.clone());
 
-	info!("encoding Alice public 	= {:?}", alice.public().0.encode());
-	info!("encoding Alice AccountId = {:?}", AccountId::from(alice.public()).encode());
+	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
+	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
+	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(alice_acc.encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	println!("    Alice's free balance = {:?}", funds);
-    let result_str = api.get_storage("System", "AccountNonce", Some(AccountId::from(alice.public()).encode())).unwrap();
+    let result_str = api.get_storage("System", "AccountNonce", Some(alice_acc.encode())).unwrap();
     let result = hexstr_to_u256(result_str).unwrap();
     println!("    Alice's Account Nonce is {}", result.low_u32());
 
@@ -236,26 +230,26 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 			error!("[-] ECALL Enclave Failed {}!", result.as_str());
 			return;
 		}
-	}	
+	}
 	// Attention: this HAS to be sr25519, although its a ed25519 key!
 	let tee_public = sr25519::Public::from_raw(tee_pubkey);
 	info!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	//info!("[+] Got ed25519 public raw of  TEE = {:?}", tee_pubkey);
-	let tee_accountid = AccountId::from(tee_public);
+	let tee_account_id = AccountId32::from(*tee_public.as_array_ref());
 
 	// check the enclave's account balance
-	let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_accountid.encode())).unwrap();
+	let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_account_id.encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();
 	info!("TEE's free balance = {:?}", funds);
 
 	if funds < U256::from(10) {
 		println!("[+] bootstrap funding Enclave form Alice's funds");
-		let xt = transfer(api.clone(), GenericAddress::from(tee_pubkey), 1000000);
+		let xt = api.balance_transfer(GenericAddress::from(tee_account_id.clone()), 1000000);
 		let xt_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
 		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
 		//verify funds have arrived
-		let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_accountid.encode())).unwrap();
+		let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_account_id.encode())).unwrap();
 		let funds = hexstr_to_u256(result_str).unwrap();
 		info!("TEE's NEW free balance = {:?}", funds);
 	}
@@ -265,8 +259,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	// perform a remote attestation and get an unchecked extrinsic back
 
 	// get enclaves's account nonce
-	let result_str = api.get_storage("System", "AccountNonce", Some(tee_accountid.encode())).unwrap();
-    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
+	let result_str = api.get_storage("System", "AccountNonce", Some(tee_account_id.encode())).unwrap();
+    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
 	info!("Enclave nonce = {:?}", nonce);
 	let nonce_bytes = nonce.encode();
 

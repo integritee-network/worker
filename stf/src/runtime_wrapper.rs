@@ -40,7 +40,7 @@ pub type BlockNumber = u32;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
-use srml_support::traits::Currency;
+use support::traits::Currency;
 use std::vec::Vec;
 
 /*
@@ -49,7 +49,7 @@ pub trait Trait: system::Trait {
     //type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 */
-    
+
 pub type System = system::Module<Runtime>;
 pub type Timestamp = timestamp::Module<Runtime>;
 pub type Indices = indices::Module<Runtime>;

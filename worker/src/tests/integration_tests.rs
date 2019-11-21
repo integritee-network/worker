@@ -18,19 +18,18 @@
 use constants::*;
 use enclave_api::*;
 use enclave_wrappers::*;
-use log::*;
 use codec::Encode;
-use primitive_types::U256;
 use sgx_types::*;
 use std::fs;
 use substrate_api_client::{Api, extrinsic::xt_primitives::GenericAddress,
 	utils::hexstr_to_u256};
 use tests::commons::*;
+use primitives::{crypto::AccountId32, ed25519};
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 	// start the substrate-api-client to communicate with the node
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
-	
+	let api = Api::<ed25519::Pair>::new(format!("ws://127.0.0.1:{}", port));
+
 	let w_url = "ws://127.0.0.1:2001";
 	let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
@@ -41,7 +40,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 	debug!("[+] Got ECC public key of TEE = {:?}", key);
 
 	// get enclaves's account nonce
-	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(key).encode())).unwrap();
+	let result_str = api.get_storage("System", "AccountNonce", Some(GenericAddress::from(AccountId32::from(key)).encode())).unwrap();
     let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
     debug!("  TEE nonce is  {}", nonce);
 	let nonce_bytes = nonce.encode();

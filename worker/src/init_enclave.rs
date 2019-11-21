@@ -58,7 +58,7 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
             false
         }
     };
-    let token_file = home_dir.join(ENCLAVE_TOKEN);;
+    let token_file = home_dir.join(ENCLAVE_TOKEN);
     if use_token {
         match File::open(&token_file) {
             Err(_) => {

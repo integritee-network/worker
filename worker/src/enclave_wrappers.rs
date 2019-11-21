@@ -24,16 +24,12 @@ use constants::*;
 use enclave_api::*;
 use init_enclave::init_enclave;
 
-use primitives::{ed25519, sr25519};
+use primitives::sr25519;
 use primitives::crypto::Ss58Codec;
 
-use substrate_api_client::{Api, extrinsic::xt_primitives::GenericAddress,
-	utils::hexstr_to_u256};
-use my_node_runtime::{UncheckedExtrinsic, Call, SubstraTEERegistryCall};
+use substrate_api_client::{Api,	utils::hexstr_to_u256};
+use my_node_runtime::UncheckedExtrinsic;
 use codec::{Decode, Encode};
-use primitive_types::U256;
-
-use crypto::*;
 
 use runtime_primitives::{AnySignature, traits::Verify};
 
@@ -168,8 +164,7 @@ pub fn process_request(
 ) {
 
 	// new api client (the other on is busy listening to events)
-	let mut _api = Api::new(format!("ws://{}", node_url));
-	let mut status = sgx_status_t::SGX_SUCCESS;
+	let mut _api = Api::<sr25519::Pair>::new(format!("ws://{}", node_url));
 	// FIXME: refactor to function
 	println!("*** Ask the signing key from the TEE");
 	let tee_pubkey_size = 32;
@@ -197,7 +192,7 @@ pub fn process_request(
 
 	let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
 
-	let nonce = hexstr_to_u256(result_str).unwrap().low_u32();	
+	let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
 	info!("Enclave nonce = {:?}", nonce);
 	let nonce_bytes = nonce.encode();
 

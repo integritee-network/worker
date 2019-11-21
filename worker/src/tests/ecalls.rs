@@ -15,9 +15,8 @@
 
 */
 
-use crypto::rsgx_sha256_slice;
+//use crypto::rsgx_sha256_slice;
 use enclave_api::*;
-use log::*;
 use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
@@ -35,8 +34,6 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 	let mut value: Vec<u8> = vec![0u8; value_size as usize];
 
 	let getter = substratee_stf::tests::get_test_getter_free_balance();
-
-	let result = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
 	let result = unsafe {
 		get_state(eid,

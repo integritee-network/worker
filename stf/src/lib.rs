@@ -25,7 +25,7 @@
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate balances;
-extern crate srml_support;
+extern crate support;
 extern crate version;
 extern crate sr_io;
 extern crate alloc;
@@ -93,9 +93,9 @@ pub struct Stf {
 impl Stf {
     pub fn init_state() -> State {
         debug!("initializing stf state");
-        let mut ext = State::new();	
+        let mut ext = State::new();
         sr_io::with_externalities(&mut ext, || {
-            // write Genesis 
+            // write Genesis
             info!("Prepare some Genesis values");
             sr_io::set_storage(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
             sr_io::set_storage(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
@@ -162,16 +162,16 @@ pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec
 pub fn init_runtime() {
 	info!("[??] asking runtime out");
 
-	let mut ext = SgxExternalities::new();	
+	let mut ext = SgxExternalities::new();
 
 	let tina = AccountId::default();
 	let origin_tina = runtime_wrapper::Origin::signed(tina.clone());
 	//let origin = runtime_wrapper::Origin::ROOT;
-	
+
 	let address = indices::Address::<Runtime>::default();
 
 	sr_io::with_externalities(&mut ext, || {
-		// write Genesis 
+		// write Genesis
 		info!("Prepare some Genesis values");
 		sr_io::set_storage(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
 		sr_io::set_storage(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
