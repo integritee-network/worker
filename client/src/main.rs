@@ -32,20 +32,15 @@ extern crate sgx_crypto_helper;
 extern crate sgx_types;
 extern crate substrate_api_client;
 
-use blake2_rfc::blake2s::blake2s;
 use clap::App;
 use codec::Encode;
-use primitive_types::U256;
-use primitives::{Pair, Public, crypto::Ss58Codec};
+use primitives::{Pair, crypto::Ss58Codec};
 use sgx_types::*;
-use substrate_api_client::{Api, compose_extrinsic, extrinsic,
-	utils::{hexstr_to_vec, hexstr_to_u256},
-	crypto::{AccountKey, CryptoKind},
-	extrinsic::{balances::transfer, xt_primitives::GenericAddress},
-	};
+use substrate_api_client::{Api,	utils::hexstr_to_u256};
 
-use substratee_client::{get_account_nonce, subscribe_to_call_confirmed, pair_from_suri_sr, 
-	transfer_amount, fund_account, get_free_balance, pair_from_suri, call_trusted_stf, get_trusted_stf_state};
+use keyring::AccountKeyring;
+
+use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use substratee_stf::{TrustedCall, TrustedGetter};
@@ -70,13 +65,12 @@ fn main() {
 
 	let port = matches.value_of("node-ws-port").unwrap_or("9944");
 	let server = matches.value_of("node-addr").unwrap_or("127.0.0.1");
-	
+
 	info!("initializing ws api to node");
-	let alice = primitives::sr25519::Pair::from_string("//Alice", None).unwrap();
-	let alicekey = AccountKey::Sr(alice.clone());
+	let alice = AccountKeyring::Alice.pair();
 	info!("use Alice account as signer = {}", alice.public().to_ss58check());
-	let mut api: substrate_api_client::Api = Api::new(format!("ws://{}:{}", server, port))
-	   	.set_signer(alicekey.clone());
+	let api = Api::new(format!("ws://{}:{}", server, port))
+	   	.set_signer(alice.clone());
 
 	println!("*** Getting the amount of the registered workers");
 	let worker = match get_worker_amount(&api) {
@@ -95,7 +89,7 @@ fn main() {
 	println!("    W1's url: {:?}\n", worker.url);
 
 	let worker_api = WorkerApi::new(worker.url.clone());
-	
+
 	//FIXME: this is outdated
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
 		panic!("outdated implementation!");
@@ -131,23 +125,23 @@ fn main() {
 	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 1_000_000, 0);
 	call_trusted_stf(&api, call, shielding_pubkey);
 
-	println!("[+] query Alice's Incognito account balance");	
+	println!("[+] query Alice's Incognito account balance");
 	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
 	get_trusted_stf_state(&worker_api, getter);
 
-	println!("[+] query Bob's Incognito account balance");	
+	println!("[+] query Bob's Incognito account balance");
 	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
 	get_trusted_stf_state(&worker_api, getter);
-	
+
 	println!("*** incognito transfer from Alice to Bob");
 	let call = TrustedCall::balance_transfer(alice_incognito_pair.public(), bob_incognito_pair.public(), 100_000);
 	call_trusted_stf(&api, call, shielding_pubkey);
 
-	println!("[+] query Alice's Incognito account balance");	
+	println!("[+] query Alice's Incognito account balance");
 	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
 	get_trusted_stf_state(&worker_api, getter);
 
-	println!("[+] query Bob's Incognito account balance");	
+	println!("[+] query Bob's Incognito account balance");
 	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
 	get_trusted_stf_state(&worker_api, getter);
 

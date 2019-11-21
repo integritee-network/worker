@@ -33,13 +33,12 @@ use codec::{Compact, Decode, Encode};
 use primitive_types::U256;
 use primitives::{
 	blake2_256,
-	crypto::Ss58Codec,
+	crypto::{Ss58Codec, Pair, AccountId32},
 	ed25519, sr25519,
 	hexdisplay::HexDisplay,
-	Pair,
 };
-use runtime_primitives::generic::Era;
-use substrate_api_client::{Api, compose_extrinsic, crypto::{AccountKey, CryptoKind},
+use runtime_primitives::{generic::Era, MultiSignature};
+use substrate_api_client::{Api, compose_extrinsic,
     extrinsic, utils::{hexstr_to_u256, hexstr_to_vec},
 };
 use substratee_stf::{TrustedCall, TrustedGetter};
@@ -67,7 +66,10 @@ pub fn user_to_pubkey(user: &str) -> ed25519::Public {
 	.expect("Invalid 'to' URI; expecting either a secret URI or a public URI.")
 }
 
-pub fn get_from_storage(api: &Api, user: &str, category: &str, item: &str) -> U256 {
+pub fn get_from_storage<P: Pair>(api: &Api<P>, user: &str, category: &str, item: &str) -> U256
+where
+	MultiSignature: From<P::Signature>,
+{
 	println!("[>] Get {}'s {}", user, item);
 
 	let accountid = user_to_pubkey(user);
@@ -79,24 +81,35 @@ pub fn get_from_storage(api: &Api, user: &str, category: &str, item: &str) -> U2
 }
 
 // function to get the free balance of a user
-pub fn get_free_balance(api: &Api, user: &str) -> U256 {
+pub fn get_free_balance<P: Pair>(api: &Api<P>, user: &str) -> U256
+where
+	MultiSignature: From<P::Signature>,
+{
 	get_from_storage(api, user, "Balances", "FreeBalance")
 }
 
 // function to get the account nonce of a user
-pub fn get_account_nonce(api: &Api, user: &str) -> U256 {
+pub fn get_account_nonce<P: Pair>(api: &Api<P>, user: &str) -> U256
+where
+	MultiSignature: From<P::Signature>
+{
 	get_from_storage(api, user, "System", "AccountNonce")
 }
 
 // function to fund an account
-pub fn fund_account(api: &Api, user: &str, amount: u128, nonce: U256, genesis_hash: Hash) {
+pub fn fund_account<P: Pair>(api: &Api<P>, user: &str, amount: u128, nonce: U256, genesis_hash: Hash)
+where
+	MultiSignature: From<P::Signature>
+{
 	println!("[>] Fund {}'s account with {}", user, amount);
+
+	let acc = AccountId32::from(*user_to_pubkey(user).as_array_ref());
 
 	let xt = compose_extrinsic!(
         api.clone(),
         "Balances",
         "set_balance",
-        GenericAddress::from(AccountKey::public_from_suri(user, Some(""), CryptoKind::Ed25519)),
+        GenericAddress::from(acc),
         Compact(amount),
 		Compact(amount)
     );
@@ -107,7 +120,10 @@ pub fn fund_account(api: &Api, user: &str, amount: u128, nonce: U256, genesis_ha
 	println!();
 }
 
-pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256) {
+pub fn transfer_amount<P: Pair>(api: &Api<P>, from: &str, to: ed25519::Public, amount: U256)
+where
+	MultiSignature: From<P::Signature>
+{
 	println!("[>] Transfer {} from '{}' to '{}'", amount, from, to);
 
 	// build the extrinsic for transfer
@@ -115,7 +131,7 @@ pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256)
         api.clone(),
         "Balances",
         "transfer",
-        GenericAddress::from(to.0),
+        GenericAddress::from(AccountId32::from(*to.as_array_ref())),
         Compact(amount.low_u128())
     );
 
@@ -127,7 +143,10 @@ pub fn transfer_amount(api: &Api, from: &str, to: ed25519::Public, amount: U256)
 }
 
 // subscribes to he substratee_registry events of type CallConfirmed
-pub fn subscribe_to_call_confirmed(api: Api) -> Vec<u8>{
+pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> Vec<u8>
+where
+	MultiSignature: From<P::Signature>
+{
 	let (events_in, events_out) = channel();
 
 	let _eventsubscriber = thread::Builder::new()
@@ -178,12 +197,14 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
 		.collect()
 }
 
-
-pub fn call_trusted_stf(api: &Api, call: TrustedCall, rsa_pubkey: Rsa3072PubKey) {
+pub fn call_trusted_stf<P: Pair>(api: &Api<P>, call: TrustedCall, rsa_pubkey: Rsa3072PubKey)
+where
+	MultiSignature: From<P::Signature>
+{
 	let call_encoded = call.encode();
 	let mut call_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&call_encoded, &mut call_encrypted).unwrap();
-	
+
 	let xt = compose_extrinsic!(
         api.clone(),
         "SubstraTEERegistry",
