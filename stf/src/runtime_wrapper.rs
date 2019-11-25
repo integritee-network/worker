@@ -37,6 +37,7 @@ use crate::{Signature, AuthorityId, AccountId, Hash};
 pub type Call = [u8; 2];
 pub type Index = u32;
 pub type BlockNumber = u32;
+pub type Balance = u128;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -85,73 +86,63 @@ impl ::core::cmp::Eq for Runtime {
     #[doc(hidden)]
     fn assert_receiver_is_total_eq(&self) -> () { { } }
 }
-impl ::srml_support::sr_primitives::traits::GetNodeBlockType for Runtime
+impl ::support::sr_primitives::traits::GetNodeBlockType for Runtime
  {
     type NodeBlock = Block; //dummy
 }
-impl ::srml_support::sr_primitives::traits::GetRuntimeBlockType for
+impl ::support::sr_primitives::traits::GetRuntimeBlockType for
  Runtime {
     type RuntimeBlock = Block;
 }
 
 impl balances::Trait for Runtime {
 	/// The type for recording an account's balance.
-	type Balance = u128;
+	type Balance = Balance;
 	/// What to do if an account's free balance gets zeroed.
 	type OnFreeBalanceZero = ();
 	/// What to do if a new account is created.
 	type OnNewAccount = Indices;
-	/// The uniquitous event type.
+	/// The ubiquitous event type.
 	type Event = Event;
-
-	type TransactionPayment = ();
 	type DustRemoval = ();
 	type TransferPayment = ();
-    type ExistentialDeposit = ExistentialDeposit;
-    type TransferFee = TransferFee;
-    type CreationFee = CreationFee;
-    type TransactionBaseFee = TransactionBaseFee;
-    type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = ConvertInto;
+	type ExistentialDeposit = ExistentialDeposit;
+	type TransferFee = TransferFee;
+	type CreationFee = CreationFee;
 }
 
 
 impl system::Trait for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
-    /// The aggregated dispatch type that is available for extrinsics.
-    type Call = Call;
+	/// The aggregated dispatch type that is available for extrinsics.
+	type Call = Call;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = Indices;
 	/// The index type for storing how many extrinsics an account has signed.
 	type Index = Index;
 	/// The index type for blocks.
 	type BlockNumber = BlockNumber;
-	/// The type for hashing blocks and tries
+	/// The type for hashing blocks and tries.
 	type Hash = Hash;
 	/// The hashing algorithm used.
 	type Hashing = BlakeTwo256;
-	/// The header digest type.
-	//type Digest = generic::Digest<Log>;
 	/// The header type.
 	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	/// The ubiquitous event type.
 	type Event = Event;
-    /// Update weight (to fee) multiplier per-block.
-    type WeightMultiplierUpdate = ();
-	/// The ubiquitous log type.
-	//type Log = Log;
 	/// The ubiquitous origin type.
 	type Origin = Origin;
-    /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-    type BlockHashCount = BlockHashCount;
-    /// Maximum weight of each block. With a default weight system of 1byte == 1weight, 4mb is ok.
-    type MaximumBlockWeight = MaximumBlockWeight;
-    /// Maximum size of all encoded transactions (in bytes) that are allowed in one block.
-    type MaximumBlockLength = MaximumBlockLength;
-    /// Portion of the block weight that is available to all normal transactions.
-    type AvailableBlockRatio = AvailableBlockRatio;
-    type Version = Version;
+	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+	type BlockHashCount = BlockHashCount;
+	/// Maximum weight of each block.
+	type MaximumBlockWeight = MaximumBlockWeight;
+	/// Maximum size of all encoded transactions (in bytes) that are allowed in one block.
+	type MaximumBlockLength = MaximumBlockLength;
+	/// Portion of the block weight that is available to all normal transactions.
+	type AvailableBlockRatio = AvailableBlockRatio;
+	/// Version of the runtime.
+	type Version = Version;
 }
 
 impl timestamp::Trait for Runtime {
@@ -178,7 +169,7 @@ impl indices::Trait for Runtime {
 pub enum Origin {
     system(system::Origin<Runtime>),
     #[allow(dead_code)]
-    Void(::srml_support::Void),
+    Void(::support::Void),
 }
 #[automatically_derived]
 #[allow(unused_qualifications)]
@@ -252,7 +243,7 @@ impl ::core::cmp::Eq for Origin {
     fn assert_receiver_is_total_eq(&self) -> () {
         {
             let _: ::core::cmp::AssertParamIsEq<system::Origin<Runtime>>;
-            let _: ::core::cmp::AssertParamIsEq<::srml_support::Void>;
+            let _: ::core::cmp::AssertParamIsEq<::support::Void>;
         }
     }
 }
@@ -267,10 +258,10 @@ impl Origin {
 impl From<system::Origin<Runtime>> for Origin {
     fn from(x: system::Origin<Runtime>) -> Self { Origin::system(x) }
 }
-impl Into<::srml_support::rstd::result::Result<system::Origin<Runtime>,
+impl Into<::support::rstd::result::Result<system::Origin<Runtime>,
                                                Origin>> for Origin {
     fn into(self)
-     -> ::srml_support::rstd::result::Result<system::Origin<Runtime>, Self> {
+     -> ::support::rstd::result::Result<system::Origin<Runtime>, Self> {
         if let Origin::system(l) = self { Ok(l) } else { Err(self) }
     }
 }
@@ -284,35 +275,35 @@ pub struct ExistentialDeposit;
 impl ExistentialDeposit {
     pub fn get() -> u128 { 500 }
 }
-impl <I: From<u128>> ::srml_support::traits::Get<I> for ExistentialDeposit {
+impl <I: From<u128>> ::support::traits::Get<I> for ExistentialDeposit {
     fn get() -> I { I::from(500) }
 }
 pub struct TransferFee;
 impl TransferFee {
     pub fn get() -> u128 { 0 }
 }
-impl <I: From<u128>> ::srml_support::traits::Get<I> for TransferFee {
+impl <I: From<u128>> ::support::traits::Get<I> for TransferFee {
     fn get() -> I { I::from(0) }
 }
 pub struct CreationFee;
 impl CreationFee {
     pub fn get() -> u128 { 0 }
 }
-impl <I: From<u128>> ::srml_support::traits::Get<I> for CreationFee {
+impl <I: From<u128>> ::support::traits::Get<I> for CreationFee {
     fn get() -> I { I::from(0) }
 }
 pub struct TransactionBaseFee;
 impl TransactionBaseFee {
     pub fn get() -> u128 { 0 }
 }
-impl <I: From<u128>> ::srml_support::traits::Get<I> for TransactionBaseFee {
+impl <I: From<u128>> ::support::traits::Get<I> for TransactionBaseFee {
     fn get() -> I { I::from(0) }
 }
 pub struct TransactionByteFee;
 impl TransactionByteFee {
     pub fn get() -> u128 { 1 }
 }
-impl <I: From<u128>> ::srml_support::traits::Get<I> for TransactionByteFee {
+impl <I: From<u128>> ::support::traits::Get<I> for TransactionByteFee {
     fn get() -> I { I::from(1) }
 }
 
@@ -328,7 +319,7 @@ pub struct BlockHashCount;
 impl BlockHashCount {
     pub fn get() -> BlockNumber { 250 }
 }
-impl <I: From<BlockNumber>> ::srml_support::traits::Get<I> for BlockHashCount
+impl <I: From<BlockNumber>> ::support::traits::Get<I> for BlockHashCount
  {
     fn get() -> I { I::from(250) }
 }
@@ -336,14 +327,14 @@ pub struct MaximumBlockWeight;
 impl MaximumBlockWeight {
     pub fn get() -> Weight { 1_000_000 }
 }
-impl <I: From<Weight>> ::srml_support::traits::Get<I> for MaximumBlockWeight {
+impl <I: From<Weight>> ::support::traits::Get<I> for MaximumBlockWeight {
     fn get() -> I { I::from(1_000_000) }
 }
 pub struct AvailableBlockRatio;
 impl AvailableBlockRatio {
     pub fn get() -> Perbill { Perbill::from_percent(75) }
 }
-impl <I: From<Perbill>> ::srml_support::traits::Get<I> for AvailableBlockRatio
+impl <I: From<Perbill>> ::support::traits::Get<I> for AvailableBlockRatio
  {
     fn get() -> I { I::from(Perbill::from_percent(75)) }
 }
@@ -351,7 +342,7 @@ pub struct MaximumBlockLength;
 impl MaximumBlockLength {
     pub fn get() -> u32 { 5 * 1024 * 1024 }
 }
-impl <I: From<u32>> ::srml_support::traits::Get<I> for MaximumBlockLength {
+impl <I: From<u32>> ::support::traits::Get<I> for MaximumBlockLength {
     fn get() -> I { I::from(5 * 1024 * 1024) }
 }
 
@@ -359,7 +350,7 @@ pub struct Version;
 impl Version {
     pub fn get() -> RuntimeVersion { VERSION }
 }
-impl <I: From<RuntimeVersion>> ::srml_support::traits::Get<I> for Version {
+impl <I: From<RuntimeVersion>> ::support::traits::Get<I> for Version {
     fn get() -> I { I::from(VERSION) }
 }
 
@@ -367,7 +358,7 @@ pub struct MinimumPeriod;
 impl MinimumPeriod {
     pub fn get() -> u64 { 5000 }
 }
-impl <I: From<u64>> ::srml_support::traits::Get<I> for MinimumPeriod {
+impl <I: From<u64>> ::support::traits::Get<I> for MinimumPeriod {
     fn get() -> I { I::from(5000) }
 }
 
@@ -387,6 +378,7 @@ pub const VERSION: RuntimeVersion =
 
 #[allow(non_camel_case_types)]
 #[structural_match]
+#[derive(Debug)]
 pub enum Event {
     system(system::Event),
     indices(indices::Event<Runtime>),
@@ -560,7 +552,7 @@ impl From<system::Event> for Event {
 impl From<indices::Event<Runtime>> for Event {
     fn from(x: indices::Event<Runtime>) -> Self { Event::indices(x) }
 }
-impl ::srml_support::rstd::convert::TryInto<indices::Event<Runtime>> for Event
+impl ::support::rstd::convert::TryInto<indices::Event<Runtime>> for Event
  {
     type
     Error
@@ -568,7 +560,7 @@ impl ::srml_support::rstd::convert::TryInto<indices::Event<Runtime>> for Event
     ();
     fn try_into(self)
      ->
-         ::srml_support::rstd::result::Result<indices::Event<Runtime>,
+         ::support::rstd::result::Result<indices::Event<Runtime>,
                                               Self::Error> {
         match self { Self::indices(evt) => Ok(evt), _ => Err(()), }
     }
@@ -576,7 +568,7 @@ impl ::srml_support::rstd::convert::TryInto<indices::Event<Runtime>> for Event
 impl From<balances::Event<Runtime>> for Event {
     fn from(x: balances::Event<Runtime>) -> Self { Event::balances(x) }
 }
-impl ::srml_support::rstd::convert::TryInto<balances::Event<Runtime>> for
+impl ::support::rstd::convert::TryInto<balances::Event<Runtime>> for
  Event {
     type
     Error
@@ -584,7 +576,7 @@ impl ::srml_support::rstd::convert::TryInto<balances::Event<Runtime>> for
     ();
     fn try_into(self)
      ->
-         ::srml_support::rstd::result::Result<balances::Event<Runtime>,
+         ::support::rstd::result::Result<balances::Event<Runtime>,
                                               Self::Error> {
         match self { Self::balances(evt) => Ok(evt), _ => Err(()), }
     }
@@ -718,14 +710,14 @@ impl <AccountId> From<RawEvent<AccountId>> for () {
 }
 impl <AccountId> RawEvent<AccountId> {
     #[allow(dead_code)]
-    pub fn metadata() -> &'static [::srml_support::event::EventMetadata] {
-        &[::srml_support::event::EventMetadata{name:
-                                                    ::srml_support::event::DecodeDifferent::Encode("SomethingStored"),
+    pub fn metadata() -> &'static [::support::event::EventMetadata] {
+        &[::support::event::EventMetadata{name:
+                                                    ::support::event::DecodeDifferent::Encode("SomethingStored"),
                                                 arguments:
-                                                    ::srml_support::event::DecodeDifferent::Encode(&["u32",
+                                                    ::support::event::DecodeDifferent::Encode(&["u32",
                                                                                                     "AccountId"]),
                                                 documentation:
-                                                    ::srml_support::event::DecodeDifferent::Encode(&[]),}]
+                                                    ::support::event::DecodeDifferent::Encode(&[]),}]
     }
 }
 */

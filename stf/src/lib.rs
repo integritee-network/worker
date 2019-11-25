@@ -141,7 +141,6 @@ impl Stf {
 
 #[cfg(feature = "sgx")]
 pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
-	use primitives::twox_128;
     let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
     let mut keyhash;
 	debug!("storage_key_hash for: module: {} key: {} (and params?) ", module, storage_key_name);
