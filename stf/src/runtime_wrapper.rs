@@ -25,8 +25,8 @@
 //use node_runtime::{Balances, AccountId, Indices, Hash, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event, Call, Origin};
 use runtime_primitives::{
     generic,
-    traits::{BlakeTwo256, ConvertInto, Block as BlockT},
-    Permill, Perbill,
+    traits::BlakeTwo256,
+    Perbill,
     weights::Weight,
 	create_runtime_str,
 };
@@ -34,16 +34,13 @@ use version::RuntimeVersion;
 
 pub use runtime_primitives::OpaqueExtrinsic as UncheckedExtrinsic;
 
-use crate::{Signature, AuthorityId, AccountId, Hash};
+use crate::{AccountId, Hash};
 pub type Call = [u8; 2];
 pub type Index = u32;
 pub type BlockNumber = u32;
 pub type Balance = u128;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-
-use support::traits::Currency;
-use std::vec::Vec;
 
 /*
 pub trait Trait: system::Trait {
@@ -52,7 +49,7 @@ pub trait Trait: system::Trait {
 }
 */
 
-pub type System = system::Module<Runtime>;
+//pub type System = system::Module<Runtime>;
 //pub type Timestamp = timestamp::Module<Runtime>;
 pub type Indices = indices::Module<Runtime>;
 pub type Balances = balances::Module<Runtime>;
@@ -69,7 +66,6 @@ impl ::core::clone::Clone for Runtime {
     #[inline]
     fn clone(&self) -> Runtime { { *self } }
 }
-#[automatically_derived]
 #[allow(unused_qualifications)]
 impl ::core::marker::Copy for Runtime { }
 #[automatically_derived]
@@ -194,10 +190,10 @@ impl ::core::cmp::PartialEq for Origin {
     fn eq(&self, other: &Origin) -> bool {
         {
             let __self_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*self) } as
+                ::core::intrinsics::discriminant_value(&*self) as
                     isize;
             let __arg_1_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*other) } as
+                ::core::intrinsics::discriminant_value(&*other) as
                     isize;
             if true && __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
@@ -215,12 +211,8 @@ impl ::core::cmp::PartialEq for Origin {
     #[inline]
     fn ne(&self, other: &Origin) -> bool {
         {
-            let __self_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*self) } as
-                    isize;
-            let __arg_1_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*other) } as
-                    isize;
+            let __self_vi = ::core::intrinsics::discriminant_value(&*self) as isize;
+            let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
             if true && __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Origin::system(ref __self_0),
@@ -273,13 +265,19 @@ impl From<Option<<Runtime as system::Trait>::AccountId>> for Origin {
 }
 
 pub struct ExistentialDeposit;
+
+#[allow(dead_code)]
 impl ExistentialDeposit {
     pub fn get() -> u128 { 500 }
 }
 impl <I: From<u128>> ::support::traits::Get<I> for ExistentialDeposit {
     fn get() -> I { I::from(500) }
 }
+
+#[allow(dead_code)]
 pub struct TransferFee;
+
+#[allow(dead_code)]
 impl TransferFee {
     pub fn get() -> u128 { 0 }
 }
@@ -287,20 +285,32 @@ impl <I: From<u128>> ::support::traits::Get<I> for TransferFee {
     fn get() -> I { I::from(0) }
 }
 pub struct CreationFee;
+
+#[allow(dead_code)]
 impl CreationFee {
     pub fn get() -> u128 { 0 }
 }
+
+#[allow(dead_code)]
 impl <I: From<u128>> ::support::traits::Get<I> for CreationFee {
     fn get() -> I { I::from(0) }
 }
+
+#[allow(dead_code)]
 pub struct TransactionBaseFee;
+
+#[allow(dead_code)]
 impl TransactionBaseFee {
-    pub fn get() -> u128 { 0 }
+	pub fn get() -> u128 { 0 }
 }
 impl <I: From<u128>> ::support::traits::Get<I> for TransactionBaseFee {
     fn get() -> I { I::from(0) }
 }
+
+#[allow(dead_code)]
 pub struct TransactionByteFee;
+
+#[allow(dead_code)]
 impl TransactionByteFee {
     pub fn get() -> u128 { 1 }
 }
@@ -309,14 +319,27 @@ impl <I: From<u128>> ::support::traits::Get<I> for TransactionByteFee {
 }
 
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
+
+#[allow(dead_code)]
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
+
+#[allow(dead_code)]
 pub const EPOCH_DURATION_IN_BLOCKS: u32 = 10 * MINUTES;
-pub const MINUTES: BlockNumber =
-    60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+
+#[allow(dead_code)]
+pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+
+#[allow(dead_code)]
 pub const HOURS: BlockNumber = MINUTES * 60;
+
+#[allow(dead_code)]
 pub const DAYS: BlockNumber = HOURS * 24;
+
+#[allow(dead_code)]
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 pub struct BlockHashCount;
+
+#[allow(dead_code)]
 impl BlockHashCount {
     pub fn get() -> BlockNumber { 250 }
 }
@@ -325,6 +348,8 @@ impl <I: From<BlockNumber>> ::support::traits::Get<I> for BlockHashCount
     fn get() -> I { I::from(250) }
 }
 pub struct MaximumBlockWeight;
+
+#[allow(dead_code)]
 impl MaximumBlockWeight {
     pub fn get() -> Weight { 1_000_000 }
 }
@@ -332,6 +357,8 @@ impl <I: From<Weight>> ::support::traits::Get<I> for MaximumBlockWeight {
     fn get() -> I { I::from(1_000_000) }
 }
 pub struct AvailableBlockRatio;
+
+#[allow(dead_code)]
 impl AvailableBlockRatio {
     pub fn get() -> Perbill { Perbill::from_percent(75) }
 }
@@ -340,6 +367,8 @@ impl <I: From<Perbill>> ::support::traits::Get<I> for AvailableBlockRatio
     fn get() -> I { I::from(Perbill::from_percent(75)) }
 }
 pub struct MaximumBlockLength;
+
+#[allow(dead_code)]
 impl MaximumBlockLength {
     pub fn get() -> u32 { 5 * 1024 * 1024 }
 }
@@ -348,6 +377,8 @@ impl <I: From<u32>> ::support::traits::Get<I> for MaximumBlockLength {
 }
 
 pub struct Version;
+
+#[allow(dead_code)]
 impl Version {
     pub fn get() -> RuntimeVersion { VERSION }
 }
@@ -355,7 +386,10 @@ impl <I: From<RuntimeVersion>> ::support::traits::Get<I> for Version {
     fn get() -> I { I::from(VERSION) }
 }
 
+#[allow(dead_code)]
 pub struct MinimumPeriod;
+
+#[allow(dead_code)]
 impl MinimumPeriod {
     pub fn get() -> u64 { 5000 }
 }
@@ -408,12 +442,8 @@ impl ::core::cmp::PartialEq for Event {
     #[inline]
     fn eq(&self, other: &Event) -> bool {
         {
-            let __self_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*self) } as
-                    isize;
-            let __arg_1_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*other) } as
-                    isize;
+            let __self_vi =  ::core::intrinsics::discriminant_value(&*self) as isize;
+            let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
             if true && __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Event::system(ref __self_0),
@@ -433,12 +463,8 @@ impl ::core::cmp::PartialEq for Event {
     #[inline]
     fn ne(&self, other: &Event) -> bool {
         {
-            let __self_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*self) } as
-                    isize;
-            let __arg_1_vi =
-                unsafe { ::core::intrinsics::discriminant_value(&*other) } as
-                    isize;
+            let __self_vi = ::core::intrinsics::discriminant_value(&*self) as isize;
+            let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
             if true && __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Event::system(ref __self_0),
@@ -478,8 +504,8 @@ const _IMPL_ENCODE_FOR_Event: () =
         extern crate codec as _codec;
         impl _codec::Encode for Event {
             fn encode_to<EncOut: _codec::Output>(&self,
-                                                              dest:
-                                                                  &mut EncOut) {
+												 dest:
+												 &mut EncOut) {
                 match *self {
                     Event::system(ref aa) => {
                         dest.push_byte(0usize as u8);
@@ -493,7 +519,6 @@ const _IMPL_ENCODE_FOR_Event: () =
                         dest.push_byte(2usize as u8);
                         dest.push(aa);
                     }
-                    _ => (),
                 }
             }
         }
@@ -542,7 +567,7 @@ const _IMPL_DECODE_FOR_Event: () =
                                                }
                                            }))
                     }
-                    x => Err("No such variant in enum Event".into()),
+                    _ => Err("No such variant in enum Event".into()),
                 }
             }
         }

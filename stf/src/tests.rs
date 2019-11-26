@@ -16,7 +16,7 @@
 */
 use alloc::prelude::v1::Vec;
 use crate::{TrustedCall, TrustedGetter, AccountId};
-use codec::{Compact, Decode, Encode};
+use codec::Encode;
 
 
 pub fn get_test_balance_set_balance_call() -> Vec<u8> {

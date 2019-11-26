@@ -53,14 +53,14 @@ use runtime_wrapper::Runtime;
 //#[cfg(feature = "sgx")]
 //use sr_io::SgxExternalities;
 
-#[cfg(feature = "sgx")]
-use std::backtrace::{self, PrintFormat};
-#[cfg(feature = "sgx")]
-use std::panic;
+//#[cfg(feature = "sgx")]
+//use std::panic;
 
-use codec::{Compact, Decode, Encode};
+use codec::{Decode, Encode};
+#[cfg(feature = "sgx")]
 use primitives::hashing::{blake2_256, twox_128};
 
+#[cfg(feature = "sgx")]
 use runtime_primitives::traits::Dispatchable;
 use runtime_primitives::{AnySignature, traits::Verify};
 //use substrate_state_machine::BasicExternalities;
@@ -110,7 +110,7 @@ impl Stf {
     }
     pub fn execute(call: TrustedCall) {
 //        sr_io::with_externalities(&mut ext, || {
-            let result = match call {
+            let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance ) =>
                     runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(who.clone()), free_balance, reserved_balance).dispatch(runtime_wrapper::Origin::ROOT),
                 TrustedCall::balance_transfer(from, to, value) => {
@@ -118,8 +118,6 @@ impl Stf {
 					let origin = runtime_wrapper::Origin::signed(from.clone());
 					runtime_wrapper::balancesCall::<Runtime>::transfer(indices::Address::<Runtime>::Id(to.clone()), value).dispatch(origin)
 				},
-                _ => {
-					Err("Call not recognized")}
             };
 //        });
     }
@@ -132,7 +130,6 @@ impl Stf {
 					sr_io::storage::get(&storage_key_bytes("Balances", "FreeBalance", Some(who.encode()))),
                 TrustedGetter::reserved_balance(who) =>
 					sr_io::storage::get(&storage_key_bytes("Balances", "ReservedBalance", Some(who.encode()))),
-                _ => None
             };
 			debug!("get_state result: {:?}", result);
 			result
@@ -144,7 +141,7 @@ impl Stf {
 #[cfg(feature = "sgx")]
 pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
     let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
-    let mut keyhash;
+    let keyhash;
 	debug!("storage_key_hash for: module: {} key: {} (and params?) ", module, storage_key_name);
     match param {
         Some(par) => {
