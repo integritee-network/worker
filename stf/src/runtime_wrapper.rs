@@ -27,7 +27,8 @@ use runtime_primitives::{
     generic,
     traits::{BlakeTwo256, ConvertInto, Block as BlockT},
     Permill, Perbill,
-    weights::Weight
+    weights::Weight,
+	create_runtime_str,
 };
 use version::RuntimeVersion;
 
@@ -52,7 +53,7 @@ pub trait Trait: system::Trait {
 */
 
 pub type System = system::Module<Runtime>;
-pub type Timestamp = timestamp::Module<Runtime>;
+//pub type Timestamp = timestamp::Module<Runtime>;
 pub type Indices = indices::Module<Runtime>;
 pub type Balances = balances::Module<Runtime>;
 
@@ -60,7 +61,7 @@ pub use balances::Call as balancesCall;
 
 
 #[structural_match]
-#[rustc_copy_clone_marker]
+//#[rustc_copy_clone_marker]
 pub struct Runtime;
 #[automatically_derived]
 #[allow(unused_qualifications)]
@@ -145,12 +146,12 @@ impl system::Trait for Runtime {
 	type Version = Version;
 }
 
-impl timestamp::Trait for Runtime {
-	/// A timestamp: seconds since the unix epoch.
-	type Moment = u64;
-	type OnTimestampSet = ();
-    type MinimumPeriod = MinimumPeriod;
-}
+//impl timestamp::Trait for Runtime {
+//	/// A timestamp: seconds since the unix epoch.
+//	type Moment = u64;
+//	type OnTimestampSet = ();
+//    type MinimumPeriod = MinimumPeriod;
+//}
 
 impl indices::Trait for Runtime {
     /// The type for recording indexing into the account enumeration. If this ever overflows, there
@@ -368,8 +369,8 @@ type ApisVec = &'static [(ApiId, u32)];
 const RUNTIME_API_VERSIONS: ApisVec = &[([0u8;8],0u32)];
 /// This runtime version.
 pub const VERSION: RuntimeVersion =
-    RuntimeVersion{spec_name: { "sgx-trusted" },
-                   impl_name: { "sgx-trusted" },
+    RuntimeVersion{spec_name: create_runtime_str!("sgx-trusted"),
+                   impl_name: create_runtime_str!("sgx-trusted"),
                    authoring_version: 3,
                    spec_version: 1,
                    impl_version: 1,

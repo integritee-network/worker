@@ -42,7 +42,6 @@ mod runtime_wrapper;
 pub mod tests;
 
 #[cfg(feature = "sgx")]
-#[macro_use]
 extern crate sgx_tstd as std;
 
 #[cfg(feature = "sgx")]
@@ -51,8 +50,8 @@ use std::prelude::v1::*;
 #[cfg(feature = "sgx")]
 use runtime_wrapper::Runtime;
 
-#[cfg(feature = "sgx")]
-use sr_io::SgxExternalities;
+//#[cfg(feature = "sgx")]
+//use sr_io::SgxExternalities;
 
 #[cfg(feature = "sgx")]
 use std::backtrace::{self, PrintFormat};
@@ -64,22 +63,25 @@ use primitives::hashing::{blake2_256, twox_128};
 
 use runtime_primitives::traits::Dispatchable;
 use runtime_primitives::{AnySignature, traits::Verify};
+//use substrate_state_machine::BasicExternalities;
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
 pub type Hash = primitives::H256;
 pub type Balance = u128;
-
-#[cfg(feature = "sgx")]
-pub type State = SgxExternalities;
+//
+////#[cfg(feature = "sgx")]
+//pub type State = SgxExternalities;
 
 #[derive(Encode, Decode)]
+#[allow(non_camel_case_types)]
 pub enum TrustedCall {
     balance_set_balance(AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
 }
 
 #[derive(Encode, Decode)]
+#[allow(non_camel_case_types)]
 pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
@@ -91,23 +93,23 @@ pub struct Stf {
 
 #[cfg(feature = "sgx")]
 impl Stf {
-    pub fn init_state() -> State {
+    pub fn init_state() {
         debug!("initializing stf state");
-        let mut ext = State::new();
-        sr_io::with_externalities(&mut ext, || {
-            // write Genesis
-            info!("Prepare some Genesis values");
-            sr_io::set_storage(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
-            sr_io::set_storage(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
-            sr_io::set_storage(&storage_key_bytes("Balances", "TransferFee", None), &1u128.encode());
-            sr_io::set_storage(&storage_key_bytes("Balances", "TransactionBaseFee", None), &1u128.encode());
-            sr_io::set_storage(&storage_key_bytes("Balances", "TransfactionByteFee", None), &1u128.encode());
-            sr_io::set_storage(&storage_key_bytes("Balances", "ExistentialDeposit", None), &1u128.encode());
-        });
-        ext
+//        let mut ext = State::new();
+//        sr_io::with_externalities(&mut ext, || {
+//            // write Genesis
+//            info!("Prepare some Genesis values");
+            sr_io::storage::set(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
+            sr_io::storage::set(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
+            sr_io::storage::set(&storage_key_bytes("Balances", "TransferFee", None), &1u128.encode());
+            sr_io::storage::set(&storage_key_bytes("Balances", "TransactionBaseFee", None), &1u128.encode());
+            sr_io::storage::set(&storage_key_bytes("Balances", "TransfactionByteFee", None), &1u128.encode());
+            sr_io::storage::set(&storage_key_bytes("Balances", "ExistentialDeposit", None), &1u128.encode());
+//        });
+//        ext
     }
-    pub fn execute(mut ext: &mut State, call: TrustedCall) {
-        sr_io::with_externalities(&mut ext, || {
+    pub fn execute(call: TrustedCall) {
+//        sr_io::with_externalities(&mut ext, || {
             let result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance ) =>
                     runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(who.clone()), free_balance, reserved_balance).dispatch(runtime_wrapper::Origin::ROOT),
@@ -119,22 +121,22 @@ impl Stf {
                 _ => {
 					Err("Call not recognized")}
             };
-        });
+//        });
     }
 
-	pub fn get_state(mut ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
+	pub fn get_state(getter: TrustedGetter) -> Option<Vec<u8>> {
 		//FIXME: only account owner may get its own data. introduce signature verification!
-        sr_io::with_externalities(&mut ext, || {
+//        sr_io::with_externalities(&mut ext, || {
             let result = match getter {
                 TrustedGetter::free_balance(who) =>
-					sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(who.encode()))),
+					sr_io::storage::get(&storage_key_bytes("Balances", "FreeBalance", Some(who.encode()))),
                 TrustedGetter::reserved_balance(who) =>
-					sr_io::storage(&storage_key_bytes("Balances", "ReservedBalance", Some(who.encode()))),
+					sr_io::storage::get(&storage_key_bytes("Balances", "ReservedBalance", Some(who.encode()))),
                 _ => None
             };
 			debug!("get_state result: {:?}", result);
 			result
-        })
+//        })
 
 	}
 }
