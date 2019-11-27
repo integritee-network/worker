@@ -10,16 +10,19 @@ sgx = [
     "sgx_tstd",
     "env_logger",
     "log",
-    ]
+    "environmental",
+    "sr-io",
+]
 
 [dependencies]
 log               = { version = "0.4", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
 env_logger        = { version = "0.7", git = "https://github.com/mesalock-linux/env_logger-sgx", optional = true }
+environmental = { version = "1.0.1", default-features = false, optional = true }
 
 [dependencies.sgx_tstd]
-git = "https://github.com/apache/incubator-mesatee-sgx/"
+git = "https://github.com/baidu/rust-sgx-sdk.git"
 features = ["untrusted_fs","net","backtrace"]
-tag = "v1.1.0"
+rev = "v1.1.0"
 optional = true
 
 [dependencies.codec]
@@ -87,9 +90,9 @@ rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
 [dependencies.sr-io]
 default-features = false
-git = "https://github.com/paritytech/substrate"
+optional = true
+#git = "https://github.com/paritytech/substrate"
 package = "sr-io"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-features = ["disable_oom", "disable_panic_handler"]
-
-
+#rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+path = "../../substraTEE-node/sr-tee-io"
+features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]

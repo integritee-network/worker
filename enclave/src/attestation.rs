@@ -50,9 +50,9 @@ use codec::{Decode, Encode, Compact};
 use utils::{hash_from_slice};
 use utils::get_ecc_seed;
 use substrate_api_client::{
-	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
-	crypto::AccountKey,
-	extrinsic};
+	extrinsic::xt_primitives::{UncheckedExtrinsicV4, GenericAddress, GenericExtra, SignedPayload},
+	extrinsic
+};
 use primitives::{ed25519, Pair};
 //use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
 /*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
@@ -600,8 +600,8 @@ pub unsafe extern "C" fn perform_ra(
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+    seed.copy_from_slice(seedvec);
+	let signer = ed25519::Pair::from_seed(&seed);
 	info!("Restored ECC pubkey: {:?}", signer.public());
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
@@ -620,7 +620,7 @@ pub unsafe extern "C" fn perform_ra(
 	    nonce,
 	    genesis_hash,
 	    spec_version
-    );	
+    );
 
 	let encoded = xt.encode();
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);

@@ -196,7 +196,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
     seed.copy_from_slice(seedvec);
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+	let signer = ed25519::Pair::from_seed(&seed);
 
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
 
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn execute_stf(
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
     seed.copy_from_slice(seedvec);
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+	let signer = ed25519::Pair::from_seed(&seed);
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
