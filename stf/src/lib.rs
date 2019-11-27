@@ -45,7 +45,7 @@ use runtime_primitives::{AnySignature, traits::Verify};
 #[cfg(feature = "sgx")]
 use runtime_primitives::traits::Dispatchable;
 #[cfg(feature = "sgx")]
-use sr_io::Basic;
+use sr_io::SgxExternalitiesTrait;
 #[cfg(feature = "sgx")]
 use std::prelude::v1::*;
 
