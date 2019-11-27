@@ -74,7 +74,14 @@ use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
-use constants::{SEALED_SIGNER_SEED_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
+use constants::{
+	SEALED_SIGNER_SEED_FILE,
+	ENCRYPTED_STATE_FILE,
+	RSA3072_SEALED_KEY_FILE,
+	SUBSRATEE_REGISTRY_MODULE,
+	CALL_CONFIRMED,
+	RUNTIME_SPEC_VERSION,
+};
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
@@ -276,17 +283,14 @@ pub unsafe extern "C" fn execute_stf(
 	let call_hash = blake2_256(&request_vec);
 	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
 
-	let xt_call = [7u8,3u8];
-
-	//FIXME: define constant at client
-	let spec_version = 4;
+	let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
 
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (xt_call, call_hash.to_vec(), state_hash.to_vec()),
 	    nonce,
 	    genesis_hash,
-	    spec_version
+	    RUNTIME_SPEC_VERSION
     );
 
 	let encoded = xt.encode();

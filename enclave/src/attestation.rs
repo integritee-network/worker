@@ -56,7 +56,7 @@ use primitives::{ed25519, Pair};
 //use crypto::ed25519::{keypair, signature};
 //use utils::blake2_256;
 
-use constants::{RA_SPID, RA_API_KEY};
+use constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
 
 //pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
@@ -601,18 +601,14 @@ pub unsafe extern "C" fn perform_ra(
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 
-	//FIXME: define constants
-	let call = [7u8,0u8];
-
-	//FIXME: define constant at client
-	let spec_version = 4;
+	let call = [SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
 
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (call, cert_der.to_vec(), url_slice.to_vec()),
 	    nonce,
 	    genesis_hash,
-	    spec_version
+	    RUNTIME_SPEC_VERSION
     );
 
 	let encoded = xt.encode();
