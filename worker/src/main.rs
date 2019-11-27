@@ -193,18 +193,18 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 	println!("   Alice's account = {}", alice.public().to_ss58check());
 	// alice is validator
 	let api = Api::new(format!("ws://{}", node_url))
-	   	.set_signer(alice.clone());
+		.set_signer(alice.clone());
 
 	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(alice_acc.encode())).unwrap();
-    let funds = hexstr_to_u256(result_str).unwrap();
+	let funds = hexstr_to_u256(result_str).unwrap();
 	println!("    Alice's free balance = {:?}", funds);
-    let result_str = api.get_storage("System", "AccountNonce", Some(alice_acc.encode())).unwrap();
-    let result = hexstr_to_u256(result_str).unwrap();
-    println!("    Alice's Account Nonce is {}", result.low_u32());
+	let result_str = api.get_storage("System", "AccountNonce", Some(alice_acc.encode())).unwrap();
+	let result = hexstr_to_u256(result_str).unwrap();
+	println!("    Alice's Account Nonce is {}", result.low_u32());
 
 
 	// ------------------------------------------------------------------------
@@ -239,7 +239,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	// check the enclave's account balance
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(tee_account_id.encode())).unwrap();
-    let funds = hexstr_to_u256(result_str).unwrap();
+	let funds = hexstr_to_u256(result_str).unwrap();
 	info!("TEE's free balance = {:?}", funds);
 
 	if funds < U256::from(10) {
@@ -260,7 +260,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	// get enclaves's account nonce
 	let result_str = api.get_storage("System", "AccountNonce", Some(tee_account_id.encode())).unwrap();
-    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
+	let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
 	info!("Enclave nonce = {:?}", nonce);
 	let nonce_bytes = nonce.encode();
 

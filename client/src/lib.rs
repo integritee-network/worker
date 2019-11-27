@@ -23,23 +23,18 @@ use std::thread;
 
 use log::info;
 use my_node_runtime::{
-	BalancesCall,
-	Call,
 	Event,
 	Hash,
-	SubstraTEERegistryCall,
 };
-use codec::{Compact, Decode, Encode};
+use codec::{Decode, Encode};
 use primitive_types::U256;
 use primitives::{
-	blake2_256,
 	crypto::{Ss58Codec, Pair, AccountId32},
 	ed25519, sr25519,
-	hexdisplay::HexDisplay,
 };
-use runtime_primitives::{generic::Era, MultiSignature};
+use runtime_primitives::MultiSignature;
 use substrate_api_client::{Api, compose_extrinsic,
-    extrinsic, utils::{hexstr_to_u256, hexstr_to_vec},
+    utils::{hexstr_to_u256, hexstr_to_vec},
 };
 use substratee_stf::{TrustedCall, TrustedGetter};
 use log::*;
@@ -97,7 +92,7 @@ where
 }
 
 // function to fund an account
-pub fn fund_account<P: Pair>(api: &Api<P>, user: &str, amount: u128, nonce: U256, genesis_hash: Hash)
+pub fn fund_account<P: Pair>(api: &Api<P>, user: &str, amount: u128)
 where
 	MultiSignature: From<P::Signature>
 {

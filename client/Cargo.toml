@@ -31,7 +31,6 @@ git = "https://github.com/scs/substraTEE-node"
 branch = "cl-introduce_host_calls_via_runtime_interface"
 #rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
 package = "substratee-node-runtime"
-#features = ["disable_allocator"]
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"

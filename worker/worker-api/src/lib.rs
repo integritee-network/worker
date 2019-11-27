@@ -31,7 +31,6 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::sync::mpsc::channel;
 use std::thread;
 use ws::connect;
-use primitives::ed25519;
 use substratee_stf::TrustedGetter;
 use codec::Encode;
 

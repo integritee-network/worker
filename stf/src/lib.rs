@@ -24,47 +24,39 @@
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-extern crate balances;
-extern crate support;
-extern crate version;
-
-#[cfg(feature = "sgx")]
-extern crate sr_io;
 extern crate alloc;
-
+extern crate balances;
+#[cfg(feature = "sgx")]
+extern crate env_logger;
 #[cfg(feature = "sgx")]
 #[macro_use]
 extern crate log;
 #[cfg(feature = "sgx")]
-extern crate env_logger;
-
-#[cfg(feature = "sgx")]
-mod runtime_wrapper;
-
-pub mod tests;
-
-#[cfg(feature = "sgx")]
 extern crate sgx_tstd as std;
+#[cfg(feature = "sgx")]
+extern crate sr_io;
+extern crate support;
+extern crate version;
 
+use codec::{Decode, Encode};
+#[cfg(feature = "sgx")]
+use primitives::hashing::{blake2_256, twox_128};
+use runtime_primitives::{AnySignature, traits::Verify};
+#[cfg(feature = "sgx")]
+use runtime_primitives::traits::Dispatchable;
+#[cfg(feature = "sgx")]
+use sr_io::Basic;
 #[cfg(feature = "sgx")]
 use std::prelude::v1::*;
 
 #[cfg(feature = "sgx")]
 use runtime_wrapper::Runtime;
 
-//#[cfg(feature = "sgx")]
-//use sr_io::SgxExternalities;
-
-//#[cfg(feature = "sgx")]
-//use std::panic;
-
-use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
-use primitives::hashing::{blake2_256, twox_128};
+mod runtime_wrapper;
 
-#[cfg(feature = "sgx")]
-use runtime_primitives::traits::Dispatchable;
-use runtime_primitives::{AnySignature, traits::Verify};
+pub mod tests;
+
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
@@ -74,14 +66,11 @@ pub type Balance = u128;
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
 
-#[cfg(feature = "sgx")]
-use sr_io::Basic;
-
 #[derive(Encode, Decode)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
-    balance_set_balance(AccountId, Balance, Balance),
-    balance_transfer(AccountId, AccountId, Balance),
+	balance_set_balance(AccountId, Balance, Balance),
+	balance_transfer(AccountId, AccountId, Balance),
 }
 
 #[derive(Encode, Decode)]
@@ -92,69 +81,68 @@ pub enum TrustedGetter {
 }
 
 #[cfg(feature = "sgx")]
-pub struct Stf {
-}
+pub struct Stf {}
 
 #[cfg(feature = "sgx")]
 impl Stf {
-    pub fn init_state() -> State {
-        debug!("initializing stf state");
-        let mut ext = State::new();
-			ext.execute_with( || {
-            sr_io::storage::set(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
-            sr_io::storage::set(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
-            sr_io::storage::set(&storage_key_bytes("Balances", "TransferFee", None), &1u128.encode());
-            sr_io::storage::set(&storage_key_bytes("Balances", "TransactionBaseFee", None), &1u128.encode());
-            sr_io::storage::set(&storage_key_bytes("Balances", "TransfactionByteFee", None), &1u128.encode());
-            sr_io::storage::set(&storage_key_bytes("Balances", "ExistentialDeposit", None), &1u128.encode());
-        });
-        ext
-    }
-    pub fn execute(ext: &mut State, call: TrustedCall) {
-        ext.execute_with( || {
-            let _result = match call {
-                TrustedCall::balance_set_balance(who, free_balance, reserved_balance ) =>
-                    runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(who.clone()), free_balance, reserved_balance).dispatch(runtime_wrapper::Origin::ROOT),
-                TrustedCall::balance_transfer(from, to, value) => {
+	pub fn init_state() -> State {
+		debug!("initializing stf state");
+		let mut ext = State::new();
+		ext.execute_with(|| {
+			sr_io::storage::set(&storage_key_bytes("Balances", "TotalIssuance", None), &11u128.encode());
+			sr_io::storage::set(&storage_key_bytes("Balances", "CreationFee", None), &1u128.encode());
+			sr_io::storage::set(&storage_key_bytes("Balances", "TransferFee", None), &1u128.encode());
+			sr_io::storage::set(&storage_key_bytes("Balances", "TransactionBaseFee", None), &1u128.encode());
+			sr_io::storage::set(&storage_key_bytes("Balances", "TransfactionByteFee", None), &1u128.encode());
+			sr_io::storage::set(&storage_key_bytes("Balances", "ExistentialDeposit", None), &1u128.encode());
+		});
+		ext
+	}
+	pub fn execute(ext: &mut State, call: TrustedCall) {
+		ext.execute_with(|| {
+			let _result = match call {
+				TrustedCall::balance_set_balance(who, free_balance, reserved_balance) =>
+					runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(who.clone()), free_balance, reserved_balance).dispatch(runtime_wrapper::Origin::ROOT),
+				TrustedCall::balance_transfer(from, to, value) => {
 					//FIXME: here would be a good place to really verify a signature
 					let origin = runtime_wrapper::Origin::signed(from.clone());
 					runtime_wrapper::balancesCall::<Runtime>::transfer(indices::Address::<Runtime>::Id(to.clone()), value).dispatch(origin)
 				},
-            };
-        });
-    }
+			};
+		});
+	}
 
 	pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
 		//FIXME: only account owner may get its own data. introduce signature verification!
-			ext.execute_with( || {
-            let result = match getter {
-                TrustedGetter::free_balance(who) =>
+		ext.execute_with(|| {
+			let result = match getter {
+				TrustedGetter::free_balance(who) =>
 					sr_io::storage::get(&storage_key_bytes("Balances", "FreeBalance", Some(who.encode()))),
-                TrustedGetter::reserved_balance(who) =>
+				TrustedGetter::reserved_balance(who) =>
 					sr_io::storage::get(&storage_key_bytes("Balances", "ReservedBalance", Some(who.encode()))),
-            };
+			};
 			debug!("get_state result: {:?}", result);
 			result
-        })
+		})
 	}
 }
 
 #[cfg(feature = "sgx")]
 pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
-    let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
-    let keyhash;
+	let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
+	let keyhash;
 	debug!("storage_key_hash for: module: {} key: {} (and params?) ", module, storage_key_name);
-    match param {
-        Some(par) => {
-            key.append(&mut par.clone());
-            keyhash = blake2_256(&key).to_vec();
-        },
-        _ => {
-            keyhash = twox_128(&key).to_vec();
-        },
-    }
+	match param {
+		Some(par) => {
+			key.append(&mut par.clone());
+			keyhash = blake2_256(&key).to_vec();
+		},
+		_ => {
+			keyhash = twox_128(&key).to_vec();
+		},
+	}
 	//debug!("   is 0x{}", hex::encode_hex(&keyhash));
-    keyhash
+	keyhash
 }
 
 /*
