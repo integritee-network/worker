@@ -5,7 +5,6 @@ members = [
 	 "substratee-node-calls",
 	 "client",
 	 "stf",
+#	 "enclave",
 ]
 
-[patch.crates-io]
-ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx" }

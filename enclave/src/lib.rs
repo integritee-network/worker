@@ -41,13 +41,11 @@ extern crate primitives;
 extern crate runtime_primitives;
 extern crate rust_base58;
 extern crate rustls;
-#[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate sgx_crypto_helper;
 extern crate sgx_rand;
 extern crate sgx_serialize;
-#[macro_use]
 extern crate sgx_serialize_derive;
 extern crate sgx_tcrypto;
 extern crate sgx_trts;
@@ -66,28 +64,20 @@ extern crate substrate_api_client;
 extern crate substratee_stf;
 
 use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
-use substrate_api_client::{
-	extrinsic::xt_primitives::{UncheckedExtrinsicV4, GenericAddress, GenericExtra, SignedPayload},
-	extrinsic};
 
-use codec::{Compact, Decode, Encode};
-use primitive_types::U256;
+use codec::{Decode, Encode};
 use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};
-use runtime_primitives::generic::Era;
-use rust_base58::ToBase58;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
-use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
+use sgx_types::{sgx_status_t, size_t};
 
 use constants::{SEALED_SIGNER_SEED_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
-use std::collections::HashMap;
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
-use std::string::ToString;
 use std::vec::Vec;
 
 mod constants;

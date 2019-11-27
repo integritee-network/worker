@@ -44,15 +44,9 @@ use std::vec::Vec;
 use itertools::Itertools;
 use core::default::Default;
 
-use runtime_primitives::generic::Era;
-use primitive_types::U256;
-use codec::{Decode, Encode, Compact};
+use codec::{Decode, Encode};
 use utils::{hash_from_slice};
 use utils::get_ecc_seed;
-use substrate_api_client::{
-	extrinsic::xt_primitives::{UncheckedExtrinsicV4, GenericAddress, GenericExtra, SignedPayload},
-	extrinsic
-};
 use primitives::{ed25519, Pair};
 //use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
 /*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
@@ -606,7 +600,6 @@ pub unsafe extern "C" fn perform_ra(
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
-	let era = Era::immortal();
 
 	//FIXME: define constants
 	let call = [7u8,0u8];
