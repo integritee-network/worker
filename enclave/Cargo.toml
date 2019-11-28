@@ -71,9 +71,7 @@ features = ["dangerous_configuration"]
 [dependencies.sr-io]
 default-features = false
 optional = true
-git = "https://github.com/scs/substraTEE-node"
-branch = "cl-introduce_host_calls_via_runtime_interface"
-#rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
+path = "../substrate-sgx/sr-io"
 package = "sr-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
@@ -120,7 +118,7 @@ features = ["sgx"]
 
 
 [patch."https://github.com/paritytech/substrate"]
-sr-io = { git = "https://github.com/scs/substraTEE-node", branch = "cl-introduce_host_calls_via_runtime_interface", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sr-io = { path = "../substrate-sgx/sr-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 
 # environment logger still depends on v1.0.9
 [patch."https://github.com/baidu/rust-sgx-sdk.git"]

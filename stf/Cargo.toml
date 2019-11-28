@@ -89,8 +89,6 @@ rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 [dependencies.sr-io]
 default-features = false
 optional = true
-git = "https://github.com/scs/substraTEE-node"
-branch = "cl-introduce_host_calls_via_runtime_interface"
-#rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
+path = "../substrate-sgx/sr-io"
 package = "sr-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]

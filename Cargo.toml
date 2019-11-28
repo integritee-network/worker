@@ -5,6 +5,11 @@ members = [
 	 "substratee-node-calls",
 	 "client",
 	 "stf",
+	 "substrate-sgx/externalities",
+	 "substrate-sgx/sr-io",
 #	 "enclave",
 ]
 
+# environment logger still depends on v1.0.9
+[patch."https://github.com/baidu/rust-sgx-sdk.git"]
+sgx_tstd = { git = "https://github.com/apache/incubator-mesatee-sgx/", rev = "v1.1.0" }

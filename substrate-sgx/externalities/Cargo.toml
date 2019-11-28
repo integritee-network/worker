@@ -1,0 +1,13 @@
+[package]
+name = "sgx-externalities"
+version = "0.1.0"
+authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+environmental = { version = "1.0.1", default-features = false}
+sgx_tstd      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"]}
+sgx_types     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git"}
+sgx_log       = { package = "log",  version = "0.4", git = "https://github.com/mesalock-linux/log-sgx"}
