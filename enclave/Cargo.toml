@@ -15,22 +15,22 @@ crate-type = ["staticlib"]
 default = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tse       = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_tstd      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"] }
-sgx_rand      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_trts      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_types     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_tseal     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_tcrypto   = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_serialize = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
-sgx_tunittest = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git" }
+sgx_tse       = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tstd      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", features = ["untrusted_fs","net","backtrace"] }
+sgx_rand      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_trts      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tcrypto   = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_serialize = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tunittest = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
 
 [dependencies]
 aes               = { version = "0.3.2" }
 ofb               = { version = "0.1.1" }
 codec             = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types   = { version = "0.6", default-features = false, features = ["codec"] }
-sgx-crypto-helper = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk.git", package = "sgx_tcrypto_helper" }
+sgx-crypto-helper = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", package = "sgx_tcrypto_helper" }
 log               = { version = "0.4", git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger        = { version = "0.7", git = "https://github.com/mesalock-linux/env_logger-sgx" }
 serde        	= { version = "1.0.97", git = "https://github.com/mesalock-linux/serde-sgx" }
@@ -76,7 +76,7 @@ package = "sr-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx_serialize_derive]
-git = "https://github.com/baidu/rust-sgx-sdk.git"
+git = "https://github.com/baidu/rust-sgx-sdk"
 rev = "v1.1.0"
 
 [dependencies.primitives]

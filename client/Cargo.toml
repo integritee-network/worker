@@ -23,13 +23,12 @@ blake2-rfc      = { version = "0.2.18", default-features = false}
 codec           = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.6", default-features = false, features = ["codec"] }
 
-sgx_types           = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper   = { rev = "v1.0.9",git = "https://github.com/baidu/rust-sgx-sdk", default-features = false }
+sgx_types           = { rev = "v1.1.0",git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper   = { rev = "v1.1.0",git = "https://github.com/baidu/rust-sgx-sdk", default-features = false }
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "cl-introduce_host_calls_via_runtime_interface"
-#rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
+tag = "M5.2"
 package = "substratee-node-runtime"
 
 [dependencies.substrate-api-client]

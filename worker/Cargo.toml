@@ -29,11 +29,11 @@ sha2 					= { version = "0.7", default-features = false }
 codec           		= { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types    		= { version = "0.6", default-features = false, features = ["codec"] }
 
-sgx_urts				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types 				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tseal				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_ucrypto 			= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper 		= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+sgx_urts				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types 				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_ucrypto 			= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper 		= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
@@ -47,11 +47,9 @@ path = "worker-api"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "cl-introduce_host_calls_via_runtime_interface"
-#rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
+tag = "M5.2"
 package = "substratee-node-runtime"
 default-features = false
-features = ["disable_allocator"]
 
 [dependencies.runtime_primitives]
 git = "https://github.com/paritytech/substrate"
