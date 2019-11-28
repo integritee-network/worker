@@ -12,8 +12,7 @@ regex = "1"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-branch = "cl-update-to-3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-#rev = "a1e82a08418dc5de0b6bd3bf016bcee004736441"
+tag = "api-M1.5"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"

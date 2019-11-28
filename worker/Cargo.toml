@@ -37,8 +37,7 @@ sgx_crypto_helper 		= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-#rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
-branch = "cl-update-to-3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+tag = "api-M1.5"
 
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
