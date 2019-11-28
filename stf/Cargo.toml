@@ -50,12 +50,6 @@ git = "https://github.com/paritytech/substrate"
 package = "sr-primitives"
 rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
-[dependencies.balances]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "pallet-balances"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
 # timestamp pulls in blake2-rfc with std
 #[dependencies.timestamp]
 #default-features = false
@@ -63,28 +57,10 @@ rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 #package = "pallet-timestamp"
 #rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
-[dependencies.system]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "palette-system"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
-[dependencies.support]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "palette-support"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
 [dependencies.indices]
 default-features = false
 git = "https://github.com/paritytech/substrate"
 package = "pallet-indices"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
-[dependencies.version]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "sr-version"
 rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
 [dependencies.sr-io]
