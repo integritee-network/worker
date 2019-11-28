@@ -30,14 +30,6 @@ pub struct Message {
 	pub sha256: sgx_sha256_hash_t
 }
 
-#[allow(dead_code)]
-pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
-	let mut array = [0; 32];
-	let bytes = &bytes[..array.len()]; // panics if not enough data
-	array.copy_from_slice(bytes);
-	array
-}
-
 pub fn get_encrypted_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
 	let pubkey_size = 8192;
 	let mut pubkey = vec![0u8; pubkey_size as usize];

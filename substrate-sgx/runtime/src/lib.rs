@@ -67,7 +67,6 @@ pub use balances::Call as balancesCall;
 
 
 #[structural_match]
-//#[rustc_copy_clone_marker]
 pub struct Runtime;
 #[automatically_derived]
 #[allow(unused_qualifications)]
@@ -174,7 +173,6 @@ impl indices::Trait for Runtime {
 #[structural_match]
 pub enum Origin {
 	system(system::Origin<Runtime>),
-	#[allow(dead_code)]
 	Void(::support::Void),
 }
 #[automatically_derived]
@@ -249,7 +247,6 @@ impl ::core::cmp::Eq for Origin {
 		}
 	}
 }
-#[allow(dead_code)]
 impl Origin {
 	pub const NONE: Self = Origin::system(system::RawOrigin::None);
 	pub const ROOT: Self = Origin::system(system::RawOrigin::Root);
@@ -275,7 +272,6 @@ impl From<Option<<Runtime as system::Trait>::AccountId>> for Origin {
 
 pub struct ExistentialDeposit;
 
-#[allow(dead_code)]
 impl ExistentialDeposit {
 	pub fn get() -> u128 { 500 }
 }
@@ -283,10 +279,8 @@ impl <I: From<u128>> ::support::traits::Get<I> for ExistentialDeposit {
 	fn get() -> I { I::from(500) }
 }
 
-#[allow(dead_code)]
 pub struct TransferFee;
 
-#[allow(dead_code)]
 impl TransferFee {
 	pub fn get() -> u128 { 0 }
 }
@@ -295,20 +289,16 @@ impl <I: From<u128>> ::support::traits::Get<I> for TransferFee {
 }
 pub struct CreationFee;
 
-#[allow(dead_code)]
 impl CreationFee {
 	pub fn get() -> u128 { 0 }
 }
 
-#[allow(dead_code)]
 impl <I: From<u128>> ::support::traits::Get<I> for CreationFee {
 	fn get() -> I { I::from(0) }
 }
 
-#[allow(dead_code)]
 pub struct TransactionBaseFee;
 
-#[allow(dead_code)]
 impl TransactionBaseFee {
 	pub fn get() -> u128 { 0 }
 }
@@ -316,10 +306,8 @@ impl <I: From<u128>> ::support::traits::Get<I> for TransactionBaseFee {
 	fn get() -> I { I::from(0) }
 }
 
-#[allow(dead_code)]
 pub struct TransactionByteFee;
 
-#[allow(dead_code)]
 impl TransactionByteFee {
 	pub fn get() -> u128 { 1 }
 }
@@ -329,26 +317,19 @@ impl <I: From<u128>> ::support::traits::Get<I> for TransactionByteFee {
 
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
-#[allow(dead_code)]
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
-#[allow(dead_code)]
 pub const EPOCH_DURATION_IN_BLOCKS: u32 = 10 * MINUTES;
 
-#[allow(dead_code)]
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 
-#[allow(dead_code)]
 pub const HOURS: BlockNumber = MINUTES * 60;
 
-#[allow(dead_code)]
 pub const DAYS: BlockNumber = HOURS * 24;
 
-#[allow(dead_code)]
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 pub struct BlockHashCount;
 
-#[allow(dead_code)]
 impl BlockHashCount {
 	pub fn get() -> BlockNumber { 250 }
 }
@@ -358,7 +339,6 @@ impl <I: From<BlockNumber>> ::support::traits::Get<I> for BlockHashCount
 }
 pub struct MaximumBlockWeight;
 
-#[allow(dead_code)]
 impl MaximumBlockWeight {
 	pub fn get() -> Weight { 1_000_000 }
 }
@@ -367,7 +347,6 @@ impl <I: From<Weight>> ::support::traits::Get<I> for MaximumBlockWeight {
 }
 pub struct AvailableBlockRatio;
 
-#[allow(dead_code)]
 impl AvailableBlockRatio {
 	pub fn get() -> Perbill { Perbill::from_percent(75) }
 }
@@ -377,7 +356,6 @@ impl <I: From<Perbill>> ::support::traits::Get<I> for AvailableBlockRatio
 }
 pub struct MaximumBlockLength;
 
-#[allow(dead_code)]
 impl MaximumBlockLength {
 	pub fn get() -> u32 { 5 * 1024 * 1024 }
 }
@@ -387,7 +365,6 @@ impl <I: From<u32>> ::support::traits::Get<I> for MaximumBlockLength {
 
 pub struct Version;
 
-#[allow(dead_code)]
 impl Version {
 	pub fn get() -> RuntimeVersion { VERSION }
 }
@@ -395,10 +372,8 @@ impl <I: From<RuntimeVersion>> ::support::traits::Get<I> for Version {
 	fn get() -> I { I::from(VERSION) }
 }
 
-#[allow(dead_code)]
 pub struct MinimumPeriod;
 
-#[allow(dead_code)]
 impl MinimumPeriod {
 	pub fn get() -> u64 { 5000 }
 }
@@ -744,7 +719,6 @@ impl <AccountId> From<RawEvent<AccountId>> for () {
     fn from(_: RawEvent<AccountId>) -> () { () }
 }
 impl <AccountId> RawEvent<AccountId> {
-    #[allow(dead_code)]
     pub fn metadata() -> &'static [::support::event::EventMetadata] {
         &[::support::event::EventMetadata{name:
                                                     ::support::event::DecodeDifferent::Encode("SomethingStored"),
