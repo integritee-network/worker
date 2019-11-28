@@ -44,15 +44,9 @@ use std::vec::Vec;
 use itertools::Itertools;
 use core::default::Default;
 
-use runtime_primitives::generic::Era;
-use primitive_types::U256;
-use codec::{Decode, Encode, Compact};
+use codec::{Decode, Encode};
 use utils::{hash_from_slice};
 use utils::get_ecc_seed;
-use substrate_api_client::{
-	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
-	crypto::AccountKey,
-	extrinsic};
 use primitives::{ed25519, Pair};
 //use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
 /*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
@@ -62,7 +56,7 @@ use primitives::{ed25519, Pair};
 //use crypto::ed25519::{keypair, signature};
 //use utils::blake2_256;
 
-use constants::{RA_SPID, RA_API_KEY};
+use constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
 
 //pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
@@ -600,27 +594,22 @@ pub unsafe extern "C" fn perform_ra(
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+    seed.copy_from_slice(seedvec);
+	let signer = ed25519::Pair::from_seed(&seed);
 	info!("Restored ECC pubkey: {:?}", signer.public());
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
-	let era = Era::immortal();
 
-	//FIXME: define constants
-	let call = [7u8,0u8];
-
-	//FIXME: define constant at client
-	let spec_version = 4;
+	let call = [SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
 
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (call, cert_der.to_vec(), url_slice.to_vec()),
 	    nonce,
 	    genesis_hash,
-	    spec_version
-    );	
+	    RUNTIME_SPEC_VERSION
+    );
 
 	let encoded = xt.encode();
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);

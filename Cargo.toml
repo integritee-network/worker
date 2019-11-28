@@ -1,25 +1,16 @@
 [workspace]
-
 members = [
 	 "worker",
 	 "worker/worker-api",
 	 "substratee-node-calls",
 	 "client",
 	 "stf",
+	 "substrate-sgx/externalities",
+	 "substrate-sgx/sr-io",
+	 "substrate-sgx/runtime"
+#	 "enclave",
 ]
 
-# cargo bug https://github.com/rust-lang/cargo/issues/5478
-# forces us to add extra characters to github url, like introducing double slashes
-[patch.'https://github.com/scs/substrate']
-primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
-substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1" }
-
-[patch.'https://github.com/paritytech/substrate']
-primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
-substrate-application-crypto = { git = "https://github.com/scs//substrate", tag = "substraTEE-M5.1" }
-
-[patch.'https://github.com/scs/substrate-api-client']
-primitives = { git = "https://github.com/scs//substrate", package = 'substrate-primitives', tag = "substraTEE-M5.1" }
-
-[patch.crates-io]
-ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx" }
+# environment logger still depends on v1.0.9
+[patch."https://github.com/baidu/rust-sgx-sdk.git"]
+sgx_tstd = { git = "https://github.com/apache/incubator-mesatee-sgx/", rev = "v1.1.0" }

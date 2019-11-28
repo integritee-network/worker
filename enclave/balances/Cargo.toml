@@ -17,7 +17,7 @@ sgx_log       = { package = "log", version = "0.4.7", git = "https://github.com/
 git = 'https://github.com/scs/substrate'
 rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
 package = "sr-std"
-features = ["no_global_allocator"]
+features = ["disable_allocator"]
 default-features = false
 
 [dependencies.sr-primitives]

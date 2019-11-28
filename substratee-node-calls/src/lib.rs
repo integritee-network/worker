@@ -3,11 +3,15 @@ extern crate regex;
 use log::*;
 use codec::{Decode, Encode};
 use substrate_api_client::utils::{hexstr_to_vec, hexstr_to_u64};
-use primitives::ed25519;
-use regex::Regex;
-use srml_support::traits::Len;
+use primitives::{crypto::Pair, ed25519};
+use runtime_primitives::{MultiSignature};
 
-pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
+use regex::Regex;
+
+pub fn get_worker_info<P: Pair, >(api: &substrate_api_client::Api<P>, index: u64) -> Enclave
+where
+	MultiSignature: From<P::Signature>,
+{
 	info!("[>] Get worker's URL");
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveRegistry", Some((index).encode())).unwrap();
 	debug!("Storage hex_str: {}", result_str);
@@ -18,7 +22,10 @@ pub fn get_worker_info(api: &substrate_api_client::Api, index: u64) -> Enclave {
 	enc
 }
 
-pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
+pub fn get_worker_amount<P: Pair>(api: &substrate_api_client::Api<P>) -> u64
+where
+	MultiSignature: From<P::Signature>,
+{
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveCount", None).unwrap();
 	info!("get_worker_amount() ret {:?}", result_str);
 	let amount = match result_str.as_str() {
@@ -29,7 +36,10 @@ pub fn get_worker_amount(api: &substrate_api_client::Api) -> u64 {
 	amount
 }
 
-pub fn get_latest_state(api: &substrate_api_client::Api) -> Option<[u8; 46]> {
+pub fn get_latest_state<P: Pair>(api: &substrate_api_client::Api<P>) -> Option<[u8; 46]>
+where
+	MultiSignature: From<P::Signature>,
+{
 	let result_str = api.get_storage("substraTEERegistry", "LatestIPFSHash", None).unwrap();
 	let unhex = hexstr_to_vec(result_str).unwrap();
 	info!("State hash vec: {:?}", unhex);
@@ -78,16 +88,6 @@ mod tests {
 	use substrate_api_client::Api;
 
 	use super::*;
-
-	#[test]
-	// test requires one registered enclave in substratee_registry
-	fn get_worker_enclave_should_work() {
-		let mut api: substrate_api_client::Api = Api::new(format!("ws://127.0.0.1:9991"));
-		api.init();
-		get_worker_amount(&api);
-		let enc = get_worker_info(&api, 0);
-
-	}
 
 	#[test]
 	fn regex_works() {

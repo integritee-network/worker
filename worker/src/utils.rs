@@ -17,8 +17,8 @@
 use log::*;
 use std::path::Path;
 use constants::*;
-use std::process::Command;
-use primitives::ed25519;
+use primitives::{ed25519, crypto::Pair};
+use runtime_primitives::MultiSignature;
 use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
 
 pub fn check_files() -> u8 {
@@ -46,7 +46,10 @@ fn file_missing(path: &str) -> u8 {
 	}
 }
 
-pub fn get_first_worker_that_is_not_equal_to_self(api: &substrate_api_client::Api, pubkey: Vec<u8>) -> Result<Enclave, &str> {
+pub fn get_first_worker_that_is_not_equal_to_self<P: Pair>(api: &substrate_api_client::Api<P>, pubkey: Vec<u8>) -> Result<Enclave, &str>
+where
+	MultiSignature: From<P::Signature>
+{
 	let w_amount = get_worker_amount(api);
 	let key = vec_to_ed25519_pub(pubkey);
 

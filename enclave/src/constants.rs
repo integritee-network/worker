@@ -22,3 +22,11 @@ pub const AES_KEY_FILE_AND_INIT_V: 	&str = "aes_key_sealed.bin";
 
 pub static RA_SPID:       &str = "../bin/spid.txt";
 pub static RA_API_KEY:	  &str = "../bin/key.txt";
+
+pub static SUBSRATEE_REGISTRY_MODULE: u8 = 6u8;
+pub static REGISTER_ENCLAVE: u8 = 0u8;
+//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
+//pub static CALL_WORKER: u8 = 2u8;
+pub static CALL_CONFIRMED: u8 = 3u8;
+
+pub static RUNTIME_SPEC_VERSION: u32 = 1;

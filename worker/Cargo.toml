@@ -27,17 +27,17 @@ cid 					= "0.3"
 sha2 					= { version = "0.7", default-features = false }
 
 codec           		= { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
-primitive-types    		= { version = "0.5.0", default-features = false, features = ["codec"] }
+primitive-types    		= { version = "0.6", default-features = false, features = ["codec"] }
 
-sgx_urts				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types 				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tseal				= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_ucrypto 			= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper 		= { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+sgx_urts				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_types 				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tseal				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_ucrypto 			= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_crypto_helper 		= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
+tag = "api-M1.5"
 
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
@@ -47,38 +47,38 @@ path = "worker-api"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-rev = "acd97f49be1f691c35f567dd79f7391ce9554a9f"
+tag = "M5.2"
 package = "substratee-node-runtime"
 default-features = false
-features = ["no_global_allocator"]
 
 [dependencies.runtime_primitives]
-git = 'https://github.com/scs/substrate'
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 package = "sr-primitives"
 
 [dependencies.balances]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
-package = "srml-balances"
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "pallet-balances"
 
 [dependencies.node-primitives]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
 [dependencies.primitives]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 package = "substrate-primitives"
 
-[dependencies.substrate-keyring]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
+[dependencies.keyring]
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "substrate-keyring"
 
 [dependencies.system]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
-package = "srml-system"
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "palette-system"
 
 [dependencies.substratee-stf]
 path = "../stf"

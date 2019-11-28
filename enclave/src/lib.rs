@@ -41,13 +41,11 @@ extern crate primitives;
 extern crate runtime_primitives;
 extern crate rust_base58;
 extern crate rustls;
-#[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate sgx_crypto_helper;
 extern crate sgx_rand;
 extern crate sgx_serialize;
-#[macro_use]
 extern crate sgx_serialize_derive;
 extern crate sgx_tcrypto;
 extern crate sgx_trts;
@@ -66,29 +64,27 @@ extern crate substrate_api_client;
 extern crate substratee_stf;
 
 use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
-use substrate_api_client::{
-	extrinsic::xt_primitives::{UncheckedExtrinsicV3, GenericAddress, GenericExtra, SignedPayload},
-	crypto::AccountKey,
-	extrinsic};
 
-use codec::{Compact, Decode, Encode};
-use primitive_types::U256;
-use primitives::{ed25519, Pair, hashing::{blake2_256}};
-use runtime_primitives::generic::Era;
-use rust_base58::ToBase58;
+use codec::{Decode, Encode};
+use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
-use sgx_types::{sgx_sha256_hash_t, sgx_status_t, size_t};
+use sgx_types::{sgx_status_t, size_t};
 
-use constants::{SEALED_SIGNER_SEED_FILE, ENCRYPTED_STATE_FILE, RSA3072_SEALED_KEY_FILE};
-use std::collections::HashMap;
+use constants::{
+	SEALED_SIGNER_SEED_FILE,
+	ENCRYPTED_STATE_FILE,
+	RSA3072_SEALED_KEY_FILE,
+	SUBSRATEE_REGISTRY_MODULE,
+	CALL_CONFIRMED,
+	RUNTIME_SPEC_VERSION,
+};
 use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
-use std::string::ToString;
 use std::vec::Vec;
 
 mod constants;
@@ -127,7 +123,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
 	//FIXME remove this leak!
 	info!("[Enclave initialized] Ed25519 seed : 0x{}", hex::encode_hex(&seedvec));
-    seed.copy_from_slice(seedvec); 
+    seed.copy_from_slice(seedvec);
 	let signer_prim = ed25519::Pair::from_seed(&seed);
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer_prim.public().0);
 
@@ -196,8 +192,8 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+    seed.copy_from_slice(seedvec);
+	let signer = ed25519::Pair::from_seed(&seed);
 
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
 
@@ -277,8 +273,8 @@ pub unsafe extern "C" fn execute_stf(
 	};
 	let mut seed = [0u8; 32];
     let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec); 
-	let signer = AccountKey::Ed(ed25519::Pair::from_seed(&seed));
+    seed.copy_from_slice(seedvec);
+	let signer = ed25519::Pair::from_seed(&seed);
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
@@ -287,18 +283,15 @@ pub unsafe extern "C" fn execute_stf(
 	let call_hash = blake2_256(&request_vec);
 	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
 
-	let xt_call = [7u8,3u8];
-
-	//FIXME: define constant at client
-	let spec_version = 4;
+	let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
 
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (xt_call, call_hash.to_vec(), state_hash.to_vec()),
 	    nonce,
 	    genesis_hash,
-	    spec_version
-    );	
+	    RUNTIME_SPEC_VERSION
+    );
 
 	let encoded = xt.encode();
 
@@ -314,12 +307,12 @@ pub unsafe extern "C" fn execute_stf(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_state(
-	getter: *const u8, 
-	getter_size: u32, 
+	getter: *const u8,
+	getter_size: u32,
 	value: *mut u8,
 	value_size: u32
 	) -> sgx_status_t {
-	
+
 	let mut getter_slice = slice::from_raw_parts(getter, getter_size as usize);
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 

@@ -7,18 +7,19 @@ edition = "2018"
 [dependencies]
 log = "0.4"
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.5.0", default-features = false, features = ["codec"] }
+primitive-types = { version = "0.6", default-features = false, features = ["codec"] }
 regex = "1"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-rev = 'a1e82a08418dc5de0b6bd3bf016bcee004736441'
+tag = "api-M1.5"
 
 [dependencies.primitives]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
+git = "https://github.com/paritytech/substrate"
 package = "substrate-primitives"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
-[dependencies.srml-support]
-git = "https://github.com/scs/substrate"
-rev = "f17d023bbe179f15678ac9989f471c9b18917e17"
+[dependencies.runtime_primitives]
+git = "https://github.com/paritytech/substrate"
+package = "sr-primitives"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"

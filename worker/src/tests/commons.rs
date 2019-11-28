@@ -16,17 +16,11 @@
 */
 
 use enclave_api::*;
-//use enclave_wrappers::get_account_nonce;
 use log::*;
-//use codec::{Compact, Encode};
-//use primitive_types::U256;
-use primitives::{ed25519, Pair};
 use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use std::str;
-use substrate_api_client::Api;
-use utils;
 use substratee_stf;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,13 +28,6 @@ pub struct Message {
 	pub account: String,
 	pub amount: u32,
 	pub sha256: sgx_sha256_hash_t
-}
-
-pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
-	let mut array = [0; 32];
-	let bytes = &bytes[..array.len()]; // panics if not enough data
-	array.copy_from_slice(bytes);
-	array
 }
 
 pub fn get_encrypted_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
@@ -68,17 +55,6 @@ pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
 	let mut payload_encrypted: Vec<u8> = Vec::new();
 	rsa_pubkey.encrypt_buffer(&payload, &mut payload_encrypted).unwrap();
 	payload_encrypted
-}
-
-#[allow(dead_code)]
-pub fn register_enclave(port: &str) {
-	let mut api = Api::new(format!("ws://127.0.0.1:{}", port));
-
-	let tee_ecc_seed = [244, 96, 170, 60, 77, 239, 28, 64, 51, 180, 208, 145, 76, 154, 198, 174,
-		236, 162, 18, 135, 190, 84, 216, 155, 142, 175, 237, 238, 60, 219, 134, 184];
-	let _pair = ed25519::Pair::from_seed(&tee_ecc_seed);
-
-//	let tx_hash = api.send_extrinsic(xthex).unwrap();
 }
 
 pub fn evaluate_result(result: sgx_status_t) {

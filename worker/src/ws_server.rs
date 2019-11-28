@@ -22,13 +22,10 @@ use std::str;
 use std::thread;
 
 use log::*;
-use primitives::{ed25519, Pair, Public};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use ws::{CloseCode, Handler, listen, Message, Result, Sender};
 use primitive_types::U256;
-use substratee_stf::TrustedGetter;
-use substrate_api_client::utils::hexstr_to_u256;
 //use enclave_api::{get_counter, get_rsa_encryption_pubkey};
 use enclave_api::{get_rsa_encryption_pubkey, get_state};
 use substratee_worker_api::requests::*;
@@ -83,7 +80,6 @@ fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str) -> Message 
 	let value_size = 16; //u128
 	let mut value: Vec<u8> = vec![0u8; value_size as usize];
 
-	let result = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let result = unsafe {
 		get_state(eid,
 					&mut retval,
