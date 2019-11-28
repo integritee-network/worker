@@ -50,10 +50,7 @@ use sr_io::SgxExternalitiesTrait;
 use std::prelude::v1::*;
 
 #[cfg(feature = "sgx")]
-use runtime_wrapper::Runtime;
-
-#[cfg(feature = "sgx")]
-mod runtime_wrapper;
+use sgx_runtime::Runtime;
 
 pub mod tests;
 
@@ -102,11 +99,11 @@ impl Stf {
 		ext.execute_with(|| {
 			let _result = match call {
 				TrustedCall::balance_set_balance(who, free_balance, reserved_balance) =>
-					runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(who.clone()), free_balance, reserved_balance).dispatch(runtime_wrapper::Origin::ROOT),
+					sgx_runtime::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(who.clone()), free_balance, reserved_balance).dispatch(sgx_runtime::Origin::ROOT),
 				TrustedCall::balance_transfer(from, to, value) => {
 					//FIXME: here would be a good place to really verify a signature
-					let origin = runtime_wrapper::Origin::signed(from.clone());
-					runtime_wrapper::balancesCall::<Runtime>::transfer(indices::Address::<Runtime>::Id(to.clone()), value).dispatch(origin)
+					let origin = sgx_runtime::Origin::signed(from.clone());
+					sgx_runtime::balancesCall::<Runtime>::transfer(indices::Address::<Runtime>::Id(to.clone()), value).dispatch(origin)
 				},
 			};
 		});
@@ -152,8 +149,8 @@ pub fn init_runtime() {
 	let mut ext = SgxExternalities::new();
 
 	let tina = AccountId::default();
-	let origin_tina = runtime_wrapper::Origin::signed(tina.clone());
-	//let origin = runtime_wrapper::Origin::ROOT;
+	let origin_tina = sgx_runtime::Origin::signed(tina.clone());
+	//let origin = sgx_runtime::Origin::ROOT;
 
 	let address = indices::Address::<Runtime>::default();
 
@@ -177,7 +174,7 @@ pub fn init_runtime() {
 		const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
 
 		info!("re-funding tina: call set_balance");
-		let res = runtime_wrapper::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina.clone()), 42, 43).dispatch(runtime_wrapper::Origin::ROOT);
+		let res = sgx_runtime::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina.clone()), 42, 43).dispatch(sgx_runtime::Origin::ROOT);
 		info!("reading Tina's FreeBalance");
 		let tina_balance = sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())));
 		info!("Tina's FreeBalance is {:?}", tina_balance);

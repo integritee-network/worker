@@ -11,6 +11,7 @@ sgx = [
     "env_logger",
     "log",
     "sr-io",
+    "sgx-runtime"
 ]
 
 [dependencies]
@@ -92,3 +93,8 @@ optional = true
 path = "../substrate-sgx/sr-io"
 package = "sr-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
+
+[dependencies.sgx-runtime]
+optional = true
+package = "sgx-runtime"
+path = "../substrate-sgx/runtime"

@@ -7,6 +7,7 @@ members = [
 	 "stf",
 	 "substrate-sgx/externalities",
 	 "substrate-sgx/sr-io",
+	 "substrate-sgx/runtime"
 #	 "enclave",
 ]
 
