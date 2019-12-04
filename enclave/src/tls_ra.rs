@@ -1,17 +1,19 @@
-use rustls;
 use rustls::{ClientSession, Stream};
 use sgx_types::*;
 
-use {cert, ocall_read_ipfs, ocall_write_ipfs};
-use attestation::create_ra_report_and_signature;
-use constants::ENCRYPTED_STATE_FILE;
+use log::*;
 use std::backtrace::{self, PrintFormat};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
 use std::sync::Arc;
 use std::vec::Vec;
-use utils::*;
+
+use crate::attestation::create_ra_report_and_signature;
+use crate::constants::ENCRYPTED_STATE_FILE;
+use crate::cert;
+use crate::{ocall_read_ipfs, ocall_write_ipfs};
+use crate::utils::*;
 
 struct ClientAuth {
 	outdated_ok: bool,

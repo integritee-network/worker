@@ -2,6 +2,7 @@
 name = "substratee_worker_enclave"
 version = "4.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
+edition = "2018"
 
 [workspace]
 members = [

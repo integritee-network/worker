@@ -15,24 +15,8 @@
 
 */
 
-#[macro_use]
-extern crate clap;
-extern crate env_logger;
-extern crate hex_literal;
-extern crate log;
-extern crate my_node_runtime;
-extern crate codec;
-extern crate primitives;
-extern crate runtime_primitives;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sgx_crypto_helper;
-extern crate sgx_types;
-extern crate substrate_api_client;
-
-use clap::App;
+use serde_derive::{Deserialize, Serialize};
+use clap::{App, load_yaml};
 use codec::Encode;
 use primitives::{Pair, crypto::Ss58Codec};
 use sgx_types::*;

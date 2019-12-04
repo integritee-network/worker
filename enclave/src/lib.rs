@@ -25,45 +25,16 @@
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-extern crate base64;
-extern crate bit_vec;
-extern crate chrono;
-extern crate env_logger;
-extern crate httparse;
-extern crate itertools;
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-extern crate num_bigint;
-extern crate codec;
-extern crate primitive_types;
-extern crate primitives;
-extern crate runtime_primitives;
-extern crate rust_base58;
-extern crate rustls;
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sgx_crypto_helper;
-extern crate sgx_rand;
-extern crate sgx_serialize;
-extern crate sgx_serialize_derive;
-extern crate sgx_tcrypto;
-extern crate sgx_trts;
-extern crate sgx_tse;
-extern crate sgx_tseal;
+use env_logger;
+use log::*;
+use serde_json;
+
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-extern crate sgx_tunittest;
-extern crate sgx_types;
-extern crate webpki;
-extern crate webpki_roots;
-extern crate yasna;
-#[macro_use]
-extern crate substrate_api_client;
-extern crate substratee_stf;
 
 use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
+use substrate_api_client::compose_extrinsic_offline;
 
 use codec::{Decode, Encode};
 use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};

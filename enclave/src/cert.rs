@@ -8,6 +8,7 @@ use sgx_types::*;
 
 use super::CERTEXPIRYDAYS;
 use std::io::BufReader;
+use log::*;
 use rustls;
 use yasna;
 use base64;

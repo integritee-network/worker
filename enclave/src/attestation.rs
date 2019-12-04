@@ -31,6 +31,7 @@ use sgx_tse::*;
 use sgx_tcrypto::*;
 use sgx_rand::*;
 
+use log::*;
 use std::prelude::v1::*;
 use std::sync::Arc;
 use std::net::TcpStream;
@@ -45,9 +46,8 @@ use itertools::Itertools;
 use core::default::Default;
 
 use codec::{Decode, Encode};
-use utils::{hash_from_slice};
-use utils::get_ecc_seed;
 use primitives::{ed25519, Pair};
+use substrate_api_client::compose_extrinsic_offline;
 //use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
 /*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
     extrinsic,
@@ -56,7 +56,9 @@ use primitives::{ed25519, Pair};
 //use crypto::ed25519::{keypair, signature};
 //use utils::blake2_256;
 
-use constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
+use crate::{cert, hex};
+use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
+use crate::utils::{hash_from_slice, get_ecc_seed};
 
 //pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
@@ -130,7 +132,7 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
 
 	// Remove %0A from cert, and only obtain the signing cert
 	cert = cert.replace("%0A", "");
-	cert = ::cert::percent_decode(cert);
+	cert = cert::percent_decode(cert);
 	let v: Vec<&str> = cert.split("-----").collect();
 	let sig_cert = v[2].to_string();
 
@@ -515,7 +517,7 @@ fn load_spid(filename: &str) -> sgx_spid_t {
 	let mut contents = String::new();
 	spidfile.read_to_string(&mut contents).expect("cannot read the spid file");
 
-	::hex::decode_spid(&contents)
+	hex::decode_spid(&contents)
 }
 
 fn get_ias_api_key() -> String {
@@ -551,7 +553,7 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  Resu
 
 	// generate an ECC certificate
 	info!("    [Enclave] Generate ECC Certificate");
-	let (key_der, cert_der) = match ::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
+	let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
 		Ok(r) => r,
 		Err(e) => {
 			error!("    [Enclave] gen_ecc_cert failed: {:?}", e);

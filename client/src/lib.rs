@@ -15,8 +15,6 @@
 
 */
 
-extern crate system;
-
 use std::process::Command;
 use std::sync::mpsc::channel;
 use std::thread;
