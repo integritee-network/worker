@@ -15,15 +15,6 @@
 
 */
 
-extern crate log;
-extern crate primitives;
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sgx_crypto_helper;
-extern crate ws;
-extern crate substratee_stf;
-extern crate codec;
-
 use client::WsClient;
 use log::*;
 use requests::*;

@@ -16,10 +16,11 @@
 
 use log::*;
 use std::path::Path;
-use constants::*;
 use primitives::{ed25519, crypto::Pair};
 use runtime_primitives::MultiSignature;
 use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
+
+use crate::constants::*;
 
 pub fn check_files() -> u8 {
 	debug!("*** Check files");

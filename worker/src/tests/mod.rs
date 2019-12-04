@@ -16,9 +16,10 @@
 */
 
 use clap::ArgMatches;
-use enclave_api::*;
-use init_enclave::init_enclave;
 use sgx_types::*;
+
+use crate::enclave_api::*;
+use crate::init_enclave::init_enclave;
 
 use self::ecalls::*;
 use self::integration_tests::*;
@@ -76,7 +77,7 @@ pub fn run_ecalls(eid: sgx_enclave_id_t) {
 	execute_stf_works(eid);
 	println!("  testing get_state()");
 	get_state_works(eid);
-	
+
 
 	println!("[+] Ecall tests ended!");
 }

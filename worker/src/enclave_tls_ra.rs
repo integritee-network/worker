@@ -23,7 +23,8 @@ use sgx_types::*;
 use log::*;
 use std::os::unix::io::{AsRawFd};
 use std::net::{TcpListener, TcpStream};
-use init_enclave::init_enclave;
+
+use crate::init_enclave::init_enclave;
 
 extern {
 	fn run_server(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,

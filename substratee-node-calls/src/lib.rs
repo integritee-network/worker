@@ -1,5 +1,3 @@
-extern crate regex;
-
 use log::*;
 use codec::{Decode, Encode};
 use substrate_api_client::utils::{hexstr_to_vec, hexstr_to_u64};

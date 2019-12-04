@@ -26,16 +26,13 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-extern crate sgx_types;
-extern crate sgx_urts;
-
 use std::{fs::File, path::PathBuf};
 use std::io::{Read, Write};
 use log::*;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
-use constants::{ENCLAVE_TOKEN, ENCLAVE_FILE};
+use crate::constants::{ENCLAVE_TOKEN, ENCLAVE_FILE};
 
 pub fn init_enclave() -> SgxResult<SgxEnclave> {
     const LEN: usize = 1024;

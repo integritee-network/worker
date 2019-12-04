@@ -15,42 +15,13 @@
 
 */
 
-#[macro_use]
-extern crate clap;
-extern crate env_logger;
-extern crate log;
-extern crate my_node_runtime;
-extern crate node_primitives;
-extern crate runtime_primitives;
-extern crate codec;
-extern crate primitive_types;
-extern crate primitives;
-extern crate rust_base58;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sgx_crypto_helper;
-extern crate sgx_types;
-extern crate sgx_ucrypto as crypto;
-extern crate sgx_urts;
-#[macro_use]
-extern crate substrate_api_client;
-extern crate substratee_stf;
-extern crate substratee_node_calls;
-extern crate substratee_worker_api;
-extern crate keyring;
-extern crate system;
-extern crate ws;
+use substrate_api_client;
+use keyring;
+use primitives;
+use substratee_worker_api;
+use substratee_node_calls;
 
-extern crate cid;
-extern crate futures;
-extern crate hyper;
-extern crate ipfs_api;
-extern crate multihash;
-extern crate sha2;
-
-use clap::App;
+use clap::{App, load_yaml};
 use enclave_api::{init, perform_ra, get_ecc_signing_pubkey};
 use enclave_wrappers::{process_request, get_signing_key_tee, get_public_key_tee};
 use init_enclave::init_enclave;
@@ -68,13 +39,13 @@ use substrate_api_client::{Api, utils::hexstr_to_vec,
 	extrinsic::{xt_primitives::GenericAddress},
 	utils::hexstr_to_u256};
 
-use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
-use ws_server::start_ws_server;
-use enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
-use substratee_node_calls::get_worker_amount;
-use substratee_worker_api::Api as WorkerApi;
-use primitives::{Pair, crypto::Ss58Codec, crypto::AccountId32, sr25519};
-use keyring::AccountKeyring;
+use crate::utils::{check_files, get_first_worker_that_is_not_equal_to_self};
+use crate::ws_server::start_ws_server;
+use crate::enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
+use crate::substratee_node_calls::get_worker_amount;
+use crate::substratee_worker_api::Api as WorkerApi;
+use crate::primitives::{Pair, crypto::Ss58Codec, crypto::AccountId32, sr25519};
+use crate::keyring::AccountKeyring;
 
 mod utils;
 mod constants;

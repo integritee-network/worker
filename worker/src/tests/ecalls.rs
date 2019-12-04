@@ -15,13 +15,13 @@
 
 */
 
-//use crypto::rsgx_sha256_slice;
-use enclave_api::*;
 use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
-use tests::commons::*;
 use substratee_stf;
+
+use crate::enclave_api::*;
+use crate::tests::commons::*;
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey

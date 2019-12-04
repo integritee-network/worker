@@ -3,6 +3,7 @@ name = "substratee_worker"
 version = "4.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
+edition = "2018"
 
 [dependencies]
 ws 						= "0.7"

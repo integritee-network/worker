@@ -20,9 +20,6 @@ use std::fs::{self, File};
 use log::*;
 use sgx_types::*;
 use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
-use constants::*;
-use enclave_api::*;
-use init_enclave::init_enclave;
 
 use primitives::sr25519;
 use primitives::crypto::Ss58Codec;
@@ -32,6 +29,10 @@ use my_node_runtime::UncheckedExtrinsic;
 use codec::{Decode, Encode};
 
 use runtime_primitives::{AnySignature, traits::Verify};
+
+use crate::constants::*;
+use crate::enclave_api::*;
+use crate::init_enclave::init_enclave;
 
 type AccountId = <AnySignature as Verify>::Signer;
 
