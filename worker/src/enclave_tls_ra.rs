@@ -14,15 +14,12 @@
 	limitations under the License.
 
 */
+use std::os::unix::io::{AsRawFd};
+use std::net::{TcpListener, TcpStream};
 
-extern crate sgx_types;
-extern crate sgx_urts;
-extern crate dirs;
 use sgx_types::*;
 
 use log::*;
-use std::os::unix::io::{AsRawFd};
-use std::net::{TcpListener, TcpStream};
 
 use crate::init_enclave::init_enclave;
 

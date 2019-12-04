@@ -1,9 +1,10 @@
+use sgx_tstd as std;
+use std::prelude::v1::*;
+
 use codec::Encode;
 use log::*;
 use primitives::hashing::{blake2_256, twox_128};
 use runtime_primitives::traits::Dispatchable;
-use sgx_tstd as std;
-use std::prelude::v1::*;
 
 use sgx_runtime::Runtime;
 use sr_io::SgxExternalitiesTrait;

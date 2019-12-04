@@ -1,13 +1,14 @@
-use rustls::{ClientSession, Stream};
-use sgx_types::*;
-
-use log::*;
 use std::backtrace::{self, PrintFormat};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
 use std::sync::Arc;
 use std::vec::Vec;
+
+use sgx_types::*;
+
+use rustls::{ClientSession, Stream};
+use log::*;
 
 use crate::attestation::create_ra_report_and_signature;
 use crate::constants::ENCRYPTED_STATE_FILE;

@@ -15,20 +15,18 @@
 
 */
 
-use std::str;
 use std::fs::{self, File};
-use log::*;
+use std::str;
+
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
-use sgx_crypto_helper::rsa3072::{Rsa3072PubKey};
 
-use primitives::sr25519;
-use primitives::crypto::Ss58Codec;
-
-use substrate_api_client::{Api,	utils::hexstr_to_u256};
-use my_node_runtime::UncheckedExtrinsic;
 use codec::{Decode, Encode};
-
+use log::*;
+use my_node_runtime::UncheckedExtrinsic;
+use primitives::{sr25519, crypto::Ss58Codec};
 use runtime_primitives::{AnySignature, traits::Verify};
+use substrate_api_client::{Api, utils::hexstr_to_u256};
 
 use crate::constants::*;
 use crate::enclave_api::*;

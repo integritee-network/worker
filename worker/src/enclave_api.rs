@@ -15,8 +15,6 @@
 
 */
 
-extern crate sgx_types;
-
 use sgx_types::*;
 
 extern {
@@ -46,7 +44,7 @@ extern {
 		getter: *const u8,
 		getter_size: u32,
 		value: *mut u8,
-		value_size: u32		
+		value_size: u32
 	) -> sgx_status_t;
 
 	pub fn get_rsa_encryption_pubkey(

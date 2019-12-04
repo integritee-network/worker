@@ -1,10 +1,9 @@
-use log::*;
 use codec::{Decode, Encode};
-use substrate_api_client::utils::{hexstr_to_vec, hexstr_to_u64};
+use log::*;
 use primitives::{crypto::Pair, ed25519};
-use runtime_primitives::{MultiSignature};
-
 use regex::Regex;
+use runtime_primitives::MultiSignature;
+use substrate_api_client::utils::{hexstr_to_u64, hexstr_to_vec};
 
 pub fn get_worker_info<P: Pair, >(api: &substrate_api_client::Api<P>, index: u64) -> Enclave
 where

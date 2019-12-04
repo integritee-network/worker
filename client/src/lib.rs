@@ -19,26 +19,26 @@ use std::process::Command;
 use std::sync::mpsc::channel;
 use std::thread;
 
+use blake2_rfc::blake2s::blake2s;
+use codec::{Decode, Encode};
+use log::*;
 use log::info;
 use my_node_runtime::{
 	Event,
 	Hash,
 };
-use codec::{Decode, Encode};
 use primitive_types::U256;
 use primitives::{
-	crypto::{Ss58Codec, Pair, AccountId32},
+	crypto::{AccountId32, Pair, Ss58Codec},
 	ed25519, sr25519,
 };
 use runtime_primitives::MultiSignature;
-use substrate_api_client::{Api, compose_extrinsic,
-    utils::{hexstr_to_u256, hexstr_to_vec},
-};
-use substratee_stf::{TrustedCall, TrustedGetter};
-use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use blake2_rfc::blake2s::blake2s;
+use substrate_api_client::{Api, compose_extrinsic,
+						   utils::{hexstr_to_u256, hexstr_to_vec},
+};
 
+use substratee_stf::{TrustedCall, TrustedGetter};
 use substratee_worker_api::Api as WorkerApi;
 
 // FIXME: most of these functions are redundant with substrate-api-client

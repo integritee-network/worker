@@ -28,11 +28,13 @@
 
 use std::{fs::File, path::PathBuf};
 use std::io::{Read, Write};
-use log::*;
+
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
-use crate::constants::{ENCLAVE_TOKEN, ENCLAVE_FILE};
+use log::*;
+
+use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN};
 
 pub fn init_enclave() -> SgxResult<SgxEnclave> {
     const LEN: usize = 1024;

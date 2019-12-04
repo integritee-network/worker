@@ -14,26 +14,25 @@
 	limitations under the License.
 
 */
-//use blake2_no_std::blake2b::blake2b;
-//use crypto::blake2s::Blake2s;
-use log::*;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::sgxfs::SgxFile;
+use std::vec::Vec;
+
 use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use std::fs::File;
-use std::io::{Read, Write};
-use std::sgxfs::SgxFile;
-use std::vec::Vec;
 use aes::Aes128;
-
+use log::*;
 use ofb::Ofb;
 use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
-type AesOfb = Ofb<Aes128>;
 
 use crate::Hash;
 use crate::constants::{AES_KEY_FILE_AND_INIT_V, SEALED_SIGNER_SEED_FILE, RSA3072_SEALED_KEY_FILE};
+
+type AesOfb = Ofb<Aes128>;
 
 pub fn read_rsa_keypair() -> SgxResult<Rsa3072KeyPair> {
 	let keyvec = read_file(RSA3072_SEALED_KEY_FILE)?;

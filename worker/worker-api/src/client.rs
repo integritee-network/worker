@@ -15,8 +15,9 @@
 
 */
 
-use log::*;
 use std::sync::mpsc::Sender as ThreadOut;
+
+use log::*;
 use ws::{CloseCode, Handler, Handshake, Message, Result, Sender};
 
 pub struct WsClient {

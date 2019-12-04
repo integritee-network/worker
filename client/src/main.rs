@@ -15,22 +15,22 @@
 
 */
 
-use serde_derive::{Deserialize, Serialize};
+use sgx_types::*;
+
 use clap::{App, load_yaml};
 use codec::Encode;
-use primitives::{Pair, crypto::Ss58Codec};
-use sgx_types::*;
-use substrate_api_client::{Api,	utils::hexstr_to_u256};
-
 use keyring::AccountKeyring;
+use log::*;
+use primitives::{crypto::Ss58Codec, Pair};
+use runtime_primitives::{AnySignature, traits::Verify};
+use serde_derive::{Deserialize, Serialize};
+use substrate_api_client::{Api, utils::hexstr_to_u256};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
-use substratee_worker_api::Api as WorkerApi;
 use substratee_stf::{TrustedCall, TrustedGetter};
-use log::*;
+use substratee_worker_api::Api as WorkerApi;
 
-use runtime_primitives::{AnySignature, traits::Verify};
 type AccountId = <AnySignature as Verify>::Signer;
 
 fn main() {

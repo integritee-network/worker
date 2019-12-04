@@ -33,17 +33,18 @@ use serde_json;
 #[macro_use]
 extern crate sgx_tstd as std;
 
-use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
-use substrate_api_client::compose_extrinsic_offline;
-
-use codec::{Decode, Encode};
-use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
+
+use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
+use substrate_api_client::compose_extrinsic_offline;
+
+use codec::{Decode, Encode};
+use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};
 
 use constants::{
 	SEALED_SIGNER_SEED_FILE,

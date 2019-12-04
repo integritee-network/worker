@@ -15,37 +15,32 @@
 
 */
 
-use substrate_api_client;
-use keyring;
-use primitives;
-use substratee_worker_api;
-use substratee_node_calls;
-
-use clap::{App, load_yaml};
-use enclave_api::{init, perform_ra, get_ecc_signing_pubkey};
-use enclave_wrappers::{process_request, get_signing_key_tee, get_public_key_tee};
-use init_enclave::init_enclave;
-use log::*;
-use my_node_runtime::{Event, Hash};
-use my_node_runtime::UncheckedExtrinsic;
-use codec::Decode;
-use codec::Encode;
-use primitive_types::U256;
-use sgx_types::*;
 use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
-use substrate_api_client::{Api, utils::hexstr_to_vec,
-	extrinsic::{xt_primitives::GenericAddress},
-	utils::hexstr_to_u256};
 
-use crate::utils::{check_files, get_first_worker_that_is_not_equal_to_self};
-use crate::ws_server::start_ws_server;
-use crate::enclave_tls_ra::{Mode, run_enclave_server, run_enclave_client};
-use crate::substratee_node_calls::get_worker_amount;
-use crate::substratee_worker_api::Api as WorkerApi;
-use crate::primitives::{Pair, crypto::Ss58Codec, crypto::AccountId32, sr25519};
-use crate::keyring::AccountKeyring;
+use sgx_types::*;
+
+use clap::{App, load_yaml};
+use codec::{Decode, Encode};
+use keyring::AccountKeyring;
+use log::*;
+use my_node_runtime::{Event, Hash, UncheckedExtrinsic};
+use primitive_types::U256;
+use primitives::{crypto::{AccountId32, Ss58Codec}, Pair, sr25519};
+use substrate_api_client::{Api,
+						   extrinsic::{xt_primitives::GenericAddress},
+						   utils::{hexstr_to_u256, hexstr_to_vec}
+};
+
+use enclave_api::{get_ecc_signing_pubkey, init, perform_ra};
+use enclave_tls_ra::{Mode, run_enclave_client, run_enclave_server};
+use enclave_wrappers::{get_public_key_tee, get_signing_key_tee, process_request};
+use init_enclave::init_enclave;
+use substratee_node_calls::get_worker_amount;
+use substratee_worker_api::Api as WorkerApi;
+use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
+use ws_server::start_ws_server;
 
 mod utils;
 mod constants;

@@ -15,15 +15,18 @@
 
 */
 
-use client::WsClient;
-use log::*;
-use requests::*;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::sync::mpsc::channel;
 use std::thread;
-use ws::connect;
-use substratee_stf::TrustedGetter;
+
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+
 use codec::Encode;
+use log::*;
+use ws::connect;
+
+use client::WsClient;
+use requests::*;
+use substratee_stf::TrustedGetter;
 
 pub mod client;
 pub mod requests;

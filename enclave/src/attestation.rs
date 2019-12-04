@@ -26,12 +26,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use sgx_types::*;
-use sgx_tse::*;
-use sgx_tcrypto::*;
-use sgx_rand::*;
-
-use log::*;
 use std::prelude::v1::*;
 use std::sync::Arc;
 use std::net::TcpStream;
@@ -42,19 +36,18 @@ use std::str;
 use std::io::{Write, Read};
 use std::untrusted::fs;
 use std::vec::Vec;
-use itertools::Itertools;
-use core::default::Default;
+
+use sgx_types::*;
+use sgx_tse::*;
+use sgx_tcrypto::*;
+use sgx_rand::*;
 
 use codec::{Decode, Encode};
+use core::default::Default;
+use itertools::Itertools;
+use log::*;
 use primitives::{ed25519, Pair};
 use substrate_api_client::compose_extrinsic_offline;
-//use my_node_runtime::{UncheckedExtrinsic,Call,SubstraTEERegistryCall};
-/*use substrate_api_client::{compose_extrinsic, crypto::{AccountKey, CryptoKind},
-    extrinsic,
-};*/
-
-//use crypto::ed25519::{keypair, signature};
-//use utils::blake2_256;
 
 use crate::{cert, hex};
 use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};

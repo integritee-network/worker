@@ -16,16 +16,12 @@
 
 */
 
-
-// #![allow(dead_code)]
-// #![allow(unused_assignments)]
-
-use sgx_types::*;
-
+use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
-use std::net::{TcpStream, SocketAddr};
 use std::str;
+
 use log::*;
+use sgx_types::*;
 
 #[no_mangle]
 pub extern "C" fn ocall_sgx_init_quote(ret_ti: *mut sgx_target_info_t,

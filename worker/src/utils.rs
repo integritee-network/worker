@@ -14,11 +14,13 @@
 	limitations under the License.
 */
 
-use log::*;
 use std::path::Path;
-use primitives::{ed25519, crypto::Pair};
+
+use log::*;
+use primitives::{crypto::Pair, ed25519};
 use runtime_primitives::MultiSignature;
-use substratee_node_calls::{get_worker_amount, get_worker_info, Enclave};
+
+use substratee_node_calls::{Enclave, get_worker_amount, get_worker_info};
 
 use crate::constants::*;
 

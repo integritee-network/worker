@@ -15,15 +15,18 @@
 
 */
 
-use futures::Future;
-use futures::Stream;
-use ipfs_api::IpfsClient;
-use log::*;
-use sgx_types::*;
 use std::io::Cursor;
 use std::slice;
 use std::str;
 use std::sync::mpsc::channel;
+
+use sgx_types::*;
+
+use futures::Future;
+use futures::Stream;
+use ipfs_api::IpfsClient;
+use log::*;
+
 
 pub type Cid = [u8; 46];
 
