@@ -1,15 +1,20 @@
 #![no_std]
 
 extern crate sgx_tstd as std;
-use environmental::environmental;
 
 use std::{collections::HashMap, vec::Vec};
+
+use sgx_serialize::{DeSerializeHelper, SerializeHelper};
+
+use environmental::environmental;
 
 pub type SgxExternalities = HashMap<Vec<u8>, Vec<u8>>;
 environmental!(ext: SgxExternalities);
 
 pub trait SgxExternalitiesTrait {
     fn new() -> Self;
+	fn decode(state: Vec<u8>) -> Self;
+	fn encode(self) -> Vec<u8>;
     fn insert(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>>;
     fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R;
 }
@@ -19,6 +24,16 @@ impl SgxExternalitiesTrait for SgxExternalities {
     fn new() -> Self {
         SgxExternalities::default()
     }
+
+	fn decode(state: Vec<u8>) -> Self {
+		let helper = DeSerializeHelper::<SgxExternalities>::new(state);
+		helper.decode().unwrap()
+	}
+
+	fn encode(self) -> Vec<u8> {
+		let helper = SerializeHelper::new();
+		helper.encode(self).unwrap()
+	}
 
     /// Insert key/value
     fn insert(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {

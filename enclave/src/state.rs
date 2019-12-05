@@ -1,11 +1,8 @@
 use std::vec::Vec;
 
-use sgx_serialize::SerializeHelper;
 use sgx_types::*;
 
 use log::*;
-
-use substratee_stf::State;
 
 use crate::aes;
 use crate::utils::*;
@@ -34,11 +31,9 @@ pub fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-pub fn encrypt(value: State) -> Result<Vec<u8>, sgx_status_t> {
-	let helper = SerializeHelper::new();
-	let mut c = helper.encode(value).unwrap();
-	aes::de_or_encrypt(&mut c)?;
-	Ok(c)
+pub fn encrypt(mut state: Vec<u8>) -> Result<Vec<u8>, sgx_status_t> {
+	aes::de_or_encrypt(&mut state)?;
+	Ok(state)
 }
 
 pub fn test_encrypted_state_io_works() {

@@ -33,12 +33,12 @@ use serde_json;
 #[macro_use]
 extern crate sgx_tstd as std;
 
-use sgx_serialize::DeSerializeHelper;
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
 use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
+use sgx_externalities::SgxExternalitiesTrait;
 use substrate_api_client::compose_extrinsic_offline;
 
 use codec::{Decode, Encode};
@@ -180,8 +180,7 @@ pub unsafe extern "C" fn execute_stf(
 		0 => Stf::init_state(),
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<State>::new(state_enc);
-			helper.decode().unwrap()
+			State::decode(state_enc)
 		}
 	};
 
@@ -189,7 +188,7 @@ pub unsafe extern "C" fn execute_stf(
 	Stf::execute(&mut state, stf_call);
 
 	// write the counter state and return
-	let enc_state = match state::encrypt(state) {
+	let enc_state = match state::encrypt(state.encode()) {
 		Ok(s) => s,
 		Err(sgx_status) => return sgx_status,
 	};
@@ -250,17 +249,16 @@ pub unsafe extern "C" fn get_state(
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 
 	// load last state
-	let state_enc = match state::read(ENCRYPTED_STATE_FILE) {
+	let state_vec = match state::read(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let mut state : State = match state_enc.len() {
+	let mut state : State = match state_vec.len() {
 		0 => Stf::init_state(),
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<State>::new(state_enc);
-			helper.decode().unwrap()
+			State::decode(state_vec)
 		}
 	};
 	let _getter = TrustedGetter::decode(&mut getter_slice).unwrap();
