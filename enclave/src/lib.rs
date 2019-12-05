@@ -111,12 +111,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size:
 	};
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-
-	// split the pubkey_slice at the length of the rsa_pubkey_json
-	// and fill the right side with whitespace so that the json can be decoded later on
-	let (left, right) = pubkey_slice.split_at_mut(rsa_pubkey_json.len());
-	left.clone_from_slice(rsa_pubkey_json.as_bytes());
-	right.iter_mut().for_each(|x| *x = 0x20);
+	write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec());
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -227,11 +222,7 @@ pub unsafe extern "C" fn execute_stf(
 
 	let encoded = xt.encode();
 
-	// split the extrinsic_slice at the length of the encoded extrinsic
-	// and fill the right side with whitespace
-	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
-	left.clone_from_slice(&encoded);
-	right.iter_mut().for_each(|x| *x = 0x20);
+	write_slice_and_whitespace_pad(extrinsic_slice, encoded);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -267,14 +258,10 @@ pub unsafe extern "C" fn get_state(
 		None => vec!(0),
 	};
 
-	// split the extrinsic_slice at the length of the encoded extrinsic
-	// and fill the right side with whitespace
-	let (left, right) = value_slice.split_at_mut(value_vec.len());
-	left.clone_from_slice(&value_vec);
-	//FIXME: now implicitly assuming we pass unsigned integer vecs, not strings terminated by 0x20
-	//FIXME: we should really pass an Option<Vec<u8>>
-	right.iter_mut().for_each(|x| *x = 0x00);
-	//right.iter_mut().for_each(|x| *x = 0x20);
+//	//FIXME: now implicitly assuming we pass unsigned integer vecs, not strings terminated by 0x20
+//	//FIXME: we should really pass an Option<Vec<u8>>
+	write_slice_and_whitespace_pad(value_slice, value_vec);
+
 	sgx_status_t::SGX_SUCCESS
 }
 

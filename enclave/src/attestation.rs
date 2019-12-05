@@ -51,7 +51,7 @@ use substrate_api_client::compose_extrinsic_offline;
 
 use crate::{cert, hex};
 use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
-use crate::utils::hash_from_slice;
+use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad};
 use crate::ed25519;
 
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
@@ -614,11 +614,7 @@ pub unsafe extern "C" fn perform_ra(
 	let encoded = xt.encode();
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
 
-	// split the extrinsic_slice at the length of the encoded extrinsic
-	// and fill the right side with whitespace
-	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
-	left.clone_from_slice(&encoded);
-	right.iter_mut().for_each(|x| *x = 0x20);
+	write_slice_and_whitespace_pad(extrinsic_slice, encoded);
 
 	sgx_status_t::SGX_SUCCESS
 }

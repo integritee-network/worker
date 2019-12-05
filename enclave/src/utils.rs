@@ -109,6 +109,13 @@ pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	Hash::from(&mut g)
 }
 
+pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
+		let (left, right) = writable.split_at_mut(data.len());
+	left.clone_from_slice(&data);
+	// fill the right side with whitespace
+	right.iter_mut().for_each(|x| *x = 0x20);
+}
+
 /*
 pub fn blake2s(plaintext: &[u8]) -> [u8; 32] {
 	let mut call_hash: [u8; 32] = Default::default();
