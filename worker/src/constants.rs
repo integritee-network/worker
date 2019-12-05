@@ -20,5 +20,12 @@ pub static ENCLAVE_FILE:		&str = "../bin/enclave.signed.so";
 pub static RSA_PUB_KEY:			&str = "rsa_pubkey.txt";
 pub static ECC_PUB_KEY:			&str = "ecc_pubkey.txt";
 
-pub static RA_SPID:				&str = "../bin/spid.txt";
-pub static RA_API_KEY:			&str = "../bin/key.txt";
+#[cfg(feature = "production")]
+pub static RA_SPID:       &str = "../bin/spid_production.txt";
+#[cfg(feature = "production")]
+pub static RA_API_KEY:	  &str = "../bin/key_production.txt";
+
+#[cfg(not(feature = "production"))]
+pub static RA_SPID:       &str = "../bin/spid.txt";
+#[cfg(not(feature = "production"))]
+pub static RA_API_KEY:	  &str = "../bin/key.txt";

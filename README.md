@@ -3,15 +3,30 @@ SubstraTEE worker for SubstraTEE node
 
 This is part of [substraTEE](https://github.com/scs/substraTEE)
 
-**Supports Rust nightly-2019-07-15**
- 
-**Enclave is compiled with nightly-2019-10-03**
+**Supports Rust nightly-2019-11-17**
+
+## Intel SGX develoment and production (commercial) license
+In order to perform a remote attestation of the enclave, an [Intel SGX Attestation Enhanced Service Privacy ID (EPID)](https://api.portal.trustedservices.intel.com/EPID-attestation) is needed. We use unlinkable quotes in our code.
+
+### Development Access
+Copy your SPID and key to the following files (use Linux line endings):
+* `bin/spid.txt`: SPID of your subscription
+* `bin/key.txt`: Key of your subscription (primary or secondary works)
+
+The enclave will be signed with the development key found under `enclave/Enclave_privat.pem` and uses the configuration found under `enclave/Enclave.config.xml`.
+
+### Production Access
+Copy your SPID and key to the following files (use Linux line endings):
+* `bin/spid_production.txt`: SPID of your subscription
+* `bin/key_production.txt`: Key of your subscription (primary or secondary works)
+
+The enclave will be signed with the your private key that waa also registered and whitelisted at Intel's. Make sure that the key is exported as an environment variable called `SGX_COMMERCIAL_KEY`. The enclave uses the configuration found under `enclave/Enclave.config.production.xml`.
 
 ## Private-tx demo
 To run a demo for private tokens do the following:
 
-Assumptions: 
-* your machine has SGX support 
+Assumptions:
+* your machine has SGX support
 * Intel SGX SDK installed.
 * rust toolchain is ready to build substrate
 

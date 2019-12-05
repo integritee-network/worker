@@ -87,6 +87,7 @@ default-features = false
 
 [features]
 default = ["std"]
+production = ["std"]
 std = [
 	"primitives/std",
 	"codec/std",

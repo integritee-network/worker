@@ -42,6 +42,8 @@ SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
+SGX_PRERELEASE ?= 0
+SGX_PRODUCTION ?= 0
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -65,6 +67,9 @@ ifeq ($(SGX_DEBUG), 1)
 ifeq ($(SGX_PRERELEASE), 1)
 $(error Cannot set SGX_DEBUG and SGX_PRERELEASE at the same time!!)
 endif
+ifeq ($(SGX_PRODUCTION), 1)
+$(error Cannot set SGX_DEBUG and SGX_PRODUCTION at the same time!!)
+endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
@@ -77,6 +82,18 @@ else
 	CARGO_TARGET := --release
 endif
 
+ifeq ($(SGX_PRODUCTION), 1)
+	SGX_ENCLAVE_MODE = "Production Mode"
+	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.production.xml"
+	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
+	WORKER_FEATURES = --features=production
+else
+	SGX_ENCLAVE_MODE = "Development Mode"
+	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
+	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
+	WORKER_FEATURES = --features=default
+endif
+
 ######## CUSTOM settings ########
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
@@ -87,7 +104,7 @@ CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h worker/Enclave_u.c worker/Enclave_u.h
 
 ######## SubstraTEE-worker settings ########
-Worker_Rust_Flags := $(CARGO_TARGET)
+Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES)
 Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find worker/ -type f -name 'Cargo.toml')
 Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
@@ -187,10 +204,11 @@ $(RustEnclave_Name): enclave compiler-rt enclave/Enclave_t.o
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	@echo
-	@echo "Signing the enclave"
-	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
+	@echo "Signing the enclave: $(SGX_ENCLAVE_MODE)"
+	$(SGX_ENCLAVE_SIGNER) sign -key $(SGX_SIGN_KEY) -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
 	@echo "SIGN =>  $@"
-
+	@echo
+	@echo "Enclave is in $(SGX_ENCLAVE_MODE)"
 
 .PHONY: enclave
 enclave:
@@ -230,3 +248,14 @@ help:
 	@echo "  client  - builds the substraTEE-client"
 	@echo ""
 	@echo "  clean   - cleanup"
+	@echo ""
+	@echo "Compilation options. Prepend them to the make command. Example: 'SGX_MODE=SW make'"
+	@echo "  SGX_MODE"
+	@echo "    HW (default): Use SGX hardware"
+	@echo "    SW: Simulation mode"
+	@echo "  SGX_DEBUG"
+	@echo "    0 (default): No debug information, optimization level 2, cargo release build"
+	@echo "    1: Debug information, optimization level 0, cargo debug build"
+	@echo "  SGX_PRODUCTION"
+	@echo "    0 (default): Using SGX development environment"
+	@echo "    1: Using SGX production environment"

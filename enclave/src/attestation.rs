@@ -53,9 +53,16 @@ use crate::{cert, hex};
 use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
 use crate::utils::{hash_from_slice, get_ecc_seed};
 
-//pub const PROD_HOSTNAME:&str = "as.sgx.trustedservices.intel.com";
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
+
+#[cfg(feature = "production")]
+pub const SIGRL_SUFFIX		: &str = "/sgx/attestation/v3/sigrl/";
+#[cfg(feature = "production")]
+pub const REPORT_SUFFIX		: &str = "/sgx/attestation/v3/report";
+
+#[cfg(not(feature = "production"))]
 pub const SIGRL_SUFFIX		: &str = "/sgx/dev/attestation/v3/sigrl/";
+#[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX		: &str = "/sgx/dev/attestation/v3/report";
 
 extern "C" {
