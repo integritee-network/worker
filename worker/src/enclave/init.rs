@@ -80,7 +80,11 @@ pub fn init_enclave() -> SgxResult<SgxEnclave> {
 
     // Step 2: call sgx_create_enclave to initialize an enclave instance
     // Debug Support: 1 = debug mode, 0 = not debug mode
+    #[cfg(not(feature = "production"))]
     let debug = 1;
+    #[cfg(feature = "production")]
+    let debug = 0;
+
     let mut misc_attr = sgx_misc_attribute_t {
         secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
         misc_select: 0,

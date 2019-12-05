@@ -112,7 +112,12 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 
 	// ------------------------------------------------------------------------
 	// initialize the enclave
-	println!("*** Starting enclave");
+	#[cfg(feature = "production")]
+	println!("*** Starting enclave in production mode");
+	#[cfg(not(feature = "production"))]
+	println!("*** Starting enclave in development mode");
+
+
 	let enclave = match init_enclave() {
 		Ok(r) => {
 			println!("[+] Init Enclave Successful. EID = {}!\n", r.geteid());
