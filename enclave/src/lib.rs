@@ -33,8 +33,6 @@ use serde_json;
 #[macro_use]
 extern crate sgx_tstd as std;
 
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use sgx_crypto_helper::RsaKeyPair;
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
@@ -44,20 +42,19 @@ use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
 use substrate_api_client::compose_extrinsic_offline;
 
 use codec::{Decode, Encode};
-use primitives::{ed25519, crypto::Pair, hashing::{blake2_256}};
+use primitives::{crypto::Pair, hashing::{blake2_256}};
 
 use constants::{
-	SEALED_SIGNER_SEED_FILE,
 	ENCRYPTED_STATE_FILE,
-	RSA3072_SEALED_KEY_FILE,
 	SUBSRATEE_REGISTRY_MODULE,
 	CALL_CONFIRMED,
 	RUNTIME_SPEC_VERSION,
 };
-use std::sgxfs::SgxFile;
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
+
+use utils::*;
 
 mod constants;
 mod utils;
@@ -77,34 +74,18 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	// initialize the logging environment in the enclave
 	env_logger::init();
 
-	match SgxFile::open(SEALED_SIGNER_SEED_FILE) {
-		Ok(_k) => (),
-		Err(x) => {
-			info!("[Enclave] Keyfile not found, creating new! {}", x);
-			if let Err(status) = utils::create_sealed_ed25519_seed() {
-				return status;
-			}
-		},
+	if let Err(status) = create_sealed_ed25519_seed_if_not_existent() {
+		return status;
 	}
 
-	let seedvec = match utils::get_ecc_seed() {
-		Ok(seed) => seed,
+	let signer = match get_sealed_ecc_pair() {
+		Ok(pair) => pair,
 		Err(status) => return status,
 	};
-	let mut seed = [0u8; 32];
-    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-	//FIXME remove this leak!
-	info!("[Enclave initialized] Ed25519 seed : 0x{}", hex::encode_hex(&seedvec));
-    seed.copy_from_slice(seedvec);
-	let signer_prim = ed25519::Pair::from_seed(&seed);
-	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer_prim.public().0);
+	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	//create RSA keypair if not existing
-	if let Err(x) = SgxFile::open(RSA3072_SEALED_KEY_FILE) {
-		info!("[Enclave] Keyfile not found, creating new! {}", x);
-		if let Err(status) = create_sealed_rsa3072_keypair() {
-			return status
-		}
+	if let Err(status) = create_sealed_rsa3072_keypair_if_not_existent() {
+		return status;
 	}
 	sgx_status_t::SGX_SUCCESS
 }
@@ -112,7 +93,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
-	let rsa_pubkey = match utils::read_rsa_pubkey() {
+	let rsa_pubkey = match read_rsa_pubkey() {
 		Ok(key) => key,
 		Err(status) => return status,
 	};
@@ -136,37 +117,17 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size:
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_sealed_rsa3072_keypair() -> Result<sgx_status_t, sgx_status_t> {
-	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
-	let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
-	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-	utils::write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
-}
-
-
-
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
 
-	match SgxFile::open(SEALED_SIGNER_SEED_FILE) {
-		Ok(_k) => (),
-		Err(x) => {
-			info!("[Enclave] Keyfile not found, creating new! {}", x);
-			if let Err(status) = utils::create_sealed_ed25519_seed() {
-				return status;
-			}
-		},
+	if let Err(status) = create_sealed_ed25519_seed_if_not_existent() {
+		return status;
 	}
 
-	let seedvec = match utils::get_ecc_seed() {
-		Ok(seed) => seed,
+	let signer = match get_sealed_ecc_pair() {
+		Ok(pair) => pair,
 		Err(status) => return status,
 	};
-	let mut seed = [0u8; 32];
-    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec);
-	let signer = ed25519::Pair::from_seed(&seed);
-
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
@@ -193,7 +154,7 @@ pub unsafe extern "C" fn execute_stf(
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	debug!("[Enclave] Read RSA keypair");
-	let rsa_keypair = match utils::read_rsa_keypair() {
+	let rsa_keypair = match read_rsa_keypair() {
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
@@ -202,11 +163,11 @@ pub unsafe extern "C" fn execute_stf(
 
 	// decrypt the payload
 	debug!("    [Enclave] Decode the payload");
-	let request_vec = utils::decrypt_payload(&request_encrypted_slice, &rsa_keypair);
+	let request_vec = decrypt_payload(&request_encrypted_slice, &rsa_keypair);
 	let stf_call = TrustedCall::decode(&mut request_vec.as_slice()).unwrap();
 
 	// load last state
-	let state_enc = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
+	let state_enc = match read_state_from_file(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -234,24 +195,20 @@ pub unsafe extern "C" fn execute_stf(
 
 	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
-	if let Err(status) = utils::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(status) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
 	}
 
 	// get information for composing the extrinsic
-	let seedvec = match utils::get_ecc_seed() {
-		Ok(seed) => seed,
+	let signer = match get_sealed_ecc_pair() {
+		Ok(pair) => pair,
 		Err(status) => return status,
 	};
-	let mut seed = [0u8; 32];
-    let seedvec = &seedvec[..seed.len()]; // panics if not enough data
-    seed.copy_from_slice(seedvec);
-	let signer = ed25519::Pair::from_seed(&seed);
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
 	let nonce = u32::decode(&mut nonce_slice).unwrap();
 	debug!("using nonce for confirmation extrinsic: {:?}", nonce);
-	let genesis_hash = utils::hash_from_slice(genesis_hash_slice);
+	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let call_hash = blake2_256(&request_vec);
 	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
 
@@ -289,7 +246,7 @@ pub unsafe extern "C" fn get_state(
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 
 	// load last state
-	let state_enc = match utils::read_state_from_file(ENCRYPTED_STATE_FILE) {
+	let state_enc = match read_state_from_file(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -322,7 +279,7 @@ pub unsafe extern "C" fn get_state(
 fn encrypt_state(value: State) -> Result<Vec<u8>, sgx_status_t> {
 	let helper = SerializeHelper::new();
 	let mut c = helper.encode(value).unwrap();
-	utils::aes_de_or_encrypt(&mut c)?;
+	aes_de_or_encrypt(&mut c)?;
 	Ok(c)
 }
 
@@ -349,7 +306,7 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
-		utils::test_encrypted_state_io_works,
+		test_encrypted_state_io_works,
 		test_ocall_read_write_ipfs
 		)
 }

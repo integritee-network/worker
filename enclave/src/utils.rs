@@ -28,6 +28,7 @@ use aes::Aes128;
 use log::*;
 use ofb::Ofb;
 use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
+use primitives::{ed25519, crypto::Pair};
 
 use crate::Hash;
 use crate::constants::{AES_KEY_FILE_AND_INIT_V, SEALED_SIGNER_SEED_FILE, RSA3072_SEALED_KEY_FILE};
@@ -48,8 +49,41 @@ pub fn read_rsa_pubkey() -> SgxResult<Rsa3072PubKey> {
 	Ok(pubkey)
 }
 
+pub fn create_sealed_rsa3072_keypair_if_not_existent() -> SgxResult<sgx_status_t> {
+	if SgxFile::open(RSA3072_SEALED_KEY_FILE).is_err() {
+		info ! ("[Enclave] Keyfile not found, creating new! {}", RSA3072_SEALED_KEY_FILE);
+		return create_sealed_rsa3072_keypair()
+	}
+	Ok(sgx_status_t::SGX_SUCCESS)
+}
+
+pub fn create_sealed_rsa3072_keypair() -> Result<sgx_status_t, sgx_status_t> {
+	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
+	let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
+	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+	write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
+}
+
 pub fn store_rsa_key_pair(pair: &[u8]) -> SgxResult<sgx_status_t> {
 	write_file(pair, RSA3072_SEALED_KEY_FILE)
+}
+
+pub fn get_sealed_ecc_pair() ->  SgxResult<ed25519::Pair> {
+	let seedvec = get_ecc_seed()?;
+
+	let mut seed = [0u8; 32];
+	let seedvec = &seedvec[..seed.len()];
+// panics if not enough data
+	seed.copy_from_slice(seedvec);
+	Ok(ed25519::Pair::from_seed(&seed))
+}
+
+pub fn create_sealed_ed25519_seed_if_not_existent() -> SgxResult<sgx_status_t> {
+	if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
+		info ! ("[Enclave] Keyfile not found, creating new! {}", SEALED_SIGNER_SEED_FILE);
+		return create_sealed_ed25519_seed()
+	}
+	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {
