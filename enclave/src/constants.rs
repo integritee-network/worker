@@ -20,7 +20,14 @@ pub const SEALED_SIGNER_SEED_FILE: 	&str = "ed25519_key_sealed.bin";
 pub const ENCRYPTED_STATE_FILE:		&str = "sealed_stf_state.bin";
 pub const AES_KEY_FILE_AND_INIT_V: 	&str = "aes_key_sealed.bin";
 
+#[cfg(feature = "production")]
+pub static RA_SPID:       &str = "../bin/spid_production.txt";
+#[cfg(feature = "production")]
+pub static RA_API_KEY:	  &str = "../bin/key_production.txt";
+
+#[cfg(not(feature = "production"))]
 pub static RA_SPID:       &str = "../bin/spid.txt";
+#[cfg(not(feature = "production"))]
 pub static RA_API_KEY:	  &str = "../bin/key.txt";
 
 pub static SUBSRATEE_REGISTRY_MODULE: u8 = 6u8;

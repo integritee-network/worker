@@ -14,6 +14,7 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+production = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tse       = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
