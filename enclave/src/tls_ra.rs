@@ -15,6 +15,8 @@ use crate::constants::ENCRYPTED_STATE_FILE;
 use crate::cert;
 use crate::{ocall_read_ipfs, ocall_write_ipfs};
 use crate::utils::*;
+use crate::rsa3072::*;
+use crate::aes::*;
 
 struct ClientAuth {
 	outdated_ok: bool,

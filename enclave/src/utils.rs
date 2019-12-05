@@ -19,120 +19,11 @@ use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 use std::vec::Vec;
 
-use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
-use sgx_crypto_helper::RsaKeyPair;
-use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
-use aes::Aes128;
 use log::*;
-use ofb::Ofb;
-use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
-use primitives::{ed25519, crypto::Pair};
 
 use crate::Hash;
-use crate::constants::{AES_KEY_FILE_AND_INIT_V, SEALED_SIGNER_SEED_FILE, RSA3072_SEALED_KEY_FILE};
-
-type AesOfb = Ofb<Aes128>;
-
-pub fn read_rsa_keypair() -> SgxResult<Rsa3072KeyPair> {
-	let keyvec = read_file(RSA3072_SEALED_KEY_FILE)?;
-	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
-	let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
-	Ok(pair)
-}
-
-pub fn read_rsa_pubkey() -> SgxResult<Rsa3072PubKey> {
-	let pair = (read_rsa_keypair())?;
-	let pubkey = pair.export_pubkey().unwrap();
-
-	Ok(pubkey)
-}
-
-pub fn create_sealed_rsa3072_keypair_if_not_existent() -> SgxResult<sgx_status_t> {
-	if SgxFile::open(RSA3072_SEALED_KEY_FILE).is_err() {
-		info ! ("[Enclave] Keyfile not found, creating new! {}", RSA3072_SEALED_KEY_FILE);
-		return create_sealed_rsa3072_keypair()
-	}
-	Ok(sgx_status_t::SGX_SUCCESS)
-}
-
-pub fn create_sealed_rsa3072_keypair() -> Result<sgx_status_t, sgx_status_t> {
-	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
-	let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
-	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-	write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
-}
-
-pub fn store_rsa_key_pair(pair: &[u8]) -> SgxResult<sgx_status_t> {
-	write_file(pair, RSA3072_SEALED_KEY_FILE)
-}
-
-pub fn get_sealed_ecc_pair() ->  SgxResult<ed25519::Pair> {
-	let seedvec = get_ecc_seed()?;
-
-	let mut seed = [0u8; 32];
-	let seedvec = &seedvec[..seed.len()];
-// panics if not enough data
-	seed.copy_from_slice(seedvec);
-	Ok(ed25519::Pair::from_seed(&seed))
-}
-
-pub fn create_sealed_ed25519_seed_if_not_existent() -> SgxResult<sgx_status_t> {
-	if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
-		info ! ("[Enclave] Keyfile not found, creating new! {}", SEALED_SIGNER_SEED_FILE);
-		return create_sealed_ed25519_seed()
-	}
-	Ok(sgx_status_t::SGX_SUCCESS)
-}
-
-pub fn get_ecc_seed() -> SgxResult<Vec<u8>> {
-	read_file(SEALED_SIGNER_SEED_FILE)
-}
-
-pub fn create_sealed_ed25519_seed() -> SgxResult<sgx_status_t> {
-	let mut seed = [0u8; 32];
-	let mut rand = match StdRng::new() {
-		Ok(rng) => rng,
-		Err(_) => { return Err(sgx_status_t::SGX_ERROR_UNEXPECTED); },
-	};
-	rand.fill_bytes(&mut seed);
-
-	write_file(&seed, SEALED_SIGNER_SEED_FILE)
-}
-
-pub fn read_or_create_aes_key_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
-	match read_aes_key_and_iv() {
-		Ok((k,i)) => Ok((k, i)),
-		Err(_) => {
-			create_sealed_aes_key_and_iv()?;
-			read_aes_key_and_iv()
-		},
-	}
-}
-
-pub fn read_aes_key_and_iv() -> SgxResult<(Vec<u8>, Vec<u8>)> {
-	let key_iv = read_file(AES_KEY_FILE_AND_INIT_V)?;
-	Ok((key_iv[..16].to_vec(), key_iv[16..].to_vec()))
-}
-
-pub fn store_aes_key_and_iv(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t>{
-	let mut key_iv = key.to_vec();
-	key_iv.extend_from_slice(&iv);
-	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
-}
-
-pub fn create_sealed_aes_key_and_iv() -> SgxResult<sgx_status_t> {
-	let mut key_iv = [0u8; 32];
-
-	let mut rand = match StdRng::new() {
-		Ok(rng) => rng,
-		Err(_) => { return Err(sgx_status_t::SGX_ERROR_UNEXPECTED); },
-	};
-
-	rand.fill_bytes(&mut key_iv);
-	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
-}
 
 pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 	match SgxFile::create(filepath) {
@@ -171,37 +62,6 @@ pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
 			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 	}
-}
-
-pub fn read_state_from_file(path: &str) -> SgxResult<Vec<u8>> {
-	let mut bytes = match read_plaintext(path) {
-		Ok(vec) => match vec.len() {
-			0 => return Ok(vec),
-			_ => vec,
-		},
-		Err(e) => return Err(e),
-	};
-
-	aes_de_or_encrypt(&mut bytes)?;
-	debug!("buffer decrypted = {:?}", bytes);
-
-	Ok(bytes)
-}
-
-pub fn write_state_to_file(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
-	debug!("plaintext data to be written: {:?}", bytes);
-
-	aes_de_or_encrypt(bytes)?;
-
-	write_plaintext(&bytes, path)?;
-	Ok(sgx_status_t::SGX_SUCCESS)
-}
-
-/// If AES acts on the encrypted data it decrypts and vice versa
-pub fn aes_de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
-	let (key, iv) = read_or_create_aes_key_iv()?;
-	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(bytes);
-	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
@@ -243,12 +103,6 @@ pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> 
 	}
 }
 
-pub fn decrypt_payload(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
-	let mut decrypted_buffer = Vec::new();
-	rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer).unwrap();
-	decrypted_buffer
-}
-
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];
 	g.copy_from_slice(&hash_slize[..]);
@@ -275,16 +129,4 @@ pub fn blake2_256(data: &[u8]) -> [u8; 32] {
 	r
 }
 */
-pub fn test_encrypted_state_io_works() {
-	let path = "test_state_file.bin";
-	let plaintext = b"The quick brown fox jumps over the lazy dog.";
-	create_sealed_aes_key_and_iv().unwrap();
-
-	aes_de_or_encrypt(&mut plaintext.to_vec()).unwrap();
-	write_state_to_file(&mut plaintext.to_vec(), path).unwrap();
-	let state: Vec<u8> = read_state_from_file(path).unwrap();
-
-	assert_eq!(state, plaintext.to_vec());
-	std::fs::remove_file(path).unwrap();
-}
 

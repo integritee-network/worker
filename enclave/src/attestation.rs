@@ -51,7 +51,8 @@ use substrate_api_client::compose_extrinsic_offline;
 
 use crate::{cert, hex};
 use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
-use crate::utils::{hash_from_slice, get_ecc_seed};
+use crate::utils::hash_from_slice;
+use crate::ed25519::get_ecc_seed;
 
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
 
