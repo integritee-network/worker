@@ -41,7 +41,9 @@ lib/libenclave.a
 bin/client.crt
 bin/client.key
 bin/spid.txt
+bin/spid_production.txt
 bin/key.txt
+bin/key_production.txt
 bin/attestation_report.json
 
 # in order to have 2 workers run and exchange keys
