@@ -116,24 +116,4 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
 	right.iter_mut().for_each(|x| *x = 0x20);
 }
 
-/*
-pub fn blake2s(plaintext: &[u8]) -> [u8; 32] {
-	let mut call_hash: [u8; 32] = Default::default();
-	Blake2s::blake2s(&mut call_hash, &plaintext[..], &[0; 32]);
-	call_hash
-}
-
-// Same functions as in substrate/core/primitives, but using the no_std blake2_rfc
-/// Do a Blake2 256-bit hash and place result in `dest`.
-fn blake2_256_into(data: &[u8], dest: &mut [u8; 32]) {
-	dest.copy_from_slice(blake2b(32, &[], data).as_bytes());
-}
-
-/// Do a Blake2 256-bit hash and return result.
-pub fn blake2_256(data: &[u8]) -> [u8; 32] {
-	let mut r = [0; 32];
-	blake2_256_into(data, &mut r);
-	r
-}
-*/
 

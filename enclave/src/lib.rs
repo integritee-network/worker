@@ -190,7 +190,6 @@ pub unsafe extern "C" fn execute_stf(
 
 
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
-
 	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
 	if let Err(status) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
@@ -221,7 +220,6 @@ pub unsafe extern "C" fn execute_stf(
     );
 
 	let encoded = xt.encode();
-
 	write_slice_and_whitespace_pad(extrinsic_slice, encoded);
 
 	sgx_status_t::SGX_SUCCESS
