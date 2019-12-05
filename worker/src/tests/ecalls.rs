@@ -20,7 +20,7 @@ use primitive_types::U256;
 use sgx_types::*;
 use substratee_stf;
 
-use crate::enclave_api::*;
+use crate::enclave::api::*;
 use crate::tests::commons::*;
 
 // TODO: test get_ecc_signing_pubkey

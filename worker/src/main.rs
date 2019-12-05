@@ -33,10 +33,10 @@ use substrate_api_client::{Api,
 						   utils::{hexstr_to_u256, hexstr_to_vec}
 };
 
-use enclave_api::{get_ecc_signing_pubkey, init, perform_ra};
-use enclave_tls_ra::{Mode, run_enclave_client, run_enclave_server};
-use enclave_wrappers::{get_public_key_tee, get_signing_key_tee, process_request};
-use init_enclave::init_enclave;
+use enclave::api::{get_ecc_signing_pubkey, init, perform_ra};
+use enclave::tls_ra::{Mode, run, run_enclave_client, run_enclave_server};
+use enclave::wrappers::{get_public_key_tee, get_signing_key_tee, process_request};
+use enclave::init::init_enclave;
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
@@ -44,12 +44,8 @@ use ws_server::start_ws_server;
 
 mod utils;
 mod constants;
-mod enclave_api;
-mod init_enclave;
+mod enclave;
 mod ws_server;
-mod enclave_wrappers;
-mod enclave_tls_ra;
-mod attestation_ocalls;
 mod ipfs;
 mod tests;
 
@@ -83,10 +79,10 @@ fn main() {
 		get_signing_key_tee();
 	} else if matches.is_present("run_server") {
 		println!("*** Running Enclave TLS server\n");
-		enclave_tls_ra::run(Mode::Server, mu_ra_port);
+		run(Mode::Server, mu_ra_port);
 	} else if matches.is_present("run_client") {
 		println!("*** Running Enclave TLS client\n");
-		enclave_tls_ra::run(Mode::Client, mu_ra_port);
+		run(Mode::Client, mu_ra_port);
 	} else if let Some(m) = matches.subcommand_matches("test_enclave") {
 		tests::run_enclave_tests(m, node_port);
 	} else {

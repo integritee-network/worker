@@ -25,8 +25,8 @@ use primitives::{crypto::AccountId32, ed25519};
 
 use crate::tests::commons::*;
 use crate::constants::*;
-use crate::enclave_api::*;
-use crate::enclave_wrappers::*;
+use crate::enclave::api::*;
+use crate::enclave::wrappers::*;
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 	// start the substrate-api-client to communicate with the node

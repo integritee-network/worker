@@ -21,7 +21,7 @@ use sgx_types::*;
 
 use log::*;
 
-use crate::init_enclave::init_enclave;
+use crate::enclave::init::init_enclave;
 
 extern {
 	fn run_server(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,

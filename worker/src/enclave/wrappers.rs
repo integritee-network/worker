@@ -29,8 +29,8 @@ use runtime_primitives::{AnySignature, traits::Verify};
 use substrate_api_client::{Api, utils::hexstr_to_u256};
 
 use crate::constants::*;
-use crate::enclave_api::*;
-use crate::init_enclave::init_enclave;
+use crate::enclave::api::*;
+use crate::enclave::init::init_enclave;
 
 type AccountId = <AnySignature as Verify>::Signer;
 

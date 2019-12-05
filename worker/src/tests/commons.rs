@@ -23,7 +23,7 @@ use sgx_types::*;
 use std::str;
 use substratee_stf;
 
-use crate::enclave_api::*;
+use crate::enclave::api::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {

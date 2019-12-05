@@ -18,8 +18,8 @@
 use clap::ArgMatches;
 use sgx_types::*;
 
-use crate::enclave_api::*;
-use crate::init_enclave::init_enclave;
+use crate::enclave::api::*;
+use crate::enclave::init::init_enclave;
 
 use self::ecalls::*;
 use self::integration_tests::*;

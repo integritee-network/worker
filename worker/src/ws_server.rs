@@ -27,7 +27,7 @@ use ws::{CloseCode, Handler, listen, Message, Result, Sender};
 
 use substratee_worker_api::requests::*;
 
-use crate::enclave_api::{get_rsa_encryption_pubkey, get_state};
+use crate::enclave::api::{get_rsa_encryption_pubkey, get_state};
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
 	// Server WebSocket handler
