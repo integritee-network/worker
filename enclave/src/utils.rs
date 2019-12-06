@@ -14,94 +14,10 @@
 	limitations under the License.
 
 */
-use std::fs::File;
-use std::io::{Read, Write};
-use std::sgxfs::SgxFile;
 use std::vec::Vec;
-
-use sgx_types::*;
-
-use log::*;
 
 use crate::Hash;
 
-pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	match SgxFile::create(filepath) {
-		Ok(mut f) => match f.write_all(bytes) {
-			Ok(()) => {
-				info!("[Enclave] Writing keyfile '{}' successful", filepath);
-				Ok(sgx_status_t::SGX_SUCCESS)
-			}
-			Err(x) => {
-				error!("[Enclave -] Writing keyfile '{}' failed! Err: {}", filepath, x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			error!("[Enclave !] Creating keyfile '{}' Err: {}", filepath, x);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		}
-	}
-}
-
-pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
-	let mut keyvec: Vec<u8> = Vec::new();
-	match SgxFile::open(filepath) {
-		Ok(mut f) => match f.read_to_end(&mut keyvec) {
-			Ok(len) => {
-				info!("[Enclave] Read {} bytes from key file", len);
-				Ok(keyvec)
-			}
-			Err(x) => {
-				error!("[Enclave] Read sealed file failed {}: Err {}", filepath, x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			info!("[Enclave] Can't find sealed file {} Err: {}" , filepath, x);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		}
-	}
-}
-
-pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
-	let mut state_vec: Vec<u8> = Vec::new();
-	match File::open(filepath) {
-		Ok(mut f) => match f.read_to_end(&mut state_vec) {
-			Ok(len) => {
-				info!("[Enclave] Read {} bytes from state file", len);
-				Ok(state_vec)
-			}
-			Err(x) => {
-				error!("[Enclave] Read encrypted state file failed {}", x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			info!("[Enclave] No encrypted state file found! {} Err: {}", filepath, x);
-			Ok(state_vec)
-		}
-	}
-}
-
-pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	match File::create(filepath) {
-		Ok(mut f) => match f.write_all(bytes) {
-			Ok(()) => {
-				info!("[Enclave] Writing to file '{}' successful", filepath);
-				Ok(sgx_status_t::SGX_SUCCESS)
-			}
-			Err(x) => {
-				error!("[Enclave] Writing to '{}' failed! {}", filepath, x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			error!("[Enclave] Creating file '{}' error! {}", filepath, x);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		}
-	}
-}
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];
@@ -110,7 +26,7 @@ pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 }
 
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
-		let (left, right) = writable.split_at_mut(data.len());
+	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
 	// fill the right side with whitespace
 	right.iter_mut().for_each(|x| *x = 0x20);

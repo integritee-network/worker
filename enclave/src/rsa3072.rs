@@ -7,11 +7,11 @@ use sgx_types::*;
 
 use log::*;
 
-use crate::utils::*;
+use crate::io;
 use crate::constants::RSA3072_SEALED_KEY_FILE;
 
 pub fn unseal_pair() -> SgxResult<Rsa3072KeyPair> {
-	let keyvec = read_file(RSA3072_SEALED_KEY_FILE)?;
+	let keyvec = io::read_file(RSA3072_SEALED_KEY_FILE)?;
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
 	let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
 	Ok(pair)
@@ -36,11 +36,11 @@ pub fn create_sealed() -> Result<sgx_status_t, sgx_status_t> {
 	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
 	let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
 	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-	write_file(rsa_key_json.as_bytes(), RSA3072_SEALED_KEY_FILE)
+	seal(rsa_key_json.as_bytes())
 }
 
 pub fn seal(pair: &[u8]) -> SgxResult<sgx_status_t> {
-	write_file(pair, RSA3072_SEALED_KEY_FILE)
+	io::write_file(pair, RSA3072_SEALED_KEY_FILE)
 }
 
 pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {

@@ -8,7 +8,7 @@ use ofb::Ofb;
 use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 
 use crate::constants::AES_KEY_FILE_AND_INIT_V;
-use crate::utils::*;
+use crate::io;
 
 type AesOfb = Ofb<Aes128>;
 
@@ -23,14 +23,14 @@ pub fn read_or_create_sealed() -> SgxResult<(Vec<u8>, Vec<u8>)> {
 }
 
 pub fn read_sealed() -> SgxResult<(Vec<u8>, Vec<u8>)> {
-	let key_iv = read_file(AES_KEY_FILE_AND_INIT_V)?;
+	let key_iv = io::read_file(AES_KEY_FILE_AND_INIT_V)?;
 	Ok((key_iv[..16].to_vec(), key_iv[16..].to_vec()))
 }
 
 pub fn seal(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t>{
 	let mut key_iv = key.to_vec();
 	key_iv.extend_from_slice(&iv);
-	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
+	io::write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 pub fn create_sealed() -> SgxResult<sgx_status_t> {
@@ -42,7 +42,7 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 	};
 
 	rand.fill_bytes(&mut key_iv);
-	write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
+	io::write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 /// If AES acts on the encrypted data it decrypts and vice versa

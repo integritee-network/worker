@@ -7,11 +7,11 @@ use sgx_rand::{Rng, StdRng};
 use primitives::{ed25519, crypto::Pair};
 use log::*;
 
-use crate::utils::*;
+use crate::io;
 use crate::constants::SEALED_SIGNER_SEED_FILE;
 
 pub fn unseal_pair() ->  SgxResult<ed25519::Pair> {
-	let seedvec = unseal()?;
+	let seedvec = unseal_seed()?;
 
 	let mut seed = [0u8; 32];
 	let seedvec = &seedvec[..seed.len()];
@@ -28,8 +28,12 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-fn unseal() -> SgxResult<Vec<u8>> {
-	read_file(SEALED_SIGNER_SEED_FILE)
+fn unseal_seed() -> SgxResult<Vec<u8>> {
+	io::read_file(SEALED_SIGNER_SEED_FILE)
+}
+
+pub fn seal_seed(pair: &[u8]) -> SgxResult<sgx_status_t> {
+	io::write_file(pair, SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn create_sealed_seed() -> SgxResult<sgx_status_t> {
@@ -40,5 +44,5 @@ pub fn create_sealed_seed() -> SgxResult<sgx_status_t> {
 	};
 	rand.fill_bytes(&mut seed);
 
-	write_file(&seed, SEALED_SIGNER_SEED_FILE)
+	seal_seed(&seed)
 }

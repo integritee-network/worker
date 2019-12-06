@@ -54,7 +54,7 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
-use utils::*;
+use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 mod constants;
 mod utils;
@@ -63,6 +63,7 @@ mod rsa3072;
 mod ed25519;
 mod state;
 mod aes;
+mod io;
 
 pub mod cert;
 pub mod hex;
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn execute_stf(
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
 	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
-	if let Err(status) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(status) = io::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
 	}
 

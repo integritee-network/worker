@@ -14,7 +14,7 @@ use crate::attestation::create_ra_report_and_signature;
 use crate::constants::ENCRYPTED_STATE_FILE;
 use crate::cert;
 use crate::{ocall_read_ipfs, ocall_write_ipfs};
-use crate::utils::*;
+use crate::io;
 use crate::rsa3072;
 use crate::aes;
 
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 
 	println!("    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS (= file hosting service)");
 
-	let enc_state = match read_plaintext(ENCRYPTED_STATE_FILE) {
+	let enc_state = match io::read_plaintext(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -277,7 +277,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 
 	println!("    [Enclave] (MU-RA-Client) Got encrypted state from ipfs: {:?}\n", enc_state);
-	if let Err(e) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(e) = io::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return e;
 	}
 
