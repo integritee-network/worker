@@ -355,6 +355,13 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         // TODO: lack security check here
         let sgx_quote: sgx_quote_t = unsafe{ptr::read(quote.as_ptr() as *const _)};
 
+		let mut ti : sgx_target_info_t = sgx_target_info_t::default();
+
+		if  sgx_quote.report_body.mr_enclave.m != ti.mr_enclave.m {
+			error!("mr_enclave is not equal to self");
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+		}
+
         // Borrow of packed field is unsafe in future Rust releases
         // ATTENTION
         // DO SECURITY CHECK ON DEMAND
