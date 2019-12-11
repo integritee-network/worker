@@ -120,7 +120,7 @@ fn parse_response_attn_report(resp : &[u8]) -> SgxResult<(String, String, String
 
 	// Remove %0A from cert, and only obtain the signing cert
 	cert = cert.replace("%0A", "");
-	cert = cert::percent_decode(cert);
+	cert = cert::percent_decode(cert)?;
 	let v: Vec<&str> = cert.split("-----").collect();
 	let sig_cert = v[2].to_string();
 

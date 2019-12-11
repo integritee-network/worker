@@ -24,6 +24,8 @@ use chrono::TimeZone;
 use chrono::Utc as TzUtc;
 use itertools::Itertools;
 
+use crate::utils::UnwrapOrSgxErrorUnexpected;
+
 extern "C" {
     pub fn ocall_get_update_info (ret_val: *mut sgx_status_t,
                                   platformBlob: * const sgx_platform_info_t,
@@ -179,17 +181,17 @@ pub fn gen_ecc_cert(payload: String,
     Ok((key_der, cert_der))
 }
 
-pub fn percent_decode(orig: String) -> String {
+pub fn percent_decode(orig: String) -> SgxResult<String> {
     let v:Vec<&str> = orig.split('%').collect();
     let mut ret = String::new();
     ret.push_str(v[0]);
     if v.len() > 1 {
         for s in v[1..].iter() {
-            ret.push(u8::from_str_radix(&s[0..2], 16).unwrap() as char);
+            ret.push(u8::from_str_radix(&s[0..2], 16).sgx_error()? as char);
             ret.push_str(&s[2..]);
         }
     }
-    ret
+    Ok(ret)
 }
 
 pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
@@ -197,7 +199,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 
     // Search for Public Key prime256v1 OID
     let prime256v1_oid = &[0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07];
-    let mut offset = cert_der.windows(prime256v1_oid.len()).position(|window| window == prime256v1_oid).unwrap();
+    let mut offset = cert_der.windows(prime256v1_oid.len()).position(|window| window == prime256v1_oid).sgx_error()?;
     offset += 11; // 10 + TAG (0x03)
 
     // Obtain Public Key length
@@ -214,7 +216,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 
     // Search for Netscape Comment OID
     let ns_cmt_oid = &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D];
-    let mut offset = cert_der.windows(ns_cmt_oid.len()).position(|window| window == ns_cmt_oid).unwrap();
+    let mut offset = cert_der.windows(ns_cmt_oid.len()).position(|window| window == ns_cmt_oid).sgx_error()?;
     offset += 12; // 11 + TAG (0x04)
 
     // Obtain Netscape Comment length
@@ -230,12 +232,12 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 
     // Extract each field
     let mut iter = payload.split(|x| *x == 0x7C);
-    let attn_report_raw = iter.next().unwrap();
-    let sig_raw = iter.next().unwrap();
-    let sig = base64::decode(&sig_raw).unwrap();
+    let attn_report_raw = iter.next().sgx_error()?;
+    let sig_raw = iter.next().sgx_error()?;
+    let sig = base64::decode(&sig_raw).sgx_error()?;
 
-    let sig_cert_raw = iter.next().unwrap();
-    let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD).unwrap();
+    let sig_cert_raw = iter.next().sgx_error()?;
+    let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD).sgx_error()?;
     let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
 
     // Verify if the signing cert is issued by Intel CA
@@ -245,7 +247,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
     let tail_len = "-----END CERTIFICATE-----".len();
     let full_len = ias_ca_stripped.len();
     let ias_ca_core : &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
-    let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).unwrap();
+    let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).sgx_error()?;
 
     let mut ca_reader = BufReader::new(&IAS_REPORT_CA[..]);
 
@@ -267,7 +269,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         SUPPORTED_SIG_ALGS,
         &webpki::TLSServerTrustAnchors(&trust_anchors),
         &chain,
-        now_func.unwrap()) {
+        now_func.sgx_error()?) {
         Ok(_) => info!("Cert is good"),
         Err(e) => error!("Cert verification error {:?}", e),
     }
@@ -286,11 +288,11 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 
     // Verify attestation report
     // 1. Check timestamp is within 24H (90day is recommended by Intel)
-    let attn_report: Value = serde_json::from_slice(attn_report_raw).unwrap();
+    let attn_report: Value = serde_json::from_slice(attn_report_raw).sgx_error()?;
     if let Value::String(time) = &attn_report["timestamp"] {
         let time_fixed = time.clone() + "+0000";
-        let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap().timestamp();
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+        let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").sgx_error()?.timestamp();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).sgx_error()?.as_secs() as i64;
         info!("Time diff = {}", now - ts);
     } else {
         error!("Failed to fetch timestamp from attestation report");
@@ -310,7 +312,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
                     // the TLV Header (4 bytes/8 hexes) should be skipped
                     let n = (pib.len() - 8)/2;
                     for i in 0..n {
-                        buf.push(u8::from_str_radix(&pib[(i*2+8)..(i*2+10)], 16).unwrap());
+                        buf.push(u8::from_str_radix(&pib[(i*2+8)..(i*2+10)], 16).sgx_error()?);
                     }
 
                     let mut update_info = sgx_update_info_bit_t::default();
@@ -350,7 +352,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 
     // 3. Verify quote body
     if let Value::String(quote_raw) = &attn_report["isvEnclaveQuoteBody"] {
-        let quote = base64::decode(&quote_raw).unwrap();
+        let quote = base64::decode(&quote_raw).sgx_error()?;
         debug!("Quote = {:?}", quote);
         // TODO: lack security check here
         let sgx_quote: sgx_quote_t = unsafe{ptr::read(quote.as_ptr() as *const _)};
