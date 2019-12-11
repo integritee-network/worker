@@ -17,6 +17,7 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
+use std::string::String;
 use std::vec::Vec;
 
 use sgx_types::*;
@@ -67,19 +68,35 @@ pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
 	match File::open(filepath) {
 		Ok(mut f) => match f.read_to_end(&mut state_vec) {
 			Ok(len) => {
-				info!("[Enclave] Read {} bytes from state file", len);
+				info!("[Enclave] Read {} bytes from file", len);
 				Ok(state_vec)
 			}
 			Err(x) => {
-				error!("[Enclave] Read encrypted state file failed {}", x);
+				error!("[Enclave] Reading '{}' failed", x);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 			}
 		},
 		Err(x) => {
-			info!("[Enclave] No encrypted state file found! {} Err: {}", filepath, x);
+			info!("[Enclave] File '{}' not found! Err: {}", filepath, x);
 			Ok(state_vec)
 		}
 	}
+}
+
+pub fn read_to_string(filepath: &str) -> SgxResult<String> {
+	let mut f = match File::open(filepath) {
+		Ok(f) => f,
+		Err(_) => {
+			error!("cannot open the '{}'", filepath);
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+		},
+	};
+	let mut contents = String::new();
+	if f.read_to_string(&mut contents).is_err() {
+		error!("cannot read the '{}'", filepath);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+	}
+	Ok(contents)
 }
 
 pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {

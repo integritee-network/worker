@@ -34,7 +34,6 @@ use std::slice;
 use std::ptr;
 use std::str;
 use std::io::{Write, Read};
-use std::untrusted::fs;
 use std::vec::Vec;
 
 use sgx_types::*;
@@ -52,6 +51,7 @@ use substrate_api_client::compose_extrinsic_offline;
 use crate::{cert, hex};
 use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
 use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected};
+use crate::io;
 use crate::ed25519;
 
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
@@ -508,38 +508,13 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 }
 
 fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-	let mut spidfile = match fs::File::open(filename) {
-		Ok(f) => f,
-		Err(_) => {
-			error!("cannot open the spid key file");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-		},
-	};
-	let mut contents = String::new();
-	if spidfile.read_to_string(&mut contents).is_err() {
-		error!("cannot read the spid file");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-	}
-
-	Ok(hex::decode_spid(&contents))
+	io::read_to_string(filename)
+		.map(|contents| hex::decode_spid(&contents))
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
-	let mut keyfile = match fs::File::open(RA_API_KEY) {
-		Ok(f) => f,
-		Err(_) => {
-			error!("cannot open the ias key file");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-		},
-	};
-	let mut key = String::new();
-
-	 if keyfile.read_to_string(&mut key).is_err() {
-		 error!("cannot read the ias key file");
-		 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-	 }
-
-	Ok(key.trim_end().to_owned())
+	io::read_to_string(RA_API_KEY)
+		.map(|key| key.trim_end().to_owned())
 }
 
 pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxResult<(Vec<u8>, Vec<u8>)> {
