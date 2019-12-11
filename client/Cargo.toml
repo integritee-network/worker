@@ -5,16 +5,10 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
 [dependencies]
-ws = "0.7"
-hex = "0.3"
 log = "0.4"
-rand = "0.6"
 env_logger = "0.7.1"
-schnorrkel = { version = "0.8.4", features = ["preaudit_deprecated"] }
 serde = "1.0"
 serde_json = "1.0"
-tiny-bip39 = "0.6.0"
-hex-literal = "0.2.0"
 serde_derive = "1.0"
 substrate-bip39 = "0.3.1"
 
