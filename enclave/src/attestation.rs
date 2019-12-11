@@ -108,12 +108,12 @@ fn parse_response_attn_report(resp : &[u8]) -> SgxResult<(String, String, String
 		//println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
 		match h.name{
 			"Content-Length" => {
-				let len_str = String::from_utf8(h.value.to_vec()).unwrap_or_sgx_error()?;
-				len_num = len_str.parse::<u32>().unwrap_or_sgx_error()?;
+				let len_str = String::from_utf8(h.value.to_vec()).sgx_error()?;
+				len_num = len_str.parse::<u32>().sgx_error()?;
 				debug!("    [Enclave] Content length = {}", len_num);
 			}
-			"X-IASReport-Signature" => sig = String::from_utf8(h.value.to_vec()).unwrap_or_sgx_error()?,
-			"X-IASReport-Signing-Certificate" => cert = String::from_utf8(h.value.to_vec()).unwrap_or_sgx_error()?,
+			"X-IASReport-Signature" => sig = String::from_utf8(h.value.to_vec()).sgx_error()?,
+			"X-IASReport-Signing-Certificate" => cert = String::from_utf8(h.value.to_vec()).sgx_error()?,
 			_ => (),
 		}
 	}
@@ -127,9 +127,9 @@ fn parse_response_attn_report(resp : &[u8]) -> SgxResult<(String, String, String
 	if len_num != 0 {
 		// The unwrap is safe. It resolves to the https::Status' unwrap function which only panics
 		// if the the response is not complete, which cannot happen if the result is Ok().
-		let header_len = result.unwrap_or_sgx_error()?.unwrap();
+		let header_len = result.sgx_error()?.unwrap();
 		let resp_body = &resp[header_len..];
-		attn_report = String::from_utf8(resp_body.to_vec()).unwrap_or_sgx_error()?;
+		attn_report = String::from_utf8(resp_body.to_vec()).sgx_error()?;
 		debug!("    [Enclave] Attestation report = {}", attn_report);
 	}
 
@@ -172,8 +172,8 @@ fn parse_response_sigrl(resp : &[u8]) -> SgxResult<Vec<u8>> {
 	for i in 0..respp.headers.len() {
 		let h = respp.headers[i];
 		if h.name == "content-length" {
-			let len_str = String::from_utf8(h.value.to_vec()).unwrap_or_sgx_error()?;
-			len_num = len_str.parse::<u32>().unwrap_or_sgx_error()?;
+			let len_str = String::from_utf8(h.value.to_vec()).sgx_error()?;
+			len_num = len_str.parse::<u32>().sgx_error()?;
 			debug!("    [Enclave] Content length = {}", len_num);
 		}
 	}
@@ -181,12 +181,12 @@ fn parse_response_sigrl(resp : &[u8]) -> SgxResult<Vec<u8>> {
 	if len_num != 0 {
 		// The unwrap is safe. It resolves to the https::Status' unwrap function which only panics
 		// if the the response is not complete, which cannot happen if the result is Ok().
-		let header_len = result.unwrap_or_sgx_error()?.unwrap();
+		let header_len = result.sgx_error()?.unwrap();
 		let resp_body = &resp[header_len..];
 		debug!("    [Enclave] Base64-encoded SigRL: {:?}", resp_body);
 
-		return base64::decode(str::from_utf8(resp_body).unwrap_or_sgx_error()?)
-			.unwrap_or_sgx_error();
+		return base64::decode(str::from_utf8(resp_body).sgx_error()?)
+			.sgx_error();
 	}
 
 	// len_num == 0
@@ -215,9 +215,9 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> SgxResult<Vec<u8>> {
 					  ias_key);
 	debug!("    [Enclave] request = {}", req);
 
-	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap_or_sgx_error()?;
+	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).sgx_error()?;
 	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-	let mut sock = TcpStream::new(fd).unwrap_or_sgx_error()?;
+	let mut sock = TcpStream::new(fd).sgx_error()?;
 	let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
 	let _result = tls.write(req.as_bytes());
@@ -226,10 +226,10 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> SgxResult<Vec<u8>> {
 	debug!("    [Enclave] tls.write complete");
 
 	tls.read_to_end(&mut plaintext)
-		.unwrap_or_sgx_error_with_log("    [Enclave] tls.read_to_end")?;
+		.sgx_error_with_log("    [Enclave] tls.read_to_end")?;
 
 	debug!("    [Enclave] tls.read_to_end complete");
-	let resp_string = String::from_utf8(plaintext.clone()).unwrap_or_sgx_error()?;
+	let resp_string = String::from_utf8(plaintext.clone()).sgx_error()?;
 
 	debug!("    [Enclave] resp_string = {}", resp_string);
 
@@ -253,9 +253,9 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> SgxResult<(String, 
 					  encoded_json);
 	debug!("    [Enclave] Req = {}", req);
 	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
-		.unwrap_or_sgx_error_with_log("Invalid DEV_HOSTNAME")?;
+		.sgx_error_with_log("Invalid DEV_HOSTNAME")?;
 	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-	let mut sock = TcpStream::new(fd).unwrap_or_sgx_error()?;
+	let mut sock = TcpStream::new(fd).sgx_error()?;
 	let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
 	let _result = tls.write(req.as_bytes());
@@ -263,9 +263,9 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> SgxResult<(String, 
 
 	debug!("    [Enclave] tls.write complete");
 
-	tls.read_to_end(&mut plaintext).unwrap_or_sgx_error()?;
+	tls.read_to_end(&mut plaintext).sgx_error()?;
 	debug!("    [Enclave] tls.read_to_end complete");
-	let resp_string = String::from_utf8(plaintext.clone()).unwrap_or_sgx_error()?;
+	let resp_string = String::from_utf8(plaintext.clone()).sgx_error()?;
 
 	debug!("    [Enclave] resp_string = {}", resp_string);
 
@@ -386,7 +386,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 */
 
 	let mut quote_nonce = sgx_quote_nonce_t { rand : [0;16] };
-	let mut os_rng = os::SgxRng::new().unwrap_or_sgx_error()?;
+	let mut os_rng = os::SgxRng::new().sgx_error()?;
 	os_rng.fill_bytes(&mut quote_nonce.rand);
 	let mut qe_report = sgx_report_t::default();
 	const RET_QUOTE_BUF_LEN : u32 = 2048;

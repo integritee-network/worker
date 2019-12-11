@@ -38,20 +38,20 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
 
 pub trait UnwrapOrSgxErrorUnexpected {
 	type ReturnType;
-	fn unwrap_or_sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> ;
-	fn unwrap_or_sgx_error_with_log(self, err_mgs: &str) -> Result<Self::ReturnType, sgx_status_t> ;
+	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> ;
+	fn sgx_error_with_log(self, err_mgs: &str) -> Result<Self::ReturnType, sgx_status_t> ;
 }
 
 impl<T> UnwrapOrSgxErrorUnexpected for Option<T> {
 	type ReturnType = T;
-	fn unwrap_or_sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> {
+	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> {
 		match self {
 			Some(r) => Ok(r),
 			None => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
 		}
 	}
 
-	fn unwrap_or_sgx_error_with_log(self, log_msg: &str) -> Result<Self::ReturnType, sgx_status_t> {
+	fn sgx_error_with_log(self, log_msg: &str) -> Result<Self::ReturnType, sgx_status_t> {
 		match self {
 			Some(r) => Ok(r),
 			None => {
@@ -64,14 +64,14 @@ impl<T> UnwrapOrSgxErrorUnexpected for Option<T> {
 
 impl<T, S> UnwrapOrSgxErrorUnexpected for Result<T, S> {
 	type ReturnType = T;
-	fn unwrap_or_sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> {
+	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> {
 		match self {
 			Ok(r) => Ok(r),
 			Err(_) => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
 		}
 	}
 
-	fn unwrap_or_sgx_error_with_log(self, log_msg: &str) -> Result<Self::ReturnType, sgx_status_t> {
+	fn sgx_error_with_log(self, log_msg: &str) -> Result<Self::ReturnType, sgx_status_t> {
 		match self {
 			Ok(r) => Ok(r),
 			Err(_) => {
