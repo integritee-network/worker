@@ -26,10 +26,13 @@ use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 
 use crate::constants::AES_KEY_FILE_AND_INIT_V;
 use crate::io;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 
 type AesOfb = Ofb<Aes128>;
 
-pub fn read_or_create_sealed() -> SgxResult<(Vec<u8>, Vec<u8>)> {
+pub type Aes = (Vec<u8>, Vec<u8>);
+
+pub fn read_or_create_sealed() -> SgxResult<Aes> {
 	match read_sealed() {
 		Ok((k,i)) => Ok((k, i)),
 		Err(_) => {
@@ -39,9 +42,9 @@ pub fn read_or_create_sealed() -> SgxResult<(Vec<u8>, Vec<u8>)> {
 	}
 }
 
-pub fn read_sealed() -> SgxResult<(Vec<u8>, Vec<u8>)> {
-	let key_iv = io::read_file(AES_KEY_FILE_AND_INIT_V)?;
-	Ok((key_iv[..16].to_vec(), key_iv[16..].to_vec()))
+pub fn read_sealed() -> SgxResult<Aes> {
+	io::read_file(AES_KEY_FILE_AND_INIT_V)
+		.map(|aes| ((aes[..16].to_vec(), aes[16..].to_vec())))
 }
 
 pub fn seal(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t>{
@@ -63,8 +66,10 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 }
 
 /// If AES acts on the encrypted data it decrypts and vice versa
-pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<sgx_status_t> {
-	let (key, iv) = read_or_create_sealed()?;
-	AesOfb::new_var(&key, &iv).unwrap().apply_keystream(bytes);
-	Ok(sgx_status_t::SGX_SUCCESS)
+pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<()> {
+	read_or_create_sealed()
+		.map(|(key , iv)| AesOfb::new_var(&key, &iv))
+		.sgx_error_with_log("Failed to Initialize AES")?
+		.map(|mut ofb| ofb.apply_keystream(bytes))
+		.sgx_error_with_log("Failed to AES en-/decrypt")
 }
