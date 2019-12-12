@@ -510,6 +510,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
 	io::read_to_string(filename)
 		.map(|contents| hex::decode_spid(&contents))
+		.sgx_error()?
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
