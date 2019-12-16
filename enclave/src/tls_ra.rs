@@ -143,7 +143,7 @@ fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
 	let shielding_key = rsa3072::unseal_pair().sgx_error()?;
 	let aes = aes::read_or_create_sealed().sgx_error()?;
 	let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
-	let enc_state = io::read_plaintext(ENCRYPTED_STATE_FILE).sgx_error()?;
+	let enc_state = io::read(ENCRYPTED_STATE_FILE).sgx_error()?;
 
 	let rsa_len = rsa_pair.as_bytes().len();
 	info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
@@ -274,7 +274,7 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
 						cid.len() as u32)
 	};
 	println!("    [Enclave] (MU-RA-Client) Got encrypted state from ipfs: {:?}\n", enc_state);
-	io::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE)?;
+	io::write(&enc_state, ENCRYPTED_STATE_FILE)?;
 	println!("    [Enclave] (MU-RA-Client) Successfully read state from IPFS");
 
 	Ok(())

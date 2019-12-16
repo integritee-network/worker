@@ -28,7 +28,7 @@ use crate::io;
 use crate::constants::RSA3072_SEALED_KEY_FILE;
 
 pub fn unseal_pair() -> SgxResult<Rsa3072KeyPair> {
-	let keyvec = io::read_file(RSA3072_SEALED_KEY_FILE)?;
+	let keyvec = io::unseal(RSA3072_SEALED_KEY_FILE)?;
 	let key_json_str = std::str::from_utf8(&keyvec).unwrap();
 	let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
 	Ok(pair)
@@ -57,7 +57,7 @@ pub fn create_sealed() -> Result<sgx_status_t, sgx_status_t> {
 }
 
 pub fn seal(pair: &[u8]) -> SgxResult<sgx_status_t> {
-	io::write_file(pair, RSA3072_SEALED_KEY_FILE)
+	io::seal(pair, RSA3072_SEALED_KEY_FILE)
 }
 
 pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {

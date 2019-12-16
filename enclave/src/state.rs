@@ -25,7 +25,7 @@ use crate::aes;
 use crate::io;
 
 pub fn read(path: &str) -> SgxResult<Vec<u8>> {
-	let mut bytes = match io::read_plaintext(path) {
+	let mut bytes = match io::read(path) {
 		Ok(vec) => match vec.len() {
 			0 => return Ok(vec),
 			_ => vec,
@@ -44,7 +44,7 @@ pub fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_
 
 	aes::de_or_encrypt(bytes)?;
 
-	io::write_plaintext(&bytes, path)?;
+	io::write(&bytes, path)?;
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 

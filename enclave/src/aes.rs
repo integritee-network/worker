@@ -43,14 +43,14 @@ pub fn read_or_create_sealed() -> SgxResult<Aes> {
 }
 
 pub fn read_sealed() -> SgxResult<Aes> {
-	io::read_file(AES_KEY_FILE_AND_INIT_V)
+	io::unseal(AES_KEY_FILE_AND_INIT_V)
 		.map(|aes| ((aes[..16].to_vec(), aes[16..].to_vec())))
 }
 
 pub fn seal(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t>{
 	let mut key_iv = key.to_vec();
 	key_iv.extend_from_slice(&iv);
-	io::write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
+	io::seal(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 pub fn create_sealed() -> SgxResult<sgx_status_t> {
@@ -62,7 +62,7 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 	};
 
 	rand.fill_bytes(&mut key_iv);
-	io::write_file(&key_iv, AES_KEY_FILE_AND_INIT_V)
+	io::seal(&key_iv, AES_KEY_FILE_AND_INIT_V)
 }
 
 /// If AES acts on the encrypted data it decrypts and vice versa

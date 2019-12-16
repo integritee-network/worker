@@ -24,19 +24,19 @@ use sgx_types::*;
 
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 
-pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
+pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
 	SgxFile::open(filepath)
-		.map(|f| read(f))
+		.map(|f| _read(f))
 		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
 
-pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
+pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {
 	File::open(filepath)
-		.map(|f| read(f))
+		.map(|f| _read(f))
 		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
 
-pub fn read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
+fn _read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
 	let mut read_data: Vec<u8> = Vec::new();
 	file.read_to_end(&mut read_data)
 		.sgx_error_with_log(&format!("[Enclave] Reading File failed!"))?;
@@ -54,19 +54,19 @@ pub fn read_to_string(filepath: &str) -> SgxResult<String> {
 	Ok(contents)
 }
 
-pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
+pub fn seal(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 	SgxFile::create(filepath)
-		.map(|f| write(bytes, f))
+		.map(|f| _write(bytes, f))
 		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
 }
 
-pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
+pub fn write(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 	File::create(filepath)
-		.map(|f| write(bytes, f))
+		.map(|f| _write(bytes, f))
 		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
 }
 
-pub fn write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
+fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
 	file.write_all(bytes)
 		.sgx_error_with_log(&format!("[Enclave] Writing File failed!"))?;
 
