@@ -34,13 +34,13 @@ pub fn read(path: &str) -> SgxResult<Vec<u8>> {
 	};
 
 	aes::de_or_encrypt(&mut bytes)?;
-	debug!("buffer decrypted = {:?}", bytes);
+	debug!("    [Enclave] buffer decrypted = {:?}", bytes);
 
 	Ok(bytes)
 }
 
 pub fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
-	debug!("plaintext data to be written: {:?}", bytes);
+	debug!("    [Enclave] Plaintext data to be written: {:?}", bytes);
 
 	aes::de_or_encrypt(bytes)?;
 

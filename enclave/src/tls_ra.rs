@@ -146,8 +146,8 @@ fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
 	let enc_state = io::read_plaintext(ENCRYPTED_STATE_FILE).sgx_error()?;
 
 	let rsa_len = rsa_pair.as_bytes().len();
-	info!("Read Shielding Key: {:?}", rsa_len);
-	info!("Sending AES key {:?}\nIV: {:?}\n", aes.0, aes.1);
+	info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
+	info!("    [Enclave] Read AES key {:?}\nIV: {:?}\n", aes.0, aes.1);
 
 	Ok((rsa_pair.as_bytes().to_vec(), aes, enc_state))
 }
@@ -164,7 +164,7 @@ fn send_files(tls: &mut Stream<ServerSession, TcpStream>,
 	tls.write(&aes.1[..]).sgx_error()?;
 
 	println!("    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS (= file hosting service)");
-	info!("Sending encrypted state length");
+	info!("    [Enclave] (MU-RA-Server) Sending encrypted state length");
 
 	tls.write(&enc_state.len().to_le_bytes()).sgx_error()?;
 	if enc_state.is_empty() {
@@ -223,24 +223,24 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
 
 	let key_len = tls.read(&mut key_len_arr)
 		.map(|_| usize::from_le_bytes(key_len_arr))
-		.sgx_error_with_log("Error receiving shielding key length")?;
+		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving shielding key length")?;
 
 	let mut rsa_pair = vec![0u8; key_len];
 	tls.read(&mut rsa_pair)
-		.map(|_| info!("Received Shielding key"))
-		.sgx_error_with_log("Error receiving shielding key")?;
+		.map(|_| info!("    [Enclave] Received Shielding key"))
+		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving shielding key")?;
 
 	rsa3072::seal(&rsa_pair)?;
 
 	let mut aes_key = [0u8; 16];
 	tls.read(&mut aes_key)
-		.map(|_| info!("Received AES key: {:?}", &aes_key[..]))
-		.sgx_error_with_log("Error receiving aes key ")?;
+		.map(|_| info!("    [Enclave] (MU-RA-Client)Received AES key: {:?}", &aes_key[..]))
+		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes key ")?;
 
 	let mut aes_iv = [0u8; 16];
 	tls.read(&mut aes_iv)
-		.map(|_| info!("Received AES IV: {:?}", &aes_iv[..]))
-		.sgx_error_with_log("Error receiving aes iv")?;
+		.map(|_| info!("    [Enclave] (MU-RA-Client) Received AES IV: {:?}", &aes_iv[..]))
+		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes iv")?;
 
 	aes::seal(aes_key, aes_iv)?;
 
@@ -259,8 +259,8 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
 
 	let mut cid = [0u8; 46];
 	tls.read(&mut cid)
-		.map(|_| info!("Received ipfs CID: {:?}", &cid[..]))
-		.sgx_error_with_log("Error receiving ipfs CID")?;
+		.map(|_| info!("    [Enclave] (MU-RA-Client) Received ipfs CID: {:?}", &cid[..]))
+		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving ipfs CID")?;
 
 	println!("    [Enclave] (MU-RA-Client) Received IPFS storage hash, reading from IPFS...");
 

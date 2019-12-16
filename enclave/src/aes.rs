@@ -69,7 +69,7 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<()> {
 	read_or_create_sealed()
 		.map(|(key , iv)| AesOfb::new_var(&key, &iv))
-		.sgx_error_with_log("Failed to Initialize AES")?
+		.sgx_error_with_log("    [Enclave]  Failed to Initialize AES")?
 		.map(|mut ofb| ofb.apply_keystream(bytes))
-		.sgx_error_with_log("Failed to AES en-/decrypt")
+		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt")
 }
