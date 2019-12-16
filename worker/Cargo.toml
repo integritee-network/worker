@@ -50,7 +50,6 @@ path = "worker-api"
 git = "https://github.com/scs/substraTEE-node"
 tag = "M5.2"
 package = "substratee-node-runtime"
-default-features = false
 
 [dependencies.runtime_primitives]
 git = "https://github.com/paritytech/substrate"
@@ -86,11 +85,5 @@ path = "../stf"
 default-features = false
 
 [features]
-default = ["std"]
-production = ["std"]
-std = [
-	"primitives/std",
-	"codec/std",
-	"my_node_runtime/std",
-]
-
+default = []
+production = []

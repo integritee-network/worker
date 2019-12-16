@@ -14,7 +14,9 @@ use crate::attestation::create_ra_report_and_signature;
 use crate::constants::ENCRYPTED_STATE_FILE;
 use crate::cert;
 use crate::{ocall_read_ipfs, ocall_write_ipfs};
-use crate::utils::*;
+use crate::io;
+use crate::rsa3072;
+use crate::aes;
 
 struct ClientAuth {
 	outdated_ok: bool,
@@ -112,8 +114,8 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
-	let shielding_key = read_rsa_keypair().unwrap();
-	let (key, iv) = read_or_create_aes_key_iv().unwrap();
+	let shielding_key = rsa3072::unseal_pair().unwrap();
+	let (key, iv) = aes::read_or_create_sealed().unwrap();
 	let rsa_pair = serde_json::to_string(&shielding_key).unwrap();
 	let rsa_len = rsa_pair.as_bytes().len();
 	info!("Sending Shielding Key: {:?}", rsa_len);
@@ -126,7 +128,7 @@ pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_
 
 	println!("    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS (= file hosting service)");
 
-	let enc_state = match read_plaintext(ENCRYPTED_STATE_FILE) {
+	let enc_state = match io::read_plaintext(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -205,7 +207,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
-	if let Err(e) = store_rsa_key_pair(&rsa_pair) {
+	if let Err(e) = rsa3072::seal(&rsa_pair) {
 		return e;
 	}
 
@@ -227,7 +229,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 		}
 	};
 
-	if let Err(e) = store_aes_key_and_iv(aes_key, aes_iv) {
+	if let Err(e) = aes::seal(aes_key, aes_iv) {
 		return e;
 	}
 
@@ -275,7 +277,7 @@ pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t)
 
 
 	println!("    [Enclave] (MU-RA-Client) Got encrypted state from ipfs: {:?}\n", enc_state);
-	if let Err(e) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(e) = io::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return e;
 	}
 

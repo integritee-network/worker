@@ -33,12 +33,12 @@ use serde_json;
 #[macro_use]
 extern crate sgx_tstd as std;
 
-use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
 use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
+use sgx_externalities::SgxExternalitiesTrait;
 use substrate_api_client::compose_extrinsic_offline;
 
 use codec::{Decode, Encode};
@@ -54,11 +54,16 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
-use utils::*;
+use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 mod constants;
 mod utils;
 mod attestation;
+mod rsa3072;
+mod ed25519;
+mod state;
+mod aes;
+mod io;
 
 pub mod cert;
 pub mod hex;
@@ -74,17 +79,17 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	// initialize the logging environment in the enclave
 	env_logger::init();
 
-	if let Err(status) = create_sealed_ed25519_seed_if_not_existent() {
+	if let Err(status) = ed25519::create_sealed_if_absent() {
 		return status;
 	}
 
-	let signer = match get_sealed_ecc_pair() {
+	let signer = match ed25519::unseal_pair() {
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	if let Err(status) = create_sealed_rsa3072_keypair_if_not_existent() {
+	if let Err(status) = rsa3072::create_sealed_if_absent() {
 		return status;
 	}
 	sgx_status_t::SGX_SUCCESS
@@ -93,7 +98,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 
-	let rsa_pubkey = match read_rsa_pubkey() {
+	let rsa_pubkey = match rsa3072::unseal_pubkey() {
 		Ok(key) => key,
 		Err(status) => return status,
 	};
@@ -107,12 +112,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size:
 	};
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-
-	// split the pubkey_slice at the length of the rsa_pubkey_json
-	// and fill the right side with whitespace so that the json can be decoded later on
-	let (left, right) = pubkey_slice.split_at_mut(rsa_pubkey_json.len());
-	left.clone_from_slice(rsa_pubkey_json.as_bytes());
-	right.iter_mut().for_each(|x| *x = 0x20);
+	write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec());
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -120,11 +120,11 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size:
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u32) -> sgx_status_t {
 
-	if let Err(status) = create_sealed_ed25519_seed_if_not_existent() {
+	if let Err(status) = ed25519::create_sealed_if_absent() {
 		return status;
 	}
 
-	let signer = match get_sealed_ecc_pair() {
+	let signer = match ed25519::unseal_pair() {
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn execute_stf(
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	debug!("[Enclave] Read RSA keypair");
-	let rsa_keypair = match read_rsa_keypair() {
+	let rsa_keypair = match rsa3072::unseal_pair() {
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
@@ -163,11 +163,11 @@ pub unsafe extern "C" fn execute_stf(
 
 	// decrypt the payload
 	debug!("    [Enclave] Decode the payload");
-	let request_vec = decrypt_payload(&request_encrypted_slice, &rsa_keypair);
+	let request_vec = rsa3072::decrypt(&request_encrypted_slice, &rsa_keypair);
 	let stf_call = TrustedCall::decode(&mut request_vec.as_slice()).unwrap();
 
 	// load last state
-	let state_enc = match read_state_from_file(ENCRYPTED_STATE_FILE) {
+	let state_enc = match state::read(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -176,8 +176,7 @@ pub unsafe extern "C" fn execute_stf(
 		0 => Stf::init_state(),
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<State>::new(state_enc);
-			helper.decode().unwrap()
+			State::decode(state_enc)
 		}
 	};
 
@@ -185,22 +184,21 @@ pub unsafe extern "C" fn execute_stf(
 	Stf::execute(&mut state, stf_call);
 
 	// write the counter state and return
-	let enc_state = match encrypt_state(state) {
+	let enc_state = match state::encrypt(state.encode()) {
 		Ok(s) => s,
 		Err(sgx_status) => return sgx_status,
 	};
 
 
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
-
 	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
-	if let Err(status) = write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(status) = io::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
 	}
 
 	// get information for composing the extrinsic
-	let signer = match get_sealed_ecc_pair() {
+	let signer = match ed25519::unseal_pair() {
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
@@ -223,12 +221,7 @@ pub unsafe extern "C" fn execute_stf(
     );
 
 	let encoded = xt.encode();
-
-	// split the extrinsic_slice at the length of the encoded extrinsic
-	// and fill the right side with whitespace
-	let (left, right) = extrinsic_slice.split_at_mut(encoded.len());
-	left.clone_from_slice(&encoded);
-	right.iter_mut().for_each(|x| *x = 0x20);
+	write_slice_and_whitespace_pad(extrinsic_slice, encoded);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -246,17 +239,16 @@ pub unsafe extern "C" fn get_state(
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 
 	// load last state
-	let state_enc = match read_state_from_file(ENCRYPTED_STATE_FILE) {
+	let state_vec = match state::read(ENCRYPTED_STATE_FILE) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
 
-	let mut state : State = match state_enc.len() {
+	let mut state : State = match state_vec.len() {
 		0 => Stf::init_state(),
 		_ => {
 			debug!("    [Enclave] State read, deserializing...");
-			let helper = DeSerializeHelper::<State>::new(state_enc);
-			helper.decode().unwrap()
+			State::decode(state_vec)
 		}
 	};
 	let _getter = TrustedGetter::decode(&mut getter_slice).unwrap();
@@ -265,22 +257,11 @@ pub unsafe extern "C" fn get_state(
 		None => vec!(0),
 	};
 
-	// split the extrinsic_slice at the length of the encoded extrinsic
-	// and fill the right side with whitespace
-	let (left, right) = value_slice.split_at_mut(value_vec.len());
-	left.clone_from_slice(&value_vec);
-	//FIXME: now implicitly assuming we pass unsigned integer vecs, not strings terminated by 0x20
-	//FIXME: we should really pass an Option<Vec<u8>>
-	right.iter_mut().for_each(|x| *x = 0x00);
-	//right.iter_mut().for_each(|x| *x = 0x20);
-	sgx_status_t::SGX_SUCCESS
-}
+//	//FIXME: now implicitly assuming we pass unsigned integer vecs, not strings terminated by 0x20
+//	//FIXME: we should really pass an Option<Vec<u8>>
+	write_slice_and_whitespace_pad(value_slice, value_vec);
 
-fn encrypt_state(value: State) -> Result<Vec<u8>, sgx_status_t> {
-	let helper = SerializeHelper::new();
-	let mut c = helper.encode(value).unwrap();
-	aes_de_or_encrypt(&mut c)?;
-	Ok(c)
+	sgx_status_t::SGX_SUCCESS
 }
 
 extern "C" {
@@ -306,7 +287,7 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
-		test_encrypted_state_io_works,
+		state::test_encrypted_state_io_works,
 		test_ocall_read_write_ipfs
 		)
 }
