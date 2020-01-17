@@ -80,7 +80,8 @@ pipeline {
           }
         }
       }
-    }    stage('Archive build output') {
+    }
+    stage('Archive build output') {
       steps {
         archiveArtifacts artifacts: '*.log'
       }
