@@ -30,11 +30,11 @@ sha2 					= { version = "0.7", default-features = false }
 codec           		= { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types    		= { version = "0.6", default-features = false, features = ["codec"] }
 
-sgx_urts				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types 				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tseal				= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_ucrypto 			= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_crypto_helper 		= { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", default-features = false}
+sgx_urts				= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types 				= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tseal				= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_ucrypto 			= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_crypto_helper 		= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
@@ -48,7 +48,7 @@ path = "worker-api"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "M5.2"
+rev = "afee14888be22018616200b2a22444e5c8f9ad9a"
 package = "substratee-node-runtime"
 
 [dependencies.runtime_primitives]

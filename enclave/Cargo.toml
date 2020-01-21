@@ -17,27 +17,27 @@ default = []
 production = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tse       = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tstd      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", features = ["untrusted_fs","net","backtrace"] }
-sgx_rand      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_trts      = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_types     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tseal     = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tcrypto   = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_serialize = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
-sgx_tunittest = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk" }
+sgx_tse       = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd      = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"] }
+sgx_rand      = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_trts      = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types     = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tseal     = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto   = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_serialize = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tunittest = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
 aes               = { version = "0.3.2" }
 ofb               = { version = "0.1.1" }
 codec             = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types   = { version = "0.6", default-features = false, features = ["codec"] }
-sgx-crypto-helper = { rev = "v1.1.0", git = "https://github.com/baidu/rust-sgx-sdk", package = "sgx_tcrypto_helper" }
-log               = { version = "0.4", git = "https://github.com/mesalock-linux/log-sgx" }
-env_logger        = { version = "0.7", git = "https://github.com/mesalock-linux/env_logger-sgx" }
-serde        	= { version = "1.0.97", git = "https://github.com/mesalock-linux/serde-sgx" }
-serde_json      = { version = "1.0.36", git = "https://github.com/mesalock-linux/serde-json-sgx"}
-lazy_static     = { version = "1.1.0", features = ["spin_no_std"] }
+sgx-crypto-helper = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
+log               = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/log-sgx" }
+env_logger        = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/env_logger-sgx" }
+serde        	  = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/serde-sgx" }
+serde_json        = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/serde-json-sgx"}
+lazy_static       = { version = "1.1.0", features = ["spin_no_std"] }
 
 # for attestation
 chrono          = { version = "0.4.7",  git = "https://github.com/mesalock-linux/chrono-sgx" }
@@ -47,7 +47,7 @@ serde_derive    = { version = "1.0", git = "https://github.com/mesalock-linux/se
 httparse        = { version = "1.3",  default-features = false }
 itertools       = { version = "0.8",  default-features = false, features = []}
 bit-vec         = { version = "0.6",    default-features = false }
-rust-base58     = { rev = "3fe87eafe81d1ff5e6cf2fb63c6976fc4e06ac44", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features=["mesalock_sgx"] }
+rust-base58     = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features=["mesalock_sgx"] }
 
 [dependencies.webpki]
 git              = "https://github.com/mesalock-linux/webpki"
@@ -61,13 +61,13 @@ version          = "0.17.0"
 
 [dependencies.yasna]
 git      = "https://github.com/mesalock-linux/yasna.rs-sgx"
-rev      = "29f0707027ce3b06ddb7daf4086ef673dbcb14ff"
+tag      = "sgx_1.1.0"
 default-features = false
 features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"]
 
 [dependencies.rustls]
 git      = "https://github.com/mesalock-linux/rustls"
-rev      = "fe19b470f6acbb4c6c39fe1f83556bc434840fd8"
+tag      = "sgx_1.1.0"
 features = ["dangerous_configuration"]
 
 [dependencies.sr-io]
@@ -78,7 +78,7 @@ package = "sr-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx_serialize_derive]
-git = "https://github.com/baidu/rust-sgx-sdk"
+git = "https://github.com/apache/teaclave-sgx-sdk.git"
 rev = "v1.1.0"
 
 [dependencies.primitives]
@@ -123,7 +123,3 @@ path = "../substrate-sgx/externalities"
 
 [patch."https://github.com/paritytech/substrate"]
 sr-io = { path = "../substrate-sgx/sr-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-
-# environment logger still depends on v1.0.9
-[patch."https://github.com/baidu/rust-sgx-sdk.git"]
-sgx_tstd = { git = "https://github.com/apache/incubator-mesatee-sgx/", rev = "v1.1.0" }

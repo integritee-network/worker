@@ -15,11 +15,11 @@ sgx = [
 ]
 
 [dependencies]
-log               = { version = "0.4", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
-env_logger        = { version = "0.7", git = "https://github.com/mesalock-linux/env_logger-sgx", optional = true }
+log               = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
+env_logger        = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/env_logger-sgx", optional = true }
 
 [dependencies.sgx_tstd]
-git = "https://github.com/baidu/rust-sgx-sdk"
+git = "https://github.com/apache/teaclave-sgx-sdk.git"
 features = ["untrusted_fs","net","backtrace"]
 rev = "v1.1.0"
 optional = true
