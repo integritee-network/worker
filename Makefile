@@ -231,11 +231,11 @@ clean:
 	@echo "cargo clean and remove Cargo.lock in root directory"
 	@cargo clean && rm -f Cargo.lock
 
-mrenclave: $(Signed_Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) dump -enclave $(Signed_Enclave_Name) -dumpfile df.out && ./extract-identity < df.out && rm df.out
+mrenclave: 
+	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity < df.out && rm df.out
 
-mrsigner: $(Signed_Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) dump -enclave $(Signed_Enclave_Name) -dumpfile df.out && ./extract-identity --mrsigner < df.out && rm df.out
+mrsigner: 
+	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity --mrsigner < df.out && rm df.out
 
 .PHONY: identity
 identity: mrenclave mrsigner
