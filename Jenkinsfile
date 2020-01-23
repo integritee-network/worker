@@ -40,7 +40,7 @@ pipeline {
         }
       }
     }
-    stage('Formater') {
+    stage('Formatter') {
       steps {
         catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
           sh 'cargo fmt -- --check > ${WORKSPACE}/fmt.log'
@@ -70,14 +70,8 @@ pipeline {
               )
           ]
         )
-        script {
-          try {
-            sh './ci/check_fmt_log.sh'
-          }
-          catch (exc) {
-            echo 'Style changes detected. Setting stage to unstable'
-            currentStage.result = 'UNSTABLE'
-          }
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                  sh './ci/check_fmt_log.sh'
         }
       }
     }
