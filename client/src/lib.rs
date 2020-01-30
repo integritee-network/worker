@@ -38,7 +38,7 @@ use substrate_api_client::{Api, compose_extrinsic,
 						   utils::{hexstr_to_u256, hexstr_to_vec},
 };
 
-use substratee_stf::{TrustedCall, TrustedGetter};
+use substratee_stf::{TrustedCall, TrustedOperation};
 use substratee_worker_api::Api as WorkerApi;
 
 // FIXME: most of these functions are redundant with substrate-api-client
@@ -216,8 +216,7 @@ where
 
 }
 
-pub fn get_trusted_stf_state(workerapi: &WorkerApi, getter: TrustedGetter) {
-	//TODO: encrypt and sign request
+pub fn get_trusted_stf_state(workerapi: &WorkerApi, getter: TrustedOperation) {
 	let ret = workerapi.get_stf_state(getter);
 	println!("    got getter response from worker: {:?}", ret);
 	//TODO: decrypt response and verify signature

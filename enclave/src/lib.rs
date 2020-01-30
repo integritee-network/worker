@@ -37,7 +37,7 @@ use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
-use substratee_stf::{Stf, TrustedCall, TrustedGetter, State};
+use substratee_stf::{Stf, TrustedCall, State, TrustedOperation};
 use sgx_externalities::SgxExternalitiesTrait;
 use substrate_api_client::compose_extrinsic_offline;
 
@@ -229,13 +229,13 @@ pub unsafe extern "C" fn execute_stf(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_state(
-	getter: *const u8,
-	getter_size: u32,
+	trusted_op: *const u8,
+	trusted_op_size: u32,
 	value: *mut u8,
 	value_size: u32
 	) -> sgx_status_t {
 
-	let mut getter_slice = slice::from_raw_parts(getter, getter_size as usize);
+	let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
 	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 
 	// load last state
@@ -251,8 +251,13 @@ pub unsafe extern "C" fn get_state(
 			State::decode(state_vec)
 		}
 	};
-	let _getter = TrustedGetter::decode(&mut getter_slice).unwrap();
-	let value_vec = match Stf::get_state(&mut state, _getter) {
+	let trusted_op = TrustedOperation::decode(&mut trusted_op_slice).unwrap();
+
+	if let false = trusted_op.verify_signature() {
+		error!("    [Enclave] Stf::get_state bad signature");
+	}
+
+	let value_vec = match Stf::get_state(&mut state, trusted_op.operation) {
 		Some(val) => val,
 		None => vec!(0),
 	};

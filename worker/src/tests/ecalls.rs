@@ -19,9 +19,11 @@ use codec::Encode;
 use primitive_types::U256;
 use sgx_types::*;
 use substratee_stf;
+use keyring::AccountKeyring;
 
 use crate::enclave::api::*;
 use crate::tests::commons::*;
+use substratee_stf::{TrustedGetter, TrustedOperation};
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey
@@ -29,22 +31,28 @@ use crate::tests::commons::*;
 pub fn get_state_works(eid: sgx_enclave_id_t) {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	let account ="Alice";
+
 	let value_size = 16; //u128
 	let mut value: Vec<u8> = vec![0u8; value_size as usize];
 
-	let getter = substratee_stf::tests::get_test_getter_free_balance();
+	let alice = AccountKeyring::Alice;
+	let getter = TrustedGetter::free_balance(alice.public());
+	let trusted_op = TrustedOperation {
+		operation: getter.clone(),
+		signature: alice.sign(getter.encode().as_slice()).into(),
+	}.encode();
 
 	let result = unsafe {
 		get_state(eid,
 					&mut retval,
-					getter.as_ptr(),
-					getter.len() as u32,
+					trusted_op.as_ptr(),
+					trusted_op.len() as u32,
 					value.as_mut_ptr(),
 					value_size as u32
 					)
 	};
-	println!("{} value: {:?}", account, value);
+	println!("{} value: {:?}", alice, value);
+	evaluate_result(retval);
 	evaluate_result(result);
 }
 

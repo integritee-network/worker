@@ -49,11 +49,29 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
+}
+
+#[derive(Encode, Decode)]
+pub struct TrustedOperation
+{
+	pub operation: TrustedGetter,
+	pub signature: AnySignature,
+}
+
+impl TrustedOperation {
+	pub fn verify_signature(&self) -> bool {
+		let account = match self.operation {
+			TrustedGetter::free_balance(account) => account,
+			TrustedGetter::reserved_balance(account) => account,
+		};
+
+		self.signature.verify(self.operation.encode().as_slice(), &account)
+	}
 }
 
 #[cfg(feature = "sgx")]
