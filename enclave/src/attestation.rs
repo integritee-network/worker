@@ -518,7 +518,13 @@ fn get_ias_api_key() -> SgxResult<String> {
 		.map(|key| key.trim_end().to_owned())
 }
 
-pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxResult<(Vec<u8>, Vec<u8>)> {
+pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxResult<(Vec<u8>, Vec<u8>, Vec<u32>)> {
+	let chain_signer = match ed25519::unseal_pair() {
+		Ok(pair) => pair,
+		Err(status) => return Err(status),
+	};
+	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
+
 	info!("    [Enclave] Generate keypair");
 	let ecc_handle = SgxEccHandle::new();
 	let _result = ecc_handle.open();
@@ -550,9 +556,13 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxR
 			return Err(e);
 		}
 	};
+	info!("    [Enclave] sign ed25519 pubkey");
+	let gxgy = ecc_handle.ecdsa_sign_slice(&chain_signer.public().0, &prv_k).unwrap();
+	let chain_signer_attestation = [gxgy.x, gxgy.y].concat().to_vec();
+
 	let _result = ecc_handle.close();
 	info!("    [Enclave] Generate ECC Certificate successful");
-	Ok((key_der, cert_der))
+	Ok((key_der, cert_der, chain_signer_attestation))
 }
 
 #[no_mangle]
@@ -570,7 +580,7 @@ pub unsafe extern "C" fn perform_ra(
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
+	let (_key_der, cert_der, signer_attn) = match create_ra_report_and_signature(sign_type) {
 		Ok(r) => r,
 		Err(e) => return e,
 	};
@@ -598,7 +608,7 @@ pub unsafe extern "C" fn perform_ra(
 
 	let xt = compose_extrinsic_offline!(
         signer,
-	    (call, cert_der.to_vec(), url_slice.to_vec()),
+	    (call, cert_der.to_vec(), signer_attn.clone(), url_slice.to_vec()),
 	    nonce,
 	    genesis_hash,
 	    RUNTIME_SPEC_VERSION
