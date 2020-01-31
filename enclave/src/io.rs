@@ -17,86 +17,58 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
+use std::string::String;
 use std::vec::Vec;
 
 use sgx_types::*;
 
-use log::*;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 
-pub fn write_file(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	match SgxFile::create(filepath) {
-		Ok(mut f) => match f.write_all(bytes) {
-			Ok(()) => {
-				info!("[Enclave] Writing keyfile '{}' successful", filepath);
-				Ok(sgx_status_t::SGX_SUCCESS)
-			}
-			Err(x) => {
-				error!("[Enclave -] Writing keyfile '{}' failed! Err: {}", filepath, x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			error!("[Enclave !] Creating keyfile '{}' Err: {}", filepath, x);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		}
-	}
+pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
+	SgxFile::open(filepath)
+		.map(|f| _read(f))
+		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
 
-pub fn read_file(filepath: &str) -> SgxResult<Vec<u8>> {
-	let mut keyvec: Vec<u8> = Vec::new();
-	match SgxFile::open(filepath) {
-		Ok(mut f) => match f.read_to_end(&mut keyvec) {
-			Ok(len) => {
-				info!("[Enclave] Read {} bytes from key file", len);
-				Ok(keyvec)
-			}
-			Err(x) => {
-				error!("[Enclave] Read sealed file failed {}: Err {}", filepath, x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			info!("[Enclave] Can't find sealed file {} Err: {}" , filepath, x);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		}
-	}
+pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {
+	File::open(filepath)
+		.map(|f| _read(f))
+		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
 
-pub fn read_plaintext(filepath: &str) -> SgxResult<Vec<u8>> {
-	let mut state_vec: Vec<u8> = Vec::new();
-	match File::open(filepath) {
-		Ok(mut f) => match f.read_to_end(&mut state_vec) {
-			Ok(len) => {
-				info!("[Enclave] Read {} bytes from state file", len);
-				Ok(state_vec)
-			}
-			Err(x) => {
-				error!("[Enclave] Read encrypted state file failed {}", x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			info!("[Enclave] No encrypted state file found! {} Err: {}", filepath, x);
-			Ok(state_vec)
-		}
-	}
+fn _read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
+	let mut read_data: Vec<u8> = Vec::new();
+	file.read_to_end(&mut read_data)
+		.sgx_error_with_log(&format!("[Enclave] Reading File failed!"))?;
+
+	Ok(read_data)
 }
 
-pub fn write_plaintext(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	match File::create(filepath) {
-		Ok(mut f) => match f.write_all(bytes) {
-			Ok(()) => {
-				info!("[Enclave] Writing to file '{}' successful", filepath);
-				Ok(sgx_status_t::SGX_SUCCESS)
-			}
-			Err(x) => {
-				error!("[Enclave] Writing to '{}' failed! {}", filepath, x);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			}
-		},
-		Err(x) => {
-			error!("[Enclave] Creating file '{}' error! {}", filepath, x);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		}
-	}
+pub fn read_to_string(filepath: &str) -> SgxResult<String> {
+	let mut contents = String::new();
+	File::open(filepath)
+		.map(|mut f| f.read_to_string(&mut contents))
+		.sgx_error_with_log(&format!("[Enclave] Could not read '{}'", filepath))?
+		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
+
+	Ok(contents)
+}
+
+pub fn seal(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
+	SgxFile::create(filepath)
+		.map(|f| _write(bytes, f))
+		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
+}
+
+pub fn write(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
+	File::create(filepath)
+		.map(|f| _write(bytes, f))
+		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
+}
+
+fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
+	file.write_all(bytes)
+		.sgx_error_with_log(&format!("[Enclave] Writing File failed!"))?;
+
+	Ok(sgx_status_t::SGX_SUCCESS)
 }

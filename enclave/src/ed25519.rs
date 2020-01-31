@@ -46,11 +46,11 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 }
 
 fn unseal_seed() -> SgxResult<Vec<u8>> {
-	io::read_file(SEALED_SIGNER_SEED_FILE)
+	io::unseal(SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn seal_seed(pair: &[u8]) -> SgxResult<sgx_status_t> {
-	io::write_file(pair, SEALED_SIGNER_SEED_FILE)
+	io::seal(pair, SEALED_SIGNER_SEED_FILE)
 }
 
 pub fn create_sealed_seed() -> SgxResult<sgx_status_t> {

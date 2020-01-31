@@ -193,7 +193,7 @@ pub unsafe extern "C" fn execute_stf(
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
 	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
-	if let Err(status) = io::write_plaintext(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(status) = io::write(&enc_state, ENCRYPTED_STATE_FILE) {
 		return status
 	}
 

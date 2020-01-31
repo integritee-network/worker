@@ -4,32 +4,34 @@ use sgx_types::*;
 use std::char;
 use std::prelude::v1::*;
 
-fn decode_hex_digit(digit: char) -> u8 {
+use log::error;
+
+fn decode_hex_digit(digit: char) -> SgxResult<u8> {
     match digit {
-        '0'..='9' => digit as u8 - b'0',
-        'a'..='f' => digit as u8 - b'a' + 10,
-        'A'..='F' => digit as u8 - b'A' + 10,
-        _ => panic!(),
+        '0'..='9' => Ok(digit as u8 - b'0'),
+        'a'..='f' => Ok(digit as u8 - b'a' + 10),
+        'A'..='F' => Ok(digit as u8 - b'A' + 10),
+        _ => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     }
 }
 
-pub fn decode_spid(hex: &str) -> sgx_spid_t {
+pub fn decode_spid(hex: &str) -> SgxResult<sgx_spid_t> {
     let mut spid = sgx_spid_t::default();
     let hex = hex.trim();
 
     if hex.len() < 16 * 2 {
         println!("Input spid file len ({}) is incorrect!", hex.len());
-        return spid;
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    let decoded_vec = decode_hex(hex);
+    let decoded_vec = decode_hex(hex)?;
 
     spid.id.copy_from_slice(&decoded_vec[..16]);
 
-    spid
+    Ok(spid)
 }
 
-pub fn decode_hex(hex: &str) -> Vec<u8> {
+pub fn decode_hex(hex: &str) -> SgxResult<Vec<u8>> {
     let mut r: Vec<u8> = Vec::new();
     let mut chars = hex.chars().enumerate();
     loop {
@@ -41,12 +43,15 @@ pub fn decode_hex(hex: &str) -> Vec<u8> {
             continue;
         }
         let (_, second) = match chars.next() {
-            None => panic!("pos = {}d", pos),
+            None => {
+				error!("Hex decode error at position = {}d", pos);
+				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+			},
             Some(elt) => elt,
         };
-        r.push((decode_hex_digit(first) << 4) | decode_hex_digit(second));
+        r.push((decode_hex_digit(first)? << 4) | decode_hex_digit(second)?);
     }
-    r
+    Ok(r)
 }
 
 #[allow(unused)]
