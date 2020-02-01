@@ -49,10 +49,11 @@ use primitives::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::{cert, hex};
-use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION};
+use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, 
+	RUNTIME_SPEC_VERSION, RA_DUMP_CERT_DER_FILE, RA_DUMP_SIGNER_ATTN_FILE};
 use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected};
-use crate::io;
 use crate::ed25519;
+use crate::io;
 
 pub const DEV_HOSTNAME		: &str = "api.trustedservices.intel.com";
 
@@ -618,6 +619,30 @@ pub unsafe extern "C" fn perform_ra(
 	debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
 
 	write_slice_and_whitespace_pad(extrinsic_slice, encoded);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
+
+	// our certificate is unlinkable
+	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+	let (_key_der, cert_der, signer_attn) = match create_ra_report_and_signature(sign_type) {
+		Ok(r) => r,
+		Err(e) => return e,
+	};
+
+	if let Err(status) = io::write_plaintext(&cert_der, RA_DUMP_CERT_DER_FILE) {
+		return status
+	}
+	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
+
+	if let Err(status) = io::write_plaintext(&signer_attn.encode()[..], RA_DUMP_SIGNER_ATTN_FILE) {
+		return status
+	}
+	info!("    [Enclave] dumped signer attestation {}", RA_DUMP_SIGNER_ATTN_FILE);
 
 	sgx_status_t::SGX_SUCCESS
 }

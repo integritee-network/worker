@@ -34,8 +34,6 @@ use crate::enclave::init::init_enclave;
 
 type AccountId = <AnySignature as Verify>::Signer;
 
-// FIXME: most of these functions use redundant code with is provided by substrate-api-client
-// but first resolve this: https://github.com/scs/substrate-api-client/issues/27
 
 pub fn get_signing_key_tee() {
 	println!();
@@ -223,5 +221,47 @@ pub fn process_request(
 	println!("[>] Confirm processing (send the extrinsic)");
 	let tx_hash = _api.send_extrinsic(_xthex).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+
+}
+
+pub fn dump_ra() {
+	println!("*** Start the enclave");
+	let enclave = match init_enclave() {
+		Ok(r) => {
+			println!("[+] Init Enclave Successful. EID = {}!", r.geteid());
+			r
+		},
+		Err(x) => {
+			error!("[-] Init Enclave Failed {}!", x);
+			return;
+		},
+	};
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	println!("*** call enclave init()");
+	let result = unsafe {
+		init(
+			enclave.geteid(),
+			&mut status,
+		)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		println!("[-] init() failed.\n");
+		return;
+	}
+
+	// request the key
+	println!();
+	println!("*** Perform RA and dump cert to disk");
+
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe {
+		dump_ra_to_disk(enclave.geteid(), &mut status)
+	};
+
+	if result != sgx_status_t::SGX_SUCCESS || status != sgx_status_t::SGX_SUCCESS {
+		error!("[-] ECALL Enclave Failed {} / status {}!", result.as_str(), status.as_str());
+		return;
+	}
 
 }

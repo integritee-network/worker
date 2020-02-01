@@ -35,7 +35,7 @@ use substrate_api_client::{Api,
 
 use enclave::api::{get_ecc_signing_pubkey, init, perform_ra};
 use enclave::tls_ra::{Mode, run, run_enclave_client, run_enclave_server};
-use enclave::wrappers::{get_public_key_tee, get_signing_key_tee, process_request};
+use enclave::wrappers::{get_public_key_tee, get_signing_key_tee, process_request, dump_ra};
 use enclave::init::init_enclave;
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
@@ -77,6 +77,9 @@ fn main() {
 	} else if matches.is_present("getsignkey") {
 		println!("*** Get the signing key from the TEE\n");
 		get_signing_key_tee();
+	} else if matches.is_present("dump_ra") {
+		println!("*** dump remote attestation to disk\n");
+		dump_ra();
 	} else if matches.is_present("run_server") {
 		println!("*** Running Enclave TLS server\n");
 		run(Mode::Server, mu_ra_port);

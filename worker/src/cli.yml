@@ -48,6 +48,8 @@ subcommands:
         about: Run TEE server for RA
     - run_client:
         about: Run TEE client for RA
+    - dump_ra:
+        about: perform RA and dump cert to disk
     - test_enclave:
           about: Run tests involving the enclave
           takes_value: true

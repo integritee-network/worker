@@ -74,6 +74,11 @@ extern {
 		unchecked_extrinsic_size: u32
 	) -> sgx_status_t;
 
+	pub fn dump_ra_to_disk(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+	) -> sgx_status_t;		
+
 	pub fn test_main_entrance(
 		eid: sgx_enclave_id_t,
 		retval: *mut size_t
