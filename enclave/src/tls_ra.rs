@@ -129,7 +129,7 @@ fn tls_server_sesssion_stream(socket_fd: i32, cfg: ServerConfig) -> SgxResult<(S
 }
 
 fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig> {
-	let (key_der, cert_der, _chain_signer_attn) = match create_ra_report_and_signature(sign_type).sgx_error()?;
+	let (key_der, cert_der, _chain_signer_attn) = create_ra_report_and_signature(sign_type).sgx_error()?;
 	
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true)));
 	let mut certs = Vec::new();
@@ -289,7 +289,7 @@ fn tls_client_session_stream(socket_fd: i32, cfg: ClientConfig) -> SgxResult<(Cl
 
 fn tls_client_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ClientConfig> {
 
-	let (key_der, cert_der) = create_ra_report_and_signature(sign_type).sgx_error()?;
+	let (key_der, cert_der, _chain_signer_attn) = create_ra_report_and_signature(sign_type).sgx_error()?;
 
 	let mut cfg = rustls::ClientConfig::new();
 	let mut certs = Vec::new();

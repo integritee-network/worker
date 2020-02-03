@@ -70,7 +70,7 @@ fn main() {
 	};
 	println!("[<] Got first worker's coordinates:");
 	println!("    W1's public key : {:?}", worker.pubkey.to_string());
-	println!("    W1's url: {:?}\n", worker.url);
+	println!("    W1's url: {}\n", String::from_utf8_lossy(&worker.url[..]).to_string());
 
 	let worker_api = WorkerApi::new(String::from_utf8_lossy(&worker.url[..]).to_string());
 
@@ -95,7 +95,7 @@ fn main() {
     info!("Alice's Account Nonce is {}", api.get_nonce().unwrap());
 
 	// compose extrinsic with encrypted payload
-	println!("[>] Get the shielding key from W1 (={})", worker.pubkey.to_string());
+	println!("[>] Get the shielding key from W1 ({})", worker.pubkey.to_string());
 	let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("[<] Got worker shielding key {:?}\n", shielding_pubkey);
 

@@ -636,12 +636,12 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 		Err(e) => return e,
 	};
 
-	if let Err(status) = io::write_plaintext(&cert_der, RA_DUMP_CERT_DER_FILE) {
+	if let Err(status) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
 		return status
 	}
 	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 
-	if let Err(status) = io::write_plaintext(&signer_attn.encode()[..], RA_DUMP_SIGNER_ATTN_FILE) {
+	if let Err(status) = io::write(&signer_attn.encode()[..], RA_DUMP_SIGNER_ATTN_FILE) {
 		return status
 	}
 	info!("    [Enclave] dumped signer attestation {}", RA_DUMP_SIGNER_ATTN_FILE);

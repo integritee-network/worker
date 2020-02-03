@@ -750,16 +750,18 @@ dependencies = [
 [[package]]
 name = "host_calls"
 version = "4.0.0"
-source = "git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a#afee14888be22018616200b2a22444e5c8f9ad9a"
+source = "git+https://github.com/scs/substraTEE-node?branch=ra_improvements#867ed6143dd8bc55dcff30aca06d1ba2e6478c1e"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustls 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
+ "sgx_ucrypto 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
  "sr-io 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-runtime-interface 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "webpki 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3051,14 +3053,15 @@ dependencies = [
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?tag=api-M1.5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
+ "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=ra_improvements)",
 ]
 
 [[package]]
 name = "substratee-node-runtime"
 version = "4.0.1"
-source = "git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a#afee14888be22018616200b2a22444e5c8f9ad9a"
+source = "git+https://github.com/scs/substraTEE-node?branch=ra_improvements#867ed6143dd8bc55dcff30aca06d1ba2e6478c1e"
 dependencies = [
- "host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a)",
+ "host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?branch=ra_improvements)",
  "palette-executive 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "palette-system 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
@@ -3128,7 +3131,7 @@ dependencies = [
  "substrate-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substratee-node-calls 4.0.0",
- "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a)",
+ "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=ra_improvements)",
  "substratee-stf 0.1.0",
  "substratee_worker_api 4.0.0",
 ]
@@ -3168,7 +3171,7 @@ dependencies = [
  "substrate-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substratee-node-calls 4.0.0",
- "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a)",
+ "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=ra_improvements)",
  "substratee-stf 0.1.0",
  "substratee_worker_api 4.0.0",
  "ws 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3952,7 +3955,7 @@ dependencies = [
 "checksum hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "023b39be39e3a2da62a94feb433e91e8bcd37676fbc8bea371daf52b7a769a3e"
 "checksum hmac 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5dcb5e64cda4c23119ab41ba960d1e170a774c8e4b9d9e6a9bc18aabf5e59695"
 "checksum hmac-drbg 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c6e570451493f10f6581b48cdd530413b63ea9e780f544bfd3bdcaa0d89d1a7b"
-"checksum host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a)" = "<none>"
+"checksum host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?branch=ra_improvements)" = "<none>"
 "checksum http 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)" = "d6ccf5ede3a895d8856620237b2f02972c1bbc78d2965ad7fe8838d4a0ed41f0"
 "checksum http-body 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6741c859c1b2463a423a1dbce98d418e6c3c3fc720fb0d45528657320920292d"
 "checksum httparse 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
@@ -4177,7 +4180,7 @@ dependencies = [
 "checksum substrate-trie 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
 "checksum substrate-wasm-builder-runner 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "bd48273fe9d7f92c1f7d6c1c537bb01c8068f925b47ad2cd8367e11dc32f8550"
 "checksum substrate-wasm-interface 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
-"checksum substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=afee14888be22018616200b2a22444e5c8f9ad9a)" = "<none>"
+"checksum substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=ra_improvements)" = "<none>"
 "checksum subtle 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 "checksum subtle 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7c65d530b10ccaeac294f349038a597e435b18fb456aadd0840a623f83b9e941"
 "checksum syn 0.15.44 (registry+https://github.com/rust-lang/crates.io-index)" = "9ca4b3b69a77cbe1ffc9e198781b7acb0c7365a883670e8f1c1bc66fba79a5c5"
