@@ -28,7 +28,7 @@ use substrate_api_client::{Api, utils::hexstr_to_u256};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
-use substratee_stf::{TrustedCall, TrustedGetter, TrustedOperation};
+use substratee_stf::{TrustedCall, TrustedGetter, TrustedGetterSigned};
 use substratee_worker_api::Api as WorkerApi;
 
 type AccountId = <AnySignature as Verify>::Signer;
@@ -111,11 +111,11 @@ fn main() {
 
 	println!("[+] query Alice's Incognito account balance");
 	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
-	let trusted_op = TrustedOperation {
-		operation: getter.clone(),
+	let getter = TrustedGetterSigned {
+		getter: getter.clone(),
 		signature: alice_incognito_pair.sign(getter.encode().as_slice()).into(),
 	};
-	get_trusted_stf_state(&worker_api, trusted_op);
+	get_trusted_stf_state(&worker_api, getter);
 
 //	println!("[+] query Bob's Incognito account balance");
 //	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());

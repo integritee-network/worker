@@ -23,7 +23,7 @@ use keyring::AccountKeyring;
 
 use crate::enclave::api::*;
 use crate::tests::commons::*;
-use substratee_stf::{TrustedGetter, TrustedOperation};
+use substratee_stf::{TrustedGetter, TrustedGetterSigned};
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey
@@ -37,8 +37,8 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 
 	let alice = AccountKeyring::Alice;
 	let getter = TrustedGetter::free_balance(alice.public());
-	let trusted_op = TrustedOperation {
-		operation: getter.clone(),
+	let trusted_op = TrustedGetterSigned {
+		getter: getter.clone(),
 		signature: alice.sign(getter.encode().as_slice()).into(),
 	}.encode();
 
