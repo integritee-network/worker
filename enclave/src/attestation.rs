@@ -520,10 +520,7 @@ fn get_ias_api_key() -> SgxResult<String> {
 }
 
 pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxResult<(Vec<u8>, Vec<u8>, [u32; 16])> {
-	let chain_signer = match ed25519::unseal_pair() {
-		Ok(pair) => pair,
-		Err(status) => return Err(status),
-	};
+	let chain_signer = ed25519::unseal_pair()?;
 	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
 
 	info!("    [Enclave] Generate keypair");
@@ -558,7 +555,7 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxR
 		}
 	};
 	info!("    [Enclave] sign ed25519 pubkey");
-	let gxgy = ecc_handle.ecdsa_sign_slice(&chain_signer.public().0, &prv_k).unwrap();
+	let gxgy = ecc_handle.ecdsa_sign_slice(&chain_signer.public().0, &prv_k).sgx_error()?;
 	let chain_signer_attestation = [gxgy.x, gxgy.y].concat();
 	let mut chain_signer_attestation_out = [0u32; 16];
 	chain_signer_attestation_out.copy_from_slice(&chain_signer_attestation[..]);
