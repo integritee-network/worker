@@ -4,12 +4,13 @@ use primitives::{crypto::Pair, ed25519};
 use regex::Regex;
 use runtime_primitives::MultiSignature;
 use substrate_api_client::utils::{hexstr_to_u64, hexstr_to_vec};
+pub use my_node_runtime::{AccountId, substratee_registry::Enclave};
 
-pub fn get_worker_info<P: Pair, >(api: &substrate_api_client::Api<P>, index: u64) -> Enclave
+pub fn get_worker_info<P: Pair, >(api: &substrate_api_client::Api<P>, index: u64) -> Enclave<AccountId, Vec<u8>>
 where
 	MultiSignature: From<P::Signature>,
 {
-	info!("[>] Get worker's URL");
+	info!("[>] Get worker's URL at index {}", index);
 	let result_str = api.get_storage("substraTEERegistry", "EnclaveRegistry", Some((index).encode())).unwrap();
 	debug!("Storage hex_str: {}", result_str);
 
@@ -54,9 +55,10 @@ where
 	}
 }
 
-fn hexstr_to_enclave(hexstr: String) -> Enclave {
+fn hexstr_to_enclave(hexstr: String) -> Enclave<AccountId, Vec<u8>> {
 	let mut unhex = hexstr_to_vec(hexstr).unwrap();
-	let (h, url) = unhex.split_at_mut(32 as usize);
+	Enclave::decode(&mut &unhex[..]).unwrap()
+/*	let (h, url) = unhex.split_at_mut(32 as usize);
 	let mut raw: [u8; 32] = Default::default();
 	raw.copy_from_slice(&h);
 	let key = ed25519::Public::from_raw(raw);
@@ -70,14 +72,7 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave {
 		// This may be the reason I was not able to do automated deserialization.
 		url: url_str[m.start()..m.end()].to_string(),
 	}
-}
-
-#[derive(Encode, Decode, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct Enclave {
-	pub pubkey: ed25519::Public,
-	// utf8 encoded url
-	pub url: String
+	*/
 }
 
 #[cfg(test)]

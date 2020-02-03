@@ -63,16 +63,16 @@ fn main() {
 			return;
 		}
 		x => {
-			println!("[<] Found {}  workers\n", x);
-			println!("[>] Getting the first worker's from the substraTEE-node");
-			get_worker_info(&api, 0)
+			println!("[<] Found {} workers\n", x);
+			println!("[>] Getting the first worker's info from the substraTEE-node");
+			get_worker_info(&api, 1)
 		}
 	};
 	println!("[<] Got first worker's coordinates:");
 	println!("    W1's public key : {:?}", worker.pubkey.to_string());
 	println!("    W1's url: {:?}\n", worker.url);
 
-	let worker_api = WorkerApi::new(worker.url.clone());
+	let worker_api = WorkerApi::new(String::from_utf8_lossy(&worker.url[..]).to_string());
 
 	//FIXME: this is outdated
 	if let Some(_matches) = matches.subcommand_matches("getcounter") {
