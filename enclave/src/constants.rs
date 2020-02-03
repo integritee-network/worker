@@ -33,6 +33,9 @@ pub static RA_SPID:       &str = "../bin/spid.txt";
 #[cfg(not(feature = "production"))]
 pub static RA_API_KEY:	  &str = "../bin/key.txt";
 
+// you may have to update these indices upon new builds of the runtime
+// you can get the index from metadata
+// when counting modules, make sure to only count those that have calls.
 pub static SUBSRATEE_REGISTRY_MODULE: u8 = 6u8;
 pub static REGISTER_ENCLAVE: u8 = 0u8;
 //pub static UNREGISTER_ENCLAVE: u8 = 1u8;
