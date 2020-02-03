@@ -38,7 +38,7 @@ use substrate_api_client::{Api, compose_extrinsic,
 						   utils::{hexstr_to_u256, hexstr_to_vec},
 };
 
-use substratee_stf::{TrustedCall, TrustedGetterSigned};
+use substratee_stf::{TrustedGetterSigned, TrustedCallSigned};
 use substratee_worker_api::Api as WorkerApi;
 
 // FIXME: most of these functions are redundant with substrate-api-client
@@ -190,7 +190,7 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
 		.collect()
 }
 
-pub fn call_trusted_stf<P: Pair>(api: &Api<P>, call: TrustedCall, rsa_pubkey: Rsa3072PubKey)
+pub fn call_trusted_stf<P: Pair>(api: &Api<P>, call: TrustedCallSigned, rsa_pubkey: Rsa3072PubKey)
 where
 	MultiSignature: From<P::Signature>
 {

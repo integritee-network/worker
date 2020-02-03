@@ -37,10 +37,9 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 
 	let alice = AccountKeyring::Alice;
 	let getter = TrustedGetter::free_balance(alice.public());
-	let trusted_op = TrustedGetterSigned {
-		getter: getter.clone(),
-		signature: alice.sign(getter.encode().as_slice()).into(),
-	}.encode();
+	let trusted_op = TrustedGetterSigned::new(getter.clone(),
+											  getter.sign(&alice.pair())
+	).encode();
 
 	let result = unsafe {
 		get_state(eid,

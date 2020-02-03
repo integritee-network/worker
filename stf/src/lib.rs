@@ -27,6 +27,7 @@
 extern crate alloc;
 
 use codec::{Decode, Encode};
+use primitives::{sr25519,Pair};
 use runtime_primitives::{AnySignature, traits::Verify};
 
 #[cfg(feature = "sgx")]
@@ -42,7 +43,7 @@ pub type Balance = u128;
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
     balance_set_balance(AccountId, Balance, Balance),
@@ -56,6 +57,10 @@ impl TrustedCall {
             TrustedCall::balance_transfer(account, _, _) => account,
         }
     }
+
+    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
+        pair.sign(self.encode().as_slice()).into()
+    }
 }
 
 
@@ -67,11 +72,15 @@ pub enum TrustedGetter {
 }
 
 impl TrustedGetter {
-    fn account(&self) -> &AccountId {
+    pub fn account(&self) -> &AccountId {
         match self {
             TrustedGetter::free_balance(account) => account,
             TrustedGetter::reserved_balance(account) => account,
         }
+    }
+
+    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
+        pair.sign(self.encode().as_slice()).into()
     }
 }
 

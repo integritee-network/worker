@@ -37,7 +37,7 @@ use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
-use substratee_stf::{Stf, TrustedCall, State, TrustedGetterSigned};
+use substratee_stf::{Stf, State, TrustedGetterSigned, TrustedCallSigned};
 use sgx_externalities::SgxExternalitiesTrait;
 use substrate_api_client::compose_extrinsic_offline;
 
@@ -164,7 +164,12 @@ pub unsafe extern "C" fn execute_stf(
 	// decrypt the payload
 	debug!("    [Enclave] Decode the payload");
 	let request_vec = rsa3072::decrypt(&request_encrypted_slice, &rsa_keypair);
-	let stf_call = TrustedCall::decode(&mut request_vec.as_slice()).unwrap();
+	let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
+
+	if let false = stf_call_signed.verify_signature() {
+		error!("    [Enclave] TrustedCallSigned: bad signature");
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
+	}
 
 	// load last state
 	let state_enc = match state::read(ENCRYPTED_STATE_FILE) {
@@ -181,7 +186,7 @@ pub unsafe extern "C" fn execute_stf(
 	};
 
 	debug!("    [Enclave] executing STF...");
-	Stf::execute(&mut state, stf_call);
+	Stf::execute(&mut state, stf_call_signed.call);
 
 	// write the counter state and return
 	let enc_state = match state::encrypt(state.encode()) {
@@ -255,6 +260,7 @@ pub unsafe extern "C" fn get_state(
 
 	if let false = tusted_getter_signed.verify_signature() {
 		error!("    [Enclave] Stf::get_state bad signature");
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	let value_vec = match Stf::get_state(&mut state, tusted_getter_signed.getter) {

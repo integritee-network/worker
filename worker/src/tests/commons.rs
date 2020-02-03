@@ -15,7 +15,9 @@
 
 */
 
+use codec::Encode;
 use log::*;
+use keyring::AccountKeyring;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -24,6 +26,7 @@ use std::str;
 use substratee_stf;
 
 use crate::enclave::api::*;
+use substratee_stf::{TrustedCall, TrustedCallSigned};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -53,9 +56,14 @@ pub fn get_encrypted_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
 }
 
 pub fn encrypt_msg(rsa_pubkey: Rsa3072PubKey) -> Vec<u8> {
-	let payload = substratee_stf::tests::get_test_balance_set_balance_call();
+	let alice = AccountKeyring::Alice;
+	let call = TrustedCall::balance_set_balance(alice.public(),33,44);
+	let trusted_op = TrustedCallSigned::new(call.clone(),
+											  call.sign(&alice.pair())
+	);
+
 	let mut payload_encrypted: Vec<u8> = Vec::new();
-	rsa_pubkey.encrypt_buffer(&payload, &mut payload_encrypted).unwrap();
+	rsa_pubkey.encrypt_buffer(&trusted_op.encode(), &mut payload_encrypted).unwrap();
 	payload_encrypted
 }
 
