@@ -27,11 +27,11 @@
 extern crate alloc;
 
 use codec::{Decode, Encode};
+use primitives::{sr25519,Pair};
 use runtime_primitives::{AnySignature, traits::Verify};
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
-pub mod tests;
 
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
@@ -42,18 +42,85 @@ pub type Balance = u128;
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
-	balance_set_balance(AccountId, Balance, Balance),
-	balance_transfer(AccountId, AccountId, Balance),
+    balance_set_balance(AccountId, Balance, Balance),
+    balance_transfer(AccountId, AccountId, Balance),
+}
+
+impl TrustedCall {
+    fn account(&self) -> &AccountId {
+        match self {
+            TrustedCall::balance_set_balance(account, _, _) => account,
+            TrustedCall::balance_transfer(account, _, _) => account,
+        }
+    }
+
+    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
+        pair.sign(self.encode().as_slice()).into()
+    }
+}
+
+
+#[derive(Encode, Decode, Clone)]
+#[allow(non_camel_case_types)]
+pub enum TrustedGetter {
+    free_balance(AccountId),
+    reserved_balance(AccountId),
+}
+
+impl TrustedGetter {
+    pub fn account(&self) -> &AccountId {
+        match self {
+            TrustedGetter::free_balance(account) => account,
+            TrustedGetter::reserved_balance(account) => account,
+        }
+    }
+
+    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
+        pair.sign(self.encode().as_slice()).into()
+    }
 }
 
 #[derive(Encode, Decode)]
-#[allow(non_camel_case_types)]
-pub enum TrustedGetter {
-	free_balance(AccountId),
-	reserved_balance(AccountId),
+pub struct TrustedGetterSigned
+{
+	pub getter: TrustedGetter,
+	pub signature: AnySignature,
+}
+
+impl TrustedGetterSigned {
+    pub fn new(getter: TrustedGetter, signature: AnySignature) -> Self {
+        TrustedGetterSigned {
+            getter,
+            signature,
+        }
+    }
+
+    pub fn verify_signature(&self) -> bool {
+        self.signature.verify(self.getter.encode().as_slice(), self.getter.account())
+    }
+}
+
+#[derive(Encode, Decode)]
+pub struct TrustedCallSigned
+{
+    pub call: TrustedCall,
+    pub signature: AnySignature,
+}
+
+impl TrustedCallSigned {
+    pub fn new(call: TrustedCall, signature: AnySignature) -> Self {
+        TrustedCallSigned {
+            call,
+            signature,
+        }
+    }
+
+    pub fn verify_signature(&self) -> bool {
+        self.signature.verify(self.call.encode().as_slice(), self.call.account())
+    }
 }
 
 #[cfg(feature = "sgx")]

@@ -28,7 +28,7 @@ use substrate_api_client::{Api, utils::hexstr_to_u256};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
-use substratee_stf::{TrustedCall, TrustedGetter};
+use substratee_stf::{TrustedCall, TrustedGetter, TrustedGetterSigned, TrustedCallSigned};
 use substratee_worker_api::Api as WorkerApi;
 
 type AccountId = <AnySignature as Verify>::Signer;
@@ -107,26 +107,32 @@ fn main() {
 
 	println!("[+] pre-funding Alice's Incognito account (ROOT call)");
 	let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 1_000_000, 0);
-	call_trusted_stf(&api, call, shielding_pubkey);
+	let call_signed = TrustedCallSigned::new(call.clone(), call.sign(&alice_incognito_pair));
+	call_trusted_stf(&api, call_signed, shielding_pubkey);
 
 	println!("[+] query Alice's Incognito account balance");
 	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
-	get_trusted_stf_state(&worker_api, getter);
+	let getter_signed = TrustedGetterSigned::new(getter.clone(), getter.sign(&alice_incognito_pair));
+	get_trusted_stf_state(&worker_api, getter_signed);
 
 	println!("[+] query Bob's Incognito account balance");
 	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
-	get_trusted_stf_state(&worker_api, getter);
+	let getter_signed = TrustedGetterSigned::new(getter.clone(), getter.sign(&bob_incognito_pair));
+	get_trusted_stf_state(&worker_api, getter_signed);
 
 	println!("*** incognito transfer from Alice to Bob");
 	let call = TrustedCall::balance_transfer(alice_incognito_pair.public(), bob_incognito_pair.public(), 100_000);
-	call_trusted_stf(&api, call, shielding_pubkey);
+	let call_signed = TrustedCallSigned::new(call.clone(), call.sign(&bob_incognito_pair));
+	call_trusted_stf(&api, call_signed, shielding_pubkey);
 
 	println!("[+] query Alice's Incognito account balance");
 	let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
-	get_trusted_stf_state(&worker_api, getter);
+	let getter_signed = TrustedGetterSigned::new(getter.clone(), getter.sign(&alice_incognito_pair));
+	get_trusted_stf_state(&worker_api, getter_signed);
 
 	println!("[+] query Bob's Incognito account balance");
 	let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
-	get_trusted_stf_state(&worker_api, getter);
+	let getter_signed = TrustedGetterSigned::new(getter.clone(), getter.sign(&bob_incognito_pair));
+	get_trusted_stf_state(&worker_api, getter_signed);
 
 }

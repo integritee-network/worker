@@ -75,6 +75,6 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
-	let payload_encrypted = get_encrypted_msg(eid);
+	let payload_encrypted = encrypted_test_msg(eid);
 	process_request(eid, payload_encrypted, port);
 }

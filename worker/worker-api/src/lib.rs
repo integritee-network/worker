@@ -26,7 +26,7 @@ use ws::connect;
 
 use client::WsClient;
 use requests::*;
-use substratee_stf::TrustedGetter;
+use substratee_stf::TrustedGetterSigned;
 
 pub mod client;
 pub mod requests;
@@ -56,9 +56,9 @@ impl Api {
 		Ok(rsa_pubkey)
 	}
 
-	pub fn get_stf_state(&self, getter: TrustedGetter) -> Result<String, ()> {
+	pub fn get_stf_state(&self, getter: TrustedGetterSigned) -> Result<String, ()> {
 		let getter_str = hex::encode(getter.encode());
-		let request = format!("{}::{}", MSG_GET_STF_STATE, getter_str);
+		let request = format!("{}::{:?}", MSG_GET_STF_STATE, getter_str);
 		Self::get(&self, &request)
 	}
 

@@ -31,6 +31,12 @@ pub mod integration_tests;
 pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 	println!("*** Starting Test enclave");
 	let enclave = init_enclave().unwrap();
+	let mut status = sgx_status_t::SGX_SUCCESS;
+	let result =  unsafe { init(enclave.geteid(), &mut status) };
+
+	if status != sgx_status_t::SGX_SUCCESS || result != sgx_status_t::SGX_SUCCESS {
+		panic!("Init Enclave in tests failed");
+	}
 
 	if matches.is_present("all") || matches.is_present("unit") {
 		println!("Running unit Tests");
@@ -77,8 +83,6 @@ pub fn run_ecalls(eid: sgx_enclave_id_t) {
 	execute_stf_works(eid);
 	println!("  testing get_state()");
 	get_state_works(eid);
-
-
 	println!("[+] Ecall tests ended!");
 }
 
