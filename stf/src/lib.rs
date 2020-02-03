@@ -32,7 +32,6 @@ use runtime_primitives::{AnySignature, traits::Verify};
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
-pub mod tests;
 
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;

@@ -23,7 +23,6 @@ use keyring::AccountKeyring;
 
 use crate::enclave::api::*;
 use crate::tests::commons::*;
-use substratee_stf::{TrustedGetter, TrustedGetterSigned};
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey
@@ -36,19 +35,16 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 	let mut value: Vec<u8> = vec![0u8; value_size as usize];
 
 	let alice = AccountKeyring::Alice;
-	let getter = TrustedGetter::free_balance(alice.public());
-	let trusted_op = TrustedGetterSigned::new(getter.clone(),
-											  getter.sign(&alice.pair())
-	).encode();
+	let trusted_getter_signed = test_trusted_getter_signed(alice).encode();
 
 	let result = unsafe {
 		get_state(eid,
-					&mut retval,
-					trusted_op.as_ptr(),
-					trusted_op.len() as u32,
-					value.as_mut_ptr(),
-					value_size as u32
-					)
+				  &mut retval,
+				  trusted_getter_signed.as_ptr(),
+				  trusted_getter_signed.len() as u32,
+				  value.as_mut_ptr(),
+				  value_size as u32
+		)
 	};
 	println!("{} value: {:?}", alice, value);
 	evaluate_result(retval);
@@ -59,7 +55,7 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
 
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
-	let mut request_encrypted = get_encrypted_msg(eid);
+	let mut request_encrypted = encrypted_test_msg(eid);
 
 	let unchecked_extrinsic_size = 500;
 	let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
