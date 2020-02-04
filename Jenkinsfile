@@ -70,7 +70,7 @@ pipeline {
               )
           ]
         )
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                   sh './ci/check_fmt_log.sh'
         }
       }
