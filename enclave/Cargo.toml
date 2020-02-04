@@ -33,7 +33,7 @@ ofb               = { version = "0.1.1" }
 codec             = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types   = { version = "0.6", default-features = false, features = ["codec"] }
 sgx-crypto-helper = { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
-log               = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/log-sgx" }
+log               = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger        = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/env_logger-sgx" }
 serde        	  = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/serde-sgx" }
 serde_json        = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/serde-json-sgx"}
