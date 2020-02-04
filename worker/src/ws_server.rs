@@ -129,30 +129,3 @@ fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
 	Message::text(rsa_pubkey_json.to_string())
 }
 
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn get_counter_signature_checking_works() {
-
-		let user = ed25519::Pair::from_string("//Alice", Some("")).expect("Invalid phrase");
-		let sign = user.sign(user.public().as_slice());
-
-		let sign_str = serde_json::to_string::<[u8]>(sign.as_ref()).unwrap();
-		let acc_str = serde_json::to_string(&user.public()).unwrap();
-
-		let request = format!("{}::{}::{}", MSG_GET_COUNTER, acc_str, sign_str);
-		let mut args: Vec<&str> = request.split("::").collect();
-
-		let mut sig_vec:  Vec<u8> = serde_json::from_str(args[2]).unwrap();
-		let mut sig_arr = [0u8; 64];
-		sig_arr.clone_from_slice(&sig_vec);
-
-		let pubkey: ed25519::Public = serde_json::from_str(&mut args[1]).unwrap();
-		let sign: ed25519::Signature = ed25519::Signature::from_raw(sig_arr);
-
-		assert!(ed25519::Pair::verify(&sign, pubkey.clone().as_slice(), &pubkey.clone()));
-	}
-}

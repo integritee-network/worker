@@ -80,14 +80,15 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 mod test {
 	use super::decode_hex;
 	use super::encode_hex;
-
+    use crate::std::string::ToString;
 	#[test]
     fn test_decode_hex() {
-        assert_eq!(decode_hex(""), [].to_vec());
-        assert_eq!(decode_hex("00"), [0x00u8].to_vec());
-        assert_eq!(decode_hex("ff"), [0xffu8].to_vec());
-        assert_eq!(decode_hex("AB"), [0xabu8].to_vec());
-        assert_eq!(decode_hex("fa19"), [0xfau8, 0x19].to_vec());
+
+        assert!(decode_hex("").unwrap().len() == 0);
+        assert_eq!(decode_hex("00").unwrap(), [0x00u8].to_vec());
+        assert_eq!(decode_hex("ff").unwrap(), [0xffu8].to_vec());
+        assert_eq!(decode_hex("AB").unwrap(), [0xabu8].to_vec());
+        assert_eq!(decode_hex("fa19").unwrap(), [0xfau8, 0x19].to_vec());
     }
 
     #[test]
