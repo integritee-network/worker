@@ -18,7 +18,7 @@
 pub static ENCLAVE_TOKEN:		&str = "../bin/enclave.token";
 pub static ENCLAVE_FILE:		&str = "../bin/enclave.signed.so";
 pub static RSA_PUB_KEY:			&str = "rsa_pubkey.txt";
-pub static ECC_PUB_KEY:			&str = "ecc_pubkey.txt";
+pub static ECC_PUB_KEY:			&str = "ecc_pubkey.bin";
 
 #[cfg(feature = "production")]
 pub static RA_SPID:       &str = "../bin/spid_production.txt";

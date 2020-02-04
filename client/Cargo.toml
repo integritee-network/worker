@@ -22,7 +22,8 @@ sgx_crypto_helper   = { rev = "v1.1.0",git = "https://github.com/apache/teaclave
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-rev = "afee14888be22018616200b2a22444e5c8f9ad9a"
+#rev = "afee14888be22018616200b2a22444e5c8f9ad9a"
+branch = "ra_improvements"
 package = "substratee-node-runtime"
 
 [dependencies.substrate-api-client]

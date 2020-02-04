@@ -20,7 +20,8 @@ use log::*;
 use primitives::{crypto::Pair, ed25519};
 use runtime_primitives::MultiSignature;
 
-use substratee_node_calls::{Enclave, get_worker_amount, get_worker_info};
+use substratee_node_calls::{Enclave, AccountId, get_worker_amount, get_worker_info};
+use codec::{Decode, Encode};
 
 use crate::constants::*;
 
@@ -49,19 +50,18 @@ fn file_missing(path: &str) -> u8 {
 	}
 }
 
-pub fn get_first_worker_that_is_not_equal_to_self<P: Pair>(api: &substrate_api_client::Api<P>, pubkey: Vec<u8>) -> Result<Enclave, &str>
+pub fn get_first_worker_that_is_not_equal_to_self<P: Pair>(api: &substrate_api_client::Api<P>, my_account: AccountId) -> Result<Enclave<AccountId,Vec<u8>>, &str>
 where
 	MultiSignature: From<P::Signature>
 {
 	let w_amount = get_worker_amount(api);
-	let key = vec_to_ed25519_pub(pubkey);
 
 	match w_amount {
 		0 => error!("No worker registered. Can't get worker info from node!"),
 		_ => {
 			for i in 0 .. w_amount {
 				let enc = get_worker_info(api, i);
-				if key != enc.pubkey {
+				if my_account != enc.pubkey {
 					info!("[+] Found worker to fetch keys from!");
 					return Ok(enc);
 				}

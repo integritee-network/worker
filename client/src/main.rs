@@ -63,30 +63,16 @@ fn main() {
 			return;
 		}
 		x => {
-			println!("[<] Found {}  workers\n", x);
-			println!("[>] Getting the first worker's from the substraTEE-node");
-			get_worker_info(&api, 0)
+			println!("[<] Found {} workers\n", x);
+			println!("[>] Getting the first worker's info from the substraTEE-node");
+			get_worker_info(&api, 1)
 		}
 	};
 	println!("[<] Got first worker's coordinates:");
 	println!("    W1's public key : {:?}", worker.pubkey.to_string());
-	println!("    W1's url: {:?}\n", worker.url);
+	println!("    W1's url: {}\n", String::from_utf8_lossy(&worker.url[..]).to_string());
 
-	let worker_api = WorkerApi::new(worker.url.clone());
-
-	//FIXME: this is outdated
-	if let Some(_matches) = matches.subcommand_matches("getcounter") {
-		panic!("outdated implementation!");
-		/*
-		let user = pair_from_suri("//Alice", Some(""));
-		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
-		let sign = user.sign(user.public().as_slice());
-		let value = worker_api.get_counter(user.public(), sign).unwrap();
-
-		println!("[<] Received MSG: {}", value);
-		return;
-		*/
-	}
+	let worker_api = WorkerApi::new(String::from_utf8_lossy(&worker.url[..]).to_string());
 
 	info!("getting free_balance for Alice");
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
@@ -95,7 +81,7 @@ fn main() {
     info!("Alice's Account Nonce is {}", api.get_nonce().unwrap());
 
 	// compose extrinsic with encrypted payload
-	println!("[>] Get the shielding key from W1 (={})", worker.pubkey.to_string());
+	println!("[>] Get the shielding key from W1 ({})", worker.pubkey.to_string());
 	let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
 	println!("[<] Got worker shielding key {:?}\n", shielding_pubkey);
 

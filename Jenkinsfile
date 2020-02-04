@@ -42,7 +42,7 @@ pipeline {
     }
     stage('Formatter') {
       steps {
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
           sh 'cargo fmt -- --check > ${WORKSPACE}/fmt.log'
         }
       }
@@ -70,7 +70,7 @@ pipeline {
               )
           ]
         )
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                   sh './ci/check_fmt_log.sh'
         }
       }

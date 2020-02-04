@@ -51,8 +51,8 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 
 pub const IAS_REPORT_CA:&[u8] = include_bytes!("../AttestationReportSigningCACert.pem");
 
-const ISSUER : &str = "MesaTEE";
-const SUBJECT : &str = "MesaTEE";
+const ISSUER : &str = "SubstraTEE";
+const SUBJECT : &str = "SubstraTEE ephemeral";
 
 pub fn gen_ecc_cert(payload: String,
                     prv_k: &sgx_ec256_private_t,

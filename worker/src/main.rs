@@ -35,7 +35,7 @@ use substrate_api_client::{Api,
 
 use enclave::api::{get_ecc_signing_pubkey, init, perform_ra};
 use enclave::tls_ra::{Mode, run, run_enclave_client, run_enclave_server};
-use enclave::wrappers::{get_public_key_tee, get_signing_key_tee, process_request};
+use enclave::wrappers::{get_public_key_tee, get_signing_key_tee, process_request, dump_ra};
 use enclave::init::init_enclave;
 use substratee_node_calls::get_worker_amount;
 use substratee_worker_api::Api as WorkerApi;
@@ -77,6 +77,9 @@ fn main() {
 	} else if matches.is_present("getsignkey") {
 		println!("*** Get the signing key from the TEE\n");
 		get_signing_key_tee();
+	} else if matches.is_present("dump_ra") {
+		println!("*** dump remote attestation to disk\n");
+		dump_ra();
 	} else if matches.is_present("run_server") {
 		println!("*** Running Enclave TLS server\n");
 		run(Mode::Server, mu_ra_port);
@@ -281,14 +284,14 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
 		},
 		_ => {
 			println!("*** There are already workers registered, fetching keys from first one...");
-			let w1 = get_first_worker_that_is_not_equal_to_self(&api, tee_pubkey.to_vec()).unwrap();
-
-			let w_api = WorkerApi::new(w1.url.clone());
+			let w1 = get_first_worker_that_is_not_equal_to_self(&api, tee_account_id).unwrap();
+			let w1_url = String::from_utf8_lossy(&w1.url[..]).to_string();
+			let w_api = WorkerApi::new(w1_url.clone());
 			let ra_port = w_api.get_mu_ra_port().unwrap();
 			info!("Got Port for MU-RA from other worker: {}", ra_port);
 
 			info!("Performing MU-RA");
-			let w1_url_port: Vec<&str> = w1.url.split(':').collect();
+			let w1_url_port: Vec<&str> = w1_url.split(':').collect();
 			run_enclave_client(enclave.geteid(), sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, &format!("{}:{}", w1_url_port[0], ra_port));
 			println!();
 			println!("[+] MU-RA successfully performed.\n");

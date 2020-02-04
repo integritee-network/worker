@@ -114,16 +114,3 @@ pub unsafe extern "C" fn ocall_read_ipfs(enc_state: *mut u8,
 	sgx_status_t::SGX_SUCCESS
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn ipfs_works() {
-		let data = b"awesome test content\n";
-		let cid = write_to_ipfs(data);
-		println!("Returned cid: {:?}", cid.to_vec());
-		let res =  read_from_ipfs(cid);
-		assert_eq!(data.to_vec(), res)
-	}
-}
