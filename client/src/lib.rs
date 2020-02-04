@@ -221,3 +221,31 @@ pub fn get_trusted_stf_state(workerapi: &WorkerApi, getter: TrustedGetterSigned)
 	println!("    got getter response from worker: {:?}", ret);
 	//TODO: decrypt response and verify signature
 }
+
+// TODO
+/*
+fn get_enclave_count(api: &Api<sr25519::Pair>) -> ParticipantIndexType {
+    hexstr_to_u64(api
+            .get_storage("EncointerCeremonies", "ParticipantCount", None)
+            .unwrap()
+            ).unwrap() as ParticipantIndexType
+}
+
+fn get_enclave(
+    api: &Api<sr25519::Pair>, 
+    cindex: CeremonyIndexType, 
+    pindex: ParticipantIndexType
+    ) -> Option<Enclave<AccountId,Vec<u8>> 
+{
+    let res = api
+        .get_storage_double_map("EncointerCeremonies", "ParticipantRegistry", 
+            cindex.encode(), pindex.encode()).unwrap();
+    match res.as_str() {
+        "null" => None,
+        _ => {
+            let accountid: AccountId = Decode::decode(&mut &hexstr_to_vec(res).unwrap()[..]).unwrap();
+            Some(accountid)
+        }
+    }
+}
+*/

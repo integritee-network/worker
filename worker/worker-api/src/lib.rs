@@ -58,7 +58,7 @@ impl Api {
 
 	pub fn get_stf_state(&self, getter: TrustedGetterSigned) -> Result<String, ()> {
 		let getter_str = hex::encode(getter.encode());
-		let request = format!("{}::{:?}", MSG_GET_STF_STATE, getter_str);
+		let request = format!("{}::{}", MSG_GET_STF_STATE, getter_str);
 		Self::get(&self, &request)
 	}
 

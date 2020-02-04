@@ -74,20 +74,6 @@ fn main() {
 
 	let worker_api = WorkerApi::new(String::from_utf8_lossy(&worker.url[..]).to_string());
 
-	//FIXME: this is outdated
-	if let Some(_matches) = matches.subcommand_matches("getcounter") {
-		panic!("outdated implementation!");
-		/*
-		let user = pair_from_suri("//Alice", Some(""));
-		println!("*** Getting the counter value of //Alice = {:?} from the substraTEE-worker", user.public().to_string());
-		let sign = user.sign(user.public().as_slice());
-		let value = worker_api.get_counter(user.public(), sign).unwrap();
-
-		println!("[<] Received MSG: {}", value);
-		return;
-		*/
-	}
-
 	info!("getting free_balance for Alice");
 	let result_str = api.get_storage("Balances", "FreeBalance", Some(AccountId::from(alice.public()).encode())).unwrap();
     let funds = hexstr_to_u256(result_str).unwrap();

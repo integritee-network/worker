@@ -30,3 +30,5 @@ subcommands:
     - getcounter:
         about: Get the counter from the substraTEE-worker
         version: "0.1"
+    - list:
+        about: query onchain enclave registry and print it to stdout
