@@ -304,6 +304,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 }
 
 fn test_ocall_read_write_ipfs() {
+	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
 	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 	let mut cid_buf: Vec<u8> = vec![0; 46];
 	let enc_state: Vec<u8> = vec![20; 36];

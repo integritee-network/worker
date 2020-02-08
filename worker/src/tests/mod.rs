@@ -83,6 +83,8 @@ pub fn run_ecalls(eid: sgx_enclave_id_t) {
 // Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
 // running the tests.
 pub fn run_integration_tests(eid: sgx_enclave_id_t, port: &str) {
+    println!("  testing perform_ra()");
     perform_ra_works(eid, port);
+    println!("  testing process_forwarded_payload()");
     process_forwarded_payload_works(eid, port);
 }

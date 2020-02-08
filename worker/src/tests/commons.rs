@@ -45,9 +45,10 @@ pub fn encrypted_test_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
 
     evaluate_result(retval);
     evaluate_result(result);
-
+    info!("got rsa shielding key form enclave");
     let rsa_pubkey: Rsa3072PubKey =
         serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+    info!("deserialized rsa key");
     let payload = test_trusted_call_signed().encode();
 
     encrypt_payload(rsa_pubkey, payload)
