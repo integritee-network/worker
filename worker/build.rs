@@ -28,14 +28,11 @@
 
 use std::env;
 
-fn main () {
+fn main() {
+    let sdk_dir = env::var("SGX_SDK").unwrap_or_else(|_| "/opt/intel/sgxsdk".to_string());
+    let is_sim = env::var("SGX_MODE").unwrap_or_else(|_| "HW".to_string());
 
-    let sdk_dir = env::var("SGX_SDK")
-                    .unwrap_or_else(|_| "/opt/intel/sgxsdk".to_string());
-    let is_sim = env::var("SGX_MODE")
-                    .unwrap_or_else(|_| "HW".to_string());
-
-	// NOTE: if the crate is a workspace member rustc-paths are relative from the root directory
+    // NOTE: if the crate is a workspace member rustc-paths are relative from the root directory
     println!("cargo:rustc-link-search=native=./lib");
     println!("cargo:rustc-link-lib=static=Enclave_u");
 

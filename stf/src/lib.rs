@@ -1,17 +1,17 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+    Copyright 2019 Supercomputing Systems AG
 
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
 
-		http://www.apache.org/licenses/LICENSE-2.0
+        http://www.apache.org/licenses/LICENSE-2.0
 
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
 
 */
 
@@ -20,15 +20,14 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
-
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate alloc;
 
 use codec::{Decode, Encode};
-use primitives::{sr25519,Pair};
-use runtime_primitives::{AnySignature, traits::Verify};
+use primitives::{sr25519, Pair};
+use runtime_primitives::{traits::Verify, AnySignature};
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
@@ -62,7 +61,6 @@ impl TrustedCall {
     }
 }
 
-
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
@@ -84,42 +82,36 @@ impl TrustedGetter {
 }
 
 #[derive(Encode, Decode)]
-pub struct TrustedGetterSigned
-{
-	pub getter: TrustedGetter,
-	pub signature: AnySignature,
+pub struct TrustedGetterSigned {
+    pub getter: TrustedGetter,
+    pub signature: AnySignature,
 }
 
 impl TrustedGetterSigned {
     pub fn new(getter: TrustedGetter, signature: AnySignature) -> Self {
-        TrustedGetterSigned {
-            getter,
-            signature,
-        }
+        TrustedGetterSigned { getter, signature }
     }
 
     pub fn verify_signature(&self) -> bool {
-        self.signature.verify(self.getter.encode().as_slice(), self.getter.account())
+        self.signature
+            .verify(self.getter.encode().as_slice(), self.getter.account())
     }
 }
 
 #[derive(Encode, Decode)]
-pub struct TrustedCallSigned
-{
+pub struct TrustedCallSigned {
     pub call: TrustedCall,
     pub signature: AnySignature,
 }
 
 impl TrustedCallSigned {
     pub fn new(call: TrustedCall, signature: AnySignature) -> Self {
-        TrustedCallSigned {
-            call,
-            signature,
-        }
+        TrustedCallSigned { call, signature }
     }
 
     pub fn verify_signature(&self) -> bool {
-        self.signature.verify(self.call.encode().as_slice(), self.call.account())
+        self.signature
+            .verify(self.call.encode().as_slice(), self.call.account())
     }
 }
 

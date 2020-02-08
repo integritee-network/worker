@@ -26,8 +26,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{fs::File, path::PathBuf};
 use std::io::{Read, Write};
+use std::{fs::File, path::PathBuf};
 
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
