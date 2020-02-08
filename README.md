@@ -110,3 +110,28 @@ Alice now uses SubstraTEE's *shielded transaction* feature to send 100k to Bob.
 TODO:
 * block diagram
 * sequence diagram
+
+
+## Tests
+### environment
+Unit tests within the enclave can't be run by `cargo test`. All unit and integration tests can be run by the worker binary
+
+first, you should run ipfs daemon because it is needed for testing
+```
+ipfs daemon
+```
+second, you'll need a substraTEE-node running
+```
+./target/release/substratee-node --dev --execution native
+```
+then you should make sure that the sealed_state is empty (but exists)
+```
+substraTEE-worker/bin$ rm sealed_stf_state.bin
+substraTEE-worker/bin$ touch sealed_stf_state.bin
+```
+
+### execute tests
+Run these with
+```
+substraTEE-worker/bin$ ./substratee_worker test_enclave --all
+```
