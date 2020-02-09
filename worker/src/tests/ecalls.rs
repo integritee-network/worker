@@ -54,19 +54,22 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 pub fn execute_stf_works(eid: sgx_enclave_id_t) {
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
-    let mut request_encrypted = encrypted_test_msg(eid);
+    let mut cyphertext = encrypted_test_msg(eid);
 
     let unchecked_extrinsic_size = 500;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
     let nonce_bytes = U256::encode(&U256::from("1"));
     let genesis_hash: [u8; 32] = [0; 32];
+    let shard = H256::default();
     //TODO: new payload
     let result = unsafe {
         execute_stf(
             eid,
             &mut retval,
-            request_encrypted.as_mut_ptr(),
-            request_encrypted.len() as u32,
+            cyphertext.as_mut_ptr(),
+            cyphertext.len() as u32,
+            shard.as_mut_ptr(),
+            shard.len(),
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
             nonce_bytes.as_ptr(),

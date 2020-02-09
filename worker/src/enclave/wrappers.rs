@@ -23,7 +23,7 @@ use sgx_types::*;
 
 use codec::{Decode, Encode};
 use log::*;
-use my_node_runtime::UncheckedExtrinsic;
+use my_node_runtime::{UncheckedExtrinsic, substratee_registry::Request};
 use primitives::{crypto::Ss58Codec, sr25519};
 use runtime_primitives::{traits::Verify, AnySignature};
 use substrate_api_client::{utils::hexstr_to_u256, Api};
@@ -159,7 +159,7 @@ pub fn get_public_key_tee() {
     }
 }
 
-pub fn process_request(eid: sgx_enclave_id_t, request: Vec<u8>, node_url: &str) {
+pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) {
     // new api client (the other on is busy listening to events)
     let mut _api = Api::<sr25519::Pair>::new(format!("ws://{}", node_url));
     // FIXME: refactor to function
@@ -205,8 +205,10 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Vec<u8>, node_url: &str) 
         execute_stf(
             eid,
             &mut status,
-            request.to_vec().as_mut_ptr(),
-            request.len() as u32,
+            request.cyphertext.as_mut_ptr(),
+            request.cyphertext.len() as u32,
+            request.shard.as_mut_ptr(),
+            request.shard.len() as u32,
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
             nonce_bytes.as_ptr(),

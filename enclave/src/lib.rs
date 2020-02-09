@@ -138,8 +138,10 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_stf(
-	request_encrypted: *mut u8,
-	request_encrypted_size: u32,
+	cyphertext: *mut u8,
+	cyphertext_size: u32,
+	shard: *mut u8,
+	shard_size: u32,
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
 	nonce: *const u8,
@@ -148,8 +150,9 @@ pub unsafe extern "C" fn execute_stf(
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
 
-	let request_encrypted_slice = slice::from_raw_parts(request_encrypted, request_encrypted_size as usize);
-	let genesis_hash_slice      = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
+	let shard_slice = slice::from_raw_parts(shard, shard_size as usize);
+	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
 	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
@@ -163,7 +166,7 @@ pub unsafe extern "C" fn execute_stf(
 
 	// decrypt the payload
 	debug!("    [Enclave] Decode the payload");
-	let request_vec = rsa3072::decrypt(&request_encrypted_slice, &rsa_keypair);
+	let request_vec = rsa3072::decrypt(&cyphertext_slice, &rsa_keypair);
 	let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
 	if let false = stf_call_signed.verify_signature() {

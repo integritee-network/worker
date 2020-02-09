@@ -56,8 +56,13 @@ impl TrustedCall {
         }
     }
 
-    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
-        pair.sign(self.encode().as_slice()).into()
+    pub fn sign(&self, pair: &sr25519::Pair, nonce: u32, mrenclave: [u8;32], shard: [u8; 32]) -> AnySignature {
+        pair.sign(
+            self.encode()
+            .append(vec![self.nonce])
+            .append(mrenclave.encode()) 
+            .append(shard.encode()).as_slice(),
+            .as_slice()).into()
     }
 }
 
@@ -101,6 +106,7 @@ impl TrustedGetterSigned {
 #[derive(Encode, Decode)]
 pub struct TrustedCallSigned {
     pub call: TrustedCall,
+    pub nonce: u32,
     pub signature: AnySignature,
 }
 
@@ -109,9 +115,14 @@ impl TrustedCallSigned {
         TrustedCallSigned { call, signature }
     }
 
-    pub fn verify_signature(&self) -> bool {
+    pub fn verify_signature(&self, mrenclave: [u8; 32], shard: [u8; 32]]) -> bool {
         self.signature
-            .verify(self.call.encode().as_slice(), self.call.account())
+            .verify(
+                self.call.encode()
+                .append(vec![self.nonce])
+                .append(mrenclave.encode()) 
+                .append(shard.encode()).as_slice(),
+                self.call.account())
     }
 }
 

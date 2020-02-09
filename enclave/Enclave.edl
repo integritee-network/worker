@@ -33,7 +33,8 @@ enclave {
 		public sgx_status_t init();
 
 		public sgx_status_t execute_stf(
-			[in, size=request_encrypted_size] uint8_t* request_encrypted, uint32_t request_encrypted_size,
+			[in, size=cyphertext_size] uint8_t* cyphertext, uint32_t cyphertext_size,
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
 			[in, size=nonce_size] uint8_t* nonce, uint32_t nonce_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
