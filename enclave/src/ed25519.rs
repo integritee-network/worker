@@ -14,7 +14,8 @@
 	limitations under the License.
 
 */
-
+use std::path::Path;
+use std::untrusted::path::PathEx;
 use std::sgxfs::SgxFile;
 use std::vec::Vec;
 
@@ -39,6 +40,9 @@ pub fn unseal_pair() ->  SgxResult<ed25519::Pair> {
 
 pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 	if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
+		if Path::new(SEALED_SIGNER_SEED_FILE).exists() {
+			panic!("[Enclave] Keyfile {} exists but can't be opened. has it been written by the same enclave?", SEALED_SIGNER_SEED_FILE);
+		}
 		info ! ("[Enclave] Keyfile not found, creating new! {}", SEALED_SIGNER_SEED_FILE);
 		return create_sealed_seed()
 	}
