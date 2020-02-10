@@ -35,7 +35,7 @@ extern crate sgx_tstd as std;
 
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
-use sgx_types::{sgx_status_t, size_t};
+use sgx_types::{sgx_status_t, size_t, sgx_target_info_t, sgx_epid_group_id_t };
 
 use substratee_stf::{Stf, State, TrustedGetterSigned, TrustedCallSigned};
 use sgx_externalities::SgxExternalitiesTrait;
@@ -138,9 +138,9 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_stf(
-	cyphertext: *mut u8,
+	cyphertext: *const u8,
 	cyphertext_size: u32,
-	shard: *mut u8,
+	shard: *const u8,
 	shard_size: u32,
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
@@ -151,9 +151,9 @@ pub unsafe extern "C" fn execute_stf(
 ) -> sgx_status_t {
 
 	let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
-	let shard_slice = slice::from_raw_parts(shard, shard_size as usize);
-	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
+	let shard = hash_from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let genesis_hash = hash_from_slice(slice::from_raw_parts(genesis_hash, genesis_hash_size as usize));
+	let nonce = u32::decode(&mut slice::from_raw_parts(nonce, nonce_size as usize)).unwrap();
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	debug!("[Enclave] Read RSA keypair");
@@ -169,7 +169,20 @@ pub unsafe extern "C" fn execute_stf(
 	let request_vec = rsa3072::decrypt(&cyphertext_slice, &rsa_keypair);
 	let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
-	if let false = stf_call_signed.verify_signature() {
+	// query our own MRENCLAVE
+	let mut ti : sgx_target_info_t = sgx_target_info_t::default();
+	let mut eg : sgx_epid_group_id_t = sgx_epid_group_id_t::default();
+	let mut rt : sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+	let res = unsafe {
+		ocall_sgx_init_quote(&mut rt as *mut sgx_status_t,
+							 &mut ti as *mut sgx_target_info_t,
+							 &mut eg as *mut sgx_epid_group_id_t)
+	};
+	let mrenclave = ti.mr_enclave;
+
+
+	if let false = stf_call_signed.verify_signature(&ti.mr_enclave.m, &shard.into()) {
 		error!("    [Enclave] TrustedCallSigned: bad signature");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
@@ -189,7 +202,7 @@ pub unsafe extern "C" fn execute_stf(
 	};
 
 	debug!("    [Enclave] executing STF...");
-	Stf::execute(&mut state, stf_call_signed.call);
+	Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
 
 	// write the counter state and return
 	let enc_state = match state::encrypt(state.encode()) {
@@ -212,9 +225,8 @@ pub unsafe extern "C" fn execute_stf(
 	};
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
-	let nonce = u32::decode(&mut nonce_slice).unwrap();
+	
 	debug!("using nonce for confirmation extrinsic: {:?}", nonce);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	let call_hash = blake2_256(&request_vec);
 	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
 
@@ -330,4 +342,11 @@ fn test_ocall_read_write_ipfs() {
 	};
 
 	assert_eq!(enc_state, ret_state);
+}
+
+extern "C" {
+	pub fn ocall_sgx_init_quote (
+		ret_val : *mut sgx_status_t,
+		ret_ti  : *mut sgx_target_info_t,
+		ret_gid : *mut sgx_epid_group_id_t) -> sgx_status_t;
 }

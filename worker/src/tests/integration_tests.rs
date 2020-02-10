@@ -17,10 +17,12 @@
 
 use codec::Encode;
 use log::*;
-use primitives::{crypto::AccountId32, ed25519};
+use primitives::{crypto::AccountId32, ed25519, hash::H256};
 use sgx_types::*;
 use std::fs;
 use substrate_api_client::{extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_u256, Api};
+
+use my_node_runtime::substratee_registry::Request;
 
 use crate::constants::*;
 use crate::enclave::api::*;
@@ -80,6 +82,9 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
-    let payload_encrypted = encrypted_test_msg(eid);
-    process_request(eid, payload_encrypted, port);
+    let req = Request {
+        cyphertext: encrypted_test_msg(eid),
+        shard: H256::default()
+    };
+    process_request(eid, req, port);
 }

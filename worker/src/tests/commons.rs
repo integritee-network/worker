@@ -65,7 +65,15 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
 pub fn test_trusted_call_signed() -> TrustedCallSigned {
     let alice = AccountKeyring::Alice;
     let call = TrustedCall::balance_set_balance(alice.public(), 33, 44);
-    TrustedCallSigned::new(call.clone(), call.sign(&alice.pair()))
+    let nonce = 21;
+    let mrenclave = [0u8;32];
+    let shard = [1u8; 32];    
+    call.sign(
+        &alice.pair(),
+        nonce,
+        &mrenclave,
+        &shard
+    )
 }
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {

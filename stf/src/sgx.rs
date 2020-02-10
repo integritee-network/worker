@@ -44,8 +44,9 @@ impl Stf {
         });
         ext
     }
-    pub fn execute(ext: &mut State, call: TrustedCall) {
+    pub fn execute(ext: &mut State, call: TrustedCall, nonce: u32) {
         ext.execute_with(|| {
+            // TODO: verify and store nonce first!
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
                     sgx_runtime::balancesCall::<Runtime>::set_balance(

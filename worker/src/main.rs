@@ -372,14 +372,12 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
                                     println!();
                                 }
                                 my_node_runtime::substratee_registry::RawEvent::Forwarded(
-                                    sender,
                                     request,
                                 ) => {
                                     println!("[+] Received Forwarded event");
-                                    debug!("    From:    {:?}", sender);
                                     debug!("    Request: {:?}", request);
                                     println!();
-                                    process_request(enclave.geteid(), request, node_url);
+                                    process_request(enclave.geteid(), request.clone(), node_url);
                                 }
                                 my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                                     sender,

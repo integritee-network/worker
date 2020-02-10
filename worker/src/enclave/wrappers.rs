@@ -205,10 +205,10 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         execute_stf(
             eid,
             &mut status,
-            request.cyphertext.as_mut_ptr(),
+            request.cyphertext.as_ptr(),
             request.cyphertext.len() as u32,
-            request.shard.as_mut_ptr(),
-            request.shard.len() as u32,
+            request.shard.as_ptr(),
+            32u32,
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
             nonce_bytes.as_ptr(),

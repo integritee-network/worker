@@ -113,7 +113,12 @@ fn main() {
 
     println!("[+] pre-funding Alice's Incognito account (ROOT call)");
     let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 1_000_000, 0);
-    let call_signed = TrustedCallSigned::new(call.clone(), call.sign(&alice_incognito_pair));
+    let call_signed = call.sign(
+        &alice_incognito_pair,
+        0,
+        &worker.mr_enclave,
+        &worker.mr_enclave);   // for demo we name the shard after our mrenclave
+
     call_trusted_stf(&api, call_signed, shielding_pubkey);
 
     println!("[+] query Alice's Incognito account balance");
@@ -133,7 +138,11 @@ fn main() {
         bob_incognito_pair.public(),
         100_000,
     );
-    let call_signed = TrustedCallSigned::new(call.clone(), call.sign(&bob_incognito_pair));
+    let call_signed = call.sign(
+        &alice_incognito_pair,
+        0,
+        &worker.mr_enclave,
+        &worker.mr_enclave);   // for demo we name the shard after our mrenclave
     call_trusted_stf(&api, call_signed, shielding_pubkey);
 
     println!("[+] query Alice's Incognito account balance");

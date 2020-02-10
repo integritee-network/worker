@@ -18,6 +18,7 @@
 use codec::Encode;
 use keyring::AccountKeyring;
 use primitive_types::U256;
+use primitives::hash::H256;
 use sgx_types::*;
 use substratee_stf;
 
@@ -66,10 +67,10 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
         execute_stf(
             eid,
             &mut retval,
-            cyphertext.as_mut_ptr(),
+            cyphertext.as_ptr(),
             cyphertext.len() as u32,
-            shard.as_mut_ptr(),
-            shard.len(),
+            shard.as_ptr(),
+            32,
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
             nonce_bytes.as_ptr(),

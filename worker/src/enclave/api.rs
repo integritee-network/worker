@@ -23,9 +23,9 @@ extern "C" {
     pub fn execute_stf(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
-        cyphertext_encrypted: *mut u8,
+        cyphertext_encrypted: *const u8,
         cyphertext_encrypted_size: u32,
-        shard_encrypted: *mut u8,
+        shard_encrypted: *const u8,
         shard_encrypted_size: u32,
         hash: *const u8,
         hash_size: u32,
