@@ -18,6 +18,7 @@
 use std::str;
 use std::sync::mpsc::channel;
 use std::thread;
+use std::fs;
 
 use sgx_types::*;
 
@@ -84,6 +85,29 @@ fn main() {
     } else if matches.is_present("dump_ra") {
         println!("*** dump remote attestation to disk\n");
         dump_ra();
+    }
+    if let Some(_matches) = matches.subcommand_matches("init_shard") {
+        println!("*** init shard(s)\n");
+        // get mrenclave
+        // query our own MRENCLAVE
+	    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
+	    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
+        let _ = unsafe { sgx_init_quote(
+            &mut ti as *mut sgx_target_info_t, 
+            &mut eg as *mut sgx_epid_group_id_t)};
+    	let mrenclave = ti.mr_enclave;
+        match _matches.values_of("shard") {
+            Some(values) => {
+                for shard in values {
+                    if shard.len() != 2*32 { panic!("shard must be 256bit hex string")}
+                    if hex::decode(shard).is_err() { panic!("shard must be hex encoded")}
+                    init_shard(shard);   
+                }},
+            _ => {
+                let shard = hex::encode(ti.mr_enclave.m);
+                init_shard(&shard);
+            }
+        };
     } else if matches.is_present("run_server") {
         println!("*** Running Enclave TLS server\n");
         run(Mode::Server, mu_ra_port);
@@ -403,4 +427,11 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str) {
             Err(_) => error!("Couldn't decode event record list"),
         }
     }
+}
+
+fn init_shard(shard: &str) {
+    let mut path: String = "./shards/".into();
+    path.push_str(shard);
+    println!("initializing shard at {}", path); 
+    fs::create_dir_all(path).expect("could not create dir")   
 }
