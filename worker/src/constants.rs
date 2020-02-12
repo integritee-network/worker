@@ -31,3 +31,5 @@ pub static RA_API_KEY_FILE: &str = "../bin/key_production.txt";
 pub static RA_SPID_FILE: &str = "../bin/spid.txt";
 #[cfg(not(feature = "production"))]
 pub static RA_API_KEY_FILE: &str = "../bin/key.txt";
+
+pub static EXTRINSIC_MAX_SIZE: usize = 4196;

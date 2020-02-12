@@ -27,10 +27,9 @@ use my_node_runtime::substratee_registry::Request;
 
 use crate::constants::*;
 use crate::enclave::api::*;
-use crate::enclave::wrappers::*;
 use crate::tests::commons::*;
 
-pub fn perform_ra_works(enclave: SgxEnclave, port: &str) {
+pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
     let api = Api::<ed25519::Pair>::new(format!("ws://127.0.0.1:{}", port));
 
@@ -56,13 +55,13 @@ pub fn perform_ra_works(enclave: SgxEnclave, port: &str) {
     let nonce_bytes = nonce.encode();
     debug!("Enclave nonce = {:?}", nonce);
     let xt =
-        enclave_perform_ra(enclave, genesis_hash, nonce_bytes.encode(), w_url.encode()).unwrap();
+        enclave_perform_ra(eid, genesis_hash, nonce_bytes.encode(), w_url.encode()).unwrap();
 }
 
-pub fn process_forwarded_payload_works(enclave: SgxEnclave, port: &str) {
+pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
     let req = Request {
-        cyphertext: encrypted_test_msg(enclave.clone()),
+        cyphertext: encrypted_test_msg(eid.clone()),
         shard: H256::default(),
     };
-    crate::process_request(enclave, req, port);
+    crate::process_request(eid, req, port);
 }

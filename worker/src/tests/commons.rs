@@ -37,10 +37,10 @@ pub struct Message {
     pub sha256: sgx_sha256_hash_t,
 }
 
-pub fn encrypted_test_msg(enclave: SgxEnclave) -> Vec<u8> {
+pub fn encrypted_test_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
     let enclave = enclave_init().unwrap();
-    let pubkey = enclave_shielding_key(enclave).unwrap();
+    let pubkey = enclave_shielding_key(eid).unwrap();
     let rsa_pubkey: Rsa3072PubKey =
         serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
     info!("deserialized rsa key");

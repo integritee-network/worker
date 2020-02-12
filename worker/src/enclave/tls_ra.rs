@@ -21,7 +21,7 @@ use sgx_types::*;
 
 use log::*;
 
-use crate::enclave::init::init_enclave;
+use crate::enclave::api::enclave_init;
 
 extern "C" {
     fn run_server(
@@ -46,16 +46,7 @@ pub enum Mode {
 pub fn run(mode: Mode, port: &str) {
     let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-    let enclave = match init_enclave() {
-        Ok(r) => {
-            println!("[+] Init Enclave Successful {}!", r.geteid());
-            r
-        }
-        Err(x) => {
-            println!("[-] Init Enclave Failed {}!", x.as_str());
-            return;
-        }
-    };
+    let enclave = enclave_init().unwrap();
 
     match mode {
         Mode::Server => {

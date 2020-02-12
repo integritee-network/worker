@@ -595,15 +595,14 @@ pub unsafe extern "C" fn perform_ra(
 		Err(status) => return status,
 	};
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
-	info!("Restored ECC pubkey: {:?}", signer.public());
-
-	let nonce = match  u32::decode(&mut nonce_slice) {
+	
+	let nonce = match u32::decode(&mut nonce_slice) {
 		Ok(n) => n,
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
-
+	debug!("decoded nonce");
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
-
+	debug!("decoded genesis_hash");
 	let call = [SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
 
 	let xt = compose_extrinsic_offline!(

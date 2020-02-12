@@ -22,7 +22,7 @@ use primitives::hash::H256;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 use substratee_stf;
-
+use crate::constants::EXTRINSIC_MAX_SIZE;
 use crate::enclave::api::*;
 use crate::tests::commons::*;
 
@@ -55,19 +55,19 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 }
 */
 
-pub fn execute_stf_works(enclave: SgxEnclave) {
+pub fn execute_stf_works(eid: sgx_enclave_id_t) {
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
-    let mut cyphertext = encrypted_test_msg(enclave.clone());
+    let mut cyphertext = encrypted_test_msg(eid.clone());
 
-    let unchecked_extrinsic_size = 500;
+    let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
     let nonce_bytes = U256::encode(&U256::from("1"));
     let genesis_hash: [u8; 32] = [0; 32];
     let shard = H256::default();
 
     let uxt = enclave_execute_stf(
-        enclave.clone(),
+        eid,
         cyphertext,
         shard.encode(),
         genesis_hash.encode(),

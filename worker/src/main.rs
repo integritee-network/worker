@@ -101,7 +101,7 @@ fn main() {
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
-        let pubkey = enclave_shielding_key(enclave).unwrap();
+        let pubkey = enclave_shielding_key(enclave.geteid()).unwrap();
         let file = File::create(constants::SHIELDING_KEY_FILE).unwrap();
         match serde_json::to_writer(file, &pubkey) {
             Err(x) => {
@@ -122,7 +122,7 @@ fn main() {
     } else if matches.is_present("signing-key") {
         info!("*** Get the signing key from the TEE\n");
         let enclave = enclave_init().unwrap();
-        let pubkey = enclave_signing_key(enclave).unwrap();
+        let pubkey = enclave_signing_key(enclave.geteid()).unwrap();
         debug!("[+] Signing key raw: {:?}", pubkey);
         match fs::write(constants::SIGNING_KEY_FILE, pubkey) {
             Err(x) => {
@@ -143,7 +143,7 @@ fn main() {
     } else if matches.is_present("dump-ra") {
         info!("*** Perform RA and dump cert to disk");
         let enclave = enclave_init().unwrap();
-        enclave_dump_ra(enclave).unwrap();
+        enclave_dump_ra(enclave.geteid()).unwrap();
         return;
     } else if matches.is_present("mrenclave") {
         println!("{}", get_mrenclave().encode().to_base58());
@@ -194,11 +194,11 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
     println!("*** Starting enclave in development mode");
 
     let enclave = enclave_init().unwrap();
-
+    let eid = enclave.geteid();
     // ------------------------------------------------------------------------
     // start the ws server to listen for worker requests
     let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(enclave.clone(), w_url.clone(), mu_ra_port.to_string());
+    start_ws_server(eid.clone(), w_url.clone(), mu_ra_port.to_string());
 
     // ------------------------------------------------------------------------
     let eid = enclave.geteid();
@@ -239,7 +239,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
 
     // get the public signing key of the TEE
     let mut signing_key_raw = [0u8; 32];
-    signing_key_raw.copy_from_slice(&enclave_signing_key(enclave.clone()).unwrap()[..]);
+    signing_key_raw.copy_from_slice(&enclave_signing_key(eid.clone()).unwrap()[..]);
     // Attention: this HAS to be sr25519, although its a ed25519 key!
     let tee_public = sr25519::Public::from_raw(signing_key_raw);
     info!(
@@ -281,7 +281,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
     let nonce_bytes = nonce.encode();
 
     let uxt = enclave_perform_ra(
-        enclave.clone(),
+        eid,
         genesis_hash,
         nonce_bytes.encode(),
         w_url.encode(),
@@ -326,7 +326,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
             info!("Performing MU-RA");
             let w1_url_port: Vec<&str> = w1_url.split(':').collect();
             run_enclave_client(
-                enclave.geteid(),
+                eid,
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("{}:{}", w1_url_port[0], ra_port),
             );
@@ -398,7 +398,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
                                     println!("[+] Received Forwarded event");
                                     debug!("    Request: {:?}", request);
                                     println!();
-                                    process_request(enclave.clone(), request.clone(), node_url);
+                                    process_request(eid.clone(), request.clone(), node_url);
                                 }
                                 my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                                     sender,
@@ -426,13 +426,13 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
     }
 }
 
-pub fn process_request(enclave: SgxEnclave, request: Request, node_url: &str) {
+pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) {
     // new api client (the other one is busy listening to events)
     // FIXME: this might not be very performant. maybe split into api_listener and api_sender
     let mut _api = Api::<sr25519::Pair>::new(format!("ws://{}", node_url));
     info!("*** Ask the signing key from the TEE");
     let mut signing_key_raw = [0u8; 32];
-    signing_key_raw.copy_from_slice(&enclave_signing_key(enclave.clone()).unwrap()[..]);
+    signing_key_raw.copy_from_slice(&enclave_signing_key(eid.clone()).unwrap()[..]);
 
     // Attention: this HAS to be sr25519, although its a ed25519 key!
     let tee_public = sr25519::Public::from_raw(signing_key_raw);
@@ -451,7 +451,7 @@ pub fn process_request(enclave: SgxEnclave, request: Request, node_url: &str) {
     let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
     info!("Enclave nonce = {:?}", nonce);
     let uxt = enclave_execute_stf(
-        enclave,
+        eid,
         request.cyphertext,
         request.shard.encode(),
         genesis_hash,

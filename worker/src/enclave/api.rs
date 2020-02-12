@@ -26,8 +26,7 @@ use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
 use codec::{Decode, Encode};
-
-use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN};
+use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -175,13 +174,13 @@ pub fn enclave_init() -> SgxResult<SgxEnclave> {
     Ok(enclave)
 }
 
-pub fn enclave_signing_key(enclave: SgxEnclave) -> SgxResult<Vec<u8>> {
+pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     let pubkey_size = 32;
     let mut pubkey = [0u8; 32];
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         get_ecc_signing_pubkey(
-            enclave.geteid(),
+            eid,
             &mut status,
             pubkey.as_mut_ptr(),
             pubkey_size,
@@ -196,14 +195,14 @@ pub fn enclave_signing_key(enclave: SgxEnclave) -> SgxResult<Vec<u8>> {
     Ok(pubkey.encode())
 }
 
-pub fn enclave_shielding_key(enclave: SgxEnclave) -> SgxResult<Vec<u8>> {
+pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     let pubkey_size = 8192;
     let mut pubkey = vec![0u8; pubkey_size as usize];
 
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         get_rsa_encryption_pubkey(
-            enclave.geteid(),
+            eid,
             &mut status,
             pubkey.as_mut_ptr(),
             pubkey_size,
@@ -222,9 +221,9 @@ pub fn enclave_shielding_key(enclave: SgxEnclave) -> SgxResult<Vec<u8>> {
     Ok(pubkey)
 }
 
-pub fn enclave_dump_ra(enclave: SgxEnclave) -> SgxResult<()> {
+pub fn enclave_dump_ra(eid: sgx_enclave_id_t) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe { dump_ra_to_disk(enclave.geteid(), &mut status) };
+    let result = unsafe { dump_ra_to_disk(eid, &mut status) };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }
@@ -235,18 +234,18 @@ pub fn enclave_dump_ra(enclave: SgxEnclave) -> SgxResult<()> {
 }
 
 pub fn enclave_execute_stf(
-    enclave: SgxEnclave,
+    eid: sgx_enclave_id_t,
     cyphertext: Vec<u8>,
     shard: Vec<u8>,
     genesis_hash: Vec<u8>,
     nonce: Vec<u8>,
 ) -> SgxResult<Vec<u8>> {
-    let unchecked_extrinsic_size = 500;
+    let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         execute_stf(
-            enclave.geteid(),
+            eid,
             &mut status,
             cyphertext.as_ptr(),
             cyphertext.len() as u32,
@@ -270,17 +269,17 @@ pub fn enclave_execute_stf(
 }
 
 pub fn enclave_perform_ra(
-    enclave: SgxEnclave,
+    eid: sgx_enclave_id_t,
     genesis_hash: Vec<u8>,
     nonce: Vec<u8>,
     url: Vec<u8>,
 ) -> SgxResult<Vec<u8>> {
-    let unchecked_extrinsic_size = 500;
+    let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         perform_ra(
-            enclave.geteid(),
+            eid,
             &mut status,
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
@@ -301,9 +300,9 @@ pub fn enclave_perform_ra(
     Ok(unchecked_extrinsic)
 }
 
-pub fn enclave_test(enclave: SgxEnclave) -> SgxResult<()> {
+pub fn enclave_test(eid: sgx_enclave_id_t) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe { test_main_entrance(enclave.geteid(), &mut status) };
+    let result = unsafe { test_main_entrance(eid, &mut status) };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }

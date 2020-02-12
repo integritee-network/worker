@@ -30,6 +30,9 @@ pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 }
 
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
+	if data.len() > writable.len() {
+		panic!("not enough bytes in output buffer for return value");
+	}
 	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
 	// fill the right side with whitespace
