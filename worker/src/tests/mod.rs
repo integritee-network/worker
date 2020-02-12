@@ -30,61 +30,31 @@ pub mod integration_tests;
 
 pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
     println!("*** Starting Test enclave");
-    let enclave = init_enclave().unwrap();
-    let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe { init(enclave.geteid(), &mut status) };
-
-    if status != sgx_status_t::SGX_SUCCESS || result != sgx_status_t::SGX_SUCCESS {
-        panic!("Init Enclave in tests failed");
-    }
+    let enclave = enclave_init().unwrap();
 
     if matches.is_present("all") || matches.is_present("unit") {
         println!("Running unit Tests");
-        run_enclave_unit_tests(enclave.geteid());
+        enclave_test(enclave.clone());
+        println!("[+] unit_test ended!");
     }
 
     if matches.is_present("all") || matches.is_present("ecall") {
         println!("Running ecall Tests");
-        run_ecalls(enclave.geteid());
+        println!("  testing execute_stf()");
+        execute_stf_works(enclave.clone());
+        //println!("  testing get_state()");
+        //get_state_works(enclave.clone());
+        println!("[+] Ecall tests ended!");
     }
 
     if matches.is_present("all") || matches.is_present("integration") {
+        // Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
+        // running the tests.
         println!("Running integration Tests");
-        run_integration_tests(enclave.geteid(), port);
+        println!("  testing perform_ra()");
+        perform_ra_works(enclave.clone(), port);
+        println!("  testing process_forwarded_payload()");
+        process_forwarded_payload_works(enclave.clone(), port);
     }
     println!("[+] All tests ended!");
-}
-
-fn run_enclave_unit_tests(eid: sgx_enclave_id_t) {
-    let mut retval = 0usize;
-
-    let result = unsafe { test_main_entrance(eid, &mut retval) };
-
-    match result {
-        sgx_status_t::SGX_SUCCESS => {}
-        _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
-            return;
-        }
-    }
-
-    assert_eq!(retval, 0);
-    println!("[+] unit_test ended!");
-}
-
-pub fn run_ecalls(eid: sgx_enclave_id_t) {
-    println!("  testing execute_stf()");
-    execute_stf_works(eid);
-    println!("  testing get_state()");
-    get_state_works(eid);
-    println!("[+] Ecall tests ended!");
-}
-
-// Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
-// running the tests.
-pub fn run_integration_tests(eid: sgx_enclave_id_t, port: &str) {
-    println!("  testing perform_ra()");
-    perform_ra_works(eid, port);
-    println!("  testing process_forwarded_payload()");
-    process_forwarded_payload_works(eid, port);
 }

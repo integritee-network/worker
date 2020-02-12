@@ -46,6 +46,7 @@ use primitives::{crypto::Pair, hashing::{blake2_256}};
 
 use constants::{
 	ENCRYPTED_STATE_FILE,
+	SHARDS_PATH,
 	SUBSRATEE_REGISTRY_MODULE,
 	CALL_CONFIRMED,
 	RUNTIME_SPEC_VERSION,
@@ -188,7 +189,9 @@ pub unsafe extern "C" fn execute_stf(
 	}
 
 	// load last state
-	let state_enc = match state::read(ENCRYPTED_STATE_FILE) {
+	let state_path = format!("{}/{}/{}",SHARDS_PATH, base64::encode(&shard.encode()), ENCRYPTED_STATE_FILE);
+	debug!("loading state from: {}", state_path);
+	let state_enc = match state::read(&state_path) {
 		Ok(state) => state,
 		Err(status) => return status,
 	};
@@ -214,7 +217,7 @@ pub unsafe extern "C" fn execute_stf(
 	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
 	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
 
-	if let Err(status) = io::write(&enc_state, ENCRYPTED_STATE_FILE) {
+	if let Err(status) = io::write(&enc_state, &state_path) {
 		return status
 	}
 

@@ -15,17 +15,19 @@
 
 */
 
+pub static ENCRYPTED_STATE_FILE: &str = "state.bin";
+pub static SHARDS_PATH: &str = "./shards";
 pub static ENCLAVE_TOKEN: &str = "../bin/enclave.token";
 pub static ENCLAVE_FILE: &str = "../bin/enclave.signed.so";
-pub static RSA_PUB_KEY: &str = "rsa_pubkey.txt";
-pub static ECC_PUB_KEY: &str = "ecc_pubkey.bin";
+pub static SHIELDING_KEY_FILE: &str = "enclave-shielding-pubkey.json";
+pub static SIGNING_KEY_FILE: &str = "enclave-signing-pubkey.bin";
 
 #[cfg(feature = "production")]
-pub static RA_SPID: &str = "../bin/spid_production.txt";
+pub static RA_SPID_FILE: &str = "../bin/spid_production.txt";
 #[cfg(feature = "production")]
-pub static RA_API_KEY: &str = "../bin/key_production.txt";
+pub static RA_API_KEY_FILE: &str = "../bin/key_production.txt";
 
 #[cfg(not(feature = "production"))]
-pub static RA_SPID: &str = "../bin/spid.txt";
+pub static RA_SPID_FILE: &str = "../bin/spid.txt";
 #[cfg(not(feature = "production"))]
-pub static RA_API_KEY: &str = "../bin/key.txt";
+pub static RA_API_KEY_FILE: &str = "../bin/key.txt";

@@ -117,7 +117,8 @@ fn main() {
         &alice_incognito_pair,
         0,
         &worker.mr_enclave,
-        &worker.mr_enclave);   // for demo we name the shard after our mrenclave
+        &worker.mr_enclave,
+    ); // for demo we name the shard after our mrenclave
 
     call_trusted_stf(&api, call_signed, shielding_pubkey);
 
@@ -142,7 +143,8 @@ fn main() {
         &alice_incognito_pair,
         0,
         &worker.mr_enclave,
-        &worker.mr_enclave);   // for demo we name the shard after our mrenclave
+        &worker.mr_enclave,
+    ); // for demo we name the shard after our mrenclave
     call_trusted_stf(&api, call_signed, shielding_pubkey);
 
     println!("[+] query Alice's Incognito account balance");

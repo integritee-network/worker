@@ -56,16 +56,22 @@ impl TrustedCall {
         }
     }
 
-    pub fn sign(&self, pair: &sr25519::Pair, nonce: u32, mrenclave: &[u8;32], shard: &[u8; 32]) -> TrustedCallSigned {
+    pub fn sign(
+        &self,
+        pair: &sr25519::Pair,
+        nonce: u32,
+        mrenclave: &[u8; 32],
+        shard: &[u8; 32],
+    ) -> TrustedCallSigned {
         let mut payload = self.encode();
         payload.append(&mut nonce.encode());
-        payload.append(&mut mrenclave.encode()); 
+        payload.append(&mut mrenclave.encode());
         payload.append(&mut shard.encode());
 
-        TrustedCallSigned{
+        TrustedCallSigned {
             call: self.clone(),
             nonce: nonce,
-            signature: pair.sign(payload.as_slice()).into()
+            signature: pair.sign(payload.as_slice()).into(),
         }
     }
 }
@@ -116,21 +122,25 @@ pub struct TrustedCallSigned {
 
 impl TrustedCallSigned {
     pub fn new(call: TrustedCall, nonce: u32, signature: AnySignature) -> Self {
-        TrustedCallSigned { call, nonce, signature }
+        TrustedCallSigned {
+            call,
+            nonce,
+            signature,
+        }
     }
 
     pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &[u8; 32]) -> bool {
         let mut payload = self.call.encode();
         payload.append(&mut self.nonce.encode());
-        payload.append(&mut mrenclave.encode()); 
+        payload.append(&mut mrenclave.encode());
         payload.append(&mut shard.encode());
-        self.signature.verify(payload.as_slice(), self.call.account())
+        self.signature
+            .verify(payload.as_slice(), self.call.account())
     }
 }
 
 #[cfg(feature = "sgx")]
 pub struct Stf {}
-
 
 #[cfg(test)]
 mod tests {
@@ -141,16 +151,12 @@ mod tests {
     #[test]
     fn verify_signature_works() {
         nonce = 21;
-        mrenclave = [0u8;32];
+        mrenclave = [0u8; 32];
         shard = [1u8; 32];
 
         let call = TrustedCall::balance_set_balance(AccountId::from(AccountKeyring::Alice), 42, 42);
-        let signed_call = call.sign(
-            &AccountKeyring::Alice.pair(),
-            nonce,
-            &mrenclave,
-            &shard);
-        
+        let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
+
         assert!(signed_call.verify_signature(&mrenclave, &shard));
     }
 }

@@ -20,6 +20,7 @@ use std::thread;
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
+use sgx_urts::SgxEnclave;
 
 use log::*;
 use primitive_types::U256;
@@ -27,13 +28,13 @@ use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
 use substratee_worker_api::requests::*;
 
-use crate::enclave::api::{get_rsa_encryption_pubkey, get_state};
+use crate::enclave::api::enclave_shielding_key;
 
-pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
+pub fn start_ws_server(enclave: SgxEnclave, addr: String, mu_ra_port: String) {
     // Server WebSocket handler
     struct Server {
         out: Sender,
-        eid: sgx_enclave_id_t,
+        enclave: SgxEnclave,
         mu_ra_port: String,
     }
 
@@ -45,9 +46,9 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
             let args: Vec<&str> = msg_txt.split("::").collect();
 
             let answer = match args[0] {
-                MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
+                MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.enclave.clone()),
                 MSG_GET_MU_RA_PORT => Message::text(self.mu_ra_port.clone()),
-                MSG_GET_STF_STATE => handle_get_stf_state_msg(self.eid, args[1]),
+                //MSG_GET_STF_STATE => handle_get_stf_state_msg(self.eid, args[1]),
                 _ => Message::text("[WS Server]: unrecognized msg pattern"),
             };
 
@@ -63,13 +64,14 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
     thread::spawn(move || {
         listen(addr, |out| Server {
             out,
-            eid,
+            enclave: enclave.clone(),
             mu_ra_port: mu_ra_port.clone(),
         })
         .unwrap()
     });
 }
 
+/*
 fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str) -> Message {
     info!("     [WS Server] Getting STF state");
 
@@ -102,23 +104,13 @@ fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str) -> Message 
 
     Message::text(format!("State is {}", val))
 }
+*/
 
-fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
+fn get_worker_pub_key(enclave: SgxEnclave) -> Message {
     // request the key
     println!();
     println!("*** Ask the public key from the TEE");
-    let pubkey_size = 8192;
-    let mut pubkey = vec![0u8; pubkey_size as usize];
-
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-    let result =
-        unsafe { get_rsa_encryption_pubkey(eid, &mut retval, pubkey.as_mut_ptr(), pubkey_size) };
-
-    match result {
-        sgx_status_t::SGX_SUCCESS => {}
-        _ => error!("[-] ECALL Enclave failed {}!", result.as_str()),
-    }
-
+    let pubkey = enclave_shielding_key(enclave).unwrap();
     let rsa_pubkey: Rsa3072PubKey =
         serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
     println!("     [WS Server] RSA pubkey {:?}\n", rsa_pubkey);

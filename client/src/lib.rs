@@ -42,7 +42,6 @@ use substratee_worker_api::Api as WorkerApi;
 
 // FIXME: most of these functions are redundant with substrate-api-client
 // but first resolve this: https://github.com/scs/substrate-api-client/issues/27
-pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
     ed25519::Pair::from_string(suri, password).expect("Invalid phrase")

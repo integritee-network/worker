@@ -49,7 +49,7 @@ use primitives::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::{cert, hex};
-use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, 
+use crate::constants::{RA_SPID_FILE, RA_API_KEY_FILE, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, 
 	RUNTIME_SPEC_VERSION, RA_DUMP_CERT_DER_FILE, RA_DUMP_SIGNER_ATTN_FILE};
 use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected};
 use crate::ed25519;
@@ -414,7 +414,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 	let p_report = &rep as * const sgx_report_t;
 	let quote_type = sign_type;
 
-	let spid : sgx_spid_t = load_spid(RA_SPID)?;
+	let spid : sgx_spid_t = load_spid(RA_SPID_FILE)?;
 
 	let p_spid = &spid as *const sgx_spid_t;
 	let p_nonce = &quote_nonce as * const sgx_quote_nonce_t;
@@ -515,7 +515,7 @@ fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
-	io::read_to_string(RA_API_KEY)
+	io::read_to_string(RA_API_KEY_FILE)
 		.map(|key| key.trim_end().to_owned())
 }
 
