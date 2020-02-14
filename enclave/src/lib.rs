@@ -33,6 +33,8 @@ use serde_json;
 #[macro_use]
 extern crate sgx_tstd as std;
 
+use base58::{FromBase58, ToBase58};
+
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t, sgx_target_info_t, sgx_epid_group_id_t };
@@ -145,16 +147,14 @@ pub unsafe extern "C" fn execute_stf(
 	shard_size: u32,
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
-	nonce: *const u8,
-	nonce_size: u32,
+	nonce: *const u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
 
 	let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
-	let shard = hash_from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let shard_slice = slice::from_raw_parts(shard, shard_size as usize);
 	let genesis_hash = hash_from_slice(slice::from_raw_parts(genesis_hash, genesis_hash_size as usize));
-	let nonce = u32::decode(&mut slice::from_raw_parts(nonce, nonce_size as usize)).unwrap();
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	debug!("[Enclave] Read RSA keypair");
@@ -170,26 +170,15 @@ pub unsafe extern "C" fn execute_stf(
 	let request_vec = rsa3072::decrypt(&cyphertext_slice, &rsa_keypair);
 	let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
-	// query our own MRENCLAVE
-	let mut ti : sgx_target_info_t = sgx_target_info_t::default();
-	let mut eg : sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-	let mut rt : sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-	let res = unsafe {
-		ocall_sgx_init_quote(&mut rt as *mut sgx_status_t,
-							 &mut ti as *mut sgx_target_info_t,
-							 &mut eg as *mut sgx_epid_group_id_t)
-	};
-	let mrenclave = ti.mr_enclave;
-
-
-	if let false = stf_call_signed.verify_signature(&ti.mr_enclave.m, &shard.into()) {
+	let mrenclave = attestation::get_mrenclave_of_self().unwrap();
+	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
+	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard_slice) {
 		error!("    [Enclave] TrustedCallSigned: bad signature");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	// load last state
-	let state_path = format!("{}/{}/{}",SHARDS_PATH, base64::encode(&shard.encode()), ENCRYPTED_STATE_FILE);
+	let state_path = format!("{}/{}/{}",SHARDS_PATH, shard_slice.to_base58(), ENCRYPTED_STATE_FILE);
 	debug!("loading state from: {}", state_path);
 	let state_enc = match state::read(&state_path) {
 		Ok(state) => state,
@@ -238,7 +227,7 @@ pub unsafe extern "C" fn execute_stf(
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (xt_call, call_hash.to_vec(), state_hash.to_vec()),
-	    nonce,
+	    *nonce,
 	    genesis_hash,
 	    RUNTIME_SPEC_VERSION
     );

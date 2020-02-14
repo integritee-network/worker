@@ -24,13 +24,13 @@ use log::*;
 use crate::enclave::api::enclave_init;
 
 extern "C" {
-    fn run_server(
+    fn run_key_provisioning_server(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         socket_fd: c_int,
         sign_type: sgx_quote_sign_type_t,
     ) -> sgx_status_t;
-    fn run_client(
+    fn request_key_provisioning(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         socket_fd: c_int,
@@ -43,66 +43,42 @@ pub enum Mode {
     Server,
 }
 
-pub fn run(mode: Mode, port: &str) {
-    let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-    let enclave = enclave_init().unwrap();
-
-    match mode {
-        Mode::Server => {
-            run_enclave_server(enclave.geteid(), sign_type, &format!("localhost:{}", port))
-        }
-        Mode::Client => {
-            run_enclave_client(enclave.geteid(), sign_type, &format!("localhost:{}", port))
-        }
-    }
-
-    println!("[+] Done!");
-    enclave.destroy();
-}
-
-pub fn run_enclave_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
+pub fn enclave_run_key_provisioning_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
     info!("Starting MU-RA-Server on: {}", addr);
     let listener = TcpListener::bind(addr).unwrap();
     loop {
         match listener.accept() {
             Ok((socket, addr)) => {
-                println!(
-                    "    [MU-RA-Server] New client requesting mutual remote attestation from {:?}",
+                info!(
+                    "[MU-RA-Server] a worker at {} is requesting key provisiong",
                     addr
                 );
                 let mut retval = sgx_status_t::SGX_SUCCESS;
-                let result = unsafe { run_server(eid, &mut retval, socket.as_raw_fd(), sign_type) };
+                let result = unsafe { run_key_provisioning_server(eid, &mut retval, socket.as_raw_fd(), sign_type) };
                 match result {
                     sgx_status_t::SGX_SUCCESS => {
-                        println!("ECALL success!");
+                        debug!("[MU-RA-Server] ECALL success!");
                     }
                     _ => {
-                        println!("[-] ECALL Enclave Failed {}!", result.as_str());
-                        return;
+                        error!("[MU-RA-Server] ECALL Enclave Failed {}!", result.as_str());
                     }
                 }
             }
-            Err(e) => println!("couldn't get client: {:?}", e),
+            Err(e) => error!("couldn't get client: {:?}", e),
         }
     }
 }
 
-pub fn run_enclave_client(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
-    println!(
-        "    [MU-RA-Client] Requesting mutual remote attestation with with {}",
-        addr
-    );
+pub fn enclave_request_key_provisioning(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) -> SgxResult<()> {
+    info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
     let socket = TcpStream::connect(addr).unwrap();
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe { run_client(eid, &mut retval, socket.as_raw_fd(), sign_type) };
-    match result {
-        sgx_status_t::SGX_SUCCESS => {
-            println!("ECALL success!");
-        }
-        _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
-            return;
-        }
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let result = unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type) };
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
     }
+    if result != sgx_status_t::SGX_SUCCESS {
+        return Err(result);
+    }
+    Ok(())
 }

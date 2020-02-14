@@ -61,7 +61,7 @@ impl TrustedCall {
         pair: &sr25519::Pair,
         nonce: u32,
         mrenclave: &[u8; 32],
-        shard: &[u8; 32],
+        shard: &[u8],
     ) -> TrustedCallSigned {
         let mut payload = self.encode();
         payload.append(&mut nonce.encode());
@@ -129,7 +129,7 @@ impl TrustedCallSigned {
         }
     }
 
-    pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &[u8; 32]) -> bool {
+    pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &[u8]) -> bool {
         let mut payload = self.call.encode();
         payload.append(&mut self.nonce.encode());
         payload.append(&mut mrenclave.encode());
@@ -152,7 +152,7 @@ mod tests {
     fn verify_signature_works() {
         nonce = 21;
         mrenclave = [0u8; 32];
-        shard = [1u8; 32];
+        shard = [1u8, 2, 3, 4, 5];
 
         let call = TrustedCall::balance_set_balance(AccountId::from(AccountKeyring::Alice), 42, 42);
         let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);

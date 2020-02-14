@@ -40,8 +40,7 @@ extern "C" {
         shard_encrypted_size: u32,
         hash: *const u8,
         hash_size: u32,
-        nonce: *const u8,
-        nonce_size: u32,
+        nonce: *const u32,
         unchecked_extrinsic: *mut u8,
         unchecked_extrinsic_size: u32,
     ) -> sgx_status_t;
@@ -69,13 +68,19 @@ extern "C" {
         pubkey_size: u32,
     ) -> sgx_status_t;
 
+    fn get_mrenclave(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        mrenclave: *mut u8,
+        mrenclave_size: u32,
+    ) -> sgx_status_t;
+
     fn perform_ra(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         genesis_hash: *const u8,
         genesis_hash_size: u32,
-        nonce: *const u8,
-        nonce_size: u32,
+        nonce: *const u32,
         url: *const u8,
         url_size: u32,
         unchecked_extrinsic: *mut u8,
@@ -221,6 +226,26 @@ pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     Ok(pubkey)
 }
 
+pub fn mrenclave(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
+    let mut m = vec![0u8; 32];
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let result = unsafe { 
+        get_mrenclave(
+            eid, 
+            &mut status,
+            m.as_mut_ptr(),
+            m.len() as u32,
+        )
+    };
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+    if result != sgx_status_t::SGX_SUCCESS {
+        return Err(result);
+    }   
+    Ok(m)
+}
+
 pub fn enclave_dump_ra(eid: sgx_enclave_id_t) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe { dump_ra_to_disk(eid, &mut status) };
@@ -238,7 +263,7 @@ pub fn enclave_execute_stf(
     cyphertext: Vec<u8>,
     shard: Vec<u8>,
     genesis_hash: Vec<u8>,
-    nonce: Vec<u8>,
+    nonce: u32,
 ) -> SgxResult<Vec<u8>> {
     let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
@@ -253,8 +278,7 @@ pub fn enclave_execute_stf(
             shard.len() as u32,
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
-            nonce.as_ptr(),
-            nonce.len() as u32,
+            &nonce,
             unchecked_extrinsic.as_mut_ptr(),
             unchecked_extrinsic_size as u32,
         )
@@ -271,7 +295,7 @@ pub fn enclave_execute_stf(
 pub fn enclave_perform_ra(
     eid: sgx_enclave_id_t,
     genesis_hash: Vec<u8>,
-    nonce: Vec<u8>,
+    nonce: u32,
     url: Vec<u8>,
 ) -> SgxResult<Vec<u8>> {
     let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
@@ -283,8 +307,7 @@ pub fn enclave_perform_ra(
             &mut status,
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
-            nonce.as_ptr(),
-            nonce.len() as u32,
+            &nonce,
             url.as_ptr(),
             url.len() as u32,
             unchecked_extrinsic.as_mut_ptr(),

@@ -62,7 +62,7 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
 
     let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
-    let nonce_bytes = U256::encode(&U256::from("1"));
+    let nonce = 0u32;
     let genesis_hash: [u8; 32] = [0; 32];
     let shard = H256::default();
 
@@ -71,7 +71,7 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
         cyphertext,
         shard.encode(),
         genesis_hash.encode(),
-        nonce_bytes,
+        nonce,
     )
     .unwrap();
 }

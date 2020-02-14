@@ -15,8 +15,14 @@
 
 */
 
+extern crate chrono;
+use chrono::prelude::DateTime;
+use chrono::Utc;
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+
 use sgx_types::*;
 
+use base58::{FromBase58, ToBase58};
 use clap::{load_yaml, App};
 use codec::Encode;
 use keyring::AccountKeyring;
@@ -70,12 +76,17 @@ fn main() {
             get_worker_info(&api, 1)
         }
     };
-    println!("[<] Got first worker's coordinates:");
-    println!("    W1's public key : {:?}", worker.pubkey.to_string());
-    println!(
-        "    W1's url: {}\n",
+    info!("[<] Got first worker's metadata");
+    info!("    worker signing key : {:?}", worker.pubkey.to_string());
+    info!("    worker url: {}",
         String::from_utf8_lossy(&worker.url[..]).to_string()
     );
+    let datetime = DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_secs(worker.timestamp as u64));
+    info!("    RA timestamp: {}", datetime.format("%Y-%m-%d %H:%M:%S.%f"));
+    info!("    worker mrenclave: {}", worker.mr_enclave.to_base58());
+
+    // default shard is identified by mrenclave
+    let shard = worker.mr_enclave;
 
     let worker_api = WorkerApi::new(String::from_utf8_lossy(&worker.url[..]).to_string());
 
@@ -120,7 +131,7 @@ fn main() {
         &worker.mr_enclave,
     ); // for demo we name the shard after our mrenclave
 
-    call_trusted_stf(&api, call_signed, shielding_pubkey);
+    call_trusted_stf(&api, call_signed, shielding_pubkey, shard);
 
     println!("[+] query Alice's Incognito account balance");
     let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
@@ -145,7 +156,7 @@ fn main() {
         &worker.mr_enclave,
         &worker.mr_enclave,
     ); // for demo we name the shard after our mrenclave
-    call_trusted_stf(&api, call_signed, shielding_pubkey);
+    call_trusted_stf(&api, call_signed, shielding_pubkey, shard);
 
     println!("[+] query Alice's Incognito account balance");
     let getter = TrustedGetter::free_balance(alice_incognito_pair.public());

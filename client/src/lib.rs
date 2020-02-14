@@ -23,7 +23,7 @@ use blake2_rfc::blake2s::blake2s;
 use codec::{Decode, Encode};
 use log::info;
 use log::*;
-use my_node_runtime::{Event, Hash};
+use my_node_runtime::{Event, Hash, substratee_registry::{Request, ShardIdentifier}};
 use primitive_types::U256;
 use primitives::{
     crypto::{AccountId32, Pair, Ss58Codec},
@@ -199,7 +199,7 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
         .collect()
 }
 
-pub fn call_trusted_stf<P: Pair>(api: &Api<P>, call: TrustedCallSigned, rsa_pubkey: Rsa3072PubKey)
+pub fn call_trusted_stf<P: Pair>(api: &Api<P>, call: TrustedCallSigned, rsa_pubkey: Rsa3072PubKey, shard: [u8; 32])
 where
     MultiSignature: From<P::Signature>,
 {
@@ -208,12 +208,16 @@ where
     rsa_pubkey
         .encrypt_buffer(&call_encoded, &mut call_encrypted)
         .unwrap();
-
+    let request = Request {
+        shard: ShardIdentifier::from(shard),
+        cyphertext: call_encrypted.clone()
+    };
+    
     let xt = compose_extrinsic!(
         api.clone(),
         "SubstraTEERegistry",
         "call_worker",
-        call_encrypted.clone()
+        request
     );
 
     // send and watch extrinsic until finalized

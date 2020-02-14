@@ -51,8 +51,8 @@ impl Api {
         let keystr = Self::get(&self, MSG_GET_PUB_KEY_WORKER)?;
 
         let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&keystr).unwrap();
-        info!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
-
+        info!("[+] Got RSA public key of enclave");
+        debug!("  enclave RSA pubkey = {:?}", rsa_pubkey);
         Ok(rsa_pubkey)
     }
 

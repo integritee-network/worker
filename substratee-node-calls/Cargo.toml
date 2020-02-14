@@ -9,6 +9,7 @@ log = "0.4"
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.6", default-features = false, features = ["codec"] }
 regex = "1"
+base58 			        = "0.1"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"

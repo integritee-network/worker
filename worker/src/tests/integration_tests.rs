@@ -55,7 +55,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     let nonce_bytes = nonce.encode();
     debug!("Enclave nonce = {:?}", nonce);
     let xt =
-        enclave_perform_ra(eid, genesis_hash, nonce_bytes.encode(), w_url.encode()).unwrap();
+        enclave_perform_ra(eid, genesis_hash, nonce, w_url.encode()).unwrap();
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {

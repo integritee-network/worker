@@ -84,9 +84,9 @@ subcommands:
                     long: integration
                     help: Run integration tests
                     takes_value: false
-                - mu-ra-server:
-                    help: Run TEE server for MU-RA
-                - mu-ra-client:
-                    help: Run TEE client for MU-RA
+                - provisioning-server:
+                    help: Run TEE server for MU-RA key provisioning
+                - provisioning-client:
+                    help: Run TEE client for MU-RA key provisioning
                      
 

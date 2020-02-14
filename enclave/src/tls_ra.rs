@@ -93,7 +93,7 @@ impl rustls::ServerCertVerifier for ServerAuth {
 
 
 #[no_mangle]
-pub unsafe extern "C" fn run_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
+pub unsafe extern "C" fn run_key_provisioning_server(socket_fd: c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
 	let cfg = match tls_server_config(sign_type) {
@@ -192,7 +192,7 @@ fn send_files(tls: &mut Stream<ServerSession, TcpStream>,
 }
 
 #[no_mangle]
-pub extern "C" fn run_client(socket_fd: c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
+pub extern "C" fn request_key_provisioning(socket_fd: c_int, sign_type: sgx_quote_sign_type_t) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
 	let cfg = match tls_client_config(sign_type) {

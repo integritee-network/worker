@@ -51,11 +51,11 @@ type AccountId = <AnySignature as Verify>::Signer;
 
 use enclave::api::{
     enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_perform_ra, enclave_shielding_key,
-    enclave_signing_key,
+    enclave_signing_key, mrenclave
 };
 use enclave::init::init_enclave;
-use enclave::tls_ra::{run, run_enclave_client, run_enclave_server, Mode};
-use substratee_node_calls::get_worker_amount;
+use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use substratee_node_calls::{get_worker_for_shard, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use ws_server::start_ws_server;
@@ -95,9 +95,15 @@ fn main() {
                 shard.copy_from_slice(&shard_vec[..]);
                 shard.into()
             }
-            _ => get_mrenclave().into(),
+            _ => {
+                let enclave = enclave_init().unwrap();
+                let mrenclave = mrenclave(enclave.geteid()).unwrap();
+                info!("no shard specified. using mrenclave as id: {}", mrenclave.to_base58());
+                let m = ShardIdentifier::from_slice(&mrenclave[..]);
+                m
+            },
         };
-        worker(&n_url, w_ip, w_port, mu_ra_port, shard);
+        worker(&n_url, w_ip, w_port, mu_ra_port, &shard);
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
@@ -146,7 +152,8 @@ fn main() {
         enclave_dump_ra(enclave.geteid()).unwrap();
         return;
     } else if matches.is_present("mrenclave") {
-        println!("{}", get_mrenclave().encode().to_base58());
+        let enclave = enclave_init().unwrap();
+        println!("{}", mrenclave(enclave.geteid()).unwrap()[..32].encode().to_base58());
         return;
     }
     if let Some(_matches) = matches.subcommand_matches("init-shard") {
@@ -156,24 +163,38 @@ fn main() {
                     if shard.len() != 2 * 32 {
                         panic!("shard must be 256bit hex string")
                     }
-                    if hex::decode(shard).is_err() {
-                        panic!("shard must be hex encoded")
+                    match hex::decode(shard) {
+                        Err(_) => panic!("shard must be hex encoded"),
+                        Ok(s) => {
+                            init_shard(&ShardIdentifier::from_slice(shard.as_bytes()));
+                        }
                     }
-                    init_shard(shard);
                 }
             }
             _ => {
-                let shard = get_mrenclave().encode().to_base58();
+                let enclave = enclave_init().unwrap();
+                let shard = ShardIdentifier::from_slice(
+                    &mrenclave(enclave.geteid()).unwrap()[..]);
                 init_shard(&shard);
             }
         };
     } else if let Some(_matches) = matches.subcommand_matches("test") {
-        if _matches.is_present("mu-ra-server") {
+        if _matches.is_present("provisioning-server") {
             println!("*** Running Enclave MU-RA TLS server\n");
-            run(Mode::Server, mu_ra_port);
-        } else if _matches.is_present("mu-ra-client") {
-            println!("*** Running Enclave MU-RA TLS client\n");
-            run(Mode::Client, mu_ra_port);
+            let enclave = enclave_init().unwrap();
+            enclave_run_key_provisioning_server(enclave.geteid(), 
+                sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, 
+                &format!("localhost:{}", mu_ra_port));
+            println!("[+] Done!");
+            enclave.destroy();
+        } else if _matches.is_present("provisioning-client") {
+            println!("*** Running Enclave MU-RA TLS server\n");
+            let enclave = enclave_init().unwrap();
+            enclave_request_key_provisioning(enclave.geteid(), 
+                sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE, 
+                &format!("localhost:{}", mu_ra_port));
+            println!("[+] Done!");
+            enclave.destroy();
         } else {
             tests::run_enclave_tests(_matches, node_port);
         }
@@ -182,7 +203,8 @@ fn main() {
     }
 }
 
-fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: ShardIdentifier) {
+fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
+    info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
     // check for required files
     check_files();
@@ -204,7 +226,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
     let eid = enclave.geteid();
     let ra_url = format!("{}:{}", w_ip, mu_ra_port);
     thread::spawn(move || {
-        run_enclave_server(
+        enclave_run_key_provisioning_server(
             eid,
             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
             &ra_url,
@@ -257,7 +279,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
 
     if funds < U256::from(10) {
         println!("[+] bootstrap funding Enclave form Alice's funds");
-        let xt = api.balance_transfer(GenericAddress::from(tee_account_id.clone()), 1000000);
+        let xt = api.balance_transfer(GenericAddress::from(tee_account_id.clone()), 100_000_000);
         let xt_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
@@ -278,13 +300,12 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
         .unwrap();
     let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
     info!("Enclave nonce = {:?}", nonce);
-    let nonce_bytes = nonce.encode();
 
     let uxt = enclave_perform_ra(
         eid,
         genesis_hash,
-        nonce_bytes.encode(),
-        w_url.encode(),
+        nonce,
+        w_url.as_bytes().to_vec(),
     )
     .unwrap();
     // hex encode the extrinsic
@@ -297,43 +318,35 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
     let tx_hash = api.send_extrinsic(_xthex).unwrap();
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-    match get_worker_amount(&api) {
-        0 => {
-            error!("No worker in registry after registering!");
-            return;
-        }
-        1 => {
-            info!("one worker registered, should be me");
-            let shardenc = shard.encode().to_base58();
-            let path = format!(
-                "{}/{}/{}",
-                constants::SHARDS_PATH,
-                &shardenc,
-                constants::ENCRYPTED_STATE_FILE
-            );
-            if !Path::new(&path).exists() {
-                panic!("shard {} hasn't been initialized", shardenc);
+    // browse enclave registry
+    match get_worker_for_shard(&api, shard) {
+        Some(w) => {
+            let master_worker = get_worker_info(&api, w);
+            if master_worker.pubkey == tee_account_id {
+                info!("the most recently active worker is myself");
+                ensure_shard_initialized(shard);
+            } else {
+                let _url = String::from_utf8_lossy(&master_worker.url[..]).to_string();
+                let _w_api = WorkerApi::new(_url.clone());
+                let _url_split: Vec<_> = _url.split(':').collect();
+                let mura_url = format!("{}:{}", 
+                    _url_split[0], 
+                    _w_api.get_mu_ra_port().unwrap());
+    
+                info!("Requesting key provisioning from worker at {}", mura_url);
+                enclave_request_key_provisioning(
+                    eid,
+                    sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+                    &mura_url,
+                );
+                debug!("key provisioning successfully performed");
             }
+        },
+        None => {
+            info!("no worker has ever published a state update for shard {}", shard.encode().to_base58());
+            ensure_shard_initialized(shard);
         }
-        _ => {
-            println!("*** There are already workers registered, fetching keys from first one...");
-            let w1 = get_first_worker_that_is_not_equal_to_self(&api, tee_account_id).unwrap();
-            let w1_url = String::from_utf8_lossy(&w1.url[..]).to_string();
-            let w_api = WorkerApi::new(w1_url.clone());
-            let ra_port = w_api.get_mu_ra_port().unwrap();
-            info!("Got Port for MU-RA from other worker: {}", ra_port);
-
-            info!("Performing MU-RA");
-            let w1_url_port: Vec<&str> = w1_url.split(':').collect();
-            run_enclave_client(
-                eid,
-                sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &format!("{}:{}", w1_url_port[0], ra_port),
-            );
-            println!();
-            println!("[+] MU-RA successfully performed.\n");
-        }
-    };
+    }
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
@@ -396,8 +409,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
                                     request,
                                 ) => {
                                     println!("[+] Received Forwarded event");
-                                    debug!("    Request: {:?}", request);
-                                    println!();
+                                    info!("    Request: \n  shard: {}\n  cyphertext: {}", request.shard.encode().to_base58(), hex::encode(request.cyphertext.clone()));
                                     process_request(eid.clone(), request.clone(), node_url);
                                 }
                                 my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
@@ -415,8 +427,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: Sha
                             }
                         }
                         _ => {
-                            debug!("event = {:?}", evr);
-                            info!("Ignoring event\n");
+                            info!("Ignoring event {:?}", evr);
                         }
                     }
                 }
@@ -455,7 +466,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         request.cyphertext,
         request.shard.encode(),
         genesis_hash,
-        nonce.encode(),
+        nonce,
     )
     .unwrap();
     info!("[<] Message decoded and processed in the enclave");
@@ -470,8 +481,8 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     );
 }
 
-fn init_shard(shard: &str) {
-    let path = format!("{}/{}", constants::SHARDS_PATH, shard);
+fn init_shard(shard: &ShardIdentifier) {
+    let path = format!("{}/{}", constants::SHARDS_PATH, shard.encode().to_base58());
     println!("initializing shard at {}", path);
     fs::create_dir_all(path.clone()).expect("could not create dir");
 
@@ -489,15 +500,15 @@ fn init_shard(shard: &str) {
     file.write_all(b"");
 }
 
-fn get_mrenclave() -> [u8; 32] {
-    // query our own MRENCLAVE
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-    let _ = unsafe {
-        sgx_init_quote(
-            &mut ti as *mut sgx_target_info_t,
-            &mut eg as *mut sgx_epid_group_id_t,
-        )
-    };
-    ti.mr_enclave.m
+fn ensure_shard_initialized(shard: &ShardIdentifier) {
+    let shardenc = shard.encode().to_base58();
+    if !Path::new(&format!(
+        "{}/{}/{}",
+        constants::SHARDS_PATH,
+        &shardenc,
+        constants::ENCRYPTED_STATE_FILE
+    )).exists() {
+        panic!("shard {} hasn't been initialized", shardenc);
+    }
+    debug!("state file is present for shard {}", shardenc);
 }
