@@ -41,7 +41,8 @@ enclave {
 		);
 
 		public sgx_status_t get_state(
-			[in, size=getter_size] uint8_t* getter, uint32_t getter_size,
+			[in, size=cyphertext_size] uint8_t* cyphertext, uint32_t cyphertext_size,
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[out, size=value_size] uint8_t* value, uint32_t value_size
 		);
 

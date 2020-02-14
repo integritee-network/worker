@@ -28,7 +28,7 @@ use std::str;
 use substratee_stf;
 
 use crate::enclave::api::*;
-use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned};
+use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned, ShardIdentifier};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -61,7 +61,7 @@ pub fn test_trusted_call_signed() -> TrustedCallSigned {
     let call = TrustedCall::balance_set_balance(alice.public(), 33, 44);
     let nonce = 21;
     let mrenclave = [0u8; 32];
-    let shard = [1u8; 32];
+    let shard = ShardIdentifier::default();
     call.sign(&alice.pair(), nonce, &mrenclave, &shard)
 }
 

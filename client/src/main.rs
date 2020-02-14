@@ -34,7 +34,7 @@ use substrate_api_client::{utils::hexstr_to_u256, Api};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
-use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned};
+use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned, ShardIdentifier};
 use substratee_worker_api::Api as WorkerApi;
 
 type AccountId = <AnySignature as Verify>::Signer;
@@ -86,7 +86,7 @@ fn main() {
     info!("    worker mrenclave: {}", worker.mr_enclave.to_base58());
 
     // default shard is identified by mrenclave
-    let shard = worker.mr_enclave;
+    let shard = ShardIdentifier::from_slice(&worker.mr_enclave);
 
     let worker_api = WorkerApi::new(String::from_utf8_lossy(&worker.url[..]).to_string());
 
@@ -128,21 +128,21 @@ fn main() {
         &alice_incognito_pair,
         0,
         &worker.mr_enclave,
-        &worker.mr_enclave,
+        &shard,
     ); // for demo we name the shard after our mrenclave
 
-    call_trusted_stf(&api, call_signed, shielding_pubkey, shard);
+    call_trusted_stf(&api, call_signed, shielding_pubkey, &shard);
 
     println!("[+] query Alice's Incognito account balance");
     let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
     let getter_signed =
         TrustedGetterSigned::new(getter.clone(), getter.sign(&alice_incognito_pair));
-    get_trusted_stf_state(&worker_api, getter_signed);
+    get_trusted_stf_state(&worker_api, getter_signed, &shard);
 
     println!("[+] query Bob's Incognito account balance");
     let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
     let getter_signed = TrustedGetterSigned::new(getter.clone(), getter.sign(&bob_incognito_pair));
-    get_trusted_stf_state(&worker_api, getter_signed);
+    get_trusted_stf_state(&worker_api, getter_signed, &shard);
 
     println!("*** incognito transfer from Alice to Bob");
     let call = TrustedCall::balance_transfer(
@@ -154,18 +154,18 @@ fn main() {
         &alice_incognito_pair,
         0,
         &worker.mr_enclave,
-        &worker.mr_enclave,
+        &shard,
     ); // for demo we name the shard after our mrenclave
-    call_trusted_stf(&api, call_signed, shielding_pubkey, shard);
+    call_trusted_stf(&api, call_signed, shielding_pubkey, &shard);
 
     println!("[+] query Alice's Incognito account balance");
     let getter = TrustedGetter::free_balance(alice_incognito_pair.public());
     let getter_signed =
         TrustedGetterSigned::new(getter.clone(), getter.sign(&alice_incognito_pair));
-    get_trusted_stf_state(&worker_api, getter_signed);
+    get_trusted_stf_state(&worker_api, getter_signed, &shard);
 
     println!("[+] query Bob's Incognito account balance");
     let getter = TrustedGetter::free_balance(bob_incognito_pair.public());
     let getter_signed = TrustedGetterSigned::new(getter.clone(), getter.sign(&bob_incognito_pair));
-    get_trusted_stf_state(&worker_api, getter_signed);
+    get_trusted_stf_state(&worker_api, getter_signed, &shard);
 }

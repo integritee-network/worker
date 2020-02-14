@@ -25,10 +25,12 @@ use sgx_urts::SgxEnclave;
 use log::*;
 use primitive_types::U256;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
-
+use codec::{Decode, Encode};
 use substratee_worker_api::requests::*;
+use substratee_stf::ShardIdentifier;
 
-use crate::enclave::api::enclave_shielding_key;
+
+use crate::enclave::api::{enclave_shielding_key, enclave_query_state};
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
     // Server WebSocket handler
@@ -48,7 +50,7 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
             let answer = match args[0] {
                 MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
                 MSG_GET_MU_RA_PORT => Message::text(self.mu_ra_port.clone()),
-                //MSG_GET_STF_STATE => handle_get_stf_state_msg(self.eid, args[1]),
+                MSG_GET_STF_STATE => handle_get_stf_state_msg(self.eid, args[1], args[2]),
                 _ => Message::text("[WS Server]: unrecognized msg pattern"),
             };
 
@@ -71,40 +73,21 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
     });
 }
 
-/*
-fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str) -> Message {
-    info!("     [WS Server] Getting STF state");
-
-    // FIXME: its good to check the signature here, but it should also be verified inside the enclave again!
+fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str, shard_str: &str) -> Message {
+    info!("     [WS Server] Query state");
     let getter_vec = hex::decode(getter_str).unwrap();
-    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let shard = ShardIdentifier::from_slice(&hex::decode(shard_str).unwrap());
 
-    // FIXME: will not always be u128!!
-    let value_size = 16; //u128
-    let mut value: Vec<u8> = vec![0u8; value_size as usize];
-
-    let result = unsafe {
-        get_state(
-            eid,
-            &mut retval,
-            getter_vec.as_ptr(),
-            getter_vec.len() as u32,
-            value.as_mut_ptr(),
-            value_size as u32,
-        )
+    let value = match enclave_query_state(eid, getter_vec, shard.encode()) {
+        Ok(val) => Some(val),
+        Err(e) => {
+            error!("query state failed");
+            None
+        }   
     };
-    match result {
-        sgx_status_t::SGX_SUCCESS => {}
-        _ => error!("[-] ECALL Enclave failed {}!", result.as_str()),
-    }
     debug!("get_state result: {:?}", value);
-    //let val = hexstr_to_u256(String::from_utf8(value).unwrap()).unwrap();
-    let val = U256::from_little_endian(&value);
-    println!("decoded value value: {}", val);
-
-    Message::text(format!("State is {}", val))
+    Message::text(hex::encode(value.encode()))
 }
-*/
 
 fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
     // request the key

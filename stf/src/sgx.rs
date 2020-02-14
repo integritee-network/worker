@@ -70,7 +70,6 @@ impl Stf {
     }
 
     pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
-        //FIXME: only account owner may get its own data. introduce signature verification!
         ext.execute_with(|| {
             let result =
                 match getter {

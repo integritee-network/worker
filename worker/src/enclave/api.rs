@@ -26,7 +26,7 @@ use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
 use codec::{Decode, Encode};
-use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE};
+use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -48,8 +48,10 @@ extern "C" {
     fn get_state(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
-        getter: *const u8,
-        getter_size: u32,
+        cyphertext: *const u8,
+        cyphertext_size: u32,
+        shard: *const u8,
+        shard_size: u32,	        
         value: *mut u8,
         value_size: u32,
     ) -> sgx_status_t;
@@ -224,6 +226,38 @@ pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(&pubkey[..]).unwrap();
     debug!("got RSA pubkey {:?}", rsa_pubkey);
     Ok(pubkey)
+}
+
+pub fn enclave_query_state(
+    eid: sgx_enclave_id_t, 
+    cyphertext: Vec<u8>,
+    shard: Vec<u8>
+) -> SgxResult<Vec<u8>> {
+    let value_size = STATE_VALUE_MAX_SIZE;
+    let mut value = vec![0u8; value_size as usize];
+
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let result = unsafe {
+        get_state(
+            eid,
+            &mut status,
+            cyphertext.as_ptr(),
+            cyphertext.len() as u32,
+            shard.as_ptr(),
+            shard.len() as u32,            
+            value.as_mut_ptr(),
+            value_size as u32,
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+    if result != sgx_status_t::SGX_SUCCESS {
+        return Err(result);
+    }
+    debug!("got state value: {:?}", hex::encode(value.clone()));
+    Ok(value)
 }
 
 pub fn mrenclave(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {

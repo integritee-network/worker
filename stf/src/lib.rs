@@ -26,8 +26,10 @@
 extern crate alloc;
 
 use codec::{Decode, Encode};
-use primitives::{sr25519, Pair};
+use primitives::{sr25519, Pair, H256};
 use runtime_primitives::{traits::Verify, AnySignature};
+//pub use my_node_runtime::substratee_registry::ShardIdentifier;
+pub type ShardIdentifier = H256;
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
@@ -61,7 +63,7 @@ impl TrustedCall {
         pair: &sr25519::Pair,
         nonce: u32,
         mrenclave: &[u8; 32],
-        shard: &[u8],
+        shard: &ShardIdentifier,
     ) -> TrustedCallSigned {
         let mut payload = self.encode();
         payload.append(&mut nonce.encode());
@@ -129,7 +131,7 @@ impl TrustedCallSigned {
         }
     }
 
-    pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &[u8]) -> bool {
+    pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool {
         let mut payload = self.call.encode();
         payload.append(&mut self.nonce.encode());
         payload.append(&mut mrenclave.encode());
@@ -138,6 +140,17 @@ impl TrustedCallSigned {
             .verify(payload.as_slice(), self.call.account())
     }
 }
+
+// TODO: #91 signed return value 
+/*
+pub struct TrustedReturnValue<T> {
+    pub value: T,
+    pub signer: AccountId
+}
+
+impl TrustedReturnValue
+*/
+
 
 #[cfg(feature = "sgx")]
 pub struct Stf {}
@@ -152,7 +165,7 @@ mod tests {
     fn verify_signature_works() {
         nonce = 21;
         mrenclave = [0u8; 32];
-        shard = [1u8, 2, 3, 4, 5];
+        shard = ShardIdentifier::default();
 
         let call = TrustedCall::balance_set_balance(AccountId::from(AccountKeyring::Alice), 42, 42);
         let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
