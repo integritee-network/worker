@@ -28,7 +28,9 @@ use std::str;
 use substratee_stf;
 
 use crate::enclave::api::*;
-use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned, ShardIdentifier};
+use substratee_stf::{
+    ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {

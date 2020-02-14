@@ -15,6 +15,9 @@
 
 */
 
+use crate::constants::EXTRINSIC_MAX_SIZE;
+use crate::enclave::api::*;
+use crate::tests::commons::*;
 use codec::Encode;
 use keyring::AccountKeyring;
 use primitive_types::U256;
@@ -22,9 +25,6 @@ use primitives::hash::H256;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 use substratee_stf;
-use crate::constants::EXTRINSIC_MAX_SIZE;
-use crate::enclave::api::*;
-use crate::tests::commons::*;
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey

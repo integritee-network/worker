@@ -25,8 +25,8 @@ use sgx_types::*;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
-use codec::{Decode, Encode};
 use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
+use codec::{Decode, Encode};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -51,7 +51,7 @@ extern "C" {
         cyphertext: *const u8,
         cyphertext_size: u32,
         shard: *const u8,
-        shard_size: u32,	        
+        shard_size: u32,
         value: *mut u8,
         value_size: u32,
     ) -> sgx_status_t;
@@ -185,14 +185,8 @@ pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     let pubkey_size = 32;
     let mut pubkey = [0u8; 32];
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe {
-        get_ecc_signing_pubkey(
-            eid,
-            &mut status,
-            pubkey.as_mut_ptr(),
-            pubkey_size,
-        )
-    };
+    let result =
+        unsafe { get_ecc_signing_pubkey(eid, &mut status, pubkey.as_mut_ptr(), pubkey_size) };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }
@@ -207,14 +201,8 @@ pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     let mut pubkey = vec![0u8; pubkey_size as usize];
 
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe {
-        get_rsa_encryption_pubkey(
-            eid,
-            &mut status,
-            pubkey.as_mut_ptr(),
-            pubkey_size,
-        )
-    };
+    let result =
+        unsafe { get_rsa_encryption_pubkey(eid, &mut status, pubkey.as_mut_ptr(), pubkey_size) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
@@ -229,9 +217,9 @@ pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
 }
 
 pub fn enclave_query_state(
-    eid: sgx_enclave_id_t, 
+    eid: sgx_enclave_id_t,
     cyphertext: Vec<u8>,
-    shard: Vec<u8>
+    shard: Vec<u8>,
 ) -> SgxResult<Vec<u8>> {
     let value_size = STATE_VALUE_MAX_SIZE;
     let mut value = vec![0u8; value_size as usize];
@@ -244,7 +232,7 @@ pub fn enclave_query_state(
             cyphertext.as_ptr(),
             cyphertext.len() as u32,
             shard.as_ptr(),
-            shard.len() as u32,            
+            shard.len() as u32,
             value.as_mut_ptr(),
             value_size as u32,
         )
@@ -263,20 +251,13 @@ pub fn enclave_query_state(
 pub fn mrenclave(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
     let mut m = vec![0u8; 32];
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe { 
-        get_mrenclave(
-            eid, 
-            &mut status,
-            m.as_mut_ptr(),
-            m.len() as u32,
-        )
-    };
+    let result = unsafe { get_mrenclave(eid, &mut status, m.as_mut_ptr(), m.len() as u32) };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }
     if result != sgx_status_t::SGX_SUCCESS {
         return Err(result);
-    }   
+    }
     Ok(m)
 }
 

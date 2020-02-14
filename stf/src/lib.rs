@@ -141,7 +141,7 @@ impl TrustedCallSigned {
     }
 }
 
-// TODO: #91 signed return value 
+// TODO: #91 signed return value
 /*
 pub struct TrustedReturnValue<T> {
     pub value: T,
@@ -150,7 +150,6 @@ pub struct TrustedReturnValue<T> {
 
 impl TrustedReturnValue
 */
-
 
 #[cfg(feature = "sgx")]
 pub struct Stf {}

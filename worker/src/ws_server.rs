@@ -22,15 +22,14 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
+use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
-use ws::{listen, CloseCode, Handler, Message, Result, Sender};
-use codec::{Decode, Encode};
-use substratee_worker_api::requests::*;
 use substratee_stf::ShardIdentifier;
+use substratee_worker_api::requests::*;
+use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
-
-use crate::enclave::api::{enclave_shielding_key, enclave_query_state};
+use crate::enclave::api::{enclave_query_state, enclave_shielding_key};
 
 pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
     // Server WebSocket handler
@@ -83,7 +82,7 @@ fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str, shard_str: 
         Err(e) => {
             error!("query state failed");
             None
-        }   
+        }
     };
     debug!("get_state result: {:?}", value);
     Message::text(hex::encode(value.encode()))

@@ -31,7 +31,7 @@ pub mod integration_tests;
 pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
     println!("*** Starting Test enclave");
     let enclave = enclave_init().unwrap();
-    let eid =enclave.geteid();
+    let eid = enclave.geteid();
 
     if matches.is_present("all") || matches.is_present("unit") {
         println!("Running unit Tests");

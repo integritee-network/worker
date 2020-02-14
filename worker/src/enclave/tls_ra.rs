@@ -43,7 +43,11 @@ pub enum Mode {
     Server,
 }
 
-pub fn enclave_run_key_provisioning_server(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) {
+pub fn enclave_run_key_provisioning_server(
+    eid: sgx_enclave_id_t,
+    sign_type: sgx_quote_sign_type_t,
+    addr: &str,
+) {
     info!("Starting MU-RA-Server on: {}", addr);
     let listener = TcpListener::bind(addr).unwrap();
     loop {
@@ -54,7 +58,9 @@ pub fn enclave_run_key_provisioning_server(eid: sgx_enclave_id_t, sign_type: sgx
                     addr
                 );
                 let mut retval = sgx_status_t::SGX_SUCCESS;
-                let result = unsafe { run_key_provisioning_server(eid, &mut retval, socket.as_raw_fd(), sign_type) };
+                let result = unsafe {
+                    run_key_provisioning_server(eid, &mut retval, socket.as_raw_fd(), sign_type)
+                };
                 match result {
                     sgx_status_t::SGX_SUCCESS => {
                         debug!("[MU-RA-Server] ECALL success!");
@@ -69,11 +75,16 @@ pub fn enclave_run_key_provisioning_server(eid: sgx_enclave_id_t, sign_type: sgx
     }
 }
 
-pub fn enclave_request_key_provisioning(eid: sgx_enclave_id_t, sign_type: sgx_quote_sign_type_t, addr: &str) -> SgxResult<()> {
+pub fn enclave_request_key_provisioning(
+    eid: sgx_enclave_id_t,
+    sign_type: sgx_quote_sign_type_t,
+    addr: &str,
+) -> SgxResult<()> {
     info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
     let socket = TcpStream::connect(addr).unwrap();
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type) };
+    let result =
+        unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type) };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }

@@ -18,7 +18,7 @@
 extern crate chrono;
 use chrono::prelude::DateTime;
 use chrono::Utc;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use sgx_types::*;
 
@@ -34,7 +34,9 @@ use substrate_api_client::{utils::hexstr_to_u256, Api};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
-use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned, ShardIdentifier};
+use substratee_stf::{
+    ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
+};
 use substratee_worker_api::Api as WorkerApi;
 
 type AccountId = <AnySignature as Verify>::Signer;
@@ -78,11 +80,15 @@ fn main() {
     };
     info!("[<] Got first worker's metadata");
     info!("    worker signing key : {:?}", worker.pubkey.to_string());
-    info!("    worker url: {}",
+    info!(
+        "    worker url: {}",
         String::from_utf8_lossy(&worker.url[..]).to_string()
     );
     let datetime = DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_secs(worker.timestamp as u64));
-    info!("    RA timestamp: {}", datetime.format("%Y-%m-%d %H:%M:%S.%f"));
+    info!(
+        "    RA timestamp: {}",
+        datetime.format("%Y-%m-%d %H:%M:%S.%f")
+    );
     info!("    worker mrenclave: {}", worker.mr_enclave.to_base58());
 
     // default shard is identified by mrenclave
@@ -124,12 +130,7 @@ fn main() {
 
     println!("[+] pre-funding Alice's Incognito account (ROOT call)");
     let call = TrustedCall::balance_set_balance(alice_incognito_pair.public(), 1_000_000, 0);
-    let call_signed = call.sign(
-        &alice_incognito_pair,
-        0,
-        &worker.mr_enclave,
-        &shard,
-    ); // for demo we name the shard after our mrenclave
+    let call_signed = call.sign(&alice_incognito_pair, 0, &worker.mr_enclave, &shard); // for demo we name the shard after our mrenclave
 
     call_trusted_stf(&api, call_signed, shielding_pubkey, &shard);
 
@@ -150,12 +151,7 @@ fn main() {
         bob_incognito_pair.public(),
         100_000,
     );
-    let call_signed = call.sign(
-        &alice_incognito_pair,
-        0,
-        &worker.mr_enclave,
-        &shard,
-    ); // for demo we name the shard after our mrenclave
+    let call_signed = call.sign(&alice_incognito_pair, 0, &worker.mr_enclave, &shard); // for demo we name the shard after our mrenclave
     call_trusted_stf(&api, call_signed, shielding_pubkey, &shard);
 
     println!("[+] query Alice's Incognito account balance");
