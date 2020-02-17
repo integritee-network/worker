@@ -70,7 +70,7 @@ name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "hermit-abi 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hermit-abi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -362,7 +362,7 @@ dependencies = [
  "crossbeam-utils 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "memoffset 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "scopeguard 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "scopeguard 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -704,7 +704,7 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -742,7 +742,7 @@ dependencies = [
 [[package]]
 name = "host_calls"
 version = "4.0.0"
-source = "git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding#ef53cdc4e87e4473700f4ae2bc13281610c4a2df"
+source = "git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b#de4bbba26ce53117d957d976df49f0b0b7acca3b"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1031,7 +1031,7 @@ name = "lock_api"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "scopeguard 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "scopeguard 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1306,7 +1306,7 @@ name = "num_cpus"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "hermit-abi 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hermit-abi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2193,7 +2193,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "scopeguard"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -2314,12 +2314,12 @@ dependencies = [
 [[package]]
 name = "sgx_alloc"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 
 [[package]]
 name = "sgx_backtrace_sys"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "cc 1.0.50 (registry+https://github.com/rust-lang/crates.io-index)",
  "sgx_build_helper 0.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
@@ -2329,12 +2329,12 @@ dependencies = [
 [[package]]
 name = "sgx_build_helper"
 version = "0.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 
 [[package]]
 name = "sgx_crypto_helper"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2348,12 +2348,12 @@ dependencies = [
 [[package]]
 name = "sgx_demangle"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 
 [[package]]
 name = "sgx_libc"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
 ]
@@ -2361,7 +2361,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_tstd 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
 ]
@@ -2369,7 +2369,7 @@ dependencies = [
 [[package]]
 name = "sgx_tcrypto"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
 ]
@@ -2377,7 +2377,7 @@ dependencies = [
 [[package]]
 name = "sgx_tprotected_fs"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_trts 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
@@ -2386,7 +2386,7 @@ dependencies = [
 [[package]]
 name = "sgx_trts"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_libc 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
@@ -2395,7 +2395,7 @@ dependencies = [
 [[package]]
 name = "sgx_tse"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
 ]
@@ -2403,7 +2403,7 @@ dependencies = [
 [[package]]
 name = "sgx_tseal"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_tcrypto 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
  "sgx_trts 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
@@ -2414,7 +2414,7 @@ dependencies = [
 [[package]]
 name = "sgx_tstd"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_alloc 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
  "sgx_backtrace_sys 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
@@ -2430,12 +2430,12 @@ dependencies = [
 [[package]]
 name = "sgx_types"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 
 [[package]]
 name = "sgx_ucrypto"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2446,7 +2446,7 @@ dependencies = [
 [[package]]
 name = "sgx_unwind"
 version = "0.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "sgx_build_helper 0.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
 ]
@@ -2454,7 +2454,7 @@ dependencies = [
 [[package]]
 name = "sgx_urts"
 version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#93c76de88befbfc1f483ce8336c7ee1f0c7f7563"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
 dependencies = [
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
@@ -3007,15 +3007,15 @@ dependencies = [
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?tag=api-M1.5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
- "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding)",
+ "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b)",
 ]
 
 [[package]]
 name = "substratee-node-runtime"
 version = "4.0.1"
-source = "git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding#ef53cdc4e87e4473700f4ae2bc13281610c4a2df"
+source = "git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b#de4bbba26ce53117d957d976df49f0b0b7acca3b"
 dependencies = [
- "host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding)",
+ "host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b)",
  "palette-executive 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "palette-system 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
@@ -3088,7 +3088,7 @@ dependencies = [
  "substrate-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substratee-node-calls 4.0.0",
- "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding)",
+ "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b)",
  "substratee-stf 0.1.0",
  "substratee_worker_api 4.0.0",
 ]
@@ -3128,7 +3128,7 @@ dependencies = [
  "substrate-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substratee-node-calls 4.0.0",
- "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding)",
+ "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b)",
  "substratee-stf 0.1.0",
  "substratee_worker_api 4.0.0",
  "ws 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3906,12 +3906,12 @@ dependencies = [
 "checksum hashbrown 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "8e6073d0ca812575946eb5f35ff68dbe519907b25c42530389ff946dc84c6ead"
 "checksum heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1679e6ea370dee694f91f1dc469bf94cf8f52051d147aec3e1f9497c6fc22461"
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
-"checksum hermit-abi 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "eff2656d88f158ce120947499e971d743c05dbcbed62e5bd2f38f1698bbc3772"
+"checksum hermit-abi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "e2c55f143919fbc0bc77e427fe2d74cf23786d7c1875666f2fde3ac3c659bb67"
 "checksum hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
 "checksum hex 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "76cdda6bf525062a0c9e8f14ee2b37935c86b8efb6c8b69b3c83dfb518a914af"
 "checksum hmac 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5dcb5e64cda4c23119ab41ba960d1e170a774c8e4b9d9e6a9bc18aabf5e59695"
 "checksum hmac-drbg 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c6e570451493f10f6581b48cdd530413b63ea9e780f544bfd3bdcaa0d89d1a7b"
-"checksum host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding)" = "<none>"
+"checksum host_calls 4.0.0 (git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b)" = "<none>"
 "checksum http 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)" = "d6ccf5ede3a895d8856620237b2f02972c1bbc78d2965ad7fe8838d4a0ed41f0"
 "checksum http-body 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6741c859c1b2463a423a1dbce98d418e6c3c3fc720fb0d45528657320920292d"
 "checksum httparse 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
@@ -4058,7 +4058,7 @@ dependencies = [
 "checksum schannel 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "507a9e6e8ffe0a4e0ebb9a10293e62fdf7657c06f1b8bb07a8fcf697d2abf295"
 "checksum schnorrkel 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)" = "eacd8381b3c37840c9c9f40472af529e49975bdcbc24f83c31059fd6539023d3"
 "checksum scopeguard 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "94258f53601af11e6a49f722422f6e3425c52b06245a5cf9bc09908b174f5e27"
-"checksum scopeguard 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b42e15e59b18a828bbf5c58ea01debb36b9b096346de35d941dcb89009f24a0d"
+"checksum scopeguard 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 "checksum sct 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e3042af939fca8c3453b7af0f1c66e533a15a86169e39de2657310ade8f98d3c"
 "checksum security-framework 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8ef2429d7cefe5fd28bd1d2ed41c944547d4ff84776f5935b456da44593a16df"
 "checksum security-framework-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "e31493fc37615debb8c5090a7aeb4a9730bc61e77ab10b9af59f1a202284f895"
@@ -4132,7 +4132,7 @@ dependencies = [
 "checksum substrate-trie 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
 "checksum substrate-wasm-builder-runner 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e30c70de7e7d5fd404fe26db1e7a4d6b553e2760b1ac490f249c04a960c483b8"
 "checksum substrate-wasm-interface 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
-"checksum substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?branch=brenzi-sharding)" = "<none>"
+"checksum substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=de4bbba26ce53117d957d976df49f0b0b7acca3b)" = "<none>"
 "checksum subtle 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 "checksum subtle 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7c65d530b10ccaeac294f349038a597e435b18fb456aadd0840a623f83b9e941"
 "checksum syn 0.15.44 (registry+https://github.com/rust-lang/crates.io-index)" = "9ca4b3b69a77cbe1ffc9e198781b7acb0c7365a883670e8f1c1bc66fba79a5c5"
