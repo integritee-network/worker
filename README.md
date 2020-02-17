@@ -19,8 +19,11 @@ The enclave will be signed with the development key found under `enclave/Enclave
 Copy your SPID and key to the following files (use Linux line endings):
 * `bin/spid_production.txt`: SPID of your subscription
 * `bin/key_production.txt`: Key of your subscription (primary or secondary works)
+These files are used to access the Intel Remote Attestation Service.
 
-The enclave will be signed with the your private key that waa also registered and whitelisted at Intel's. Make sure that the key is exported as an environment variable called `SGX_COMMERCIAL_KEY`. The enclave uses the configuration found under `enclave/Enclave.config.production.xml`.
+The enclave will be signed with the private key that was also registered and whitelisted at Intel's (in the process of obtaining a commercial license). Make sure that the key is exported as an environment variable called `SGX_COMMERCIAL_KEY`.
+
+The enclave in production mode uses the configuration found under `enclave/Enclave.config.production.xml`.
 
 ## Private-tx demo
 To run a demo for private tokens do the following:
