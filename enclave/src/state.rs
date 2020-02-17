@@ -18,13 +18,61 @@
 use std::vec::Vec;
 
 use sgx_types::*;
-
+use sgx_tcrypto::rsgx_sha256_slice;
 use log::*;
 
 use crate::aes;
 use crate::io;
+use crate::hex;
+use substratee_stf::{Stf, State as StfState, ShardIdentifier};
+use sgx_externalities::SgxExternalitiesTrait;
+use primitives::H256;
+use codec::{Decode, Encode};
+use base58::{FromBase58, ToBase58};
+use crate::constants::{
+	ENCRYPTED_STATE_FILE,
+	SHARDS_PATH,
+};
 
-pub fn read(path: &str) -> SgxResult<Vec<u8>> {
+pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
+	// load last state
+	let state_path = format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
+	debug!("loading state from: {}", state_path);
+	let state_vec = read(&state_path)?;
+
+	// state is now decrypted!
+	let state : StfState = match state_vec.len() {
+		0 => { 
+			debug!("state is empty. will initialize it.");
+			Stf::init_state() 
+		},
+		n => {
+			debug!("State loaded with size {}B, deserializing...", n);
+			StfState::decode(state_vec)
+		}
+	};
+	debug!("state decoded successfully");
+	Ok(state)
+}
+
+pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
+	let state_path = format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
+	debug!("writing state to: {}", state_path);
+
+	let cyphertext = encrypt(state.encode())?;
+
+	let state_hash = match rsgx_sha256_slice(&cyphertext) {
+		Ok(h) => h,
+		Err(status) => return Err(status),
+	};
+	
+	debug!("new state hash=0x{}", hex::encode_hex(&state_hash));
+
+	io::write(&cyphertext, &state_path)?;
+	Ok(state_hash.into())
+}
+
+fn read(path: &str) -> SgxResult<Vec<u8>> {
 	let mut bytes = match io::read(path) {
 		Ok(vec) => match vec.len() {
 			0 => return Ok(vec),
@@ -34,13 +82,13 @@ pub fn read(path: &str) -> SgxResult<Vec<u8>> {
 	};
 
 	aes::de_or_encrypt(&mut bytes)?;
-	debug!("    [Enclave] buffer decrypted = {:?}", bytes);
+	debug!("buffer decrypted = {:?}", bytes);
 
 	Ok(bytes)
 }
 
-pub fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
-	debug!("    [Enclave] Plaintext data to be written: {:?}", bytes);
+fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
+	debug!("plaintext data to be written: {:?}", bytes);
 
 	aes::de_or_encrypt(bytes)?;
 
@@ -48,7 +96,7 @@ pub fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-pub fn encrypt(mut state: Vec<u8>) -> Result<Vec<u8>, sgx_status_t> {
+fn encrypt(mut state: Vec<u8>) -> SgxResult<Vec<u8>> {
 	aes::de_or_encrypt(&mut state)?;
 	Ok(state)
 }

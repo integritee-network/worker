@@ -9,10 +9,11 @@ log = "0.4"
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.6", default-features = false, features = ["codec"] }
 regex = "1"
+base58 			        = "0.1"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-rev = "c2309a2f6b140ad914ea809a0348c9432c6c7d30"
+rev = "de4bbba26ce53117d957d976df49f0b0b7acca3b"
 package = "substratee-node-runtime"
 
 [dependencies.substrate-api-client]

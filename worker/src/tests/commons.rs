@@ -22,11 +22,15 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
+use sgx_urts::SgxEnclave;
+
 use std::str;
 use substratee_stf;
 
 use crate::enclave::api::*;
-use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned};
+use substratee_stf::{
+    ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -36,21 +40,13 @@ pub struct Message {
 }
 
 pub fn encrypted_test_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
-    let pubkey_size = 8192;
-    let mut pubkey = vec![0u8; pubkey_size as usize];
-
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-    let result =
-        unsafe { get_rsa_encryption_pubkey(eid, &mut retval, pubkey.as_mut_ptr(), pubkey_size) };
-
-    evaluate_result(retval);
-    evaluate_result(result);
-    info!("got rsa shielding key form enclave");
+    info!("*** Get the public key from the TEE\n");
+    let enclave = enclave_init().unwrap();
+    let pubkey = enclave_shielding_key(eid).unwrap();
     let rsa_pubkey: Rsa3072PubKey =
         serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
     info!("deserialized rsa key");
     let payload = test_trusted_call_signed().encode();
-
     encrypt_payload(rsa_pubkey, payload)
 }
 
@@ -65,7 +61,10 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
 pub fn test_trusted_call_signed() -> TrustedCallSigned {
     let alice = AccountKeyring::Alice;
     let call = TrustedCall::balance_set_balance(alice.public(), 33, 44);
-    TrustedCallSigned::new(call.clone(), call.sign(&alice.pair()))
+    let nonce = 21;
+    let mrenclave = [0u8; 32];
+    let shard = ShardIdentifier::default();
+    call.sign(&alice.pair(), nonce, &mrenclave, &shard)
 }
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {

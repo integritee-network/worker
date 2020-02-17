@@ -25,28 +25,19 @@ use substratee_node_calls::{get_worker_amount, get_worker_info, AccountId, Encla
 
 use crate::constants::*;
 
-pub fn check_files() -> u8 {
+pub fn check_files() {
     debug!("*** Check files");
-
-    let mut missing_files = 0;
-    missing_files += file_missing(ENCLAVE_FILE);
-    missing_files += file_missing(RSA_PUB_KEY);
-    missing_files += file_missing(ECC_PUB_KEY);
-
-    // remote attestation files
-    missing_files += file_missing(RA_SPID);
-    missing_files += file_missing(RA_API_KEY);
-
-    missing_files
-}
-
-fn file_missing(path: &str) -> u8 {
-    if Path::new(path).exists() {
-        debug!("File '{}' found", path);
-        0
-    } else {
-        error!("File '{}' not found", path);
-        1
+    let files = vec![
+        ENCLAVE_FILE,
+        SHIELDING_KEY_FILE,
+        SIGNING_KEY_FILE,
+        RA_SPID_FILE,
+        RA_API_KEY_FILE,
+    ];
+    for f in files.iter() {
+        if !Path::new(f).exists() {
+            panic!("file doesn't exist: {}", f);
+        }
     }
 }
 

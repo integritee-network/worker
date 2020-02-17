@@ -1,6 +1,10 @@
+use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
 use log::*;
-pub use my_node_runtime::{substratee_registry::Enclave, AccountId};
+pub use my_node_runtime::{
+    substratee_registry::{Enclave, ShardIdentifier},
+    AccountId,
+};
 use primitives::{crypto::Pair, ed25519};
 use regex::Regex;
 use runtime_primitives::MultiSignature;
@@ -29,6 +33,28 @@ where
     enc
 }
 
+pub fn get_worker_for_shard<P: Pair>(
+    api: &substrate_api_client::Api<P>,
+    shard: &ShardIdentifier,
+) -> Option<u64>
+where
+    MultiSignature: From<P::Signature>,
+{
+    let result_str = api
+        .get_storage("substraTEERegistry", "WorkerForShard", Some(shard.encode()))
+        .unwrap();
+    match result_str.as_str() {
+        "null" => {
+            info!(
+                "no worker has ever published a state update for shard {}",
+                shard.encode().to_base58()
+            );
+            None
+        }
+        _ => Some(hexstr_to_u64(result_str).unwrap()),
+    }
+}
+
 pub fn get_worker_amount<P: Pair>(api: &substrate_api_client::Api<P>) -> u64
 where
     MultiSignature: From<P::Signature>,
@@ -36,7 +62,7 @@ where
     let result_str = api
         .get_storage("substraTEERegistry", "EnclaveCount", None)
         .unwrap();
-    info!("get_worker_amount() ret {:?}", result_str);
+    debug!("get_worker_amount() ret {:?}", result_str);
     let amount = match result_str.as_str() {
         "null" => 0u64,
         _ => hexstr_to_u64(result_str).unwrap(),

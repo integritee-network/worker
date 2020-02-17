@@ -20,13 +20,13 @@ use std::thread;
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use log::*;
 use ws::connect;
 
 use client::WsClient;
 use requests::*;
-use substratee_stf::TrustedGetterSigned;
+use substratee_stf::{ShardIdentifier, TrustedGetterSigned};
 
 pub mod client;
 pub mod requests;
@@ -51,15 +51,31 @@ impl Api {
         let keystr = Self::get(&self, MSG_GET_PUB_KEY_WORKER)?;
 
         let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&keystr).unwrap();
-        info!("[+] Got RSA public key of TEE = {:?}", rsa_pubkey);
-
+        info!("[+] Got RSA public key of enclave");
+        debug!("  enclave RSA pubkey = {:?}", rsa_pubkey);
         Ok(rsa_pubkey)
     }
 
-    pub fn get_stf_state(&self, getter: TrustedGetterSigned) -> Result<String, ()> {
+    pub fn get_stf_state(
+        &self,
+        getter: TrustedGetterSigned,
+        shard: &ShardIdentifier,
+    ) -> Result<Vec<u8>, ()> {
         let getter_str = hex::encode(getter.encode());
-        let request = format!("{}::{}", MSG_GET_STF_STATE, getter_str);
-        Self::get(&self, &request)
+        let shard_str = hex::encode(shard.encode());
+        let request = format!("{}::{}::{}", MSG_GET_STF_STATE, getter_str, shard_str);
+        match Self::get(&self, &request) {
+            Ok(res) => {
+                debug!("got a response from worker: {:?}", res);
+                let value_slice = hex::decode(&res).unwrap();
+                let value: Option<Vec<u8>> = Decode::decode(&mut &value_slice[..]).unwrap();
+                match value {
+                    Some(val) => Ok(val),
+                    None => Err(()),
+                }
+            }
+            Err(e) => Err(e),
+        }
     }
 
     fn get(&self, request: &str) -> Result<String, ()> {

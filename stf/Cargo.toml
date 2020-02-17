@@ -74,3 +74,9 @@ features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 optional = true
 package = "sgx-runtime"
 path = "../substrate-sgx/runtime"
+
+
+[dev-dependencies.keyring]
+git = "https://github.com/paritytech/substrate"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "substrate-keyring"

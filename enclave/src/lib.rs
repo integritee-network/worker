@@ -33,19 +33,22 @@ use serde_json;
 #[macro_use]
 extern crate sgx_tstd as std;
 
-use sgx_tcrypto::rsgx_sha256_slice;
-use sgx_tunittest::*;
-use sgx_types::{sgx_status_t, size_t};
+use base58::{FromBase58, ToBase58};
 
-use substratee_stf::{Stf, State, TrustedGetterSigned, TrustedCallSigned};
+
+use sgx_tunittest::*;
+use sgx_types::{sgx_status_t, size_t, sgx_target_info_t, sgx_epid_group_id_t, SgxResult };
+
+use substratee_stf::{Stf, State as StfState, TrustedGetterSigned, TrustedCallSigned, ShardIdentifier};
 use sgx_externalities::SgxExternalitiesTrait;
 use substrate_api_client::compose_extrinsic_offline;
 
 use codec::{Decode, Encode};
-use primitives::{crypto::Pair, hashing::{blake2_256}};
+use primitives::{crypto::Pair, hashing::{blake2_256}, H256};
 
 use constants::{
 	ENCRYPTED_STATE_FILE,
+	SHARDS_PATH,
 	SUBSRATEE_REGISTRY_MODULE,
 	CALL_CONFIRMED,
 	RUNTIME_SPEC_VERSION,
@@ -128,7 +131,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
-	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
+	info!("Restored ECC pubkey: {:?}", signer.public());
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(&signer.public());
@@ -138,69 +141,57 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_stf(
-	request_encrypted: *mut u8,
-	request_encrypted_size: u32,
+	cyphertext: *const u8,
+	cyphertext_size: u32,
+	shard: *const u8,
+	shard_size: u32,
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
-	nonce: *const u8,
-	nonce_size: u32,
+	nonce: *const u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32
 ) -> sgx_status_t {
 
-	let request_encrypted_slice = slice::from_raw_parts(request_encrypted, request_encrypted_size as usize);
-	let genesis_hash_slice      = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let mut nonce_slice  = slice::from_raw_parts(nonce, nonce_size as usize);
+	let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
+	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let genesis_hash = hash_from_slice(slice::from_raw_parts(genesis_hash, genesis_hash_size as usize));
 	let extrinsic_slice  = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	debug!("[Enclave] Read RSA keypair");
+	debug!("load shielding keypair");
 	let rsa_keypair = match rsa3072::unseal_pair() {
 		Ok(pair) => pair,
 		Err(status) => return status,
 	};
 
-	debug!("[Enclave] Read RSA keypair done");
-
 	// decrypt the payload
-	debug!("    [Enclave] Decode the payload");
-	let request_vec = rsa3072::decrypt(&request_encrypted_slice, &rsa_keypair);
+	debug!("decrypt the call");
+	let request_vec = rsa3072::decrypt(&cyphertext_slice, &rsa_keypair);
 	let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
-	if let false = stf_call_signed.verify_signature() {
-		error!("    [Enclave] TrustedCallSigned: bad signature");
-		return sgx_status_t::SGX_ERROR_UNEXPECTED;
-	}
-
-	// load last state
-	let state_enc = match state::read(ENCRYPTED_STATE_FILE) {
-		Ok(state) => state,
+	debug!("query mrenclave of self");
+	let mrenclave = match attestation::get_mrenclave_of_self() {
+		Ok(m) => m,
 		Err(status) => return status,
 	};
 
-	let mut state : State = match state_enc.len() {
-		0 => Stf::init_state(),
-		_ => {
-			debug!("    [Enclave] State read, deserializing...");
-			State::decode(state_enc)
-		}
-	};
-
-	debug!("    [Enclave] executing STF...");
-	Stf::execute(&mut state, stf_call_signed.call);
-
-	// write the counter state and return
-	let enc_state = match state::encrypt(state.encode()) {
-		Ok(s) => s,
-		Err(sgx_status) => return sgx_status,
-	};
-
-
-	let state_hash = rsgx_sha256_slice(&enc_state).unwrap();
-	debug!("    [Enclave] Updated encrypted state. hash=0x{}", hex::encode_hex(&state_hash));
-
-	if let Err(status) = io::write(&enc_state, ENCRYPTED_STATE_FILE) {
-		return status
+	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
+	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
+		error!("TrustedCallSigned: bad signature");
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
+
+	let mut state = match state::load(&shard) {
+		Ok(s) => s,
+		Err(status) => return status,
+	};	
+
+	debug!("execute STF");
+	Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
+
+	let state_hash = match state::write(state, &shard) {
+		Ok(h) => h,
+		Err(status) => return status,
+	};
 
 	// get information for composing the extrinsic
 	let signer = match ed25519::unseal_pair() {
@@ -209,18 +200,17 @@ pub unsafe extern "C" fn execute_stf(
 	};
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
-	let nonce = u32::decode(&mut nonce_slice).unwrap();
-	debug!("using nonce for confirmation extrinsic: {:?}", nonce);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
+	
+	debug!("confirmation extrinsic nonce: {:?}", nonce);
 	let call_hash = blake2_256(&request_vec);
-	debug!("[Enclave]: Call hash 0x{}", hex::encode_hex(&call_hash));
+	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
 	let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
 
 	let xt = compose_extrinsic_offline!(
         signer,
-	    (xt_call, call_hash.to_vec(), state_hash.to_vec()),
-	    nonce,
+	    (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
+	    *nonce,
 	    genesis_hash,
 	    RUNTIME_SPEC_VERSION
     );
@@ -236,41 +226,32 @@ pub unsafe extern "C" fn execute_stf(
 pub unsafe extern "C" fn get_state(
 	trusted_op: *const u8,
 	trusted_op_size: u32,
+	shard: *const u8,
+	shard_size: u32,	
 	value: *mut u8,
 	value_size: u32
-	) -> sgx_status_t {
-
+) -> sgx_status_t {
+	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 	let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
-	let value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
-
-	// load last state
-	let state_vec = match state::read(ENCRYPTED_STATE_FILE) {
-		Ok(state) => state,
-		Err(status) => return status,
-	};
-
-	let mut state : State = match state_vec.len() {
-		0 => Stf::init_state(),
-		_ => {
-			debug!("    [Enclave] State read, deserializing...");
-			State::decode(state_vec)
-		}
-	};
+	let mut value_slice  = slice::from_raw_parts_mut(value, value_size as usize);
 	let tusted_getter_signed = TrustedGetterSigned::decode(&mut trusted_op_slice).unwrap();
 
+	debug!("verifying signature of TrustedCallSigned");
 	if let false = tusted_getter_signed.verify_signature() {
-		error!("    [Enclave] Stf::get_state bad signature");
+		error!("bad signature");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
-	let value_vec = match Stf::get_state(&mut state, tusted_getter_signed.getter) {
-		Some(val) => val,
-		None => vec!(0),
-	};
+	let mut state = match state::load(&shard) {
+		Ok(s) => s,
+		Err(status) => return status,
+	};	
 
-//	//FIXME: now implicitly assuming we pass unsigned integer vecs, not strings terminated by 0x20
-//	//FIXME: we should really pass an Option<Vec<u8>>
-	write_slice_and_whitespace_pad(value_slice, value_vec);
+	debug!("calling ito STF to get state");
+	let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
+
+	debug!("returning getter result");
+	write_slice_and_whitespace_pad(value_slice, value_opt.encode());
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -327,4 +308,11 @@ fn test_ocall_read_write_ipfs() {
 	};
 
 	assert_eq!(enc_state, ret_state);
+}
+
+extern "C" {
+	pub fn ocall_sgx_init_quote (
+		ret_val : *mut sgx_status_t,
+		ret_ti  : *mut sgx_target_info_t,
+		ret_gid : *mut sgx_epid_group_id_t) -> sgx_status_t;
 }

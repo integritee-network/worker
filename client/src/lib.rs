@@ -23,7 +23,10 @@ use blake2_rfc::blake2s::blake2s;
 use codec::{Decode, Encode};
 use log::info;
 use log::*;
-use my_node_runtime::{Event, Hash};
+use my_node_runtime::{
+    substratee_registry::{Request, ShardIdentifier},
+    Event, Hash,
+};
 use primitive_types::U256;
 use primitives::{
     crypto::{AccountId32, Pair, Ss58Codec},
@@ -42,7 +45,6 @@ use substratee_worker_api::Api as WorkerApi;
 
 // FIXME: most of these functions are redundant with substrate-api-client
 // but first resolve this: https://github.com/scs/substrate-api-client/issues/27
-pub static ECC_PUB_KEY: &str = "./bin/ecc_pubkey.txt";
 
 pub fn pair_from_suri(suri: &str, password: Option<&str>) -> ed25519::Pair {
     ed25519::Pair::from_string(suri, password).expect("Invalid phrase")
@@ -170,8 +172,13 @@ where
                         payload,
                     ) = &pe
                     {
-                        println!("[+] Received confirm call from {}", sender);
+                        info!("[+] Received confirm call from {}", sender);
                         return payload.to_vec().clone();
+                    } else {
+                        debug!(
+                            "received unknown event from SubstraTeeRegistry: {:?}",
+                            evr.event
+                        )
                     }
                 }
             }
@@ -200,8 +207,12 @@ pub fn get_wasm_hash(path: &str) -> Vec<String> {
         .collect()
 }
 
-pub fn call_trusted_stf<P: Pair>(api: &Api<P>, call: TrustedCallSigned, rsa_pubkey: Rsa3072PubKey)
-where
+pub fn call_trusted_stf<P: Pair>(
+    api: &Api<P>,
+    call: TrustedCallSigned,
+    rsa_pubkey: Rsa3072PubKey,
+    shard: &ShardIdentifier,
+) where
     MultiSignature: From<P::Signature>,
 {
     let call_encoded = call.encode();
@@ -209,13 +220,12 @@ where
     rsa_pubkey
         .encrypt_buffer(&call_encoded, &mut call_encrypted)
         .unwrap();
+    let request = Request {
+        shard: shard.clone(),
+        cyphertext: call_encrypted.clone(),
+    };
 
-    let xt = compose_extrinsic!(
-        api.clone(),
-        "SubstraTEERegistry",
-        "call_worker",
-        call_encrypted.clone()
-    );
+    let xt = compose_extrinsic!(api.clone(), "SubstraTEERegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized
     let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
@@ -230,10 +240,31 @@ where
     debug!("confirmation stf call Hash:   {:?}", act_hash);
 }
 
-pub fn get_trusted_stf_state(workerapi: &WorkerApi, getter: TrustedGetterSigned) {
-    let ret = workerapi.get_stf_state(getter);
-    println!("    got getter response from worker: {:?}", ret);
-    //TODO: decrypt response and verify signature
+pub fn get_trusted_stf_state(
+    workerapi: &WorkerApi,
+    getter: TrustedGetterSigned,
+    shard: &ShardIdentifier,
+) {
+    //TODO: #91
+    //  encrypt getter
+    //  decrypt response and verify signature
+    debug!("calling workerapi to get value");
+    let ret = workerapi
+        .get_stf_state(getter, shard)
+        .expect("getting value failed");
+    let ret_cropped = &ret[..9 * 2];
+    debug!(
+        "got getter response from worker: {:?}\ncropping to {:?}",
+        ret, ret_cropped
+    );
+    let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
+    match valopt {
+        Some(v) => {
+            let value = U256::from_little_endian(&v);
+            println!("    value = {}", value);
+        }
+        _ => error!("error getting value"),
+    };
 }
 
 // TODO

@@ -44,8 +44,9 @@ impl Stf {
         });
         ext
     }
-    pub fn execute(ext: &mut State, call: TrustedCall) {
+    pub fn execute(ext: &mut State, call: TrustedCall, nonce: u32) {
         ext.execute_with(|| {
+            // TODO: verify and store nonce first!
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
                     sgx_runtime::balancesCall::<Runtime>::set_balance(
@@ -69,7 +70,6 @@ impl Stf {
     }
 
     pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
-        //FIXME: only account owner may get its own data. introduce signature verification!
         ext.execute_with(|| {
             let result =
                 match getter {

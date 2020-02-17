@@ -25,6 +25,9 @@ args:
         long: request
         help: Send custom request to the substraTEE-worker
         takes_value: true
+    - shard:
+        short: s
+        help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
 
 subcommands:
     - getcounter:

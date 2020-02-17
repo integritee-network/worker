@@ -15,18 +15,21 @@
 
 */
 
+use crate::constants::EXTRINSIC_MAX_SIZE;
+use crate::enclave::api::*;
+use crate::tests::commons::*;
 use codec::Encode;
 use keyring::AccountKeyring;
 use primitive_types::U256;
+use primitives::hash::H256;
 use sgx_types::*;
+use sgx_urts::SgxEnclave;
 use substratee_stf;
-
-use crate::enclave::api::*;
-use crate::tests::commons::*;
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey
 
+/* who needs get_state anyway?
 pub fn get_state_works(eid: sgx_enclave_id_t) {
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -50,31 +53,25 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
     evaluate_result(retval);
     evaluate_result(result);
 }
+*/
 
 pub fn execute_stf_works(eid: sgx_enclave_id_t) {
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
-    let mut request_encrypted = encrypted_test_msg(eid);
+    let mut cyphertext = encrypted_test_msg(eid.clone());
 
-    let unchecked_extrinsic_size = 500;
+    let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
-    let nonce_bytes = U256::encode(&U256::from("1"));
+    let nonce = 0u32;
     let genesis_hash: [u8; 32] = [0; 32];
-    //TODO: new payload
-    let result = unsafe {
-        execute_stf(
-            eid,
-            &mut retval,
-            request_encrypted.as_mut_ptr(),
-            request_encrypted.len() as u32,
-            genesis_hash.as_ptr(),
-            genesis_hash.len() as u32,
-            nonce_bytes.as_ptr(),
-            nonce_bytes.len() as u32,
-            unchecked_extrinsic.as_mut_ptr(),
-            unchecked_extrinsic_size as u32,
-        )
-    };
+    let shard = H256::default();
 
-    evaluate_result(result);
+    let uxt = enclave_execute_stf(
+        eid,
+        cyphertext,
+        shard.encode(),
+        genesis_hash.encode(),
+        nonce,
+    )
+    .unwrap();
 }

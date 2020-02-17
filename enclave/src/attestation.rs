@@ -49,7 +49,7 @@ use primitives::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::{cert, hex};
-use crate::constants::{RA_SPID, RA_API_KEY, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, 
+use crate::constants::{RA_SPID_FILE, RA_API_KEY_FILE, SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE, 
 	RUNTIME_SPEC_VERSION, RA_DUMP_CERT_DER_FILE, RA_DUMP_SIGNER_ATTN_FILE};
 use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected};
 use crate::ed25519;
@@ -88,6 +88,62 @@ extern "C" {
 		maxlen             : u32,
 		p_quote_len        : *mut u32) -> sgx_status_t;
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
+
+	let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
+	match get_mrenclave_of_self() {
+		Ok(m) => {
+			mrenclave_slice.copy_from_slice(&m.m[..]);
+			sgx_status_t::SGX_SUCCESS
+		}
+		Err(e) => e
+	}
+}
+
+pub fn get_mrenclave_of_self() -> SgxResult<sgx_measurement_t> {
+	Ok(get_report_of_self()?.mr_enclave)
+}
+
+fn get_report_of_self() -> SgxResult<sgx_report_body_t> {
+	// (1) get ti + eg
+	let mut ti : sgx_target_info_t = sgx_target_info_t::default();
+	let mut eg : sgx_epid_group_id_t = sgx_epid_group_id_t::default();
+	let mut rt : sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+	let res = unsafe {
+		ocall_sgx_init_quote(&mut rt as *mut sgx_status_t,
+							 &mut ti as *mut sgx_target_info_t,
+							 &mut eg as *mut sgx_epid_group_id_t)
+	};
+
+	debug!("    [Enclave] EPID group id = {:?}", eg);
+
+	if res != sgx_status_t::SGX_SUCCESS {
+		return Err(res);
+	}
+
+	if rt != sgx_status_t::SGX_SUCCESS {
+		return Err(rt);
+	}
+
+	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
+
+	let rep = match rsgx_create_report(&ti, &report_data) {
+		Ok(r) =>{
+			debug!("    [Enclave] Report creation successful. mr_signer.m = {:?}", r.body.mr_signer.m);
+			r
+		},
+		Err(e) =>{
+			error!("    [Enclave] Report creation failed. {:?}", e);
+			return Err(e);
+		},
+	};
+	Ok(rep.body)
+}
+
+
 
 fn parse_response_attn_report(resp : &[u8]) -> SgxResult<(String, String, String)> {
 	debug!("    [Enclave] Entering parse_response_attn_report");
@@ -414,7 +470,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 	let p_report = &rep as * const sgx_report_t;
 	let quote_type = sign_type;
 
-	let spid : sgx_spid_t = load_spid(RA_SPID)?;
+	let spid : sgx_spid_t = load_spid(RA_SPID_FILE)?;
 
 	let p_spid = &spid as *const sgx_spid_t;
 	let p_nonce = &quote_nonce as * const sgx_quote_nonce_t;
@@ -515,7 +571,7 @@ fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
-	io::read_to_string(RA_API_KEY)
+	io::read_to_string(RA_API_KEY_FILE)
 		.map(|key| key.trim_end().to_owned())
 }
 
@@ -569,8 +625,7 @@ pub fn create_ra_report_and_signature(sign_type: sgx_quote_sign_type_t) ->  SgxR
 pub unsafe extern "C" fn perform_ra(
 							genesis_hash: * const u8,
 							genesis_hash_size: u32,
-							nonce: * const u8,
-							nonce_size: u32,
+							nonce: * const u32,
 							url: * const u8,
 							url_size: u32,
 							unchecked_extrinsic: * mut u8,
@@ -587,7 +642,7 @@ pub unsafe extern "C" fn perform_ra(
 
 	info!("    [Enclave] Compose extrinsic");
 	let genesis_hash_slice  = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
+	//let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
 	let url_slice			= slice::from_raw_parts(url, url_size as usize);
 	let extrinsic_slice     = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 	let signer = match ed25519::unseal_pair() {
@@ -595,21 +650,17 @@ pub unsafe extern "C" fn perform_ra(
 		Err(status) => return status,
 	};
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
-	info!("Restored ECC pubkey: {:?}", signer.public());
 
-	let nonce = match  u32::decode(&mut nonce_slice) {
-		Ok(n) => n,
-		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-	};
-
+	debug!("decoded nonce: {}", *nonce);
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
-
+	debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
+	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
 	let call = [SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
 
 	let xt = compose_extrinsic_offline!(
         signer,
 	    (call, cert_der.to_vec(), signer_attn, url_slice.to_vec()),
-	    nonce,
+	    *nonce,
 	    genesis_hash,
 	    RUNTIME_SPEC_VERSION
     );
