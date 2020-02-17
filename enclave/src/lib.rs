@@ -35,7 +35,7 @@ extern crate sgx_tstd as std;
 
 use base58::{FromBase58, ToBase58};
 
-use sgx_tcrypto::rsgx_sha256_slice;
+
 use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t, sgx_target_info_t, sgx_epid_group_id_t, SgxResult };
 
@@ -139,42 +139,6 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: * mut u8, pubkey_size: u
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn load_state(shard: &ShardIdentifier) -> SgxResult<StfState> {
-	// load last state
-	let state_path = format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
-	debug!("loading state from: {}", state_path);
-	let state_vec = state::read(&state_path)?;
-
-	// state is now decrypted!
-	let state : StfState = match state_vec.len() {
-		0 => { 
-			debug!("state is empty. will initialize it.");
-			Stf::init_state() 
-		},
-		n => {
-			debug!("State loaded with size {}B, deserializing...", n);
-			StfState::decode(state_vec)
-		}
-	};
-	debug!("state decoded successfully");
-	Ok(state)
-}
-
-fn write_state(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
-	let state_path = format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
-	debug!("writing state to: {}", state_path);
-
-	let cyphertext = state::encrypt(state.encode())?;
-
-	let state_hash = rsgx_sha256_slice(&cyphertext).unwrap();
-	debug!("new state hash=0x{}", hex::encode_hex(&state_hash));
-
-	io::write(&cyphertext, &state_path)?;
-	Ok(state_hash.into())
-}
-
-
-
 #[no_mangle]
 pub unsafe extern "C" fn execute_stf(
 	cyphertext: *const u8,
@@ -205,14 +169,18 @@ pub unsafe extern "C" fn execute_stf(
 	let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
 	debug!("query mrenclave of self");
-	let mrenclave = attestation::get_mrenclave_of_self().unwrap();
+	let mrenclave = match attestation::get_mrenclave_of_self() {
+		Ok(m) => m,
+		Err(status) => return status,
+	};
+
 	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
 		error!("TrustedCallSigned: bad signature");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
-	let mut state = match load_state(&shard) {
+	let mut state = match state::load(&shard) {
 		Ok(s) => s,
 		Err(status) => return status,
 	};	
@@ -220,7 +188,7 @@ pub unsafe extern "C" fn execute_stf(
 	debug!("execute STF");
 	Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
 
-	let state_hash = match write_state(state, &shard) {
+	let state_hash = match state::write(state, &shard) {
 		Ok(h) => h,
 		Err(status) => return status,
 	};
@@ -274,7 +242,7 @@ pub unsafe extern "C" fn get_state(
 		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
-	let mut state = match load_state(&shard) {
+	let mut state = match state::load(&shard) {
 		Ok(s) => s,
 		Err(status) => return status,
 	};	
