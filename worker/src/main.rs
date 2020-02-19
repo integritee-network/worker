@@ -24,7 +24,6 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
 
 use base58::{FromBase58, ToBase58};
 use clap::{load_yaml, App};
@@ -53,18 +52,15 @@ use enclave::api::{
     enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_perform_ra, enclave_shielding_key,
     enclave_signing_key, mrenclave,
 };
-use enclave::init::init_enclave;
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use substratee_node_calls::{get_worker_for_shard, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
-use utils::{check_files, get_first_worker_that_is_not_equal_to_self};
 use ws_server::start_ws_server;
 
 mod constants;
 mod enclave;
 mod ipfs;
 mod tests;
-mod utils;
 mod ws_server;
 
 fn main() {
@@ -174,7 +170,7 @@ fn main() {
                     match hex::decode(shard) {
                         Err(_) => panic!("shard must be hex encoded"),
                         Ok(s) => {
-                            init_shard(&ShardIdentifier::from_slice(shard.as_bytes()));
+                            init_shard(&ShardIdentifier::from_slice(&s[..]));
                         }
                     }
                 }
@@ -203,7 +199,8 @@ fn main() {
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", mu_ra_port),
-            );
+            )
+            .unwrap();
             println!("[+] Done!");
             enclave.destroy();
         } else {
@@ -341,7 +338,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
                     eid,
                     sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                     &mura_url,
-                );
+                )
+                .unwrap();
                 debug!("key provisioning successfully performed");
             }
         }
@@ -500,14 +498,14 @@ fn init_shard(shard: &ShardIdentifier) {
     if Path::new(&path).exists() {
         println!("shard state exists. Overwrite? [y/N]");
         let buffer = &mut String::new();
-        stdin().read_line(buffer);
+        stdin().read_line(buffer).unwrap();
         match buffer.trim() {
             "y" | "Y" => (),
             _ => return,
         }
     }
     let mut file = fs::File::create(path).unwrap();
-    file.write_all(b"");
+    file.write_all(b"").unwrap();
 }
 
 fn ensure_shard_initialized(shard: &ShardIdentifier) {
@@ -523,4 +521,20 @@ fn ensure_shard_initialized(shard: &ShardIdentifier) {
         panic!("shard {} hasn't been initialized", shardenc);
     }
     debug!("state file is present for shard {}", shardenc);
+}
+
+pub fn check_files() {
+    debug!("*** Check files");
+    let files = vec![
+        constants::ENCLAVE_FILE,
+        constants::SHIELDING_KEY_FILE,
+        constants::SIGNING_KEY_FILE,
+        constants::RA_SPID_FILE,
+        constants::RA_API_KEY_FILE,
+    ];
+    for f in files.iter() {
+        if !Path::new(f).exists() {
+            panic!("file doesn't exist: {}", f);
+        }
+    }
 }

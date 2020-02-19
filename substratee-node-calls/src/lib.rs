@@ -1,12 +1,11 @@
-use base58::{FromBase58, ToBase58};
+use base58::ToBase58;
 use codec::{Decode, Encode};
 use log::*;
 pub use my_node_runtime::{
     substratee_registry::{Enclave, ShardIdentifier},
     AccountId,
 };
-use primitives::{crypto::Pair, ed25519};
-use regex::Regex;
+use primitives::crypto::Pair;
 use runtime_primitives::MultiSignature;
 use substrate_api_client::utils::{hexstr_to_u64, hexstr_to_vec};
 
@@ -95,23 +94,8 @@ where
 }
 
 fn hexstr_to_enclave(hexstr: String) -> Enclave<AccountId, Vec<u8>> {
-    let mut unhex = hexstr_to_vec(hexstr).unwrap();
+    let unhex = hexstr_to_vec(hexstr).unwrap();
     Enclave::decode(&mut &unhex[..]).unwrap()
-    /*	let (h, url) = unhex.split_at_mut(32 as usize);
-    let mut raw: [u8; 32] = Default::default();
-    raw.copy_from_slice(&h);
-    let key = ed25519::Public::from_raw(raw);
-
-    let url_str = std::str::from_utf8(&url[1..]).unwrap();
-    let re = Regex::new("[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[:][0-9]{4}").unwrap();
-    let m = re.find(url_str).unwrap();
-    Enclave {
-        pubkey: key,
-        // Fixme: There are some bytes left that contain metadata about the linkable map.
-        // This may be the reason I was not able to do automated deserialization.
-        url: url_str[m.start()..m.end()].to_string(),
-    }
-    */
 }
 
 #[cfg(test)]

@@ -18,11 +18,11 @@
 extern crate chrono;
 use chrono::prelude::DateTime;
 use chrono::Utc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
 use sgx_types::*;
 
-use base58::{FromBase58, ToBase58};
+use base58::ToBase58;
 use clap::{load_yaml, App};
 use codec::Encode;
 use keyring::AccountKeyring;
@@ -34,9 +34,7 @@ use substrate_api_client::{utils::hexstr_to_u256, Api};
 
 use substratee_client::*;
 use substratee_node_calls::{get_worker_amount, get_worker_info};
-use substratee_stf::{
-    ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
-};
+use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned};
 use substratee_worker_api::Api as WorkerApi;
 
 type AccountId = <AnySignature as Verify>::Signer;

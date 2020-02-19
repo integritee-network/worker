@@ -44,7 +44,7 @@ impl Stf {
         });
         ext
     }
-    pub fn execute(ext: &mut State, call: TrustedCall, nonce: u32) {
+    pub fn execute(ext: &mut State, call: TrustedCall, _nonce: u32) {
         ext.execute_with(|| {
             // TODO: verify and store nonce first!
             let _result = match call {

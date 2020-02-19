@@ -15,16 +15,11 @@
 
 */
 
-use crate::constants::EXTRINSIC_MAX_SIZE;
 use crate::enclave::api::*;
 use crate::tests::commons::*;
 use codec::Encode;
-use keyring::AccountKeyring;
-use primitive_types::U256;
 use primitives::hash::H256;
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
-use substratee_stf;
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey
@@ -56,17 +51,12 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
 */
 
 pub fn execute_stf_works(eid: sgx_enclave_id_t) {
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-
-    let mut cyphertext = encrypted_test_msg(eid.clone());
-
-    let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
-    let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+    let cyphertext = encrypted_test_msg(eid.clone());
     let nonce = 0u32;
     let genesis_hash: [u8; 32] = [0; 32];
     let shard = H256::default();
 
-    let uxt = enclave_execute_stf(
+    let _uxt = enclave_execute_stf(
         eid,
         cyphertext,
         shard.encode(),

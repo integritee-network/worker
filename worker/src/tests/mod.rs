@@ -16,10 +16,8 @@
 */
 
 use clap::ArgMatches;
-use sgx_types::*;
 
 use crate::enclave::api::*;
-use crate::enclave::init::init_enclave;
 
 use self::ecalls::*;
 use self::integration_tests::*;
@@ -35,7 +33,7 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 
     if matches.is_present("all") || matches.is_present("unit") {
         println!("Running unit Tests");
-        enclave_test(eid);
+        enclave_test(eid).unwrap();
         println!("[+] unit_test ended!");
     }
 

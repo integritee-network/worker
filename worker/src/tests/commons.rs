@@ -22,7 +22,6 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
 
 use std::str;
 use substratee_stf;
@@ -41,7 +40,6 @@ pub struct Message {
 
 pub fn encrypted_test_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
-    let enclave = enclave_init().unwrap();
     let pubkey = enclave_shielding_key(eid).unwrap();
     let rsa_pubkey: Rsa3072PubKey =
         serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
@@ -70,14 +68,4 @@ pub fn test_trusted_call_signed() -> TrustedCallSigned {
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
     let getter = TrustedGetter::free_balance(who.public());
     TrustedGetterSigned::new(getter.clone(), getter.sign(&who.pair()))
-}
-
-pub fn evaluate_result(result: sgx_status_t) {
-    match result {
-        sgx_status_t::SGX_SUCCESS => {}
-        _ => {
-            error!("[<] Error processing in enclave enclave");
-            panic!("");
-        }
-    }
 }

@@ -19,7 +19,6 @@ use codec::Encode;
 use log::*;
 use primitives::{crypto::AccountId32, ed25519, hash::H256};
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
 use std::fs;
 use substrate_api_client::{extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_u256, Api};
 
@@ -52,9 +51,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
         .unwrap();
     let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
     debug!("  TEE nonce is  {}", nonce);
-    let nonce_bytes = nonce.encode();
-    debug!("Enclave nonce = {:?}", nonce);
-    let xt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.encode()).unwrap();
+    let _xt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.encode()).unwrap();
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {

@@ -21,8 +21,6 @@ use sgx_types::*;
 
 use log::*;
 
-use crate::enclave::api::enclave_init;
-
 extern "C" {
     fn run_key_provisioning_server(
         eid: sgx_enclave_id_t,
@@ -36,11 +34,6 @@ extern "C" {
         socket_fd: c_int,
         sign_type: sgx_quote_sign_type_t,
     ) -> sgx_status_t;
-}
-
-pub enum Mode {
-    Client,
-    Server,
 }
 
 pub fn enclave_run_key_provisioning_server(

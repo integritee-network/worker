@@ -44,9 +44,9 @@ pub fn decode_hex(hex: &str) -> SgxResult<Vec<u8>> {
         }
         let (_, second) = match chars.next() {
             None => {
-				error!("Hex decode error at position = {}d", pos);
-				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-			},
+                error!("Hex decode error at position = {}d", pos);
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
             Some(elt) => elt,
         };
         r.push((decode_hex_digit(first)? << 4) | decode_hex_digit(second)?);
@@ -78,12 +78,11 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod test {
-	use super::decode_hex;
-	use super::encode_hex;
+    use super::decode_hex;
+    use super::encode_hex;
     use crate::std::string::ToString;
-	#[test]
+    #[test]
     fn test_decode_hex() {
-
         assert!(decode_hex("").unwrap().len() == 0);
         assert_eq!(decode_hex("00").unwrap(), [0x00u8].to_vec());
         assert_eq!(decode_hex("ff").unwrap(), [0xffu8].to_vec());
