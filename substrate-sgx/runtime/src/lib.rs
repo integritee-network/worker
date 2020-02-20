@@ -27,6 +27,7 @@
 #![feature(structural_match)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
+#![feature(stmt_expr_attributes)]
 
 //use node_runtime::{Balances, AccountId, Indices, Hash, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event, Call, Origin};
 use runtime_primitives::{
@@ -539,8 +540,8 @@ impl ::core::cmp::Eq for Event {
 }
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_ENCODE_FOR_Event: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #![allow(unknown_lints)]
+    #![allow(rust_2018_idioms)]
     extern crate codec as _codec;
     impl _codec::Encode for Event {
         fn encode_to<EncOut: _codec::Output>(&self, dest: &mut EncOut) {
@@ -564,8 +565,8 @@ const _IMPL_ENCODE_FOR_Event: () = {
 };
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DECODE_FOR_Event: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #![allow(unknown_lints)]
+    #![allow(rust_2018_idioms)]
     extern crate codec as _codec;
     impl _codec::Decode for Event {
         fn decode<DecIn: _codec::Input>(

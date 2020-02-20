@@ -43,7 +43,7 @@ pub fn read_or_create_sealed() -> SgxResult<Aes> {
 }
 
 pub fn read_sealed() -> SgxResult<Aes> {
-    io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| ((aes[..16].to_vec(), aes[16..].to_vec())))
+    io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| (aes[..16].to_vec(), aes[16..].to_vec()))
 }
 
 pub fn seal(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t> {

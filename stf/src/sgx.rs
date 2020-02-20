@@ -50,7 +50,7 @@ impl Stf {
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
                     sgx_runtime::balancesCall::<Runtime>::set_balance(
-                        indices::Address::<Runtime>::Id(who.clone()),
+                        indices::Address::<Runtime>::Id(who),
                         free_balance,
                         reserved_balance,
                     )
@@ -58,9 +58,9 @@ impl Stf {
                 }
                 TrustedCall::balance_transfer(from, to, value) => {
                     //FIXME: here would be a good place to really verify a signature
-                    let origin = sgx_runtime::Origin::signed(from.clone());
+                    let origin = sgx_runtime::Origin::signed(from);
                     sgx_runtime::balancesCall::<Runtime>::transfer(
-                        indices::Address::<Runtime>::Id(to.clone()),
+                        indices::Address::<Runtime>::Id(to),
                         value,
                     )
                     .dispatch(origin)

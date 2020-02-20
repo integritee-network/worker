@@ -26,20 +26,20 @@ use crate::utils::UnwrapOrSgxErrorUnexpected;
 
 pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
     SgxFile::open(filepath)
-        .map(|f| _read(f))
+        .map(_read)
         .sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
 
 pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {
     File::open(filepath)
-        .map(|f| _read(f))
+        .map(_read)
         .sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
 
 fn _read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
     let mut read_data: Vec<u8> = Vec::new();
     file.read_to_end(&mut read_data)
-        .sgx_error_with_log(&format!("[Enclave] Reading File failed!"))?;
+        .sgx_error_with_log("[Enclave] Reading File failed!")?;
 
     Ok(read_data)
 }
@@ -68,7 +68,7 @@ pub fn write(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 
 fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
     file.write_all(bytes)
-        .sgx_error_with_log(&format!("[Enclave] Writing File failed!"))?;
+        .sgx_error_with_log("[Enclave] Writing File failed!")?;
 
     Ok(sgx_status_t::SGX_SUCCESS)
 }

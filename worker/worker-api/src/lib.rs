@@ -74,13 +74,13 @@ impl Api {
                     None => Err(()),
                 }
             }
-            Err(e) => Err(e),
+            Err(_) => Err(()),
         }
     }
 
     fn get(&self, request: &str) -> Result<String, ()> {
         let url = self.url.clone();
-        let req = request.to_string().clone();
+        let req = request.to_string();
         let (port_in, port_out) = channel();
 
         info!("[Worker Api]: Sending request: {}", req);
@@ -93,7 +93,6 @@ impl Api {
                 Ok(c) => c,
                 Err(_) => {
                     error!("Could not connect to worker");
-                    return;
                 }
             }
         });

@@ -72,7 +72,7 @@ impl TrustedCall {
 
         TrustedCallSigned {
             call: self.clone(),
-            nonce: nonce,
+            nonce,
             signature: pair.sign(payload.as_slice()).into(),
         }
     }
