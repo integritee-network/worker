@@ -34,14 +34,17 @@ use keystore::Store;
 use std::path::PathBuf;
 
 use base58::{FromBase58, ToBase58};
+use blake2_rfc::blake2s::blake2s;
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
-use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use sr_primitives::{traits::{IdentifyAccount, Verify}, MultiSignature};
 use primitive_types::U256;
-use blake2_rfc::blake2s::blake2s;
+use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sr_primitives::{
+    traits::{IdentifyAccount, Verify},
+    MultiSignature,
+};
 
 use std::sync::mpsc::channel;
 use std::thread;
@@ -53,11 +56,15 @@ use substrate_api_client::{
     utils::{hexstr_to_u256, hexstr_to_u64, hexstr_to_vec},
     Api,
 };
-use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, 
-    TrustedCallSigned, TrustedGetterSigned, TrustedOperationSigned,
-    cli::get_identifiers};
+use substratee_node_runtime::{
+    substratee_registry::{Enclave, Request},
+    AccountId, Event, Hash, Signature,
+};
+use substratee_stf::{
+    cli::get_identifiers, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
+    TrustedOperationSigned,
+};
 use substratee_worker_api::Api as WorkerApi;
-use substratee_node_runtime::{substratee_registry::{Enclave, Request}, AccountId, Event, Hash, Signature};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -325,12 +332,8 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
 
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) {
     match top {
-        TrustedOperationSigned::call(call) => {
-            send_request(matches, call.clone())
-        },
-        TrustedOperationSigned::get(getter) => {
-            get_state(matches, getter.clone())
-        }
+        TrustedOperationSigned::call(call) => send_request(matches, call.clone()),
+        TrustedOperationSigned::get(getter) => get_state(matches, getter.clone()),
     };
 }
 
@@ -338,7 +341,7 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSig
 // here we assume that the getter result is a u128, but how should we now here in this crate?
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
     let worker_api = get_worker_api(matches);
-    let (mrenclave, shard) = get_identifiers(matches);
+    let (_mrenclave, shard) = get_identifiers(matches);
     debug!("calling workerapi to get state value");
     let ret = worker_api
         .get_stf_state(getter, &shard)
@@ -361,7 +364,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     let chain_api = get_chain_api(matches);
     let worker_api = get_worker_api(matches);
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
-    
+
     let call_encoded = call.encode();
     let mut call_encrypted: Vec<u8> = Vec::new();
     shielding_pubkey
@@ -370,39 +373,39 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
 
     let arg_signer = matches.value_of("xt-signer").unwrap();
     let signer = get_pair_from_str(arg_signer);
-    let _chain_api = chain_api.clone().set_signer(sr25519_core::Pair::from(signer));
+    let _chain_api = chain_api
+        .clone()
+        .set_signer(sr25519_core::Pair::from(signer));
 
     let shard_opt = match matches.value_of("shard") {
-        Some(s) => {
-            match s.from_base58() {
-                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-                Err(_) => panic!("shard argument must be base58 encoded")
-            }
+        Some(s) => match s.from_base58() {
+            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+            Err(_) => panic!("shard argument must be base58 encoded"),
         },
-        None => {
-            match matches.value_of("mrenclave") {
-                Some(m) => {
-                    match m.from_base58() {
-                        Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-                        Err(_) => panic!("mrenclave argument must be base58 encoded")
-                    }
-                },
-                None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied")
-            }
-
-        }
+        None => match matches.value_of("mrenclave") {
+            Some(m) => match m.from_base58() {
+                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                Err(_) => panic!("mrenclave argument must be base58 encoded"),
+            },
+            None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
+        },
     };
     let shard = match shard_opt {
         Ok(shard) => shard,
         Err(e) => panic!(e),
     };
-    
+
     let request = Request {
         shard: shard.clone(),
         cyphertext: call_encrypted.clone(),
     };
 
-    let xt = compose_extrinsic!(_chain_api.clone(), "SubstraTEERegistry", "call_worker", request);
+    let xt = compose_extrinsic!(
+        _chain_api.clone(),
+        "SubstraTEERegistry",
+        "call_worker",
+        request
+    );
 
     // send and watch extrinsic until finalized
     let tx_hash = _chain_api.send_extrinsic(xt.hex_encode()).unwrap();

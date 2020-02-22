@@ -20,7 +20,7 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
-#![cfg_attr(all(not(target_env = "sgx"), not(feature="std")) , no_std)]
+#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate alloc;
@@ -48,7 +48,6 @@ pub type Balance = u128;
 
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
-
 
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
@@ -111,7 +110,7 @@ impl TrustedGetter {
         let signature = pair.sign(self.encode().as_slice()).into();
         TrustedGetterSigned {
             getter: self.clone(),
-            signature
+            signature,
         }
     }
 }
