@@ -2,7 +2,7 @@ use sgx_tstd as std;
 use std::prelude::v1::*;
 
 use codec::Encode;
-use log::*;
+use log_sgx::*;
 use primitives::hashing::{blake2_256, twox_128};
 use runtime_primitives::traits::Dispatchable;
 

@@ -33,21 +33,30 @@ use keyring::AccountKeyring;
 use keystore::Store;
 use std::path::PathBuf;
 
-use base58::ToBase58;
+use base58::{FromBase58, ToBase58};
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use sr_primitives::traits::{IdentifyAccount, Verify};
+use sr_primitives::{traits::{IdentifyAccount, Verify}, MultiSignature};
+
+use blake2_rfc::blake2s::blake2s;
+
 use std::sync::mpsc::channel;
+use std::thread;
+
 use substrate_api_client::{
+    compose_extrinsic,
     extrinsic::xt_primitives::GenericAddress,
     node_metadata,
     utils::{hexstr_to_u256, hexstr_to_u64, hexstr_to_vec},
     Api,
 };
-use substratee_node_runtime::{substratee_registry::Enclave, AccountId, Event, Hash, Signature};
+use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, 
+    TrustedCallSigned, TrustedGetterSigned, TrustedOperationSigned};
+use substratee_worker_api::Api as WorkerApi;
+use substratee_node_runtime::{substratee_registry::{Enclave, Request}, AccountId, Event, Hash, Signature};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -282,7 +291,7 @@ fn main() {
                     Ok(())
                 }),
         )
-        .add_cmd(substratee_stf::cli::cmd())
+        .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
@@ -302,6 +311,83 @@ fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
     );
     info!("connecting to {}", url);
     Api::<sr25519::Pair>::new(url)
+}
+
+fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
+    let url = format!(
+        "{}:{}",
+        matches.value_of("worker-url").unwrap(),
+        matches.value_of("worker-port").unwrap()
+    );
+    WorkerApi::new(url)
+}
+
+fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) {
+    match top {
+        TrustedOperationSigned::call(call) => {
+            send_request(matches, call.clone())
+        },
+        TrustedOperationSigned::get(getter) => ()
+    };
+}
+fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
+    let chain_api = get_chain_api(matches);
+    let worker_api = get_worker_api(matches);
+    let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+    
+    let call_encoded = call.encode();
+    let mut call_encrypted: Vec<u8> = Vec::new();
+    shielding_pubkey
+        .encrypt_buffer(&call_encoded, &mut call_encrypted)
+        .unwrap();
+
+    let arg_signer = matches.value_of("xt-signer").unwrap();
+    let signer = get_pair_from_str(arg_signer);
+    let _chain_api = chain_api.clone().set_signer(sr25519_core::Pair::from(signer));
+
+    let shard_opt = match matches.value_of("shard") {
+        Some(s) => {
+            match s.from_base58() {
+                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                Err(_) => panic!("shard argument must be base58 encoded")
+            }
+        },
+        None => {
+            match matches.value_of("mrenclave") {
+                Some(m) => {
+                    match m.from_base58() {
+                        Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                        Err(_) => panic!("mrenclave argument must be base58 encoded")
+                    }
+                },
+                None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied")
+            }
+
+        }
+    };
+    let shard = match shard_opt {
+        Ok(shard) => shard,
+        Err(e) => panic!(e),
+    };
+    
+    let request = Request {
+        shard: shard.clone(),
+        cyphertext: call_encrypted.clone(),
+    };
+
+    let xt = compose_extrinsic!(_chain_api.clone(), "SubstraTEERegistry", "call_worker", request);
+
+    // send and watch extrinsic until finalized
+    let tx_hash = _chain_api.send_extrinsic(xt.hex_encode()).unwrap();
+    info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
+    info!("waiting for confirmation of stf call");
+    let act_hash = subscribe_to_call_confirmed(_chain_api.clone());
+    info!("callConfirmed event received");
+    debug!(
+        "Expected stf call Hash: {:?}",
+        blake2s(32, &[0; 32], &call_encrypted).as_bytes()
+    );
+    debug!("confirmation stf call Hash:   {:?}", act_hash);
 }
 
 fn listen(matches: &ArgMatches<'_>) {
@@ -366,6 +452,49 @@ fn listen(matches: &ArgMatches<'_>) {
                 }
             }
             Err(_) => error!("couldn't decode event record list"),
+        }
+    }
+}
+
+// subscribes to he substratee_registry events of type CallConfirmed
+pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> Vec<u8>
+where
+    MultiSignature: From<P::Signature>,
+{
+    let (events_in, events_out) = channel();
+
+    let _eventsubscriber = thread::Builder::new()
+        .name("eventsubscriber".to_owned())
+        .spawn(move || {
+            api.subscribe_events(events_in.clone());
+        })
+        .unwrap();
+
+    println!("[+] Subscribed, waiting for event...\n");
+    loop {
+        let event_str = events_out.recv().unwrap();
+
+        let _unhex = hexstr_to_vec(event_str).unwrap();
+        let mut _er_enc = _unhex.as_slice();
+        let _events = Vec::<system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
+        if let Ok(evts) = _events {
+            for evr in &evts {
+                if let Event::substratee_registry(pe) = &evr.event {
+                    if let substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                        sender,
+                        payload,
+                    ) = &pe
+                    {
+                        println!("[+] Received confirm call from {}", sender);
+                        return payload.to_vec().clone();
+                    } else {
+                        debug!(
+                            "received unknown event from SubstraTeeRegistry: {:?}",
+                            evr.event
+                        )
+                    }
+                }
+            }
         }
     }
 }

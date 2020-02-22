@@ -18,6 +18,7 @@ clap-nested = "0.3.1"
 primitive-types = { version = "0.6.1", default-features = false, features = ["codec"] }
 base58 			        = "0.1"
 chrono = "*"
+blake2-rfc      = { version = "0.2.18", default-features = false}
 
 [dependencies.serde]
 features = ["derive"]
@@ -64,6 +65,9 @@ package = "substratee-node-runtime"
 
 [dependencies.substratee-stf]
 path = "../stf"
+
+[dependencies.substratee_worker_api]
+path = "../worker/worker-api"
 
 [dependencies.keyring]
 git = 'https://github.com/paritytech/substrate'

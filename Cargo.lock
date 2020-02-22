@@ -3028,6 +3028,7 @@ name = "substratee-client"
 version = "4.0.0"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "blake2-rfc 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap-nested 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3050,6 +3051,7 @@ dependencies = [
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substratee-node-runtime 4.0.1 (git+https://github.com/scs/substraTEE-node?rev=7328b37166fdffcc74cf11763084d67029945df9)",
  "substratee-stf 0.1.0",
+ "substratee_worker_api 4.0.0",
  "tiny-bip39 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -3106,10 +3108,12 @@ dependencies = [
 name = "substratee-stf"
 version = "0.1.0"
 dependencies = [
+ "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap-nested 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (git+https://github.com/mesalock-linux/env_logger-sgx?tag=sgx_1.1.0)",
  "log 0.4.10 (git+https://github.com/mesalock-linux/log-sgx?tag=sgx_1.1.0)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-indices 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sgx-runtime 0.1.0",
@@ -3118,6 +3122,7 @@ dependencies = [
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-application-crypto 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
+ "substrate-keystore 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
 ]
 

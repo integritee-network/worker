@@ -49,6 +49,14 @@ pub type Balance = u128;
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
 
+
+#[derive(Encode, Decode, Clone)]
+#[allow(non_camel_case_types)]
+pub enum TrustedOperationSigned {
+    call(TrustedCallSigned),
+    get(TrustedGetterSigned),
+}
+
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
@@ -104,7 +112,7 @@ impl TrustedGetter {
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 pub struct TrustedGetterSigned {
     pub getter: TrustedGetter,
     pub signature: AnySignature,
@@ -121,7 +129,7 @@ impl TrustedGetterSigned {
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 pub struct TrustedCallSigned {
     pub call: TrustedCall,
     pub nonce: u32,
