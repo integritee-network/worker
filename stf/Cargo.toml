@@ -5,7 +5,7 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
 [features]
-default = []
+default = ["std"]
 sgx = [
     "sgx_tstd",
     "env_logger",
@@ -13,10 +13,16 @@ sgx = [
     "sr-io",
     "sgx-runtime"
 ]
+std = [
+    "clap",
+    "clap-nested"
+]
 
 [dependencies]
 log               = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
 env_logger        = { tag = "sgx_1.1.0", git = "https://github.com/mesalock-linux/env_logger-sgx", optional = true }
+clap                = { version = "2.33", optional = true }
+clap-nested         = { version = "0.3.1", optional = true }
 
 [dependencies.sgx_tstd]
 git = "https://github.com/apache/teaclave-sgx-sdk.git"

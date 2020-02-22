@@ -20,10 +20,13 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
-#![cfg_attr(not(target_env = "sgx"), no_std)]
+#![cfg_attr(all(not(target_env = "sgx"), not(feature="std")) , no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate clap;
 
 use codec::{Decode, Encode};
 use primitives::{sr25519, Pair, H256};
@@ -33,6 +36,9 @@ pub type ShardIdentifier = H256;
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
+
+#[cfg(feature = "std")]
+pub mod cli;
 
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;

@@ -12,8 +12,9 @@ hex = "0.4"
 json = "0.12.0"
 substrate-bip39 = "0.3.1"
 tiny-bip39 = "0.6.2"
-serde_json      = { version = "1.0"}
-clap            = { version = "2.33", features = [ "yaml" ] }
+serde_json = "1.0"
+clap = "2.33"
+clap-nested = "0.3.1"
 primitive-types = { version = "0.6.1", default-features = false, features = ["codec"] }
 base58 			        = "0.1"
 chrono = "*"
@@ -60,6 +61,9 @@ default-features=false
 git = "https://github.com/scs/substraTEE-node"
 rev = "7328b37166fdffcc74cf11763084d67029945df9"
 package = "substratee-node-runtime"
+
+[dependencies.substratee-stf]
+path = "../stf"
 
 [dependencies.keyring]
 git = 'https://github.com/paritytech/substrate'
