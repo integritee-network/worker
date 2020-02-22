@@ -40,7 +40,7 @@ use codec::{Decode, Encode};
 use log::*;
 use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sr_primitives::{traits::{IdentifyAccount, Verify}, MultiSignature};
-
+use primitive_types::U256;
 use blake2_rfc::blake2s::blake2s;
 
 use std::sync::mpsc::channel;
@@ -54,7 +54,8 @@ use substrate_api_client::{
     Api,
 };
 use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, 
-    TrustedCallSigned, TrustedGetterSigned, TrustedOperationSigned};
+    TrustedCallSigned, TrustedGetterSigned, TrustedOperationSigned,
+    cli::get_identifiers};
 use substratee_worker_api::Api as WorkerApi;
 use substratee_node_runtime::{substratee_registry::{Enclave, Request}, AccountId, Event, Hash, Signature};
 
@@ -327,7 +328,33 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSig
         TrustedOperationSigned::call(call) => {
             send_request(matches, call.clone())
         },
-        TrustedOperationSigned::get(getter) => ()
+        TrustedOperationSigned::get(getter) => {
+            get_state(matches, getter.clone())
+        }
+    };
+}
+
+//FIXME: even better would be if the interpretation of the getter result is left to the stf crate
+// here we assume that the getter result is a u128, but how should we now here in this crate?
+fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
+    let worker_api = get_worker_api(matches);
+    let (mrenclave, shard) = get_identifiers(matches);
+    debug!("calling workerapi to get state value");
+    let ret = worker_api
+        .get_stf_state(getter, &shard)
+        .expect("getting value failed");
+    let ret_cropped = &ret[..9 * 2];
+    debug!(
+        "got getter response from worker: {:?}\ncropping to {:?}",
+        ret, ret_cropped
+    );
+    let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
+    match valopt {
+        Some(v) => {
+            let value = U256::from_little_endian(&v);
+            println!("    value = {}", value);
+        }
+        _ => error!("error getting value"),
     };
 }
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {

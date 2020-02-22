@@ -107,8 +107,12 @@ impl TrustedGetter {
         }
     }
 
-    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
-        pair.sign(self.encode().as_slice()).into()
+    pub fn sign(&self, pair: &sr25519::Pair) -> TrustedGetterSigned {
+        let signature = pair.sign(self.encode().as_slice()).into();
+        TrustedGetterSigned {
+            getter: self.clone(),
+            signature
+        }
     }
 }
 

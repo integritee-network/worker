@@ -17,14 +17,15 @@
 
 use clap::{Arg, ArgMatches, SubCommand};
 use clap_nested::{Commander, Command, MultiCommand};
-use crate::{AccountId, TrustedCall, TrustedCallSigned, TrustedOperationSigned, ShardIdentifier};
+use crate::{AccountId, TrustedCall, TrustedGetter, TrustedCallSigned, TrustedGetterSigned, TrustedOperationSigned, ShardIdentifier};
 use log::*;
-use base58::FromBase58;
+use base58::{FromBase58, ToBase58};
 use application_crypto::{ed25519, sr25519};
 use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use runtime_primitives::traits::IdentifyAccount;
 use keystore::Store;
 use std::path::PathBuf;
+use codec::{Decode, Encode};
 
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
@@ -83,6 +84,44 @@ pub fn cmd<'a>(perform_operation: &'a Fn(&ArgMatches<'_>, &TrustedOperationSigne
             .about("trusted calls to worker enclave")
         })
         .add_cmd(
+            Command::new("new-account")
+                .description("generates a new incognito account for the given substraTEE shard")
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let store = Store::open(get_keystore_path(matches), None).unwrap();
+                    let key: sr25519::AppPair = store.write().generate().unwrap();
+                    drop(store);
+                    println!("{}", key.public().to_ss58check());
+                    Ok(())
+                }),
+        )
+        .add_cmd(
+            Command::new("list-accounts")
+                .description("lists all accounts in keystore for the substraTEE chain")
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let store = Store::open(get_keystore_path(matches), None).unwrap();
+                    println!("sr25519 keys:");
+                    for pubkey in store
+                        .read()
+                        .public_keys::<sr25519::AppPublic>()
+                        .unwrap()
+                        .into_iter()
+                    {
+                        println!("{}", pubkey.to_ss58check());
+                    }
+                    println!("ed25519 keys:");
+                    for pubkey in store
+                        .read()
+                        .public_keys::<ed25519::AppPublic>()
+                        .unwrap()
+                        .into_iter()
+                    {
+                        println!("{}", pubkey.to_ss58check());
+                    }
+                    drop(store);
+                    Ok(())
+                }),
+        )
+        .add_cmd(
             Command::new("transfer")
                 .description("send funds from one incognito account to another")
                 .options(|app| {
@@ -113,22 +152,13 @@ pub fn cmd<'a>(perform_operation: &'a Fn(&ArgMatches<'_>, &TrustedOperationSigne
                     let arg_to = matches.value_of("to").unwrap();
                     let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
                         .expect("amount can be converted to u128");
-                    let from = get_pair_from_str(arg_from);
+                    let from = get_pair_from_str(matches, arg_from);
                     let to = get_accountid_from_str(arg_to);
                     info!("from ss58 is {}", from.public().to_ss58check());
                     info!("to ss58 is {}", to.to_ss58check());
 
-                    let mut mrenclave = [ 0u8; 32 ];
-                    if !matches.is_present("mrenclave") {
-                        panic!("--mrenclave must be provided");
-                    };
-                    mrenclave.copy_from_slice(&matches.value_of("mrenclave").unwrap().from_base58()
-                        .expect("mrenclave has to be base58 encoded"));
-                    let shard = match matches.value_of("shard") {
-                        Some(val) => ShardIdentifier::from_slice(&val.from_base58()
-                            .expect("mrenclave has to be base58 encoded")),
-                        None => ShardIdentifier::from_slice(&mrenclave),
-                    };
+                    let (mrenclave, shard) = get_identifiers(matches);
+                    
                     let tcall = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()) ,
                         sr25519_core::Public::from(to),
@@ -142,10 +172,91 @@ pub fn cmd<'a>(perform_operation: &'a Fn(&ArgMatches<'_>, &TrustedOperationSigne
                     Ok(())
                 })
         )
+        .add_cmd(
+            Command::new("set-balance")
+                .description("ROOT call to set some account balance to an arbitrary number")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("account")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("sender's AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("amount")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("U128")
+                            .help("amount to be transferred"),
+                    )
+                })
+                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                    let arg_who = matches.value_of("account").unwrap();
+                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                        .expect("amount can be converted to u128");
+                    let who = get_pair_from_str(matches, arg_who);
+                    let signer = get_pair_from_str(matches, "//AliceIncognito");
+                    info!("account ss58 is {}", who.public().to_ss58check());
+
+                    let (mrenclave, shard) = get_identifiers(matches);
+                    
+                    let tcall = TrustedCall::balance_set_balance(
+                        sr25519_core::Public::from(who.public()) ,
+                        amount,
+                        amount,
+                    );
+                    let nonce = 0; // FIXME: hard coded for now
+                    let tscall = tcall.sign(&sr25519_core::Pair::from(signer), 
+                        nonce, &mrenclave, &shard);
+                    println!("call from: {}", tscall.call.account());
+                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    Ok(())
+                })
+        )
+        .add_cmd(
+            Command::new("balance")
+            .description("query balance for incognito account in keystore")
+            .options(|app| {
+                app.arg(
+                    Arg::with_name("accountid")
+                        .takes_value(true)
+                        .required(true)
+                        .value_name("SS58")
+                        .help("AccountId in ss58check format"),
+                )   
+            })
+            .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                let arg_who = matches.value_of("accountid").unwrap();
+                let who = get_pair_from_str(matches, arg_who);
+                let tgetter = TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
+                let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
+                perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                Ok(())
+            })
+        )
         .into_cmd("trusted")
     }
 
+fn get_keystore_path(matches: &ArgMatches<'_>) -> PathBuf {
+    let (mrenclave, shard) = get_identifiers(matches);
+    PathBuf::from(&format!("{}/{}", KEYSTORE_PATH, shard.encode().to_base58()))
+}
 
+pub fn get_identifiers(matches: &ArgMatches<'_>) -> ([u8; 32], ShardIdentifier) {
+    let mut mrenclave = [ 0u8; 32 ];
+    if !matches.is_present("mrenclave") {
+        panic!("--mrenclave must be provided");
+    };
+    mrenclave.copy_from_slice(&matches.value_of("mrenclave").unwrap().from_base58()
+        .expect("mrenclave has to be base58 encoded"));
+    let shard = match matches.value_of("shard") {
+        Some(val) => ShardIdentifier::from_slice(&val.from_base58()
+            .expect("mrenclave has to be base58 encoded")),
+        None => ShardIdentifier::from_slice(&mrenclave),
+    };
+    (mrenclave, shard)
+}
 // TODO this function is redundant with client::main
 fn get_accountid_from_str(account: &str) -> AccountId {
     match &account[..2] {
@@ -157,7 +268,7 @@ fn get_accountid_from_str(account: &str) -> AccountId {
 
 // TODO this function is redundant with client::main
 // get a pair either form keyring (well known keys) or from the store
-fn get_pair_from_str(account: &str) -> sr25519::AppPair {
+fn get_pair_from_str(matches: &ArgMatches<'_>, account: &str) -> sr25519::AppPair {
     info!("getting pair for {}", account);
     match &account[..2] {
         "//" => sr25519::AppPair::from_string(account, None).unwrap(),
@@ -165,7 +276,7 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
             info!("fetching from keystore at {}", &KEYSTORE_PATH);
             // open store without password protection
             let store =
-                Store::open(PathBuf::from(&KEYSTORE_PATH), None).expect("store should exist");
+                Store::open(get_keystore_path(matches), None).expect("store should exist");
             info!("store opened");
             let _pair = store
                 .read()
