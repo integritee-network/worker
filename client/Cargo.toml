@@ -1,73 +1,75 @@
 [package]
-name = "substratee_client"
+name = "substratee-client"
 version = "4.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
 [dependencies]
+substrate-api-client = { tag = "api-M1.5", git = "https://github.com/scs/substrate-api-client.git"}
 log = "0.4"
-env_logger = "0.7.1"
-serde = "1.0"
-serde_json = "1.0"
-serde_derive = "1.0"
+env_logger = "0.7"
+hex = "0.4"
+json = "0.12.0"
 substrate-bip39 = "0.3.1"
-chrono = "*"
-base58 = "0.1"
-
+tiny-bip39 = "0.6.2"
+serde_json      = { version = "1.0"}
 clap            = { version = "2.33", features = [ "yaml" ] }
-blake2-rfc      = { version = "0.2.18", default-features = false}
-codec           = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.6", default-features = false, features = ["codec"] }
+primitive-types = { version = "0.6.1", default-features = false, features = ["codec"] }
+base58 			        = "0.1"
+chrono = "*"
 
-sgx_types           = { rev = "v1.1.0",git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_crypto_helper   = { rev = "v1.1.0",git = "https://github.com/apache/teaclave-sgx-sdk.git", default-features = false }
+[dependencies.serde]
+features = ["derive"]
+optional = true
+version = "1.0"
 
-[dependencies.my_node_runtime]
+[dependencies.codec]
+default-features = false
+package = "parity-scale-codec"
+features = ["derive"]
+version = "1.0.0"
+
+[dependencies.primitives]
+git = 'https://github.com/paritytech/substrate'
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "substrate-primitives"
+
+[dependencies.sr-primitives]
+git = "https://github.com/paritytech/substrate"
+package = "sr-primitives"
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+
+[dependencies.keystore]
+git = 'https://github.com/paritytech/substrate'
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "substrate-keystore"
+
+[dependencies.balances]
+git = 'https://github.com/paritytech/substrate'
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "pallet-balances"
+default-features=false
+
+[dependencies.system]
+git = 'https://github.com/paritytech/substrate'
+rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+package = "palette-system"
+default-features=false
+
+[dependencies.substratee_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
 rev = "7328b37166fdffcc74cf11763084d67029945df9"
 package = "substratee-node-runtime"
 
-[dependencies.substrate-api-client]
-git = "https://github.com/scs/substrate-api-client"
-tag = "api-M1.5"
-
-[dependencies.substratee-node-calls]
-path = "../substratee-node-calls"
-
-[dependencies.substratee_worker_api]
-path = "../worker/worker-api"
-
-[dependencies.system]
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "palette-system"
-
-[dependencies.primitives]
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-primitives"
-features = ["full_crypto"]
-
-[dependencies.node-primitives]
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
 [dependencies.keyring]
-git = "https://github.com/paritytech/substrate"
+git = 'https://github.com/paritytech/substrate'
 rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 package = "substrate-keyring"
 
-[dependencies.runtime_primitives]
+[dependencies.app-crypto]
 git = "https://github.com/paritytech/substrate"
 rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "sr-primitives"
-#default-features = false
+package = "substrate-application-crypto"
 
-[dependencies.indices]
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "pallet-indices"
-
-[dependencies.substratee-stf]
-path = "../stf"
-default-features = false
+#[patch.crates-io]
+#ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}
