@@ -7,7 +7,7 @@
 
 # binaries
 bin/*.so
-bin/substratee_*
+bin/substratee-*
 bin/*.wasm
 
 # sealed data
@@ -23,6 +23,8 @@ bin/ecc_pubkey.txt
 #intelliJ
 .idea/
 *.iml
+
+*.log
 
 # generated enclave files
 worker/Enclave_u.*
@@ -41,8 +43,17 @@ bin/spid_production.txt
 bin/key.txt
 bin/key_production.txt
 bin/attestation_report.json
+bin/shards
+bin/*.der
+bin/enclave-shielding-pubkey.json
 
 # in order to have 2 workers run and exchange keys
-bin2/substratee_worker
+bin2/substratee-worker
 bin2/*.bin
 bin2/*.txt
+bin2/shards
+bin2/enclave-shielding-pubkey.json
+
+# client
+client/my_keystore
+client/my_trusted_keystore

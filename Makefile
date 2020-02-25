@@ -122,7 +122,7 @@ Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Pa
 
 Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
-Client_Binary := substratee_client
+Client_Binary := substratee-client
 Client_Name := $(Client_Path)/$(Client_Binary)
 
 ######## Enclave settings ########
@@ -181,8 +181,8 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo "Building the substraTEE-worker"
 	@cd worker && SGX_SDK=$(SGX_SDK) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
-	cp $(Worker_Rust_Path)/substratee_worker ./bin
-	cp $(Worker_Rust_Path)/substratee_worker ./bin2
+	cp $(Worker_Rust_Path)/substratee-worker ./bin
+	cp $(Worker_Rust_Path)/substratee-worker ./bin2
 
 ######## SubstraTEE-client objects ########
 $(Client_Name): $(Client_SRC_Files)

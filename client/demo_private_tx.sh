@@ -2,8 +2,8 @@
 
 # setup:
 # run all on localhost:
-# run substratee_node --dev --ws-port 9979 -lruntime=debug
-# run substratee_worker -p 9979 run
+# run substratee-node --dev --ws-port 9979 -lruntime=debug
+# run substratee-worker -p 9979 run
 #
 # then run this script
 

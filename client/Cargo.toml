@@ -58,7 +58,7 @@ rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 package = "palette-system"
 default-features=false
 
-[dependencies.substratee_node_runtime]
+[dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
 rev = "7328b37166fdffcc74cf11763084d67029945df9"
 package = "substratee-node-runtime"
@@ -66,7 +66,7 @@ package = "substratee-node-runtime"
 [dependencies.substratee-stf]
 path = "../stf"
 
-[dependencies.substratee_worker_api]
+[dependencies.substratee-worker-api]
 path = "../worker/worker-api"
 
 [dependencies.keyring]

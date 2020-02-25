@@ -1,5 +1,5 @@
 [package]
-name = "substratee_worker_enclave"
+name = "substratee-worker-enclave"
 version = "4.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
