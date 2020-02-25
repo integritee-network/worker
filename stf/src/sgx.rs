@@ -97,7 +97,8 @@ pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec
     );
     match param {
         Some(par) => {
-            key.append(&mut par.clone());
+            let mut p = par;
+            key.append(&mut p);
             keyhash = blake2_256(&key).to_vec();
         }
         _ => {

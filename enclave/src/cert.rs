@@ -323,10 +323,13 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
             panic!();
         }
     }
+    verify_attn_report(attn_report_raw, pub_k)
+}
 
+fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_status_t> {
     // Verify attestation report
     // 1. Check timestamp is within 24H (90day is recommended by Intel)
-    let attn_report: Value = serde_json::from_slice(attn_report_raw).sgx_error()?;
+    let attn_report: Value = serde_json::from_slice(report_raw).sgx_error()?;
     if let Value::String(time) = &attn_report["timestamp"] {
         let time_fixed = time.clone() + "+0000";
         let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")
