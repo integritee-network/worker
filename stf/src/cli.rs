@@ -162,7 +162,7 @@ pub fn cmd<'a>(
 
                     let tcall = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
-                        sr25519_core::Public::from(to),
+                        to,
                         amount,
                     );
                     let nonce = 0; // FIXME: hard coded for now
@@ -269,9 +269,13 @@ pub fn get_identifiers(matches: &ArgMatches<'_>) -> ([u8; 32], ShardIdentifier) 
 // TODO this function is redundant with client::main
 fn get_accountid_from_str(account: &str) -> AccountId {
     match &account[..2] {
-        "//" => AccountId::from(sr25519::Pair::from_string(account, None).unwrap().public())
+        "//" => sr25519::Pair::from_string(account, None)
+            .unwrap()
+            .public()
             .into_account(),
-        _ => AccountId::from(sr25519::Public::from_ss58check(account).unwrap()).into_account(),
+        _ => sr25519::Public::from_ss58check(account)
+            .unwrap()
+            .into_account(),
     }
 }
 

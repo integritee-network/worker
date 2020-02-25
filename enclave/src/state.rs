@@ -26,7 +26,7 @@ use crate::constants::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use crate::hex;
 use crate::io;
 use base58::ToBase58;
-use codec::{Decode, Encode};
+use codec::Encode;
 use primitives::H256;
 use sgx_externalities::SgxExternalitiesTrait;
 use substratee_stf::{ShardIdentifier, State as StfState, Stf};

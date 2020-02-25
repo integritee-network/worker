@@ -168,7 +168,7 @@ fn main() {
                     let api = get_chain_api(matches);
                     let account = matches.value_of("AccountId").unwrap();
                     let accountid = get_accountid_from_str(account);
-                    let _api = api.clone().set_signer(AccountKeyring::Alice.pair());
+                    let _api = api.set_signer(AccountKeyring::Alice.pair());
                     let xt = _api.balance_transfer(
                         GenericAddress::from(accountid.clone()),
                         PREFUNDING_AMOUNT,
@@ -247,7 +247,7 @@ fn main() {
                     let to = get_accountid_from_str(arg_to);
                     info!("from ss58 is {}", from.public().to_ss58check());
                     info!("to ss58 is {}", to.to_ss58check());
-                    let _api = api.clone().set_signer(sr25519_core::Pair::from(from));
+                    let _api = api.set_signer(sr25519_core::Pair::from(from));
                     let xt = _api.balance_transfer(GenericAddress::from(to.clone()), amount);
                     let tx_hash = _api.send_extrinsic(xt.hex_encode()).unwrap();
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
@@ -263,7 +263,7 @@ fn main() {
                     let api = get_chain_api(matches);
                     let wcount = get_enclave_count(&api);
                     println!("number of workers registered: {}", wcount);
-                    for w in 1..wcount + 1 {
+                    for w in 1..=wcount {
                         let enclave = get_enclave(&api, w);
                         if enclave.is_none() {
                             println!("error reading enclave data");
@@ -306,8 +306,8 @@ fn main() {
             Ok(())
         })
         .run();
-    if res.is_err() {
-        println!("{}", res.unwrap_err().message);
+    if let Err(e) = res {
+        println!("{}", e)
     }
 }
 
@@ -373,19 +373,17 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
 
     let arg_signer = matches.value_of("xt-signer").unwrap();
     let signer = get_pair_from_str(arg_signer);
-    let _chain_api = chain_api
-        .clone()
-        .set_signer(sr25519_core::Pair::from(signer));
+    let _chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
 
     let shard_opt = match matches.value_of("shard") {
         Some(s) => match s.from_base58() {
             Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-            Err(_) => panic!("shard argument must be base58 encoded"),
+            _ => panic!("shard argument must be base58 encoded"),
         },
         None => match matches.value_of("mrenclave") {
             Some(m) => match m.from_base58() {
                 Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-                Err(_) => panic!("mrenclave argument must be base58 encoded"),
+                _ => panic!("mrenclave argument must be base58 encoded"),
             },
             None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
         },
@@ -396,7 +394,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     };
 
     let request = Request {
-        shard: shard.clone(),
+        shard,
         cyphertext: call_encrypted.clone(),
     };
 
@@ -411,7 +409,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     let tx_hash = _chain_api.send_extrinsic(xt.hex_encode()).unwrap();
     info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
-    let act_hash = subscribe_to_call_confirmed(_chain_api.clone());
+    let act_hash = subscribe_to_call_confirmed(_chain_api);
     info!("callConfirmed event received");
     debug!(
         "Expected stf call Hash: {:?}",
@@ -425,12 +423,12 @@ fn listen(matches: &ArgMatches<'_>) {
     info!("Subscribing to events");
     let (events_in, events_out) = channel();
     let mut count = 0u32;
-    api.subscribe_events(events_in.clone());
+    api.subscribe_events(events_in);
     loop {
-        if matches.is_present("events") {
-            if count >= value_t!(matches.value_of("events"), u32).unwrap() {
-                return;
-            };
+        if matches.is_present("events")
+            && count >= value_t!(matches.value_of("events"), u32).unwrap()
+        {
+            return;
         };
         let event_str = events_out.recv().unwrap();
         let _unhex = hexstr_to_vec(event_str).unwrap();
@@ -460,7 +458,7 @@ fn listen(matches: &ArgMatches<'_>) {
                             count += 1;
                             match &ee {
                                 substratee_node_runtime::substratee_registry::RawEvent::AddedEnclave(accountid, url) => {
-                                    println!("AddedEnclave: {:?} at url {}", accountid, String::from_utf8(url.to_vec()).unwrap_or("error".to_string()));
+                                    println!("AddedEnclave: {:?} at url {}", accountid, String::from_utf8(url.to_vec()).unwrap_or_else(|_| "error".to_string()));
                                 },
                                 substratee_node_runtime::substratee_registry::RawEvent::RemovedEnclave(accountid) => {
                                     println!("RemovedEnclave: {:?}", accountid);
@@ -516,7 +514,7 @@ where
                     ) = &pe
                     {
                         println!("[+] Received confirm call from {}", sender);
-                        return payload.to_vec().clone();
+                        return payload.to_vec();
                     } else {
                         debug!(
                             "received unknown event from SubstraTeeRegistry: {:?}",

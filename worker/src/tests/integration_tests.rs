@@ -56,7 +56,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
     let req = Request {
-        cyphertext: encrypted_test_msg(eid.clone()),
+        cyphertext: encrypted_test_msg(eid),
         shard: H256::default(),
     };
     crate::process_request(eid, req, port);

@@ -224,6 +224,7 @@ pub fn percent_decode(orig: String) -> SgxResult<String> {
     Ok(ret)
 }
 
+// FIXME: This code is redundant with the host call of the substraTEE-node
 pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
     // Before we reach here, Webpki already verifed the cert is properly signed
 
