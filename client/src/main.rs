@@ -355,7 +355,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
     match valopt {
         Some(v) => {
             let value = U256::from_little_endian(&v);
-            println!("    value = {}", value);
+            println!("{}", value);
         }
         _ => error!("error getting value"),
     };
@@ -498,7 +498,7 @@ where
         })
         .unwrap();
 
-    println!("[+] Subscribed, waiting for event...\n");
+    println!("waiting for confirmation event...");
     loop {
         let event_str = events_out.recv().unwrap();
 

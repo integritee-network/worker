@@ -80,7 +80,7 @@ fn main() {
     info!("MU-RA server on port {}", mu_ra_port);
 
     if let Some(_matches) = matches.subcommand_matches("run") {
-        println!("*** Starting substraTEE-worker\n");
+        println!("*** Starting substraTEE-worker");
         let shard: ShardIdentifier = match _matches.value_of("shard") {
             Some(value) => {
                 let shard_vec = value.from_base58().unwrap();
@@ -311,8 +311,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
         })
         .unwrap();
 
-    println!("[+] Subscribed, waiting for event...");
-    println!();
+    println!("[+] Subscribed to events. waiting...");
 
     loop {
         let event_str = events_out.recv().unwrap();
@@ -330,8 +329,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
                             debug!("{:?}", be);
                             match &be {
                                 balances::RawEvent::Transfer(transactor, dest, value, fee) => {
-                                    println!("    Transactor:  {:?}", transactor);
-                                    println!("    Destination: {:?}", dest);
+                                    println!("    Transactor:  {:?}", transactor.to_ss58check());
+                                    println!("    Destination: {:?}", dest.to_ss58check());
                                     println!("    Value:       {:?}", value);
                                     println!("    Fee:         {:?}", fee);
                                     println!();
@@ -342,7 +341,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
                             }
                         }
                         Event::substratee_registry(re) => {
-                            println!("[+] Received substratee_registry event");
                             debug!("{:?}", re);
                             match &re {
                                 my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
@@ -360,7 +358,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
                                 my_node_runtime::substratee_registry::RawEvent::Forwarded(
                                     request,
                                 ) => {
-                                    println!("[+] Received Forwarded event");
+                                    println!("[+] Received trusted call");
                                     info!(
                                         "    Request: \n  shard: {}\n  cyphertext: {}",
                                         request.shard.encode().to_base58(),
@@ -428,12 +426,9 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
     let mut _xthex = hex::encode(ue.encode());
     _xthex.insert_str(0, "0x");
-    info!("[>] Confirm processing (send the extrinsic)");
-    let tx_hash = _api.send_extrinsic(_xthex).unwrap();
-    println!(
-        "[<] Request Extrinsic got finalized. tx hash: {:?}\n",
-        tx_hash
-    );
+    println!("[>] Confirm successful processing of trusted call (send the extrinsic)");
+    let _hash = _api.send_extrinsic(_xthex).unwrap();
+    debug!("[<] Request Extrinsic got finalized");
 }
 
 fn init_shard(shard: &ShardIdentifier) {

@@ -168,7 +168,12 @@ pub fn cmd<'a>(
                     let nonce = 0; // FIXME: hard coded for now
                     let tscall =
                         tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
-                    println!("call from: {}", tscall.call.account());
+                    println!(
+                        "send trusted call transfer from {} to {}: {}",
+                        tscall.call.account(),
+                        to,
+                        amount
+                    );
                     perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
@@ -210,7 +215,11 @@ pub fn cmd<'a>(
                     let nonce = 0; // FIXME: hard coded for now
                     let tscall =
                         tcall.sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard);
-                    println!("call from: {}", tscall.call.account());
+                    println!(
+                        "send trusted call set-balance({}, {})",
+                        tscall.call.account(),
+                        amount
+                    );
                     perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
