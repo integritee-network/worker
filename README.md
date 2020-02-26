@@ -49,13 +49,13 @@ cd substraTEE-worker
 git checkout tags/M5
 make
 cd bin
-RUST_LOG=info ./substratee_worker -p 9979 worker
+RUST_LOG=info ./substratee-worker -p 9979 worker
 ```
 
 in terminal 3, run the client
 ```
 cd substraTEE-worker/bin
-./substratee_client --node-ws-port 9979
+./substratee-client --node-ws-port 9979
 ```
 
 Then you should see this in terminal 3:
@@ -136,5 +136,5 @@ substraTEE-worker/bin$ touch sealed_stf_state.bin
 ### execute tests
 Run these with
 ```
-substraTEE-worker/bin$ ./substratee_worker test_enclave --all
+substraTEE-worker/bin$ ./substratee-worker test_enclave --all
 ```

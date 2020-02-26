@@ -93,7 +93,7 @@ impl ::core::cmp::PartialEq for Runtime {
 impl ::core::cmp::Eq for Runtime {
     #[inline]
     #[doc(hidden)]
-    fn assert_receiver_is_total_eq(&self) -> () {
+    fn assert_receiver_is_total_eq(&self) {
         {}
     }
 }
@@ -203,7 +203,7 @@ impl ::core::cmp::PartialEq for Origin {
         {
             let __self_vi = ::core::intrinsics::discriminant_value(&*self) as isize;
             let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
-            if true && __self_vi == __arg_1_vi {
+            if __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Origin::system(ref __self_0), &Origin::system(ref __arg_1_0)) => {
                         (*__self_0) == (*__arg_1_0)
@@ -223,7 +223,7 @@ impl ::core::cmp::PartialEq for Origin {
         {
             let __self_vi = ::core::intrinsics::discriminant_value(&*self) as isize;
             let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
-            if true && __self_vi == __arg_1_vi {
+            if __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Origin::system(ref __self_0), &Origin::system(ref __arg_1_0)) => {
                         (*__self_0) != (*__arg_1_0)
@@ -245,7 +245,7 @@ impl ::core::cmp::PartialEq for Origin {
 impl ::core::cmp::Eq for Origin {
     #[inline]
     #[doc(hidden)]
-    fn assert_receiver_is_total_eq(&self) -> () {
+    fn assert_receiver_is_total_eq(&self) {
         {
             let _: ::core::cmp::AssertParamIsEq<system::Origin<Runtime>>;
             let _: ::core::cmp::AssertParamIsEq<::support::Void>;
@@ -482,7 +482,7 @@ impl ::core::cmp::PartialEq for Event {
         {
             let __self_vi = ::core::intrinsics::discriminant_value(&*self) as isize;
             let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
-            if true && __self_vi == __arg_1_vi {
+            if __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Event::system(ref __self_0), &Event::system(ref __arg_1_0)) => {
                         (*__self_0) == (*__arg_1_0)
@@ -505,7 +505,7 @@ impl ::core::cmp::PartialEq for Event {
         {
             let __self_vi = ::core::intrinsics::discriminant_value(&*self) as isize;
             let __arg_1_vi = ::core::intrinsics::discriminant_value(&*other) as isize;
-            if true && __self_vi == __arg_1_vi {
+            if __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
                     (&Event::system(ref __self_0), &Event::system(ref __arg_1_0)) => {
                         (*__self_0) != (*__arg_1_0)
@@ -530,7 +530,7 @@ impl ::core::cmp::PartialEq for Event {
 impl ::core::cmp::Eq for Event {
     #[inline]
     #[doc(hidden)]
-    fn assert_receiver_is_total_eq(&self) -> () {
+    fn assert_receiver_is_total_eq(&self) {
         {
             let _: ::core::cmp::AssertParamIsEq<system::Event>;
             let _: ::core::cmp::AssertParamIsEq<indices::Event<Runtime>>;
@@ -679,7 +679,7 @@ impl <AccountId: ::core::cmp::Eq> ::core::cmp::Eq for RawEvent<AccountId>
     {
     #[inline]
     #[doc(hidden)]
-    fn assert_receiver_is_total_eq(&self) -> () {
+    fn assert_receiver_is_total_eq(&self) {
         {
             let _: ::core::cmp::AssertParamIsEq<u32>;
             let _: ::core::cmp::AssertParamIsEq<AccountId>;
@@ -754,7 +754,7 @@ const _IMPL_DECODE_FOR_RawEvent: () =
         }
     };
 impl <AccountId> From<RawEvent<AccountId>> for () {
-    fn from(_: RawEvent<AccountId>) -> () { () }
+    fn from(_: RawEvent<AccountId>) { () }
 }
 impl <AccountId> RawEvent<AccountId> {
     pub fn metadata() -> &'static [::support::event::EventMetadata] {

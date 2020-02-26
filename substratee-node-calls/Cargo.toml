@@ -12,7 +12,7 @@ base58 			        = "0.1"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-rev = "7328b37166fdffcc74cf11763084d67029945df9"
+rev = "e09d5c51287d240df904b5dc98c4a9f59ac7c002"
 package = "substratee-node-runtime"
 
 [dependencies.substrate-api-client]

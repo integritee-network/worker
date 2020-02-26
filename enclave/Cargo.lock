@@ -1478,7 +1478,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "substratee_worker_enclave"
+name = "substratee-worker-enclave"
 version = "4.0.0"
 dependencies = [
  "aes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",

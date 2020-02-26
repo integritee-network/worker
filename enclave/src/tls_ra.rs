@@ -167,9 +167,9 @@ fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
 
 fn send_files(
     tls: &mut Stream<ServerSession, TcpStream>,
-    rsa_pair: &Vec<u8>,
+    rsa_pair: &[u8],
     aes: &(Vec<u8>, Vec<u8>),
-    enc_state: &Vec<u8>,
+    enc_state: &[u8],
 ) -> SgxResult<()> {
     tls.write(&rsa_pair.len().to_le_bytes()).sgx_error()?;
     tls.write(&rsa_pair).sgx_error()?;

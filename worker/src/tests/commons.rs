@@ -67,5 +67,5 @@ pub fn test_trusted_call_signed() -> TrustedCallSigned {
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
     let getter = TrustedGetter::free_balance(who.public());
-    TrustedGetterSigned::new(getter.clone(), getter.sign(&who.pair()))
+    getter.sign(&who.pair())
 }

@@ -20,10 +20,13 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
-#![cfg_attr(not(target_env = "sgx"), no_std)]
+#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate clap;
 
 use codec::{Decode, Encode};
 use primitives::{sr25519, Pair, H256};
@@ -34,6 +37,9 @@ pub type ShardIdentifier = H256;
 #[cfg(feature = "sgx")]
 pub mod sgx;
 
+#[cfg(feature = "std")]
+pub mod cli;
+
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
@@ -42,6 +48,13 @@ pub type Balance = u128;
 
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
+
+#[derive(Encode, Decode, Clone)]
+#[allow(non_camel_case_types)]
+pub enum TrustedOperationSigned {
+    call(TrustedCallSigned),
+    get(TrustedGetterSigned),
+}
 
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
@@ -93,12 +106,16 @@ impl TrustedGetter {
         }
     }
 
-    pub fn sign(&self, pair: &sr25519::Pair) -> AnySignature {
-        pair.sign(self.encode().as_slice()).into()
+    pub fn sign(&self, pair: &sr25519::Pair) -> TrustedGetterSigned {
+        let signature = pair.sign(self.encode().as_slice()).into();
+        TrustedGetterSigned {
+            getter: self.clone(),
+            signature,
+        }
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 pub struct TrustedGetterSigned {
     pub getter: TrustedGetter,
     pub signature: AnySignature,
@@ -115,7 +132,7 @@ impl TrustedGetterSigned {
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 pub struct TrustedCallSigned {
     pub call: TrustedCall,
     pub nonce: u32,

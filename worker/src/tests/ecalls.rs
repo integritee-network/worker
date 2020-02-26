@@ -15,43 +15,28 @@
 
 */
 
-use crate::enclave::api::*;
-use crate::tests::commons::*;
+use crate::enclave::api::{enclave_execute_stf, enclave_query_state};
+use crate::init_shard;
+use crate::tests::commons::{encrypted_test_msg, test_trusted_getter_signed};
 use codec::Encode;
+use keyring::AccountKeyring;
 use primitives::hash::H256;
 use sgx_types::*;
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey
 
-/* who needs get_state anyway?
 pub fn get_state_works(eid: sgx_enclave_id_t) {
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-
-    let value_size = 16; //u128
-    let mut value: Vec<u8> = vec![0u8; value_size as usize];
-
     let alice = AccountKeyring::Alice;
     let trusted_getter_signed = test_trusted_getter_signed(alice).encode();
-
-    let result = unsafe {
-        get_state(
-            eid,
-            &mut retval,
-            trusted_getter_signed.as_ptr(),
-            trusted_getter_signed.len() as u32,
-            value.as_mut_ptr(),
-            value_size as u32,
-        )
-    };
-    println!("{} value: {:?}", alice, value);
-    evaluate_result(retval);
-    evaluate_result(result);
+    let shard = H256::default();
+    init_shard(&shard);
+    let res = enclave_query_state(eid, trusted_getter_signed, shard.encode()).unwrap();
+    println!("get_state returned {:?}", res);
 }
-*/
 
 pub fn execute_stf_works(eid: sgx_enclave_id_t) {
-    let cyphertext = encrypted_test_msg(eid.clone());
+    let cyphertext = encrypted_test_msg(eid);
     let nonce = 0u32;
     let genesis_hash: [u8; 32] = [0; 32];
     let shard = H256::default();

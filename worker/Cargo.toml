@@ -1,5 +1,5 @@
 [package]
-name = "substratee_worker"
+name = "substratee-worker"
 version = "4.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
@@ -43,12 +43,12 @@ tag = "api-M1.5"
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
 
-[dependencies.substratee_worker_api]
+[dependencies.substratee-worker-api]
 path = "worker-api"
 
 [dependencies.my_node_runtime]
 git = "https://github.com/scs/substraTEE-node"
-rev = "7328b37166fdffcc74cf11763084d67029945df9"
+rev = "e09d5c51287d240df904b5dc98c4a9f59ac7c002"
 package = "substratee-node-runtime"
 
 [dependencies.runtime_primitives]
