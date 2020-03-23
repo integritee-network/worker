@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# this pre-commit hooks uses cargo fmt to check the code style
+
+echo '+cargo fmt -- --check'
+cargo fmt -- --check
+result=$?
+
+if [[ ${result} -ne 0 ]] ; then
+    cat <<\EOF
+There are some code style issues, run `cargo fmt` first.
+EOF
+    exit 1
+fi
+
+exit 0
