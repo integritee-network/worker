@@ -50,6 +50,7 @@ use enclave::api::{
     enclave_signing_key, mrenclave,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use std::slice;
 use substratee_node_calls::{get_worker_for_shard, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
@@ -532,4 +533,40 @@ pub fn check_files() {
             panic!("file doesn't exist: {}", f);
         }
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_worker_request(
+    worker_request: *const u8,
+    req_size: u32,
+    worker_response: *mut u8,
+    resp_size: u32,
+) -> sgx_status_t {
+    debug!("    Entering ocall_ocall_worker_request");
+    let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
+
+    let mut w_response = slice::from_raw_parts_mut(worker_response, resp_size as usize);
+    let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
+    let req = WorkerRequest::decode(&mut req_slice).unwrap();
+
+    // let res = match req {
+    //     WorkerRequest::ChainStorage(module, key_hash, params) => {
+    //         api.get_storage(module, &key_hash, params)
+    //     }
+    // };
+
+    w_response = WorkerResponse::ChainStorage(Vec::new())
+        .encode()
+        .as_mut_slice();
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[derive(Encode, Decode, Clone)]
+pub enum WorkerRequest {
+    ChainStorage(Vec<u8>),
+}
+
+#[derive(Encode, Decode, Clone)]
+pub enum WorkerResponse {
+    ChainStorage(Vec<u8>),
 }

@@ -101,5 +101,10 @@ enclave {
 			[in, size = state_size] uint8_t * enc_state, uint32_t state_size,
 			[out, size = cid_size] uint8_t * cid, uint32_t cid_size
 		);
+
+		sgx_status_t ocall_worker_request(
+	        [in, size = req_size] uint8_t * worker_request, uint32_t req_size,
+	        [out, size = resp_size] uint8_t * worker_respone, uint32_t resp_size
+	    );
 	};
 };
