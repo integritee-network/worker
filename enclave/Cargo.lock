@@ -1352,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "2.0.0"
-source = "git+https://github.com/scs/substrate-api-client?tag=api-M1.5#5a825ff965bbae4ac0967ac23ede25c50ce66487"
+source = "git+https://github.com/scs/substrate-api-client?branch=cl-get_block-api#ea46435a661b126b965fce3e5564cb7ae6ae77b6"
 dependencies = [
  "node-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "palette-metadata 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
@@ -1514,7 +1514,7 @@ dependencies = [
  "sr-io 2.0.0",
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "sr-std 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
- "substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?tag=api-M1.5)",
+ "substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?branch=cl-get_block-api)",
  "substrate-application-crypto 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substratee-stf 0.1.0",
@@ -1876,7 +1876,7 @@ dependencies = [
 "checksum sr-version 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
 "checksum static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 "checksum stream-cipher 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8131256a5896cabcf5eb04f4d6dacbe1aefda854b0d9896e09cb58829ec5638c"
-"checksum substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?tag=api-M1.5)" = "<none>"
+"checksum substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?branch=cl-get_block-api)" = "<none>"
 "checksum substrate-application-crypto 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
 "checksum substrate-debug-derive 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
 "checksum substrate-inherents 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)" = "<none>"
