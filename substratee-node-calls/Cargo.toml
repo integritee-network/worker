@@ -17,7 +17,7 @@ package = "substratee-node-runtime"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "api-M1.5"
+branch = "cl-get_block-api"
 
 [dependencies.primitives]
 git = "https://github.com/paritytech/substrate"
