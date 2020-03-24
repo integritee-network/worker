@@ -262,9 +262,7 @@ extern "C" {
         cid: *const u8,
         cid_size: u32,
     ) -> sgx_status_t;
-}
 
-extern "C" {
     pub fn ocall_write_ipfs(
         ret_val: *mut sgx_status_t,
         enc_state: *const u8,
@@ -272,13 +270,28 @@ extern "C" {
         cid: *mut u8,
         cid_size: u32,
     ) -> sgx_status_t;
+
+    pub fn ocall_worker_request(
+        ret_val: *mut sgx_status_t,
+        worker_request: *const u8,
+        req_size: u32,
+        worker_respone: *const u8,
+        resp_size: u32,
+    ) -> sgx_status_t;
+
+    pub fn ocall_sgx_init_quote(
+        ret_val: *mut sgx_status_t,
+        ret_ti: *mut sgx_target_info_t,
+        ret_gid: *mut sgx_epid_group_id_t,
+    ) -> sgx_status_t;
 }
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
-        state::test_encrypted_state_io_works,
-        test_ocall_read_write_ipfs
+        // state::test_encrypted_state_io_works,
+        // test_ocall_read_write_ipfs
+        test_ocall_worker_request
     )
 }
 
@@ -312,10 +325,50 @@ fn test_ocall_read_write_ipfs() {
     assert_eq!(enc_state, ret_state);
 }
 
-extern "C" {
-    pub fn ocall_sgx_init_quote(
-        ret_val: *mut sgx_status_t,
-        ret_ti: *mut sgx_target_info_t,
-        ret_gid: *mut sgx_epid_group_id_t,
-    ) -> sgx_status_t;
+#[derive(Encode, Decode, Clone, Debug)]
+pub enum WorkerRequest {
+    ChainStorage(Vec<u8>),
+}
+
+#[derive(Encode, Decode, Clone, Debug)]
+pub enum WorkerResponse {
+    ChainStorage(Vec<u8>),
+}
+
+
+fn test_ocall_worker_request() {
+
+    info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "FreeBalance", None));
+    let mut resp:  Vec<u8> = vec![0; 50];
+
+    let _res = unsafe {
+        ocall_write_ipfs(
+            &mut rt as *mut sgx_status_t,
+            req.encode().as_ptr(),
+            req.encode().len() as u32,
+            resp.encode().as_mut_ptr(),
+            resp.encode().len() as u32,
+        )
+    };
+    let response = WorkerResponse::decode(&mut resp.as_slice()).unwrap();
+
+    println!("Worker Response in thest: {:?}", response);
+}
+
+// use primitives::blake2_256;
+use primitives::twox_128;
+
+fn storage_key_hash_vec(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
+    let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
+    match param {
+        Some(par) => {
+            key.extend(&par);
+            blake2_256(&key).to_vec()
+        },
+        _ => {
+            twox_128(&key).to_vec()
+        },
+    }
 }
