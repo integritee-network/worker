@@ -97,21 +97,3 @@ fn hexstr_to_enclave(hexstr: String) -> Enclave<AccountId, Vec<u8>> {
     let unhex = hexstr_to_vec(hexstr).unwrap();
     Enclave::decode(&mut &unhex[..]).unwrap()
 }
-
-#[cfg(test)]
-mod tests {
-    use substrate_api_client::Api;
-
-    use super::*;
-
-    #[test]
-    fn regex_works() {
-        let url = "1192.168.10.21:9111askdfhkajsd";
-        let re = Regex::new("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{4}").unwrap();
-
-        println!("Regex {}", re.as_str());
-        let m = re.find(url).unwrap();
-
-        assert_eq!("192.168.10.21:9111", &url[m.start()..m.end()])
-    }
-}
