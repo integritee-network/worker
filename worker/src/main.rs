@@ -545,28 +545,27 @@ pub unsafe extern "C" fn ocall_worker_request(
     debug!("    Entering ocall_ocall_worker_request");
     let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
 
-    let mut w_response = slice::from_raw_parts_mut(worker_response, resp_size as usize);
+    let w_response = slice::from_raw_parts_mut(worker_response, resp_size as usize);
     let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
     let req = WorkerRequest::decode(&mut req_slice).unwrap();
 
-    // let res = match req {
-    //     WorkerRequest::ChainStorage(module, key_hash, params) => {
-    //         api.get_storage(module, &key_hash, params)
-    //     }
-    // };
+    let res = match req {
+        WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
+    };
+    info!("Api client Result{:?} ", res);
 
-    w_response = WorkerResponse::ChainStorage(Vec::new())
-        .encode()
-        .as_mut_slice();
+    let w_slice = WorkerResponse::ChainStorage(res.as_bytes().to_vec()).encode();
+
+    w_response[..w_slice.len()].clone_from_slice(w_slice.as_slice());
     sgx_status_t::SGX_SUCCESS
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>),
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub enum WorkerResponse {
     ChainStorage(Vec<u8>),
 }

@@ -37,7 +37,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
 
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, utils::{storage_key_hash_vec, hexstr_to_u256}};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -340,35 +340,22 @@ fn test_ocall_worker_request() {
 
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "FreeBalance", None));
-    let mut resp:  Vec<u8> = vec![0; 50];
+    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "TotalIssuance", None));
+    let mut resp  = [0; 256];
 
     let _res = unsafe {
-        ocall_write_ipfs(
+        ocall_worker_request(
             &mut rt as *mut sgx_status_t,
             req.encode().as_ptr(),
             req.encode().len() as u32,
-            resp.encode().as_mut_ptr(),
-            resp.encode().len() as u32,
+            resp.as_mut_ptr(),
+            resp.len() as u32,
         )
     };
-    let response = WorkerResponse::decode(&mut resp.as_slice()).unwrap();
+    let value = match WorkerResponse::decode(&mut resp.as_ref()).unwrap() {
+        WorkerResponse::ChainStorage(value) => value
+    };
 
-    println!("Worker Response in thest: {:?}", response);
-}
-
-// use primitives::blake2_256;
-use primitives::twox_128;
-
-fn storage_key_hash_vec(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
-    let mut key = [module, storage_key_name].join(" ").as_bytes().to_vec();
-    match param {
-        Some(par) => {
-            key.extend(&par);
-            blake2_256(&key).to_vec()
-        },
-        _ => {
-            twox_128(&key).to_vec()
-        },
-    }
+    let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
+    info!("Total Issuance is: {:?}", issuance);
 }
