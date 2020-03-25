@@ -20,7 +20,7 @@ use std::io::stdin;
 use std::io::Write;
 use std::path::Path;
 use std::str;
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
 use sgx_types::*;
@@ -39,6 +39,8 @@ use primitives::{
     crypto::{AccountId32, Ss58Codec},
     sr25519, Pair,
 };
+use serde_derive::{Deserialize, Serialize};
+
 use substrate_api_client::{
     extrinsic::xt_primitives::GenericAddress,
     utils::{hexstr_to_u256, hexstr_to_vec},
@@ -304,90 +306,102 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
     println!("*** Subscribing to events");
-    let (events_in, events_out) = channel();
+    let (sender, receiver) = channel();
+    let sender2 = sender.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api.subscribe_events(events_in.clone());
+            api.subscribe_events(sender2);
         })
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
 
     loop {
-        let event_str = events_out.recv().unwrap();
+        let msg = receiver.recv().unwrap();
 
-        let _unhex = hexstr_to_vec(event_str).unwrap();
-        let mut _er_enc = _unhex.as_slice();
-        let _events = Vec::<system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
-        match _events {
-            Ok(evts) => {
-                for evr in &evts {
-                    debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
-                    match &evr.event {
-                        Event::balances(be) => {
-                            println!("[+] Received balances event");
-                            debug!("{:?}", be);
-                            match &be {
-                                balances::RawEvent::Transfer(transactor, dest, value, fee) => {
-                                    println!("    Transactor:  {:?}", transactor.to_ss58check());
-                                    println!("    Destination: {:?}", dest.to_ss58check());
-                                    println!("    Value:       {:?}", value);
-                                    println!("    Fee:         {:?}", fee);
-                                    println!();
-                                }
-                                _ => {
-                                    info!("Ignoring unsupported balances event");
-                                }
-                            }
-                        }
-                        Event::substratee_registry(re) => {
-                            debug!("{:?}", re);
-                            match &re {
-                                my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
-                                    sender,
-                                    worker_url,
-                                ) => {
-                                    println!("[+] Received AddedEnclave event");
-                                    println!("    Sender (Worker):  {:?}", sender);
-                                    println!(
-                                        "    Registered URL: {:?}",
-                                        str::from_utf8(worker_url).unwrap()
-                                    );
-                                    println!();
-                                }
-                                my_node_runtime::substratee_registry::RawEvent::Forwarded(
-                                    request,
-                                ) => {
-                                    println!("[+] Received trusted call");
-                                    info!(
-                                        "    Request: \n  shard: {}\n  cyphertext: {}",
-                                        request.shard.encode().to_base58(),
-                                        hex::encode(request.cyphertext.clone())
-                                    );
-                                    process_request(eid, request.clone(), node_url);
-                                }
-                                my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
-                                    sender,
-                                    payload,
-                                ) => {
-                                    println!("[+] Received CallConfirmed event");
-                                    debug!("    From:    {:?}", sender);
-                                    debug!("    Payload: {:?}", hex::encode(payload));
-                                    println!();
-                                }
-                                _ => {
-                                    info!("Ignoring unsupported substratee_registry event");
-                                }
-                            }
-                        }
-                        _ => {
-                            info!("Ignoring event {:?}", evr);
-                        }
+        if let Ok(events) = parse_events(msg.clone()) {
+            handle_events(eid, node_url, events, sender.clone())
+        } else if let Ok(request) = serde_json::from_str(&msg) {
+            handle_request(request, &receiver)
+        } else {
+            println!("[-] Unable to parse received message!")
+        }
+    }
+}
+
+fn handle_request(req: WorkerRequest, _receiver: &Receiver<String>) {
+    println!("Handling incoming worder request: {:?}", req);
+}
+
+type Events = Vec<system::EventRecord<Event, Hash>>;
+fn parse_events(event: String) -> Result<Events, String> {
+    let _unhex = hexstr_to_vec(event).unwrap();
+    let mut _er_enc = _unhex.as_slice();
+    Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
+}
+
+fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<String>) {
+    for evr in &events {
+        debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
+        match &evr.event {
+            Event::balances(be) => {
+                println!("[+] Received balances event");
+                debug!("{:?}", be);
+                match &be {
+                    balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+                        println!("    Transactor:  {:?}", transactor.to_ss58check());
+                        println!("    Destination: {:?}", dest.to_ss58check());
+                        println!("    Value:       {:?}", value);
+                        println!("    Fee:         {:?}", fee);
+                        println!();
+                    }
+                    _ => {
+                        info!("Ignoring unsupported balances event");
                     }
                 }
             }
-            Err(_) => error!("Couldn't decode event record list"),
+            Event::substratee_registry(re) => {
+                debug!("{:?}", re);
+                match &re {
+                    my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+                        sender,
+                        worker_url,
+                    ) => {
+                        println!("[+] Received AddedEnclave event");
+                        println!("    Sender (Worker):  {:?}", sender);
+                        println!(
+                            "    Registered URL: {:?}",
+                            str::from_utf8(worker_url).unwrap()
+                        );
+                        println!();
+                    }
+                    my_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
+                        println!("[+] Received trusted call");
+                        info!(
+                            "    Request: \n  shard: {}\n  cyphertext: {}",
+                            request.shard.encode().to_base58(),
+                            hex::encode(request.cyphertext.clone())
+                        );
+                        process_request(eid, request.clone(), node_url);
+                    }
+                    my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                        sender,
+                        payload,
+                    ) => {
+                        println!("[+] Received CallConfirmed event");
+                        debug!("    From:    {:?}", sender);
+                        debug!("    Payload: {:?}", hex::encode(payload));
+                        println!();
+                    }
+                    _ => {
+                        info!("Ignoring unsupported substratee_registry event");
+                    }
+                }
+            }
+            _ => {
+                info!("Ignoring event {:?}", evr);
+            }
         }
     }
 }
@@ -560,12 +574,12 @@ pub unsafe extern "C" fn ocall_worker_request(
     sgx_status_t::SGX_SUCCESS
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>),
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize)]
 pub enum WorkerResponse {
     ChainStorage(Vec<u8>),
 }
