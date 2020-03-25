@@ -57,7 +57,7 @@ version          = "0.21.0"
 [dependencies.webpki-roots]
 git              = "https://github.com/mesalock-linux/webpki-roots"
 branch           = "mesalock_sgx"
-version          = "0.17.0"
+version          = "0.19.0"
 
 [dependencies.yasna]
 git      = "https://github.com/mesalock-linux/yasna.rs-sgx"
