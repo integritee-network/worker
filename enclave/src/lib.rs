@@ -37,7 +37,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
+use substrate_api_client::{compose_extrinsic_offline, utils::{storage_key_hash_vec, hexstr_to_u256}};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -340,8 +340,8 @@ fn test_ocall_worker_request() {
 
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "FreeBalance", None));
-    let mut resp  = [0; 32];
+    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "TotalIssuance", None));
+    let mut resp  = [0; 256];
 
     let _res = unsafe {
         ocall_worker_request(
@@ -352,7 +352,10 @@ fn test_ocall_worker_request() {
             resp.len() as u32,
         )
     };
-    let response = WorkerResponse::decode(&mut resp.as_ref()).unwrap();
+    let value = match WorkerResponse::decode(&mut resp.as_ref()).unwrap() {
+        WorkerResponse::ChainStorage(value) => value
+    };
 
-    debug!("Worker Response in thest: {:?}", response);
+    let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
+    info!("Total Issuance is: {:?}", issuance);
 }

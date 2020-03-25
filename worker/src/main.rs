@@ -543,21 +543,18 @@ pub unsafe extern "C" fn ocall_worker_request(
     resp_size: u32,
 ) -> sgx_status_t {
     debug!("    Entering ocall_ocall_worker_request");
-    // let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
+    let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
 
     let w_response = slice::from_raw_parts_mut(worker_response, resp_size as usize);
     let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
     let req = WorkerRequest::decode(&mut req_slice).unwrap();
 
-    debug!("Worker Request {:?} ", req);
+    let res = match req {
+        WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
+    };
+    info!("Api client Result{:?} ", res);
 
-    // let res = match req {
-    //     WorkerRequest::ChainStorage(module, key_hash, params) => {
-    //         api.get_storage(module, &key_hash, params)
-    //     }
-    // };
-
-    let w_slice = WorkerResponse::ChainStorage(vec![0, 1, 2, 3, 3, 4, 4]).encode();
+    let w_slice = WorkerResponse::ChainStorage(res.as_bytes().to_vec()).encode();
 
     w_response[..w_slice.len()].clone_from_slice(w_slice.as_slice());
     sgx_status_t::SGX_SUCCESS
