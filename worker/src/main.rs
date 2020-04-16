@@ -335,6 +335,7 @@ fn handle_request(req: WorkerRequest, _receiver: &Receiver<String>) {
 }
 
 type Events = Vec<system::EventRecord<Event, Hash>>;
+
 fn parse_events(event: String) -> Result<Events, String> {
     let _unhex = hexstr_to_vec(event).unwrap();
     let mut _er_enc = _unhex.as_slice();
@@ -574,12 +575,44 @@ pub unsafe extern "C" fn ocall_worker_request(
     sgx_status_t::SGX_SUCCESS
 }
 
-#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize)]
+#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>),
 }
 
-#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize)]
+#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum WorkerResponse {
     ChainStorage(Vec<u8>),
+}
+
+unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
+    std::slice::from_raw_parts_mut((p as *mut T) as *mut u8, std::mem::size_of::<T>())
+}
+
+#[cfg(test)]
+mod test {
+    use super::{any_as_u8_slice_mut, WorkerRequest, WorkerResponse};
+    use nb_sync::fifo::{Channel, Sender};
+    use substrate_api_client::utils::storage_key_hash_vec;
+
+    #[test]
+    fn sender_aligned_from_raw_parts_is_functional() {
+        let mut buffer: [Option<WorkerRequest>; 4] = [None, None, None, None];
+        let mut channel = Channel::new(&mut buffer);
+
+        let (mut receiver, mut sender) = channel.split();
+        let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
+
+        let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<WorkerRequest>>() };
+
+        // only for readability
+        let sender_2 = &mut body[0];
+        println!("Sender: {:?} ", sender_2);
+
+        let req =
+            WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "TotalIssuance", None));
+
+        sender_2.send(req.clone()).unwrap();
+        assert_eq!(req, receiver.recv().unwrap());
+    }
 }

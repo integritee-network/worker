@@ -15,6 +15,7 @@ rust-crypto 			= "0.2"
 clap 					= { version = "2.33", features = [ "yaml" ] }
 
 dirs 					= "1.0.2"
+nb-sync                 = "0.2"
 serde 					= "1.0"
 serde_json 				= "1.0"
 serde_derive 			= "1.0"

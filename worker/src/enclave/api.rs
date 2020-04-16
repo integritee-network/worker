@@ -348,28 +348,3 @@ pub fn enclave_test(eid: sgx_enclave_id_t) -> SgxResult<()> {
     }
     Ok(())
 }
-
-unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    std::slice::from_raw_parts((p as *const T) as *const u8, std::mem::size_of::<T>())
-}
-
-#[cfg(test)]
-mod test {
-    use crate::enclave::api::any_as_u8_slice;
-    use std::sync::mpsc::{channel, Sender};
-    // {channel, Sender};
-
-    #[test]
-    fn sender_to_and_from_slice_works() {
-        let (sender, receiver) = channel::<String>();
-        let sender_slice = unsafe { any_as_u8_slice(&sender) };
-
-        let (_head, body, _tail) = unsafe { sender_slice.align_to::<Sender<String>>() };
-
-        let sender_2 = body[0].clone();
-        println!("Sender: {:?} ", sender_2);
-
-        sender_2.send("Hello".to_string()).unwrap();
-        assert_eq!("Hello".to_string(), receiver.recv().unwrap());
-    }
-}
