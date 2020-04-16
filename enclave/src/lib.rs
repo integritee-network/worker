@@ -37,7 +37,10 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::{storage_key_hash_vec, hexstr_to_u256}};
+use substrate_api_client::{
+    compose_extrinsic_offline,
+    utils::{hexstr_to_u256, storage_key_hash_vec},
+};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -275,8 +278,8 @@ extern "C" {
         ret_val: *mut sgx_status_t,
         worker_request: *const u8,
         req_size: u32,
-        worker_respone: *const u8,
-        resp_size: u32,
+        sender: *mut u8,
+        sender_size: u32,
     ) -> sgx_status_t;
 
     pub fn ocall_sgx_init_quote(
@@ -325,37 +328,60 @@ fn test_ocall_read_write_ipfs() {
     assert_eq!(enc_state, ret_state);
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum IPC {
+    Request(WorkerRequest),
+    Response(WorkerResponse),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>),
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse {
     ChainStorage(Vec<u8>),
 }
 
+use nb_sync::fifo::{Channel, Receiver, Sender};
+
+unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
+    std::slice::from_raw_parts_mut((p as *mut T) as *mut u8, std::mem::size_of::<T>())
+}
 
 fn test_ocall_worker_request() {
-
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "TotalIssuance", None));
-    let mut resp  = [0; 256];
+
+    let mut buffer: [Option<IPC>; 4] = [None, None, None, None];
+    let mut channel = Channel::new(&mut buffer);
+
+    let (mut receiver, mut sender) = channel.split();
+    let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
+
+    info!("Sender Slice len {}", sender_slice.len());
+    info!("Sender Slice: {:?}", sender_slice);
+
+    let req = IPC::Request(WorkerRequest::ChainStorage(storage_key_hash_vec(
+        "Balances",
+        "TotalIssuance",
+        None,
+    )));
 
     let _res = unsafe {
         ocall_worker_request(
             &mut rt as *mut sgx_status_t,
             req.encode().as_ptr(),
             req.encode().len() as u32,
-            resp.as_mut_ptr(),
-            resp.len() as u32,
+            sender_slice.as_mut_ptr(),
+            sender_slice.len() as u32,
         )
     };
-    let value = match WorkerResponse::decode(&mut resp.as_ref()).unwrap() {
-        WorkerResponse::ChainStorage(value) => value
-    };
 
-    let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
-    info!("Total Issuance is: {:?}", issuance);
+    // let resp = receiver.recv().unwrap();
+    // info!("Worker Response: {:?}", resp);
+    //
+    // let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
+    // info!("Total Issuance is: {:?}", issuance);
 }

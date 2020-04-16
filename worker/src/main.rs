@@ -14,6 +14,7 @@
     limitations under the License.
 
 */
+#![feature(const_in_array_repeat_expressions)]
 
 use std::fs::{self, File};
 use std::io::stdin;
@@ -34,6 +35,7 @@ use my_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
     Event, Hash, UncheckedExtrinsic,
 };
+use nb_sync::fifo::{Channel as NB_Channel, Receiver as NB_Receiver, Sender as NB_Sender};
 use primitive_types::U256;
 use primitives::{
     crypto::{AccountId32, Ss58Codec},
@@ -307,31 +309,42 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // subscribe to events and react on firing
     println!("*** Subscribing to events");
     let (sender, receiver) = channel();
+    let api2 = api.clone();
     let sender2 = sender.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api.subscribe_events(sender2);
+            api2.subscribe_events(sender2);
         })
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
+
+    let mut buffer: [Option<IPC>; 16] = [None; 16];
+    let mut channel = NB_Channel::new(&mut buffer);
+    let (mut nb_receiver, mut nb_sender) = channel.split();
 
     loop {
         let msg = receiver.recv().unwrap();
 
         if let Ok(events) = parse_events(msg.clone()) {
             handle_events(eid, node_url, events, sender.clone())
-        } else if let Ok(request) = serde_json::from_str(&msg) {
-            handle_request(request, &receiver)
+        // } else if let Ok(request) = serde_json::from_str(&msg) {
+        //     handle_request(request, &nb_receiver, &api)
         } else {
             println!("[-] Unable to parse received message!")
         }
     }
 }
 
-fn handle_request(req: WorkerRequest, _receiver: &Receiver<String>) {
+fn handle_request(req: WorkerRequest, receiver: &NB_Receiver<IPC>, api: &Api<sr25519::Pair>) {
     println!("Handling incoming worder request: {:?}", req);
+
+    let res = match req {
+        WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
+    };
+
+    let resp = IPC::Response(WorkerResponse::ChainStorage(res.into_bytes()));
 }
 
 type Events = Vec<system::EventRecord<Event, Hash>>;
@@ -554,33 +567,39 @@ pub fn check_files() {
 pub unsafe extern "C" fn ocall_worker_request(
     worker_request: *const u8,
     req_size: u32,
-    worker_response: *mut u8,
-    resp_size: u32,
+    sender_ptr: *mut u8,
+    sender_size: u32,
 ) -> sgx_status_t {
     debug!("    Entering ocall_ocall_worker_request");
-    let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
+    // let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
 
-    let w_response = slice::from_raw_parts_mut(worker_response, resp_size as usize);
     let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
-    let req = WorkerRequest::decode(&mut req_slice).unwrap();
+    let req = IPC::decode(&mut req_slice).unwrap();
 
-    let res = match req {
-        WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
-    };
-    info!("Api client Result{:?} ", res);
+    debug!("Sender size {}", sender_size);
 
-    let w_slice = WorkerResponse::ChainStorage(res.as_bytes().to_vec()).encode();
+    let sender_slice = slice::from_raw_parts_mut(sender_ptr, sender_size as usize);
+    debug!("Sender Slice {:?}", sender_slice);
 
-    w_response[..w_slice.len()].clone_from_slice(w_slice.as_slice());
+    let (_head, body, _tail) = sender_slice.align_to_mut::<Sender<IPC>>();
+
+    let sender = &mut body[0];
+    sender.send(req).unwrap();
     sgx_status_t::SGX_SUCCESS
 }
 
-#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum IPC {
+    Request(WorkerRequest),
+    Response(WorkerResponse),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>),
 }
 
-#[derive(Encode, Decode, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse {
     ChainStorage(Vec<u8>),
 }
@@ -591,26 +610,29 @@ unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
 
 #[cfg(test)]
 mod test {
-    use super::{any_as_u8_slice_mut, WorkerRequest, WorkerResponse};
+    use super::{any_as_u8_slice_mut, WorkerRequest, WorkerResponse, IPC};
     use nb_sync::fifo::{Channel, Sender};
     use substrate_api_client::utils::storage_key_hash_vec;
 
     #[test]
     fn sender_aligned_from_raw_parts_is_functional() {
-        let mut buffer: [Option<WorkerRequest>; 4] = [None, None, None, None];
+        let mut buffer: [Option<IPC>; 4] = [None, None, None, None];
         let mut channel = Channel::new(&mut buffer);
 
         let (mut receiver, mut sender) = channel.split();
         let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
 
-        let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<WorkerRequest>>() };
+        let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<IPC>>() };
 
         // only for readability
         let sender_2 = &mut body[0];
         println!("Sender: {:?} ", sender_2);
 
-        let req =
-            WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "TotalIssuance", None));
+        let req = IPC::Request(WorkerRequest::ChainStorage(storage_key_hash_vec(
+            "Balances",
+            "TotalIssuance",
+            None,
+        )));
 
         sender_2.send(req.clone()).unwrap();
         assert_eq!(req, receiver.recv().unwrap());
