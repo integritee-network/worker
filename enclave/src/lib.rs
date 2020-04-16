@@ -37,7 +37,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::{storage_key_hash_vec, hexstr_to_u256}};
+use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -275,8 +275,8 @@ extern "C" {
         ret_val: *mut sgx_status_t,
         worker_request: *const u8,
         req_size: u32,
-        worker_respone: *const u8,
-        resp_size: u32,
+        response: *mut u8,
+        response_size: u32,
     ) -> sgx_status_t;
 
     pub fn ocall_sgx_init_quote(
@@ -325,37 +325,46 @@ fn test_ocall_read_write_ipfs() {
     assert_eq!(enc_state, ret_state);
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage(Vec<u8>),
+    ChainStorage {
+        storage_key: Vec<u8>,
+        node_url: Vec<u8>,
+    },
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
-pub enum WorkerResponse {
-    ChainStorage(Vec<u8>),
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerResponse<V: Encode + Decode> {
+    ChainStorage {
+        storage_value: V,
+        storage_proof: Vec<Vec<u8>>,
+    },
 }
-
 
 fn test_ocall_worker_request() {
-
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let req = WorkerRequest::ChainStorage(storage_key_hash_vec("Balances", "TotalIssuance", None));
-    let mut resp  = [0; 256];
+
+    let n_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
+
+    let req = WorkerRequest::ChainStorage {
+        storage_key: storage_key_hash_vec("Balances", "TotalIssuance", None),
+        node_url: n_url,
+    };
+
+    let resp = vec![0u8; 500];
 
     let _res = unsafe {
         ocall_worker_request(
             &mut rt as *mut sgx_status_t,
             req.encode().as_ptr(),
             req.encode().len() as u32,
-            resp.as_mut_ptr(),
-            resp.len() as u32,
+            resp.encode().as_mut_ptr(),
+            resp.encode().len() as u32,
         )
     };
-    let value = match WorkerResponse::decode(&mut resp.as_ref()).unwrap() {
-        WorkerResponse::ChainStorage(value) => value
-    };
 
-    let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
-    info!("Total Issuance is: {:?}", issuance);
+    //
+    // let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
+    // info!("Total Issuance is: {:?}", issuance);
 }
