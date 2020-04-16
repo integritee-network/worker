@@ -3,7 +3,7 @@ SubstraTEE worker for SubstraTEE node
 
 This is part of [substraTEE](https://github.com/scs/substraTEE)
 
-**Supports Rust nightly-2019-11-17**
+**Supports Rust nightly-2020-03-12**
 
 ## Intel SGX develoment and production (commercial) license
 In order to perform a remote attestation of the enclave, an [Intel SGX Attestation Enhanced Service Privacy ID (EPID)](https://api.portal.trustedservices.intel.com/EPID-attestation) is needed. We use unlinkable quotes in our code.
