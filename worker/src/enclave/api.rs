@@ -348,32 +348,3 @@ pub fn enclave_test(eid: sgx_enclave_id_t) -> SgxResult<()> {
     }
     Ok(())
 }
-
-unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
-    std::slice::from_raw_parts_mut((p as *mut T) as *mut u8, std::mem::size_of::<T>())
-}
-
-#[cfg(test)]
-mod test {
-    use crate::enclave::api::{any_as_u8_slice, any_as_u8_slice_mut};
-    use nb_sync::fifo::{Channel, Sender};
-    // {channel, Sender};
-
-    #[test]
-    fn sender_to_and_from_slice_works() {
-        let mut buffer: [Option<String>; 4] = [None, None, None, None];
-        let mut channel = Channel::new(&mut buffer);
-
-        let (mut receiver, mut sender) = channel.split();
-        let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
-
-        let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<String>>() };
-
-        // only for readability
-        let sender_2 = &mut body[0];
-        println!("Sender: {:?} ", sender_2);
-
-        sender_2.send("Hello".to_string()).unwrap();
-        assert_eq!("Hello".to_string(), receiver.recv().unwrap());
-    }
-}
