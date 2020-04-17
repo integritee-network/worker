@@ -33,7 +33,7 @@ primitive-types    		= { version = "0.6", default-features = false, features = [
 
 sgx_urts				= { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types 				= { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_crypto_helper 		= { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git", default-features = false}
+sgx_crypto_helper 		= { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"

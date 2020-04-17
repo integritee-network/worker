@@ -2489,6 +2489,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sgx_crypto_helper"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_types 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
+]
+
+[[package]]
 name = "sgx_demangle"
 version = "1.1.1"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
@@ -2565,6 +2574,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sgx_ucrypto"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rdrand 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_types 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
+]
+
+[[package]]
 name = "sgx_unwind"
 version = "0.1.1"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
@@ -2574,11 +2594,11 @@ dependencies = [
 
 [[package]]
 name = "sgx_urts"
-version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
 dependencies = [
  "libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)",
- "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
+ "sgx_types 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
 ]
 
 [[package]]
@@ -3254,9 +3274,10 @@ dependencies = [
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
- "sgx_crypto_helper 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
- "sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
- "sgx_urts 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)",
+ "sgx_crypto_helper 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
+ "sgx_types 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
+ "sgx_ucrypto 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
+ "sgx_urts 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)",
  "sha2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate?rev=3bf9540e72df5ecb3955845764dfee7dcdbb26b5)",
  "substrate-api-client 2.0.0 (git+https://github.com/scs/substrate-api-client?branch=cl-get_block-api)",
@@ -4194,6 +4215,7 @@ dependencies = [
 "checksum sgx_backtrace_sys 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_build_helper 0.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_crypto_helper 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)" = "<none>"
+"checksum sgx_crypto_helper 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_demangle 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_libc 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_serialize 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
@@ -4203,8 +4225,9 @@ dependencies = [
 "checksum sgx_types 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)" = "<none>"
 "checksum sgx_types 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_ucrypto 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)" = "<none>"
+"checksum sgx_ucrypto 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sgx_unwind 0.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
-"checksum sgx_urts 1.1.0 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.0)" = "<none>"
+"checksum sgx_urts 1.1.1 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1)" = "<none>"
 "checksum sha1 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "171698ce4ec7cbb93babeb3190021b4d72e96ccb98e33d277ae4ea959d6f2d9e"
 "checksum sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 "checksum sha2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9eb6be24e4c23a84d7184280d2722f7f2731fcdd4a9d886efbfe4413e4847ea0"
