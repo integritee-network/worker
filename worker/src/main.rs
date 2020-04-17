@@ -579,6 +579,7 @@ pub unsafe extern "C" fn ocall_worker_request(
     debug!("Sender size {}", sender_size);
     debug!("Sender Slice {:?}", sender_slice);
 
+    // TODO: Why does this fail here? The slice is identical to before passing the pointer into the enclave
     let (_head, body, _tail) = sender_slice.align_to_mut::<NB_Sender<IPC>>();
     debug!("Head: {:?}", body);
 
