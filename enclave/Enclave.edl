@@ -62,6 +62,10 @@ enclave {
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
+        public sgx_status_t channel(
+			[in, size=sender_size] uint8_t* sender, uint32_t sender_size
+		);
+
 		public sgx_status_t dump_ra_to_disk();
 
 		public sgx_status_t run_key_provisioning_server(int fd,sgx_quote_sign_type_t quote_type);

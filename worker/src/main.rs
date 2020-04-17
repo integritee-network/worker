@@ -21,7 +21,7 @@ use std::io::stdin;
 use std::io::Write;
 use std::path::Path;
 use std::str;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
 
 use sgx_types::*;
@@ -35,13 +35,13 @@ use my_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
     Event, Hash, UncheckedExtrinsic,
 };
-use nb_sync::fifo::{Channel as NB_Channel, Receiver as NB_Receiver, Sender as NB_Sender};
+use nb_sync::fifo::Sender as NB_Sender;
 use primitive_types::U256;
 use primitives::{
     crypto::{AccountId32, Ss58Codec},
     sr25519, Pair,
 };
-use serde_derive::{Deserialize, Serialize};
+// use serde_derive::{Deserialize, Serialize};
 
 use substrate_api_client::{
     extrinsic::xt_primitives::GenericAddress,
@@ -320,9 +320,9 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     println!("[+] Subscribed to events. waiting...");
 
-    let mut buffer: [Option<IPC>; 16] = [None; 16];
-    let mut channel = NB_Channel::new(&mut buffer);
-    let (mut nb_receiver, mut nb_sender) = channel.split();
+    // let mut buffer: [Option<IPC>; 16] = [None; 16];
+    // let mut channel = NB_Channel::new(&mut buffer);
+    // let (mut nb_receiver, mut nb_sender) = channel.split();
 
     loop {
         let msg = receiver.recv().unwrap();
@@ -337,15 +337,15 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     }
 }
 
-fn handle_request(req: WorkerRequest, receiver: &NB_Receiver<IPC>, api: &Api<sr25519::Pair>) {
-    println!("Handling incoming worder request: {:?}", req);
-
-    let res = match req {
-        WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
-    };
-
-    let resp = IPC::Response(WorkerResponse::ChainStorage(res.into_bytes()));
-}
+// fn handle_request(req: WorkerRequest, receiver: &NB_Receiver<IPC>, api: &Api<sr25519::Pair>) {
+//     println!("Handling incoming worder request: {:?}", req);
+//
+//     let res = match req {
+//         WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
+//     };
+//
+//     let resp = IPC::Response(WorkerResponse::ChainStorage(res.into_bytes()));
+// }
 
 type Events = Vec<system::EventRecord<Event, Hash>>;
 
@@ -570,21 +570,23 @@ pub unsafe extern "C" fn ocall_worker_request(
     sender_ptr: *mut u8,
     sender_size: u32,
 ) -> sgx_status_t {
-    debug!("    Entering ocall_ocall_worker_request");
-    // let api = Api::<sr25519::Pair>::new(format!("ws://{}:{}", "127.0.0.1", "9944"));
+    debug!("    Entering ocall_worker_request");
 
     let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
     let req = IPC::decode(&mut req_slice).unwrap();
 
-    debug!("Sender size {}", sender_size);
-
     let sender_slice = slice::from_raw_parts_mut(sender_ptr, sender_size as usize);
+    debug!("Sender size {}", sender_size);
     debug!("Sender Slice {:?}", sender_slice);
 
-    let (_head, body, _tail) = sender_slice.align_to_mut::<Sender<IPC>>();
+    let (_head, body, _tail) = sender_slice.align_to_mut::<NB_Sender<IPC>>();
+    debug!("Head: {:?}", body);
 
     let sender = &mut body[0];
-    sender.send(req).unwrap();
+
+    if let Err(_) = sender.send(req) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -621,6 +623,8 @@ mod test {
 
         let (mut receiver, mut sender) = channel.split();
         let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
+
+        println!("Sender slice: {:?}", sender_slice);
 
         let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<IPC>>() };
 

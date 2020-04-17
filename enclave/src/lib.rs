@@ -37,10 +37,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
 
-use substrate_api_client::{
-    compose_extrinsic_offline,
-    utils::{hexstr_to_u256, storage_key_hash_vec},
-};
+use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -344,10 +341,38 @@ pub enum WorkerResponse {
     ChainStorage(Vec<u8>),
 }
 
-use nb_sync::fifo::{Channel, Receiver, Sender};
+use nb_sync::fifo::{Channel, Sender};
 
 unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
     std::slice::from_raw_parts_mut((p as *mut T) as *mut u8, std::mem::size_of::<T>())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn channel(sender: *mut u8, sender_size: u32) -> sgx_status_t {
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+    let req = IPC::Request(WorkerRequest::ChainStorage(storage_key_hash_vec(
+        "Balances",
+        "TotalIssuance",
+        None,
+    )));
+
+    let _res = ocall_worker_request(
+        &mut rt as *mut sgx_status_t,
+        req.encode().as_ptr(),
+        req.encode().len() as u32,
+        sender,
+        sender_size,
+    );
+
+    if _res != sgx_status_t::SGX_SUCCESS {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    // if rt != sgx_status_t::SGX_SUCCESS {
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
+
+    sgx_status_t::SGX_SUCCESS
 }
 
 fn test_ocall_worker_request() {
@@ -362,6 +387,9 @@ fn test_ocall_worker_request() {
 
     info!("Sender Slice len {}", sender_slice.len());
     info!("Sender Slice: {:?}", sender_slice);
+
+    let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<IPC>>() };
+    info!("Sender Slice: {:?}", body);
 
     let req = IPC::Request(WorkerRequest::ChainStorage(storage_key_hash_vec(
         "Balances",
@@ -379,8 +407,8 @@ fn test_ocall_worker_request() {
         )
     };
 
-    // let resp = receiver.recv().unwrap();
-    // info!("Worker Response: {:?}", resp);
+    let resp = receiver.recv().unwrap();
+    info!("Worker Response: {:?}", resp);
     //
     // let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
     // info!("Total Issuance is: {:?}", issuance);
