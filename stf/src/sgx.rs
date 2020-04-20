@@ -9,9 +9,8 @@ use runtime_primitives::traits::Dispatchable;
 use sgx_runtime::Runtime;
 use sr_io::SgxExternalitiesTrait;
 
-use crate::{State, Stf, TrustedCall, TrustedGetter};
+use crate::{AccountId, State, Stf, TrustedCall, TrustedGetter};
 
-#[cfg(feature = "sgx")]
 impl Stf {
     pub fn init_state() -> State {
         debug!("initializing stf state");
@@ -86,6 +85,17 @@ impl Stf {
             result
         })
     }
+
+    pub fn get_key_hash_to_verify(call: &TrustedCall) -> Vec<u8> {
+        match call {
+            TrustedCall::balance_set_balance(account, _, _) => nonce_key_hash(account),
+            TrustedCall::balance_transfer(account, _, _) => nonce_key_hash(account),
+        }
+    }
+}
+
+pub fn nonce_key_hash(account: &AccountId) -> Vec<u8> {
+    storage_key_bytes("System", "AccountNonce", Some(account.encode()))
 }
 
 pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {
