@@ -43,7 +43,6 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         execute_stf_works(eid);
         println!("  testing get_state()");
         get_state_works(eid);
-        println!("[+] Ecall testing channel!");
         println!("[+] Ecall tests ended!");
     }
 

@@ -14,8 +14,6 @@
     limitations under the License.
 
 */
-#![feature(const_in_array_repeat_expressions)]
-
 use std::fs::{self, File};
 use std::io::stdin;
 use std::io::Write;
@@ -40,8 +38,6 @@ use primitives::{
     crypto::{AccountId32, Ss58Codec},
     sr25519, Pair,
 };
-// use serde_derive::{Deserialize, Serialize};
-
 use substrate_api_client::{
     extrinsic::xt_primitives::GenericAddress,
     utils::{hexstr_to_u256, hexstr_to_vec},
@@ -308,43 +304,25 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // subscribe to events and react on firing
     println!("*** Subscribing to events");
     let (sender, receiver) = channel();
-    let api2 = api.clone();
     let sender2 = sender.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api2.subscribe_events(sender2);
+            api.subscribe_events(sender2);
         })
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
 
-    // let mut buffer: [Option<IPC>; 16] = [None; 16];
-    // let mut channel = NB_Channel::new(&mut buffer);
-    // let (mut nb_receiver, mut nb_sender) = channel.split();
-
     loop {
         let msg = receiver.recv().unwrap();
-
         if let Ok(events) = parse_events(msg.clone()) {
             handle_events(eid, node_url, events, sender.clone())
-        // } else if let Ok(request) = serde_json::from_str(&msg) {
-        //     handle_request(request, &nb_receiver, &api)
         } else {
             println!("[-] Unable to parse received message!")
         }
     }
 }
-
-// fn handle_request(req: WorkerRequest, receiver: &NB_Receiver<IPC>, api: &Api<sr25519::Pair>) {
-//     println!("Handling incoming worder request: {:?}", req);
-//
-//     let res = match req {
-//         WorkerRequest::ChainStorage(hash) => api.get_storage_by_key_hash(hash).unwrap(),
-//     };
-//
-//     let resp = IPC::Response(WorkerResponse::ChainStorage(res.into_bytes()));
-// }
 
 type Events = Vec<system::EventRecord<Event, Hash>>;
 
