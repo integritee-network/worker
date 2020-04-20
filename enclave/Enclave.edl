@@ -37,6 +37,7 @@ enclave {
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
 			[in] uint32_t* nonce,
+			[in, size=node_url_size] uint8_t* node_url, uint32_t node_url_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 

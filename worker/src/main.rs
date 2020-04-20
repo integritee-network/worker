@@ -426,6 +426,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         request.shard.encode(),
         genesis_hash,
         nonce,
+        node_url.to_owned(),
     )
     .unwrap();
     info!("[<] Message decoded and processed in the enclave");
@@ -558,15 +559,28 @@ pub unsafe extern "C" fn ocall_worker_request(
             node_url: url,
         } => {
             let api = Api::<sr25519::Pair>::new(String::from_utf8(url).unwrap());
-            api.get_storage_by_key_hash(key)
+            api.get_storage_by_key_hash(key).unwrap()
         }
     };
-    info!("[ocall] fetched storage: {}", storage.unwrap());
+    info!("[ocall] fetched storage: {}", storage);
 
-    let mut resp_slice = slice::from_raw_parts_mut(response, response_size as usize);
-    // let resp = IPC::decode(&mut resp_slice).unwrap();
-
+    let resp = WorkerResponse::ChainStorage {
+        storage_value: storage.into_bytes(),
+        storage_proof: None,
+    };
+    let resp_slice = slice::from_raw_parts_mut(response, response_size as usize);
+    write_slice_and_whitespace_pad(resp_slice, resp.encode());
     sgx_status_t::SGX_SUCCESS
+}
+
+pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
+    if data.len() > writable.len() {
+        panic!("not enough bytes in output buffer for return value");
+    }
+    let (left, right) = writable.split_at_mut(data.len());
+    left.clone_from_slice(&data);
+    // fill the right side with whitespace
+    right.iter_mut().for_each(|x| *x = 0x20);
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -581,6 +595,6 @@ pub enum WorkerRequest {
 pub enum WorkerResponse<V: Encode + Decode> {
     ChainStorage {
         storage_value: V,
-        storage_proof: Vec<Vec<u8>>,
+        storage_proof: Option<Vec<Vec<u8>>>,
     },
 }

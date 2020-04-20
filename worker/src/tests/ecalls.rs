@@ -40,6 +40,7 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
     let nonce = 0u32;
     let genesis_hash: [u8; 32] = [0; 32];
     let shard = H256::default();
+    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
 
     let _uxt = enclave_execute_stf(
         eid,
@@ -47,6 +48,7 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
         shard.encode(),
         genesis_hash.encode(),
         nonce,
+        node_url,
     )
     .unwrap();
 }

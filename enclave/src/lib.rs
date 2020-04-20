@@ -48,6 +48,8 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
+use std::ptr::slice_from_raw_parts;
+use substrate_api_client::utils::hexstr_to_u256;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 mod aes;
@@ -145,6 +147,8 @@ pub unsafe extern "C" fn execute_stf(
     genesis_hash: *const u8,
     genesis_hash_size: u32,
     nonce: *const u32,
+    node_url: *const u8,
+    node_url_size: u32,
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
@@ -154,6 +158,7 @@ pub unsafe extern "C" fn execute_stf(
         genesis_hash,
         genesis_hash_size as usize,
     ));
+    let node_url = slice::from_raw_parts(node_url, node_url_size as usize);
     let extrinsic_slice =
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
@@ -352,19 +357,31 @@ fn test_ocall_worker_request() {
         node_url: n_url,
     };
 
-    let resp = vec![0u8; 500];
+    let mut resp = vec![0u8; 500];
 
-    let _res = unsafe {
+    let res = unsafe {
         ocall_worker_request(
             &mut rt as *mut sgx_status_t,
             req.encode().as_ptr(),
             req.encode().len() as u32,
-            resp.encode().as_mut_ptr(),
-            resp.encode().len() as u32,
+            resp.as_mut_ptr(),
+            resp.len() as u32,
         )
     };
 
-    //
-    // let issuance = String::from_utf8(value).map(|s| hexstr_to_u256(s).unwrap()).unwrap();
-    // info!("Total Issuance is: {:?}", issuance);
+    let resp = WorkerResponse::<Vec<u8>>::decode(&mut resp.as_slice()).unwrap();
+
+    let total_issuance = match resp {
+        WorkerResponse::ChainStorage {
+            storage_value: value,
+            storage_proof: _,
+        } => String::from_utf8(value)
+            .map(|s| hexstr_to_u256(s).unwrap())
+            .unwrap(),
+    };
+
+    info!("Total Issuance is: {:?}", total_issuance);
+
+    assert_eq!(res, sgx_status_t::SGX_SUCCESS);
+    assert_eq!(rt, sgx_status_t::SGX_SUCCESS);
 }
