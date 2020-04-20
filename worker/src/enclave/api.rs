@@ -40,6 +40,8 @@ extern "C" {
         hash: *const u8,
         hash_size: u32,
         nonce: *const u32,
+        node_url: *const u8,
+        node_url_size: u32,
         unchecked_extrinsic: *mut u8,
         unchecked_extrinsic_size: u32,
     ) -> sgx_status_t;
@@ -278,6 +280,7 @@ pub fn enclave_execute_stf(
     shard: Vec<u8>,
     genesis_hash: Vec<u8>,
     nonce: u32,
+    node_url: String,
 ) -> SgxResult<Vec<u8>> {
     let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
@@ -293,6 +296,8 @@ pub fn enclave_execute_stf(
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
             &nonce,
+            node_url.as_bytes().as_ptr(),
+            node_url.into_bytes().len() as u32,
             unchecked_extrinsic.as_mut_ptr(),
             unchecked_extrinsic_size as u32,
         )
