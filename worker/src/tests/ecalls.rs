@@ -15,7 +15,7 @@
 
 */
 
-use crate::enclave::api::{enclave_channel, enclave_execute_stf, enclave_query_state};
+use crate::enclave::api::{enclave_execute_stf, enclave_query_state};
 use crate::init_shard;
 use crate::tests::commons::{encrypted_test_msg, test_trusted_getter_signed};
 use codec::Encode;
@@ -49,8 +49,4 @@ pub fn execute_stf_works(eid: sgx_enclave_id_t) {
         nonce,
     )
     .unwrap();
-}
-
-pub fn channel_works(eid: sgx_enclave_id_t) {
-    enclave_channel(eid).unwrap();
 }

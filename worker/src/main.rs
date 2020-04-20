@@ -35,7 +35,6 @@ use my_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
     Event, Hash, UncheckedExtrinsic,
 };
-use nb_sync::fifo::Sender as NB_Sender;
 use primitive_types::U256;
 use primitives::{
     crypto::{AccountId32, Ss58Codec},
@@ -567,79 +566,43 @@ pub fn check_files() {
 pub unsafe extern "C" fn ocall_worker_request(
     worker_request: *const u8,
     req_size: u32,
-    sender_ptr: *mut u8,
-    sender_size: u32,
+    response: *mut u8,
+    response_size: u32,
 ) -> sgx_status_t {
     debug!("    Entering ocall_worker_request");
 
     let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
-    let req = IPC::decode(&mut req_slice).unwrap();
+    let req = WorkerRequest::decode(&mut req_slice).unwrap();
 
-    let sender_slice = slice::from_raw_parts_mut(sender_ptr, sender_size as usize);
-    debug!("Sender size {}", sender_size);
-    debug!("Sender Slice {:?}", sender_slice);
+    let storage = match req {
+        WorkerRequest::ChainStorage {
+            storage_key: key,
+            node_url: url,
+        } => {
+            let api = Api::<sr25519::Pair>::new(String::from_utf8(url).unwrap());
+            api.get_storage_by_key_hash(key)
+        }
+    };
+    info!("[ocall] fetched storage: {}", storage.unwrap());
 
-    // TODO: Why does this fail here? The slice is identical to before passing the pointer into the enclave
-    let (_head, body, _tail) = sender_slice.align_to_mut::<NB_Sender<IPC>>();
-    debug!("Head: {:?}", body);
+    let mut resp_slice = slice::from_raw_parts_mut(response, response_size as usize);
+    // let resp = IPC::decode(&mut resp_slice).unwrap();
 
-    let sender = &mut body[0];
-
-    if let Err(_) = sender.send(req) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
     sgx_status_t::SGX_SUCCESS
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
-pub enum IPC {
-    Request(WorkerRequest),
-    Response(WorkerResponse),
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage(Vec<u8>),
+    ChainStorage {
+        storage_key: Vec<u8>,
+        node_url: Vec<u8>,
+    },
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
-pub enum WorkerResponse {
-    ChainStorage(Vec<u8>),
-}
-
-unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
-    std::slice::from_raw_parts_mut((p as *mut T) as *mut u8, std::mem::size_of::<T>())
-}
-
-#[cfg(test)]
-mod test {
-    use super::{any_as_u8_slice_mut, WorkerRequest, WorkerResponse, IPC};
-    use nb_sync::fifo::{Channel, Sender};
-    use substrate_api_client::utils::storage_key_hash_vec;
-
-    #[test]
-    fn sender_aligned_from_raw_parts_is_functional() {
-        let mut buffer: [Option<IPC>; 4] = [None, None, None, None];
-        let mut channel = Channel::new(&mut buffer);
-
-        let (mut receiver, mut sender) = channel.split();
-        let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
-
-        println!("Sender slice: {:?}", sender_slice);
-
-        let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<Sender<IPC>>() };
-
-        // only for readability
-        let sender_2 = &mut body[0];
-        println!("Sender: {:?} ", sender_2);
-
-        let req = IPC::Request(WorkerRequest::ChainStorage(storage_key_hash_vec(
-            "Balances",
-            "TotalIssuance",
-            None,
-        )));
-
-        sender_2.send(req.clone()).unwrap();
-        assert_eq!(req, receiver.recv().unwrap());
-    }
+pub enum WorkerResponse<V: Encode + Decode> {
+    ChainStorage {
+        storage_value: V,
+        storage_proof: Vec<Vec<u8>>,
+    },
 }

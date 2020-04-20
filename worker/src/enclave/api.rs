@@ -88,13 +88,6 @@ extern "C" {
         unchecked_extrinsic_size: u32,
     ) -> sgx_status_t;
 
-    fn channel(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        sender: *mut u8,
-        sender_size: u32,
-    ) -> sgx_status_t;
-
     fn dump_ra_to_disk(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
     fn test_main_entrance(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -342,46 +335,6 @@ pub fn enclave_perform_ra(
         return Err(result);
     }
     Ok(unchecked_extrinsic)
-}
-
-use crate::{any_as_u8_slice_mut, WorkerRequest, IPC};
-use nb_sync::fifo::{Channel as NB_Channel, Sender as NB_Sender};
-use substrate_api_client::utils::storage_key_hash_vec;
-
-pub fn enclave_channel(eid: sgx_enclave_id_t) -> SgxResult<()> {
-    let mut status = sgx_status_t::SGX_SUCCESS;
-
-    let mut buffer: [Option<IPC>; 4] = [None, None, None, None];
-    let mut nb_channel = NB_Channel::new(&mut buffer);
-
-    let (mut receiver, mut sender) = nb_channel.split();
-    let sender_slice = unsafe { any_as_u8_slice_mut(&mut sender) };
-
-    log::debug!("Sender Slice: {:?}", sender_slice);
-
-    let (_head, body, _tail) = unsafe { sender_slice.align_to_mut::<NB_Sender<IPC>>() };
-    debug!("Head: {:?}", body);
-
-    let result = unsafe {
-        channel(
-            eid,
-            &mut status,
-            sender_slice.as_mut_ptr(),
-            sender_slice.len() as u32,
-        )
-    };
-
-    println!("[enclave_channel]: retval {:?}", result);
-    println!("[enclave_channel]: retval {:?}", status);
-
-    let req = IPC::Request(WorkerRequest::ChainStorage(storage_key_hash_vec(
-        "Balances",
-        "TotalIssuance",
-        None,
-    )));
-    assert_eq!(req, receiver.recv().unwrap());
-
-    Ok(())
 }
 
 pub fn enclave_test(eid: sgx_enclave_id_t) -> SgxResult<()> {
