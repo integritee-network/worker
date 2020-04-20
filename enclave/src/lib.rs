@@ -35,7 +35,7 @@ extern crate sgx_tstd as std;
 use base58::ToBase58;
 
 use sgx_tunittest::*;
-use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
+use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
@@ -48,7 +48,6 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
-use std::ptr::slice_from_raw_parts;
 use substrate_api_client::utils::hexstr_to_u256;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
@@ -188,6 +187,29 @@ pub unsafe extern "C" fn execute_stf(
     let mut state = match state::load(&shard) {
         Ok(s) => s,
         Err(status) => return status,
+    };
+
+    debug!("Verify STF Arguments!");
+    let storage_key_hash_to_verify = Stf::get_key_hash_to_verify(&stf_call_signed.call);
+
+    let req = WorkerRequest::ChainStorage {
+        storage_key: storage_key_hash_to_verify,
+        node_url: node_url.to_vec(),
+    };
+
+    let resp: WorkerResponse<Vec<u8>> = match worker_request(req) {
+        Ok(r) => r,
+        Err(status) => return status,
+    };
+
+    // after upgrade to api-client alpha branch we can directly decode into a nonce, as no longer Strings are returned
+    let _valid_nonce = match resp {
+        WorkerResponse::ChainStorage {
+            storage_value: value,
+            storage_proof: _proof,
+        } => String::from_utf8(value)
+            .map(|s| hexstr_to_u256(s).unwrap().low_u32())
+            .unwrap(),
     };
 
     debug!("execute STF");
@@ -346,16 +368,8 @@ pub enum WorkerResponse<V: Encode + Decode> {
     },
 }
 
-fn test_ocall_worker_request() {
-    info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
+fn worker_request<V: Encode + Decode>(req: WorkerRequest) -> SgxResult<WorkerResponse<V>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-    let n_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
-
-    let req = WorkerRequest::ChainStorage {
-        storage_key: storage_key_hash_vec("Balances", "TotalIssuance", None),
-        node_url: n_url,
-    };
 
     let mut resp = vec![0u8; 500];
 
@@ -369,7 +383,25 @@ fn test_ocall_worker_request() {
         )
     };
 
-    let resp = WorkerResponse::<Vec<u8>>::decode(&mut resp.as_slice()).unwrap();
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(rt);
+    }
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(res);
+    }
+
+    Ok(WorkerResponse::<V>::decode(&mut resp.as_slice()).unwrap())
+}
+
+fn test_ocall_worker_request() {
+    info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
+    let req = WorkerRequest::ChainStorage {
+        storage_key: storage_key_hash_vec("Balances", "TotalIssuance", None),
+        node_url: format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes(),
+    };
+
+    let resp: WorkerResponse<Vec<u8>> = worker_request(req).unwrap();
 
     let total_issuance = match resp {
         WorkerResponse::ChainStorage {
@@ -381,7 +413,4 @@ fn test_ocall_worker_request() {
     };
 
     info!("Total Issuance is: {:?}", total_issuance);
-
-    assert_eq!(res, sgx_status_t::SGX_SUCCESS);
-    assert_eq!(rt, sgx_status_t::SGX_SUCCESS);
 }
