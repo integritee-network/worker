@@ -20,6 +20,7 @@ pipeline {
         sh 'rustup show'
         sh 'git log -n1'
         sh 'ls -la /opt/sgxsdk'
+        sh 'env'
       }
     }
     stage('Build') {
