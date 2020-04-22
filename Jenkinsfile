@@ -16,10 +16,9 @@ pipeline {
   stages {
     stage('Information') {
       steps {
-        sh 'ls -la'
-        sh 'env'
         sh 'cargo --version'
         sh 'rustup show'
+        sh 'git log -n1'
       }
     }
     stage('Build') {
