@@ -10,6 +10,12 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '14'))
   }
   stages {
+    stage('Information') {
+      steps {
+        sh 'ls -la'
+        sh 'env'
+      }
+    }
     stage('Build') {
       steps {
         sh 'make'
