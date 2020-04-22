@@ -1,19 +1,12 @@
 pipeline {
   agent {
-    node {
-      label 'rust&&sgx'
-    }
+    docker { image 'scssubstratee/substratee_dev:18.04-2.9-1.1.1' }
   }
   options {
     timeout(time: 2, unit: 'HOURS')
     buildDiscarder(logRotator(numToKeepStr: '14'))
   }
   stages {
-    stage('Environment') {
-      steps {
-        sh './ci/install_rust.sh'
-      }
-    }
     stage('Build') {
       steps {
         sh 'make'
