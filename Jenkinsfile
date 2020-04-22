@@ -2,7 +2,11 @@ pipeline {
   agent {
     docker {
       image 'scssubstratee/substratee_dev:18.04-2.9-1.1.1'
-      args '-u root --privileged'
+      args '''
+        -u root
+        --privileged
+        -e PATH="$PATH:/root/.cargo/bin"
+      '''
     }
   }
   options {
@@ -14,6 +18,8 @@ pipeline {
       steps {
         sh 'ls -la'
         sh 'env'
+        sh 'cargo --version'
+        sh 'rustup show'
       }
     }
     stage('Build') {
