@@ -25,7 +25,8 @@ pipeline {
     }
     stage('Environment') {
       steps {
-        sh 'source /opt/sgxsdk/environment'
+        sh '. /opt/sgxsdk/environment'
+        sh 'env'
       }
     }
     stage('Build') {
