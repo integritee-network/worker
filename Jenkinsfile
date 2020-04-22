@@ -20,6 +20,7 @@ pipeline {
         sh 'cargo --version'
         sh 'rustup show'
         sh 'git log -n1'
+        sh 'ls -la /opt/sgxsdk'
       }
     }
     stage('Environment') {
