@@ -1,6 +1,9 @@
 pipeline {
   agent {
-    docker { image 'scssubstratee/substratee_dev:18.04-2.9-1.1.1' }
+    docker {
+      image 'scssubstratee/substratee_dev:18.04-2.9-1.1.1'
+      args '-u root --privileged'
+    }
   }
   options {
     timeout(time: 2, unit: 'HOURS')
