@@ -5,7 +5,6 @@ pipeline {
       args '''
         -u root
         --privileged
-        -e PATH="$PATH:/root/.cargo/bin"
       '''
     }
   }
@@ -21,12 +20,6 @@ pipeline {
         sh 'rustup show'
         sh 'git log -n1'
         sh 'ls -la /opt/sgxsdk'
-      }
-    }
-    stage('Environment') {
-      steps {
-        sh '. /opt/sgxsdk/environment'
-        sh 'env'
       }
     }
     stage('Build') {
