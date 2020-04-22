@@ -1,7 +1,15 @@
 pipeline {
   agent {
-    node {
-      label 'rust&&sgx'
+    docker {
+      image 'scssubstratee/substratee_dev:18.04-2.9-1.1.1'
+      args '''
+        -u root
+        --privileged
+        -e SGX_SDK=/opt/sgxsdk
+        -e PATH="$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
+        -e PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
+        -e LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+      '''
     }
   }
   options {
@@ -9,9 +17,11 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '14'))
   }
   stages {
-    stage('Environment') {
+    stage('Information') {
       steps {
-        sh './ci/install_rust.sh'
+        sh 'cargo --version'
+        sh 'rustup show'
+        sh 'env'
       }
     }
     stage('Build') {
