@@ -16,9 +16,15 @@ pipeline {
   stages {
     stage('Information') {
       steps {
+        sh 'echo $0'
         sh 'cargo --version'
         sh 'rustup show'
         sh 'git log -n1'
+      }
+    }
+    stage('Environment') {
+      steps {
+        sh 'source /opt/sgxsdk/environment'
       }
     }
     stage('Build') {
