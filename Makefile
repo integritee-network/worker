@@ -23,6 +23,9 @@ SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
 SGX_PRODUCTION ?= 0
 
+# include the build settings from rust-sgx-sdk
+include rust-sgx-sdk/buildenv.mk
+
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
 else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
@@ -121,14 +124,11 @@ RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lcompiler-rt-patch -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
-RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
-	-Wl,--whole-archive -l$(Trts_Library_Name) -l$(Service_Library_Name) -l${ProtectedFs_Library_Name} -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
-	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
-	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
-	-Wl,--defsym,__ImageBase=0 \
-	-Wl,--gc-sections \
-	-Wl,--version-script=enclave/Enclave.lds
+RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
+	-Wl,--version-script=enclave/Enclave.lds \
+	$(ENCLAVE_LDFLAGS)
 
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
@@ -178,6 +178,7 @@ enclave/Enclave_t.o: $(Enclave_EDL_Files)
 
 $(RustEnclave_Name): enclave compiler-rt enclave/Enclave_t.o
 	cp ./rust-sgx-sdk/compiler-rt/libcompiler-rt-patch.a ./lib
+	@echo Compiling $(RustEnclave_Name)
 	@$(CXX) enclave/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 	@echo "LINK =>  $@"
 
