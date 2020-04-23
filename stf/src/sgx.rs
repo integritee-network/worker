@@ -1,7 +1,8 @@
 use sgx_tstd as std;
+use std::collections::HashMap;
 use std::prelude::v1::*;
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use log_sgx::*;
 use primitives::hashing::{blake2_256, twox_128};
 use runtime_primitives::traits::Dispatchable;
@@ -43,9 +44,28 @@ impl Stf {
         });
         ext
     }
-    pub fn execute(ext: &mut State, call: TrustedCall, _nonce: u32) {
+
+    pub fn update_storage(ext: &mut State, map_update: HashMap<Vec<u8>, Vec<u8>>) {
+        ext.execute_with(|| {
+            map_update
+                .iter()
+                .for_each(|(k, v)| sr_io::storage::set(k, v))
+        });
+    }
+
+    pub fn execute(ext: &mut State, call: TrustedCall, nonce: u32) {
         ext.execute_with(|| {
             // TODO: verify and store nonce first!
+            assert_eq!(
+                nonce,
+                Decode::decode(
+                    &mut sr_io::storage::get(&nonce_key_hash(call.account()))
+                        .unwrap()
+                        .as_slice()
+                )
+                .unwrap()
+            );
+
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
                     sgx_runtime::balancesCall::<Runtime>::set_balance(
@@ -86,11 +106,17 @@ impl Stf {
         })
     }
 
-    pub fn get_key_hash_to_verify(call: &TrustedCall) -> Vec<u8> {
+    pub fn get_key_hashes_to_verify(call: &TrustedCall) -> Vec<Vec<u8>> {
+        let mut key_hashes = Vec::new();
         match call {
-            TrustedCall::balance_set_balance(account, _, _) => nonce_key_hash(account),
-            TrustedCall::balance_transfer(account, _, _) => nonce_key_hash(account),
-        }
+            TrustedCall::balance_set_balance(account, _, _) => {
+                key_hashes.push(nonce_key_hash(account))
+            }
+            TrustedCall::balance_transfer(account, _, _) => {
+                key_hashes.push(nonce_key_hash(account))
+            }
+        };
+        key_hashes
     }
 }
 
