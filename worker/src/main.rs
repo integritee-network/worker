@@ -543,33 +543,41 @@ pub fn check_files() {
 
 #[no_mangle]
 pub unsafe extern "C" fn ocall_worker_request(
-    worker_request: *const u8,
+    request: *const u8,
     req_size: u32,
     response: *mut u8,
-    response_size: u32,
+    resp_size: u32,
 ) -> sgx_status_t {
     debug!("    Entering ocall_worker_request");
+    let mut req_slice = slice::from_raw_parts(request, req_size as usize);
+    let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
 
-    let mut req_slice = slice::from_raw_parts(worker_request, req_size as usize);
-    let req = WorkerRequest::decode(&mut req_slice).unwrap();
+    let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
 
-    let storage = match req {
-        WorkerRequest::ChainStorage {
-            storage_key: key,
-            node_url: url,
-        } => {
-            let api = Api::<sr25519::Pair>::new(String::from_utf8(url).unwrap());
-            api.get_storage_by_key_hash(key).unwrap()
-        }
-    };
-    info!("[ocall] fetched storage: {}", storage);
+    let resp: Vec<WorkerResponse<Vec<u8>>> = requests
+        .into_iter()
+        .map(|req| match req {
+            WorkerRequest::ChainStorage {
+                storage_key: key,
+                node_url: url,
+            } => {
+                let api = Api::<sr25519::Pair>::new(String::from_utf8(url).unwrap());
+                let resp = WorkerResponse::ChainStorage {
+                    storage_key: key.clone(),
+                    storage_value: api.get_storage_by_key_hash(key).unwrap().into_bytes(),
+                    storage_proof: None,
+                };
+                resp
+            }
+        })
+        .collect();
 
-    let resp = WorkerResponse::ChainStorage {
-        storage_value: storage.into_bytes(),
-        storage_proof: None,
-    };
-    let resp_slice = slice::from_raw_parts_mut(response, response_size as usize);
+    debug!("Response vec: {:?}", resp);
+
+    debug!("Response slice before : {:?}", &resp_slice);
     write_slice_and_whitespace_pad(resp_slice, resp.encode());
+    debug!("Response slice: {:?}", &resp_slice);
+
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -594,6 +602,7 @@ pub enum WorkerRequest {
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
     ChainStorage {
+        storage_key: Vec<u8>,
         storage_value: V,
         storage_proof: Option<Vec<Vec<u8>>>,
     },
