@@ -572,12 +572,7 @@ pub unsafe extern "C" fn ocall_worker_request(
         })
         .collect();
 
-    debug!("Response vec: {:?}", resp);
-
-    debug!("Response slice before : {:?}", &resp_slice);
     write_slice_and_whitespace_pad(resp_slice, resp.encode());
-    debug!("Response slice: {:?}", &resp_slice);
-
     sgx_status_t::SGX_SUCCESS
 }
 

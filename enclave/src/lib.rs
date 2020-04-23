@@ -381,8 +381,7 @@ fn worker_request<V: Encode + Decode>(
     req: Vec<WorkerRequest>,
 ) -> SgxResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // let mut resp = vec![0u8; 500];
-    let mut resp = vec![0; 64];
+    let mut resp: Vec<u8> = vec![0; 500];
 
     let res = unsafe {
         ocall_worker_request(
@@ -393,7 +392,6 @@ fn worker_request<V: Encode + Decode>(
             resp.len() as u32,
         )
     };
-    info!("Worker response: {:?}", resp.as_slice());
 
     if rt != sgx_status_t::SGX_SUCCESS {
         return Err(rt);
@@ -420,16 +418,17 @@ fn test_ocall_worker_request() {
     };
 
     let first = resp.pop().unwrap();
-    info!("Worker response: {:?}", first.clone());
-    //
-    // let total_issuance = match resp {
-    //     WorkerResponse::ChainStorage {
-    //         storage_value: value,
-    //         storage_proof: _,
-    //     } => String::from_utf8(value)
-    //         .map(|s| hexstr_to_u256(s).unwrap())
-    //         .unwrap(),
-    // };
-    //
-    // info!("Total Issuance is: {:?}", total_issuance);
+    info!("Worker response: {:?}", first);
+
+    let total_issuance = match first {
+        WorkerResponse::ChainStorage {
+            storage_key: _,
+            storage_value: value,
+            storage_proof: _,
+        } => String::from_utf8(value)
+            .map(|s| hexstr_to_u256(s).unwrap())
+            .unwrap(),
+    };
+
+    info!("Total Issuance is: {:?}", total_issuance);
 }
