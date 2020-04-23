@@ -2471,7 +2471,7 @@ name = "sgx_crypto_helper"
 version = "1.1.1"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
 dependencies = [
- "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-big-array 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
