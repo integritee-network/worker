@@ -105,7 +105,7 @@ enclave {
 
 		sgx_status_t ocall_worker_request(
 	        [in, size = req_size] uint8_t * request, uint32_t req_size,
-	        [in, size = resp_size] uint8_t * response, uint32_t resp_size
+	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
 	    );
 	};
 };
