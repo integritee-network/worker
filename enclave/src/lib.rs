@@ -93,7 +93,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     // create the aes key that is used for state encryption such that a key is always present in tests.
     // It will be overwritten anyway if mutual remote attastation is performed with the primary worker
     if let Err(status) = aes::read_or_create_sealed() {
-        return status
+        return status;
     }
 
     sgx_status_t::SGX_SUCCESS
@@ -197,27 +197,28 @@ pub unsafe extern "C" fn execute_stf(
     };
 
     debug!("Verify STF Arguments!");
-    let storage_key_hash_to_verify = Stf::get_key_hash_to_verify(&stf_call_signed.call);
+    let requests = Stf::get_key_hash_to_verify(&stf_call_signed.call)
+        .into_iter()
+        .map(|hash| WorkerRequest::ChainStorage {
+            storage_key: hash,
+            node_url: node_url.to_vec(),
+        })
+        .collect();
 
-    let req = WorkerRequest::ChainStorage {
-        storage_key: storage_key_hash_to_verify,
-        node_url: node_url.to_vec(),
-    };
-
-    let resp: WorkerResponse<Vec<u8>> = match worker_request(req) {
+    let resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
         Ok(r) => r,
         Err(status) => return status,
     };
 
     // after upgrade to api-client alpha branch we can directly decode into a nonce, as no longer Strings are returned
-    let _valid_nonce = match resp {
-        WorkerResponse::ChainStorage {
-            storage_value: value,
-            storage_proof: _proof,
-        } => String::from_utf8(value)
-            .map(|s| hexstr_to_u256(s).unwrap().low_u32())
-            .unwrap(),
-    };
+    // let _valid_nonce = match resp {
+    //     WorkerResponse::ChainStorage {
+    //         storage_value: value,
+    //         storage_proof: _proof,
+    //     } => String::from_utf8(value)
+    //         .map(|s| hexstr_to_u256(s).unwrap().low_u32())
+    //         .unwrap(),
+    // };
 
     debug!("execute STF");
     Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
@@ -307,10 +308,10 @@ extern "C" {
 
     pub fn ocall_worker_request(
         ret_val: *mut sgx_status_t,
-        worker_request: *const u8,
+        request: *const u8,
         req_size: u32,
         response: *mut u8,
-        response_size: u32,
+        resp_size: u32,
     ) -> sgx_status_t;
 
     pub fn ocall_sgx_init_quote(
@@ -324,7 +325,7 @@ extern "C" {
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
         // state::test_encrypted_state_io_works,
-        // test_ocall_read_write_ipfs
+        test_ocall_read_write_ipfs,
         test_ocall_worker_request
     )
 }
@@ -370,15 +371,18 @@ pub enum WorkerRequest {
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
     ChainStorage {
+        storage_key: Vec<u8>,
         storage_value: V,
-        storage_proof: Vec<Vec<u8>>,
+        storage_proof: Option<Vec<Vec<u8>>>,
     },
 }
 
-fn worker_request<V: Encode + Decode>(req: WorkerRequest) -> SgxResult<WorkerResponse<V>> {
+fn worker_request<V: Encode + Decode>(
+    req: Vec<WorkerRequest>,
+) -> SgxResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-    let mut resp = vec![0u8; 500];
+    // let mut resp = vec![0u8; 500];
+    let mut resp = vec![0; 64];
 
     let res = unsafe {
         ocall_worker_request(
@@ -389,6 +393,7 @@ fn worker_request<V: Encode + Decode>(req: WorkerRequest) -> SgxResult<WorkerRes
             resp.len() as u32,
         )
     };
+    info!("Worker response: {:?}", resp.as_slice());
 
     if rt != sgx_status_t::SGX_SUCCESS {
         return Err(rt);
@@ -397,27 +402,34 @@ fn worker_request<V: Encode + Decode>(req: WorkerRequest) -> SgxResult<WorkerRes
     if res != sgx_status_t::SGX_SUCCESS {
         return Err(res);
     }
-
-    Ok(WorkerResponse::<V>::decode(&mut resp.as_slice()).unwrap())
+    Ok(Decode::decode(&mut resp.as_slice()).unwrap())
 }
 
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
-    let req = WorkerRequest::ChainStorage {
+    let mut requests = Vec::new();
+
+    requests.push(WorkerRequest::ChainStorage {
         storage_key: storage_key_hash_vec("Balances", "TotalIssuance", None),
         node_url: format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes(),
+    });
+
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
+        Ok(response) => response,
+        Err(_) => panic!("Worker response decode failed"),
     };
 
-    let resp: WorkerResponse<Vec<u8>> = worker_request(req).unwrap();
-
-    let total_issuance = match resp {
-        WorkerResponse::ChainStorage {
-            storage_value: value,
-            storage_proof: _,
-        } => String::from_utf8(value)
-            .map(|s| hexstr_to_u256(s).unwrap())
-            .unwrap(),
-    };
-
-    info!("Total Issuance is: {:?}", total_issuance);
+    let first = resp.pop().unwrap();
+    info!("Worker response: {:?}", first.clone());
+    //
+    // let total_issuance = match resp {
+    //     WorkerResponse::ChainStorage {
+    //         storage_value: value,
+    //         storage_proof: _,
+    //     } => String::from_utf8(value)
+    //         .map(|s| hexstr_to_u256(s).unwrap())
+    //         .unwrap(),
+    // };
+    //
+    // info!("Total Issuance is: {:?}", total_issuance);
 }
