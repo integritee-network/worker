@@ -48,6 +48,7 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
+use std::collections::HashMap;
 use substrate_api_client::utils::hexstr_to_u256;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
@@ -197,7 +198,7 @@ pub unsafe extern "C" fn execute_stf(
     };
 
     debug!("Verify STF Arguments!");
-    let requests = Stf::get_key_hash_to_verify(&stf_call_signed.call)
+    let requests = Stf::get_key_hashes_to_verify(&stf_call_signed.call)
         .into_iter()
         .map(|hash| WorkerRequest::ChainStorage {
             storage_key: hash,
@@ -205,20 +206,29 @@ pub unsafe extern "C" fn execute_stf(
         })
         .collect();
 
-    let resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
         Ok(r) => r,
         Err(status) => return status,
     };
 
-    // after upgrade to api-client alpha branch we can directly decode into a nonce, as no longer Strings are returned
-    // let _valid_nonce = match resp {
-    //     WorkerResponse::ChainStorage {
-    //         storage_value: value,
-    //         storage_proof: _proof,
-    //     } => String::from_utf8(value)
-    //         .map(|s| hexstr_to_u256(s).unwrap().low_u32())
-    //         .unwrap(),
-    // };
+    // after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
+    // agnostic to their actual types. Unfortunately, this is not possible with strings return by the api-client
+    let (key, valid_nonce) = match resp.pop().unwrap() {
+        WorkerResponse::ChainStorage {
+            storage_key: key,
+            storage_value: value,
+            storage_proof: _proof,
+        } => (
+            key,
+            String::from_utf8(value)
+                .map(|s| hexstr_to_u256(s).unwrap().low_u32())
+                .unwrap(),
+        ),
+    };
+
+    let mut update_map = HashMap::new();
+    update_map.insert(key, valid_nonce.encode());
+    Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
     Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
