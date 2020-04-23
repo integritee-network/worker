@@ -21,7 +21,7 @@ updatesdk:
 # check for already updated version
 ifneq ('$(VERSION111)','$(LOCALVERSION)')
 	@echo Local version = $(LOCAL_VERSION)
-	@echo sgxsdk v1.1.1 version = $(REMOTE_VERSION)
+	@echo sgxsdk v1.1.1 version = $(VERSION111)
 
 	@rm -rf $(SDK_PATH_GIT)
 	@$(GIT) clone $(REPO) $(SDK_PATH_GIT)
@@ -30,6 +30,6 @@ ifneq ('$(VERSION111)','$(LOCALVERSION)')
 	rsync -a $(SDK_PATH_GIT)/common $(SDK_PATH)
 	rsync -a $(SDK_PATH_GIT)/compiler-rt $(SDK_PATH)
 	rm -rf $(SDK_PATH_GIT)
-	@echo $(REMOTE_VERSION) > $(VERSION_FILE)
+	@echo $(VERSION111) > $(VERSION_FILE)
 
 endif
