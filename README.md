@@ -26,6 +26,7 @@ you get a docker image with
 - Ubuntu 18.04
 - Intel SGX SDK 2.9
 - Rust SGX SDK 1.1.1 (which includes the correct Rust version)
+- IPF 0.4.21
 
 To start developing with the docker image, perform these steps:
 1. Clone the substraTEE-worker repository:
@@ -38,7 +39,7 @@ To start developing with the docker image, perform these steps:
    ```
 3. Start the docker container and mount the local substraTEE-worker directory to `/root/substraTEE-worker`:
    ```
-   docker run -it -v ./substraTEE-worker-DOCKERTEST:/root/substraTEE-worker scssubstratee/substratee_dev:18.04-2.9-1.1.1 /bin/bash
+   docker run -it -v ${PWD}/substraTEE-worker-DOCKERTEST:/root/substraTEE-worker scssubstratee/substratee_dev:18.04-2.9-1.1.1 /bin/bash
    ```
 4. Change into the substraTEE-worker directory and build the code:
    ```
