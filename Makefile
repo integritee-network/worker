@@ -1,38 +1,16 @@
-# Copyright (C) 2017-2018 Baidu, Inc. All Rights Reserved.
+# Copyright 2020 Supercomputing Systems AG
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#  * Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in
-#    the documentation and/or other materials provided with the
-#    distribution.
-#  * Neither the name of Baidu, Inc., nor the names of its
-#    contributors may be used to endorse or promote products derived
-#    from this software without specific prior written permission.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-
-# +----------------------------------------------------------------------------+
-# |                                                                            |
-# |                 THIS FILE CONTAINS MODIFICATIONS                           |
-# |                DON'T OVERWRITE THE CONTENT BLINDLY                         |
-# |                                                                            |
-# +----------------------------------------------------------------------------+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 ######## Update SGX SDK ########
 include UpdateRustSGXSDK.mk
@@ -160,6 +138,7 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
 worker: $(Worker_Name)
 client: $(Client_Name)
+githooks: .git/hooks/pre-commit
 
 ######## EDL objects ########
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
@@ -222,6 +201,10 @@ compiler-rt:
 	@echo "Building the compiler"
 	$(MAKE) -C ./rust-sgx-sdk/compiler-rt/ 2> /dev/null
 
+.git/hooks/pre-commit: .githooks/pre-commit
+	@echo "Installing git hooks"
+	cp .githooks/pre-commit .git/hooks
+
 .PHONY: clean
 clean:
 	@echo "Removing the compiled files"
@@ -231,10 +214,10 @@ clean:
 	@echo "cargo clean and remove Cargo.lock in root directory"
 	@cargo clean && rm -f Cargo.lock
 
-mrenclave: 
+mrenclave:
 	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity < df.out && rm df.out
 
-mrsigner: 
+mrsigner:
 	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity --mrsigner < df.out && rm df.out
 
 .PHONY: identity
@@ -243,9 +226,10 @@ identity: mrenclave mrsigner
 .PHONY: help
 help:
 	@echo "Available targets"
-	@echo "  all     - builds all targets (default)"
-	@echo "  worker  - builds the substraTEE-worker"
-	@echo "  client  - builds the substraTEE-client"
+	@echo "  all      - builds all targets (default)"
+	@echo "  worker   - builds the substraTEE-worker"
+	@echo "  client   - builds the substraTEE-client"
+	@echo "  githooks - installs the git hooks (copy .githooks/pre-commit to .git/hooks)"
 	@echo ""
 	@echo "  clean   - cleanup"
 	@echo ""
