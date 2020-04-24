@@ -10,7 +10,10 @@ use runtime_primitives::traits::Dispatchable;
 use sgx_runtime::Runtime;
 use sr_io::SgxExternalitiesTrait;
 
-use crate::{AccountId, BalanceTransferFn, State, Stf, TrustedCall, TrustedGetter};
+use crate::{
+    AccountId, BalanceTransferFn, State, Stf, TrustedCall, TrustedGetter, BALANCE_MODULE,
+    BALANCE_TRANSFER,
+};
 
 impl Stf {
     pub fn init_state() -> State {
@@ -90,7 +93,7 @@ impl Stf {
                     .dispatch(origin)
                 }
                 TrustedCall::balance_unshield(who, value) => {
-                    calls.push(([0, 1], who, Compact(value)));
+                    calls.push(([BALANCE_MODULE, BALANCE_TRANSFER], who, Compact(value)));
                     Ok(())
                 }
             };
