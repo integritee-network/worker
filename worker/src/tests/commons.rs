@@ -18,6 +18,7 @@
 use codec::Encode;
 use keyring::AccountKeyring;
 use log::*;
+use primitives::sr25519;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -27,6 +28,8 @@ use std::str;
 use substratee_stf;
 
 use crate::enclave::api::*;
+use substrate_api_client::utils::hexstr_to_u256;
+use substrate_api_client::Api;
 use substratee_stf::{
     ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
 };
@@ -38,14 +41,32 @@ pub struct Message {
     pub sha256: sgx_sha256_hash_t,
 }
 
-pub fn encrypted_test_msg(eid: sgx_enclave_id_t) -> Vec<u8> {
+pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
-    let pubkey = enclave_shielding_key(eid).unwrap();
-    let rsa_pubkey: Rsa3072PubKey =
-        serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid)
+        .map(|key| serde_json::from_slice(key.as_slice()).unwrap())
+        .unwrap();
     info!("deserialized rsa key");
-    let payload = test_trusted_call_signed().encode();
-    encrypt_payload(rsa_pubkey, payload)
+
+    let call = TrustedCall::balance_set_balance(who.public(), 33, 44);
+    encrypt_payload(
+        rsa_pubkey,
+        test_trusted_call_signed(who, call, nonce).encode(),
+    )
+}
+
+pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
+    info!("*** Get the public key from the TEE\n");
+    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid)
+        .map(|key| serde_json::from_slice(key.as_slice()).unwrap())
+        .unwrap();
+    info!("deserialized rsa key");
+
+    let call = TrustedCall::balance_unshield(who.public(), 33);
+    encrypt_payload(
+        rsa_pubkey,
+        test_trusted_call_signed(who, call, nonce).encode(),
+    )
 }
 
 pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
@@ -56,16 +77,29 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
     payload_encrypted
 }
 
-pub fn test_trusted_call_signed() -> TrustedCallSigned {
-    let alice = AccountKeyring::Alice;
-    let call = TrustedCall::balance_set_balance(alice.public(), 33, 44);
-    let nonce = 21;
+pub fn test_trusted_call_signed(
+    who: AccountKeyring,
+    call: TrustedCall,
+    nonce: u32,
+) -> TrustedCallSigned {
     let mrenclave = [0u8; 32];
     let shard = ShardIdentifier::default();
-    call.sign(&alice.pair(), nonce, &mrenclave, &shard)
+    call.sign(&who.pair(), nonce, &mrenclave, &shard)
 }
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
     let getter = TrustedGetter::free_balance(who.public());
     getter.sign(&who.pair())
+}
+
+pub fn setup_api_and_nonce(who: AccountKeyring) -> (Api<sr25519::Pair>, u32) {
+    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
+    let api = Api::<sr25519::Pair>::new(node_url.clone());
+
+    let nonce = api
+        .get_storage("System", "AccountNonce", Some(who.to_account_id().encode()))
+        .map(|n| hexstr_to_u256(n).unwrap())
+        .unwrap()
+        .low_u32();
+    (api, nonce)
 }

@@ -15,13 +15,11 @@
 
 */
 
-use crate::enclave::api::{enclave_execute_stf, enclave_query_state};
+use crate::enclave::api::enclave_query_state;
 use crate::init_shard;
-use crate::tests::commons::{encrypted_test_msg, test_trusted_getter_signed};
-use base58::ToBase58;
+use crate::tests::commons::test_trusted_getter_signed;
 use codec::Encode;
 use keyring::AccountKeyring;
-use std::fs;
 
 use primitives::hash::H256;
 use sgx_types::*;
@@ -36,28 +34,4 @@ pub fn get_state_works(eid: sgx_enclave_id_t) {
     init_shard(&shard);
     let res = enclave_query_state(eid, trusted_getter_signed, shard.encode()).unwrap();
     println!("get_state returned {:?}", res);
-}
-
-pub fn execute_stf_works(eid: sgx_enclave_id_t) {
-    let cyphertext = encrypted_test_msg(eid);
-    let nonce = 0u32;
-    let genesis_hash: [u8; 32] = [0; 32];
-    let shard = H256::default();
-
-    // create the state such that we do not need to initialize it manually
-    let path = "./shards/".to_owned() + &shard.encode().to_base58();
-    fs::create_dir_all(&path).unwrap();
-    fs::File::create(path + "/state.bin").unwrap();
-
-    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
-
-    let _uxt = enclave_execute_stf(
-        eid,
-        cyphertext,
-        shard.encode(),
-        genesis_hash.encode(),
-        nonce,
-        node_url,
-    )
-    .unwrap();
 }
