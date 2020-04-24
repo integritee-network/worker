@@ -55,7 +55,7 @@ impl Stf {
 
     pub fn execute(ext: &mut State, call: TrustedCall, nonce: u32) {
         ext.execute_with(|| {
-            // TODO: verify and store nonce first!
+            // TODO: enclave should not panic here.
             assert_eq!(
                 nonce,
                 Decode::decode(

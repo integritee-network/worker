@@ -197,7 +197,7 @@ pub unsafe extern "C" fn execute_stf(
         Err(status) => return status,
     };
 
-    debug!("Verify STF Arguments!");
+    debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
         .into_iter()
         .map(|hash| WorkerRequest::ChainStorage(hash))
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn execute_stf(
         Err(status) => return status,
     };
 
-    // after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
+    // Todo: after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
     // agnostic to their actual types. Unfortunately, this is not possible with strings return by the api-client
     let (key, untrusted_nonce) = match resp.pop().unwrap() {
         WorkerResponse::ChainStorage(key, value, _proof) => (
