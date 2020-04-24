@@ -545,30 +545,28 @@ pub fn check_files() {
 pub unsafe extern "C" fn ocall_worker_request(
     request: *const u8,
     req_size: u32,
+    node_url: *const u8,
+    node_url_size: u32,
     response: *mut u8,
     resp_size: u32,
 ) -> sgx_status_t {
     debug!("    Entering ocall_worker_request");
     let mut req_slice = slice::from_raw_parts(request, req_size as usize);
     let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
+    let url_slice = slice::from_raw_parts(node_url, node_url_size as usize);
+
+    let api = Api::<sr25519::Pair>::new(String::from_utf8(url_slice.to_vec()).unwrap());
 
     let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
 
     let resp: Vec<WorkerResponse<Vec<u8>>> = requests
         .into_iter()
         .map(|req| match req {
-            WorkerRequest::ChainStorage {
-                storage_key: key,
-                node_url: url,
-            } => {
-                let api = Api::<sr25519::Pair>::new(String::from_utf8(url).unwrap());
-                let resp = WorkerResponse::ChainStorage {
-                    storage_key: key.clone(),
-                    storage_value: api.get_storage_by_key_hash(key).unwrap().into_bytes(),
-                    storage_proof: None,
-                };
-                resp
-            }
+            WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
+                key.clone(),
+                api.get_storage_by_key_hash(key).unwrap().into_bytes(),
+                None,
+            ),
         })
         .collect();
 
@@ -588,17 +586,10 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage {
-        storage_key: Vec<u8>,
-        node_url: Vec<u8>,
-    },
+    ChainStorage(Vec<u8>), // (storage_key)
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
-    ChainStorage {
-        storage_key: Vec<u8>,
-        storage_value: V,
-        storage_proof: Option<Vec<Vec<u8>>>,
-    },
+    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
