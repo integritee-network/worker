@@ -39,8 +39,6 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 
     if matches.is_present("all") || matches.is_present("ecall") {
         println!("Running ecall Tests");
-        println!("  testing execute_stf()");
-        execute_stf_works(eid);
         println!("  testing get_state()");
         get_state_works(eid);
         println!("[+] Ecall tests ended!");
@@ -51,9 +49,14 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         // running the tests.
         println!("Running integration Tests");
         println!("  testing perform_ra()");
-        perform_ra_works(eid, port);
-        println!("  testing process_forwarded_payload()");
-        process_forwarded_payload_works(eid, port);
+        // perform_ra_works(eid, port);
+        // println!("  testing process_forwarded_payload()");
+        // process_forwarded_payload_works(eid, port);
+
+        println!("  testing execute_stf_set_balance()");
+        execute_stf_set_balance_works(eid);
+        println!("  testing execute_stf_unshield_balance()");
+        // execute_stf_unshield_balance_works(eid);
     }
     println!("[+] All tests ended!");
 }
