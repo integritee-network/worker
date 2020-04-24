@@ -28,8 +28,8 @@ use my_node_runtime::substratee_registry::Request;
 
 use crate::constants::*;
 use crate::enclave::api::*;
+use crate::get_enclave_signing_key;
 use crate::tests::commons::*;
-use crate::{ensure_account_has_funds, get_enclave_signing_key};
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
@@ -109,7 +109,7 @@ pub fn execute_stf(eid: sgx_enclave_id_t, api: Api<sr25519::Pair>, cyphertext: V
 
     let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut uxt.as_slice()).unwrap();
 
-    extrinsics.iter().for_each(|xt| {
+    extrinsics.into_iter().for_each(|xt| {
         let mut xt = hex::encode(xt);
         xt.insert_str(0, "0x");
         api.send_extrinsic(xt).unwrap();

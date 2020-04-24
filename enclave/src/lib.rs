@@ -244,19 +244,18 @@ pub unsafe extern "C" fn execute_stf(
     };
     debug!("Restored ECC pubkey: {:?}", signer.public());
 
-    debug!("confirmation extrinsic nonce: {:?}", nonce);
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
     let mut nonce = *nonce.clone();
 
     let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
-        .iter()
+        .into_iter()
         .map(|call| {
             let xt = compose_extrinsic_offline!(
                 signer.clone(),
                 call,
-                nonce,
+                nonce.clone(),
                 genesis_hash.clone(),
                 RUNTIME_SPEC_VERSION
             )

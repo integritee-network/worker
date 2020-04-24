@@ -47,6 +47,8 @@ pub type Hash = primitives::H256;
 pub type Balance = u128;
 
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
+pub static BALANCE_MODULE: u8 = 4u8;
+pub static BALANCE_TRANSFER: u8 = 0u8;
 
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
