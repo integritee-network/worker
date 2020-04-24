@@ -58,7 +58,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
-    let (_api, nonce) = setup_api_and_nonce(AccountKeyring::Alice);
+    let (_api, nonce) = setup(eid, AccountKeyring::Alice);
     let req = Request {
         cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce),
         shard: H256::default(),
@@ -67,13 +67,13 @@ pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
 }
 
 pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t) {
-    let (api, nonce) = setup_api_and_nonce(AccountKeyring::Alice);
+    let (api, nonce) = setup(eid, AccountKeyring::Alice);
     let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.clone());
     execute_stf(eid, api, cyphertext)
 }
 
 pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t) {
-    let (api, nonce) = setup_api_and_nonce(AccountKeyring::Alice);
+    let (api, nonce) = setup(eid, AccountKeyring::Alice);
     let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.clone());
     execute_stf(eid, api, cyphertext)
 }
@@ -81,7 +81,6 @@ pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t) {
 pub fn execute_stf(eid: sgx_enclave_id_t, api: Api<sr25519::Pair>, cyphertext: Vec<u8>) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
     let tee_account_id = get_enclave_signing_key(eid);
-    ensure_account_has_funds(&api, &tee_account_id);
 
     let nonce = hexstr_to_u256(
         api.get_storage("System", "AccountNonce", Some(tee_account_id.encode()))

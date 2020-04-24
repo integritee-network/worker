@@ -28,6 +28,7 @@ use std::str;
 use substratee_stf;
 
 use crate::enclave::api::*;
+use crate::{ensure_account_has_funds, get_enclave_signing_key};
 use substrate_api_client::utils::hexstr_to_u256;
 use substrate_api_client::Api;
 use substratee_stf::{
@@ -92,9 +93,11 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
     getter.sign(&who.pair())
 }
 
-pub fn setup_api_and_nonce(who: AccountKeyring) -> (Api<sr25519::Pair>, u32) {
+pub fn setup(eid: sgx_enclave_id_t, who: AccountKeyring) -> (Api<sr25519::Pair>, u32) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
-    let api = Api::<sr25519::Pair>::new(node_url.clone());
+    let api = Api::<sr25519::Pair>::new(node_url.clone()).set_signer(who.pair());
+
+    ensure_account_has_funds(&api, &get_enclave_signing_key(eid));
 
     let nonce = api
         .get_storage("System", "AccountNonce", Some(who.to_account_id().encode()))
