@@ -106,7 +106,7 @@ impl Stf {
         })
     }
 
-    pub fn get_key_hashes_to_verify(call: &TrustedCall) -> Vec<Vec<u8>> {
+    pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
         match call {
             TrustedCall::balance_set_balance(account, _, _) => {

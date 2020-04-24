@@ -198,27 +198,20 @@ pub unsafe extern "C" fn execute_stf(
     };
 
     debug!("Verify STF Arguments!");
-    let requests = Stf::get_key_hashes_to_verify(&stf_call_signed.call)
+    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
         .into_iter()
-        .map(|hash| WorkerRequest::ChainStorage {
-            storage_key: hash,
-            node_url: node_url.to_vec(),
-        })
+        .map(|hash| WorkerRequest::ChainStorage(hash))
         .collect();
 
-    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
         Ok(r) => r,
         Err(status) => return status,
     };
 
     // after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
     // agnostic to their actual types. Unfortunately, this is not possible with strings return by the api-client
-    let (key, valid_nonce) = match resp.pop().unwrap() {
-        WorkerResponse::ChainStorage {
-            storage_key: key,
-            storage_value: value,
-            storage_proof: _proof,
-        } => (
+    let (key, untrusted_nonce) = match resp.pop().unwrap() {
+        WorkerResponse::ChainStorage(key, value, _proof) => (
             key,
             String::from_utf8(value)
                 .map(|s| hexstr_to_u256(s).unwrap().low_u32())
@@ -227,7 +220,7 @@ pub unsafe extern "C" fn execute_stf(
     };
 
     let mut update_map = HashMap::new();
-    update_map.insert(key, valid_nonce.encode());
+    update_map.insert(key, untrusted_nonce.encode());
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
@@ -320,6 +313,8 @@ extern "C" {
         ret_val: *mut sgx_status_t,
         request: *const u8,
         req_size: u32,
+        node_url: *const u8,
+        node_url_size: u32,
         response: *mut u8,
         resp_size: u32,
     ) -> sgx_status_t;
@@ -372,23 +367,17 @@ fn test_ocall_read_write_ipfs() {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage {
-        storage_key: Vec<u8>,
-        node_url: Vec<u8>,
-    },
+    ChainStorage(Vec<u8>), // (storage_key)
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
-    ChainStorage {
-        storage_key: Vec<u8>,
-        storage_value: V,
-        storage_proof: Option<Vec<Vec<u8>>>,
-    },
+    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
 
 fn worker_request<V: Encode + Decode>(
     req: Vec<WorkerRequest>,
+    node_url: &[u8],
 ) -> SgxResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut resp: Vec<u8> = vec![0; 500];
@@ -398,6 +387,8 @@ fn worker_request<V: Encode + Decode>(
             &mut rt as *mut sgx_status_t,
             req.encode().as_ptr(),
             req.encode().len() as u32,
+            node_url.as_ptr(),
+            node_url.len() as u32,
             resp.as_mut_ptr(),
             resp.len() as u32,
         )
@@ -416,13 +407,15 @@ fn worker_request<V: Encode + Decode>(
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut requests = Vec::new();
+    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
 
-    requests.push(WorkerRequest::ChainStorage {
-        storage_key: storage_key_hash_vec("Balances", "TotalIssuance", None),
-        node_url: format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes(),
-    });
+    requests.push(WorkerRequest::ChainStorage(storage_key_hash_vec(
+        "Balances",
+        "TotalIssuance",
+        None,
+    )));
 
-    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
         Ok(response) => response,
         Err(_) => panic!("Worker response decode failed"),
     };
@@ -431,11 +424,7 @@ fn test_ocall_worker_request() {
     info!("Worker response: {:?}", first);
 
     let total_issuance = match first {
-        WorkerResponse::ChainStorage {
-            storage_key: _,
-            storage_value: value,
-            storage_proof: _,
-        } => String::from_utf8(value)
+        WorkerResponse::ChainStorage(_storage_key, value, _proof) => String::from_utf8(value)
             .map(|s| hexstr_to_u256(s).unwrap())
             .unwrap(),
     };
