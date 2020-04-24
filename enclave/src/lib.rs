@@ -224,7 +224,13 @@ pub unsafe extern "C" fn execute_stf(
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
-    Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
+    let mut calls_buffer = Vec::new();
+    Stf::execute(
+        &mut state,
+        stf_call_signed.call,
+        stf_call_signed.nonce,
+        &mut calls_buffer,
+    );
 
     let state_hash = match state::write(state, &shard) {
         Ok(h) => h,
@@ -242,18 +248,37 @@ pub unsafe extern "C" fn execute_stf(
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let mut nonce = *nonce.clone();
 
-    let xt = compose_extrinsic_offline!(
-        signer,
-        (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
-        *nonce,
-        genesis_hash,
-        RUNTIME_SPEC_VERSION
+    let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
+        .iter()
+        .map(|call| {
+            let xt = compose_extrinsic_offline!(
+                signer.clone(),
+                call,
+                nonce,
+                genesis_hash.clone(),
+                RUNTIME_SPEC_VERSION
+            )
+            .encode();
+            nonce += 1;
+            xt
+        })
+        .collect();
+
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    extrinsic_buffer.push(
+        compose_extrinsic_offline!(
+            signer,
+            (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
+            nonce,
+            genesis_hash,
+            RUNTIME_SPEC_VERSION
+        )
+        .encode(),
     );
 
-    let encoded = xt.encode();
-    write_slice_and_whitespace_pad(extrinsic_slice, encoded);
+    write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer.encode());
 
     sgx_status_t::SGX_SUCCESS
 }

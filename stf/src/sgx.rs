@@ -2,7 +2,7 @@ use sgx_tstd as std;
 use std::collections::HashMap;
 use std::prelude::v1::*;
 
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use log_sgx::*;
 use primitives::hashing::{blake2_256, twox_128};
 use runtime_primitives::traits::Dispatchable;
@@ -10,7 +10,7 @@ use runtime_primitives::traits::Dispatchable;
 use sgx_runtime::Runtime;
 use sr_io::SgxExternalitiesTrait;
 
-use crate::{AccountId, State, Stf, TrustedCall, TrustedGetter};
+use crate::{AccountId, BalanceTransferFn, State, Stf, TrustedCall, TrustedGetter};
 
 impl Stf {
     pub fn init_state() -> State {
@@ -53,7 +53,12 @@ impl Stf {
         });
     }
 
-    pub fn execute(ext: &mut State, call: TrustedCall, nonce: u32) {
+    pub fn execute(
+        ext: &mut State,
+        call: TrustedCall,
+        nonce: u32,
+        calls: &mut Vec<BalanceTransferFn>,
+    ) {
         ext.execute_with(|| {
             // TODO: enclave should not panic here.
             assert_eq!(
@@ -83,6 +88,10 @@ impl Stf {
                         value,
                     )
                     .dispatch(origin)
+                }
+                TrustedCall::balance_unshield(who, value) => {
+                    calls.push(([0, 1], who, Compact(value)));
+                    Ok(())
                 }
             };
         });
@@ -115,6 +124,7 @@ impl Stf {
             TrustedCall::balance_transfer(account, _, _) => {
                 key_hashes.push(nonce_key_hash(account))
             }
+            TrustedCall::balance_unshield(account, _) => key_hashes.push(nonce_key_hash(account)),
         };
         key_hashes
     }
