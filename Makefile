@@ -229,7 +229,7 @@ help:
 	@echo "  all      - builds all targets (default)"
 	@echo "  worker   - builds the substraTEE-worker"
 	@echo "  client   - builds the substraTEE-client"
-	@echo "  githooks - installs the git hooks"
+	@echo "  githooks - installs the git hooks (copy .githooks/pre-commit to .git/hooks)"
 	@echo ""
 	@echo "  clean   - cleanup"
 	@echo ""

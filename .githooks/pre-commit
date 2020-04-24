@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# this pre-commit hooks uses cargo fmt to check the code style
+# This pre-commit hook uses cargo fmt to check the code style
+# Install it either with `make githooks` or copy the file to .git/hooks
 
 echo '+cargo fmt -- --check'
 cargo fmt -- --check
