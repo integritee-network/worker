@@ -277,7 +277,7 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> SgxResult<Vec<u8>> {
 					  gid,
 					  DEV_HOSTNAME,
 					  ias_key);
-    debug!("    [Enclave] request = {}", req);
+    debug!("    [Enclave]  request = {}", req);
 
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).sgx_error()?;
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
@@ -348,7 +348,7 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
 
 #[allow(const_err)]
 pub fn create_attestation_report(
-    pub_k: &sgx_ec256_public_t,
+    pub_k: &[u8; 32],
     sign_type: sgx_quote_sign_type_t,
 ) -> SgxResult<(String, String, String)> {
     // Workflow:
@@ -402,21 +402,13 @@ pub fn create_attestation_report(
     let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num)?;
 
     // (2) Generate the report
-    // Fill ecc256 public key into report_data
-
-    /* Code von Baidu */
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-    let mut pub_k_gx = pub_k.gx;
-    pub_k_gx.reverse();
-    let mut pub_k_gy = pub_k.gy;
-    pub_k_gy.reverse();
-    report_data.d[..32].clone_from_slice(&pub_k_gx);
-    report_data.d[32..].clone_from_slice(&pub_k_gy);
+    report_data.d[..32].clone_from_slice(&pub_k[..]);
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) => {
             debug!(
-                "    [Enclave] Report creation successful. mr_signer.m = {:?}",
+                "    [Enclave] Report creation successful. mr_signer.m = {:x?}",
                 r.body.mr_signer.m
             );
             r
@@ -426,37 +418,6 @@ pub fn create_attestation_report(
             return Err(e);
         }
     };
-
-    /* Code von Alain
-        let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-        let mut pub_k_gx = pub_k.gx.clone();
-        pub_k_gx.reverse();
-        let mut pub_k_gy = pub_k.gy.clone();
-        pub_k_gy.reverse();
-     //   report_data.d[..32].clone_from_slice(&pub_k_gx);
-     //   report_data.d[32..].clone_from_slice(&pub_k_gy);
-
-        // TODO: block hash would guarantee that the quote is recent. add it as well
-        // report_data = hash{pub_k_gx||pub_k_gy||block_hash}
-        let mut context = [0;96];
-        let block_hash_slice = [0;32];
-        context[..32].clone_from_slice(&pub_k_gx);
-        context[32..64].clone_from_slice(&pub_k_gy);
-        context[64..].clone_from_slice(&block_hash_slice);
-
-        report_data.d.clone_from_slice(&rsgx_sha256_slice(&context[..]).unwrap());
-
-        let rep = match rsgx_create_report(&ti, &report_data) {
-            Ok(r) =>{
-                println!("Report creation => success {:?}", r.body.mr_signer.m);
-                Some(r)
-            },
-            Err(e) =>{
-                println!("Report creation => failed {:?}", e);
-                None
-            },
-        };
-    */
 
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
     let mut os_rng = os::SgxRng::new().sgx_error()?;
@@ -609,10 +570,12 @@ pub fn create_ra_report_and_signature(
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
     let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-    info!("    [Enclave] Generate keypair successful");
+    info!("    [Enclave] Generate ephemeral ECDSA keypair successful");
+    debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
+    debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
     info!("    [Enclave] Create attestation report");
-    let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
+    let (attn_report, sig, cert) = match create_attestation_report(&chain_signer.public().0, sign_type) {
         Ok(r) => r,
         Err(e) => {
             error!("    [Enclave] Error in create_attestation_report: {:?}", e);
@@ -636,13 +599,15 @@ pub fn create_ra_report_and_signature(
             return Err(e);
         }
     };
-    info!("    [Enclave] sign ed25519 pubkey");
+    info!("    [Enclave] sign ed25519 pubkey with ephemeral ECDSA key");
+    debug!("     payload {:02x}", chain_signer.public().0.iter().format(""));
     let gxgy = ecc_handle
         .ecdsa_sign_slice(&chain_signer.public().0, &prv_k)
         .sgx_error()?;
     let chain_signer_attestation = [gxgy.x, gxgy.y].concat();
     let mut chain_signer_attestation_out = [0u32; 16];
     chain_signer_attestation_out.copy_from_slice(&chain_signer_attestation[..]);
+    debug!("     signature: {:02x}", chain_signer_attestation_out.iter().format(""));
 
     let _result = ecc_handle.close();
     info!("    [Enclave] Generate ECC Certificate successful");
