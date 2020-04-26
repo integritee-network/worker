@@ -3,7 +3,19 @@ SubstraTEE worker for SubstraTEE node
 
 This is part of [substraTEE](https://github.com/scs/substraTEE)
 
+## build
+
 **Supports Rust nightly-2020-03-12**
+
+### build with docker
+If you do not have the Intel SGX dependencies installed, you may use our docker image:
+
+```
+docker pull scssubstratee/substratee_dev:18.04-2.9-1.1.1
+docker run -it -v $(pwd):/root/work scssubstratee/substratee_dev:18.04-2.9-1.1.1 /bin/bash
+container> cd work
+container> make
+```
 
 ## Intel SGX develoment and production (commercial) license
 In order to perform a remote attestation of the enclave, an [Intel SGX Attestation Enhanced Service Privacy ID (EPID)](https://api.portal.trustedservices.intel.com/EPID-attestation) is needed. We use unlinkable quotes in our code.
@@ -32,6 +44,8 @@ Assumptions:
 * your machine has SGX support
 * Intel SGX SDK installed.
 * rust toolchain is ready to build substrate
+
+see build instruction above if you prefer using our docker image set up with all dependencies
 
 in terminal 1 run a substraTEE-node
 ```
