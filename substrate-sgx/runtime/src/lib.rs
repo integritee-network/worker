@@ -24,9 +24,9 @@
 
 #![no_std]
 #![feature(rustc_private)]
-#![feature(structural_match)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
+#![feature(negative_impls)]
 #![feature(stmt_expr_attributes)]
 
 //use node_runtime::{Balances, AccountId, Indices, Hash, Nonce, opaque, Block, BlockNumber, AuthorityId, AuthoritySignature, Event, Call, Origin};
@@ -62,7 +62,6 @@ pub type Balances = balances::Module<Runtime>;
 
 pub use balances::Call as balancesCall;
 
-#[structural_match]
 pub struct Runtime;
 #[automatically_derived]
 #[allow(unused_qualifications)]
@@ -173,7 +172,6 @@ impl indices::Trait for Runtime {
 }
 
 #[allow(non_camel_case_types)]
-#[structural_match]
 pub enum Origin {
     system(system::Origin<Runtime>),
     Void(::support::Void),
@@ -447,7 +445,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 };
 
 #[allow(non_camel_case_types)]
-#[structural_match]
 #[derive(Debug)]
 pub enum Event {
     system(system::Event),
@@ -637,7 +634,6 @@ impl ::support::rstd::convert::TryInto<balances::Event<Runtime>> for Event {
 pub type Event<T> = RawEvent<<T as system::Trait>::AccountId>;
 /// Events for this module.
 ///
-#[structural_match]
 pub enum RawEvent<AccountId> { SomethingStored(u32, AccountId), }
 #[automatically_derived]
 #[allow(unused_qualifications)]

@@ -32,7 +32,7 @@ base58 			    = { version = "0.1", optional = true }
 [dependencies.sgx_tstd]
 git = "https://github.com/apache/teaclave-sgx-sdk.git"
 features = ["untrusted_fs","net","backtrace"]
-rev = "v1.1.1"
+rev = "v1.1.2"
 optional = true
 
 [dependencies.codec]

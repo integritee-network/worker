@@ -42,13 +42,13 @@ pipeline {
       steps {
         sh 'cargo clean'
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd client  && cargo +nightly-2020-03-12 clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
+          sh 'cd client  && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd worker  && cargo +nightly-2020-03-12 clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'
+          sh 'cd worker  && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd enclave && cargo +nightly-2020-03-12 clippy 2>&1 | tee ${WORKSPACE}/clippy_enclave.log'
+          sh 'cd enclave && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_enclave.log'
         }
       }
     }
