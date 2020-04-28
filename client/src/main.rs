@@ -40,7 +40,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
-use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sr_primitives::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
@@ -428,7 +428,7 @@ fn listen(matches: &ArgMatches<'_>) {
         let event_str = events_out.recv().unwrap();
         let _unhex = hexstr_to_vec(event_str).unwrap();
         let mut _er_enc = _unhex.as_slice();
-        let _events = Vec::<system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
+        let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
         match _events {
             Ok(evts) => {
                 for evr in &evts {
@@ -437,7 +437,7 @@ fn listen(matches: &ArgMatches<'_>) {
                         /*                            Event::balances(be) => {
                             println!(">>>>>>>>>> balances event: {:?}", be);
                             match &be {
-                                balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+                                pallet_balances::RawEvent::Transfer(transactor, dest, value, fee) => {
                                     println!("Transactor: {:?}", transactor);
                                     println!("Destination: {:?}", dest);
                                     println!("Value: {:?}", value);
@@ -499,7 +499,7 @@ where
 
         let _unhex = hexstr_to_vec(event_str).unwrap();
         let mut _er_enc = _unhex.as_slice();
-        let _events = Vec::<system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
+        let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
         if let Ok(evts) = _events {
             for evr in &evts {
                 if let Event::substratee_registry(pe) = &evr.event {

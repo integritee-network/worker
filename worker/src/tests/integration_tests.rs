@@ -19,7 +19,7 @@ use base58::ToBase58;
 use codec::{Decode, Encode};
 use keyring::AccountKeyring;
 use log::*;
-use primitives::{crypto::AccountId32, hash::H256, sr25519};
+use sp_core::{crypto::AccountId32, hash::H256, sr25519};
 use sgx_types::*;
 use std::fs;
 use substrate_api_client::{extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_u256, Api};

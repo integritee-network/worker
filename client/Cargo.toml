@@ -29,39 +29,28 @@ version = "1.0"
 default-features = false
 package = "parity-scale-codec"
 features = ["derive"]
-version = "1.0.0"
+version = "1.3.0"
 
-[dependencies.primitives]
-git = 'https://github.com/paritytech/substrate'
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-primitives"
+[dependencies.sp-core]
+version = '2.0.0-alpha.6'
 
-[dependencies.sr-primitives]
-git = "https://github.com/paritytech/substrate"
-package = "sr-primitives"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
+[dependencies.sp-runtime]
+version = '2.0.0-alpha.6'
 
-[dependencies.keystore]
-git = 'https://github.com/paritytech/substrate'
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-keystore"
+[dependencies.sp-keystore]
+version = '2.0.0-alpha.6'
 
-[dependencies.balances]
-git = 'https://github.com/paritytech/substrate'
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "pallet-balances"
+[dependencies.pallet-balances]
+version = '2.0.0-alpha.6'
 default-features=false
 
-[dependencies.system]
-git = 'https://github.com/paritytech/substrate'
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "palette-system"
+[dependencies.frame-system]
+version = '2.0.0-alpha.6'
 default-features=false
 
 [dependencies.substratee-node-runtime]
-git = "https://github.com/scs/substraTEE-node-pre2.0.0"
-rev = "e09d5c51287d240df904b5dc98c4a9f59ac7c002"
-package = "substratee-node-runtime"
+git = "https://github.com/scs/substraTEE-node"
+tag = "v0.6.0"
 
 [dependencies.substratee-stf]
 path = "../stf"
@@ -69,15 +58,11 @@ path = "../stf"
 [dependencies.substratee-worker-api]
 path = "../worker/worker-api"
 
-[dependencies.keyring]
-git = 'https://github.com/paritytech/substrate'
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-keyring"
+[dependencies.sp-keyring]
+version = '2.0.0-alpha.6'
 
-[dependencies.app-crypto]
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-application-crypto"
+[dependencies.sp-application-crypto]
+version = '2.0.0-alpha.6'
 
 #[patch.crates-io]
 #ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}

@@ -5,8 +5,8 @@ pub use my_node_runtime::{
     substratee_registry::{Enclave, ShardIdentifier},
     AccountId,
 };
-use primitives::crypto::Pair;
-use runtime_primitives::MultiSignature;
+use sp_core::crypto::Pair;
+use sp_runtime::MultiSignature;
 use substrate_api_client::utils::{hexstr_to_u64, hexstr_to_vec};
 
 pub fn get_worker_info<P: Pair>(

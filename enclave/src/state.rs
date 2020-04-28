@@ -27,7 +27,7 @@ use crate::hex;
 use crate::io;
 use base58::ToBase58;
 use codec::Encode;
-use primitives::H256;
+use sp_core::H256;
 use sgx_externalities::SgxExternalitiesTrait;
 use substratee_stf::{ShardIdentifier, State as StfState, Stf};
 

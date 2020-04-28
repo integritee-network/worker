@@ -18,7 +18,7 @@
 use codec::Encode;
 use keyring::AccountKeyring;
 use log::*;
-use primitives::sr25519;
+use sp_core::sr25519;
 use serde_derive::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;

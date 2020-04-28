@@ -4,8 +4,8 @@ use std::prelude::v1::*;
 
 use codec::{Compact, Decode, Encode};
 use log_sgx::*;
-use primitives::hashing::{blake2_256, twox_128};
-use runtime_primitives::traits::Dispatchable;
+use sp_core::hashing::{blake2_256, twox_128};
+use sp_runtime::traits::Dispatchable;
 
 use sgx_runtime::Runtime;
 use sr_io::SgxExternalitiesTrait;

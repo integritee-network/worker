@@ -21,7 +21,7 @@ use crate::tests::commons::test_trusted_getter_signed;
 use codec::Encode;
 use keyring::AccountKeyring;
 
-use primitives::hash::H256;
+use sp_core::hash::H256;
 use sgx_types::*;
 
 // TODO: test get_ecc_signing_pubkey

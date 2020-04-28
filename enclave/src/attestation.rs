@@ -45,7 +45,7 @@ use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
 use log::*;
-use primitives::Pair;
+use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::constants::{

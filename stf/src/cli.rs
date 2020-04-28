@@ -23,8 +23,8 @@ use clap_nested::{Command, Commander, MultiCommand};
 use codec::Encode;
 use keystore::Store;
 use log::*;
-use primitives::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use runtime_primitives::traits::IdentifyAccount;
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 
 const KEYSTORE_PATH: &str = "my_trusted_keystore";

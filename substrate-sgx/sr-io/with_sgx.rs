@@ -19,7 +19,7 @@ extern crate sgx_tstd as std;
 use std::prelude::v1::String;
 
 use codec::{Decode, Encode};
-use primitives::{
+use sp_core::{
     hash::H256,
     offchain::{
         Timestamp, HttpRequestId, HttpRequestStatus, HttpError, StorageKind, OpaqueNetworkState,
@@ -189,35 +189,35 @@ pub mod hashing {
 
     pub fn blake2_128(data: &[u8]) -> [u8; 16] {
         debug!("blake2_128 of {}", encode_hex(data));
-        let hash = primitives::blake2_128(data);
+        let hash = sp_core::blake2_128(data);
         debug!("  returning hash {}", encode_hex(&hash));
         hash
     }
 
     pub fn blake2_256(data: &[u8]) -> [u8; 32] {
         debug!("blake2_256 of {}", encode_hex(data));
-        let hash = primitives::blake2_256(data);
+        let hash = sp_core::blake2_256(data);
         debug!("  returning hash {}", encode_hex(&hash));
         hash
     }
 
     pub fn twox_256(data: &[u8]) -> [u8; 32] {
         debug!("twox_256 of {}", encode_hex(data));
-        let hash = primitives::twox_256(data);
+        let hash = sp_core::twox_256(data);
         debug!("  returning {}", encode_hex(&hash));
         hash
     }
 
     pub fn twox_128(data: &[u8]) -> [u8; 16] {
         debug!("twox_128 of {}", encode_hex(data));
-        let hash = primitives::twox_128(data);
+        let hash = sp_core::twox_128(data);
         debug!("  returning {}", encode_hex(&hash));
         hash
     }
 
     pub fn twox_64(data: &[u8]) -> [u8; 8] {
         debug!("twox_64 of {}", encode_hex(data));
-        let hash = primitives::twox_64(data);
+        let hash = sp_core::twox_64(data);
         debug!("  returning {}", encode_hex(&hash));
         hash
     }
@@ -417,7 +417,7 @@ pub mod misc {
 
 pub mod logging {
     use super::*;
-    use primitives::LogLevel;
+    use sp_core::LogLevel;
     /// Request to print a log message on the host.
     ///
     /// Note that this will be only displayed if the host is enabled to display log messages with
@@ -439,8 +439,8 @@ pub mod logging {
 #[cfg(test)]
 mod tests {
     use hex_literal::hex;
-    use primitives::{H256, map};
-    use primitives::storage::well_known_keys::CODE;
+    use sp_core::{H256, map};
+    use sp_core::storage::well_known_keys::CODE;
 
     use super::*;
 

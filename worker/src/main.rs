@@ -34,7 +34,7 @@ use my_node_runtime::{
     Event, Hash, UncheckedExtrinsic,
 };
 use primitive_types::U256;
-use primitives::{
+use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519, Pair,
 };
@@ -324,7 +324,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     }
 }
 
-type Events = Vec<system::EventRecord<Event, Hash>>;
+type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
 fn parse_events(event: String) -> Result<Events, String> {
     let _unhex = hexstr_to_vec(event).unwrap();
@@ -340,7 +340,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                 println!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
-                    balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+                    pallet_balances::RawEvent::Transfer(transactor, dest, value, fee) => {
                         println!("    Transactor:  {:?}", transactor.to_ss58check());
                         println!("    Destination: {:?}", dest.to_ss58check());
                         println!("    Value:       {:?}", value);

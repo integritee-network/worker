@@ -1,17 +1,17 @@
 // The content of this file is exactly the same as in the
 // sr-io/src/lib.rs file in the substrate repository
-use rstd::vec::Vec;
+use sp_stf::vec::Vec;
 
 #[cfg(feature = "std")]
-use rstd::ops::Deref;
+use sp_stf::ops::Deref;
 
 #[cfg(feature = "std")]
-use primitives::{
+use sp_core::{
     crypto::Pair, traits::KeystoreExt, offchain::OffchainExt, hexdisplay::HexDisplay,
     storage::ChildStorageKey,
 };
 
-use primitives::{
+use sp_core::{
     crypto::KeyTypeId, ed25519, sr25519, H256, LogLevel,
     offchain::{
         Timestamp, HttpRequestId, HttpRequestStatus, HttpError, StorageKind, OpaqueNetworkState,
@@ -173,12 +173,12 @@ pub trait Storage {
 
     /// A trie root formed from the iterated items.
     fn blake2_256_trie_root(input: Vec<(Vec<u8>, Vec<u8>)>) -> H256 {
-        Layout::<primitives::Blake2Hasher>::trie_root(input)
+        Layout::<sp_core::Blake2Hasher>::trie_root(input)
     }
 
     /// A trie root formed from the enumerated items.
     fn blake2_256_ordered_trie_root(input: Vec<Vec<u8>>) -> H256 {
-        Layout::<primitives::Blake2Hasher>::ordered_trie_root(input)
+        Layout::<sp_core::Blake2Hasher>::ordered_trie_root(input)
     }
 }
 
@@ -351,32 +351,32 @@ pub trait Crypto {
 pub trait Hashing {
     /// Conduct a 256-bit Keccak hash.
     fn keccak_256(data: &[u8]) -> [u8; 32] {
-        primitives::hashing::keccak_256(data)
+        sp_core::hashing::keccak_256(data)
     }
 
     /// Conduct a 128-bit Blake2 hash.
     fn blake2_128(data: &[u8]) -> [u8; 16] {
-        primitives::hashing::blake2_128(data)
+        sp_core::hashing::blake2_128(data)
     }
 
     /// Conduct a 256-bit Blake2 hash.
     fn blake2_256(data: &[u8]) -> [u8; 32] {
-        primitives::hashing::blake2_256(data)
+        sp_core::hashing::blake2_256(data)
     }
 
     /// Conduct four XX hashes to give a 256-bit result.
     fn twox_256(data: &[u8]) -> [u8; 32] {
-        primitives::hashing::twox_256(data)
+        sp_core::hashing::twox_256(data)
     }
 
     /// Conduct two XX hashes to give a 128-bit result.
     fn twox_128(data: &[u8]) -> [u8; 16] {
-        primitives::hashing::twox_128(data)
+        sp_core::hashing::twox_128(data)
     }
 
     /// Conduct two XX hashes to give a 64-bit result.
     fn twox_64(data: &[u8]) -> [u8; 8] {
-        primitives::hashing::twox_64(data)
+        sp_core::hashing::twox_64(data)
     }
 }
 
@@ -730,7 +730,7 @@ pub extern fn oom(_: core::alloc::Layout) -> ! {
 
 /// Type alias for Externalities implementation used in tests.
 #[cfg(feature = "std")]
-pub type TestExternalities = substrate_state_machine::TestExternalities<primitives::Blake2Hasher, u64>;
+pub type TestExternalities = substrate_state_machine::TestExternalities<sp_core::Blake2Hasher, u64>;
 
 /// The host functions Substrate provides for the Wasm runtime environment.
 ///
@@ -750,7 +750,7 @@ pub type SubstrateHostFunctions = (
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primitives::map;
+    use sp_core::map;
     use substrate_state_machine::BasicExternalities;
 
     #[test]

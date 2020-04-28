@@ -39,7 +39,7 @@ use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_ve
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
-use primitives::{crypto::Pair, hashing::blake2_256};
+use sp_core::{crypto::Pair, hashing::blake2_256};
 
 use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
 use std::slice;
@@ -65,7 +65,7 @@ pub mod tls_ra;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
-pub type Hash = primitives::H256;
+pub type Hash = sp_core::H256;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {

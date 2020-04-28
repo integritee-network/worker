@@ -18,7 +18,7 @@ std = [
     "clap-nested",
     "log",
     "base58",
-    "keystore"
+    "sc-keystore"
 ]
 
 [dependencies]
@@ -41,58 +41,37 @@ package = "parity-scale-codec"
 version = "1.0.0"
 features = ["derive"]
 
-[dependencies.primitives]
+[dependencies.sp-core]
+version = '2.0.0-alpha.6'
 default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "substrate-primitives"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 features = ["full_crypto"]
 
-[dependencies.application-crypto]
+[dependencies.sp-application-crypto]
+version = '2.0.0-alpha.6'
 default-features = false
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-application-crypto"
 features = ["full_crypto"]
 
-[dependencies.runtime_primitives]
+[dependencies.sp-runtime]
+version = '2.0.0-alpha.6'
 default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "sr-primitives"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
-# timestamp pulls in blake2-rfc with std
-#[dependencies.timestamp]
-#default-features = false
-#git = "https://github.com/paritytech/substrate"
-#package = "pallet-timestamp"
-#rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-
-[dependencies.indices]
-default-features = false
-git = "https://github.com/paritytech/substrate"
-package = "pallet-indices"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
 
 [dependencies.sr-io]
+version = '2.0.0-alpha.6'
 default-features = false
 optional = true
 path = "../substrate-sgx/sr-io"
-package = "sr-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx-runtime]
-optional = true
+default-features = false
 package = "sgx-runtime"
 path = "../substrate-sgx/runtime"
-
-[dev-dependencies.keyring]
-git = "https://github.com/paritytech/substrate"
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-keyring"
-
-[dependencies.keystore]
-git = 'https://github.com/paritytech/substrate'
-rev = "3bf9540e72df5ecb3955845764dfee7dcdbb26b5"
-package = "substrate-keystore"
 optional = true
+
+[dependencies.sc-keystore]
+version = '2.0.0-alpha.6'
+optional = true
+
+[dev-dependencies.sp-keyring]
+version = '2.0.0-alpha.6'
+
