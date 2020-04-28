@@ -4,10 +4,10 @@ use std::prelude::v1::*;
 
 use codec::{Compact, Decode, Encode};
 use log_sgx::*;
-use sp_core::hashing::{blake2_256, twox_128};
+use sp_core::{hashing::{blake2_256, twox_128}, crypto::AccountId32};
 use sp_runtime::traits::Dispatchable;
-
-use sgx_runtime::Runtime;
+use sp_runtime::traits::IdentifyAccount;
+use sgx_runtime::{Runtime, Address};
 use sr_io::SgxExternalitiesTrait;
 
 use crate::{
@@ -76,8 +76,8 @@ impl Stf {
 
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
-                    sgx_runtime::balancesCall::<Runtime>::set_balance(
-                        indices::Address::<Runtime>::Id(who),
+                    sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                        AccountId32::from(who),
                         free_balance,
                         reserved_balance,
                     )
@@ -85,16 +85,16 @@ impl Stf {
                 }
                 TrustedCall::balance_transfer(from, to, value) => {
                     //FIXME: here would be a good place to really verify a signature
-                    let origin = sgx_runtime::Origin::signed(from);
-                    sgx_runtime::balancesCall::<Runtime>::transfer(
-                        indices::Address::<Runtime>::Id(to),
+                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                    sgx_runtime::BalancesCall::<Runtime>::transfer(
+                        AccountId32::from(to),
                         value,
                     )
                     .dispatch(origin)
                 }
                 TrustedCall::balance_unshield(who, value) => {
                     calls.push(([BALANCE_MODULE, BALANCE_TRANSFER], who, Compact(value)));
-                    Ok(())
+                    Ok(Default::default())
                 }
             };
         });
@@ -168,7 +168,7 @@ pub fn init_runtime() {
     let origin_tina = sgx_runtime::Origin::signed(tina.clone());
     //let origin = sgx_runtime::Origin::ROOT;
 
-    let address = indices::Address::<Runtime>::default();
+    let address = Address::<Runtime>::default();
 
     sr_io::with_externalities(&mut ext, || {
         // write Genesis
@@ -190,7 +190,7 @@ pub fn init_runtime() {
         const CENTS: u128 = 1_000 * MILLICENTS;    // assume this is worth about a cent.
 
         info!("re-funding tina: call set_balance");
-        let res = sgx_runtime::balancesCall::<Runtime>::set_balance(indices::Address::<Runtime>::Id(tina.clone()), 42, 43).dispatch(sgx_runtime::Origin::ROOT);
+        let res = sgx_runtime::BalancesCall::<Runtime>::set_balance(Address::<Runtime>::Id(tina.clone()), 42, 43).dispatch(sgx_runtime::Origin::ROOT);
         info!("reading Tina's FreeBalance");
         let tina_balance = sr_io::storage(&storage_key_bytes("Balances", "FreeBalance", Some(tina.clone().encode())));
         info!("Tina's FreeBalance is {:?}", tina_balance);

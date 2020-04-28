@@ -1,10 +1,13 @@
+#![no_std]
 #![feature(prelude_import)]
+#![feature(structural_match)]
+#![feature(core_intrinsics)]
+#![feature(derive_eq)]
+
+
 //! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 #![recursion_limit = "256"]
-#[prelude_import]
-use std::prelude::v1::*;
-#[macro_use]
-extern crate std;
+
 use sp_std::prelude::*;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
@@ -927,7 +930,7 @@ impl ::frame_support::dispatch::GetCallMetadata for Call {
             }
             "Balances" => <<Balances as Callable<Runtime>>::Call as GetCallName>::get_call_names(),
             "Sudo" => <<Sudo as Callable<Runtime>>::Call as GetCallName>::get_call_names(),
-            _ => ::std::rt::begin_panic("internal error: entered unreachable code"),
+            _ => &["internal error: entered unreachable code"],
         }
     }
 }
@@ -1008,381 +1011,6 @@ impl From<::frame_support::dispatch::CallableCallFor<Sudo, Runtime>> for Call {
 impl Runtime {
     pub fn metadata() -> ::frame_support::metadata::RuntimeMetadataPrefixed {
         :: frame_support :: metadata :: RuntimeMetadataLastVersion { modules : :: frame_support :: metadata :: DecodeDifferent :: Encode ( & [ :: frame_support :: metadata :: ModuleMetadata { name : :: frame_support :: metadata :: DecodeDifferent :: Encode ( "System" ) , storage : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( system :: Module :: < Runtime > :: storage_metadata ) ) ) , calls : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( system :: Module :: < Runtime > :: call_functions ) ) ) , event : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( { # [ allow ( dead_code ) ] enum ProcMacroHack { Value = ( "Runtime :: [< __module_events_ system >]" , 0 ) . 1 , } { Runtime :: __module_events_system } } ) ) ) , constants : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( system :: Module :: < Runtime > :: module_constants_metadata ) ) , errors : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( < system :: Module < Runtime > as :: frame_support :: metadata :: ModuleErrorMetadata > :: metadata ) ) , } , :: frame_support :: metadata :: ModuleMetadata { name : :: frame_support :: metadata :: DecodeDifferent :: Encode ( "Timestamp" ) , storage : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( timestamp :: Module :: < Runtime > :: storage_metadata ) ) ) , calls : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( timestamp :: Module :: < Runtime > :: call_functions ) ) ) , event : None , constants : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( timestamp :: Module :: < Runtime > :: module_constants_metadata ) ) , errors : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( < timestamp :: Module < Runtime > as :: frame_support :: metadata :: ModuleErrorMetadata > :: metadata ) ) , } , :: frame_support :: metadata :: ModuleMetadata { name : :: frame_support :: metadata :: DecodeDifferent :: Encode ( "Balances" ) , storage : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( balances :: Module :: < Runtime > :: storage_metadata ) ) ) , calls : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( balances :: Module :: < Runtime > :: call_functions ) ) ) , event : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( { # [ allow ( dead_code ) ] enum ProcMacroHack { Value = ( "Runtime :: [< __module_events_ balances >]" , 0 ) . 1 , } { Runtime :: __module_events_balances } } ) ) ) , constants : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( balances :: Module :: < Runtime > :: module_constants_metadata ) ) , errors : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( < balances :: Module < Runtime > as :: frame_support :: metadata :: ModuleErrorMetadata > :: metadata ) ) , } , :: frame_support :: metadata :: ModuleMetadata { name : :: frame_support :: metadata :: DecodeDifferent :: Encode ( "TransactionPayment" ) , storage : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( transaction_payment :: Module :: < Runtime > :: storage_metadata ) ) ) , calls : None , event : None , constants : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( transaction_payment :: Module :: < Runtime > :: module_constants_metadata ) ) , errors : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( < transaction_payment :: Module < Runtime > as :: frame_support :: metadata :: ModuleErrorMetadata > :: metadata ) ) , } , :: frame_support :: metadata :: ModuleMetadata { name : :: frame_support :: metadata :: DecodeDifferent :: Encode ( "Sudo" ) , storage : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( sudo :: Module :: < Runtime > :: storage_metadata ) ) ) , calls : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( sudo :: Module :: < Runtime > :: call_functions ) ) ) , event : Some ( :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( { # [ allow ( dead_code ) ] enum ProcMacroHack { Value = ( "Runtime :: [< __module_events_ sudo >]" , 0 ) . 1 , } { Runtime :: __module_events_sudo } } ) ) ) , constants : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( sudo :: Module :: < Runtime > :: module_constants_metadata ) ) , errors : :: frame_support :: metadata :: DecodeDifferent :: Encode ( :: frame_support :: metadata :: FnEncode ( < sudo :: Module < Runtime > as :: frame_support :: metadata :: ModuleErrorMetadata > :: metadata ) ) , } ] ) , extrinsic : :: frame_support :: metadata :: ExtrinsicMetadata { version : < UncheckedExtrinsic as :: frame_support :: sp_runtime :: traits :: ExtrinsicMetadata > :: VERSION , signed_extensions : < < UncheckedExtrinsic as :: frame_support :: sp_runtime :: traits :: ExtrinsicMetadata > :: SignedExtensions as :: frame_support :: sp_runtime :: traits :: SignedExtension > :: identifier ( ) . into_iter ( ) . map ( :: frame_support :: metadata :: DecodeDifferent :: Encode ) . collect ( ) , } , } . into ( )
-    }
-}
-#[cfg(any(feature = "std", test))]
-pub type SystemConfig = system::GenesisConfig;
-#[cfg(any(feature = "std", test))]
-pub type BalancesConfig = balances::GenesisConfig<Runtime>;
-#[cfg(any(feature = "std", test))]
-pub type SudoConfig = sudo::GenesisConfig<Runtime>;
-#[cfg(any(feature = "std", test))]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct GenesisConfig {
-    pub system: Option<SystemConfig>,
-    pub balances: Option<BalancesConfig>,
-    pub sudo: Option<SudoConfig>,
-}
-#[doc(hidden)]
-#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
-const _IMPL_SERIALIZE_FOR_GenesisConfig: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
-    extern crate serde as _serde;
-    #[automatically_derived]
-    impl _serde::Serialize for GenesisConfig {
-        fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
-        where
-            __S: _serde::Serializer,
-        {
-            let mut __serde_state = match _serde::Serializer::serialize_struct(
-                __serializer,
-                "GenesisConfig",
-                false as usize + 1 + 1 + 1,
-            ) {
-                _serde::export::Ok(__val) => __val,
-                _serde::export::Err(__err) => {
-                    return _serde::export::Err(__err);
-                }
-            };
-            match _serde::ser::SerializeStruct::serialize_field(
-                &mut __serde_state,
-                "system",
-                &self.system,
-            ) {
-                _serde::export::Ok(__val) => __val,
-                _serde::export::Err(__err) => {
-                    return _serde::export::Err(__err);
-                }
-            };
-            match _serde::ser::SerializeStruct::serialize_field(
-                &mut __serde_state,
-                "balances",
-                &self.balances,
-            ) {
-                _serde::export::Ok(__val) => __val,
-                _serde::export::Err(__err) => {
-                    return _serde::export::Err(__err);
-                }
-            };
-            match _serde::ser::SerializeStruct::serialize_field(
-                &mut __serde_state,
-                "sudo",
-                &self.sudo,
-            ) {
-                _serde::export::Ok(__val) => __val,
-                _serde::export::Err(__err) => {
-                    return _serde::export::Err(__err);
-                }
-            };
-            _serde::ser::SerializeStruct::end(__serde_state)
-        }
-    }
-};
-#[doc(hidden)]
-#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
-const _IMPL_DESERIALIZE_FOR_GenesisConfig: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
-    extern crate serde as _serde;
-    #[automatically_derived]
-    impl<'de> _serde::Deserialize<'de> for GenesisConfig {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
-        where
-            __D: _serde::Deserializer<'de>,
-        {
-            #[allow(non_camel_case_types)]
-            enum __Field {
-                __field0,
-                __field1,
-                __field2,
-            }
-            struct __FieldVisitor;
-            impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
-                type Value = __Field;
-                fn expecting(
-                    &self,
-                    __formatter: &mut _serde::export::Formatter,
-                ) -> _serde::export::fmt::Result {
-                    _serde::export::Formatter::write_str(__formatter, "field identifier")
-                }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        0u64 => _serde::export::Ok(__Field::__field0),
-                        1u64 => _serde::export::Ok(__Field::__field1),
-                        2u64 => _serde::export::Ok(__Field::__field2),
-                        _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"field index 0 <= i < 3",
-                        )),
-                    }
-                }
-                fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        "system" => _serde::export::Ok(__Field::__field0),
-                        "balances" => _serde::export::Ok(__Field::__field1),
-                        "sudo" => _serde::export::Ok(__Field::__field2),
-                        _ => _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS)),
-                    }
-                }
-                fn visit_bytes<__E>(
-                    self,
-                    __value: &[u8],
-                ) -> _serde::export::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        b"system" => _serde::export::Ok(__Field::__field0),
-                        b"balances" => _serde::export::Ok(__Field::__field1),
-                        b"sudo" => _serde::export::Ok(__Field::__field2),
-                        _ => {
-                            let __value = &_serde::export::from_utf8_lossy(__value);
-                            _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS))
-                        }
-                    }
-                }
-            }
-            impl<'de> _serde::Deserialize<'de> for __Field {
-                #[inline]
-                fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
-                where
-                    __D: _serde::Deserializer<'de>,
-                {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
-                }
-            }
-            struct __Visitor<'de> {
-                marker: _serde::export::PhantomData<GenesisConfig>,
-                lifetime: _serde::export::PhantomData<&'de ()>,
-            }
-            impl<'de> _serde::de::Visitor<'de> for __Visitor<'de> {
-                type Value = GenesisConfig;
-                fn expecting(
-                    &self,
-                    __formatter: &mut _serde::export::Formatter,
-                ) -> _serde::export::fmt::Result {
-                    _serde::export::Formatter::write_str(__formatter, "struct GenesisConfig")
-                }
-                #[inline]
-                fn visit_seq<__A>(
-                    self,
-                    mut __seq: __A,
-                ) -> _serde::export::Result<Self::Value, __A::Error>
-                where
-                    __A: _serde::de::SeqAccess<'de>,
-                {
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<
-                        Option<SystemConfig>,
-                    >(&mut __seq)
-                    {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
-                        }
-                    } {
-                        _serde::export::Some(__value) => __value,
-                        _serde::export::None => {
-                            return _serde::export::Err(_serde::de::Error::invalid_length(
-                                0usize,
-                                &"struct GenesisConfig with 3 elements",
-                            ));
-                        }
-                    };
-                    let __field1 = match match _serde::de::SeqAccess::next_element::<
-                        Option<BalancesConfig>,
-                    >(&mut __seq)
-                    {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
-                        }
-                    } {
-                        _serde::export::Some(__value) => __value,
-                        _serde::export::None => {
-                            return _serde::export::Err(_serde::de::Error::invalid_length(
-                                1usize,
-                                &"struct GenesisConfig with 3 elements",
-                            ));
-                        }
-                    };
-                    let __field2 = match match _serde::de::SeqAccess::next_element::<
-                        Option<SudoConfig>,
-                    >(&mut __seq)
-                    {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
-                        }
-                    } {
-                        _serde::export::Some(__value) => __value,
-                        _serde::export::None => {
-                            return _serde::export::Err(_serde::de::Error::invalid_length(
-                                2usize,
-                                &"struct GenesisConfig with 3 elements",
-                            ));
-                        }
-                    };
-                    _serde::export::Ok(GenesisConfig {
-                        system: __field0,
-                        balances: __field1,
-                        sudo: __field2,
-                    })
-                }
-                #[inline]
-                fn visit_map<__A>(
-                    self,
-                    mut __map: __A,
-                ) -> _serde::export::Result<Self::Value, __A::Error>
-                where
-                    __A: _serde::de::MapAccess<'de>,
-                {
-                    let mut __field0: _serde::export::Option<Option<SystemConfig>> =
-                        _serde::export::None;
-                    let mut __field1: _serde::export::Option<Option<BalancesConfig>> =
-                        _serde::export::None;
-                    let mut __field2: _serde::export::Option<Option<SudoConfig>> =
-                        _serde::export::None;
-                    while let _serde::export::Some(__key) =
-                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
-                            _serde::export::Ok(__val) => __val,
-                            _serde::export::Err(__err) => {
-                                return _serde::export::Err(__err);
-                            }
-                        }
-                    {
-                        match __key {
-                            __Field::__field0 => {
-                                if _serde::export::Option::is_some(&__field0) {
-                                    return _serde::export::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field(
-                                            "system",
-                                        ),
-                                    );
-                                }
-                                __field0 = _serde::export::Some(
-                                    match _serde::de::MapAccess::next_value::<Option<SystemConfig>>(
-                                        &mut __map,
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    },
-                                );
-                            }
-                            __Field::__field1 => {
-                                if _serde::export::Option::is_some(&__field1) {
-                                    return _serde::export::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field(
-                                            "balances",
-                                        ),
-                                    );
-                                }
-                                __field1 = _serde::export::Some(
-                                    match _serde::de::MapAccess::next_value::<Option<BalancesConfig>>(
-                                        &mut __map,
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    },
-                                );
-                            }
-                            __Field::__field2 => {
-                                if _serde::export::Option::is_some(&__field2) {
-                                    return _serde::export::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field("sudo"),
-                                    );
-                                }
-                                __field2 = _serde::export::Some(
-                                    match _serde::de::MapAccess::next_value::<Option<SudoConfig>>(
-                                        &mut __map,
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    },
-                                );
-                            }
-                        }
-                    }
-                    let __field0 = match __field0 {
-                        _serde::export::Some(__field0) => __field0,
-                        _serde::export::None => {
-                            match _serde::private::de::missing_field("system") {
-                                _serde::export::Ok(__val) => __val,
-                                _serde::export::Err(__err) => {
-                                    return _serde::export::Err(__err);
-                                }
-                            }
-                        }
-                    };
-                    let __field1 = match __field1 {
-                        _serde::export::Some(__field1) => __field1,
-                        _serde::export::None => {
-                            match _serde::private::de::missing_field("balances") {
-                                _serde::export::Ok(__val) => __val,
-                                _serde::export::Err(__err) => {
-                                    return _serde::export::Err(__err);
-                                }
-                            }
-                        }
-                    };
-                    let __field2 = match __field2 {
-                        _serde::export::Some(__field2) => __field2,
-                        _serde::export::None => match _serde::private::de::missing_field("sudo") {
-                            _serde::export::Ok(__val) => __val,
-                            _serde::export::Err(__err) => {
-                                return _serde::export::Err(__err);
-                            }
-                        },
-                    };
-                    _serde::export::Ok(GenesisConfig {
-                        system: __field0,
-                        balances: __field1,
-                        sudo: __field2,
-                    })
-                }
-            }
-            const FIELDS: &'static [&'static str] = &["system", "balances", "sudo"];
-            _serde::Deserializer::deserialize_struct(
-                __deserializer,
-                "GenesisConfig",
-                FIELDS,
-                __Visitor {
-                    marker: _serde::export::PhantomData::<GenesisConfig>,
-                    lifetime: _serde::export::PhantomData,
-                },
-            )
-        }
-    }
-};
-#[cfg(any(feature = "std", test))]
-impl ::sp_runtime::BuildStorage for GenesisConfig {
-    fn assimilate_storage(
-        &self,
-        storage: &mut ::sp_runtime::Storage,
-    ) -> std::result::Result<(), String> {
-        if let Some(ref extra) = self.system {
-            :: sp_runtime :: BuildModuleGenesisStorage :: < Runtime , system :: __InherentHiddenInstance > :: build_module_genesis_storage ( extra , storage ) ? ;
-        }
-        if let Some(ref extra) = self.balances {
-            :: sp_runtime :: BuildModuleGenesisStorage :: < Runtime , balances :: __InherentHiddenInstance > :: build_module_genesis_storage ( extra , storage ) ? ;
-        }
-        if let Some(ref extra) = self.sudo {
-            :: sp_runtime :: BuildModuleGenesisStorage :: < Runtime , sudo :: __InherentHiddenInstance > :: build_module_genesis_storage ( extra , storage ) ? ;
-        }
-        Ok(())
     }
 }
 trait InherentDataExt {
@@ -1475,9 +1103,7 @@ pub type SignedExtra = (
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
-/// Executive: handles dispatch to the various modules.
-pub type Executive =
-    frame_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
+
 #[doc(hidden)]
 mod sp_api_hidden_includes_IMPL_RUNTIME_APIS {
     pub extern crate sp_api as sp_api;
@@ -1734,10 +1360,10 @@ impl sp_api::runtime_decl_for_Core::Core<Block> for Runtime {
         VERSION
     }
     fn execute_block(block: Block) {
-        Executive::execute_block(block)
+        ()
     }
     fn initialize_block(header: &<Block as BlockT>::Header) {
-        Executive::initialize_block(header)
+        ()
     }
 }
 #[cfg(any(feature = "std", test))]
