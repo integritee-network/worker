@@ -24,9 +24,7 @@
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 #![allow(clippy::missing_safety_doc)]
 
-use env_logger;
 use log::*;
-use serde_json;
 
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
@@ -200,7 +198,7 @@ pub unsafe extern "C" fn execute_stf(
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
         .into_iter()
-        .map(|hash| WorkerRequest::ChainStorage(hash))
+        .map(WorkerRequest::ChainStorage)
         .collect();
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
@@ -247,7 +245,7 @@ pub unsafe extern "C" fn execute_stf(
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let mut nonce = *nonce.clone();
+    let mut nonce = *nonce;
 
     let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
         .into_iter()
@@ -255,8 +253,8 @@ pub unsafe extern "C" fn execute_stf(
             let xt = compose_extrinsic_offline!(
                 signer.clone(),
                 call,
-                nonce.clone(),
-                genesis_hash.clone(),
+                nonce,
+                genesis_hash,
                 RUNTIME_SPEC_VERSION
             )
             .encode();
@@ -441,7 +439,7 @@ fn test_ocall_worker_request() {
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
         Ok(response) => response,
-        Err(_) => panic!("Worker response decode failed"),
+        Err(e) => panic!("Worker response decode failed. Error: {:?}", e),
     };
 
     let first = resp.pop().unwrap();

@@ -20,12 +20,10 @@ use keyring::AccountKeyring;
 use log::*;
 use primitives::sr25519;
 use serde_derive::{Deserialize, Serialize};
-use serde_json;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 
 use std::str;
-use substratee_stf;
 
 use crate::enclave::api::*;
 use crate::{ensure_account_has_funds, get_enclave_signing_key};
@@ -95,7 +93,7 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
 
 pub fn setup(eid: sgx_enclave_id_t, who: AccountKeyring) -> (Api<sr25519::Pair>, u32) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
-    let api = Api::<sr25519::Pair>::new(node_url.clone()).set_signer(who.pair());
+    let api = Api::<sr25519::Pair>::new(node_url).set_signer(who.pair());
 
     ensure_account_has_funds(&api, &get_enclave_signing_key(eid));
 

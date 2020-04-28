@@ -68,13 +68,13 @@ pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
 
 pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t) {
     let (api, nonce) = setup(eid, AccountKeyring::Alice);
-    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.clone());
+    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce);
     execute_stf(eid, api, cyphertext)
 }
 
 pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t) {
     let (api, nonce) = setup(eid, AccountKeyring::Alice);
-    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.clone());
+    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce);
     execute_stf(eid, api, cyphertext)
 }
 

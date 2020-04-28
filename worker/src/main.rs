@@ -541,6 +541,9 @@ pub fn check_files() {
     }
 }
 
+/// # Safety
+///
+/// FFI are always unsafe
 #[no_mangle]
 pub unsafe extern "C" fn ocall_worker_request(
     request: *const u8,

@@ -7,7 +7,6 @@ use sgx_tcrypto::*;
 use sgx_types::*;
 
 use super::CERTEXPIRYDAYS;
-use base64;
 use bit_vec::BitVec;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -16,12 +15,8 @@ use chrono::Utc as TzUtc;
 use itertools::Itertools;
 use log::*;
 use num_bigint::BigUint;
-use rustls;
-use serde_json;
 use serde_json::Value;
 use std::io::BufReader;
-use webpki;
-use yasna;
 use yasna::models::ObjectIdentifier;
 
 use crate::utils::UnwrapOrSgxErrorUnexpected;
