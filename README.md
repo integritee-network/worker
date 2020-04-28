@@ -3,9 +3,53 @@ SubstraTEE worker for SubstraTEE node
 
 This is part of [substraTEE](https://github.com/scs/substraTEE)
 
+## Development environment
 **Supports Rust nightly-2019-11-17**
 
-## Intel SGX develoment and production (commercial) license
+### Local installation
+You need the following components installed to start developing/compiling the code:
+* [Intel SGX driver](https://github.com/intel/linux-sgx-driver), [SGX and PSW](https://github.com/intel/linux-sgx)
+* [Rust](https://www.rust-lang.org/)
+* [Rust SGX SDK](https://github.com/apache/incubator-teaclave-sgx-sdk)
+* [IPFS](https://ipfs.io/)
+
+### Docker image
+We provide docker images with all the required tools installed. They can be found on [dockerhub](https://hub.docker.com/repository/docker/scssubstratee/substratee_dev).
+
+The tag has the following format: `<Ubuntu version>-<Intel SGX SDK version>-<Rust SGX SDK version>`. We don't provide any *latest* so you must specify the tag.
+
+If you execute
+```
+$ docker pull scssubstratee/substratee_dev:18.04-2.9-1.1.1
+```
+you get a docker image with
+- Ubuntu 18.04
+- Intel SGX SDK 2.9
+- Rust SGX SDK 1.1.1 (which includes the correct Rust version)
+- IPF 0.4.21
+
+To start developing with the docker image, perform these steps:
+1. Clone the substraTEE-worker repository:
+   ```
+   git clone https://github.com/scs/substraTEE-worker.git
+   ```
+2. Pull the docker image with the desired tag:
+   ```
+   docker pull scssubstratee/substratee_dev:18.04-2.9-1.1.1
+   ```
+3. Start the docker container and mount the local substraTEE-worker directory to `/root/substraTEE-worker`:
+   ```
+   docker run -it -v ${PWD}/substraTEE-worker-DOCKERTEST:/root/substraTEE-worker scssubstratee/substratee_dev:18.04-2.9-1.1.1 /bin/bash
+   ```
+4. Change into the substraTEE-worker directory and build the code:
+   ```
+   cd substraTEE-worker
+   make
+   ```
+
+This build the code inside the docker, but the compiled binaries are stored on your local working copy.
+
+## Intel SGX development and production (commercial) license
 In order to perform a remote attestation of the enclave, an [Intel SGX Attestation Enhanced Service Privacy ID (EPID)](https://api.portal.trustedservices.intel.com/EPID-attestation) is needed. We use unlinkable quotes in our code.
 
 ### Development Access
@@ -13,7 +57,7 @@ Copy your SPID and key to the following files (use Linux line endings):
 * `bin/spid.txt`: SPID of your subscription
 * `bin/key.txt`: Key of your subscription (primary or secondary works)
 
-The enclave will be signed with the development key found under `enclave/Enclave_privat.pem` and uses the configuration found under `enclave/Enclave.config.xml`.
+The enclave will be signed with the development key found under `enclave/Enclave_private.pem` and uses the configuration found under `enclave/Enclave.config.xml`.
 
 ### Production Access
 Copy your SPID and key to the following files (use Linux line endings):

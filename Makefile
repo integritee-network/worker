@@ -72,6 +72,11 @@ else
 	WORKER_FEATURES = --features=default
 endif
 
+# check if running on Jenkins
+ifdef BUILD_ID
+	CARGO_TARGET += --verbose
+endif
+
 ######## CUSTOM settings ########
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
