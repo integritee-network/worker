@@ -19,8 +19,6 @@ pipeline {
   stages {
     stage('Information') {
       steps {
-      // atm the rust version is not up do date in the docker, therefore this is needed
-        sh './ci/install_rust.sh'
         sh 'cargo --version'
         sh 'rustup show'
         sh 'env'
