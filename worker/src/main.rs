@@ -27,9 +27,9 @@ use sgx_types::*;
 use base58::{FromBase58, ToBase58};
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
-use keyring::AccountKeyring;
+use sp_keyring::AccountKeyring;
 use log::*;
-use my_node_runtime::{
+use substratee_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
     Event, Hash, UncheckedExtrinsic,
 };
@@ -41,7 +41,7 @@ use sp_core::{
 use substrate_api_client::{
     extrinsic::xt_primitives::GenericAddress,
     utils::{hexstr_to_u256, hexstr_to_vec},
-    Api,
+    Api, XtStatus
 };
 
 use enclave::api::{
@@ -243,19 +243,14 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     let api = Api::new(format!("ws://{}", node_url)).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
-    let tee_account_id = get_enclave_signing_key(eid);
-    ensure_account_has_funds(&api, &tee_account_id);
+    let tee_accountid = get_enclave_signing_key(eid);
+    ensure_account_has_funds(&api, &tee_accountid);
 
     // ------------------------------------------------------------------------
     // perform a remote attestation and get an unchecked extrinsic back
 
     // get enclaves's account nonce
-    let nonce = hexstr_to_u256(
-        api.get_storage("System", "AccountNonce", Some(tee_account_id.encode()))
-            .unwrap(),
-    )
-    .unwrap()
-    .low_u32();
+    let nonce = get_nonce(&api, &tee_accountid);
     info!("Enclave nonce = {:?}", nonce);
 
     let uxt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.as_bytes().to_vec()).unwrap();
@@ -265,14 +260,14 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     // send the extrinsic and wait for confirmation
     println!("[>] Register the enclave (send the extrinsic)");
-    let tx_hash = api.send_extrinsic(_xthex).unwrap();
+    let tx_hash = api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
     // browse enclave registry
     match get_worker_for_shard(&api, shard) {
         Some(w) => {
-            let master_worker = get_worker_info(&api, w);
-            if master_worker.pubkey == tee_account_id {
+            let master_worker = get_worker_info(&api, w).unwrap();
+            if master_worker.pubkey == tee_accountid {
                 info!("the most recently active worker is myself");
                 ensure_shard_initialized(shard);
             } else {
@@ -340,11 +335,10 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                 println!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
-                    pallet_balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+                    pallet_balances::RawEvent::Transfer(transactor, dest, value) => {
                         println!("    Transactor:  {:?}", transactor.to_ss58check());
                         println!("    Destination: {:?}", dest.to_ss58check());
                         println!("    Value:       {:?}", value);
-                        println!("    Fee:         {:?}", fee);
                         println!();
                     }
                     _ => {
@@ -355,7 +349,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
             Event::substratee_registry(re) => {
                 debug!("{:?}", re);
                 match &re {
-                    my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+                    substratee_node_runtime::substratee_registry::RawEvent::AddedEnclave(
                         sender,
                         worker_url,
                     ) => {
@@ -367,7 +361,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                         );
                         println!();
                     }
-                    my_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
+                    substratee_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
                         println!("[+] Received trusted call");
                         info!(
                             "    Request: \n  shard: {}\n  cyphertext: {}",
@@ -376,7 +370,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                         );
                         process_request(eid, request.clone(), node_url);
                     }
-                    my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                    substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
                         payload,
                     ) => {
@@ -412,13 +406,8 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         tee_accountid.to_ss58check()
     );
 
-    let result_str = _api
-        .get_storage("System", "AccountNonce", Some(tee_accountid.encode()))
-        .unwrap();
-
+    let nonce = get_nonce(&_api, &AccountId32::from(tee_accountid));
     let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
-
-    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
     info!("Enclave nonce = {:?}", nonce);
     let uxt = enclave_execute_stf(
         eid,
@@ -434,7 +423,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     let mut _xthex = hex::encode(ue.encode());
     _xthex.insert_str(0, "0x");
     println!("[>] Confirm successful processing of trusted call (send the extrinsic)");
-    let _hash = _api.send_extrinsic(_xthex).unwrap();
+    let _hash = _api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
     debug!("[<] Request Extrinsic got finalized");
 }
 
@@ -477,37 +466,31 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
     let alice_acc = AccountId32::from(*alice.public().as_array_ref());
     info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-    let result_str = api
-        .get_storage("Balances", "FreeBalance", Some(alice_acc.encode()))
-        .unwrap();
-    let funds = hexstr_to_u256(result_str).unwrap();
-    info!("    Alice's free balance = {:?}", funds);
-    let result_str = api
-        .get_storage("System", "AccountNonce", Some(alice_acc.encode()))
-        .unwrap();
-    let result = hexstr_to_u256(result_str).unwrap();
-    info!("    Alice's Account Nonce is {}", result.low_u32());
+    let data = api.get_account_data(&alice_acc).unwrap();
+    info!("    Alice's free balance = {:?}", data.free);
+    let nonce = get_nonce(&api, &alice_acc);
+    info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let result_str = api
-        .get_storage("Balances", "FreeBalance", Some(accountid.encode()))
-        .unwrap();
-    let funds = hexstr_to_u256(result_str).unwrap();
-    info!("TEE's free balance = {:?}", funds);
+    let data = api.get_account_data(&accountid).unwrap();    
+    info!("TEE's free balance = {:?}", data.free);
 
-    if funds < U256::from(10) {
+    if data.free < 10 {
         println!("[+] bootstrap funding Enclave form Alice's funds");
         let xt = api.balance_transfer(GenericAddress::from(accountid.clone()), 100_000_000);
-        let xt_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
+        let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
         //verify funds have arrived
-        let result_str = api
-            .get_storage("Balances", "FreeBalance", Some(accountid.encode()))
-            .unwrap();
-        let funds = hexstr_to_u256(result_str).unwrap();
-        info!("TEE's NEW free balance = {:?}", funds);
+        let data = api.get_account_data(&accountid).unwrap();    
+        info!("TEE's NEW free balance = {:?}", data.free);
     }
+}
+
+fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
+    if let Some(info) = api.get_account_info(who) {
+        info.nonce
+    } else { 0 }
 }
 
 fn ensure_shard_initialized(shard: &ShardIdentifier) {
@@ -565,9 +548,10 @@ pub unsafe extern "C" fn ocall_worker_request(
     let resp: Vec<WorkerResponse<Vec<u8>>> = requests
         .into_iter()
         .map(|req| match req {
+            //let res = 
             WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
                 key.clone(),
-                api.get_storage_by_key_hash(key).unwrap().into_bytes(),
+                api.get_storage_by_key_hash(key).unwrap(),
                 None,
             ),
         })

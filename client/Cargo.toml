@@ -5,7 +5,7 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
 [dependencies]
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "cl-get_block-api"}
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", tag = "v0.4.0-sub2.0.0-alpha.6"}
 log = "0.4"
 env_logger = "0.7"
 hex = "0.4"
@@ -37,7 +37,7 @@ version = '2.0.0-alpha.6'
 [dependencies.sp-runtime]
 version = '2.0.0-alpha.6'
 
-[dependencies.sp-keystore]
+[dependencies.sc-keystore]
 version = '2.0.0-alpha.6'
 
 [dependencies.pallet-balances]

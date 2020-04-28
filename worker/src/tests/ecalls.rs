@@ -19,7 +19,7 @@ use crate::enclave::api::enclave_query_state;
 use crate::init_shard;
 use crate::tests::commons::test_trusted_getter_signed;
 use codec::Encode;
-use keyring::AccountKeyring;
+use sp_keyring::AccountKeyring;
 
 use sp_core::hash::H256;
 use sgx_types::*;

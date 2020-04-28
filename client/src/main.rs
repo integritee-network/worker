@@ -28,9 +28,9 @@ extern crate chrono;
 use chrono::{DateTime, Utc};
 use std::time::{Duration, UNIX_EPOCH};
 
-use app_crypto::{ed25519, sr25519};
-use keyring::AccountKeyring;
-use keystore::Store;
+use sp_application_crypto::{ed25519, sr25519};
+use sp_keyring::AccountKeyring;
+use sc_keystore::Store;
 use std::path::PathBuf;
 
 use base58::{FromBase58, ToBase58};
@@ -41,7 +41,7 @@ use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use sr_primitives::{
+use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
 };
@@ -52,9 +52,9 @@ use std::thread;
 use substrate_api_client::{
     compose_extrinsic,
     extrinsic::xt_primitives::GenericAddress,
-    node_metadata,
-    utils::{hexstr_to_u256, hexstr_to_u64, hexstr_to_vec},
-    Api,
+    node_metadata::Metadata,
+    utils::{hexstr_to_vec},
+    Api, XtStatus
 };
 use substratee_node_runtime::{
     substratee_registry::{Enclave, Request},
@@ -147,7 +147,7 @@ fn main() {
                     let meta = get_chain_api(matches).get_metadata();
                     println!(
                         "Metadata:\n {}",
-                        node_metadata::pretty_format(&meta).unwrap()
+                        Metadata::pretty_format(&meta).unwrap()
                     );
                     Ok(())
                 }),
@@ -177,13 +177,13 @@ fn main() {
                         "[+] Alice is generous and pre funds account {}\n",
                         accountid.to_ss58check()
                     );
-                    let tx_hash = _api.send_extrinsic(xt.hex_encode()).unwrap();
+                    let tx_hash = _api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
                     info!(
                         "[+] Pre-Funding transaction got finalized. Hash: {:?}\n",
                         tx_hash
                     );
-                    let result = _api.get_free_balance(&accountid);
-                    println!("balance for {} is now {}", accountid.to_ss58check(), result);
+                    let result = _api.get_account_data(&accountid).unwrap();
+                    println!("balance for {} is now {}", accountid.to_ss58check(), result.free);
                     Ok(())
                 }),
         )
@@ -203,11 +203,12 @@ fn main() {
                     let api = get_chain_api(matches);
                     let account = matches.value_of("AccountId").unwrap();
                     let accountid = get_accountid_from_str(account);
-                    let result_str = api
-                        .get_storage("Balances", "FreeBalance", Some(accountid.encode()))
-                        .unwrap();
-                    let result = hexstr_to_u256(result_str).unwrap();
-                    println!("balance for {} is {}", account, result);
+                    let balance = if let Some(data) = api.get_account_data(&accountid) {
+                        data.free
+                    } else {
+                        0
+                    };
+                    println!("balance for {} is {}", account, balance);
                     Ok(())
                 }),
         )
@@ -249,10 +250,10 @@ fn main() {
                     info!("to ss58 is {}", to.to_ss58check());
                     let _api = api.set_signer(sr25519_core::Pair::from(from));
                     let xt = _api.balance_transfer(GenericAddress::from(to.clone()), amount);
-                    let tx_hash = _api.send_extrinsic(xt.hex_encode()).unwrap();
+                    let tx_hash = _api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
-                    let result = _api.get_free_balance(&to);
-                    println!("balance for {} is now {}", to, result);
+                    let result = _api.get_account_data(&to.clone()).unwrap();
+                    println!("balance for {} is now {}", to, result.free);
                     Ok(())
                 }),
         )
@@ -401,7 +402,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     let xt = compose_extrinsic!(_chain_api, "SubstraTEERegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized
-    let tx_hash = _chain_api.send_extrinsic(xt.hex_encode()).unwrap();
+    let tx_hash = _chain_api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
     info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
     let act_hash = subscribe_to_call_confirmed(_chain_api);
@@ -554,27 +555,14 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 }
 
 fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
-    hexstr_to_u64(
-        api.get_storage("substraTEERegistry", "EnclaveCount", None)
-            .unwrap(),
-    )
-    .unwrap()
+    api.get_storage_value("substraTEERegistry", "EnclaveCount")
+        .unwrap()
 }
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
-    let res = api
-        .get_storage(
-            "substraTEERegistry",
-            "EnclaveRegistry",
-            Some(eindex.encode()),
-        )
-        .unwrap();
-    match res.as_str() {
-        "null" => None,
-        _ => {
-            let enclave: Enclave<AccountId, Vec<u8>> =
-                Decode::decode(&mut &hexstr_to_vec(res).unwrap()[..]).unwrap();
-            Some(enclave)
-        }
-    }
+    api.get_storage_map(
+        "substraTEERegistry",
+        "EnclaveRegistry",
+        eindex
+    ).unwrap()
 }

@@ -17,14 +17,14 @@
 
 use base58::ToBase58;
 use codec::{Decode, Encode};
-use keyring::AccountKeyring;
+use sp_keyring::AccountKeyring;
 use log::*;
 use sp_core::{crypto::AccountId32, hash::H256, sr25519};
 use sgx_types::*;
 use std::fs;
-use substrate_api_client::{extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_u256, Api};
+use substrate_api_client::{extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_u256, Api, XtStatus};
 
-use my_node_runtime::substratee_registry::Request;
+use substratee_node_runtime::substratee_registry::Request;
 
 use crate::constants::*;
 use crate::enclave::api::*;
@@ -45,14 +45,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     debug!("[+] Got ECC public key of TEE = {:?}", key);
 
     // get enclaves's account nonce
-    let result_str = api
-        .get_storage(
-            "System",
-            "AccountNonce",
-            Some(GenericAddress::from(AccountId32::from(key)).encode()),
-        )
-        .unwrap();
-    let nonce = hexstr_to_u256(result_str).unwrap().low_u32();
+    let nonce = get_nonce(&api, &AccountId32::from(key));
     debug!("  TEE nonce is  {}", nonce);
     let _xt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.encode()).unwrap();
 }
@@ -80,15 +73,9 @@ pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t) {
 
 pub fn execute_stf(eid: sgx_enclave_id_t, api: Api<sr25519::Pair>, cyphertext: Vec<u8>) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
-    let tee_account_id = get_enclave_signing_key(eid);
+    let tee_accountid = get_enclave_signing_key(eid);
 
-    let nonce = hexstr_to_u256(
-        api.get_storage("System", "AccountNonce", Some(tee_account_id.encode()))
-            .unwrap(),
-    )
-    .unwrap()
-    .low_u32();
-
+    let nonce = get_nonce(&api, &tee_accountid);
     let genesis_hash = api.genesis_hash;
     let shard = H256::default();
 
@@ -112,6 +99,6 @@ pub fn execute_stf(eid: sgx_enclave_id_t, api: Api<sr25519::Pair>, cyphertext: V
     extrinsics.into_iter().for_each(|xt| {
         let mut xt = hex::encode(xt);
         xt.insert_str(0, "0x");
-        api.send_extrinsic(xt).unwrap();
+        api.send_extrinsic(xt, XtStatus::Finalized).unwrap();
     });
 }

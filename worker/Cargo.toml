@@ -44,7 +44,7 @@ path = "../substratee-node-calls"
 [dependencies.substratee-worker-api]
 path = "worker-api"
 
-[dependencies.my_node_runtime]
+[dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
 tag = "v0.6.0"
 

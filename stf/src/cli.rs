@@ -16,12 +16,12 @@
 */
 
 use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperationSigned};
-use application_crypto::{ed25519, sr25519};
+use sp_application_crypto::{ed25519, sr25519};
 use base58::{FromBase58, ToBase58};
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
 use codec::Encode;
-use keystore::Store;
+use sc_keystore::Store;
 use log::*;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;

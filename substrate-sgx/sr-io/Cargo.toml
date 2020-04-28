@@ -25,7 +25,7 @@ version = '2.0.0-alpha.6'
 default-features = false
 
 [dependencies.sp-state-machine]
-version = '2.0.0-alpha.6'
+version = '0.8.0-alpha.6'
 optional = true
 
 [dependencies.sp-runtime-interface]
@@ -37,7 +37,7 @@ version = '2.0.0-alpha.6'
 optional = true
 
 [dependencies.sp-externalities]
-version = '2.0.0-alpha.6'
+version = '0.8.0-alpha.6'
 optional = true
 
 [dependencies.sgx-externalities]
