@@ -9,7 +9,7 @@ edition = "2018"
 ws 						= "0.7"
 hex 					= "0.3"
 log 					= "0.4"
-env_logger 				= "0.6"
+env_logger 				= "0.7"
 base58 			        = "0.1"
 rust-crypto 			= "0.2"
 clap 					= { version = "2.33", features = [ "yaml" ] }
@@ -24,21 +24,19 @@ ipfs-api				= "0.5.0-alpha2"
 futures 				= "0.1"
 hyper 					= "0.12"
 multihash 				= "0.8"
-cid 					= "0.3"
+cid 					= "<0.3.1"
 sha2 					= { version = "0.7", default-features = false }
 
 codec           		= { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitive-types    		= { version = "0.6", default-features = false, features = ["codec"] }
 
-sgx_urts				= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_types 				= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tseal				= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_ucrypto 			= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_crypto_helper 		= { rev = "v1.1.0", git = "https://github.com/apache/teaclave-sgx-sdk.git", default-features = false}
+sgx_urts				= { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types 				= { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_crypto_helper 		= { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "api-M1.5"
+branch = "cl-get_block-api"
 
 [dependencies.substratee-node-calls]
 path = "../substratee-node-calls"
@@ -47,7 +45,7 @@ path = "../substratee-node-calls"
 path = "worker-api"
 
 [dependencies.my_node_runtime]
-git = "https://github.com/scs/substraTEE-node"
+git = "https://github.com/scs/substraTEE-node-pre2.0.0"
 rev = "e09d5c51287d240df904b5dc98c4a9f59ac7c002"
 package = "substratee-node-runtime"
 

@@ -1,7 +1,8 @@
 use sgx_tstd as std;
+use std::collections::HashMap;
 use std::prelude::v1::*;
 
-use codec::Encode;
+use codec::{Compact, Decode, Encode};
 use log_sgx::*;
 use primitives::hashing::{blake2_256, twox_128};
 use runtime_primitives::traits::Dispatchable;
@@ -9,9 +10,11 @@ use runtime_primitives::traits::Dispatchable;
 use sgx_runtime::Runtime;
 use sr_io::SgxExternalitiesTrait;
 
-use crate::{State, Stf, TrustedCall, TrustedGetter};
+use crate::{
+    AccountId, BalanceTransferFn, State, Stf, TrustedCall, TrustedGetter, BALANCE_MODULE,
+    BALANCE_TRANSFER,
+};
 
-#[cfg(feature = "sgx")]
 impl Stf {
     pub fn init_state() -> State {
         debug!("initializing stf state");
@@ -44,9 +47,33 @@ impl Stf {
         });
         ext
     }
-    pub fn execute(ext: &mut State, call: TrustedCall, _nonce: u32) {
+
+    pub fn update_storage(ext: &mut State, map_update: HashMap<Vec<u8>, Vec<u8>>) {
         ext.execute_with(|| {
-            // TODO: verify and store nonce first!
+            map_update
+                .iter()
+                .for_each(|(k, v)| sr_io::storage::set(k, v))
+        });
+    }
+
+    pub fn execute(
+        ext: &mut State,
+        call: TrustedCall,
+        nonce: u32,
+        calls: &mut Vec<BalanceTransferFn>,
+    ) {
+        ext.execute_with(|| {
+            // TODO: enclave should not panic here.
+            assert_eq!(
+                nonce,
+                Decode::decode(
+                    &mut sr_io::storage::get(&nonce_key_hash(call.account()))
+                        .unwrap()
+                        .as_slice()
+                )
+                .unwrap()
+            );
+
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
                     sgx_runtime::balancesCall::<Runtime>::set_balance(
@@ -64,6 +91,10 @@ impl Stf {
                         value,
                     )
                     .dispatch(origin)
+                }
+                TrustedCall::balance_unshield(who, value) => {
+                    calls.push(([BALANCE_MODULE, BALANCE_TRANSFER], who, Compact(value)));
+                    Ok(())
                 }
             };
         });
@@ -86,6 +117,24 @@ impl Stf {
             result
         })
     }
+
+    pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
+        let mut key_hashes = Vec::new();
+        match call {
+            TrustedCall::balance_set_balance(account, _, _) => {
+                key_hashes.push(nonce_key_hash(account))
+            }
+            TrustedCall::balance_transfer(account, _, _) => {
+                key_hashes.push(nonce_key_hash(account))
+            }
+            TrustedCall::balance_unshield(account, _) => key_hashes.push(nonce_key_hash(account)),
+        };
+        key_hashes
+    }
+}
+
+pub fn nonce_key_hash(account: &AccountId) -> Vec<u8> {
+    storage_key_bytes("System", "AccountNonce", Some(account.encode()))
 }
 
 pub fn storage_key_bytes(module: &str, storage_key_name: &str, param: Option<Vec<u8>>) -> Vec<u8> {

@@ -19,8 +19,6 @@ pipeline {
   stages {
     stage('Information') {
       steps {
-      // atm the rust version is not up do date in the docker, therefore this is needed
-        sh './ci/install_rust.sh'
         sh 'cargo --version'
         sh 'rustup show'
         sh 'env'
@@ -42,13 +40,13 @@ pipeline {
       steps {
         sh 'cargo clean'
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd client  && cargo +nightly-2019-11-25 clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
+          sh 'cd client  && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd worker  && cargo +nightly-2019-11-25 clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'
+          sh 'cd worker  && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd enclave && cargo +nightly-2019-11-25 clippy 2>&1 | tee ${WORKSPACE}/clippy_enclave.log'
+          sh 'cd enclave && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_enclave.log'
         }
       }
     }
@@ -66,10 +64,6 @@ pipeline {
           enabledForFailure: true,
           qualityGates: [[threshold: 1, type: 'TOTAL', unstable: true]],
           tools: [
-              cargo(
-                pattern: 'build_*.log',
-                reportEncoding: 'UTF-8'
-              ),
               groovyScript(
                 parserId:'clippy-warnings',
                 pattern: 'clippy_*.log',

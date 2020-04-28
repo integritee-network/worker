@@ -182,7 +182,7 @@ fn main() {
                         "[+] Pre-Funding transaction got finalized. Hash: {:?}\n",
                         tx_hash
                     );
-                    let result = _api.get_free_balance(&accountid.clone());
+                    let result = _api.get_free_balance(&accountid);
                     println!("balance for {} is now {}", accountid.to_ss58check(), result);
                     Ok(())
                 }),
@@ -398,12 +398,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
         cyphertext: call_encrypted.clone(),
     };
 
-    let xt = compose_extrinsic!(
-        _chain_api.clone(),
-        "SubstraTEERegistry",
-        "call_worker",
-        request
-    );
+    let xt = compose_extrinsic!(_chain_api, "SubstraTEERegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized
     let tx_hash = _chain_api.send_extrinsic(xt.hex_encode()).unwrap();

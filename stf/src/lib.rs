@@ -28,7 +28,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate clap;
 
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use primitives::{sr25519, Pair, H256};
 use runtime_primitives::{traits::Verify, AnySignature};
 //pub use my_node_runtime::substratee_registry::ShardIdentifier;
@@ -46,6 +46,10 @@ pub type AccountId = <Signature as Verify>::Signer;
 pub type Hash = primitives::H256;
 pub type Balance = u128;
 
+pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
+pub static BALANCE_MODULE: u8 = 4u8;
+pub static BALANCE_TRANSFER: u8 = 0u8;
+
 #[cfg(feature = "sgx")]
 pub type State = sr_io::SgxExternalities;
 
@@ -61,6 +65,7 @@ pub enum TrustedOperationSigned {
 pub enum TrustedCall {
     balance_set_balance(AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
+    balance_unshield(AccountId, Balance),
 }
 
 impl TrustedCall {
@@ -68,6 +73,7 @@ impl TrustedCall {
         match self {
             TrustedCall::balance_set_balance(account, _, _) => account,
             TrustedCall::balance_transfer(account, _, _) => account,
+            TrustedCall::balance_unshield(account, _) => account,
         }
     }
 

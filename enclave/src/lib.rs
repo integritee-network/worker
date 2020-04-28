@@ -24,9 +24,7 @@
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 #![allow(clippy::missing_safety_doc)]
 
-use env_logger;
 use log::*;
-use serde_json;
 
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
@@ -35,9 +33,9 @@ extern crate sgx_tstd as std;
 use base58::ToBase58;
 
 use sgx_tunittest::*;
-use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t};
+use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -48,6 +46,8 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
+use std::collections::HashMap;
+use substrate_api_client::utils::hexstr_to_u256;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 mod aes;
@@ -88,6 +88,13 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     if let Err(status) = rsa3072::create_sealed_if_absent() {
         return status;
     }
+
+    // create the aes key that is used for state encryption such that a key is always present in tests.
+    // It will be overwritten anyway if mutual remote attastation is performed with the primary worker
+    if let Err(status) = aes::read_or_create_sealed() {
+        return status;
+    }
+
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -145,6 +152,8 @@ pub unsafe extern "C" fn execute_stf(
     genesis_hash: *const u8,
     genesis_hash_size: u32,
     nonce: *const u32,
+    node_url: *const u8,
+    node_url_size: u32,
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
@@ -154,6 +163,7 @@ pub unsafe extern "C" fn execute_stf(
         genesis_hash,
         genesis_hash_size as usize,
     ));
+    let node_url = slice::from_raw_parts(node_url, node_url_size as usize);
     let extrinsic_slice =
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
@@ -185,8 +195,40 @@ pub unsafe extern "C" fn execute_stf(
         Err(status) => return status,
     };
 
+    debug!("Update STF storage!");
+    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
+        .into_iter()
+        .map(WorkerRequest::ChainStorage)
+        .collect();
+
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
+        Ok(r) => r,
+        Err(status) => return status,
+    };
+
+    // Todo: after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
+    // agnostic to their actual types. Unfortunately, this is not possible with strings return by the api-client
+    let (key, untrusted_nonce) = match resp.pop().unwrap() {
+        WorkerResponse::ChainStorage(key, value, _proof) => (
+            key,
+            String::from_utf8(value)
+                .map(|s| hexstr_to_u256(s).unwrap().low_u32())
+                .unwrap(),
+        ),
+    };
+
+    let mut update_map = HashMap::new();
+    update_map.insert(key, untrusted_nonce.encode());
+    Stf::update_storage(&mut state, update_map);
+
     debug!("execute STF");
-    Stf::execute(&mut state, stf_call_signed.call, stf_call_signed.nonce);
+    let mut calls_buffer = Vec::new();
+    Stf::execute(
+        &mut state,
+        stf_call_signed.call,
+        stf_call_signed.nonce,
+        &mut calls_buffer,
+    );
 
     let state_hash = match state::write(state, &shard) {
         Ok(h) => h,
@@ -200,22 +242,40 @@ pub unsafe extern "C" fn execute_stf(
     };
     debug!("Restored ECC pubkey: {:?}", signer.public());
 
-    debug!("confirmation extrinsic nonce: {:?}", nonce);
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let mut nonce = *nonce;
 
-    let xt = compose_extrinsic_offline!(
-        signer,
-        (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
-        *nonce,
-        genesis_hash,
-        RUNTIME_SPEC_VERSION
+    let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
+        .into_iter()
+        .map(|call| {
+            let xt = compose_extrinsic_offline!(
+                signer.clone(),
+                call,
+                nonce,
+                genesis_hash,
+                RUNTIME_SPEC_VERSION
+            )
+            .encode();
+            nonce += 1;
+            xt
+        })
+        .collect();
+
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    extrinsic_buffer.push(
+        compose_extrinsic_offline!(
+            signer,
+            (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
+            nonce,
+            genesis_hash,
+            RUNTIME_SPEC_VERSION
+        )
+        .encode(),
     );
 
-    let encoded = xt.encode();
-    write_slice_and_whitespace_pad(extrinsic_slice, encoded);
+    write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer.encode());
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -262,9 +322,7 @@ extern "C" {
         cid: *const u8,
         cid_size: u32,
     ) -> sgx_status_t;
-}
 
-extern "C" {
     pub fn ocall_write_ipfs(
         ret_val: *mut sgx_status_t,
         enc_state: *const u8,
@@ -272,13 +330,30 @@ extern "C" {
         cid: *mut u8,
         cid_size: u32,
     ) -> sgx_status_t;
+
+    pub fn ocall_worker_request(
+        ret_val: *mut sgx_status_t,
+        request: *const u8,
+        req_size: u32,
+        node_url: *const u8,
+        node_url_size: u32,
+        response: *mut u8,
+        resp_size: u32,
+    ) -> sgx_status_t;
+
+    pub fn ocall_sgx_init_quote(
+        ret_val: *mut sgx_status_t,
+        ret_ti: *mut sgx_target_info_t,
+        ret_gid: *mut sgx_epid_group_id_t,
+    ) -> sgx_status_t;
 }
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
         state::test_encrypted_state_io_works,
-        test_ocall_read_write_ipfs
+        test_ocall_read_write_ipfs,
+        test_ocall_worker_request
     )
 }
 
@@ -312,10 +387,69 @@ fn test_ocall_read_write_ipfs() {
     assert_eq!(enc_state, ret_state);
 }
 
-extern "C" {
-    pub fn ocall_sgx_init_quote(
-        ret_val: *mut sgx_status_t,
-        ret_ti: *mut sgx_target_info_t,
-        ret_gid: *mut sgx_epid_group_id_t,
-    ) -> sgx_status_t;
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerRequest {
+    ChainStorage(Vec<u8>), // (storage_key)
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerResponse<V: Encode + Decode> {
+    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+}
+
+fn worker_request<V: Encode + Decode>(
+    req: Vec<WorkerRequest>,
+    node_url: &[u8],
+) -> SgxResult<Vec<WorkerResponse<V>>> {
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let mut resp: Vec<u8> = vec![0; 500];
+
+    let res = unsafe {
+        ocall_worker_request(
+            &mut rt as *mut sgx_status_t,
+            req.encode().as_ptr(),
+            req.encode().len() as u32,
+            node_url.as_ptr(),
+            node_url.len() as u32,
+            resp.as_mut_ptr(),
+            resp.len() as u32,
+        )
+    };
+
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(rt);
+    }
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(res);
+    }
+    Ok(Decode::decode(&mut resp.as_slice()).unwrap())
+}
+
+fn test_ocall_worker_request() {
+    info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
+    let mut requests = Vec::new();
+    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
+
+    requests.push(WorkerRequest::ChainStorage(storage_key_hash_vec(
+        "Balances",
+        "TotalIssuance",
+        None,
+    )));
+
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
+        Ok(response) => response,
+        Err(e) => panic!("Worker response decode failed. Error: {:?}", e),
+    };
+
+    let first = resp.pop().unwrap();
+    info!("Worker response: {:?}", first);
+
+    let total_issuance = match first {
+        WorkerResponse::ChainStorage(_storage_key, value, _proof) => String::from_utf8(value)
+            .map(|s| hexstr_to_u256(s).unwrap())
+            .unwrap(),
+    };
+
+    info!("Total Issuance is: {:?}", total_issuance);
 }

@@ -14,13 +14,12 @@
     limitations under the License.
 
 */
-
 use std::fs::{self, File};
 use std::io::stdin;
 use std::io::Write;
 use std::path::Path;
 use std::str;
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
 
 use sgx_types::*;
@@ -50,6 +49,7 @@ use enclave::api::{
     enclave_signing_key, mrenclave,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use std::slice;
 use substratee_node_calls::{get_worker_for_shard, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
@@ -303,90 +303,96 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
     println!("*** Subscribing to events");
-    let (events_in, events_out) = channel();
+    let (sender, receiver) = channel();
+    let sender2 = sender.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api.subscribe_events(events_in.clone());
+            api.subscribe_events(sender2);
         })
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
 
     loop {
-        let event_str = events_out.recv().unwrap();
+        let msg = receiver.recv().unwrap();
+        if let Ok(events) = parse_events(msg.clone()) {
+            handle_events(eid, node_url, events, sender.clone())
+        } else {
+            println!("[-] Unable to parse received message!")
+        }
+    }
+}
 
-        let _unhex = hexstr_to_vec(event_str).unwrap();
-        let mut _er_enc = _unhex.as_slice();
-        let _events = Vec::<system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
-        match _events {
-            Ok(evts) => {
-                for evr in &evts {
-                    debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
-                    match &evr.event {
-                        Event::balances(be) => {
-                            println!("[+] Received balances event");
-                            debug!("{:?}", be);
-                            match &be {
-                                balances::RawEvent::Transfer(transactor, dest, value, fee) => {
-                                    println!("    Transactor:  {:?}", transactor.to_ss58check());
-                                    println!("    Destination: {:?}", dest.to_ss58check());
-                                    println!("    Value:       {:?}", value);
-                                    println!("    Fee:         {:?}", fee);
-                                    println!();
-                                }
-                                _ => {
-                                    info!("Ignoring unsupported balances event");
-                                }
-                            }
-                        }
-                        Event::substratee_registry(re) => {
-                            debug!("{:?}", re);
-                            match &re {
-                                my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
-                                    sender,
-                                    worker_url,
-                                ) => {
-                                    println!("[+] Received AddedEnclave event");
-                                    println!("    Sender (Worker):  {:?}", sender);
-                                    println!(
-                                        "    Registered URL: {:?}",
-                                        str::from_utf8(worker_url).unwrap()
-                                    );
-                                    println!();
-                                }
-                                my_node_runtime::substratee_registry::RawEvent::Forwarded(
-                                    request,
-                                ) => {
-                                    println!("[+] Received trusted call");
-                                    info!(
-                                        "    Request: \n  shard: {}\n  cyphertext: {}",
-                                        request.shard.encode().to_base58(),
-                                        hex::encode(request.cyphertext.clone())
-                                    );
-                                    process_request(eid, request.clone(), node_url);
-                                }
-                                my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
-                                    sender,
-                                    payload,
-                                ) => {
-                                    println!("[+] Received CallConfirmed event");
-                                    debug!("    From:    {:?}", sender);
-                                    debug!("    Payload: {:?}", hex::encode(payload));
-                                    println!();
-                                }
-                                _ => {
-                                    info!("Ignoring unsupported substratee_registry event");
-                                }
-                            }
-                        }
-                        _ => {
-                            info!("Ignoring event {:?}", evr);
-                        }
+type Events = Vec<system::EventRecord<Event, Hash>>;
+
+fn parse_events(event: String) -> Result<Events, String> {
+    let _unhex = hexstr_to_vec(event).unwrap();
+    let mut _er_enc = _unhex.as_slice();
+    Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
+}
+
+fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<String>) {
+    for evr in &events {
+        debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
+        match &evr.event {
+            Event::balances(be) => {
+                println!("[+] Received balances event");
+                debug!("{:?}", be);
+                match &be {
+                    balances::RawEvent::Transfer(transactor, dest, value, fee) => {
+                        println!("    Transactor:  {:?}", transactor.to_ss58check());
+                        println!("    Destination: {:?}", dest.to_ss58check());
+                        println!("    Value:       {:?}", value);
+                        println!("    Fee:         {:?}", fee);
+                        println!();
+                    }
+                    _ => {
+                        info!("Ignoring unsupported balances event");
                     }
                 }
             }
-            Err(_) => error!("Couldn't decode event record list"),
+            Event::substratee_registry(re) => {
+                debug!("{:?}", re);
+                match &re {
+                    my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+                        sender,
+                        worker_url,
+                    ) => {
+                        println!("[+] Received AddedEnclave event");
+                        println!("    Sender (Worker):  {:?}", sender);
+                        println!(
+                            "    Registered URL: {:?}",
+                            str::from_utf8(worker_url).unwrap()
+                        );
+                        println!();
+                    }
+                    my_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
+                        println!("[+] Received trusted call");
+                        info!(
+                            "    Request: \n  shard: {}\n  cyphertext: {}",
+                            request.shard.encode().to_base58(),
+                            hex::encode(request.cyphertext.clone())
+                        );
+                        process_request(eid, request.clone(), node_url);
+                    }
+                    my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                        sender,
+                        payload,
+                    ) => {
+                        println!("[+] Received CallConfirmed event");
+                        debug!("    From:    {:?}", sender);
+                        debug!("    Payload: {:?}", hex::encode(payload));
+                        println!();
+                    }
+                    _ => {
+                        info!("Ignoring unsupported substratee_registry event");
+                    }
+                }
+            }
+            _ => {
+                info!("Ignoring event {:?}", evr);
+            }
         }
     }
 }
@@ -420,6 +426,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         request.shard.encode(),
         genesis_hash,
         nonce,
+        node_url.to_owned(),
     )
     .unwrap();
     info!("[<] Message decoded and processed in the enclave");
@@ -532,4 +539,60 @@ pub fn check_files() {
             panic!("file doesn't exist: {}", f);
         }
     }
+}
+
+/// # Safety
+///
+/// FFI are always unsafe
+#[no_mangle]
+pub unsafe extern "C" fn ocall_worker_request(
+    request: *const u8,
+    req_size: u32,
+    node_url: *const u8,
+    node_url_size: u32,
+    response: *mut u8,
+    resp_size: u32,
+) -> sgx_status_t {
+    debug!("    Entering ocall_worker_request");
+    let mut req_slice = slice::from_raw_parts(request, req_size as usize);
+    let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
+    let url_slice = slice::from_raw_parts(node_url, node_url_size as usize);
+
+    let api = Api::<sr25519::Pair>::new(String::from_utf8(url_slice.to_vec()).unwrap());
+
+    let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
+
+    let resp: Vec<WorkerResponse<Vec<u8>>> = requests
+        .into_iter()
+        .map(|req| match req {
+            WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
+                key.clone(),
+                api.get_storage_by_key_hash(key).unwrap().into_bytes(),
+                None,
+            ),
+        })
+        .collect();
+
+    write_slice_and_whitespace_pad(resp_slice, resp.encode());
+    sgx_status_t::SGX_SUCCESS
+}
+
+pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
+    if data.len() > writable.len() {
+        panic!("not enough bytes in output buffer for return value");
+    }
+    let (left, right) = writable.split_at_mut(data.len());
+    left.clone_from_slice(&data);
+    // fill the right side with whitespace
+    right.iter_mut().for_each(|x| *x = 0x20);
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerRequest {
+    ChainStorage(Vec<u8>), // (storage_key)
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerResponse<V: Encode + Decode> {
+    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }

@@ -4,7 +4,7 @@ SubstraTEE worker for SubstraTEE node
 This is part of [substraTEE](https://github.com/scs/substraTEE)
 
 ## Development environment
-**Supports Rust nightly-2019-11-17**
+**Supports Rust nightly-2020-04-07**
 
 ### Local installation
 You need the following components installed to start developing/compiling the code:
@@ -20,7 +20,7 @@ The tag has the following format: `<Ubuntu version>-<Intel SGX SDK version>-<Rus
 
 If you execute
 ```
-$ docker pull scssubstratee/substratee_dev:18.04-2.9-1.1.1
+$ docker pull scssubstratee/substratee_dev:18.04-2.9.1-1.2
 ```
 you get a docker image with
 - Ubuntu 18.04
@@ -35,11 +35,11 @@ To start developing with the docker image, perform these steps:
    ```
 2. Pull the docker image with the desired tag:
    ```
-   docker pull scssubstratee/substratee_dev:18.04-2.9-1.1.1
+   docker pull scssubstratee/substratee_dev:18.04-2.9.1-1.1.2
    ```
 3. Start the docker container and mount the local substraTEE-worker directory to `/root/substraTEE-worker`:
    ```
-   docker run -it -v ${PWD}/substraTEE-worker-DOCKERTEST:/root/substraTEE-worker scssubstratee/substratee_dev:18.04-2.9-1.1.1 /bin/bash
+   docker run -it -v ${PWD}/substraTEE-worker-DOCKERTEST:/root/substraTEE-worker scssubstratee/substratee_dev:18.04-2.9.1-1.1.2 /bin/bash
    ```
 4. Change into the substraTEE-worker directory and build the code:
    ```
