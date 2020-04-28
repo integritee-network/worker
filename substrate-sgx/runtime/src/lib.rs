@@ -1,3 +1,13 @@
+//! This file has been semi-manually derived from node-template-runtime
+//! ```
+//! clone https://github.com/scs/substrate-node-template.git 
+//! git checkout sgx-runtime
+//! cargo expand > node-runtime-expanded.rs
+//!
+//! then throw away all std and Genesis Stuff
+//!
+//! you might have to repeat this procedure for runtime updates
+
 #![no_std]
 #![feature(prelude_import)]
 #![feature(structural_match)]

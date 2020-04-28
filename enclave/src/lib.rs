@@ -35,7 +35,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
+use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
@@ -47,7 +47,6 @@ use std::string::String;
 use std::vec::Vec;
 
 use std::collections::HashMap;
-use substrate_api_client::utils::hexstr_to_u256;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 mod aes;
@@ -206,14 +205,10 @@ pub unsafe extern "C" fn execute_stf(
         Err(status) => return status,
     };
 
-    // Todo: after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
-    // agnostic to their actual types. Unfortunately, this is not possible with strings return by the api-client
     let (key, untrusted_nonce) = match resp.pop().unwrap() {
         WorkerResponse::ChainStorage(key, value, _proof) => (
             key,
-            String::from_utf8(value)
-                .map(|s| hexstr_to_u256(s).unwrap().low_u32())
-                .unwrap(),
+            value,
         ),
     };
 
@@ -431,10 +426,9 @@ fn test_ocall_worker_request() {
     let mut requests = Vec::new();
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
 
-    requests.push(WorkerRequest::ChainStorage(storage_key_hash_vec(
+    requests.push(WorkerRequest::ChainStorage(storage_value_key_vec(
         "Balances",
         "TotalIssuance",
-        None,
     )));
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
@@ -446,9 +440,7 @@ fn test_ocall_worker_request() {
     info!("Worker response: {:?}", first);
 
     let total_issuance = match first {
-        WorkerResponse::ChainStorage(_storage_key, value, _proof) => String::from_utf8(value)
-            .map(|s| hexstr_to_u256(s).unwrap())
-            .unwrap(),
+        WorkerResponse::ChainStorage(_storage_key, value, _proof) => value
     };
 
     info!("Total Issuance is: {:?}", total_issuance);
