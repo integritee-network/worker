@@ -64,10 +64,6 @@ pipeline {
           enabledForFailure: true,
           qualityGates: [[threshold: 1, type: 'TOTAL', unstable: true]],
           tools: [
-              cargo(
-                pattern: 'build_*.log',
-                reportEncoding: 'UTF-8'
-              ),
               groovyScript(
                 parserId:'clippy-warnings',
                 pattern: 'clippy_*.log',
