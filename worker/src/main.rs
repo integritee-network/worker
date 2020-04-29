@@ -28,16 +28,13 @@ use base58::{FromBase58, ToBase58};
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use log::*;
-use primitive_types::U256;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519, Pair,
 };
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{
-    extrinsic::xt_primitives::GenericAddress,
-    utils::{hexstr_to_u256, hexstr_to_vec},
-    Api, XtStatus,
+    extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
@@ -472,7 +469,7 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
     info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let free = get_balance(&api, &accountid); 
+    let free = get_balance(&api, &accountid);
     info!("TEE's free balance = {:?}", free);
 
     if free < 10 {

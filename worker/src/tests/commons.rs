@@ -28,7 +28,6 @@ use std::str;
 
 use crate::enclave::api::*;
 use crate::{ensure_account_has_funds, get_enclave_signing_key};
-use substrate_api_client::utils::hexstr_to_u256;
 use substrate_api_client::Api;
 use substratee_stf::{
     ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,

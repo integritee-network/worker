@@ -1,13 +1,9 @@
-use base58::ToBase58;
-use codec::{Decode, Encode};
-use log::*;
 pub use my_node_runtime::{
     substratee_registry::{Enclave, ShardIdentifier},
     AccountId,
 };
 use sp_core::crypto::Pair;
 use sp_runtime::MultiSignature;
-use substrate_api_client::utils::{hexstr_to_u64, hexstr_to_vec};
 
 pub fn get_worker_info<P: Pair>(
     api: &substrate_api_client::Api<P>,

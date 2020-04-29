@@ -22,9 +22,7 @@ use sgx_types::*;
 use sp_core::{crypto::AccountId32, hash::H256, sr25519};
 use sp_keyring::AccountKeyring;
 use std::fs;
-use substrate_api_client::{
-    extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_u256, Api, XtStatus,
-};
+use substrate_api_client::{Api, XtStatus};
 
 use substratee_node_runtime::substratee_registry::Request;
 
