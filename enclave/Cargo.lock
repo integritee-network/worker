@@ -1344,7 +1344,7 @@ dependencies = [
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime-interface 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "twox-hash 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-wasm-interface 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1522,7 +1522,6 @@ dependencies = [
  "sgx_tstd 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_tunittest 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
- "sp-application-crypto 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io 2.0.0-alpha.6",
  "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",

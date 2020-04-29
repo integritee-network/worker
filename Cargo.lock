@@ -2963,7 +2963,7 @@ dependencies = [
  "sp-state-machine 0.8.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-trie 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "twox-hash 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-wasm-interface 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
