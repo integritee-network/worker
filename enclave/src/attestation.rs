@@ -687,7 +687,7 @@ pub unsafe extern "C" fn perform_ra(
 
     let xt = compose_extrinsic_offline!(
         signer,
-        (call, cert_der.to_vec(), signer_attn, url_slice.to_vec()),
+        (call, cert_der.to_vec(), url_slice.to_vec()),
         *nonce,
         genesis_hash,
         RUNTIME_SPEC_VERSION
