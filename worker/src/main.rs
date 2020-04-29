@@ -466,16 +466,16 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
     let alice_acc = AccountId32::from(*alice.public().as_array_ref());
     info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-    let data = api.get_account_data(&alice_acc).unwrap();
-    info!("    Alice's free balance = {:?}", data.free);
+    let free = get_balance(&api, &alice_acc);
+    info!("    Alice's free balance = {:?}", free);
     let nonce = get_nonce(&api, &alice_acc);
     info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let data = api.get_account_data(&accountid).unwrap();
-    info!("TEE's free balance = {:?}", data.free);
+    let free = get_balance(&api, &accountid); 
+    info!("TEE's free balance = {:?}", free);
 
-    if data.free < 10 {
+    if free < 10 {
         println!("[+] bootstrap funding Enclave form Alice's funds");
         let xt = api.balance_transfer(GenericAddress::from(accountid.clone()), 100_000_000);
         let xt_hash = api
@@ -484,14 +484,22 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
         //verify funds have arrived
-        let data = api.get_account_data(&accountid).unwrap();
-        info!("TEE's NEW free balance = {:?}", data.free);
+        let free = get_balance(&api, &accountid);
+        info!("TEE's NEW free balance = {:?}", free);
     }
 }
 
 fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
     if let Some(info) = api.get_account_info(who) {
         info.nonce
+    } else {
+        0
+    }
+}
+
+fn get_balance(api: &Api<sr25519::Pair>, who: &AccountId32) -> u128 {
+    if let Some(data) = api.get_account_data(who) {
+        data.free
     } else {
         0
     }
