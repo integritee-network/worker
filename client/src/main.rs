@@ -28,9 +28,9 @@ extern crate chrono;
 use chrono::{DateTime, Utc};
 use std::time::{Duration, UNIX_EPOCH};
 
+use sc_keystore::Store;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_keyring::AccountKeyring;
-use sc_keystore::Store;
 use std::path::PathBuf;
 
 use base58::{FromBase58, ToBase58};
@@ -50,11 +50,8 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use substrate_api_client::{
-    compose_extrinsic,
-    extrinsic::xt_primitives::GenericAddress,
-    node_metadata::Metadata,
-    utils::{hexstr_to_vec},
-    Api, XtStatus
+    compose_extrinsic, extrinsic::xt_primitives::GenericAddress, node_metadata::Metadata,
+    utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Enclave, Request},
@@ -145,10 +142,7 @@ fn main() {
                 .description("query node metadata and print it as json to stdout")
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let meta = get_chain_api(matches).get_metadata();
-                    println!(
-                        "Metadata:\n {}",
-                        Metadata::pretty_format(&meta).unwrap()
-                    );
+                    println!("Metadata:\n {}", Metadata::pretty_format(&meta).unwrap());
                     Ok(())
                 }),
         )
@@ -177,13 +171,19 @@ fn main() {
                         "[+] Alice is generous and pre funds account {}\n",
                         accountid.to_ss58check()
                     );
-                    let tx_hash = _api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+                    let tx_hash = _api
+                        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                        .unwrap();
                     info!(
                         "[+] Pre-Funding transaction got finalized. Hash: {:?}\n",
                         tx_hash
                     );
                     let result = _api.get_account_data(&accountid).unwrap();
-                    println!("balance for {} is now {}", accountid.to_ss58check(), result.free);
+                    println!(
+                        "balance for {} is now {}",
+                        accountid.to_ss58check(),
+                        result.free
+                    );
                     Ok(())
                 }),
         )
@@ -250,7 +250,9 @@ fn main() {
                     info!("to ss58 is {}", to.to_ss58check());
                     let _api = api.set_signer(sr25519_core::Pair::from(from));
                     let xt = _api.balance_transfer(GenericAddress::from(to.clone()), amount);
-                    let tx_hash = _api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+                    let tx_hash = _api
+                        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                        .unwrap();
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
                     let result = _api.get_account_data(&to.clone()).unwrap();
                     println!("balance for {} is now {}", to, result.free);
@@ -402,7 +404,9 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     let xt = compose_extrinsic!(_chain_api, "SubstraTEERegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized
-    let tx_hash = _chain_api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+    let tx_hash = _chain_api
+        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+        .unwrap();
     info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
     let act_hash = subscribe_to_call_confirmed(_chain_api);
@@ -560,9 +564,6 @@ fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
 }
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
-    api.get_storage_map(
-        "substraTEERegistry",
-        "EnclaveRegistry",
-        eindex
-    ).unwrap()
+    api.get_storage_map("substraTEERegistry", "EnclaveRegistry", eindex)
+        .unwrap()
 }

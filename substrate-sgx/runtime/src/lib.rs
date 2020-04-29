@@ -1,6 +1,6 @@
 //! This file has been semi-manually derived from node-template-runtime
 //! ```
-//! clone https://github.com/scs/substrate-node-template.git 
+//! clone https://github.com/scs/substrate-node-template.git
 //! git checkout sgx-runtime
 //! cargo expand > node-runtime-expanded.rs
 //!
@@ -14,27 +14,27 @@
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
 
-
 //! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 #![recursion_limit = "256"]
 
-use sp_std::prelude::*;
-use sp_core::OpaqueMetadata;
-use sp_runtime::{
-    ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
-    transaction_validity::{TransactionValidity, TransactionSource},
-};
-use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, IdentityLookup, Verify, ConvertInto, IdentifyAccount,
+pub use balances::Call as BalancesCall;
+pub use frame_support::{
+    construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue,
 };
 use sp_api::impl_runtime_apis;
+use sp_core::OpaqueMetadata;
+use sp_runtime::traits::{
+    BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, IdentityLookup, Verify,
+};
+use sp_runtime::{
+    create_runtime_str, generic, impl_opaque_keys,
+    transaction_validity::{TransactionSource, TransactionValidity},
+    ApplyExtrinsicResult, MultiSignature,
+};
+pub use sp_runtime::{Perbill, Permill};
+use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
 pub use timestamp::Call as TimestampCall;
-pub use balances::Call as BalancesCall;
-pub use sp_runtime::{Permill, Perbill};
-pub use frame_support::{
-    StorageValue, construct_runtime, parameter_types, traits::Randomness, weights::Weight,
-};
 /// An index to a block.
 pub type BlockNumber = u32;
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
@@ -1034,8 +1034,8 @@ impl InherentDataExt for ::frame_support::inherent::InherentData {
         &self,
     ) -> ::frame_support::inherent::Vec<<Block as ::frame_support::inherent::BlockT>::Extrinsic>
     {
-        use ::frame_support::inherent::ProvideInherent;
         use ::frame_support::inherent::Extrinsic;
+        use ::frame_support::inherent::ProvideInherent;
         let mut inherents = Vec::new();
         if let Some(inherent) = Timestamp::create_inherent(self) {
             inherents.push(
@@ -1047,7 +1047,7 @@ impl InherentDataExt for ::frame_support::inherent::InherentData {
         inherents
     }
     fn check_extrinsics(&self, block: &Block) -> ::frame_support::inherent::CheckInherentsResult {
-        use ::frame_support::inherent::{ProvideInherent, IsFatalError};
+        use ::frame_support::inherent::{IsFatalError, ProvideInherent};
         let mut result = ::frame_support::inherent::CheckInherentsResult::new();
         for xt in block.extrinsics() {
             if ::frame_support::inherent::Extrinsic::is_signed(xt).unwrap_or(false) {
@@ -1081,7 +1081,7 @@ impl ::frame_support::unsigned::ValidateUnsigned for Runtime {
         }
     }
     fn validate_unsigned(
-        #[allow(unused_variables)] source: ::frame_support::unsigned::TransactionSource,
+        source: ::frame_support::unsigned::TransactionSource,
         call: &Self::Call,
     ) -> ::frame_support::unsigned::TransactionValidity {
         #[allow(unreachable_patterns)]

@@ -16,11 +16,7 @@ pub fn get_worker_info<P: Pair>(
 where
     MultiSignature: From<P::Signature>,
 {
-    api.get_storage_map(
-            "substraTEERegistry",
-            "EnclaveRegistry",
-            index
-    )
+    api.get_storage_map("substraTEERegistry", "EnclaveRegistry", index)
 }
 
 pub fn get_worker_for_shard<P: Pair>(
@@ -33,9 +29,7 @@ where
     api.get_storage_map("substraTEERegistry", "WorkerForShard", shard)
 }
 
-pub fn get_worker_amount<P: Pair>(
-    api: &substrate_api_client::Api<P>
-) -> Option<u64>
+pub fn get_worker_amount<P: Pair>(api: &substrate_api_client::Api<P>) -> Option<u64>
 where
     MultiSignature: From<P::Signature>,
 {
@@ -44,7 +38,7 @@ where
 
 pub fn get_latest_state<P: Pair>(
     api: &substrate_api_client::Api<P>,
-    shard: &ShardIdentifier
+    shard: &ShardIdentifier,
 ) -> Option<[u8; 46]>
 where
     MultiSignature: From<P::Signature>,

@@ -51,7 +51,7 @@ pub static BALANCE_MODULE: u8 = 4u8;
 pub static BALANCE_TRANSFER: u8 = 0u8;
 
 #[cfg(feature = "sgx")]
-pub type State = sr_io::SgxExternalities;
+pub type State = sp_io::SgxExternalities;
 
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]

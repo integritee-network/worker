@@ -10,7 +10,7 @@ sgx = [
     "sgx_tstd",
     "env_logger",
     "log-sgx",
-    "sr-io",
+    "sp-io",
     "sgx-runtime"
 ]
 std = [
@@ -55,11 +55,11 @@ features = ["full_crypto"]
 version = '2.0.0-alpha.6'
 default-features = false
 
-[dependencies.sr-io]
+[dependencies.sp-io]
 version = '2.0.0-alpha.6'
 default-features = false
 optional = true
-path = "../substrate-sgx/sr-io"
+path = "../substrate-sgx/sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx-runtime]

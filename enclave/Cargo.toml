@@ -70,11 +70,11 @@ git      = "https://github.com/mesalock-linux/rustls"
 rev      = "sgx_1.1.2"
 features = ["dangerous_configuration"]
 
-[dependencies.sr-io]
+[dependencies.sp-io]
 default-features = false
 optional = true
-path = "../substrate-sgx/sr-io"
-package = "sr-io"
+path = "../substrate-sgx/sp-io"
+package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx_serialize_derive]
@@ -114,4 +114,4 @@ features = ["sgx"]
 path = "../substrate-sgx/externalities"
 
 [patch.crates-io]
-sr-io = { path = "../substrate-sgx/sr-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sp-io = { path = "../substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}

@@ -16,13 +16,13 @@
 */
 
 use codec::Encode;
-use sp_keyring::AccountKeyring;
 use log::*;
-use sp_core::sr25519;
-use sp_core::crypto::AccountId32;
 use serde_derive::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
+use sp_core::crypto::AccountId32;
+use sp_core::sr25519;
+use sp_keyring::AccountKeyring;
 
 use std::str;
 
@@ -105,5 +105,7 @@ pub fn setup(eid: sgx_enclave_id_t, who: AccountKeyring) -> (Api<sr25519::Pair>,
 pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
     if let Some(info) = api.get_account_info(who) {
         info.nonce
-    } else { 0 }
+    } else {
+        0
+    }
 }

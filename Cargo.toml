@@ -6,7 +6,7 @@ members = [
 	 "client",
 	 "stf",
 #	 "substrate-sgx/externalities",
-#	 "substrate-sgx/sr-io",
+#	 "substrate-sgx/sp-io",
 #	 "substrate-sgx/runtime"
 #	 "enclave",
 ]

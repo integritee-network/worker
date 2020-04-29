@@ -27,21 +27,21 @@ use sgx_types::*;
 use base58::{FromBase58, ToBase58};
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
-use sp_keyring::AccountKeyring;
 use log::*;
-use substratee_node_runtime::{
-    substratee_registry::{Request, ShardIdentifier},
-    Event, Hash, UncheckedExtrinsic,
-};
 use primitive_types::U256;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519, Pair,
 };
+use sp_keyring::AccountKeyring;
 use substrate_api_client::{
     extrinsic::xt_primitives::GenericAddress,
     utils::{hexstr_to_u256, hexstr_to_vec},
-    Api, XtStatus
+    Api, XtStatus,
+};
+use substratee_node_runtime::{
+    substratee_registry::{Request, ShardIdentifier},
+    Event, Hash, UncheckedExtrinsic,
 };
 
 use enclave::api::{
@@ -472,17 +472,19 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
     info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let data = api.get_account_data(&accountid).unwrap();    
+    let data = api.get_account_data(&accountid).unwrap();
     info!("TEE's free balance = {:?}", data.free);
 
     if data.free < 10 {
         println!("[+] bootstrap funding Enclave form Alice's funds");
         let xt = api.balance_transfer(GenericAddress::from(accountid.clone()), 100_000_000);
-        let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+        let xt_hash = api
+            .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+            .unwrap();
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
         //verify funds have arrived
-        let data = api.get_account_data(&accountid).unwrap();    
+        let data = api.get_account_data(&accountid).unwrap();
         info!("TEE's NEW free balance = {:?}", data.free);
     }
 }
@@ -490,7 +492,9 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
 fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
     if let Some(info) = api.get_account_info(who) {
         info.nonce
-    } else { 0 }
+    } else {
+        0
+    }
 }
 
 fn ensure_shard_initialized(shard: &ShardIdentifier) {
@@ -548,7 +552,7 @@ pub unsafe extern "C" fn ocall_worker_request(
     let resp: Vec<WorkerResponse<Vec<u8>>> = requests
         .into_iter()
         .map(|req| match req {
-            //let res = 
+            //let res =
             WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
                 key.clone(),
                 api.get_storage_by_key_hash(key).unwrap(),
