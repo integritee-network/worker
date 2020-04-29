@@ -1,0 +1,64 @@
+[package]
+name = "chain_relay"
+version = "0.1.0"
+authors = ["Supercomputing Systems AG <info@scs.ch>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd      = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"] }
+
+[dependencies]
+derive_more     = { version = "0.99.5" }
+hash-db         = { version = "0.15.2", default-features = false }
+log             = { version = "0.4", git = "https://github.com/mesalock-linux/log-sgx" }
+num             = { package = "num-traits", version = "0.2", default-features = false }
+
+[dependencies.codec]
+package = "parity-scale-codec"
+features = ["derive"]
+version = "1.3.0"
+default-features=false
+
+[dependencies.finality-grandpa]
+version = "0.11.2"
+default-features = false
+features = ["derive-codec"]
+
+[dependencies.frame-system]
+version = "2.0.0-alpha.6"
+default-features = false
+
+[dependencies.sp-io]
+default-features = false
+path = "../../substrate-sgx/sp-io"
+package = "sp-io"
+features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
+
+[dependencies.sp-core]
+version = '2.0.0-alpha.6'
+default-features = false
+features = ["full_crypto"]
+
+[dependencies.sp-application-crypto]
+version = '2.0.0-alpha.6'
+default-features = false
+features = ["full_crypto"]
+
+[dependencies.sp-finality-grandpa]
+version = '2.0.0-alpha.6'
+default-features = false
+
+[dependencies.sp-runtime]
+version = '2.0.0-alpha.6'
+default-features = false
+
+[dependencies.sp-runtime-interface]
+version = '2.0.0-alpha.6'
+default-features = false
+features = ["disable_target_static_assertions"]
+
+[dependencies.sp-trie]
+version = '2.0.0-alpha.6'
+default-features = false
