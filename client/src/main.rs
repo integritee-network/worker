@@ -405,7 +405,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
 
     // send and watch extrinsic until finalized
     let tx_hash = _chain_api
-        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+        .send_extrinsic(xt.hex_encode(), XtStatus::Ready)
         .unwrap();
     info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
