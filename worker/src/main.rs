@@ -414,9 +414,16 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         nonce,
         node_url.to_owned(),
     ).unwrap();
-
-    info!("[<] Message decoded and processed in the enclave");
-    let xts = Vec::<UncheckedExtrinsic>::decode(&mut uxts.as_slice()).unwrap();
+    debug!("raw extrinsic returned form enclave {:x?}", uxts);
+    info!("[<] Message decoded and processed in the enclave. will send confirmation extrinsic");
+    //let xts = Vec::<UncheckedExtrinsic>::decode(&mut uxts.as_slice()).unwrap();
+    let xt = UncheckedExtrinsic::decode(&mut uxts.as_slice()).unwrap();
+    let mut _xthex = hex::encode(xt.encode());
+    _xthex.insert_str(0, "0x");
+    println!("[>] send an extrinsic composed by enclave");
+    let _hash = _api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
+    debug!("[<] Request Extrinsic got finalized");        
+/*        
     info!("enclave requests to send {} extrinsics", xts.len());
     for xt in xts.iter() {
         let mut _xthex = hex::encode(xt.encode());
@@ -426,6 +433,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         debug!("[<] Request Extrinsic got finalized");        
     }
     info!("all extrinsics sent.");
+*/
 }
 
 fn init_shard(shard: &ShardIdentifier) {

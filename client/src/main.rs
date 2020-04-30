@@ -409,13 +409,23 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
         .unwrap();
     info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
-    let act_hash = subscribe_to_call_confirmed(_chain_api);
+    let (events_in, events_out) = channel();
+    _chain_api.subscribe_events(events_in.clone());
+    let ret: CallConfirmedArgs = _chain_api.wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
+        .unwrap()
+        .unwrap();
     info!("callConfirmed event received");
     debug!(
         "Expected stf call Hash: {:?}",
         blake2s(32, &[0; 32], &call_encrypted).as_bytes()
     );
-    debug!("confirmation stf call Hash:   {:?}", act_hash);
+    debug!("confirmation stf call Hash:   {:?}", ret.payload);
+}
+
+#[derive(Decode)]
+struct CallConfirmedArgs {
+    signer: AccountId,
+    payload: Vec<u8>
 }
 
 fn listen(matches: &ArgMatches<'_>) {
@@ -484,6 +494,7 @@ fn listen(matches: &ArgMatches<'_>) {
     }
 }
 
+
 // subscribes to he substratee_registry events of type CallConfirmed
 pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> Vec<u8>
 where
@@ -507,6 +518,7 @@ where
         let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
         if let Ok(evts) = _events {
             for evr in &evts {
+                info!("received event {:?}", evr.event);
                 if let Event::substratee_registry(pe) = &evr.event {
                     if let substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,

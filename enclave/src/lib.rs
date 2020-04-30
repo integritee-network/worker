@@ -243,7 +243,7 @@ pub unsafe extern "C" fn execute_stf(
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
     let mut nonce = *nonce;
-
+    /*
     let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
         .into_iter()
         .map(|call| {
@@ -259,20 +259,19 @@ pub unsafe extern "C" fn execute_stf(
             xt
         })
         .collect();
+*/
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    extrinsic_buffer.push(
+    //extrinsic_buffer.push(
+    let extrinsic_buffer = 
         compose_extrinsic_offline!(
             signer,
             (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
             nonce,
             genesis_hash,
             RUNTIME_SPEC_VERSION
-        )
-        .encode(),
-    );
-
-    write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer.encode());
+        ).encode();
+    write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer);
 
     sgx_status_t::SGX_SUCCESS
 }
