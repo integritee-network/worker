@@ -401,7 +401,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
         cyphertext: call_encrypted.clone(),
     };
 
-    let xt = compose_extrinsic!(_chain_api, "SubstraTEERegistry", "call_worker", request);
+    let xt = compose_extrinsic!(_chain_api, "SubstrateeRegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized
     let tx_hash = _chain_api

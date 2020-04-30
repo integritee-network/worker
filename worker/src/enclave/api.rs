@@ -282,8 +282,8 @@ pub fn enclave_execute_stf(
     nonce: u32,
     node_url: String,
 ) -> SgxResult<Vec<u8>> {
-    let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
-    let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+    let unchecked_extrinsics_size = EXTRINSIC_MAX_SIZE;
+    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; unchecked_extrinsics_size as usize];
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         execute_stf(
@@ -298,8 +298,8 @@ pub fn enclave_execute_stf(
             &nonce,
             node_url.as_bytes().as_ptr(),
             node_url.into_bytes().len() as u32,
-            unchecked_extrinsic.as_mut_ptr(),
-            unchecked_extrinsic_size as u32,
+            unchecked_extrinsics.as_mut_ptr(),
+            unchecked_extrinsics_size as u32,
         )
     };
     if status != sgx_status_t::SGX_SUCCESS {
@@ -308,7 +308,7 @@ pub fn enclave_execute_stf(
     if result != sgx_status_t::SGX_SUCCESS {
         return Err(result);
     }
-    Ok(unchecked_extrinsic)
+    Ok(unchecked_extrinsics)
 }
 
 pub fn enclave_perform_ra(

@@ -200,20 +200,22 @@ pub unsafe extern "C" fn execute_stf(
         .map(WorkerRequest::ChainStorage)
         .collect();
 
-    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
+    let mut responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
         Ok(r) => r,
         Err(status) => return status,
     };
 
-    let (key, untrusted_nonce) = match resp.pop().unwrap() {
-        WorkerResponse::ChainStorage(key, value, _proof) => (
-            key,
-            value,
-        ),
-    };
-
     let mut update_map = HashMap::new();
-    update_map.insert(key, untrusted_nonce.encode());
+    for response in responses.iter() {
+        match response {
+            WorkerResponse::ChainStorage(key, value, _proof) => {
+                if let Some(val) = value {
+                    update_map.insert(key.clone(), val.clone());
+                }
+            }
+        }
+    }
+    
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
@@ -382,6 +384,7 @@ fn test_ocall_read_write_ipfs() {
     assert_eq!(enc_state, ret_state);
 }
 
+// TODO: this is redundantly defined in worker/src/main.rs
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>), // (storage_key)
@@ -389,7 +392,7 @@ pub enum WorkerRequest {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
-    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+    ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
 
 fn worker_request<V: Encode + Decode>(

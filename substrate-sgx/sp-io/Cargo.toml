@@ -22,6 +22,7 @@ default-features = false
 [dependencies.sp-core]
 version = '2.0.0-alpha.6'
 default-features = false
+features=["full_crypto"]
 
 [dependencies.sp-state-machine]
 version = '0.8.0-alpha.6'

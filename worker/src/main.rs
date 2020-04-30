@@ -64,7 +64,7 @@ fn main() {
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
-    let node_ip = matches.value_of("node-server").unwrap_or("127.0.0.1");
+    let node_ip = matches.value_of("node-server").unwrap_or("ws://127.0.0.1");
     let node_port = matches.value_of("node-port").unwrap_or("9944");
     let n_url = format!("{}:{}", node_ip, node_port);
     info!("Interacting with node on {}", n_url);
@@ -237,7 +237,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let api = Api::new(format!("ws://{}", node_url)).set_signer(AccountKeyring::Alice.pair());
+    let api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = get_enclave_signing_key(eid);
@@ -391,7 +391,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
 pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) {
     // new api client (the other one is busy listening to events)
     // FIXME: this might not be very performant. maybe split into api_listener and api_sender
-    let mut _api = Api::<sr25519::Pair>::new(format!("ws://{}", node_url));
+    let mut _api = Api::<sr25519::Pair>::new(node_url.to_string());
     info!("*** Ask the signing key from the TEE");
     let mut signing_key_raw = [0u8; 32];
     signing_key_raw.copy_from_slice(&enclave_signing_key(eid).unwrap()[..]);
@@ -406,22 +406,26 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     let nonce = get_nonce(&_api, &AccountId32::from(tee_accountid));
     let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
     info!("Enclave nonce = {:?}", nonce);
-    let uxt = enclave_execute_stf(
+    let uxts = enclave_execute_stf(
         eid,
         request.cyphertext,
         request.shard.encode(),
         genesis_hash,
         nonce,
         node_url.to_owned(),
-    )
-    .unwrap();
+    ).unwrap();
+
     info!("[<] Message decoded and processed in the enclave");
-    let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
-    let mut _xthex = hex::encode(ue.encode());
-    _xthex.insert_str(0, "0x");
-    println!("[>] Confirm successful processing of trusted call (send the extrinsic)");
-    let _hash = _api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
-    debug!("[<] Request Extrinsic got finalized");
+    let xts = Vec::<UncheckedExtrinsic>::decode(&mut uxts.as_slice()).unwrap();
+    info!("enclave requests to send {} extrinsics", xts.len());
+    for xt in xts.iter() {
+        let mut _xthex = hex::encode(xt.encode());
+        _xthex.insert_str(0, "0x");
+        println!("[>] send an extrinsic composed by enclave");
+        let _hash = _api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
+        debug!("[<] Request Extrinsic got finalized");        
+    }
+    info!("all extrinsics sent.");
 }
 
 fn init_shard(shard: &ShardIdentifier) {
@@ -560,7 +564,7 @@ pub unsafe extern "C" fn ocall_worker_request(
             //let res =
             WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
                 key.clone(),
-                api.get_storage_by_key_hash(key).unwrap(),
+                api.get_storage_by_key_hash(key),
                 None,
             ),
         })
@@ -587,5 +591,5 @@ pub enum WorkerRequest {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
-    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+    ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }

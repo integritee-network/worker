@@ -71,7 +71,7 @@ impl Stf {
                 nonce,
                 Decode::decode(
                     &mut sp_io::storage::get(&nonce_key_hash(call.account()))
-                        .unwrap()
+                        .unwrap_or(0u32.encode())
                         .as_slice()
                 )
                 .unwrap()

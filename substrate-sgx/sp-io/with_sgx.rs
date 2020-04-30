@@ -20,7 +20,7 @@ use std::prelude::v1::String;
 
 use codec::{Decode, Encode};
 use sp_core::{
-    crypto::KeyTypeId,
+    crypto::{KeyTypeId, Pair},
     ed25519,
     hash::H256,
     offchain::{
@@ -378,8 +378,7 @@ pub mod crypto {
     }
 
     pub fn sr25519_verify(sig: &sr25519::Signature, msg: &[u8], pubkey: &sr25519::Public) -> bool {
-        warn!("crypto::sr25519_verify unimplemented");
-        true
+        sr25519::Pair::verify(sig, msg, pubkey)
     }
 
     pub fn secp256k1_ecdsa_recover(
