@@ -79,7 +79,7 @@ fn main() {
                     .global(true)
                     .takes_value(true)
                     .value_name("STRING")
-                    .default_value("127.0.0.1")
+                    .default_value("ws://127.0.0.1")
                     .help("node url"),
             )
             .arg(
@@ -316,7 +316,7 @@ fn main() {
 
 fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
     let url = format!(
-        "ws://{}:{}",
+        "{}:{}",
         matches.value_of("node-url").unwrap(),
         matches.value_of("node-port").unwrap()
     );
