@@ -51,23 +51,23 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
-    let (_api, nonce) = setup(eid, AccountKeyring::Alice);
+    let (_api, nonce) = setup(eid, Some(AccountKeyring::Alice));
     let req = Request {
-        cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce),
+        cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap()),
         shard: H256::default(),
     };
     crate::process_request(eid, req, port);
 }
 
 pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t) {
-    let (api, nonce) = setup(eid, AccountKeyring::Alice);
-    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce);
+    let (api, nonce) = setup(eid, Some(AccountKeyring::Alice));
+    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap());
     execute_stf(eid, api, cyphertext)
 }
 
 pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t) {
-    let (api, nonce) = setup(eid, AccountKeyring::Alice);
-    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce);
+    let (api, nonce) = setup(eid, Some(AccountKeyring::Alice));
+    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.unwrap());
     execute_stf(eid, api, cyphertext)
 }
 

@@ -91,14 +91,22 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
     getter.sign(&who.pair())
 }
 
-pub fn setup(eid: sgx_enclave_id_t, who: AccountKeyring) -> (Api<sr25519::Pair>, u32) {
+pub fn setup(
+    eid: sgx_enclave_id_t,
+    who: Option<AccountKeyring>,
+) -> (Api<sr25519::Pair>, Option<u32>) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
-    let api = Api::<sr25519::Pair>::new(node_url).set_signer(who.pair());
-
+    let mut api = Api::<sr25519::Pair>::new(node_url);
     ensure_account_has_funds(&api, &get_enclave_signing_key(eid));
 
-    let nonce = get_nonce(&api, &who.to_account_id());
-    (api, nonce)
+    match who {
+        Some(account) => {
+            api = api.set_signer(account.pair());
+            let nonce = get_nonce(&api, &account.to_account_id());
+            (api, Some(nonce))
+        }
+        None => (api, None),
+    }
 }
 
 pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
