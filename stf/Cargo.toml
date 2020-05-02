@@ -41,6 +41,21 @@ package = "parity-scale-codec"
 version = "1.0.0"
 features = ["derive"]
 
+[dependencies.balances]
+default-features = false
+package = 'pallet-balances'
+version = '2.0.0-alpha.6'
+
+[dependencies.system]
+default-features = false
+package = 'frame-system'
+version = '2.0.0-alpha.6'
+
+[dependencies.metadata]
+version = '11.0.0-alpha.6'
+package = "frame-metadata"
+default-features=false
+
 [dependencies.sp-core]
 version = '2.0.0-alpha.6'
 default-features = false

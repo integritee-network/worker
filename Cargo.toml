@@ -10,3 +10,7 @@ members = [
 #	 "substrate-sgx/runtime"
 #	 "enclave",
 ]
+
+[patch."https://github.com/scs/substrate-api-client.git"]
+substrate-api-client = { path = "../substrate-api-client" }
+
