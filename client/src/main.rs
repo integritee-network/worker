@@ -34,13 +34,13 @@ use sp_keyring::AccountKeyring;
 use std::path::PathBuf;
 
 use base58::{FromBase58, ToBase58};
-use blake2_rfc::blake2s::blake2s;
+
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, hashing::blake2_256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
@@ -407,19 +407,19 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     let tx_hash = _chain_api
         .send_extrinsic(xt.hex_encode(), XtStatus::Ready)
         .unwrap();
-    info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
+    info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
     let (events_in, events_out) = channel();
     _chain_api.subscribe_events(events_in.clone());
-    let ret: CallConfirmedArgs = _chain_api.wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
-        .unwrap()
-        .unwrap();
-    info!("callConfirmed event received");
-    debug!(
-        "Expected stf call Hash: {:?}",
-        blake2s(32, &[0; 32], &call_encrypted).as_bytes()
-    );
-    debug!("confirmation stf call Hash:   {:?}", ret.payload);
+    while true {
+        let ret: CallConfirmedArgs = _chain_api.wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
+            .unwrap().unwrap();
+        let expected = blake2_256(&call_encoded);
+        info!("callConfirmed event received");
+        debug!("Expected stf call Hash: {:?}", expected);
+        debug!("Confirmed stf call Hash: {:?}", ret.payload);
+        if ret.payload == expected { break; }
+    };
 }
 
 #[derive(Decode)]

@@ -243,6 +243,9 @@ pub unsafe extern "C" fn execute_stf(
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
     let mut nonce = *nonce;
+
+    //TODO: re-enable this but make sure to count up the nonce for subsequent extrinsics!!!!
+
     /*
     let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
         .into_iter()

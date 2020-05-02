@@ -421,9 +421,11 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     let mut _xthex = hex::encode(xt.encode());
     _xthex.insert_str(0, "0x");
     println!("[>] send an extrinsic composed by enclave");
-    let _hash = _api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
-    debug!("[<] Request Extrinsic got finalized");        
-/*        
+    let _hash = _api.send_extrinsic(_xthex, XtStatus::Ready).unwrap();
+    debug!("[<] Call confirmation extrinsic sent");        
+/*   TODO: re-enable this:  but beware that you'll have to count up the nonce in stf 
+    for subsequent extrinsics from the same address
+    
     info!("enclave requests to send {} extrinsics", xts.len());
     for xt in xts.iter() {
         let mut _xthex = hex::encode(xt.encode());
