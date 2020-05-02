@@ -5,7 +5,7 @@ authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
 [dependencies]
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "substratee-type-workaround" }
 log = "0.4"
 env_logger = "0.7"
 hex = "0.4"
