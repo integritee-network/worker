@@ -22,7 +22,6 @@ pub const SHARDS_PATH: &str = "./shards";
 pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
 
 pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
-pub const RA_DUMP_SIGNER_ATTN_FILE: &str = "ra_dump_signer_attn.bin";
 
 #[cfg(feature = "production")]
 pub static RA_SPID_FILE: &str = "../bin/spid_production.txt";
@@ -43,4 +42,5 @@ pub static REGISTER_ENCLAVE: u8 = 0u8;
 //pub static CALL_WORKER: u8 = 2u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 
-pub static RUNTIME_SPEC_VERSION: u32 = 1;
+// bump this to be consistent with SubstraTEE-node runtime
+pub static RUNTIME_SPEC_VERSION: u32 = 2;

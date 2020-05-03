@@ -200,7 +200,7 @@ pub unsafe extern "C" fn execute_stf(
         .map(WorkerRequest::ChainStorage)
         .collect();
 
-    let mut responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
+    let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
         Ok(r) => r,
         Err(status) => return status,
     };
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn execute_stf(
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let mut nonce = *nonce;
+    let nonce = *nonce;
 
     //TODO: re-enable this but make sure to count up the nonce for subsequent extrinsics!!!!
 

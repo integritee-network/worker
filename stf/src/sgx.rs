@@ -4,14 +4,12 @@ use std::prelude::v1::*;
 
 use codec::{Compact, Decode, Encode};
 use log_sgx::*;
-use sgx_runtime::{Address, Runtime, Balance};
+use sgx_runtime::{Runtime, Balance};
 use sp_core::{
     crypto::AccountId32,
-    hashing::{blake2_256, twox_128},
 };
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
-use sp_runtime::traits::IdentifyAccount;
 use metadata::StorageHasher;
 
 use crate::{
@@ -76,7 +74,7 @@ impl Stf {
                 nonce,
                 Decode::decode(
                     &mut sp_io::storage::get(&nonce_key_hash(call.account()))
-                        .unwrap_or(0u32.encode())
+                        .unwrap_or_else(|| 0u32.encode())
                         .as_slice()
                 )
                 .unwrap()

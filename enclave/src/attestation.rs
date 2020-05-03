@@ -49,7 +49,7 @@ use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::constants::{
-    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_DUMP_SIGNER_ATTN_FILE, RA_SPID_FILE,
+    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE,
     REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE,
 };
 use crate::ed25519;
@@ -559,7 +559,7 @@ fn get_ias_api_key() -> SgxResult<String> {
 
 pub fn create_ra_report_and_signature(
     sign_type: sgx_quote_sign_type_t,
-) -> SgxResult<(Vec<u8>, Vec<u8>, [u32; 16])> {
+) -> SgxResult<(Vec<u8>, Vec<u8>)> {
     let chain_signer = ed25519::unseal_pair()?;
     info!(
         "[Enclave Attestation] Ed25519 pub raw : {:?}",
@@ -599,19 +599,10 @@ pub fn create_ra_report_and_signature(
             return Err(e);
         }
     };
-    info!("    [Enclave] sign ed25519 pubkey with ephemeral ECDSA key");
-    debug!("     payload {:02x}", chain_signer.public().0.iter().format(""));
-    let gxgy = ecc_handle
-        .ecdsa_sign_slice(&chain_signer.public().0, &prv_k)
-        .sgx_error()?;
-    let chain_signer_attestation = [gxgy.x, gxgy.y].concat();
-    let mut chain_signer_attestation_out = [0u32; 16];
-    chain_signer_attestation_out.copy_from_slice(&chain_signer_attestation[..]);
-    debug!("     signature: {:02x}", chain_signer_attestation_out.iter().format(""));
 
-    let _result = ecc_handle.close();
+    let _ = ecc_handle.close();
     info!("    [Enclave] Generate ECC Certificate successful");
-    Ok((key_der, cert_der, chain_signer_attestation_out))
+    Ok((key_der, cert_der))
 }
 
 #[no_mangle]
@@ -627,7 +618,7 @@ pub unsafe extern "C" fn perform_ra(
     // our certificate is unlinkable
     let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-    let (_key_der, cert_der, signer_attn) = match create_ra_report_and_signature(sign_type) {
+    let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
         Ok(r) => r,
         Err(e) => return e,
     };
@@ -671,7 +662,7 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
     // our certificate is unlinkable
     let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-    let (_key_der, cert_der, signer_attn) = match create_ra_report_and_signature(sign_type) {
+    let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
         Ok(r) => r,
         Err(e) => return e,
     };
@@ -680,14 +671,6 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
         return status;
     }
     info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
-
-    if let Err(status) = io::write(&signer_attn.encode()[..], RA_DUMP_SIGNER_ATTN_FILE) {
-        return status;
-    }
-    info!(
-        "    [Enclave] dumped signer attestation {}",
-        RA_DUMP_SIGNER_ATTN_FILE
-    );
 
     sgx_status_t::SGX_SUCCESS
 }

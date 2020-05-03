@@ -46,6 +46,7 @@ optional = true
 
 [dependencies.sgx-externalities]
 path = "../externalities"
+default-features = false
 optional = true
 
 [features]

@@ -107,6 +107,7 @@ features = ["sgx"]
 
 [dependencies.sgx-externalities]
 path = "../substrate-sgx/externalities"
+default-features = false
 
 [patch.crates-io]
 sp-io = { path = "../substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}

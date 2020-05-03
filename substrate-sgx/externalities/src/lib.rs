@@ -1,9 +1,11 @@
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(not(feature = "std"))]
 extern crate sgx_tstd as std;
 
 use std::{collections::HashMap, vec::Vec};
 
+#[cfg(not(feature = "std"))]
 use sgx_serialize::{DeSerializeHelper, SerializeHelper};
 
 use environmental::environmental;
@@ -19,6 +21,7 @@ pub trait SgxExternalitiesTrait {
     fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R;
 }
 
+#[cfg(not(feature = "std"))]
 impl SgxExternalitiesTrait for SgxExternalities {
     /// Create a new instance of `BasicExternalities`
     fn new() -> Self {

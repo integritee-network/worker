@@ -34,7 +34,7 @@ use sp_core::{
 };
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{
-    extrinsic::xt_primitives::GenericAddress, utils::hexstr_to_vec, Api, XtStatus,
+    utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
@@ -488,7 +488,7 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
 
     if free < 10 {
         println!("[+] bootstrap funding Enclave form Alice's funds");
-        let xt = api.balance_transfer(GenericAddress::from(accountid.clone()), 100_000_000);
+        let xt = api.balance_transfer(accountid.clone(), 100_000_000);
         let xt_hash = api
             .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
             .unwrap();

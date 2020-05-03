@@ -180,14 +180,14 @@ pub struct Stf {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keyring::AccountKeyring;
+    use sp_keyring::AccountKeyring;
     use std::vec::Vec;
 
     #[test]
     fn verify_signature_works() {
-        nonce = 21;
-        mrenclave = [0u8; 32];
-        shard = ShardIdentifier::default();
+        let nonce = 21;
+        let mrenclave = [0u8; 32];
+        let shard = ShardIdentifier::default();
 
         let call = TrustedCall::balance_set_balance(AccountId::from(AccountKeyring::Alice), 42, 42);
         let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);

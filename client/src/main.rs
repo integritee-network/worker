@@ -50,7 +50,7 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use substrate_api_client::{
-    compose_extrinsic, extrinsic::xt_primitives::GenericAddress, node_metadata::Metadata,
+    compose_extrinsic, node_metadata::Metadata,
     utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
@@ -164,7 +164,7 @@ fn main() {
                     let accountid = get_accountid_from_str(account);
                     let _api = api.set_signer(AccountKeyring::Alice.pair());
                     let xt = _api.balance_transfer(
-                        GenericAddress::from(accountid.clone()),
+                        accountid.clone(),
                         PREFUNDING_AMOUNT,
                     );
                     info!(
@@ -249,12 +249,12 @@ fn main() {
                     info!("from ss58 is {}", from.public().to_ss58check());
                     info!("to ss58 is {}", to.to_ss58check());
                     let _api = api.set_signer(sr25519_core::Pair::from(from));
-                    let xt = _api.balance_transfer(GenericAddress::from(to.clone()), amount);
+                    let xt = _api.balance_transfer(to.clone(), amount);
                     let tx_hash = _api
                         .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
                         .unwrap();
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
-                    let result = _api.get_account_data(&to.clone()).unwrap();
+                    let result = _api.get_account_data(&to).unwrap();
                     println!("balance for {} is now {}", to, result.free);
                     Ok(())
                 }),
@@ -398,7 +398,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
 
     let request = Request {
         shard,
-        cyphertext: call_encrypted.clone(),
+        cyphertext: call_encrypted,
     };
 
     let xt = compose_extrinsic!(_chain_api, "SubstrateeRegistry", "call_worker", request);
@@ -410,8 +410,8 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
     let (events_in, events_out) = channel();
-    _chain_api.subscribe_events(events_in.clone());
-    while true {
+    _chain_api.subscribe_events(events_in);
+    loop {
         let ret: CallConfirmedArgs = _chain_api.wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
             .unwrap().unwrap();
         let expected = blake2_256(&call_encoded);
@@ -422,6 +422,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     };
 }
 
+#[allow(dead_code)]
 #[derive(Decode)]
 struct CallConfirmedArgs {
     signer: AccountId,

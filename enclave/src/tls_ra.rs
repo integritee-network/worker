@@ -140,7 +140,7 @@ fn tls_server_sesssion_stream(
 }
 
 fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig> {
-    let (key_der, cert_der, _chain_signer_attn) =
+    let (key_der, cert_der) =
         create_ra_report_and_signature(sign_type).sgx_error()?;
 
     let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true)));
@@ -335,7 +335,7 @@ fn tls_client_session_stream(
 }
 
 fn tls_client_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ClientConfig> {
-    let (key_der, cert_der, _chain_signer_attn) =
+    let (key_der, cert_der) =
         create_ra_report_and_signature(sign_type).sgx_error()?;
 
     let mut cfg = rustls::ClientConfig::new();
