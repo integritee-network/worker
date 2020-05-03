@@ -49,8 +49,8 @@ use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::constants::{
-    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE,
-    REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE,
+    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+    SUBSRATEE_REGISTRY_MODULE,
 };
 use crate::ed25519;
 use crate::io;
@@ -575,13 +575,14 @@ pub fn create_ra_report_and_signature(
     debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
     info!("    [Enclave] Create attestation report");
-    let (attn_report, sig, cert) = match create_attestation_report(&chain_signer.public().0, sign_type) {
-        Ok(r) => r,
-        Err(e) => {
-            error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-            return Err(e);
-        }
-    };
+    let (attn_report, sig, cert) =
+        match create_attestation_report(&chain_signer.public().0, sign_type) {
+            Ok(r) => r,
+            Err(e) => {
+                error!("    [Enclave] Error in create_attestation_report: {:?}", e);
+                return Err(e);
+            }
+        };
     println!("    [Enclave] Create attestation report successful");
     debug!("              attn_report = {:?}", attn_report);
     debug!("              sig         = {:?}", sig);

@@ -18,7 +18,6 @@
 //! substratee_client 127.0.0.1:9944 transfer //Alice 5G9RtsTbiYJYQYMHbWfyPoeuuxNaCbC16tZ2JGrZ4gRKwz14 1000
 //!
 #![feature(rustc_private)]
-
 #[macro_use]
 extern crate clap;
 extern crate env_logger;
@@ -65,6 +64,7 @@ use substratee_worker_api::Api as WorkerApi;
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     env_logger::init();
@@ -92,7 +92,7 @@ fn main() {
                     .help("node port"),
             )
             .name("substratee-client")
-            .version("0.1")
+            .version(VERSION)
             .author("Supercomputing Systems AG <info@scs.ch>")
             .about("interact with substraTEE node and workers")
             .after_help("stf subcommands depend on the stf crate this has been built against")

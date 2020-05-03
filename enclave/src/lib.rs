@@ -215,7 +215,7 @@ pub unsafe extern "C" fn execute_stf(
             }
         }
     }
-    
+
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
@@ -247,33 +247,33 @@ pub unsafe extern "C" fn execute_stf(
     //TODO: re-enable this but make sure to count up the nonce for subsequent extrinsics!!!!
 
     /*
-    let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
-        .into_iter()
-        .map(|call| {
-            let xt = compose_extrinsic_offline!(
-                signer.clone(),
-                call,
-                nonce,
-                genesis_hash,
-                RUNTIME_SPEC_VERSION
-            )
-            .encode();
-            nonce += 1;
-            xt
-        })
-        .collect();
-*/
+        let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
+            .into_iter()
+            .map(|call| {
+                let xt = compose_extrinsic_offline!(
+                    signer.clone(),
+                    call,
+                    nonce,
+                    genesis_hash,
+                    RUNTIME_SPEC_VERSION
+                )
+                .encode();
+                nonce += 1;
+                xt
+            })
+            .collect();
+    */
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     //extrinsic_buffer.push(
-    let extrinsic_buffer = 
-        compose_extrinsic_offline!(
-            signer,
-            (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
-            nonce,
-            genesis_hash,
-            RUNTIME_SPEC_VERSION
-        ).encode();
+    let extrinsic_buffer = compose_extrinsic_offline!(
+        signer,
+        (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
+        nonce,
+        genesis_hash,
+        RUNTIME_SPEC_VERSION
+    )
+    .encode();
     write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer);
 
     sgx_status_t::SGX_SUCCESS
@@ -445,7 +445,7 @@ fn test_ocall_worker_request() {
     info!("Worker response: {:?}", first);
 
     let total_issuance = match first {
-        WorkerResponse::ChainStorage(_storage_key, value, _proof) => value
+        WorkerResponse::ChainStorage(_storage_key, value, _proof) => value,
     };
 
     info!("Total Issuance is: {:?}", total_issuance);
