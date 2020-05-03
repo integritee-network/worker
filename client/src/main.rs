@@ -40,7 +40,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, hashing::blake2_256};
+use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
@@ -50,8 +50,7 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use substrate_api_client::{
-    compose_extrinsic, node_metadata::Metadata,
-    utils::hexstr_to_vec, Api, XtStatus,
+    compose_extrinsic, node_metadata::Metadata, utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Enclave, Request},
@@ -163,10 +162,7 @@ fn main() {
                     let account = matches.value_of("AccountId").unwrap();
                     let accountid = get_accountid_from_str(account);
                     let _api = api.set_signer(AccountKeyring::Alice.pair());
-                    let xt = _api.balance_transfer(
-                        accountid.clone(),
-                        PREFUNDING_AMOUNT,
-                    );
+                    let xt = _api.balance_transfer(accountid.clone(), PREFUNDING_AMOUNT);
                     info!(
                         "[+] Alice is generous and pre funds account {}\n",
                         accountid.to_ss58check()
@@ -412,21 +408,25 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     let (events_in, events_out) = channel();
     _chain_api.subscribe_events(events_in);
     loop {
-        let ret: CallConfirmedArgs = _chain_api.wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
-            .unwrap().unwrap();
+        let ret: CallConfirmedArgs = _chain_api
+            .wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
+            .unwrap()
+            .unwrap();
         let expected = blake2_256(&call_encoded);
         info!("callConfirmed event received");
         debug!("Expected stf call Hash: {:?}", expected);
         debug!("Confirmed stf call Hash: {:?}", ret.payload);
-        if ret.payload == expected { break; }
-    };
+        if ret.payload == expected {
+            break;
+        }
+    }
 }
 
 #[allow(dead_code)]
 #[derive(Decode)]
 struct CallConfirmedArgs {
     signer: AccountId,
-    payload: Vec<u8>
+    payload: Vec<u8>,
 }
 
 fn listen(matches: &ArgMatches<'_>) {
@@ -494,7 +494,6 @@ fn listen(matches: &ArgMatches<'_>) {
         }
     }
 }
-
 
 // subscribes to he substratee_registry events of type CallConfirmed
 pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> Vec<u8>
@@ -574,7 +573,9 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
     if let Some(count) = api.get_storage_value("SubstrateeRegistry", "EnclaveCount") {
         count
-    } else { 0 }
+    } else {
+        0
+    }
 }
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {

@@ -4,13 +4,11 @@ use std::prelude::v1::*;
 
 use codec::{Compact, Decode, Encode};
 use log_sgx::*;
-use sgx_runtime::{Runtime, Balance};
-use sp_core::{
-    crypto::AccountId32,
-};
+use metadata::StorageHasher;
+use sgx_runtime::{Balance, Runtime};
+use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
-use metadata::StorageHasher;
 
 use crate::{
     AccountId, BalanceTransferFn, State, Stf, TrustedCall, TrustedGetter, BALANCE_MODULE,
@@ -104,20 +102,22 @@ impl Stf {
     }
 
     pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
-        ext.execute_with(|| {
-            match getter {
-                TrustedGetter::free_balance(who) => { 
-                    if let Some(info) = get_account_info(&who) {
-                        debug!("AccountInfo for {:?} is {:?}", who, info);
-                        Some(info.data.free.encode())
-                    } else { None }
-                },
-                TrustedGetter::reserved_balance(who) => {
-                    if let Some(info) = get_account_info(&who) {
-                        debug!("AccountInfo for {:?} is {:?}", who, info);
-                        Some(info.data.reserved.encode())
-                    } else { None }
-                },
+        ext.execute_with(|| match getter {
+            TrustedGetter::free_balance(who) => {
+                if let Some(info) = get_account_info(&who) {
+                    debug!("AccountInfo for {:?} is {:?}", who, info);
+                    Some(info.data.free.encode())
+                } else {
+                    None
+                }
+            }
+            TrustedGetter::reserved_balance(who) => {
+                if let Some(info) = get_account_info(&who) {
+                    debug!("AccountInfo for {:?} is {:?}", who, info);
+                    Some(info.data.reserved.encode())
+                } else {
+                    None
+                }
             }
         })
     }
@@ -139,7 +139,12 @@ impl Stf {
 
 // get the AccountInfo key where the nonce is stored
 pub fn nonce_key_hash(account: &AccountId) -> Vec<u8> {
-    storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
+    storage_map_key(
+        "System",
+        "Account",
+        account,
+        &StorageHasher::Blake2_128Concat,
+    )
 }
 
 fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
@@ -147,13 +152,16 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
         "System",
         "Account",
         who,
-        &StorageHasher::Blake2_128Concat
+        &StorageHasher::Blake2_128Concat,
     )) {
         if let Ok(info) = AccountInfo::decode(&mut infovec.as_slice()) {
             Some(info)
-        } else { None }
+        } else {
+            None
+        }
+    } else {
+        None
     }
-    else { None }
 }
 
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
@@ -163,11 +171,11 @@ pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
 }
 
 pub fn storage_map_key<K: Encode>(
-    module_prefix: &str, 
-    storage_prefix: &str, 
-    mapkey1: &K, 
-    hasher1: &StorageHasher) -> Vec<u8> 
-{
+    module_prefix: &str,
+    storage_prefix: &str,
+    mapkey1: &K,
+    hasher1: &StorageHasher,
+) -> Vec<u8> {
     let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
     bytes.extend(&sp_core::twox_128(storage_prefix.as_bytes())[..]);
     bytes.extend(key_hash(mapkey1, hasher1));
@@ -175,14 +183,13 @@ pub fn storage_map_key<K: Encode>(
 }
 
 pub fn storage_double_map_key<K: Encode, Q: Encode>(
-    module_prefix: &str, 
-    storage_prefix: &str, 
+    module_prefix: &str,
+    storage_prefix: &str,
     mapkey1: &K,
     hasher1: &StorageHasher,
     mapkey2: &Q,
     hasher2: &StorageHasher,
-    ) -> Vec<u8> 
-{
+) -> Vec<u8> {
     let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
     bytes.extend(&sp_core::twox_128(storage_prefix.as_bytes())[..]);
     bytes.extend(key_hash(mapkey1, hasher1));
@@ -211,4 +218,3 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
         StorageHasher::Twox64Concat => sp_core::twox_64(&encoded_key).to_vec(),
     }
 }
-
