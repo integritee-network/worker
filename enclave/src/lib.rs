@@ -35,11 +35,11 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::storage_key_hash_vec};
+use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
-use primitives::{crypto::Pair, hashing::blake2_256};
+use sp_core::{crypto::Pair, hashing::blake2_256};
 
 use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
 use std::slice;
@@ -47,7 +47,6 @@ use std::string::String;
 use std::vec::Vec;
 
 use std::collections::HashMap;
-use substrate_api_client::utils::hexstr_to_u256;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 mod aes;
@@ -65,7 +64,7 @@ pub mod tls_ra;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
-pub type Hash = primitives::H256;
+pub type Hash = sp_core::H256;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -201,24 +200,22 @@ pub unsafe extern "C" fn execute_stf(
         .map(WorkerRequest::ChainStorage)
         .collect();
 
-    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
+    let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
         Ok(r) => r,
         Err(status) => return status,
     };
 
-    // Todo: after upgrade to api-client alpha branch we can directly store the encoded values into the HashMap and can be
-    // agnostic to their actual types. Unfortunately, this is not possible with strings return by the api-client
-    let (key, untrusted_nonce) = match resp.pop().unwrap() {
-        WorkerResponse::ChainStorage(key, value, _proof) => (
-            key,
-            String::from_utf8(value)
-                .map(|s| hexstr_to_u256(s).unwrap().low_u32())
-                .unwrap(),
-        ),
-    };
-
     let mut update_map = HashMap::new();
-    update_map.insert(key, untrusted_nonce.encode());
+    for response in responses.iter() {
+        match response {
+            WorkerResponse::ChainStorage(key, value, _proof) => {
+                if let Some(val) = value {
+                    update_map.insert(key.clone(), val.clone());
+                }
+            }
+        }
+    }
+    
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
@@ -245,8 +242,11 @@ pub unsafe extern "C" fn execute_stf(
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let mut nonce = *nonce;
+    let nonce = *nonce;
 
+    //TODO: re-enable this but make sure to count up the nonce for subsequent extrinsics!!!!
+
+    /*
     let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
         .into_iter()
         .map(|call| {
@@ -262,20 +262,19 @@ pub unsafe extern "C" fn execute_stf(
             xt
         })
         .collect();
+*/
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    extrinsic_buffer.push(
+    //extrinsic_buffer.push(
+    let extrinsic_buffer = 
         compose_extrinsic_offline!(
             signer,
             (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
             nonce,
             genesis_hash,
             RUNTIME_SPEC_VERSION
-        )
-        .encode(),
-    );
-
-    write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer.encode());
+        ).encode();
+    write_slice_and_whitespace_pad(extrinsic_slice, extrinsic_buffer);
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -387,6 +386,7 @@ fn test_ocall_read_write_ipfs() {
     assert_eq!(enc_state, ret_state);
 }
 
+// TODO: this is redundantly defined in worker/src/main.rs
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
     ChainStorage(Vec<u8>), // (storage_key)
@@ -394,7 +394,7 @@ pub enum WorkerRequest {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
-    ChainStorage(Vec<u8>, V, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+    ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
 
 fn worker_request<V: Encode + Decode>(
@@ -431,10 +431,9 @@ fn test_ocall_worker_request() {
     let mut requests = Vec::new();
     let node_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
 
-    requests.push(WorkerRequest::ChainStorage(storage_key_hash_vec(
+    requests.push(WorkerRequest::ChainStorage(storage_value_key_vec(
         "Balances",
         "TotalIssuance",
-        None,
     )));
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
@@ -446,9 +445,7 @@ fn test_ocall_worker_request() {
     info!("Worker response: {:?}", first);
 
     let total_issuance = match first {
-        WorkerResponse::ChainStorage(_storage_key, value, _proof) => String::from_utf8(value)
-            .map(|s| hexstr_to_u256(s).unwrap())
-            .unwrap(),
+        WorkerResponse::ChainStorage(_storage_key, value, _proof) => value
     };
 
     info!("Total Issuance is: {:?}", total_issuance);

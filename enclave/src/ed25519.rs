@@ -22,7 +22,7 @@ use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
 use log::*;
-use primitives::{crypto::Pair, ed25519};
+use sp_core::{crypto::Pair, ed25519};
 
 use crate::constants::SEALED_SIGNER_SEED_FILE;
 use crate::io;

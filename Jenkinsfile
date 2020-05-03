@@ -5,10 +5,6 @@ pipeline {
       args '''
         -u root
         --privileged
-        -e SGX_SDK=/opt/sgxsdk
-        -e PATH="$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
-        -e PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-        -e LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
       '''
     }
   }

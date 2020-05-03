@@ -19,10 +19,10 @@ use crate::enclave::api::enclave_query_state;
 use crate::init_shard;
 use crate::tests::commons::test_trusted_getter_signed;
 use codec::Encode;
-use keyring::AccountKeyring;
+use sp_keyring::AccountKeyring;
 
-use primitives::hash::H256;
 use sgx_types::*;
+use sp_core::hash::H256;
 
 // TODO: test get_ecc_signing_pubkey
 // TODO: test get_rsa_encryption_pubkey

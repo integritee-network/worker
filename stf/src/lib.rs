@@ -29,8 +29,8 @@ extern crate alloc;
 extern crate clap;
 
 use codec::{Compact, Decode, Encode};
-use primitives::{sr25519, Pair, H256};
-use runtime_primitives::{traits::Verify, AnySignature};
+use sp_core::{sr25519, Pair, H256};
+use sp_runtime::{traits::Verify, AnySignature};
 //pub use my_node_runtime::substratee_registry::ShardIdentifier;
 pub type ShardIdentifier = H256;
 
@@ -43,7 +43,7 @@ pub mod cli;
 pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
-pub type Hash = primitives::H256;
+pub type Hash = sp_core::H256;
 pub type Balance = u128;
 
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
@@ -51,7 +51,7 @@ pub static BALANCE_MODULE: u8 = 4u8;
 pub static BALANCE_TRANSFER: u8 = 0u8;
 
 #[cfg(feature = "sgx")]
-pub type State = sr_io::SgxExternalities;
+pub type State = sp_io::SgxExternalities;
 
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
@@ -180,14 +180,14 @@ pub struct Stf {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keyring::AccountKeyring;
+    use sp_keyring::AccountKeyring;
     use std::vec::Vec;
 
     #[test]
     fn verify_signature_works() {
-        nonce = 21;
-        mrenclave = [0u8; 32];
-        shard = ShardIdentifier::default();
+        let nonce = 21;
+        let mrenclave = [0u8; 32];
+        let shard = ShardIdentifier::default();
 
         let call = TrustedCall::balance_set_balance(AccountId::from(AccountKeyring::Alice), 42, 42);
         let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);

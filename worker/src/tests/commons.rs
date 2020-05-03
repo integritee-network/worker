@@ -16,18 +16,18 @@
 */
 
 use codec::Encode;
-use keyring::AccountKeyring;
 use log::*;
-use primitives::sr25519;
 use serde_derive::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
+use sp_core::crypto::AccountId32;
+use sp_core::sr25519;
+use sp_keyring::AccountKeyring;
 
 use std::str;
 
 use crate::enclave::api::*;
 use crate::{ensure_account_has_funds, get_enclave_signing_key};
-use substrate_api_client::utils::hexstr_to_u256;
 use substrate_api_client::Api;
 use substratee_stf::{
     ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
@@ -97,10 +97,14 @@ pub fn setup(eid: sgx_enclave_id_t, who: AccountKeyring) -> (Api<sr25519::Pair>,
 
     ensure_account_has_funds(&api, &get_enclave_signing_key(eid));
 
-    let nonce = api
-        .get_storage("System", "AccountNonce", Some(who.to_account_id().encode()))
-        .map(|n| hexstr_to_u256(n).unwrap())
-        .unwrap()
-        .low_u32();
+    let nonce = get_nonce(&api, &who.to_account_id());
     (api, nonce)
+}
+
+pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
+    if let Some(info) = api.get_account_info(who) {
+        info.nonce
+    } else {
+        0
+    }
 }
