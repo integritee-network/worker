@@ -66,7 +66,7 @@ use substratee_worker_api::Api as WorkerApi;
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     env_logger::init();
