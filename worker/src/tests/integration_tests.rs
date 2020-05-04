@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use log::*;
 use sgx_types::*;
 use sp_core::{crypto::AccountId32, hash::H256, sr25519};
+use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_keyring::AccountKeyring;
 use std::fs;
 use substrate_api_client::{Api, XtStatus};
@@ -30,6 +31,7 @@ use crate::constants::*;
 use crate::enclave::api::*;
 use crate::get_enclave_signing_key;
 use crate::tests::commons::*;
+use substratee_node_runtime::Header;
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
@@ -101,4 +103,22 @@ pub fn execute_stf(eid: sgx_enclave_id_t, api: Api<sr25519::Pair>, cyphertext: V
         xt.insert_str(0, "0x");
         api.send_extrinsic(xt, XtStatus::Finalized).unwrap();
     });
+}
+
+pub fn chain_relay(eid: sgx_enclave_id_t) {
+    let (api, _) = setup(eid, None);
+    //
+    let genesis_hash = api.get_genesis_hash();
+    let genesis_header: Header = api.get_header(Some(genesis_hash.clone())).unwrap();
+
+    println!("Got genesis Header: \n {:?} \n", genesis_header);
+
+    let grandpas: AuthorityList = api
+        .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
+        .map(|g: VersionedAuthorityList| g.into())
+        .unwrap();
+
+    println!("Grandpa Authority List: \n {:?} \n ", grandpas);
+
+    enclave_init_chain_relay(eid, genesis_hash, VersionedAuthorityList::from(grandpas)).unwrap();
 }

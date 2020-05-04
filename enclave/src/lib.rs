@@ -49,6 +49,8 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
+use chain_relay::init_chain_relay;
+
 mod aes;
 mod attestation;
 mod constants;

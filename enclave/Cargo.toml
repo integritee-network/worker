@@ -101,6 +101,9 @@ tag = "v0.4.2-sub2.0.0-alpha.6"
 default-features = false
 features = ["full_crypto"]
 
+[dependencies.chain-relay]
+path = "chain_relay"
+
 [dependencies.substratee-stf]
 path = "../stf"
 default-features = false

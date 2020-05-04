@@ -31,6 +31,8 @@ use crate::std::collections::BTreeMap;
 use crate::std::fmt;
 use crate::std::vec::Vec;
 
+use sgx_types::*;
+
 use error::JustificationError;
 use justification::GrandpaJustification;
 use storage_proof::{StorageProof, StorageProofChecker};
@@ -38,6 +40,7 @@ use storage_proof::{StorageProof, StorageProofChecker};
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
+use log::*;
 use num::AsPrimitive;
 use sp_core::Hasher;
 use sp_core::H256;
@@ -83,6 +86,17 @@ pub trait Trait: frame_system::Trait<Hash = H256> {
 pub struct LightValidation<T: Trait> {
     num_bridges: BridgeId,
     tracked_bridges: BTreeMap<BridgeId, BridgeInfo<T>>,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn init_chain_relay(
+    genesis_hash: *const u8,
+    genesis_hash_size: usize,
+    authority_list: *const u8,
+    authority_list_size: usize,
+) -> sgx_status_t {
+    info!("Succesfully got in init_relay!!!");
+    sgx_status_t::SGX_SUCCESS
 }
 
 impl<T: Trait> LightValidation<T>

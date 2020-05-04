@@ -47,6 +47,11 @@ enclave {
 			[out, size=value_size] uint8_t* value, uint32_t value_size
 		);
 
+		public sgx_status_t init_chain_relay(
+			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,
+            [in, size=authority_list_size] uint8_t* shard, size_t authority_list_size
+        );
+
 		public sgx_status_t get_rsa_encryption_pubkey(
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 

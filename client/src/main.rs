@@ -348,6 +348,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
         .get_stf_state(getter, &shard)
         .expect("getting value failed");
     let ret_cropped = &ret[..9 * 2];
+
     debug!(
         "got getter response from worker: {:?}\ncropping to {:?}",
         ret, ret_cropped

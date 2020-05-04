@@ -48,15 +48,17 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         // Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
         // running the tests.
         println!("Running integration Tests");
-        println!("  testing perform_ra()");
-        perform_ra_works(eid, port);
-        println!("  testing process_forwarded_payload()");
-        process_forwarded_payload_works(eid, port);
-
-        println!("  testing execute_stf_set_balance()");
-        execute_stf_set_balance_works(eid);
-        println!("  testing execute_stf_unshield_balance()");
-        execute_stf_unshield_balance_works(eid);
+        // println!("  testing perform_ra()");
+        // perform_ra_works(eid, port);
+        // println!("  testing process_forwarded_payload()");
+        // process_forwarded_payload_works(eid, port);
+        //
+        // println!("  testing execute_stf_set_balance()");
+        // execute_stf_set_balance_works(eid);
+        // println!("  testing execute_stf_unshield_balance()");
+        // execute_stf_unshield_balance_works(eid);
+        println!("  testing chain_relay");
+        chain_relay(eid);
     }
     println!("[+] All tests ended!");
 }

@@ -26,6 +26,8 @@ use sgx_urts::SgxEnclave;
 
 use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
 use codec::Encode;
+use sp_core::H256;
+use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -55,6 +57,15 @@ extern "C" {
         shard_size: u32,
         value: *mut u8,
         value_size: u32,
+    ) -> sgx_status_t;
+
+    fn init_chain_relay(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        genesis_hash: *const u8,
+        genesis_hash_size: usize,
+        authority_list: *const u8,
+        authority_list_size: usize,
     ) -> sgx_status_t;
 
     fn get_rsa_encryption_pubkey(
@@ -180,6 +191,33 @@ pub fn enclave_init() -> SgxResult<SgxEnclave> {
         return Err(result);
     }
     Ok(enclave)
+}
+
+pub fn enclave_init_chain_relay(
+    eid: sgx_enclave_id_t,
+    genesis_hash: H256,
+    authority_list: VersionedAuthorityList,
+) -> SgxResult<()> {
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let result = unsafe {
+        init_chain_relay(
+            eid,
+            &mut status,
+            genesis_hash.encode().as_ptr(),
+            genesis_hash.encode().len(),
+            authority_list.endode().as_ptr(),
+            authority_list.encode().len(),
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+    if result != sgx_status_t::SGX_SUCCESS {
+        return Err(result);
+    }
+
+    Ok(())
 }
 
 pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
