@@ -1,6 +1,6 @@
 [package]
 name = "substratee-client"
-version = "0.6.0"
+version = "0.6.1-sub2.0.0-alpha.6"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
