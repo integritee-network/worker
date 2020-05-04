@@ -48,8 +48,10 @@ use sp_runtime::{
 use std::sync::mpsc::channel;
 use std::thread;
 
+use std::convert::TryFrom;
 use substrate_api_client::{
-    compose_extrinsic, node_metadata::Metadata, utils::hexstr_to_vec, Api, XtStatus,
+    compose_extrinsic, events::EventsDecoder, node_metadata::Metadata, utils::hexstr_to_vec, Api,
+    XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Enclave, Request},
@@ -407,9 +409,20 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
     info!("waiting for confirmation of stf call");
     let (events_in, events_out) = channel();
     _chain_api.subscribe_events(events_in);
+
+    let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
+    decoder
+        .register_type_size::<Hash>("ShardIdentifier")
+        .unwrap();
+
     loop {
         let ret: CallConfirmedArgs = _chain_api
-            .wait_for_event("SubstrateeRegistry", "CallConfirmed", &events_out)
+            .wait_for_event(
+                "SubstrateeRegistry",
+                "CallConfirmed",
+                Some(decoder.clone()),
+                &events_out,
+            )
             .unwrap()
             .unwrap();
         let expected = blake2_256(&call_encoded);
