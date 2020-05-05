@@ -40,31 +40,34 @@ use storage_proof::{StorageProof, StorageProofChecker};
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
+use frame_system::Trait;
 use log::*;
 use num::AsPrimitive;
-use sp_core::Hasher;
-use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthorityWeight, SetId};
-use sp_runtime::traits::{Block as BlockT, Header, NumberFor};
+use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 use sp_runtime::Justification;
+use std::marker::PhantomData;
 
 #[derive(Encode, Decode, Clone, PartialEq)]
-pub struct BridgeInitInfo<T: Trait> {
-    pub block_header: T::Header,
+pub struct BridgeInitInfo<Block: BlockT, T: Trait> {
+    pub _phantom: PhantomData<T>,
+    pub block_header: Block::Header,
     pub validator_set: AuthorityList,
     pub validator_set_proof: StorageProof,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq)]
-pub struct BridgeInfo<T: Trait> {
-    last_finalized_block_header: T::Header,
+pub struct BridgeInfo<Block: BlockT, T: Trait> {
+    pub _marker: PhantomData<T>,
+    last_finalized_block_header: Block::Header,
     current_validator_set: AuthorityList,
     current_validator_set_id: SetId,
 }
 
-impl<T: Trait> BridgeInfo<T> {
-    pub fn new(block_header: T::Header, validator_set: AuthorityList) -> Self {
+impl<Block: BlockT, T: Trait> BridgeInfo<Block, T> {
+    pub fn new(block_header: Block::Header, validator_set: AuthorityList) -> Self {
         BridgeInfo {
+            _marker: PhantomData,
             last_finalized_block_header: block_header,
             current_validator_set: validator_set,
             current_validator_set_id: 0,
@@ -74,34 +77,35 @@ impl<T: Trait> BridgeInfo<T> {
 
 type BridgeId = u64;
 
-pub trait Trait: frame_system::Trait<Hash = H256> {
-    type Block: BlockT<Hash = H256, Header = Self::Header>;
-}
+// pub trait Trait: frame_system::Trait<Hash = H256> {
+//     type Block: BlockT<Hash = H256, Header = Self::Header>;
+// }
 
 // impl Trait for chain::Runtime {
 //     type Block = chain::Block;
 // }
 
 #[derive(Encode, Decode, Clone)]
-pub struct LightValidation<T: Trait> {
+pub struct LightValidation<Block: BlockT, T: Trait> {
     num_bridges: BridgeId,
-    tracked_bridges: BTreeMap<BridgeId, BridgeInfo<T>>,
+    tracked_bridges: BTreeMap<BridgeId, BridgeInfo<Block, T>>,
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn init_chain_relay(
-    genesis_hash: *const u8,
-    genesis_hash_size: usize,
-    authority_list: *const u8,
-    authority_list_size: usize,
+    _genesis_hash: *const u8,
+    _genesis_hash_size: usize,
+    _authority_list: *const u8,
+    _authority_list_size: usize,
 ) -> sgx_status_t {
-    info!("Succesfully got in init_relay!!!");
+    info!("Succesfully got in init_relay!");
+
     sgx_status_t::SGX_SUCCESS
 }
 
-impl<T: Trait> LightValidation<T>
+impl<Block: BlockT, T: Trait> LightValidation<Block, T>
 where
-    NumberFor<T::Block>: AsPrimitive<usize>,
+    NumberFor<Block>: AsPrimitive<usize>,
 {
     pub fn new() -> Self {
         LightValidation {
@@ -112,13 +116,17 @@ where
 
     pub fn initialize_bridge(
         &mut self,
-        block_header: T::Header,
+        block_header: Block::Header,
         validator_set: AuthorityList,
         validator_set_proof: StorageProof,
     ) -> Result<BridgeId, Error> {
-        let state_root = block_header.state_root();
+        let state_root = block_header.state_root().encode();
 
-        Self::check_validator_set_proof(state_root, validator_set_proof, &validator_set)?;
+        Self::check_validator_set_proof(
+            &T::Hash::decode(&mut state_root.as_slice()).unwrap(),
+            validator_set_proof,
+            &validator_set,
+        )?;
 
         let bridge_info = BridgeInfo::new(block_header, validator_set);
 
@@ -133,8 +141,8 @@ where
     pub fn submit_finalized_headers(
         &mut self,
         bridge_id: BridgeId,
-        header: T::Header,
-        ancestry_proof: Vec<T::Header>,
+        header: Block::Header,
+        ancestry_proof: Vec<Block::Header>,
         validator_set: AuthorityList,
         validator_set_id: SetId,
         grandpa_proof: Justification,
@@ -146,14 +154,14 @@ where
 
         // Check that the new header is a decendent of the old header
         let last_header = &bridge.last_finalized_block_header;
-        verify_ancestry(ancestry_proof, header_hash(last_header), &header)?;
+        verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-        let block_hash = header_hash(&header);
+        let block_hash = header.hash();
         let block_num = *header.number();
 
         // Check that the header has been finalized
         let voter_set = VoterSet::from_iter(validator_set.clone());
-        verify_grandpa_proof::<T::Block>(
+        verify_grandpa_proof::<Block>(
             grandpa_proof,
             block_hash,
             block_num,
@@ -178,14 +186,14 @@ where
     pub fn submit_simple_header(
         &mut self,
         bridge_id: BridgeId,
-        header: T::Header,
+        header: Block::Header,
         grandpa_proof: Justification,
     ) -> Result<(), Error> {
         let bridge = self
             .tracked_bridges
             .get(&bridge_id)
             .ok_or(Error::NoSuchBridgeExists)?;
-        if header_hash(&bridge.last_finalized_block_header) != *header.parent_hash() {
+        if bridge.last_finalized_block_header.hash() != *header.parent_hash() {
             return Err(Error::HeaderAncestryMismatch);
         }
         let ancestry_proof = vec![];
@@ -226,16 +234,17 @@ impl From<JustificationError> for Error {
     }
 }
 
-impl<T: Trait> LightValidation<T>
-where
-    NumberFor<T::Block>: AsPrimitive<usize>,
+impl<Block: BlockT, T: Trait> LightValidation<Block, T>
+// where
+//     NumberFor<T::Block>: AsPrimitive<usize>,
 {
     fn check_validator_set_proof(
         state_root: &T::Hash,
         proof: StorageProof,
         validator_set: &Vec<(AuthorityId, AuthorityWeight)>,
     ) -> Result<(), Error> {
-        let checker = <StorageProofChecker<T::Hashing>>::new(*state_root, proof.clone())?;
+        let checker =
+            StorageProofChecker::<T::Hashing>::new(T::Hash::from(*state_root), proof.clone())?;
 
         // By encoding the given set we should have an easy way to compare
         // with the stuff we get out of storage via `read_value`
@@ -260,7 +269,7 @@ where
 // Log2 Ancestors (#2053) in the future.
 fn verify_ancestry<H>(proof: Vec<H>, ancestor_hash: H::Hash, child: &H) -> Result<(), Error>
 where
-    H: Header<Hash = H256>,
+    H: HeaderT,
 {
     let mut parent_hash = child.parent_hash();
     if *parent_hash == ancestor_hash {
@@ -270,7 +279,7 @@ where
     // If we find that the header's parent hash matches our ancestor's hash we're done
     for header in proof.iter() {
         // Need to check that blocks are actually related
-        if header_hash(header) != *parent_hash {
+        if header.hash() != *parent_hash {
             break;
         }
 
@@ -291,7 +300,7 @@ fn verify_grandpa_proof<B>(
     voters: &VoterSet<AuthorityId>,
 ) -> Result<(), Error>
 where
-    B: BlockT<Hash = H256>,
+    B: BlockT,
     NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
     // We don't really care about the justification, as long as it's valid
@@ -305,7 +314,7 @@ where
     Ok(())
 }
 
-impl<T: Trait> fmt::Debug for LightValidation<T> {
+impl<Block: BlockT, T: Trait> fmt::Debug for LightValidation<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -315,14 +324,14 @@ impl<T: Trait> fmt::Debug for LightValidation<T> {
     }
 }
 
-impl<T: Trait> fmt::Debug for BridgeInfo<T> {
+impl<Block: BlockT, T: Trait> fmt::Debug for BridgeInfo<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BridgeInfo {{ last_finalized_block_header: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
                self.last_finalized_block_header, self.current_validator_set, self.current_validator_set_id)
     }
 }
 
-impl<T: Trait> fmt::Debug for BridgeInitInfo<T> {
+impl<Block: BlockT, T: Trait> fmt::Debug for BridgeInitInfo<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
