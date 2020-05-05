@@ -54,11 +54,11 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         // process_forwarded_payload_works(eid, port);
         //
         // println!("  testing execute_stf_set_balance()");
-        // execute_stf_set_balance_works(eid);
+        // execute_stf_set_balance_works(eid, port);
         // println!("  testing execute_stf_unshield_balance()");
-        // execute_stf_unshield_balance_works(eid);
+        // execute_stf_unshield_balance_works(eid, port);
         println!("  testing chain_relay");
-        chain_relay(eid);
+        chain_relay(eid, port);
     }
     println!("[+] All tests ended!");
 }

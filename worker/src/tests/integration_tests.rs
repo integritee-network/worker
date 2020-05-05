@@ -53,7 +53,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 }
 
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
-    let (_api, nonce) = setup(eid, Some(AccountKeyring::Alice));
+    let (_api, nonce) = setup(eid, Some(AccountKeyring::Alice), port);
     let req = Request {
         cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap()),
         shard: H256::default(),
@@ -61,14 +61,14 @@ pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
     crate::process_request(eid, req, port);
 }
 
-pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t) {
-    let (api, nonce) = setup(eid, Some(AccountKeyring::Alice));
+pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t, port: &str) {
+    let (api, nonce) = setup(eid, Some(AccountKeyring::Alice), port);
     let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap());
     execute_stf(eid, api, cyphertext)
 }
 
-pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t) {
-    let (api, nonce) = setup(eid, Some(AccountKeyring::Alice));
+pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t, port: &str) {
+    let (api, nonce) = setup(eid, Some(AccountKeyring::Alice), port);
     let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.unwrap());
     execute_stf(eid, api, cyphertext)
 }
@@ -105,8 +105,8 @@ pub fn execute_stf(eid: sgx_enclave_id_t, api: Api<sr25519::Pair>, cyphertext: V
     });
 }
 
-pub fn chain_relay(eid: sgx_enclave_id_t) {
-    let (api, _) = setup(eid, None);
+pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
+    let (api, _) = setup(eid, None, port);
     //
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash.clone())).unwrap();

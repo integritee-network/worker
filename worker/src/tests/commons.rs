@@ -94,8 +94,9 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
 pub fn setup(
     eid: sgx_enclave_id_t,
     who: Option<AccountKeyring>,
+    port: &str,
 ) -> (Api<sr25519::Pair>, Option<u32>) {
-    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944");
+    let node_url = format!("ws://{}:{}", "127.0.0.1", port);
     let mut api = Api::<sr25519::Pair>::new(node_url);
     ensure_account_has_funds(&api, &get_enclave_signing_key(eid));
 
