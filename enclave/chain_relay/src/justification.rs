@@ -27,11 +27,8 @@ use super::error::JustificationError as ClientError;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
 use finality_grandpa::Error as GrandpaError;
-use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
-
-use super::wasm_hacks::header_hash;
 
 /// A GRANDPA justification for block finality, it includes a commit message and
 /// an ancestry proof including all headers routing all precommit target blocks

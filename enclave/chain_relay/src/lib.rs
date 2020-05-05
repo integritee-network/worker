@@ -24,8 +24,6 @@ extern crate sgx_tstd as std;
 mod error;
 mod justification;
 mod storage_proof;
-mod wasm_hacks;
-use wasm_hacks::header_hash;
 
 use crate::std::collections::BTreeMap;
 use crate::std::fmt;

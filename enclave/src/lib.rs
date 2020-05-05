@@ -49,6 +49,9 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
+// we need to import this, else the compiler cannot find the function defined in the .edl file.
+// But the rust compiler does not recognize this.
+#[allow(unused_imports)]
 use chain_relay::init_chain_relay;
 
 mod aes;
