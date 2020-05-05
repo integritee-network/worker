@@ -21,59 +21,30 @@
 #[macro_use]
 extern crate sgx_tstd as std;
 
-mod error;
-mod justification;
-mod storage_proof;
+pub mod error;
+pub mod justification;
+pub mod state;
+pub mod storage_proof;
 
 use crate::std::collections::BTreeMap;
 use crate::std::fmt;
 use crate::std::vec::Vec;
 
-use sgx_types::*;
-
 use error::JustificationError;
 use justification::GrandpaJustification;
+use state::{RelayInitState, RelayState};
 use storage_proof::{StorageProof, StorageProofChecker};
 
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
 use frame_system::Trait;
-use log::*;
 use num::AsPrimitive;
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthorityWeight, SetId};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 use sp_runtime::Justification;
-use std::marker::PhantomData;
 
-#[derive(Encode, Decode, Clone, PartialEq)]
-pub struct BridgeInitInfo<Block: BlockT, T: Trait> {
-    pub _phantom: PhantomData<T>,
-    pub block_header: Block::Header,
-    pub validator_set: AuthorityList,
-    pub validator_set_proof: StorageProof,
-}
-
-#[derive(Encode, Decode, Clone, PartialEq)]
-pub struct BridgeInfo<Block: BlockT, T: Trait> {
-    pub _marker: PhantomData<T>,
-    last_finalized_block_header: Block::Header,
-    current_validator_set: AuthorityList,
-    current_validator_set_id: SetId,
-}
-
-impl<Block: BlockT, T: Trait> BridgeInfo<Block, T> {
-    pub fn new(block_header: Block::Header, validator_set: AuthorityList) -> Self {
-        BridgeInfo {
-            _marker: PhantomData,
-            last_finalized_block_header: block_header,
-            current_validator_set: validator_set,
-            current_validator_set_id: 0,
-        }
-    }
-}
-
-type BridgeId = u64;
+type RelayId = u64;
 
 // pub trait Trait: frame_system::Trait<Hash = H256> {
 //     type Block: BlockT<Hash = H256, Header = Self::Header>;
@@ -85,20 +56,8 @@ type BridgeId = u64;
 
 #[derive(Encode, Decode, Clone)]
 pub struct LightValidation<Block: BlockT, T: Trait> {
-    num_bridges: BridgeId,
-    tracked_bridges: BTreeMap<BridgeId, BridgeInfo<Block, T>>,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn init_chain_relay(
-    _genesis_hash: *const u8,
-    _genesis_hash_size: usize,
-    _authority_list: *const u8,
-    _authority_list_size: usize,
-) -> sgx_status_t {
-    info!("Succesfully got in init_relay!");
-
-    sgx_status_t::SGX_SUCCESS
+    num_relays: RelayId,
+    tracked_relays: BTreeMap<RelayId, RelayState<Block, T>>,
 }
 
 impl<Block: BlockT, T: Trait> LightValidation<Block, T>
@@ -107,51 +66,51 @@ where
 {
     pub fn new() -> Self {
         LightValidation {
-            num_bridges: 0,
-            tracked_bridges: BTreeMap::new(),
+            num_relays: 0,
+            tracked_relays: BTreeMap::new(),
         }
     }
 
-    pub fn initialize_bridge(
+    pub fn initialize_relay(
         &mut self,
         block_header: Block::Header,
         validator_set: AuthorityList,
-        validator_set_proof: StorageProof,
-    ) -> Result<BridgeId, Error> {
-        let state_root = block_header.state_root().encode();
+        _validator_set_proof: StorageProof,
+    ) -> Result<RelayId, Error> {
+        // Todo: Enable when we get proofs
+        // let state_root = block_header.state_root().encode();
+        // Self::check_validator_set_proof(
+        //     &T::Hash::decode(&mut state_root.as_slice()).unwrap(),
+        //     validator_set_proof,
+        //     &validator_set,
+        // )?;
 
-        Self::check_validator_set_proof(
-            &T::Hash::decode(&mut state_root.as_slice()).unwrap(),
-            validator_set_proof,
-            &validator_set,
-        )?;
+        let relay_info = RelayState::new(block_header, validator_set);
 
-        let bridge_info = BridgeInfo::new(block_header, validator_set);
+        let new_relay_id = self.num_relays + 1;
+        self.tracked_relays.insert(new_relay_id, relay_info);
 
-        let new_bridge_id = self.num_bridges + 1;
-        self.tracked_bridges.insert(new_bridge_id, bridge_info);
+        self.num_relays = new_relay_id;
 
-        self.num_bridges = new_bridge_id;
-
-        Ok(new_bridge_id)
+        Ok(new_relay_id)
     }
 
     pub fn submit_finalized_headers(
         &mut self,
-        bridge_id: BridgeId,
+        relay_id: RelayId,
         header: Block::Header,
         ancestry_proof: Vec<Block::Header>,
         validator_set: AuthorityList,
         validator_set_id: SetId,
         grandpa_proof: Justification,
     ) -> Result<(), Error> {
-        let bridge = self
-            .tracked_bridges
-            .get(&bridge_id)
-            .ok_or(Error::NoSuchBridgeExists)?;
+        let relay = self
+            .tracked_relays
+            .get(&relay_id)
+            .ok_or(Error::NoSuchRelayExists)?;
 
         // Check that the new header is a decendent of the old header
-        let last_header = &bridge.last_finalized_block_header;
+        let last_header = &relay.last_finalized_block_header;
         verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
         let block_hash = header.hash();
@@ -167,15 +126,15 @@ where
             &voter_set,
         )?;
 
-        match self.tracked_bridges.get_mut(&bridge_id) {
-            Some(bridge_info) => {
-                bridge_info.last_finalized_block_header = header;
-                if validator_set_id > bridge_info.current_validator_set_id {
-                    bridge_info.current_validator_set = validator_set;
-                    bridge_info.current_validator_set_id = validator_set_id;
+        match self.tracked_relays.get_mut(&relay_id) {
+            Some(relay_info) => {
+                relay_info.last_finalized_block_header = header;
+                if validator_set_id > relay_info.current_validator_set_id {
+                    relay_info.current_validator_set = validator_set;
+                    relay_info.current_validator_set_id = validator_set_id;
                 }
             }
-            _ => panic!("We succesfully got this bridge earlier, therefore it exists; qed"),
+            _ => panic!("We succesfully got this relay earlier, therefore it exists; qed"),
         };
 
         Ok(())
@@ -183,22 +142,22 @@ where
 
     pub fn submit_simple_header(
         &mut self,
-        bridge_id: BridgeId,
+        relay_id: RelayId,
         header: Block::Header,
         grandpa_proof: Justification,
     ) -> Result<(), Error> {
-        let bridge = self
-            .tracked_bridges
-            .get(&bridge_id)
-            .ok_or(Error::NoSuchBridgeExists)?;
-        if bridge.last_finalized_block_header.hash() != *header.parent_hash() {
+        let relay = self
+            .tracked_relays
+            .get(&relay_id)
+            .ok_or(Error::NoSuchRelayExists)?;
+        if relay.last_finalized_block_header.hash() != *header.parent_hash() {
             return Err(Error::HeaderAncestryMismatch);
         }
         let ancestry_proof = vec![];
-        let validator_set = bridge.current_validator_set.clone();
-        let validator_set_id = bridge.current_validator_set_id;
+        let validator_set = relay.current_validator_set.clone();
+        let validator_set_id = relay.current_validator_set_id;
         self.submit_finalized_headers(
-            bridge_id,
+            relay_id,
             header,
             ancestry_proof,
             validator_set,
@@ -216,7 +175,7 @@ pub enum Error {
     // InvalidValidatorSetProof,
     ValidatorSetMismatch,
     InvalidAncestryProof,
-    NoSuchBridgeExists,
+    NoSuchRelayExists,
     InvalidFinalityProof,
     // UnknownClientError,
     HeaderAncestryMismatch,
@@ -316,24 +275,24 @@ impl<Block: BlockT, T: Trait> fmt::Debug for LightValidation<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "LightValidationTest {{ num_bridges: {}, tracked_bridges: {:?} }}",
-            self.num_bridges, self.tracked_bridges
+            "LightValidationTest {{ num_relays: {}, tracked_relays: {:?} }}",
+            self.num_relays, self.tracked_relays
         )
     }
 }
 
-impl<Block: BlockT, T: Trait> fmt::Debug for BridgeInfo<Block, T> {
+impl<Block: BlockT, T: Trait> fmt::Debug for RelayState<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "BridgeInfo {{ last_finalized_block_header: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
+        write!(f, "RelayInfo {{ last_finalized_block_header: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
                self.last_finalized_block_header, self.current_validator_set, self.current_validator_set_id)
     }
 }
 
-impl<Block: BlockT, T: Trait> fmt::Debug for BridgeInitInfo<Block, T> {
+impl<Block: BlockT, T: Trait> fmt::Debug for RelayInitState<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "BridgeInfo {{ block_header: {:?}, validator_set: {:?}, validator_set_proof: {:?} }}",
+            "RelayInfo {{ block_header: {:?}, validator_set: {:?}, validator_set_proof: {:?} }}",
             self.block_header, self.validator_set, self.validator_set_proof
         )
     }
