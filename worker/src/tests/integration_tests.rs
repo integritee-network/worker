@@ -120,5 +120,5 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
 
     println!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    enclave_init_chain_relay(eid, genesis_hash, VersionedAuthorityList::from(grandpas)).unwrap();
+    enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas)).unwrap();
 }

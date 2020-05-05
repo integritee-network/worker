@@ -87,6 +87,10 @@ version = '2.0.0-alpha.6'
 default-features = false
 features = ["full_crypto"]
 
+[dependencies.sp-finality-grandpa]
+version = "2.0.0-alpha.6"
+default-features = false
+
 [dependencies.sp-runtime]
 version = '2.0.0-alpha.6'
 default-features = false
@@ -100,6 +104,10 @@ git = "https://github.com/scs/substrate-api-client"
 tag = "v0.4.2-sub2.0.0-alpha.6"
 default-features = false
 features = ["full_crypto"]
+
+[dependencies.sgx-runtime]
+git = "https://github.com/scs/substrate-node-template"
+branch = "sgx-runtime"
 
 [dependencies.chain-relay]
 path = "chain_relay"

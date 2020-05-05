@@ -35,11 +35,13 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
+use sgx_runtime::{Block, Header, Runtime};
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
+use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
 use std::slice;
@@ -49,10 +51,7 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
-// we need to import this, else the compiler cannot find the function defined in the .edl file.
-// But the rust compiler does not recognize this.
-#[allow(unused_imports)]
-use chain_relay::init_chain_relay;
+use chain_relay::{storage_proof::StorageProof, LightValidation};
 
 mod aes;
 mod attestation;
@@ -314,6 +313,37 @@ pub unsafe extern "C" fn get_state(
 
     debug!("returning getter result");
     write_slice_and_whitespace_pad(value_slice, value_opt.encode());
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn init_chain_relay(
+    genesis_header: *const u8,
+    genesis_header_size: usize,
+    authority_list: *const u8,
+    authority_list_size: usize,
+) -> sgx_status_t {
+    info!("Succesfully got in init_relay!");
+
+    let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
+    let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
+    let auth = VersionedAuthorityList::decode(&mut auth).unwrap();
+
+    let mut validator: LightValidation<Block, Runtime> = LightValidation::new();
+
+    info!("Instantiated Light Validation: {:?}", validator);
+
+    let id = validator
+        .initialize_relay(
+            Header::decode(&mut header).unwrap(),
+            auth.into(),
+            StorageProof::default(),
+        )
+        .unwrap();
+
+    info!("Succesfully initialized relay with Id: {}:", id);
+    info!("Status Light Validation: {:?}", validator);
 
     sgx_status_t::SGX_SUCCESS
 }

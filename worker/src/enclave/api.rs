@@ -28,6 +28,7 @@ use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VA
 use codec::Encode;
 use sp_core::H256;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList};
+use substratee_node_runtime::Header;
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -195,19 +196,22 @@ pub fn enclave_init() -> SgxResult<SgxEnclave> {
 
 pub fn enclave_init_chain_relay(
     eid: sgx_enclave_id_t,
-    genesis_hash: H256,
+    genesis_hash: Header,
     authority_list: VersionedAuthorityList,
 ) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
-        init_chain_relay(
-            eid,
-            &mut status,
-            genesis_hash.encode().as_ptr(),
-            genesis_hash.encode().len(),
-            authority_list.endode().as_ptr(),
-            authority_list.encode().len(),
-        )
+        // Todo: this is a bit ugly but the common `encode()` is not implemented for authority list
+        authority_list.using_encoded(|authorities| {
+            init_chain_relay(
+                eid,
+                &mut status,
+                genesis_hash.encode().as_ptr(),
+                genesis_hash.encode().len(),
+                authorities.as_ptr(),
+                authorities.len(),
+            )
+        })
     };
 
     if status != sgx_status_t::SGX_SUCCESS {

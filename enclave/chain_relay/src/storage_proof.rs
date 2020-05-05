@@ -22,7 +22,7 @@ use sp_trie::{trie_types::TrieDB, MemoryDB, Trie};
 
 use super::Error;
 
-pub(crate) type StorageProof = Vec<Vec<u8>>;
+pub type StorageProof = Vec<Vec<u8>>;
 
 /// This struct is used to read storage values from a subset of a Merklized database. The "proof"
 /// is a subset of the nodes in the Merkle structure of the database, so that it provides
