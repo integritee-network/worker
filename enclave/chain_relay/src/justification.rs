@@ -48,19 +48,17 @@ pub struct GrandpaJustification<Block: BlockT> {
     votes_ancestries: Vec<Block::Header>,
 }
 
-impl<Block: BlockT<Hash = H256>> GrandpaJustification<Block> {
+impl<Block: BlockT> GrandpaJustification<Block> {
     /// Create a GRANDPA justification from the given commit. This method
     /// assumes the commit is valid and well-formed.
     #[cfg(test)]
-    pub(crate) fn from_commit<B, E, RA>(
-        client: &Client<B, E, Block, RA>,
+    pub(crate) fn from_commit<C>(
+        client: &Arc<C>,
         round: u64,
         commit: Commit<Block>,
     ) -> Result<GrandpaJustification<Block>, Error>
     where
-        B: Backend<Block, Blake2Hasher>,
-        E: CallExecutor<Block, Blake2Hasher> + Send + Sync,
-        RA: Send + Sync,
+        C: HeaderBackend<Block>,
     {
         let mut votes_ancestries_hashes = HashSet::new();
         let mut votes_ancestries = Vec::new();
@@ -148,14 +146,16 @@ impl<Block: BlockT<Hash = H256>> GrandpaJustification<Block> {
             }
         }
 
+        let mut buf = Vec::new();
         let mut visited_hashes = HashSet::new();
         for signed in self.commit.precommits.iter() {
-            if let Err(_) = communication::check_message_sig::<Block>(
+            if let Err(_) = communication::check_message_sig_with_buffer::<Block>(
                 &finality_grandpa::Message::Precommit(signed.precommit.clone()),
                 &signed.id,
                 &signed.signature,
                 self.round,
                 set_id,
+                &mut buf,
             ) {
                 return Err(ClientError::BadJustification(
                     "invalid signature for precommit in grandpa justification".to_string(),
@@ -187,7 +187,7 @@ impl<Block: BlockT<Hash = H256>> GrandpaJustification<Block> {
         let ancestry_hashes = self
             .votes_ancestries
             .iter()
-            .map(|h: &Block::Header| header_hash(h))
+            .map(|h: &Block::Header| h.hash())
             .collect();
 
         if visited_hashes != ancestry_hashes {
@@ -209,12 +209,12 @@ struct AncestryChain<Block: BlockT> {
     ancestry: HashMap<Block::Hash, Block::Header>,
 }
 
-impl<Block: BlockT<Hash = H256>> AncestryChain<Block> {
+impl<Block: BlockT> AncestryChain<Block> {
     fn new(ancestry: &[Block::Header]) -> AncestryChain<Block> {
         let ancestry: HashMap<_, _> = ancestry
             .iter()
             .cloned()
-            .map(|h: Block::Header| (header_hash(&h), h))
+            .map(|h: Block::Header| (h.hash(), h))
             .collect();
 
         AncestryChain { ancestry }
@@ -281,16 +281,23 @@ mod communication {
 
     // Check the signature of a Grandpa message.
     // This was originally taken from `communication/mod.rs`
-    pub fn check_message_sig<Block: BlockT>(
+
+    /// Check a message signature by encoding the message as a localized payload and
+    /// verifying the provided signature using the expected authority id.
+    /// The encoding necessary to verify the signature will be done using the given
+    /// buffer, the original content of the buffer will be cleared.
+    pub(crate) fn check_message_sig_with_buffer<Block: BlockT>(
         message: &Message<Block>,
         id: &AuthorityId,
         signature: &AuthoritySignature,
         round: RoundNumber,
         set_id: SetIdNumber,
+        buf: &mut Vec<u8>,
     ) -> Result<(), ()> {
         let as_public = id.clone();
-        let encoded_raw = localized_payload(round, set_id, message);
-        if AuthorityPair::verify(signature, &encoded_raw, &as_public) {
+        localized_payload_with_buffer(round, set_id, message, buf);
+
+        if AuthorityPair::verify(signature, buf, &as_public) {
             Ok(())
         } else {
             debug!(target: "afg", "Bad signature on message from {:?}", id);
@@ -298,11 +305,16 @@ mod communication {
         }
     }
 
-    pub(crate) fn localized_payload<E: Encode>(
+    /// Encode round message localized to a given round and set id using the given
+    /// buffer. The given buffer will be cleared and the resulting encoded payload
+    /// will always be written to the start of the buffer.
+    pub(crate) fn localized_payload_with_buffer<E: Encode>(
         round: RoundNumber,
         set_id: SetIdNumber,
         message: &E,
-    ) -> Vec<u8> {
-        (message, round, set_id).encode()
+        buf: &mut Vec<u8>,
+    ) {
+        buf.clear();
+        (message, round, set_id).encode_to(buf)
     }
 }
