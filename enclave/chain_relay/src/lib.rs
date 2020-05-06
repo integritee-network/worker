@@ -283,8 +283,8 @@ impl<Block: BlockT, T: Trait> fmt::Debug for LightValidation<Block, T> {
 
 impl<Block: BlockT, T: Trait> fmt::Debug for RelayState<Block, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "RelayInfo {{ last_finalized_block_header: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
-               self.last_finalized_block_header, self.current_validator_set, self.current_validator_set_id)
+        write!(f, "RelayInfo {{ last_finalized_block_header_number: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
+               self.last_finalized_block_header.number(), self.current_validator_set, self.current_validator_set_id)
     }
 }
 
