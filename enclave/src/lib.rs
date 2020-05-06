@@ -35,7 +35,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
-use sgx_runtime::{Block, Header, Runtime};
+use sgx_runtime::{opaque::Block, opaque::Header, Runtime};
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 

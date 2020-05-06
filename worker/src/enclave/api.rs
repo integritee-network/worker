@@ -27,7 +27,7 @@ use sgx_urts::SgxEnclave;
 use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
 use codec::Encode;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList};
-use substratee_node_runtime::{Block, Header};
+use substratee_node_runtime::opaque::{Block, Header};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;

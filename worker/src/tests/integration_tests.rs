@@ -31,7 +31,7 @@ use crate::constants::*;
 use crate::enclave::api::*;
 use crate::get_enclave_signing_key;
 use crate::tests::commons::*;
-use substratee_node_runtime::{Block, Header};
+use substratee_node_runtime::opaque::{Block, Header};
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
