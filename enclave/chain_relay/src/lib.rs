@@ -128,7 +128,8 @@ where
 
         match self.tracked_relays.get_mut(&relay_id) {
             Some(relay_info) => {
-                relay_info.last_finalized_block_header = header;
+                relay_info.last_finalized_block_header = header.clone();
+                relay_info.headers.push(header);
                 if validator_set_id > relay_info.current_validator_set_id {
                     relay_info.current_validator_set = validator_set;
                     relay_info.current_validator_set_id = validator_set_id;
