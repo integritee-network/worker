@@ -352,11 +352,12 @@ pub unsafe extern "C" fn init_chain_relay(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn sync_chain_relay(headers: *const u8, headers_size: usize) -> sgx_status_t {
+pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize) -> sgx_status_t {
     info!("Syncing chain relay!");
 
-    let mut headers_slice = slice::from_raw_parts(headers, headers_size);
-    let headers: Vec<Header> = Decode::decode(&mut headers_slice).unwrap();
+    let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
+    info!("blocks slice : {:?}", blocks_slice.len());
+    let blocks: Vec<Block> = Decode::decode(&mut blocks_slice).unwrap();
 
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
     info!("relay db {:?}", val_vec);
@@ -364,9 +365,9 @@ pub unsafe extern "C" fn sync_chain_relay(headers: *const u8, headers_size: usiz
     let mut validator: LightValidation<Block, Runtime> =
         Decode::decode(&mut val_vec.as_slice()).unwrap();
 
-    headers.into_iter().for_each(|header| {
+    blocks.into_iter().for_each(|block| {
         validator
-            .submit_simple_header(validator.num_relays, header, Justification::default())
+            .submit_simple_header(validator.num_relays, block.header, Justification::default())
             .unwrap()
     });
 

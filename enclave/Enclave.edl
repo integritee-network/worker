@@ -53,7 +53,7 @@ enclave {
         );
 
         public sgx_status_t sync_chain_relay(
-        			[in, size=headers_size] uint8_t* headers, size_t headers_size
+            [in, size=blocks_size] uint8_t* blocks, size_t blocks_size
         );
 
 		public sgx_status_t get_rsa_encryption_pubkey(

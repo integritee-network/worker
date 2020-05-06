@@ -26,9 +26,8 @@ use sgx_urts::SgxEnclave;
 
 use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
 use codec::Encode;
-use sp_core::H256;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList};
-use substratee_node_runtime::Header;
+use substratee_node_runtime::{Block, Header};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -72,8 +71,8 @@ extern "C" {
     fn sync_chain_relay(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
-        headers: *const u8,
-        headers_size: usize,
+        blocks: *const u8,
+        blocks_size: usize,
     ) -> sgx_status_t;
 
     fn get_rsa_encryption_pubkey(
@@ -231,14 +230,14 @@ pub fn enclave_init_chain_relay(
     Ok(())
 }
 
-pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, headers: Vec<Header>) -> SgxResult<()> {
+pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, blocks: Vec<Block>) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         sync_chain_relay(
             eid,
             &mut status,
-            headers.encode().as_ptr(),
-            headers.encode().len(),
+            blocks.encode().as_ptr(),
+            blocks.encode().len(),
         )
     };
 
