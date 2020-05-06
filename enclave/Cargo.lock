@@ -848,7 +848,7 @@ dependencies = [
 [[package]]
 name = "pallet-template"
 version = "2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime#b79d2d69d768a6e111637190bed13f0d5168084d"
+source = "git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6#b79d2d69d768a6e111637190bed13f0d5168084d"
 dependencies = [
  "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1293,7 +1293,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime#b79d2d69d768a6e111637190bed13f0d5168084d"
+source = "git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6#b79d2d69d768a6e111637190bed13f0d5168084d"
 dependencies = [
  "frame-executive 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1303,7 +1303,7 @@ dependencies = [
  "pallet-grandpa 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-randomness-collective-flip 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)",
+ "pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)",
  "pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1859,7 +1859,7 @@ dependencies = [
  "log 0.4.8 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)",
+ "sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)",
  "sgx_tstd 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sp-application-crypto 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1869,7 +1869,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-enclave"
-version = "0.6.0"
+version = "0.6.1-sub2.0.0-alpha.6"
 dependencies = [
  "aes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.10.1 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
@@ -2220,7 +2220,7 @@ dependencies = [
 "checksum pallet-randomness-collective-flip 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "1139a9bf489b947a677574ee8ade27c7b710ce25a07f1630b80c20af8f682f91"
 "checksum pallet-session 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "4fdeb41738a79d3247b2a7fd9ce8ae5a7d9e92ca2de198e006f891240c8dcacc"
 "checksum pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "70b15e01796c9d2791cbd9ae2d7c9b59c8eccc3682afbb1189f6ebe7b07f4d71"
-"checksum pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)" = "<none>"
+"checksum pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)" = "<none>"
 "checksum pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "4d9de9af5f5ed3377a6108eed436791bfe18bc3e4e2e416854d0074d31b1be00"
 "checksum pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "54768f5959e0bef53218b91f289d6807c0786d93fb90a3c7e39ab7ff9f018f23"
 "checksum pallet-transaction-payment-rpc-runtime-api 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "7323ef565470b51bb79fc65d3c3a1bff0ecb317485acc66a64406309c25f1b77"
@@ -2269,7 +2269,7 @@ dependencies = [
 "checksum serde_derive 1.0.106 (git+https://github.com/mesalock-linux/serde-sgx)" = "<none>"
 "checksum serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)" = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
 "checksum serde_json 1.0.51 (git+https://github.com/mesalock-linux/serde-json-sgx?rev=sgx_1.1.2)" = "<none>"
-"checksum sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)" = "<none>"
+"checksum sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)" = "<none>"
 "checksum sgx_alloc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
 "checksum sgx_backtrace_sys 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
 "checksum sgx_build_helper 0.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"

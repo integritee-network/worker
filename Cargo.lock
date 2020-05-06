@@ -1737,7 +1737,7 @@ dependencies = [
 [[package]]
 name = "pallet-template"
 version = "2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime#b79d2d69d768a6e111637190bed13f0d5168084d"
+source = "git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6#b79d2d69d768a6e111637190bed13f0d5168084d"
 dependencies = [
  "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2540,7 +2540,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime#b79d2d69d768a6e111637190bed13f0d5168084d"
+source = "git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6#b79d2d69d768a6e111637190bed13f0d5168084d"
 dependencies = [
  "frame-executive 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2550,7 +2550,7 @@ dependencies = [
  "pallet-grandpa 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-randomness-collective-flip 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)",
+ "pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)",
  "pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3216,33 +3216,8 @@ dependencies = [
 
 [[package]]
 name = "substrate-api-client"
-version = "0.4.1"
-source = "git+https://github.com/scs/substrate-api-client#29d3025eb7247bfa9a05a35f6adab54d931ea321"
-dependencies = [
- "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-metadata 11.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-balances 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "primitive-types 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.52 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-version 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "ws 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "substrate-api-client"
-version = "0.4.1"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=substratee-type-workaround#2ced10f1cfc558ca498d0c18f14ae2117e4c4262"
+version = "0.4.2-sub2.0.0-alpha.6"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6#ed8b6b441182d247af027c8d987d3386ce8019b2"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata 11.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3293,7 +3268,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "substratee-client"
-version = "0.6.0"
+version = "0.6.1-sub2.0.0-alpha.6"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2-rfc 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3315,17 +3290,17 @@ dependencies = [
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-keyring 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-api-client 0.4.1 (git+https://github.com/scs/substrate-api-client.git?branch=substratee-type-workaround)",
+ "substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6)",
  "substrate-bip39 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "substratee-node-runtime 0.6.1 (git+https://github.com/scs/substraTEE-node?tag=v0.6.1)",
  "substratee-stf 0.2.0",
- "substratee-worker-api 0.6.0",
+ "substratee-worker-api 0.6.1-sub2.0.0-alpha.6",
  "tiny-bip39 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "substratee-node-calls"
-version = "0.6.0"
+version = "0.6.1-sub2.0.0-alpha.6"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3333,7 +3308,7 @@ dependencies = [
  "primitive-types 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-api-client 0.4.1 (git+https://github.com/scs/substrate-api-client)",
+ "substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6)",
  "substratee-node-runtime 0.6.1 (git+https://github.com/scs/substraTEE-node?tag=v0.6.1)",
 ]
 
@@ -3385,7 +3360,7 @@ dependencies = [
  "pallet-balances 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-keystore 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)",
+ "sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)",
  "sgx_tstd 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sp-application-crypto 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3396,7 +3371,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker"
-version = "0.6.0"
+version = "0.6.1-sub2.0.0-alpha.6"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cid 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3424,17 +3399,17 @@ dependencies = [
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-keyring 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-api-client 0.4.1 (git+https://github.com/scs/substrate-api-client)",
- "substratee-node-calls 0.6.0",
+ "substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6)",
+ "substratee-node-calls 0.6.1-sub2.0.0-alpha.6",
  "substratee-node-runtime 0.6.1 (git+https://github.com/scs/substraTEE-node?tag=v0.6.1)",
  "substratee-stf 0.2.0",
- "substratee-worker-api 0.6.0",
+ "substratee-worker-api 0.6.1-sub2.0.0-alpha.6",
  "ws 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "substratee-worker-api"
-version = "0.6.0"
+version = "0.6.1-sub2.0.0-alpha.6"
 dependencies = [
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4344,7 +4319,7 @@ dependencies = [
 "checksum pallet-session 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "4fdeb41738a79d3247b2a7fd9ce8ae5a7d9e92ca2de198e006f891240c8dcacc"
 "checksum pallet-substratee-registry 0.6.1 (git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.1)" = "<none>"
 "checksum pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "70b15e01796c9d2791cbd9ae2d7c9b59c8eccc3682afbb1189f6ebe7b07f4d71"
-"checksum pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)" = "<none>"
+"checksum pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)" = "<none>"
 "checksum pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "4d9de9af5f5ed3377a6108eed436791bfe18bc3e4e2e416854d0074d31b1be00"
 "checksum pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "54768f5959e0bef53218b91f289d6807c0786d93fb90a3c7e39ab7ff9f018f23"
 "checksum pallet-transaction-payment-rpc-runtime-api 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "7323ef565470b51bb79fc65d3c3a1bff0ecb317485acc66a64406309c25f1b77"
@@ -4432,7 +4407,7 @@ dependencies = [
 "checksum serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)" = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
 "checksum serde_json 1.0.52 (registry+https://github.com/rust-lang/crates.io-index)" = "a7894c8ed05b7a3a279aeb79025fdec1d3158080b75b98a08faf2806bb799edd"
 "checksum serde_urlencoded 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)" = "642dd69105886af2efd227f75a520ec9b44a820d65bc133a9131f7d229fd165a"
-"checksum sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template.git?branch=sgx-runtime)" = "<none>"
+"checksum sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)" = "<none>"
 "checksum sgx_alloc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
 "checksum sgx_backtrace_sys 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
 "checksum sgx_build_helper 0.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
@@ -4491,8 +4466,7 @@ dependencies = [
 "checksum strsim 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 "checksum strum 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6138f8f88a16d90134763314e3fc76fa3ed6a7db4725d6acf9a3ef95a3188d22"
 "checksum strum_macros 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0054a7df764039a6cd8592b9de84be4bec368ff081d203a7d5371cbfa8e65c81"
-"checksum substrate-api-client 0.4.1 (git+https://github.com/scs/substrate-api-client)" = "<none>"
-"checksum substrate-api-client 0.4.1 (git+https://github.com/scs/substrate-api-client.git?branch=substratee-type-workaround)" = "<none>"
+"checksum substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6)" = "<none>"
 "checksum substrate-bip39 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3be511be555a3633e71739a79e4ddff6a6aaa6579fa6114182a51d72c3eb93c5"
 "checksum substrate-bip39 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c004e8166d6e0aa3a9d5fa673e5b7098ff25f930de1013a21341988151e681bb"
 "checksum substrate-wasm-builder-runner 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e30c70de7e7d5fd404fe26db1e7a4d6b553e2760b1ac490f249c04a960c483b8"
