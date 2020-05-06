@@ -52,7 +52,7 @@ use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 use chain_relay::{storage_proof::StorageProof, LightValidation};
-use sp_runtime::Justification;
+use sp_runtime::generic::SignedBlock;
 
 mod aes;
 mod attestation;
@@ -325,7 +325,7 @@ pub unsafe extern "C" fn init_chain_relay(
     authority_list: *const u8,
     authority_list_size: usize,
 ) -> sgx_status_t {
-    info!("Succesfully got in init_relay!");
+    info!("Init Chain Relay!");
 
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
@@ -356,22 +356,24 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
     info!("Syncing chain relay!");
 
     let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
-    info!("blocks slice : {:?}", blocks_slice.len());
-    let blocks: Vec<Block> = Decode::decode(&mut blocks_slice).unwrap();
+    let blocks: Vec<SignedBlock<Block>> = Decode::decode(&mut blocks_slice).unwrap();
 
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
-    info!("relay db {:?}", val_vec);
 
     let mut validator: LightValidation<Block, Runtime> =
         Decode::decode(&mut val_vec.as_slice()).unwrap();
 
-    blocks.into_iter().for_each(|block| {
+    blocks.into_iter().for_each(|signed_block| {
         validator
-            .submit_simple_header(validator.num_relays, block.header, Justification::default())
+            .submit_simple_header(
+                validator.num_relays,
+                signed_block.block.header,
+                signed_block.justification.unwrap(),
+            )
             .unwrap()
     });
 
-    info!("Synced Relay DB. Current state: {:?}", validator);
+    debug!("Synced Relay DB. Current state: {:?}", validator);
 
     sgx_status_t::SGX_SUCCESS
 }

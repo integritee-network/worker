@@ -31,7 +31,7 @@ use crate::constants::*;
 use crate::enclave::api::*;
 use crate::get_enclave_signing_key;
 use crate::tests::commons::*;
-use substratee_node_runtime::opaque::{Block, Header};
+use substratee_node_runtime::{Header, SignedBlock};
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
@@ -123,18 +123,24 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
 
     enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas)).unwrap();
 
-    // obtain newest header
-    let mut head: Block = api.get_block(None).unwrap();
-    println!("Got Head : \n {:?} \n ", head);
+    // obtain latest finalized block
+    let mut head: SignedBlock = api
+        .get_finalized_head()
+        .map(|hash| api.get_signed_block(Some(hash)).unwrap())
+        .unwrap();
 
-    let mut blocks_to_sync = Vec::<Block>::new();
+    println!("Got Finalized Head : \n {:?} \n ", head);
+
+    let mut blocks_to_sync = Vec::<SignedBlock>::new();
     blocks_to_sync.push(head.clone());
 
     // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-    while &head.header.parent_hash != &genesis_hash {
-        head = api.get_block(Some(head.header.parent_hash)).unwrap();
+    while &head.block.header.parent_hash != &genesis_hash {
+        head = api
+            .get_signed_block(Some(head.block.header.parent_hash))
+            .unwrap();
         blocks_to_sync.push(head.clone());
-        println!("Syncing Block: {}", head.header.number)
+        println!("Syncing Block: {}", head.block.header.number)
     }
     blocks_to_sync.reverse();
     println!("Got {} headers to sync.", blocks_to_sync.len());

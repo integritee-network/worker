@@ -118,13 +118,13 @@ where
 
         // Check that the header has been finalized
         let voter_set = VoterSet::from_iter(validator_set.clone());
-        // verify_grandpa_proof::<Block>(
-        //     grandpa_proof,
-        //     block_hash,
-        //     block_num,
-        //     validator_set_id,
-        //     &voter_set,
-        // )?;
+        verify_grandpa_proof::<Block>(
+            grandpa_proof,
+            block_hash,
+            block_num,
+            validator_set_id,
+            &voter_set,
+        )?;
 
         match self.tracked_relays.get_mut(&relay_id) {
             Some(relay_info) => {

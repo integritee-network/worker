@@ -26,8 +26,8 @@ use sgx_urts::SgxEnclave;
 
 use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
 use codec::Encode;
-use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList};
-use substratee_node_runtime::opaque::{Block, Header};
+use sp_finality_grandpa::VersionedAuthorityList;
+use substratee_node_runtime::{Header, SignedBlock};
 
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -230,7 +230,7 @@ pub fn enclave_init_chain_relay(
     Ok(())
 }
 
-pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, blocks: Vec<Block>) -> SgxResult<()> {
+pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, blocks: Vec<SignedBlock>) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         sync_chain_relay(
