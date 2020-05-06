@@ -98,7 +98,7 @@ pub fn setup(
 ) -> (Api<sr25519::Pair>, Option<u32>) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", port);
     let mut api = Api::<sr25519::Pair>::new(node_url);
-    ensure_account_has_funds(&api, &get_enclave_signing_key(eid));
+    ensure_account_has_funds(&mut api, &get_enclave_signing_key(eid));
 
     match who {
         Some(account) => {

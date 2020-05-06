@@ -235,17 +235,17 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
+    let mut api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = get_enclave_signing_key(eid);
-    ensure_account_has_funds(&api, &tee_accountid);
+    ensure_account_has_funds(&mut api, &tee_accountid);
 
     // ------------------------------------------------------------------------
     // perform a remote attestation and get an unchecked extrinsic back
 
     // get enclaves's account nonce
-    let nonce = get_nonce(&api, &tee_accountid);
+    let nonce = get_nonce(&mut api, &tee_accountid);
     info!("Enclave nonce = {:?}", nonce);
 
     let uxt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.as_bytes().to_vec()).unwrap();
@@ -470,7 +470,7 @@ fn get_enclave_signing_key(eid: sgx_enclave_id_t) -> AccountId32 {
 }
 
 // Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
+fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId32) {
     let alice = AccountKeyring::Alice.pair();
     info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
     let alice_acc = AccountId32::from(*alice.public().as_array_ref());
@@ -486,6 +486,9 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
     info!("TEE's free balance = {:?}", free);
 
     if free < 10 {
+        let signer_orig = api.signer.clone();
+        api.signer = Some(alice);
+
         println!("[+] bootstrap funding Enclave form Alice's funds");
         let xt = api.balance_transfer(accountid.clone(), 100_000_000);
         let xt_hash = api
@@ -496,6 +499,8 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
         //verify funds have arrived
         let free = get_balance(&api, &accountid);
         info!("TEE's NEW free balance = {:?}", free);
+
+        api.signer = signer_orig;
     }
 }
 
