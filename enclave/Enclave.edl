@@ -52,6 +52,10 @@ enclave {
             [in, size=authority_list_size] uint8_t* shard, size_t authority_list_size
         );
 
+        public sgx_status_t sync_chain_relay(
+        			[in, size=headers_size] uint8_t* headers, size_t headers_size
+        );
+
 		public sgx_status_t get_rsa_encryption_pubkey(
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 

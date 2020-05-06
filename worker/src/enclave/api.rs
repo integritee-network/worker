@@ -69,6 +69,13 @@ extern "C" {
         authority_list_size: usize,
     ) -> sgx_status_t;
 
+    fn sync_chain_relay(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        headers: *const u8,
+        headers_size: usize,
+    ) -> sgx_status_t;
+
     fn get_rsa_encryption_pubkey(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
@@ -212,6 +219,27 @@ pub fn enclave_init_chain_relay(
                 authorities.len(),
             )
         })
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+    if result != sgx_status_t::SGX_SUCCESS {
+        return Err(result);
+    }
+
+    Ok(())
+}
+
+pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, headers: Vec<Header>) -> SgxResult<()> {
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let result = unsafe {
+        sync_chain_relay(
+            eid,
+            &mut status,
+            headers.encode().as_ptr(),
+            headers.encode().len(),
+        )
     };
 
     if status != sgx_status_t::SGX_SUCCESS {

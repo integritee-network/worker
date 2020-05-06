@@ -112,6 +112,7 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
     let genesis_header: Header = api.get_header(Some(genesis_hash.clone())).unwrap();
 
     println!("Got genesis Header: \n {:?} \n", genesis_header);
+    println!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
 
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
@@ -121,4 +122,19 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
     println!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
     enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas)).unwrap();
+
+    // obtain newest header
+    let mut head: Header = api.get_header(None).unwrap();
+
+    let mut headers_to_sync = Vec::<Header>::new();
+
+    // Todo: Check, is this dangerous such that it could be an eternal or too big loop
+    while &head.parent_hash != &genesis_hash {
+        head = api.get_header(Some(head.parent_hash)).unwrap();
+        headers_to_sync.push(head.clone());
+        println!("Syncing Block: {}", head.number)
+    }
+    headers_to_sync.reverse();
+    println!("Got {} headers to sync.", headers_to_sync.len());
+    enclave_sync_chain_relay(eid, headers_to_sync).unwrap();
 }

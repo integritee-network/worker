@@ -20,6 +20,7 @@ pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
 pub const SHARDS_PATH: &str = "./shards";
 pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
+pub const CHAIN_RELAY_DB: &str = "chain_relay_db.bin";
 
 pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 

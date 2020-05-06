@@ -52,6 +52,7 @@ use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 use chain_relay::{storage_proof::StorageProof, LightValidation};
+use sp_runtime::Justification;
 
 mod aes;
 mod attestation;
@@ -344,6 +345,32 @@ pub unsafe extern "C" fn init_chain_relay(
 
     info!("Succesfully initialized relay with Id: {}:", id);
     info!("Status Light Validation: {:?}", validator);
+
+    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sync_chain_relay(headers: *const u8, headers_size: usize) -> sgx_status_t {
+    info!("Syncing chain relay!");
+
+    let mut headers_slice = slice::from_raw_parts(headers, headers_size);
+    let headers: Vec<Header> = Decode::decode(&mut headers_slice).unwrap();
+
+    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
+    info!("relay db {:?}", val_vec);
+
+    let mut validator: LightValidation<Block, Runtime> =
+        Decode::decode(&mut val_vec.as_slice()).unwrap();
+
+    headers.into_iter().for_each(|header| {
+        validator
+            .submit_simple_header(validator.num_relays, header, Justification::default())
+            .unwrap()
+    });
+
+    info!("Synced Relay DB. Current state: {:?}", validator);
 
     sgx_status_t::SGX_SUCCESS
 }

@@ -56,8 +56,8 @@ type RelayId = u64;
 
 #[derive(Encode, Decode, Clone)]
 pub struct LightValidation<Block: BlockT, T: Trait> {
-    num_relays: RelayId,
-    tracked_relays: BTreeMap<RelayId, RelayState<Block, T>>,
+    pub num_relays: RelayId,
+    pub tracked_relays: BTreeMap<RelayId, RelayState<Block, T>>,
 }
 
 impl<Block: BlockT, T: Trait> LightValidation<Block, T>
@@ -118,13 +118,13 @@ where
 
         // Check that the header has been finalized
         let voter_set = VoterSet::from_iter(validator_set.clone());
-        verify_grandpa_proof::<Block>(
-            grandpa_proof,
-            block_hash,
-            block_num,
-            validator_set_id,
-            &voter_set,
-        )?;
+        // verify_grandpa_proof::<Block>(
+        //     grandpa_proof,
+        //     block_hash,
+        //     block_num,
+        //     validator_set_id,
+        //     &voter_set,
+        // )?;
 
         match self.tracked_relays.get_mut(&relay_id) {
             Some(relay_info) => {
