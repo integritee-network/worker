@@ -40,6 +40,7 @@ use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigne
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
+use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
 use std::slice;
@@ -48,6 +49,9 @@ use std::vec::Vec;
 
 use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
+
+use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
+use sp_runtime::generic::SignedBlock;
 
 mod aes;
 mod attestation;
@@ -309,6 +313,65 @@ pub unsafe extern "C" fn get_state(
 
     debug!("returning getter result");
     write_slice_and_whitespace_pad(value_slice, value_opt.encode());
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn init_chain_relay(
+    genesis_header: *const u8,
+    genesis_header_size: usize,
+    authority_list: *const u8,
+    authority_list_size: usize,
+) -> sgx_status_t {
+    info!("Init Chain Relay!");
+
+    let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
+    let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
+    let auth = VersionedAuthorityList::decode(&mut auth).unwrap();
+
+    let mut validator = LightValidation::new();
+
+    info!("Instantiated Light Validation: {:?}", validator);
+
+    let id = validator
+        .initialize_relay(
+            Header::decode(&mut header).unwrap(),
+            auth.into(),
+            StorageProof::default(),
+        )
+        .unwrap();
+
+    info!("Succesfully initialized relay with Id: {}:", id);
+    info!("Status Light Validation: {:?}", validator);
+
+    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize) -> sgx_status_t {
+    info!("Syncing chain relay!");
+
+    let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
+    let blocks: Vec<SignedBlock<Block>> = Decode::decode(&mut blocks_slice).unwrap();
+
+    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
+
+    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
+
+    blocks.into_iter().for_each(|signed_block| {
+        validator
+            .submit_simple_header(
+                validator.num_relays, // fixme: ATM we only have one relay, then it works.
+                signed_block.block.header,
+                signed_block.justification.unwrap(),
+            )
+            .unwrap()
+    });
+
+    debug!("Synced Relay DB. Current state: {:?}", validator);
 
     sgx_status_t::SGX_SUCCESS
 }

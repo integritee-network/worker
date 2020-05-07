@@ -235,11 +235,11 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
+    let mut api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = get_enclave_signing_key(eid);
-    ensure_account_has_funds(&api, &tee_accountid);
+    ensure_account_has_funds(&mut api, &tee_accountid);
 
     // ------------------------------------------------------------------------
     // perform a remote attestation and get an unchecked extrinsic back
@@ -389,7 +389,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
 pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) {
     // new api client (the other one is busy listening to events)
     // FIXME: this might not be very performant. maybe split into api_listener and api_sender
-    let mut _api = Api::<sr25519::Pair>::new(node_url.to_string());
+    let api = Api::<sr25519::Pair>::new(node_url.to_string());
     info!("*** Ask the signing key from the TEE");
     let mut signing_key_raw = [0u8; 32];
     signing_key_raw.copy_from_slice(&enclave_signing_key(eid).unwrap()[..]);
@@ -401,8 +401,8 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         tee_accountid.to_ss58check()
     );
 
-    let nonce = get_nonce(&_api, &AccountId32::from(tee_accountid));
-    let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
+    let nonce = get_nonce(&api, &AccountId32::from(tee_accountid));
+    let genesis_hash = api.genesis_hash.as_bytes().to_vec();
     info!("Enclave nonce = {:?}", nonce);
     let uxts = enclave_execute_stf(
         eid,
@@ -420,7 +420,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     let mut _xthex = hex::encode(xt.encode());
     _xthex.insert_str(0, "0x");
     println!("[>] send an extrinsic composed by enclave");
-    let _hash = _api.send_extrinsic(_xthex, XtStatus::Ready).unwrap();
+    let _hash = api.send_extrinsic(_xthex, XtStatus::Ready).unwrap();
     debug!("[<] Call confirmation extrinsic sent");
     /*   TODO: re-enable this:  but beware that you'll have to count up the nonce in stf
         for subsequent extrinsics from the same address
@@ -470,7 +470,7 @@ fn get_enclave_signing_key(eid: sgx_enclave_id_t) -> AccountId32 {
 }
 
 // Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
+fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId32) {
     let alice = AccountKeyring::Alice.pair();
     info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
     let alice_acc = AccountId32::from(*alice.public().as_array_ref());
@@ -486,6 +486,9 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
     info!("TEE's free balance = {:?}", free);
 
     if free < 10 {
+        let signer_orig = api.signer.clone();
+        api.signer = Some(alice);
+
         println!("[+] bootstrap funding Enclave form Alice's funds");
         let xt = api.balance_transfer(accountid.clone(), 100_000_000);
         let xt_hash = api
@@ -496,6 +499,8 @@ fn ensure_account_has_funds(api: &Api<sr25519::Pair>, accountid: &AccountId32) {
         //verify funds have arrived
         let free = get_balance(&api, &accountid);
         info!("TEE's NEW free balance = {:?}", free);
+
+        api.signer = signer_orig;
     }
 }
 
