@@ -70,12 +70,12 @@ impl LightValidation {
         validator_set_proof: StorageProof,
     ) -> Result<RelayId, Error> {
         // Todo: Enable when we get proofs
-        let state_root = block_header.state_root();
-        Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
-            state_root,
-            validator_set_proof,
-            &validator_set,
-        )?;
+        // let state_root = block_header.state_root();
+        // Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
+        //     state_root,
+        //     validator_set_proof,
+        //     &validator_set,
+        // )?;
 
         let relay_info = RelayState::new(block_header, validator_set);
 
