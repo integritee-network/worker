@@ -112,15 +112,15 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
 
-    println!("Got genesis Header: \n {:?} \n", genesis_header);
-    println!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
+    info!("Got genesis Header: \n {:?} \n", genesis_header);
+    info!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
 
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
         .map(|g: VersionedAuthorityList| g.into())
         .unwrap();
 
-    println!("Grandpa Authority List: \n {:?} \n ", grandpas);
+    info!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
     enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas)).unwrap();
 
@@ -130,7 +130,7 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
         .unwrap();
 
-    println!("Got Finalized Head : \n {:?} \n ", head);
+    info!("Got Finalized Head : \n {:?} \n ", head);
 
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
     blocks_to_sync.push(head.clone());
@@ -141,9 +141,9 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        println!("Syncing Block: {}", head.block.header.number)
+        // println!("Syncing Block: {}", head.block.header.number)
     }
     blocks_to_sync.reverse();
-    println!("Got {} headers to sync.", blocks_to_sync.len());
+    // println!("Got {} headers to sync.", blocks_to_sync.len());
     enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
 }

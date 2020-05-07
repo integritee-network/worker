@@ -415,26 +415,18 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     .unwrap();
     debug!("raw extrinsic returned form enclave {:x?}", uxts);
     info!("[<] Message decoded and processed in the enclave. will send confirmation extrinsic");
-    //let xts = Vec::<UncheckedExtrinsic>::decode(&mut uxts.as_slice()).unwrap();
-    let xt = UncheckedExtrinsic::decode(&mut uxts.as_slice()).unwrap();
-    let mut _xthex = hex::encode(xt.encode());
-    _xthex.insert_str(0, "0x");
-    println!("[>] send an extrinsic composed by enclave");
-    let _hash = api.send_extrinsic(_xthex, XtStatus::Ready).unwrap();
-    debug!("[<] Call confirmation extrinsic sent");
-    /*   TODO: re-enable this:  but beware that you'll have to count up the nonce in stf
-        for subsequent extrinsics from the same address
+    let xts = Vec::<Vec<u8>>::decode(&mut uxts.as_slice()).unwrap();
 
-        info!("enclave requests to send {} extrinsics", xts.len());
-        for xt in xts.iter() {
-            let mut _xthex = hex::encode(xt.encode());
-            _xthex.insert_str(0, "0x");
-            println!("[>] send an extrinsic composed by enclave");
-            let _hash = _api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
-            debug!("[<] Request Extrinsic got finalized");
-        }
-        info!("all extrinsics sent.");
-    */
+    info!("enclave requests to send {} extrinsics", xts.len());
+    for xt in xts.iter() {
+        let mut _xthex = hex::encode(xt);
+        _xthex.insert_str(0, "0x");
+        println!("[>] send an extrinsic composed by enclave");
+        // need to put finalized here, else the subsequent tests fetch a nonce that is too low.
+        let _hash = api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
+        debug!("[<] Request Extrinsic got finalized");
+    }
+    info!("all extrinsics sent.");
 }
 
 fn init_shard(shard: &ShardIdentifier) {
@@ -576,9 +568,11 @@ pub unsafe extern "C" fn ocall_worker_request(
         .into_iter()
         .map(|req| match req {
             //let res =
-            WorkerRequest::ChainStorage(key) => {
-                WorkerResponse::ChainStorage(key.clone(), api.get_storage_by_key_hash(key), None)
-            }
+            WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
+                key.clone(),
+                api.get_opaque_storage_by_key_hash(key),
+                None,
+            ),
         })
         .collect();
 
