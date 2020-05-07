@@ -103,14 +103,14 @@ impl LightValidation {
 
         // Check that the new header is a decendent of the old header
         let last_header = &relay.last_finalized_block_header;
-        verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
+        Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
         let block_hash = header.hash();
         let block_num = *header.number();
 
         // Check that the header has been finalized
         let voter_set = VoterSet::from_iter(validator_set.clone());
-        verify_grandpa_proof::<Block>(
+        Self::verify_grandpa_proof::<Block>(
             grandpa_proof,
             block_hash,
             block_num,
@@ -158,9 +158,7 @@ impl LightValidation {
             grandpa_proof,
         )
     }
-}
 
-impl LightValidation {
     fn check_validator_set_proof<Hash: HashT>(
         state_root: &Hash::Out,
         proof: StorageProof,
@@ -182,62 +180,62 @@ impl LightValidation {
             Err(Error::ValidatorSetMismatch)
         }
     }
-}
 
-// A naive way to check whether a `child` header is a decendent
-// of an `ancestor` header. For this it requires a proof which
-// is a chain of headers between (but not including) the `child`
-// and `ancestor`. This could be updated to use something like
-// Log2 Ancestors (#2053) in the future.
-fn verify_ancestry<Header>(
-    proof: Vec<Header>,
-    ancestor_hash: Header::Hash,
-    child: &Header,
-) -> Result<(), Error>
-where
-    Header: HeaderT,
-{
-    let mut parent_hash = child.parent_hash();
-    if *parent_hash == ancestor_hash {
-        return Ok(());
+    fn verify_grandpa_proof<Block>(
+        justification: Justification,
+        hash: Block::Hash,
+        number: NumberFor<Block>,
+        set_id: u64,
+        voters: &VoterSet<AuthorityId>,
+    ) -> Result<(), Error>
+    where
+        Block: BlockT,
+        NumberFor<Block>: finality_grandpa::BlockNumberOps,
+    {
+        // We don't really care about the justification, as long as it's valid
+        let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
+            &justification,
+            (hash, number),
+            set_id,
+            voters,
+        )?;
+
+        Ok(())
     }
 
-    // If we find that the header's parent hash matches our ancestor's hash we're done
-    for header in proof.iter() {
-        // Need to check that blocks are actually related
-        if header.hash() != *parent_hash {
-            break;
-        }
-
-        parent_hash = header.parent_hash();
+    // A naive way to check whether a `child` header is a decendent
+    // of an `ancestor` header. For this it requires a proof which
+    // is a chain of headers between (but not including) the `child`
+    // and `ancestor`. This could be updated to use something like
+    // Log2 Ancestors (#2053) in the future.
+    fn verify_ancestry<Header>(
+        proof: Vec<Header>,
+        ancestor_hash: Header::Hash,
+        child: &Header,
+    ) -> Result<(), Error>
+    where
+        Header: HeaderT,
+    {
+        let mut parent_hash = child.parent_hash();
         if *parent_hash == ancestor_hash {
             return Ok(());
         }
+
+        // If we find that the header's parent hash matches our ancestor's hash we're done
+        for header in proof.iter() {
+            // Need to check that blocks are actually related
+            if header.hash() != *parent_hash {
+                break;
+            }
+
+            parent_hash = header.parent_hash();
+            if *parent_hash == ancestor_hash {
+                return Ok(());
+            }
+        }
+
+        Err(Error::InvalidAncestryProof)
     }
-
-    Err(Error::InvalidAncestryProof)
-}
-
-fn verify_grandpa_proof<Block>(
-    justification: Justification,
-    hash: Block::Hash,
-    number: NumberFor<Block>,
-    set_id: u64,
-    voters: &VoterSet<AuthorityId>,
-) -> Result<(), Error>
-where
-    Block: BlockT,
-    NumberFor<Block>: finality_grandpa::BlockNumberOps,
-{
-    // We don't really care about the justification, as long as it's valid
-    let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
-        &justification,
-        (hash, number),
-        set_id,
-        voters,
-    )?;
-
-    Ok(())
 }
 
 impl fmt::Debug for LightValidation {
