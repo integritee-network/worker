@@ -30,7 +30,7 @@ use crate::std::collections::BTreeMap;
 use crate::std::fmt;
 use crate::std::vec::Vec;
 
-use error::JustificationError;
+use error::Error;
 use justification::GrandpaJustification;
 use state::RelayState;
 use storage_proof::{StorageProof, StorageProofChecker};
@@ -44,7 +44,6 @@ use sp_runtime::traits::{
     BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor,
 };
 use sp_runtime::{Justification, OpaqueExtrinsic};
-use std::fmt::Debug;
 
 type RelayId = u64;
 pub type Header = HeaderG<u32, BlakeTwo256>;
@@ -161,30 +160,6 @@ impl LightValidation {
     }
 }
 
-#[derive(Debug)]
-pub enum Error {
-    // InvalidStorageProof,
-    StorageRootMismatch,
-    StorageValueUnavailable,
-    // InvalidValidatorSetProof,
-    ValidatorSetMismatch,
-    InvalidAncestryProof,
-    NoSuchRelayExists,
-    InvalidFinalityProof,
-    // UnknownClientError,
-    HeaderAncestryMismatch,
-}
-
-impl From<JustificationError> for Error {
-    fn from(e: JustificationError) -> Self {
-        match e {
-            JustificationError::BadJustification(_) | JustificationError::JustificationDecode => {
-                Error::InvalidFinalityProof
-            }
-        }
-    }
-}
-
 impl LightValidation {
     fn check_validator_set_proof<Hash: HashT>(
         state_root: &Hash::Out,
@@ -272,12 +247,5 @@ impl fmt::Debug for LightValidation {
             "LightValidationTest {{ num_relays: {}, tracked_relays: {:?} }}",
             self.num_relays, self.tracked_relays
         )
-    }
-}
-
-impl<Block: BlockT> fmt::Debug for RelayState<Block> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "RelayInfo {{ last_finalized_block_header_number: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
-               self.last_finalized_block_header.number(), self.current_validator_set, self.current_validator_set_id)
     }
 }
