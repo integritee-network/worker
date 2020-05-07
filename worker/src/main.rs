@@ -389,7 +389,7 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
 pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) {
     // new api client (the other one is busy listening to events)
     // FIXME: this might not be very performant. maybe split into api_listener and api_sender
-    let mut _api = Api::<sr25519::Pair>::new(node_url.to_string());
+    let api = Api::<sr25519::Pair>::new(node_url.to_string());
     info!("*** Ask the signing key from the TEE");
     let mut signing_key_raw = [0u8; 32];
     signing_key_raw.copy_from_slice(&enclave_signing_key(eid).unwrap()[..]);
@@ -401,8 +401,8 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
         tee_accountid.to_ss58check()
     );
 
-    let nonce = get_nonce(&_api, &AccountId32::from(tee_accountid));
-    let genesis_hash = _api.genesis_hash.as_bytes().to_vec();
+    let nonce = get_nonce(&api, &AccountId32::from(tee_accountid));
+    let genesis_hash = api.genesis_hash.as_bytes().to_vec();
     info!("Enclave nonce = {:?}", nonce);
     let uxts = enclave_execute_stf(
         eid,
@@ -420,7 +420,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     let mut _xthex = hex::encode(xt.encode());
     _xthex.insert_str(0, "0x");
     println!("[>] send an extrinsic composed by enclave");
-    let _hash = _api.send_extrinsic(_xthex, XtStatus::Ready).unwrap();
+    let _hash = api.send_extrinsic(_xthex, XtStatus::Ready).unwrap();
     debug!("[<] Call confirmation extrinsic sent");
     /*   TODO: re-enable this:  but beware that you'll have to count up the nonce in stf
         for subsequent extrinsics from the same address

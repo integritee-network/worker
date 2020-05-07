@@ -959,16 +959,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-template"
-version = "2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-node-template?branch=sgx-runtime#b79d2d69d768a6e111637190bed13f0d5168084d"
-dependencies = [
- "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "pallet-timestamp"
 version = "2.0.0-alpha.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1417,38 +1407,6 @@ dependencies = [
  "pallet-randomness-collective-flip 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)",
- "pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-api 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-application-crypto 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-block-builder 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-consensus-aura 0.8.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-inherents 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 2.0.0-alpha.6",
- "sp-offchain 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-session 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-transaction-pool 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-version 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "sgx-runtime"
-version = "2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-node-template?branch=sgx-runtime#b79d2d69d768a6e111637190bed13f0d5168084d"
-dependencies = [
- "frame-executive 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-aura 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-balances 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-grandpa 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-randomness-collective-flip 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template?branch=sgx-runtime)",
  "pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1998,7 +1956,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.4.2-sub2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6#ed8b6b441182d247af027c8d987d3386ce8019b2"
+source = "git+https://github.com/scs/substrate-api-client?branch=cl-get_signed_block#0766dac01ddf2820df2eb561184fab1ebbcd7a95"
 dependencies = [
  "frame-metadata 11.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2055,7 +2013,6 @@ dependencies = [
  "serde_derive 1.0.106 (git+https://github.com/mesalock-linux/serde-sgx)",
  "serde_json 1.0.51 (git+https://github.com/mesalock-linux/serde-json-sgx?rev=sgx_1.1.2)",
  "sgx-externalities 0.2.0",
- "sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template?branch=sgx-runtime)",
  "sgx_rand 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_serialize 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_serialize_derive 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
@@ -2072,7 +2029,7 @@ dependencies = [
  "sp-io 2.0.0-alpha.6",
  "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6)",
+ "substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?branch=cl-get_signed_block)",
  "substratee-stf 0.2.0",
  "webpki 0.21.2 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
  "webpki-roots 0.19.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
@@ -2421,7 +2378,6 @@ dependencies = [
 "checksum pallet-session 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "4fdeb41738a79d3247b2a7fd9ce8ae5a7d9e92ca2de198e006f891240c8dcacc"
 "checksum pallet-sudo 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "70b15e01796c9d2791cbd9ae2d7c9b59c8eccc3682afbb1189f6ebe7b07f4d71"
 "checksum pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)" = "<none>"
-"checksum pallet-template 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template?branch=sgx-runtime)" = "<none>"
 "checksum pallet-timestamp 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "4d9de9af5f5ed3377a6108eed436791bfe18bc3e4e2e416854d0074d31b1be00"
 "checksum pallet-transaction-payment 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "54768f5959e0bef53218b91f289d6807c0786d93fb90a3c7e39ab7ff9f018f23"
 "checksum pallet-transaction-payment-rpc-runtime-api 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "7323ef565470b51bb79fc65d3c3a1bff0ecb317485acc66a64406309c25f1b77"
@@ -2471,7 +2427,6 @@ dependencies = [
 "checksum serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)" = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
 "checksum serde_json 1.0.51 (git+https://github.com/mesalock-linux/serde-json-sgx?rev=sgx_1.1.2)" = "<none>"
 "checksum sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/sgx-runtime.git?tag=v2.0.0-alpha.6)" = "<none>"
-"checksum sgx-runtime 2.0.0-alpha.6 (git+https://github.com/scs/substrate-node-template?branch=sgx-runtime)" = "<none>"
 "checksum sgx_alloc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
 "checksum sgx_backtrace_sys 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
 "checksum sgx_build_helper 0.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)" = "<none>"
@@ -2523,7 +2478,7 @@ dependencies = [
 "checksum spin 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 "checksum static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 "checksum stream-cipher 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8131256a5896cabcf5eb04f4d6dacbe1aefda854b0d9896e09cb58829ec5638c"
-"checksum substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?tag=v0.4.2-sub2.0.0-alpha.6)" = "<none>"
+"checksum substrate-api-client 0.4.2-sub2.0.0-alpha.6 (git+https://github.com/scs/substrate-api-client?branch=cl-get_signed_block)" = "<none>"
 "checksum subtle 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 "checksum subtle 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7c65d530b10ccaeac294f349038a597e435b18fb456aadd0840a623f83b9e941"
 "checksum syn 0.11.11 (registry+https://github.com/rust-lang/crates.io-index)" = "d3b891b9015c88c576343b9b3e41c2c11a51c219ef067b264bd9c8aa9b441dad"

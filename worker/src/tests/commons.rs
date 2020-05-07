@@ -15,6 +15,7 @@
 
 */
 
+use base58::ToBase58;
 use codec::Encode;
 use log::*;
 use serde_derive::{Deserialize, Serialize};
@@ -24,7 +25,7 @@ use sp_core::crypto::AccountId32;
 use sp_core::sr25519;
 use sp_keyring::AccountKeyring;
 
-use std::str;
+use std::{fs, str};
 
 use crate::enclave::api::*;
 use crate::{ensure_account_has_funds, get_enclave_signing_key};
@@ -95,18 +96,24 @@ pub fn setup(
     eid: sgx_enclave_id_t,
     who: Option<AccountKeyring>,
     port: &str,
-) -> (Api<sr25519::Pair>, Option<u32>) {
+) -> (Api<sr25519::Pair>, Option<u32>, ShardIdentifier) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", port);
     let mut api = Api::<sr25519::Pair>::new(node_url);
     ensure_account_has_funds(&mut api, &get_enclave_signing_key(eid));
+
+    // create the state such that we do not need to initialize it manually
+    let shard = ShardIdentifier::default();
+    let path = "./shards/".to_owned() + &shard.encode().to_base58();
+    fs::create_dir_all(&path).unwrap();
+    fs::File::create(path + "/state.bin").unwrap();
 
     match who {
         Some(account) => {
             api = api.set_signer(account.pair());
             let nonce = get_nonce(&api, &account.to_account_id());
-            (api, Some(nonce))
+            (api, Some(nonce), shard)
         }
-        None => (api, None),
+        None => (api, None, shard),
     }
 }
 
