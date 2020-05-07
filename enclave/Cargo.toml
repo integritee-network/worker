@@ -105,10 +105,6 @@ branch = "cl-get_signed_block"
 default-features = false
 features = ["full_crypto"]
 
-[dependencies.sgx-runtime]
-git = "https://github.com/scs/substrate-node-template"
-branch = "sgx-runtime"
-
 [dependencies.chain-relay]
 path = "chain_relay"
 

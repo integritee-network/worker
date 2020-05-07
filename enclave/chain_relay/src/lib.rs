@@ -32,38 +32,31 @@ use crate::std::vec::Vec;
 
 use error::JustificationError;
 use justification::GrandpaJustification;
-use state::{RelayInitState, RelayState};
+use state::RelayState;
 use storage_proof::{StorageProof, StorageProofChecker};
 
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
-use frame_system::Trait;
-use num::AsPrimitive;
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthorityWeight, SetId};
-use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
-use sp_runtime::Justification;
+use sp_runtime::generic::{Block as BlockG, Header as HeaderG};
+use sp_runtime::traits::{
+    BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor,
+};
+use sp_runtime::{Justification, OpaqueExtrinsic};
+use std::fmt::Debug;
 
 type RelayId = u64;
-
-// pub trait Trait: frame_system::Trait<Hash = H256> {
-//     type Block: BlockT<Hash = H256, Header = Self::Header>;
-// }
-
-// impl Trait for chain::Runtime {
-//     type Block = chain::Block;
-// }
+pub type Header = HeaderG<u32, BlakeTwo256>;
+pub type Block = BlockG<Header, OpaqueExtrinsic>;
 
 #[derive(Encode, Decode, Clone)]
-pub struct LightValidation<Block: BlockT, T: Trait> {
+pub struct LightValidation {
     pub num_relays: RelayId,
-    pub tracked_relays: BTreeMap<RelayId, RelayState<Block, T>>,
+    pub tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
 }
 
-impl<Block: BlockT, T: Trait> LightValidation<Block, T>
-where
-    NumberFor<Block>: AsPrimitive<usize>,
-{
+impl LightValidation {
     pub fn new() -> Self {
         LightValidation {
             num_relays: 0,
@@ -73,17 +66,17 @@ where
 
     pub fn initialize_relay(
         &mut self,
-        block_header: Block::Header,
+        block_header: Header,
         validator_set: AuthorityList,
-        _validator_set_proof: StorageProof,
+        validator_set_proof: StorageProof,
     ) -> Result<RelayId, Error> {
         // Todo: Enable when we get proofs
-        // let state_root = block_header.state_root().encode();
-        // Self::check_validator_set_proof(
-        //     &T::Hash::decode(&mut state_root.as_slice()).unwrap(),
-        //     validator_set_proof,
-        //     &validator_set,
-        // )?;
+        let state_root = block_header.state_root();
+        Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
+            state_root,
+            validator_set_proof,
+            &validator_set,
+        )?;
 
         let relay_info = RelayState::new(block_header, validator_set);
 
@@ -98,8 +91,8 @@ where
     pub fn submit_finalized_headers(
         &mut self,
         relay_id: RelayId,
-        header: Block::Header,
-        ancestry_proof: Vec<Block::Header>,
+        header: Header,
+        ancestry_proof: Vec<Header>,
         validator_set: AuthorityList,
         validator_set_id: SetId,
         grandpa_proof: Justification,
@@ -144,7 +137,7 @@ where
     pub fn submit_simple_header(
         &mut self,
         relay_id: RelayId,
-        header: Block::Header,
+        header: Header,
         grandpa_proof: Justification,
     ) -> Result<(), Error> {
         let relay = self
@@ -192,17 +185,13 @@ impl From<JustificationError> for Error {
     }
 }
 
-impl<Block: BlockT, T: Trait> LightValidation<Block, T>
-// where
-//     NumberFor<T::Block>: AsPrimitive<usize>,
-{
-    fn check_validator_set_proof(
-        state_root: &T::Hash,
+impl LightValidation {
+    fn check_validator_set_proof<Hash: HashT>(
+        state_root: &Hash::Out,
         proof: StorageProof,
         validator_set: &Vec<(AuthorityId, AuthorityWeight)>,
     ) -> Result<(), Error> {
-        let checker =
-            StorageProofChecker::<T::Hashing>::new(T::Hash::from(*state_root), proof.clone())?;
+        let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
 
         // By encoding the given set we should have an easy way to compare
         // with the stuff we get out of storage via `read_value`
@@ -225,9 +214,13 @@ impl<Block: BlockT, T: Trait> LightValidation<Block, T>
 // is a chain of headers between (but not including) the `child`
 // and `ancestor`. This could be updated to use something like
 // Log2 Ancestors (#2053) in the future.
-fn verify_ancestry<H>(proof: Vec<H>, ancestor_hash: H::Hash, child: &H) -> Result<(), Error>
+fn verify_ancestry<Header>(
+    proof: Vec<Header>,
+    ancestor_hash: Header::Hash,
+    child: &Header,
+) -> Result<(), Error>
 where
-    H: HeaderT,
+    Header: HeaderT,
 {
     let mut parent_hash = child.parent_hash();
     if *parent_hash == ancestor_hash {
@@ -250,19 +243,19 @@ where
     Err(Error::InvalidAncestryProof)
 }
 
-fn verify_grandpa_proof<B>(
+fn verify_grandpa_proof<Block>(
     justification: Justification,
-    hash: B::Hash,
-    number: NumberFor<B>,
+    hash: Block::Hash,
+    number: NumberFor<Block>,
     set_id: u64,
     voters: &VoterSet<AuthorityId>,
 ) -> Result<(), Error>
 where
-    B: BlockT,
-    NumberFor<B>: finality_grandpa::BlockNumberOps,
+    Block: BlockT,
+    NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
     // We don't really care about the justification, as long as it's valid
-    let _ = GrandpaJustification::<B>::decode_and_verify_finalizes(
+    let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
         &justification,
         (hash, number),
         set_id,
@@ -272,7 +265,7 @@ where
     Ok(())
 }
 
-impl<Block: BlockT, T: Trait> fmt::Debug for LightValidation<Block, T> {
+impl fmt::Debug for LightValidation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -282,19 +275,9 @@ impl<Block: BlockT, T: Trait> fmt::Debug for LightValidation<Block, T> {
     }
 }
 
-impl<Block: BlockT, T: Trait> fmt::Debug for RelayState<Block, T> {
+impl<Block: BlockT> fmt::Debug for RelayState<Block> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "RelayInfo {{ last_finalized_block_header_number: {:?}, current_validator_set: {:?}, current_validator_set_id: {} }}",
                self.last_finalized_block_header.number(), self.current_validator_set, self.current_validator_set_id)
-    }
-}
-
-impl<Block: BlockT, T: Trait> fmt::Debug for RelayInitState<Block, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "RelayInfo {{ block_header: {:?}, validator_set: {:?}, validator_set_proof: {:?} }}",
-            self.block_header, self.validator_set, self.validator_set_proof
-        )
     }
 }

@@ -35,7 +35,6 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
-use sgx_runtime::{opaque::Block, opaque::Header, Runtime};
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
@@ -51,7 +50,7 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
-use chain_relay::{storage_proof::StorageProof, LightValidation};
+use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
 
 mod aes;
@@ -331,7 +330,7 @@ pub unsafe extern "C" fn init_chain_relay(
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
     let auth = VersionedAuthorityList::decode(&mut auth).unwrap();
 
-    let mut validator: LightValidation<Block, Runtime> = LightValidation::new();
+    let mut validator = LightValidation::new();
 
     info!("Instantiated Light Validation: {:?}", validator);
 
@@ -360,13 +359,12 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
 
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
 
-    let mut validator: LightValidation<Block, Runtime> =
-        Decode::decode(&mut val_vec.as_slice()).unwrap();
+    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
     blocks.into_iter().for_each(|signed_block| {
         validator
             .submit_simple_header(
-                validator.num_relays,
+                validator.num_relays, // fixme: ATM we only have one relay, then it works.
                 signed_block.block.header,
                 signed_block.justification.unwrap(),
             )
