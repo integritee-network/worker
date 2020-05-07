@@ -78,6 +78,11 @@ impl Stf {
                 .unwrap()
             );
 
+            sp_io::storage::set(
+                &nonce_key_hash(call.account()),
+                (nonce + 1).encode().as_slice(),
+            );
+
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
                     sgx_runtime::BalancesCall::<Runtime>::set_balance(

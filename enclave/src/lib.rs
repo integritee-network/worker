@@ -246,28 +246,23 @@ pub unsafe extern "C" fn execute_stf(
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let nonce = *nonce;
-    let mut extrinsics_buffer: Vec<Vec<u8>> = Vec::new();
+    let mut nonce = *nonce;
 
-    //TODO: re-enable this but make sure to count up the nonce for subsequent extrinsics!!!!
-
-    /*
-        let mut extrinsic_buffer: Vec<Vec<u8>> = calls_buffer
-            .into_iter()
-            .map(|call| {
-                let xt = compose_extrinsic_offline!(
-                    signer.clone(),
-                    call,
-                    nonce,
-                    genesis_hash,
-                    RUNTIME_SPEC_VERSION
-                )
-                .encode();
-                nonce += 1;
-                xt
-            })
-            .collect();
-    */
+    let mut extrinsics_buffer: Vec<Vec<u8>> = calls_buffer
+        .into_iter()
+        .map(|call| {
+            let xt = compose_extrinsic_offline!(
+                signer.clone(),
+                call,
+                nonce,
+                genesis_hash,
+                RUNTIME_SPEC_VERSION
+            )
+            .encode();
+            nonce += 1;
+            xt
+        })
+        .collect();
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     extrinsics_buffer.push(
