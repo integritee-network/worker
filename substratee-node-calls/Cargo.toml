@@ -1,6 +1,6 @@
 [package]
 name = "substratee-node-calls"
-version = "0.6.1-sub2.0.0-alpha.6"
+version = "0.6.1-sub2.0.0-alpha.7"
 authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"
 
@@ -20,7 +20,7 @@ git = "https://github.com/scs/substrate-api-client"
 branch = "cl-get_signed_block"
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 
 [dependencies.sp-runtime]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'

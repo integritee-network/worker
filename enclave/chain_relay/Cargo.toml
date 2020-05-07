@@ -28,7 +28,7 @@ default-features = false
 features = ["derive-codec"]
 
 [dependencies.frame-system]
-version = "2.0.0-alpha.6"
+version = "2.0.0-alpha.7"
 default-features = false
 
 [dependencies.sp-io]
@@ -38,28 +38,28 @@ package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-application-crypto]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-finality-grandpa]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 
 [dependencies.sp-runtime]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 
 [dependencies.sp-runtime-interface]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 features = ["disable_target_static_assertions"]
 
 [dependencies.sp-trie]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false

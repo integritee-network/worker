@@ -1,6 +1,6 @@
 [package]
 name = "sp-io"
-version = "2.0.0-alpha.6"
+version = "2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -16,11 +16,11 @@ sgx_types     = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-
 sgx_log       = { version = "0.4", package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional =true }
 
 [dependencies.sp-std]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 features=["full_crypto"]
 
@@ -29,15 +29,15 @@ version = '0.8.0-alpha.6'
 optional = true
 
 [dependencies.sp-runtime-interface]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 
 [dependencies.sp-wasm-interface]
-version = "2.0.0-alpha.6"
+version = "2.0.0-alpha.7"
 default-features = false
 
 [dependencies.sp-trie]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 optional = true
 
 [dependencies.sp-externalities]

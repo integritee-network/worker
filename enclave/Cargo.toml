@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-enclave"
-version = "0.6.1-sub2.0.0-alpha.6"
+version = "0.6.1-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -83,20 +83,20 @@ git = "https://github.com/apache/teaclave-sgx-sdk.git"
 rev = "v1.1.2"
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-finality-grandpa]
-version = "2.0.0-alpha.6"
+version = "2.0.0-alpha.7"
 default-features = false
 
 [dependencies.sp-runtime]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 
 [dependencies.sp-std]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 default-features = false
 
 [dependencies.substrate-api-client]
