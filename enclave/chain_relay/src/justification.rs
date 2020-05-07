@@ -146,18 +146,19 @@ impl<Block: BlockT> GrandpaJustification<Block> {
         let mut buf = Vec::new();
         let mut visited_hashes = HashSet::new();
         for signed in self.commit.precommits.iter() {
-            if let Err(_) = communication::check_message_sig_with_buffer::<Block>(
+            if communication::check_message_sig_with_buffer::<Block>(
                 &finality_grandpa::Message::Precommit(signed.precommit.clone()),
                 &signed.id,
                 &signed.signature,
                 self.round,
                 set_id,
                 &mut buf,
-            ) {
+            )
+            .is_err()
+            {
                 return Err(ClientError::BadJustification(
                     "invalid signature for precommit in grandpa justification".to_string(),
-                )
-                .into());
+                ));
             }
 
             if self.commit.target_hash == signed.precommit.target_hash {
@@ -175,8 +176,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
                 _ => {
                     return Err(ClientError::BadJustification(
                         "invalid precommit ancestry proof in grandpa justification".to_string(),
-                    )
-                    .into());
+                    ));
                 }
             }
         }
@@ -191,8 +191,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
             return Err(ClientError::BadJustification(
                 "invalid precommit ancestries in grandpa justification with unused headers"
                     .to_string(),
-            )
-            .into());
+            ));
         }
 
         Ok(())

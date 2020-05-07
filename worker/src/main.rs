@@ -245,7 +245,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // perform a remote attestation and get an unchecked extrinsic back
 
     // get enclaves's account nonce
-    let nonce = get_nonce(&mut api, &tee_accountid);
+    let nonce = get_nonce(&api, &tee_accountid);
     info!("Enclave nonce = {:?}", nonce);
 
     let uxt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.as_bytes().to_vec()).unwrap();

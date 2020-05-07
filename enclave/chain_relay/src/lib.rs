@@ -33,23 +33,21 @@ use crate::std::vec::Vec;
 use error::Error;
 use justification::GrandpaJustification;
 use state::RelayState;
-use storage_proof::{StorageProof, StorageProofChecker};
+use storage_proof::StorageProof;
 
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
-use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthorityWeight, SetId};
+use sp_finality_grandpa::{AuthorityId, AuthorityList, SetId};
 use sp_runtime::generic::{Block as BlockG, Header as HeaderG};
-use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor,
-};
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, Header as HeaderT, NumberFor};
 use sp_runtime::{Justification, OpaqueExtrinsic};
 
 type RelayId = u64;
 pub type Header = HeaderG<u32, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Default)]
 pub struct LightValidation {
     pub num_relays: RelayId,
     pub tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
@@ -57,17 +55,14 @@ pub struct LightValidation {
 
 impl LightValidation {
     pub fn new() -> Self {
-        LightValidation {
-            num_relays: 0,
-            tracked_relays: BTreeMap::new(),
-        }
+        LightValidation::default()
     }
 
     pub fn initialize_relay(
         &mut self,
         block_header: Header,
         validator_set: AuthorityList,
-        validator_set_proof: StorageProof,
+        _validator_set_proof: StorageProof,
     ) -> Result<RelayId, Error> {
         // Todo: Enable when we get proofs
         // let state_root = block_header.state_root();
@@ -158,28 +153,28 @@ impl LightValidation {
             grandpa_proof,
         )
     }
-
-    fn check_validator_set_proof<Hash: HashT>(
-        state_root: &Hash::Out,
-        proof: StorageProof,
-        validator_set: &Vec<(AuthorityId, AuthorityWeight)>,
-    ) -> Result<(), Error> {
-        let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
-
-        // By encoding the given set we should have an easy way to compare
-        // with the stuff we get out of storage via `read_value`
-        let mut encoded_validator_set = validator_set.encode();
-        encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
-        let actual_validator_set = checker
-            .read_value(b":grandpa_authorities")?
-            .ok_or(Error::StorageValueUnavailable)?;
-
-        if encoded_validator_set == actual_validator_set {
-            Ok(())
-        } else {
-            Err(Error::ValidatorSetMismatch)
-        }
-    }
+    //
+    // fn check_validator_set_proof<Hash: HashT>(
+    //     state_root: &Hash::Out,
+    //     proof: StorageProof,
+    //     validator_set: &Vec<(AuthorityId, AuthorityWeight)>,
+    // ) -> Result<(), Error> {
+    //     let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
+    //
+    //     // By encoding the given set we should have an easy way to compare
+    //     // with the stuff we get out of storage via `read_value`
+    //     let mut encoded_validator_set = validator_set.encode();
+    //     encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
+    //     let actual_validator_set = checker
+    //         .read_value(b":grandpa_authorities")?
+    //         .ok_or(Error::StorageValueUnavailable)?;
+    //
+    //     if encoded_validator_set == actual_validator_set {
+    //         Ok(())
+    //     } else {
+    //         Err(Error::ValidatorSetMismatch)
+    //     }
+    // }
 
     fn verify_grandpa_proof<Block>(
         justification: Justification,

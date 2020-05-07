@@ -55,7 +55,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
 pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
     let (_api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
     let req = Request {
-        cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap().into()),
+        cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap()),
         shard,
     };
     crate::process_request(eid, req, format!("ws://{}:{}", "127.0.0.1", port).as_str());
@@ -63,13 +63,13 @@ pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
 
 pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t, port: &str) {
     let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
-    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap().into());
+    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap());
     execute_stf(eid, api, cyphertext, port, shard)
 }
 
 pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t, port: &str) {
     let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
-    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.unwrap().into());
+    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.unwrap());
     execute_stf(eid, api, cyphertext, port, shard)
 }
 
@@ -110,7 +110,7 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
     let (api, _, _) = setup(eid, None, port);
     //
     let genesis_hash = api.get_genesis_hash();
-    let genesis_header: Header = api.get_header(Some(genesis_hash.clone())).unwrap();
+    let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
 
     println!("Got genesis Header: \n {:?} \n", genesis_header);
     println!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
@@ -136,7 +136,7 @@ pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
     blocks_to_sync.push(head.clone());
 
     // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-    while &head.block.header.parent_hash != &genesis_hash {
+    while head.block.header.parent_hash != genesis_hash {
         head = api
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
