@@ -44,4 +44,4 @@ pub static REGISTER_ENCLAVE: u8 = 0u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 
 // bump this to be consistent with SubstraTEE-node runtime
-pub static RUNTIME_SPEC_VERSION: u32 = 2;
+pub static RUNTIME_SPEC_VERSION: u32 = 1;
