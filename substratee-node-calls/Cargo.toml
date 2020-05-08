@@ -18,7 +18,6 @@ package = "substratee-node-runtime"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-branch = "cl-get_signed_block"
 
 [dependencies.sp-core]
 version = '2.0.0-alpha.7'
