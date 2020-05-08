@@ -46,7 +46,9 @@ path = "worker-api"
 
 [dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "v0.6.1"
+#tag = "v0.6.1"
+branch = "alpha.7"
+package = "substratee-node-runtime"
 
 [dependencies.sp-finality-grandpa]
 version = "2.0.0-alpha.7"
