@@ -3217,7 +3217,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.4.2-sub2.0.0-alpha.6"
-source = "git+https://github.com/scs/substrate-api-client?branch=cl-get_signed_block#0766dac01ddf2820df2eb561184fab1ebbcd7a95"
+source = "git+https://github.com/scs/substrate-api-client?branch=cl-get_signed_block#9dbcd79c9771233ae51aaaf932c90cf95f5209ea"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata 11.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3824,7 +3824,7 @@ name = "twox-hash"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
