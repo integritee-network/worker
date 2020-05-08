@@ -5,8 +5,5 @@ members = [
 	 "substratee-node-calls",
 	 "client",
 	 "stf",
-#	 "substrate-sgx/externalities",
-#	 "substrate-sgx/sp-io",
-#	 "substrate-sgx/runtime"
 #	 "enclave",
 ]
