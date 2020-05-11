@@ -28,7 +28,7 @@ use substratee_node_runtime::substratee_registry::Request;
 
 use crate::constants::*;
 use crate::enclave::api::*;
-use crate::get_enclave_account;
+use crate::enclave_account;
 use crate::tests::commons::*;
 use substratee_node_calls::ShardIdentifier;
 use substratee_node_runtime::{Header, SignedBlock};
@@ -81,7 +81,7 @@ pub fn execute_stf(
     shard: ShardIdentifier,
 ) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", port);
-    let tee_accountid = get_enclave_account(eid);
+    let tee_accountid = enclave_account(eid);
     info!("Executing STF");
 
     let nonce = get_nonce(&api, &tee_accountid);

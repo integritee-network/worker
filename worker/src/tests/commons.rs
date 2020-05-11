@@ -28,7 +28,7 @@ use sp_keyring::AccountKeyring;
 use std::{fs, str};
 
 use crate::enclave::api::*;
-use crate::{ensure_account_has_funds, get_enclave_account};
+use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
 use substratee_stf::{
     ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
@@ -99,7 +99,7 @@ pub fn setup(
 ) -> (Api<sr25519::Pair>, Option<u32>, ShardIdentifier) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", port);
     let mut api = Api::<sr25519::Pair>::new(node_url);
-    ensure_account_has_funds(&mut api, &get_enclave_account(eid));
+    ensure_account_has_funds(&mut api, &enclave_account(eid));
 
     // create the state such that we do not need to initialize it manually
     let shard = ShardIdentifier::default();

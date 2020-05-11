@@ -238,7 +238,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     let mut api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
-    let tee_accountid = get_enclave_account(eid);
+    let tee_accountid = enclave_account(eid);
     ensure_account_has_funds(&mut api, &tee_accountid);
 
     // ------------------------------------------------------------------------
@@ -445,7 +445,7 @@ fn init_shard(shard: &ShardIdentifier) {
 }
 
 // get the public signing key of the TEE
-fn get_enclave_account(eid: sgx_enclave_id_t) -> AccountId32 {
+fn enclave_account(eid: sgx_enclave_id_t) -> AccountId32 {
     let tee_public = enclave_signing_key(eid).unwrap();
     info!(
         "[+] Got ed25519 account of TEE = {}",
