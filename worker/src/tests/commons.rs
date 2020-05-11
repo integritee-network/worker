@@ -28,11 +28,9 @@ use sp_keyring::AccountKeyring;
 use std::{fs, str};
 
 use crate::enclave::api::*;
-use crate::{enclave_account, ensure_account_has_funds};
+use crate::{enclave_account, enclave_mrenclave, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{
-    ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
-};
+use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -51,7 +49,13 @@ pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: 
     let call = TrustedCall::balance_set_balance(who.public(), 33, 44);
     encrypt_payload(
         rsa_pubkey,
-        test_trusted_call_signed(who, call, nonce).encode(),
+        call.sign(
+            &who.pair(),
+            nonce,
+            &enclave_mrenclave(eid).unwrap(),
+            &ShardIdentifier::default(),
+        )
+        .encode(),
     )
 }
 
@@ -65,7 +69,13 @@ pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32
     let call = TrustedCall::balance_unshield(who.public(), 33);
     encrypt_payload(
         rsa_pubkey,
-        test_trusted_call_signed(who, call, nonce).encode(),
+        call.sign(
+            &who.pair(),
+            nonce,
+            &enclave_mrenclave(eid).unwrap(),
+            &ShardIdentifier::default(),
+        )
+        .encode(),
     )
 }
 
@@ -75,16 +85,6 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
         .encrypt_buffer(&payload, &mut payload_encrypted)
         .unwrap();
     payload_encrypted
-}
-
-pub fn test_trusted_call_signed(
-    who: AccountKeyring,
-    call: TrustedCall,
-    nonce: u32,
-) -> TrustedCallSigned {
-    let mrenclave = [0u8; 32];
-    let shard = ShardIdentifier::default();
-    call.sign(&who.pair(), nonce, &mrenclave, &shard)
 }
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {

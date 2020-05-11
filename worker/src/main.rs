@@ -40,8 +40,8 @@ use substratee_node_runtime::{
 };
 
 use enclave::api::{
-    enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_perform_ra, enclave_shielding_key,
-    enclave_signing_key, mrenclave,
+    enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_mrenclave, enclave_perform_ra,
+    enclave_shielding_key, enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use std::slice;
@@ -85,7 +85,7 @@ fn main() {
             }
             _ => {
                 let enclave = enclave_init().unwrap();
-                let mrenclave = mrenclave(enclave.geteid()).unwrap();
+                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
                 info!(
                     "no shard specified. using mrenclave as id: {}",
                     mrenclave.to_base58()
@@ -145,7 +145,8 @@ fn main() {
         let enclave = enclave_init().unwrap();
         println!(
             "{}",
-            mrenclave(enclave.geteid()).unwrap()[..32]
+            enclave_mrenclave(enclave.geteid())
+                .unwrap()
                 .encode()
                 .to_base58()
         );
@@ -168,7 +169,8 @@ fn main() {
             }
             _ => {
                 let enclave = enclave_init().unwrap();
-                let shard = ShardIdentifier::from_slice(&mrenclave(enclave.geteid()).unwrap()[..]);
+                let shard =
+                    ShardIdentifier::from_slice(&enclave_mrenclave(enclave.geteid()).unwrap());
                 init_shard(&shard);
             }
         };

@@ -320,8 +320,8 @@ pub fn enclave_query_state(
     Ok(value)
 }
 
-pub fn mrenclave(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
-    let mut m = vec![0u8; 32];
+pub fn enclave_mrenclave(eid: sgx_enclave_id_t) -> SgxResult<[u8; 32]> {
+    let mut m = [0u8; 32];
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe { get_mrenclave(eid, &mut status, m.as_mut_ptr(), m.len() as u32) };
     if status != sgx_status_t::SGX_SUCCESS {
