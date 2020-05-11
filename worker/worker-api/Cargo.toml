@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-api"
-version = "0.6.1-sub2.0.0-alpha.6"
+version = "0.6.1-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -14,7 +14,7 @@ sgx_crypto_helper = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-
 codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.6'
+version = '2.0.0-alpha.7'
 
 [dependencies.substratee-stf]
 path = "../../stf"
