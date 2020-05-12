@@ -28,10 +28,14 @@ use substratee_node_runtime::substratee_registry::Request;
 
 use crate::constants::*;
 use crate::enclave::api::*;
-use crate::get_enclave_signing_key;
+use crate::enclave_account;
 use crate::tests::commons::*;
+use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_node_calls::ShardIdentifier;
 use substratee_node_runtime::{Header, SignedBlock};
+use substratee_stf::BalanceTransferFn;
+
+type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
@@ -81,7 +85,7 @@ pub fn execute_stf(
     shard: ShardIdentifier,
 ) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", port);
-    let tee_accountid = get_enclave_signing_key(eid);
+    let tee_accountid = enclave_account(eid);
     info!("Executing STF");
 
     let nonce = get_nonce(&api, &tee_accountid);
@@ -97,13 +101,30 @@ pub fn execute_stf(
     )
     .unwrap();
 
-    let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut uxt.as_slice()).unwrap();
+    let mut extrinsics: Vec<Vec<u8>> = Decode::decode(&mut uxt.as_slice()).unwrap();
+    info!("Enclave wants to send {} extrinsics", extrinsics.len());
 
-    extrinsics.into_iter().for_each(|xt| {
-        let mut xt = hex::encode(xt);
-        xt.insert_str(0, "0x");
-        api.send_extrinsic(xt, XtStatus::Finalized).unwrap();
-    });
+    // send all unshield extrinsics
+    while extrinsics.len() > 1 {
+        let xt_vec = extrinsics.remove(0);
+
+        let xt: UncheckedExtrinsicV4<BalanceTransferFn> =
+            Decode::decode(&mut xt_vec.as_slice()).unwrap();
+        info!("STF extrinsic: {:?}", xt);
+
+        api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+            .unwrap();
+    }
+
+    // the last element is always the confirmaton extrinsic
+    let xt: UncheckedExtrinsicV4<SubstrateeConfirmCallFn> = extrinsics
+        .pop()
+        .map(|xt| Decode::decode(&mut xt.as_slice()).unwrap())
+        .unwrap();
+
+    info!("Call Confirm extrinsic: {:?}", xt);
+    api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+        .unwrap();
 }
 
 pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {

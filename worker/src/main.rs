@@ -40,8 +40,8 @@ use substratee_node_runtime::{
 };
 
 use enclave::api::{
-    enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_perform_ra, enclave_shielding_key,
-    enclave_signing_key, mrenclave,
+    enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_mrenclave, enclave_perform_ra,
+    enclave_shielding_key, enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use std::slice;
@@ -85,7 +85,7 @@ fn main() {
             }
             _ => {
                 let enclave = enclave_init().unwrap();
-                let mrenclave = mrenclave(enclave.geteid()).unwrap();
+                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
                 info!(
                     "no shard specified. using mrenclave as id: {}",
                     mrenclave.to_base58()
@@ -145,7 +145,8 @@ fn main() {
         let enclave = enclave_init().unwrap();
         println!(
             "{}",
-            mrenclave(enclave.geteid()).unwrap()[..32]
+            enclave_mrenclave(enclave.geteid())
+                .unwrap()
                 .encode()
                 .to_base58()
         );
@@ -168,7 +169,8 @@ fn main() {
             }
             _ => {
                 let enclave = enclave_init().unwrap();
-                let shard = ShardIdentifier::from_slice(&mrenclave(enclave.geteid()).unwrap()[..]);
+                let shard =
+                    ShardIdentifier::from_slice(&enclave_mrenclave(enclave.geteid()).unwrap());
                 init_shard(&shard);
             }
         };
@@ -238,7 +240,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     let mut api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
-    let tee_accountid = get_enclave_signing_key(eid);
+    let tee_accountid = enclave_account(eid);
     ensure_account_has_funds(&mut api, &tee_accountid);
 
     // ------------------------------------------------------------------------
@@ -391,11 +393,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     // FIXME: this might not be very performant. maybe split into api_listener and api_sender
     let api = Api::<sr25519::Pair>::new(node_url.to_string());
     info!("*** Ask the signing key from the TEE");
-    let mut signing_key_raw = [0u8; 32];
-    signing_key_raw.copy_from_slice(&enclave_signing_key(eid).unwrap()[..]);
-
-    // Attention: this HAS to be sr25519, although its a ed25519 key!
-    let tee_accountid = sr25519::Public::from_raw(signing_key_raw);
+    let tee_accountid = enclave_signing_key(eid).unwrap();
     info!(
         "[+] Got ed25519 account of TEE = {}",
         tee_accountid.to_ss58check()
@@ -449,11 +447,8 @@ fn init_shard(shard: &ShardIdentifier) {
 }
 
 // get the public signing key of the TEE
-fn get_enclave_signing_key(eid: sgx_enclave_id_t) -> AccountId32 {
-    let mut signing_key_raw = [0u8; 32];
-    signing_key_raw.copy_from_slice(&enclave_signing_key(eid).unwrap()[..]);
-    // Attention: this HAS to be sr25519, although its a ed25519 key!
-    let tee_public = sr25519::Public::from_raw(signing_key_raw);
+fn enclave_account(eid: sgx_enclave_id_t) -> AccountId32 {
+    let tee_public = enclave_signing_key(eid).unwrap();
     info!(
         "[+] Got ed25519 account of TEE = {}",
         tee_public.to_ss58check()
