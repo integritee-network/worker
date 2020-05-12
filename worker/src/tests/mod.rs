@@ -55,7 +55,7 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         println!("  testing process_forwarded_payload()");
         process_forwarded_payload_works(eid, port);
         // syncing the chain relay is necessary such that the enclave can verify
-        // the `SubstrateeRegistry::CallConfirmed inclusion proofs
+        // the `SubstrateeRegistry::CallConfirmed` inclusion proofs
         println!("  syncing chain_relay");
         head = sync_chain_relay(eid, port, head);
         println!("  testing execute_stf_set_balance()");

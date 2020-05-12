@@ -3570,7 +3570,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.4.3-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client#2a0b4eea284d2f64ca12a8a9db1025380bef4c22"
+source = "git+https://github.com/scs/substrate-api-client?branch=cl-subscribe-finalized-heads#1c35b681a6c206d57bf7b3bc67c6d97969d4d7d6"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
