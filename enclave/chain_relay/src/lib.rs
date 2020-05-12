@@ -29,6 +29,7 @@ pub mod storage_proof;
 use crate::std::collections::BTreeMap;
 use crate::std::fmt;
 use crate::std::vec::Vec;
+use core::iter::Iterator;
 
 use error::Error;
 use justification::GrandpaJustification;
@@ -38,9 +39,12 @@ use storage_proof::StorageProof;
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
+use log::info;
 use sp_finality_grandpa::{AuthorityId, AuthorityList, SetId};
 use sp_runtime::generic::{Block as BlockG, Header as HeaderG};
-use sp_runtime::traits::{BlakeTwo256, Block as BlockT, Header as HeaderT, NumberFor};
+use sp_runtime::traits::{
+    BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor,
+};
 use sp_runtime::{Justification, OpaqueExtrinsic};
 
 type RelayId = u64;
@@ -153,6 +157,65 @@ impl LightValidation {
             grandpa_proof,
         )
     }
+
+    pub fn submit_xt_to_be_included(
+        &mut self,
+        relay_id: RelayId,
+        extrinsic: OpaqueExtrinsic,
+    ) -> Result<(), Error> {
+        let relay = self
+            .tracked_relays
+            .get_mut(&relay_id)
+            .ok_or(Error::NoSuchRelayExists)?;
+        relay.verify_tx_inclusion.push(extrinsic);
+        Ok(())
+    }
+
+    pub fn check_xt_inclusion(&mut self, block: &Block) -> Result<(), Error> {
+        let relay = self
+            .tracked_relays
+            .get_mut(&self.num_relays)
+            .ok_or(Error::NoSuchRelayExists)?;
+
+        if !Self::_has_xt_to_be_included(relay) {
+            return Ok(());
+        }
+
+        let mut found_xts = vec![];
+        block.extrinsics.iter().for_each(|xt| {
+            if let Some(index) = relay.verify_tx_inclusion.iter().position(|xt_opaque| {
+                <<Header as HeaderT>::Hashing>::hash_of(xt)
+                    == <<Header as HeaderT>::Hashing>::hash_of(xt_opaque)
+            }) {
+                found_xts.push(index);
+            }
+        });
+
+        let rm: Vec<OpaqueExtrinsic> = found_xts
+            .into_iter()
+            .map(|i| relay.verify_tx_inclusion.remove(i))
+            .collect();
+
+        info!("Verified that {} extrinsics have been included.", rm.len());
+
+        Ok(())
+    }
+
+    pub fn has_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<bool, Error> {
+        let relay = self
+            .tracked_relays
+            .get(&relay_id)
+            .ok_or(Error::NoSuchRelayExists)?;
+        Ok(Self::_has_xt_to_be_included(relay))
+    }
+
+    fn _has_xt_to_be_included(relay: &RelayState<Block>) -> bool {
+        match relay.verify_tx_inclusion.len() {
+            0 => false,
+            _amount => true,
+        }
+    }
+
     //
     // fn check_validator_set_proof<Hash: HashT>(
     //     state_root: &Hash::Out,

@@ -127,44 +127,63 @@ pub fn execute_stf(
         .unwrap();
 }
 
-pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
+pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
     let (api, _, _) = setup(eid, None, port);
     //
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
 
-    info!("Got genesis Header: \n {:?} \n", genesis_header);
-    info!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
+    println!("Got genesis Header: \n {:?} \n", genesis_header);
+    println!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
 
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
         .map(|g: VersionedAuthorityList| g.into())
         .unwrap();
 
-    info!("Grandpa Authority List: \n {:?} \n ", grandpas);
+    println!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas)).unwrap();
+    enclave_init_chain_relay(
+        eid,
+        genesis_header.clone(),
+        VersionedAuthorityList::from(grandpas),
+    )
+    .unwrap();
+
+    println!("Finished init chain relay, syncing....");
+
+    sync_chain_relay(eid, port, genesis_header)
+}
+
+pub fn sync_chain_relay(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
+    let (api, _, _) = setup(eid, None, port);
 
     // obtain latest finalized block
-    let mut head: SignedBlock = api
+    let curr_head: SignedBlock = api
         .get_finalized_head()
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
         .unwrap();
 
-    info!("Got Finalized Head : \n {:?} \n ", head);
+    println!("Got Finalized Head : \n {:?} \n ", curr_head);
 
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
-    blocks_to_sync.push(head.clone());
+    blocks_to_sync.push(curr_head.clone());
 
     // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-    while head.block.header.parent_hash != genesis_hash {
+    let mut head = curr_head.clone();
+    while head.block.header.parent_hash != last_synced_head.hash() {
         head = api
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        // println!("Syncing Block: {}", head.block.header.number)
+        println!(
+            "Syncing Block: {}, has justification: {}",
+            head.block.header.number,
+            head.justification.is_some()
+        )
     }
     blocks_to_sync.reverse();
-    // println!("Got {} headers to sync.", blocks_to_sync.len());
+    println!("Got {} headers to sync.", blocks_to_sync.len());
     enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
+    curr_head.block.header
 }

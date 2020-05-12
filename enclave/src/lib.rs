@@ -52,6 +52,7 @@ use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 
 use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
+use sp_runtime::OpaqueExtrinsic;
 
 mod aes;
 mod attestation;
@@ -160,6 +161,18 @@ pub unsafe extern "C" fn execute_stf(
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
+    // first verify if all our previous extrinsics have been included
+    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
+    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
+
+    if validator
+        .has_xt_to_be_included(validator.num_relays)
+        .unwrap()
+    {
+        error!("extrinsics need to be included before enclave operation is resumed");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
     let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
     let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
     let genesis_hash = hash_from_slice(slice::from_raw_parts(
@@ -265,16 +278,20 @@ pub unsafe extern "C" fn execute_stf(
         .collect();
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    extrinsics_buffer.push(
-        compose_extrinsic_offline!(
-            signer,
-            (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
-            nonce,
-            genesis_hash,
-            RUNTIME_SPEC_VERSION
-        )
-        .encode(),
-    );
+    let xt = compose_extrinsic_offline!(
+        signer,
+        (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
+        nonce,
+        genesis_hash,
+        RUNTIME_SPEC_VERSION
+    )
+    .encode();
+
+    extrinsics_buffer.push(xt.clone());
+
+    validator
+        .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic(xt))
+        .unwrap();
     write_slice_and_whitespace_pad(extrinsic_slice, extrinsics_buffer.encode());
 
     sgx_status_t::SGX_SUCCESS
@@ -355,10 +372,10 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
     let blocks: Vec<SignedBlock<Block>> = Decode::decode(&mut blocks_slice).unwrap();
 
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
-
     let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
     blocks.into_iter().for_each(|signed_block| {
+        validator.check_xt_inclusion(&signed_block.block).unwrap();
         validator
             .submit_simple_header(
                 validator.num_relays, // fixme: ATM we only have one relay, then it works.
