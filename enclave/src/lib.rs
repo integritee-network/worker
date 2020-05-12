@@ -368,6 +368,7 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
             .unwrap()
     });
 
+    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
     debug!("Synced Relay DB. Current state: {:?}", validator);
 
     sgx_status_t::SGX_SUCCESS
