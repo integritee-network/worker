@@ -196,7 +196,9 @@ impl LightValidation {
             .map(|i| relay.verify_tx_inclusion.remove(i))
             .collect();
 
-        info!("Verified that {} extrinsics have been included.", rm.len());
+        if !rm.is_empty() {
+            info!("Verified that {} extrinsics have been included.", rm.len());
+        }
 
         Ok(())
     }

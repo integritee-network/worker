@@ -448,16 +448,16 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Header {
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
-
-    println!("Got genesis Header: \n {:?} \n", genesis_header);
-    println!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
+    println!("Finished initializing chain relay, syncing....");
+    debug!("Got genesis Header: \n {:?} \n", genesis_header);
+    debug!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
 
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
         .map(|g: VersionedAuthorityList| g.into())
         .unwrap();
 
-    println!("Grandpa Authority List: \n {:?} \n ", grandpas);
+    debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
     enclave_init_chain_relay(
         eid,
@@ -466,7 +466,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     )
     .unwrap();
 
-    println!("Finished inititializing chain relay, syncing....");
+    println!("Finished initializing chain relay, syncing....");
 
     sync_chain_relay(eid, api, genesis_header)
 }
@@ -494,14 +494,19 @@ pub fn sync_chain_relay(
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        println!(
+        // Even though in our configuration every block should have a justification, it once occurred that one block
+        // did not have one. Then the enclave panics. Currently, we only support finalized blocks with justification.
+        debug!(
             "Syncing Block: {}, has justification: {}",
             head.block.header.number,
             head.justification.is_some()
         )
     }
     blocks_to_sync.reverse();
-    println!("Got {} headers to sync.", blocks_to_sync.len());
+    println!(
+        "Got {} headers to sync in chain relay.",
+        blocks_to_sync.len()
+    );
     enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
     curr_head.block.header
 }

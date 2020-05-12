@@ -346,8 +346,6 @@ pub unsafe extern "C" fn init_chain_relay(
 
     let mut validator = LightValidation::new();
 
-    info!("Instantiated Light Validation: {:?}", validator);
-
     let id = validator
         .initialize_relay(
             Header::decode(&mut header).unwrap(),
