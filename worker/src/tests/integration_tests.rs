@@ -19,7 +19,6 @@ use codec::{Decode, Encode};
 use log::*;
 use sgx_types::*;
 use sp_core::{crypto::AccountId32, sr25519};
-use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_keyring::AccountKeyring;
 use std::fs;
 use substrate_api_client::{Api, XtStatus};
@@ -32,7 +31,7 @@ use crate::enclave_account;
 use crate::tests::commons::*;
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_node_calls::ShardIdentifier;
-use substratee_node_runtime::{Header, SignedBlock};
+use substratee_node_runtime::Header;
 use substratee_stf::BalanceTransferFn;
 
 type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
@@ -127,44 +126,13 @@ pub fn execute_stf(
         .unwrap();
 }
 
-pub fn chain_relay(eid: sgx_enclave_id_t, port: &str) {
+pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
     let (api, _, _) = setup(eid, None, port);
     //
-    let genesis_hash = api.get_genesis_hash();
-    let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
+    crate::init_chain_relay(eid, &api)
+}
 
-    info!("Got genesis Header: \n {:?} \n", genesis_header);
-    info!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
-
-    let grandpas: AuthorityList = api
-        .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
-        .map(|g: VersionedAuthorityList| g.into())
-        .unwrap();
-
-    info!("Grandpa Authority List: \n {:?} \n ", grandpas);
-
-    enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas)).unwrap();
-
-    // obtain latest finalized block
-    let mut head: SignedBlock = api
-        .get_finalized_head()
-        .map(|hash| api.get_signed_block(Some(hash)).unwrap())
-        .unwrap();
-
-    info!("Got Finalized Head : \n {:?} \n ", head);
-
-    let mut blocks_to_sync = Vec::<SignedBlock>::new();
-    blocks_to_sync.push(head.clone());
-
-    // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-    while head.block.header.parent_hash != genesis_hash {
-        head = api
-            .get_signed_block(Some(head.block.header.parent_hash))
-            .unwrap();
-        blocks_to_sync.push(head.clone());
-        // println!("Syncing Block: {}", head.block.header.number)
-    }
-    blocks_to_sync.reverse();
-    // println!("Got {} headers to sync.", blocks_to_sync.len());
-    enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
+pub fn sync_chain_relay(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
+    let (api, _, _) = setup(eid, None, port);
+    crate::sync_chain_relay(eid, &api, last_synced_head)
 }

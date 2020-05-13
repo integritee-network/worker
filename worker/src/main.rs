@@ -36,14 +36,16 @@ use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
 use substratee_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
-    Event, Hash, UncheckedExtrinsic,
+    Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
 };
 
+use crate::enclave::api::{enclave_init_chain_relay, enclave_sync_chain_relay};
 use enclave::api::{
     enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_mrenclave, enclave_perform_ra,
     enclave_shielding_key, enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::slice;
 use substratee_node_calls::{get_worker_for_shard, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
@@ -251,6 +253,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     info!("Enclave nonce = {:?}", nonce);
 
     let uxt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.as_bytes().to_vec()).unwrap();
+    let mut latest_head = init_chain_relay(eid, &api);
+
     let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
     let mut _xthex = hex::encode(ue.encode());
     _xthex.insert_str(0, "0x");
@@ -297,11 +301,19 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     println!("*** Subscribing to events");
     let (sender, receiver) = channel();
     let sender2 = sender.clone();
+    let api2 = api.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api.subscribe_events(sender2);
+            api2.subscribe_events(sender2);
         })
+        .unwrap();
+
+    let api3 = api.clone();
+    let sender3 = sender.clone();
+    let _block_subscriber = thread::Builder::new()
+        .name("block_subscriber".to_owned())
+        .spawn(move || api3.subscribe_finalized_heads(sender3))
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
@@ -310,6 +322,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
         let msg = receiver.recv().unwrap();
         if let Ok(events) = parse_events(msg.clone()) {
             handle_events(eid, node_url, events, sender.clone())
+        } else if let Ok(_header) = parse_header(msg.clone()) {
+            latest_head = sync_chain_relay(eid, &api, latest_head)
         } else {
             println!("[-] Unable to parse received message!")
         }
@@ -319,9 +333,13 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
 fn parse_events(event: String) -> Result<Events, String> {
-    let _unhex = hexstr_to_vec(event).unwrap();
+    let _unhex = hexstr_to_vec(event).map_err(|_| "Decoding Events Failed".to_string())?;
     let mut _er_enc = _unhex.as_slice();
     Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
+}
+
+fn parse_header(header: String) -> Result<Header, String> {
+    serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
 }
 
 fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<String>) {
@@ -427,6 +445,72 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
     info!("all extrinsics sent.");
 }
 
+pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Header {
+    let genesis_hash = api.get_genesis_hash();
+    let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
+    println!("Finished initializing chain relay, syncing....");
+    debug!("Got genesis Header: \n {:?} \n", genesis_header);
+    debug!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
+
+    let grandpas: AuthorityList = api
+        .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
+        .map(|g: VersionedAuthorityList| g.into())
+        .unwrap();
+
+    debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+
+    enclave_init_chain_relay(
+        eid,
+        genesis_header.clone(),
+        VersionedAuthorityList::from(grandpas),
+    )
+    .unwrap();
+
+    println!("Finished initializing chain relay, syncing....");
+
+    sync_chain_relay(eid, api, genesis_header)
+}
+
+pub fn sync_chain_relay(
+    eid: sgx_enclave_id_t,
+    api: &Api<sr25519::Pair>,
+    last_synced_head: Header,
+) -> Header {
+    // obtain latest finalized block
+    let curr_head: SignedBlock = api
+        .get_finalized_head()
+        .map(|hash| api.get_signed_block(Some(hash)).unwrap())
+        .unwrap();
+
+    println!("Got Finalized Head : \n {:?} \n ", curr_head);
+
+    let mut blocks_to_sync = Vec::<SignedBlock>::new();
+    blocks_to_sync.push(curr_head.clone());
+
+    // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
+    let mut head = curr_head.clone();
+    while head.block.header.parent_hash != last_synced_head.hash() {
+        head = api
+            .get_signed_block(Some(head.block.header.parent_hash))
+            .unwrap();
+        blocks_to_sync.push(head.clone());
+        // Even though in our configuration every block should have a justification, it once occurred that one block
+        // did not have one. Then the enclave panics. Currently, we only support finalized blocks with justification.
+        debug!(
+            "Syncing Block: {}, has justification: {}",
+            head.block.header.number,
+            head.justification.is_some()
+        )
+    }
+    blocks_to_sync.reverse();
+    println!(
+        "Got {} headers to sync in chain relay.",
+        blocks_to_sync.len()
+    );
+    enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
+    curr_head.block.header
+}
+
 fn init_shard(shard: &ShardIdentifier) {
     let path = format!("{}/{}", constants::SHARDS_PATH, shard.encode().to_base58());
     println!("initializing shard at {}", path);
@@ -472,12 +556,12 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
     let free = get_balance(&api, &accountid);
     info!("TEE's free balance = {:?}", free);
 
-    if free < 1000_000_000_000 {
+    if free < 1_000_000_000_000 {
         let signer_orig = api.signer.clone();
         api.signer = Some(alice);
 
         println!("[+] bootstrap funding Enclave form Alice's funds");
-        let xt = api.balance_transfer(accountid.clone(), 1000_000_000_000);
+        let xt = api.balance_transfer(accountid.clone(), 1_000_000_000_000);
         let xt_hash = api
             .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
             .unwrap();
