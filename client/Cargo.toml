@@ -53,8 +53,7 @@ default-features=false
 
 [dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-#tag = "v0.6.1"
-branch = "alpha.7"
+tag = "v0.6.2-sub2.0.0-alpha.7"
 package = "substratee-node-runtime"
 
 [dependencies.substratee-stf]

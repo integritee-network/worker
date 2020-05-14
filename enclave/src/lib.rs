@@ -165,12 +165,8 @@ pub unsafe extern "C" fn execute_stf(
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
     let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
-    if validator
-        .has_xt_to_be_included(validator.num_relays)
-        .unwrap()
-    {
-        error!("extrinsics need to be included before enclave operation is resumed");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    if let Ok(amount) = validator.num_xt_to_be_included(validator.num_relays) {
+        warn!("{} extrinsics still need to be included", amount);
     }
 
     let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
@@ -338,7 +334,7 @@ pub unsafe extern "C" fn init_chain_relay(
     authority_list: *const u8,
     authority_list_size: usize,
 ) -> sgx_status_t {
-    info!("Init Chain Relay!");
+    info!("Initializing Chain Relay!");
 
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
@@ -346,16 +342,13 @@ pub unsafe extern "C" fn init_chain_relay(
 
     let mut validator = LightValidation::new();
 
-    let id = validator
+    let _id = validator
         .initialize_relay(
             Header::decode(&mut header).unwrap(),
             auth.into(),
             StorageProof::default(),
         )
         .unwrap();
-
-    info!("Succesfully initialized relay with Id: {}:", id);
-    info!("Status Light Validation: {:?}", validator);
 
     io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
 
@@ -373,14 +366,16 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
     let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
     blocks.into_iter().for_each(|signed_block| {
-        validator.check_xt_inclusion(&signed_block.block).unwrap();
+        validator
+            .check_xt_inclusion(validator.num_relays, &signed_block.block)
+            .unwrap(); // panic can only happen if relay_id is unsafe
         validator
             .submit_simple_header(
-                validator.num_relays, // fixme: ATM we only have one relay, then it works.
+                validator.num_relays,
                 signed_block.block.header,
-                signed_block.justification.unwrap(),
+                signed_block.justification,
             )
-            .unwrap()
+            .unwrap() // panic can only happen if relay_id is unsafe
     });
 
     io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
