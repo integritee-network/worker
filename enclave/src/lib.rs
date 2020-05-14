@@ -376,7 +376,7 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
             .submit_simple_header(
                 validator.num_relays, // fixme: ATM we only have one relay, then it works.
                 signed_block.block.header,
-                signed_block.justification.unwrap(),
+                signed_block.justification,
             )
             .unwrap()
     });

@@ -93,16 +93,26 @@ impl LightValidation {
         ancestry_proof: Vec<Header>,
         validator_set: AuthorityList,
         validator_set_id: SetId,
-        grandpa_proof: Justification,
+        grandpa_proof: Option<Justification>,
     ) -> Result<(), Error> {
         let relay = self
             .tracked_relays
-            .get(&relay_id)
+            .get_mut(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
 
         // Check that the new header is a decendent of the old header
         let last_header = &relay.last_finalized_block_header;
         Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
+
+        if grandpa_proof.is_none() {
+            relay.last_finalized_block_header = header.clone();
+            relay.unjustified_headers.push(header);
+            info!(
+                "Syncing finalized block without grandpa proof. Amount Unjustified Headeers: {}",
+                relay.unjustified_headers.len()
+            );
+            return Ok(());
+        }
 
         let block_hash = header.hash();
         let block_num = *header.number();
@@ -110,24 +120,23 @@ impl LightValidation {
         // Check that the header has been finalized
         let voter_set = VoterSet::from_iter(validator_set.clone());
         Self::verify_grandpa_proof::<Block>(
-            grandpa_proof,
+            grandpa_proof.unwrap(),
             block_hash,
             block_num,
             validator_set_id,
             &voter_set,
         )?;
 
-        match self.tracked_relays.get_mut(&relay_id) {
-            Some(relay_info) => {
-                relay_info.last_finalized_block_header = header.clone();
-                relay_info.headers.push(header);
-                if validator_set_id > relay_info.current_validator_set_id {
-                    relay_info.current_validator_set = validator_set;
-                    relay_info.current_validator_set_id = validator_set_id;
-                }
-            }
-            _ => panic!("We succesfully got this relay earlier, therefore it exists; qed"),
-        };
+        relay.last_finalized_block_header = header.clone();
+
+        // a valid grandpa proof proofs finalization of all previous unjustified blocks
+        relay.headers.append(&mut relay.unjustified_headers);
+        relay.headers.push(header);
+
+        if validator_set_id > relay.current_validator_set_id {
+            relay.current_validator_set = validator_set;
+            relay.current_validator_set_id = validator_set_id;
+        }
 
         Ok(())
     }
@@ -136,7 +145,7 @@ impl LightValidation {
         &mut self,
         relay_id: RelayId,
         header: Header,
-        grandpa_proof: Justification,
+        grandpa_proof: Option<Justification>,
     ) -> Result<(), Error> {
         let relay = self
             .tracked_relays
