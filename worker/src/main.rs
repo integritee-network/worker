@@ -448,9 +448,7 @@ pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Header {
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
-    println!("Finished initializing chain relay, syncing....");
-    debug!("Got genesis Header: \n {:?} \n", genesis_header);
-    debug!("Got genesis Parent: \n {:?} \n", genesis_header.parent_hash);
+    info!("Got genesis Header: \n {:?} \n", genesis_header);
 
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
@@ -466,7 +464,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     )
     .unwrap();
 
-    println!("Finished initializing chain relay, syncing....");
+    info!("Finished initializing chain relay, syncing....");
 
     sync_chain_relay(eid, api, genesis_header)
 }
@@ -482,8 +480,6 @@ pub fn sync_chain_relay(
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
         .unwrap();
 
-    println!("Got Finalized Head : \n {:?} \n ", curr_head);
-
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
     blocks_to_sync.push(curr_head.clone());
 
@@ -494,8 +490,6 @@ pub fn sync_chain_relay(
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        // Even though in our configuration every block should have a justification, it once occurred that one block
-        // did not have one. Then the enclave panics. Currently, we only support finalized blocks with justification.
         debug!(
             "Syncing Block: {}, has justification: {}",
             head.block.header.number,
@@ -503,7 +497,7 @@ pub fn sync_chain_relay(
         )
     }
     blocks_to_sync.reverse();
-    println!(
+    debug!(
         "Got {} headers to sync in chain relay.",
         blocks_to_sync.len()
     );

@@ -334,7 +334,7 @@ pub unsafe extern "C" fn init_chain_relay(
     authority_list: *const u8,
     authority_list_size: usize,
 ) -> sgx_status_t {
-    info!("Init Chain Relay!");
+    info!("Initializing Chain Relay!");
 
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
@@ -342,16 +342,13 @@ pub unsafe extern "C" fn init_chain_relay(
 
     let mut validator = LightValidation::new();
 
-    let id = validator
+    let _id = validator
         .initialize_relay(
             Header::decode(&mut header).unwrap(),
             auth.into(),
             StorageProof::default(),
         )
         .unwrap();
-
-    info!("Succesfully initialized relay with Id: {}:", id);
-    info!("Status Light Validation: {:?}", validator);
 
     io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
 
@@ -371,14 +368,14 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
     blocks.into_iter().for_each(|signed_block| {
         validator
             .check_xt_inclusion(validator.num_relays, &signed_block.block)
-            .unwrap();
+            .unwrap(); // panic can only happen if relay_id is unsafe
         validator
             .submit_simple_header(
-                validator.num_relays, // fixme: ATM we only have one relay, then it works.
+                validator.num_relays,
                 signed_block.block.header,
                 signed_block.justification,
             )
-            .unwrap()
+            .unwrap() // panic can only happen if relay_id is unsafe
     });
 
     io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();

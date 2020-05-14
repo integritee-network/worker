@@ -108,7 +108,7 @@ impl LightValidation {
             relay.last_finalized_block_header = header.clone();
             relay.unjustified_headers.push(header);
             info!(
-                "Syncing finalized block without grandpa proof. Amount Unjustified Headeers: {}",
+                "Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
                 relay.unjustified_headers.len()
             );
             return Ok(());
@@ -151,6 +151,7 @@ impl LightValidation {
             .tracked_relays
             .get(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
+
         if relay.last_finalized_block_header.hash() != *header.parent_hash() {
             return Err(Error::HeaderAncestryMismatch);
         }
@@ -206,7 +207,7 @@ impl LightValidation {
             .collect();
 
         if !rm.is_empty() {
-            info!("Verified that {} extrinsics have been included.", rm.len());
+            info!("Verfified inclusion proof of {} extrinsics.", rm.len());
         }
 
         Ok(())
