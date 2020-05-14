@@ -165,12 +165,8 @@ pub unsafe extern "C" fn execute_stf(
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
     let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
-    if validator
-        .has_xt_to_be_included(validator.num_relays)
-        .unwrap()
-    {
-        error!("extrinsics need to be included before enclave operation is resumed");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    if let Ok(amount) = validator.num_xt_to_be_included(validator.num_relays) {
+        warn!("{} extrinsics still need to be included", amount);
     }
 
     let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
@@ -373,7 +369,9 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
     let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
     blocks.into_iter().for_each(|signed_block| {
-        validator.check_xt_inclusion(&signed_block.block).unwrap();
+        validator
+            .check_xt_inclusion(validator.num_relays, &signed_block.block)
+            .unwrap();
         validator
             .submit_simple_header(
                 validator.num_relays, // fixme: ATM we only have one relay, then it works.

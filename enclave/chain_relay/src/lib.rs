@@ -171,13 +171,13 @@ impl LightValidation {
         Ok(())
     }
 
-    pub fn check_xt_inclusion(&mut self, block: &Block) -> Result<(), Error> {
+    pub fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
         let relay = self
             .tracked_relays
-            .get_mut(&self.num_relays)
+            .get_mut(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
 
-        if !Self::_has_xt_to_be_included(relay) {
+        if relay.verify_tx_inclusion.is_empty() {
             return Ok(());
         }
 
@@ -203,19 +203,12 @@ impl LightValidation {
         Ok(())
     }
 
-    pub fn has_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<bool, Error> {
+    pub fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
         let relay = self
             .tracked_relays
             .get(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
-        Ok(Self::_has_xt_to_be_included(relay))
-    }
-
-    fn _has_xt_to_be_included(relay: &RelayState<Block>) -> bool {
-        match relay.verify_tx_inclusion.len() {
-            0 => false,
-            _amount => true,
-        }
+        Ok(relay.verify_tx_inclusion.len())
     }
 
     //
