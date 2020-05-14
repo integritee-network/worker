@@ -394,6 +394,13 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                         debug!("    Payload: {:?}", hex::encode(payload));
                         println!();
                     }
+                    substratee_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+                        incognito_account,
+                    ) => {
+                        println!("[+] Received ShieldFunds event");
+                        debug!("    For:    {:?}", incognito_account);
+                        println!();
+                    }
                     _ => {
                         info!("Ignoring unsupported substratee_registry event");
                     }
