@@ -92,6 +92,14 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
     getter.sign(&who.pair())
 }
 
+pub fn encrypted_alice(eid: sgx_enclave_id_t) -> Vec<u8> {
+    info!("*** Get the public key from the TEE\n");
+    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid)
+        .map(|key| serde_json::from_slice(key.as_slice()).unwrap())
+        .unwrap();
+    encrypt_payload(rsa_pubkey, AccountKeyring::Alice.encode())
+}
+
 pub fn setup(
     eid: sgx_enclave_id_t,
     who: Option<AccountKeyring>,

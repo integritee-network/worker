@@ -49,6 +49,8 @@ pub type Balance = u128;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub static BALANCE_MODULE: u8 = 4u8;
 pub static BALANCE_TRANSFER: u8 = 0u8;
+pub static SUBSRATEE_REGISTRY_MODULE: u8 = 6u8;
+pub static CALL_CONFIRMED: u8 = 3u8;
 
 #[cfg(feature = "sgx")]
 pub type State = sp_io::SgxExternalities;
@@ -66,6 +68,7 @@ pub enum TrustedCall {
     balance_set_balance(AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
     balance_unshield(AccountId, Balance),
+    balance_shield(AccountId, Balance),
 }
 
 impl TrustedCall {
@@ -74,6 +77,7 @@ impl TrustedCall {
             TrustedCall::balance_set_balance(account, _, _) => account,
             TrustedCall::balance_transfer(account, _, _) => account,
             TrustedCall::balance_unshield(account, _) => account,
+            TrustedCall::balance_shield(account, _) => account,
         }
     }
 

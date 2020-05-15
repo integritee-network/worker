@@ -10,10 +10,17 @@ use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
-use crate::{
-    AccountId, BalanceTransferFn, State, Stf, TrustedCall, TrustedGetter, BALANCE_MODULE,
-    BALANCE_TRANSFER,
-};
+use crate::{AccountId, State, Stf, TrustedCall, TrustedGetter, BALANCE_MODULE, BALANCE_TRANSFER};
+
+/// Simple blob that holds a call in encoded format
+#[derive(Clone, Debug)]
+pub struct OpaqueCall(pub Vec<u8>);
+
+impl Encode for OpaqueCall {
+    fn encode(&self) -> Vec<u8> {
+        self.0.clone()
+    }
+}
 
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
@@ -60,28 +67,23 @@ impl Stf {
         });
     }
 
-    pub fn execute(
-        ext: &mut State,
-        call: TrustedCall,
-        nonce: u32,
-        calls: &mut Vec<BalanceTransferFn>,
-    ) {
+    pub fn execute(ext: &mut State, call: TrustedCall, _nonce: u32, calls: &mut Vec<OpaqueCall>) {
         ext.execute_with(|| {
             // TODO: enclave should not panic here.
-            assert_eq!(
-                nonce,
-                Decode::decode(
-                    &mut sp_io::storage::get(&nonce_key_hash(call.account()))
-                        .unwrap_or_else(|| 0u32.encode())
-                        .as_slice()
-                )
-                .unwrap()
-            );
-
-            sp_io::storage::set(
-                &nonce_key_hash(call.account()),
-                (nonce + 1).encode().as_slice(),
-            );
+            // assert_eq!(
+            //     nonce,
+            //     Decode::decode(
+            //         &mut sp_io::storage::get(&nonce_key_hash(call.account()))
+            //             .unwrap_or_else(|| 0u32.encode())
+            //             .as_slice()
+            //     )
+            //     .unwrap()
+            // );
+            //
+            // sp_io::storage::set(
+            //     &nonce_key_hash(call.account()),
+            //     (nonce + 1).encode().as_slice(),
+            // );
 
             let _result = match call {
                 TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
@@ -99,9 +101,12 @@ impl Stf {
                         .dispatch(origin)
                 }
                 TrustedCall::balance_unshield(who, value) => {
-                    calls.push(([BALANCE_MODULE, BALANCE_TRANSFER], who, Compact(value)));
+                    calls.push(OpaqueCall(
+                        ([BALANCE_MODULE, BALANCE_TRANSFER], who, Compact(value)).encode(),
+                    ));
                     Ok(Default::default())
                 }
+                TrustedCall::balance_shield(_who, _value) => Ok(Default::default()),
             };
         });
     }
@@ -127,6 +132,23 @@ impl Stf {
         })
     }
 
+    // pub fn shield_funds(ext: &mut State, account: AccountId, amount: u128) {
+    //     ext.execute_with(|| {
+    //         let _result = match get_account_info(&account) {
+    //             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
+    //                 account.into(),
+    //                 account_info.data.free + amount,
+    //                 account_info.data.reserved,
+    //             )
+    //             .dispatch(sgx_runtime::Origin::ROOT),
+    //             None => {
+    //                 sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
+    //                     .dispatch(sgx_runtime::Origin::ROOT)
+    //             }
+    //         };
+    //     })
+    // }
+
     pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
         match call {
@@ -137,6 +159,7 @@ impl Stf {
                 key_hashes.push(nonce_key_hash(account))
             }
             TrustedCall::balance_unshield(account, _) => key_hashes.push(nonce_key_hash(account)),
+            TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };
         key_hashes
     }

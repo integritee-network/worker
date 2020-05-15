@@ -33,7 +33,9 @@ use sp_core::{
     sr25519, Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
+use substrate_api_client::{
+    extrinsic::xt_primitives::UncheckedExtrinsicV4, utils::hexstr_to_vec, Api, XtStatus,
+};
 use substratee_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
     Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
@@ -56,6 +58,8 @@ mod enclave;
 mod ipfs;
 mod tests;
 mod ws_server;
+
+type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
 fn main() {
     // Setup logging
@@ -504,8 +508,55 @@ pub fn sync_chain_relay(
         "Got {} headers to sync in chain relay.",
         blocks_to_sync.len()
     );
-    enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
+
+    // for debugging
+    // find_shield_funds_xt(&blocks_to_sync);
+
+    let tee_accountid = enclave_account(eid);
+    let tee_nonce = get_nonce(&api, &tee_accountid);
+
+    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
+
+    let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
+    info!(
+        "Sync chain relay: Enclave wants to send {} extrinsics",
+        extrinsics.len()
+    );
+
+    extrinsics
+        .into_iter()
+        .map(|xt_vec| {
+            info!("Encoded xt: {:?}", xt_vec);
+            UncheckedExtrinsicV4::<SubstrateeConfirmCallFn>::decode(&mut xt_vec.as_slice()).unwrap()
+        })
+        .for_each(|xt| {
+            api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                .unwrap();
+        });
+
     curr_head.block.header
+}
+
+// debug method. Todo: delete when cl-transaction-inclusion branch is merged.
+fn find_shield_funds_xt(blocks: &Vec<SignedBlock>) {
+    for block in blocks.iter() {
+        for xt in block.block.extrinsics.iter() {
+            if let substratee_node_runtime::Call::SubstrateeRegistry(
+                substratee_node_runtime::substratee_registry::Call::shield_funds(
+                    account,
+                    amount,
+                    shard,
+                ),
+            ) = &xt.function
+            {
+                warn!("Founds Shieldfunds xt!");
+                warn!(
+                    "Account: {:?}, Amount: {}, Shard: {:?}",
+                    account, amount, shard
+                );
+            }
+        }
+    }
 }
 
 fn init_shard(shard: &ShardIdentifier) {

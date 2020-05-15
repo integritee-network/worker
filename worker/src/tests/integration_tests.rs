@@ -155,7 +155,7 @@ pub fn shield_funds(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header)
         api.clone(),
         "SubstrateeRegistry",
         "shield_funds",
-        vec![0u8],
+        encrypted_alice(eid),
         444u128,
         shard
     );

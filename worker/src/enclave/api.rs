@@ -74,6 +74,9 @@ extern "C" {
         retval: *mut sgx_status_t,
         blocks: *const u8,
         blocks_size: usize,
+        nonce: *const u32,
+        unchecked_extrinsic: *mut u8,
+        unchecked_extrinsic_size: usize,
     ) -> sgx_status_t;
 
     fn get_rsa_encryption_pubkey(
@@ -231,15 +234,27 @@ pub fn enclave_init_chain_relay(
     Ok(())
 }
 
-pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, blocks: Vec<SignedBlock>) -> SgxResult<()> {
+pub fn enclave_sync_chain_relay(
+    eid: sgx_enclave_id_t,
+    blocks: Vec<SignedBlock>,
+    tee_nonce: u32,
+) -> SgxResult<Vec<u8>> {
     let mut status = sgx_status_t::SGX_SUCCESS;
+
+    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE as usize];
+
     let result = unsafe {
-        sync_chain_relay(
-            eid,
-            &mut status,
-            blocks.encode().as_ptr(),
-            blocks.encode().len(),
-        )
+        blocks.using_encoded(|b| {
+            sync_chain_relay(
+                eid,
+                &mut status,
+                b.as_ptr(),
+                b.len(),
+                &tee_nonce,
+                unchecked_extrinsics.as_mut_ptr(),
+                EXTRINSIC_MAX_SIZE,
+            )
+        })
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
@@ -249,7 +264,7 @@ pub fn enclave_sync_chain_relay(eid: sgx_enclave_id_t, blocks: Vec<SignedBlock>)
         return Err(result);
     }
 
-    Ok(())
+    Ok(unchecked_extrinsics)
 }
 
 pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<ed25519::Public> {
@@ -353,8 +368,7 @@ pub fn enclave_execute_stf(
     nonce: u32,
     node_url: String,
 ) -> SgxResult<Vec<u8>> {
-    let unchecked_extrinsics_size = EXTRINSIC_MAX_SIZE;
-    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; unchecked_extrinsics_size as usize];
+    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         execute_stf(
@@ -370,7 +384,7 @@ pub fn enclave_execute_stf(
             node_url.as_bytes().as_ptr(),
             node_url.into_bytes().len() as u32,
             unchecked_extrinsics.as_mut_ptr(),
-            unchecked_extrinsics_size as u32,
+            EXTRINSIC_MAX_SIZE as u32,
         )
     };
     if status != sgx_status_t::SGX_SUCCESS {
