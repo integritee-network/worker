@@ -497,11 +497,7 @@ pub fn sync_chain_relay(
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        debug!(
-            "Syncing Block: {}, has justification: {}",
-            head.block.header.number,
-            head.justification.is_some()
-        )
+        debug!("Syncing Block: {:?}", head.block)
     }
     blocks_to_sync.reverse();
     debug!(

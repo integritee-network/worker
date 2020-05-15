@@ -501,6 +501,9 @@ fn listen(matches: &ArgMatches<'_>) {
                                 substratee_node_runtime::substratee_registry::RawEvent::ShieldFunds(incognito_account) => {
                                     println!("ShieldFunds for {:?}", incognito_account);
                                 },
+                                substratee_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(public_account) => {
+                                    println!("UnshieldFunds for {:?}", public_account);
+                                },
                             }
                         }
                         _ => debug!("ignoring unsupported module event: {:?}", evr.event),

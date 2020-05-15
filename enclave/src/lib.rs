@@ -39,7 +39,7 @@ use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_v
 use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
 
 use codec::{Decode, Encode};
-use sp_core::{crypto::Pair, hashing::blake2_256};
+use sp_core::{crypto::Pair, hashing::blake2_256, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
@@ -53,6 +53,7 @@ use utils::{hash_from_slice, write_slice_and_whitespace_pad};
 use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
 use sp_runtime::OpaqueExtrinsic;
+use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
 mod aes;
 mod attestation;
@@ -355,6 +356,8 @@ pub unsafe extern "C" fn init_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
+pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, H256);
+
 #[no_mangle]
 pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize) -> sgx_status_t {
     info!("Syncing chain relay!");
@@ -365,18 +368,29 @@ pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize)
     let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
     let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
 
-    blocks.into_iter().for_each(|signed_block| {
+    for signed_block in blocks.iter() {
         validator
             .check_xt_inclusion(validator.num_relays, &signed_block.block)
-            .unwrap(); // panic can only happen if relay_id is unsafe
-        validator
-            .submit_simple_header(
-                validator.num_relays,
-                signed_block.block.header,
-                signed_block.justification,
-            )
-            .unwrap() // panic can only happen if relay_id is unsafe
-    });
+            .unwrap(); // panic can only happen if relay_id is does not exist
+        if let Err(e) = validator.submit_simple_header(
+            validator.num_relays,
+            signed_block.block.header.clone(),
+            signed_block.justification.clone(),
+        ) {
+            error!("Block verificatio failed. Error : {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    }
+
+    for block in blocks.iter() {
+        for xt_opaque in block.block.extrinsics.iter() {
+            if let Ok(xt) =
+                UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
+            {
+                info!("Found ShieldFunds extrinsic in block {:?}", xt.encode());
+            }
+        }
+    }
 
     io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
     debug!("Synced Relay DB. Current state: {:?}", validator);

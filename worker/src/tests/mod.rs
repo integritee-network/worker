@@ -65,7 +65,9 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         println!("  testing execute_stf_unshield_balance()");
         execute_stf_unshield_balance_works(eid, port);
         println!("  syncing chain_relay");
-        sync_chain_relay(eid, port, head);
+        head = sync_chain_relay(eid, port, head);
+        println!("  testing shield_funds");
+        head = shield_funds(eid, port, head);
     }
     println!("[+] All tests ended!");
 }

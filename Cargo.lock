@@ -1182,7 +1182,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.0"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=cl-shield-funds-call#a121a8494c497a197c788675c7b5581c380b9b1a"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=cl-shield-funds-call#cf614c4b2caba2f5451b8ee614bf69c5bd21f016"
 dependencies = [
  "base64",
  "chrono",
@@ -1906,7 +1906,7 @@ dependencies = [
 [[package]]
 name = "pallet-substratee-registry"
 version = "0.6.3"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=cl-shield-funds-call#a121a8494c497a197c788675c7b5581c380b9b1a"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=cl-shield-funds-call#cf614c4b2caba2f5451b8ee614bf69c5bd21f016"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4253,7 +4253,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.5.6",
 ]
 
 [[package]]
