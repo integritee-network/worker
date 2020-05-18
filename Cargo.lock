@@ -3605,8 +3605,8 @@ dependencies = [
 
 [[package]]
 name = "substrate-api-client"
-version = "0.4.4-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.4-sub2.0.0-alpha.7#4009ba7d0ee75cb9cf3e1e2e8ab6e6eb5395d912"
+version = "0.4.3-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/substrate-api-client?branch=cl-make-url-public#8b0ec26ac8bc4cb73eb991ba4c50e7a472bbe7a1"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
@@ -4253,7 +4253,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.5.6",
+ "rand 0.7.3",
 ]
 
 [[package]]

@@ -77,6 +77,8 @@ extern "C" {
         blocks: *const u8,
         blocks_size: usize,
         nonce: *const u32,
+        node_url: *const u8,
+        url_size: usize,
         unchecked_extrinsic: *mut u8,
         unchecked_extrinsic_size: usize,
     ) -> sgx_status_t;
@@ -246,6 +248,7 @@ pub fn enclave_sync_chain_relay(
     eid: sgx_enclave_id_t,
     blocks: Vec<SignedBlock>,
     tee_nonce: u32,
+    node_url: &str,
 ) -> SgxResult<Vec<u8>> {
     let mut status = sgx_status_t::SGX_SUCCESS;
 
@@ -259,6 +262,8 @@ pub fn enclave_sync_chain_relay(
                 b.as_ptr(),
                 b.len(),
                 &tee_nonce,
+                node_url.as_ptr(),
+                node_url.len(),
                 unchecked_extrinsics.as_mut_ptr(),
                 EXTRINSIC_MAX_SIZE,
             )

@@ -56,6 +56,7 @@ enclave {
         public sgx_status_t sync_chain_relay(
             [in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
             [in] uint32_t* nonce,
+            [in, size=node_url_size] uint8_t* node_url, size_t node_url_size,
             [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, size_t unchecked_extrinsic_size
         );
 

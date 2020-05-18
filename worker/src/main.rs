@@ -383,11 +383,11 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                     substratee_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
                         println!("[+] Received trusted call");
                         info!(
-                            "    Request: \n  shard: {}\n  cyphertext: {}",
+                            "    Request: \n  shard: {}\n  cyphertext: {:?}",
                             request.shard.encode().to_base58(),
-                            hex::encode(request.cyphertext.clone())
+                            request.cyphertext.clone()
                         );
-                        process_request(eid, request.clone(), node_url);
+                        // process_request(eid, request.clone(), node_url);
                     }
                     substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
@@ -505,10 +505,12 @@ pub fn sync_chain_relay(
         blocks_to_sync.len()
     );
 
+    find_call_worker_xt(&blocks_to_sync);
+
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
+    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce, &api.url).unwrap();
 
     let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
     info!(
@@ -528,6 +530,21 @@ pub fn sync_chain_relay(
         });
 
     curr_head.block.header
+}
+
+// debug method. Todo: delete when cl- branch is merged.
+fn find_call_worker_xt(blocks: &Vec<SignedBlock>) {
+    for block in blocks.iter() {
+        for xt in block.block.extrinsics.iter() {
+            if let substratee_node_runtime::Call::SubstrateeRegistry(
+                substratee_node_runtime::substratee_registry::Call::call_worker(request),
+            ) = &xt.function
+            {
+                warn!("Founds Shieldfunds xt!");
+                warn!("Request: {:?}", request);
+            }
+        }
+    }
 }
 
 fn init_shard(shard: &ShardIdentifier) {

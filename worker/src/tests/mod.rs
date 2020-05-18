@@ -47,27 +47,27 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
     if matches.is_present("all") || matches.is_present("integration") {
         // Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
         // running the tests.
-        println!("Running integration Tests");
-        println!("  testing perform_ra()");
-        perform_ra_works(eid, port);
+        // println!("Running integration Tests");
+        // println!("  testing perform_ra()");
+        // perform_ra_works(eid, port);
         println!("  init chain_relay");
         let mut head = init_chain_relay(eid, port);
-        println!("  testing process_forwarded_payload()");
-        process_forwarded_payload_works(eid, port);
-        // syncing the chain relay is necessary such that the enclave can verify
-        // the `SubstrateeRegistry::CallConfirmed` inclusion proofs
-        println!("  syncing chain_relay");
-        head = sync_chain_relay(eid, port, head);
-        println!("  testing execute_stf_set_balance()");
-        execute_stf_set_balance_works(eid, port);
-        println!("  syncing chain_relay");
-        head = sync_chain_relay(eid, port, head);
-        println!("  testing execute_stf_unshield_balance()");
-        execute_stf_unshield_balance_works(eid, port);
-        println!("  syncing chain_relay");
-        head = sync_chain_relay(eid, port, head);
-        println!("  testing shield_funds");
-        let _head = shield_funds(eid, port, head);
+        // println!("  testing process_forwarded_payload()");
+        // process_forwarded_payload_works(eid, port);
+        // // syncing the chain relay is necessary such that the enclave can verify
+        // // the `SubstrateeRegistry::CallConfirmed` inclusion proofs
+        // println!("  syncing chain_relay");
+        // head = sync_chain_relay(eid, port, head);
+        // println!("  testing execute_stf_set_balance()");
+        // execute_stf_set_balance_works(eid, port);
+        // println!("  syncing chain_relay");
+        // head = sync_chain_relay(eid, port, head);
+        // println!("  testing execute_stf_unshield_balance()");
+        // execute_stf_unshield_balance_works(eid, port);
+        // println!("  syncing chain_relay");
+        // head = sync_chain_relay(eid, port, head);
+        // println!("  testing shield_funds");
+        // let _head = shield_funds(eid, port, head);
     }
     println!("[+] All tests ended!");
 }
