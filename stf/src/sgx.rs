@@ -106,7 +106,10 @@ impl Stf {
                     ));
                     Ok(Default::default())
                 }
-                TrustedCall::balance_shield(_who, _value) => Ok(Default::default()),
+                TrustedCall::balance_shield(who, value) => {
+                    Self::shield_funds(who, value);
+                    Ok(Default::default())
+                }
             };
         });
     }
@@ -132,22 +135,18 @@ impl Stf {
         })
     }
 
-    // pub fn shield_funds(ext: &mut State, account: AccountId, amount: u128) {
-    //     ext.execute_with(|| {
-    //         let _result = match get_account_info(&account) {
-    //             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-    //                 account.into(),
-    //                 account_info.data.free + amount,
-    //                 account_info.data.reserved,
-    //             )
-    //             .dispatch(sgx_runtime::Origin::ROOT),
-    //             None => {
-    //                 sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
-    //                     .dispatch(sgx_runtime::Origin::ROOT)
-    //             }
-    //         };
-    //     })
-    // }
+    fn shield_funds(account: AccountId, amount: u128) {
+        let _result = match get_account_info(&account) {
+            Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                account.into(),
+                account_info.data.free + amount,
+                account_info.data.reserved,
+            )
+            .dispatch(sgx_runtime::Origin::ROOT),
+            None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
+                .dispatch(sgx_runtime::Origin::ROOT),
+        };
+    }
 
     pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
