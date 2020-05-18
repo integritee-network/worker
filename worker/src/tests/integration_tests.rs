@@ -32,16 +32,12 @@ use crate::constants::*;
 use crate::enclave::api::*;
 use crate::enclave_account;
 use crate::tests::commons::*;
-use std::convert::TryFrom;
-use std::sync::mpsc::channel;
 use std::thread::sleep;
 use std::time::Duration;
-use substrate_api_client::{
-    compose_extrinsic, events::EventsDecoder, extrinsic::xt_primitives::UncheckedExtrinsicV4,
-};
+use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
 use substratee_node_calls::ShardIdentifier;
 use substratee_node_runtime::Header;
-use substratee_stf::{BalanceTransferFn, Hash};
+use substratee_stf::BalanceTransferFn;
 
 type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
@@ -152,7 +148,7 @@ pub fn shield_funds(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header)
     let (api, _nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
 
     let xt: UncheckedExtrinsicV4<ShieldFundsFn> = compose_extrinsic!(
-        api.clone(),
+        api,
         "SubstrateeRegistry",
         "shield_funds",
         encrypted_alice(eid),

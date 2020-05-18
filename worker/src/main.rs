@@ -467,12 +467,9 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    let latest = enclave_init_chain_relay(
-        eid,
-        genesis_header.clone(),
-        VersionedAuthorityList::from(grandpas),
-    )
-    .unwrap();
+    let latest =
+        enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas))
+            .unwrap();
 
     info!("Finished initializing chain relay, syncing....");
 
@@ -508,9 +505,6 @@ pub fn sync_chain_relay(
         blocks_to_sync.len()
     );
 
-    // for debugging
-    // find_shield_funds_xt(&blocks_to_sync);
-
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
@@ -534,28 +528,6 @@ pub fn sync_chain_relay(
         });
 
     curr_head.block.header
-}
-
-// debug method. Todo: delete when cl-transaction-inclusion branch is merged.
-fn find_shield_funds_xt(blocks: &Vec<SignedBlock>) {
-    for block in blocks.iter() {
-        for xt in block.block.extrinsics.iter() {
-            if let substratee_node_runtime::Call::SubstrateeRegistry(
-                substratee_node_runtime::substratee_registry::Call::shield_funds(
-                    account,
-                    amount,
-                    shard,
-                ),
-            ) = &xt.function
-            {
-                warn!("Founds Shieldfunds xt!");
-                warn!(
-                    "Account: {:?}, Amount: {}, Shard: {:?}",
-                    account, amount, shard
-                );
-            }
-        }
-    }
 }
 
 fn init_shard(shard: &ShardIdentifier) {
