@@ -159,7 +159,7 @@ pub unsafe extern "C" fn execute_stf(
     cyphertext_size: u32,
     shard: *const u8,
     shard_size: u32,
-    _genesis_hash: *const u8, // Todo: since light_validation_code is used, genesis hash is no longer needed
+    _genesis_hash: *const u8, // Todo: Remove, since light_validation_code is used, genesis hash is no longer needed
     _genesis_hash_size: u32,
     nonce: *const u32,
     node_url: *const u8,
@@ -296,7 +296,7 @@ fn stf_post_actions(
 
     write_slice_and_whitespace_pad(extrinsics_slice, extrinsics_buffer.encode());
 
-    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
+    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB)?;
     debug!("Synced Relay DB. Current state: {:?}", validator);
 
     Ok(())
@@ -347,19 +347,32 @@ pub unsafe extern "C" fn init_chain_relay(
 
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
-    let auth = VersionedAuthorityList::decode(&mut auth).unwrap();
+
+    let header = match Header::decode(&mut header) {
+        Ok(h) => h,
+        Err(e) => {
+            error!("Decoding Header failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let auth = match VersionedAuthorityList::decode(&mut auth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("Decoding VersionedAuthorityList failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
     let mut validator = LightValidation::new();
 
-    let _id = validator
-        .initialize_relay(
-            Header::decode(&mut header).unwrap(),
-            auth.into(),
-            StorageProof::default(),
-        )
-        .unwrap();
+    if let Err(_e) = validator.initialize_relay(header, auth.into(), StorageProof::default()) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
-    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
+    if let Err(e) = io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB) {
+        return e;
+    }
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -376,11 +389,28 @@ pub unsafe extern "C" fn sync_chain_relay(
 ) -> sgx_status_t {
     info!("Syncing chain relay!");
     let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
-    let blocks: Vec<SignedBlock<Block>> = Decode::decode(&mut blocks_slice).unwrap();
     let xt_slice = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size);
 
-    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
-    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
+    let blocks: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_slice) {
+        Ok(b) => b,
+        Err(e) => {
+            error!("Decoding signed blocks failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let val_vec = match io::unseal(constants::CHAIN_RELAY_DB) {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    let mut validator: LightValidation = match Decode::decode(&mut val_vec.as_slice()) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("Decoding validator failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
     for signed_block in blocks.iter() {
         validator
@@ -391,7 +421,7 @@ pub unsafe extern "C" fn sync_chain_relay(
             signed_block.block.header.clone(),
             signed_block.justification.clone(),
         ) {
-            error!("Block verificatio failed. Error : {:?}", e);
+            error!("Block verification failed. Error : {:?}", e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     }
@@ -408,6 +438,7 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
+/// Scans blocks for extrinsics that ask the enclave to execute some actions.
 pub fn scan_blocks_for_relevant_xt(blocks: Vec<SignedBlock<Block>>) -> SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();
     for block in blocks.iter() {
