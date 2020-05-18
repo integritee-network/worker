@@ -1182,7 +1182,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.0"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=cl-shield-funds-call#a121a8494c497a197c788675c7b5581c380b9b1a"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.5-sub2.0.0-alpha.7#9d664bbb96e7b529dcb66abf661b2564a3d8f609"
 dependencies = [
  "base64",
  "chrono",
@@ -1905,8 +1905,8 @@ dependencies = [
 
 [[package]]
 name = "pallet-substratee-registry"
-version = "0.6.3"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=cl-shield-funds-call#a121a8494c497a197c788675c7b5581c380b9b1a"
+version = "0.6.5-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.5-sub2.0.0-alpha.7#9d664bbb96e7b529dcb66abf661b2564a3d8f609"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3706,8 +3706,8 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-runtime"
-version = "0.6.2-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substraTEE-node?branch=registry-pallet-shield-funds#94c48b53b789195fa1c0c5aa64fb014f478243b6"
+version = "0.6.3-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/substraTEE-node?tag=v0.6.3-sub2.0.0-alpha.7#b75d1fe59d8ca8764ca486b3c5ca19e0ba9a8039"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4253,7 +4253,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.5.6",
 ]
 
 [[package]]

@@ -46,8 +46,7 @@ path = "worker-api"
 
 [dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-#tag = "v0.6.2-sub2.0.0-alpha.7"
-branch = "registry-pallet-shield-funds"
+tag = "v0.6.3-sub2.0.0-alpha.7"
 package = "substratee-node-runtime"
 
 [dependencies.sp-finality-grandpa]
