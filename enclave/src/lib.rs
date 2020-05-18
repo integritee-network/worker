@@ -50,9 +50,10 @@ use std::string::String;
 use std::vec::Vec;
 
 use std::collections::HashMap;
-use utils::{hash_from_slice, write_slice_and_whitespace_pad};
+use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::SHIELD_FUNDS;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
 use sp_runtime::OpaqueExtrinsic;
@@ -395,6 +396,19 @@ pub unsafe extern "C" fn sync_chain_relay(
         }
     }
 
+    let calls = match scan_blocks_for_relevant_xt(blocks) {
+        Ok(c) => c,
+        Err(e) => return e,
+    };
+
+    if let Err(_e) = stf_post_actions(&mut validator, calls, xt_slice, *nonce) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+pub fn scan_blocks_for_relevant_xt(blocks: Vec<SignedBlock<Block>>) -> SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();
     for block in blocks.iter() {
         for xt_opaque in block.block.extrinsics.iter() {
@@ -414,21 +428,15 @@ pub unsafe extern "C" fn sync_chain_relay(
                     call, account_encrypted, amount, shard
                 );
 
-                let mut state = match state::load(&shard) {
-                    Ok(s) => s,
-                    Err(status) => return status,
-                };
+                let mut state = state::load(&shard)?;
 
                 debug!("load shielding keypair");
-                let rsa_keypair = match rsa3072::unseal_pair() {
-                    Ok(pair) => pair,
-                    Err(status) => return status,
-                };
+                let rsa_keypair = rsa3072::unseal_pair()?;
 
                 // decrypt the payload
                 debug!("decrypt the call");
                 let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
-                let account = AccountId::decode(&mut account_vec.as_slice()).unwrap();
+                let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
 
                 Stf::execute(
                     &mut state,
@@ -437,7 +445,7 @@ pub unsafe extern "C" fn sync_chain_relay(
                     &mut calls,
                 );
                 let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-                let state_hash = state::write(state, &shard).unwrap();
+                let state_hash = state::write(state, &shard)?;
                 calls.push(OpaqueCall(
                     (
                         xt_call,
@@ -450,12 +458,7 @@ pub unsafe extern "C" fn sync_chain_relay(
             };
         }
     }
-
-    if let Err(_e) = stf_post_actions(&mut validator, calls, xt_slice, *nonce) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    sgx_status_t::SGX_SUCCESS
+    Ok(calls)
 }
 
 extern "C" {
