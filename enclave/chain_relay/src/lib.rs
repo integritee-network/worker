@@ -229,6 +229,14 @@ impl LightValidation {
         Ok(relay.headers[0].hash())
     }
 
+    pub fn latest_header(&self, relay_id: RelayId) -> Result<Header, Error> {
+        let relay = self
+            .tracked_relays
+            .get(&relay_id)
+            .ok_or(Error::NoSuchRelayExists)?;
+        Ok(relay.last_finalized_block_header.clone())
+    }
+
     //
     // fn check_validator_set_proof<Hash: HashT>(
     //     state_root: &Hash::Out,

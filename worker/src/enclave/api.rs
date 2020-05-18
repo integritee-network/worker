@@ -25,7 +25,7 @@ use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
 use crate::constants::{ENCLAVE_FILE, ENCLAVE_TOKEN, EXTRINSIC_MAX_SIZE, STATE_VALUE_MAX_SIZE};
-use codec::Encode;
+use codec::{Decode, Encode};
 use sp_core::ed25519;
 use sp_finality_grandpa::VersionedAuthorityList;
 use substratee_node_runtime::{Header, SignedBlock};
@@ -67,6 +67,8 @@ extern "C" {
         genesis_hash_size: usize,
         authority_list: *const u8,
         authority_list_size: usize,
+        latest_header: *mut u8,
+        latest_header_size: usize,
     ) -> sgx_status_t;
 
     fn sync_chain_relay(
@@ -208,7 +210,9 @@ pub fn enclave_init_chain_relay(
     eid: sgx_enclave_id_t,
     genesis_hash: Header,
     authority_list: VersionedAuthorityList,
-) -> SgxResult<()> {
+) -> SgxResult<Header> {
+    let mut latest_header = vec![0u8; 200];
+
     let mut status = sgx_status_t::SGX_SUCCESS;
     let result = unsafe {
         // Todo: this is a bit ugly but the common `encode()` is not implemented for authority list
@@ -220,6 +224,8 @@ pub fn enclave_init_chain_relay(
                 genesis_hash.encode().len(),
                 authorities.as_ptr(),
                 authorities.len(),
+                latest_header.as_mut_ptr(),
+                latest_header.len(),
             )
         })
     };
@@ -230,8 +236,10 @@ pub fn enclave_init_chain_relay(
     if result != sgx_status_t::SGX_SUCCESS {
         return Err(result);
     }
+    let latest: Header = Decode::decode(&mut latest_header.as_slice()).unwrap();
+    info!("Latest Header {:?}", latest);
 
-    Ok(())
+    Ok(latest)
 }
 
 pub fn enclave_sync_chain_relay(

@@ -54,7 +54,7 @@ use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::SHIELD_FUNDS;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
-use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
+use chain_relay::{Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
 use sp_runtime::OpaqueExtrinsic;
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
@@ -168,8 +168,10 @@ pub unsafe extern "C" fn execute_stf(
     unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
     // first verify if all our previous extrinsics have been included
-    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
-    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
+    let mut validator = match io::light_validation::unseal() {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
 
     if let Ok(amount) = validator.num_xt_to_be_included(validator.num_relays) {
         warn!("{} extrinsics still need to be included", amount);
@@ -255,7 +257,7 @@ pub unsafe extern "C" fn execute_stf(
         (xt_call, shard, call_hash.to_vec(), state_hash.encode()).encode(),
     ));
 
-    if let Err(e) = stf_post_actions(&mut validator, calls_buffer, extrinsic_slice, *nonce) {
+    if let Err(e) = stf_post_actions(validator, calls_buffer, extrinsic_slice, *nonce) {
         return e;
     }
 
@@ -263,7 +265,7 @@ pub unsafe extern "C" fn execute_stf(
 }
 
 fn stf_post_actions(
-    validator: &mut LightValidation,
+    mut validator: LightValidation,
     calls_buffer: Vec<OpaqueCall>,
     extrinsics_slice: &mut [u8],
     mut nonce: u32,
@@ -296,8 +298,7 @@ fn stf_post_actions(
 
     write_slice_and_whitespace_pad(extrinsics_slice, extrinsics_buffer.encode());
 
-    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB)?;
-    debug!("Synced Relay DB. Current state: {:?}", validator);
+    io::light_validation::seal(validator)?;
 
     Ok(())
 }
@@ -342,10 +343,13 @@ pub unsafe extern "C" fn init_chain_relay(
     genesis_header_size: usize,
     authority_list: *const u8,
     authority_list_size: usize,
+    latest_header: *mut u8,
+    latest_header_size: usize,
 ) -> sgx_status_t {
     info!("Initializing Chain Relay!");
 
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
+    let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
 
     let header = match Header::decode(&mut header) {
@@ -364,16 +368,10 @@ pub unsafe extern "C" fn init_chain_relay(
         }
     };
 
-    let mut validator = LightValidation::new();
-
-    if let Err(_e) = validator.initialize_relay(header, auth.into(), StorageProof::default()) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    match io::light_validation::read_or_init_validator(header, auth) {
+        Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
+        Err(e) => return e,
     }
-
-    if let Err(e) = io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB) {
-        return e;
-    }
-
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -399,17 +397,9 @@ pub unsafe extern "C" fn sync_chain_relay(
         }
     };
 
-    let val_vec = match io::unseal(constants::CHAIN_RELAY_DB) {
+    let mut validator = match io::light_validation::unseal() {
         Ok(v) => v,
         Err(e) => return e,
-    };
-
-    let mut validator: LightValidation = match Decode::decode(&mut val_vec.as_slice()) {
-        Ok(v) => v,
-        Err(e) => {
-            error!("Decoding validator failed. Error: {:?}", e);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
     };
 
     for signed_block in blocks.iter() {
@@ -431,7 +421,7 @@ pub unsafe extern "C" fn sync_chain_relay(
         Err(e) => return e,
     };
 
-    if let Err(_e) = stf_post_actions(&mut validator, calls, xt_slice, *nonce) {
+    if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 

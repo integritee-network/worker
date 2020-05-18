@@ -460,7 +460,6 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
-
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
         .map(|g: VersionedAuthorityList| g.into())
@@ -468,7 +467,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    enclave_init_chain_relay(
+    let latest = enclave_init_chain_relay(
         eid,
         genesis_header.clone(),
         VersionedAuthorityList::from(grandpas),
@@ -477,7 +476,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     info!("Finished initializing chain relay, syncing....");
 
-    sync_chain_relay(eid, api, genesis_header)
+    sync_chain_relay(eid, api, latest)
 }
 
 pub fn sync_chain_relay(

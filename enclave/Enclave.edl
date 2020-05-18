@@ -49,7 +49,8 @@ enclave {
 
 		public sgx_status_t init_chain_relay(
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,
-            [in, size=authority_list_size] uint8_t* shard, size_t authority_list_size
+            [in, size=authority_list_size] uint8_t* shard, size_t authority_list_size,
+            [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
         public sgx_status_t sync_chain_relay(
