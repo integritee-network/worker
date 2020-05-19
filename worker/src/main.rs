@@ -33,23 +33,20 @@ use sp_core::{
     sr25519, Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{
-    extrinsic::xt_primitives::UncheckedExtrinsicV4, utils::hexstr_to_vec, Api, XtStatus,
-};
+use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
 use substratee_node_runtime::{
-    substratee_registry::{Request, ShardIdentifier},
-    Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
+    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
 };
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_sync_chain_relay};
 use enclave::api::{
-    enclave_dump_ra, enclave_execute_stf, enclave_init, enclave_mrenclave, enclave_perform_ra,
-    enclave_shielding_key, enclave_signing_key,
+    enclave_dump_ra, enclave_init, enclave_mrenclave, enclave_perform_ra, enclave_shielding_key,
+    enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::slice;
-use substratee_node_calls::{get_worker_for_shard, get_worker_info};
+use substratee_node_primitives::calls::{get_worker_for_shard, get_worker_info};
 use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 
@@ -58,8 +55,6 @@ mod enclave;
 mod ipfs;
 mod tests;
 mod ws_server;
-
-type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
 fn main() {
     // Setup logging
@@ -325,7 +320,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     loop {
         let msg = receiver.recv().unwrap();
         if let Ok(events) = parse_events(msg.clone()) {
-            handle_events(eid, node_url, events, sender.clone())
+            print_events(events, sender.clone())
         } else if let Ok(_header) = parse_header(msg.clone()) {
             latest_head = sync_chain_relay(eid, &api, latest_head)
         } else {
@@ -346,7 +341,7 @@ fn parse_header(header: String) -> Result<Header, String> {
     serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
 }
 
-fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<String>) {
+fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {
@@ -383,11 +378,10 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                     substratee_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
                         println!("[+] Received trusted call");
                         info!(
-                            "    Request: \n  shard: {}\n  cyphertext: {}",
+                            "    Request: \n  shard: {}\n  cyphertext: {:?}",
                             request.shard.encode().to_base58(),
-                            hex::encode(request.cyphertext.clone())
+                            request.cyphertext.clone()
                         );
-                        process_request(eid, request.clone(), node_url);
                     }
                     substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
@@ -415,45 +409,6 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
             }
         }
     }
-}
-
-pub fn process_request(eid: sgx_enclave_id_t, request: Request, node_url: &str) {
-    // new api client (the other one is busy listening to events)
-    // FIXME: this might not be very performant. maybe split into api_listener and api_sender
-    let api = Api::<sr25519::Pair>::new(node_url.to_string());
-    info!("*** Ask the signing key from the TEE");
-    let tee_accountid = enclave_signing_key(eid).unwrap();
-    info!(
-        "[+] Got ed25519 account of TEE = {}",
-        tee_accountid.to_ss58check()
-    );
-
-    let nonce = get_nonce(&api, &AccountId32::from(tee_accountid));
-    let genesis_hash = api.genesis_hash.as_bytes().to_vec();
-    info!("Enclave nonce = {:?}", nonce);
-    let uxts = enclave_execute_stf(
-        eid,
-        request.cyphertext,
-        request.shard.encode(),
-        genesis_hash,
-        nonce,
-        node_url.to_owned(),
-    )
-    .unwrap();
-    debug!("raw extrinsic returned form enclave {:x?}", uxts);
-    info!("[<] Message decoded and processed in the enclave. will send confirmation extrinsic");
-    let xts = Vec::<Vec<u8>>::decode(&mut uxts.as_slice()).unwrap();
-
-    info!("enclave requests to send {} extrinsics", xts.len());
-    for xt in xts.iter() {
-        let mut _xthex = hex::encode(xt);
-        _xthex.insert_str(0, "0x");
-        println!("[>] send an extrinsic composed by enclave");
-        // need to put finalized here, else the subsequent tests fetch a nonce that is too low.
-        let _hash = api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
-        debug!("[<] Request Extrinsic got finalized");
-    }
-    info!("all extrinsics sent.");
 }
 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Header {
@@ -508,7 +463,7 @@ pub fn sync_chain_relay(
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
+    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce, &api.url).unwrap();
 
     let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
     info!(
@@ -516,18 +471,18 @@ pub fn sync_chain_relay(
         extrinsics.len()
     );
 
-    extrinsics
-        .into_iter()
-        .map(|xt_vec| {
-            info!("Encoded xt: {:?}", xt_vec);
-            UncheckedExtrinsicV4::<SubstrateeConfirmCallFn>::decode(&mut xt_vec.as_slice()).unwrap()
-        })
-        .for_each(|xt| {
-            api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
-                .unwrap();
-        });
+    for xt in extrinsics.into_iter() {
+        api.send_extrinsic(hex_encode(xt), XtStatus::Finalized)
+            .unwrap();
+    }
 
     curr_head.block.header
+}
+
+fn hex_encode(data: Vec<u8>) -> String {
+    let mut hex_str = hex::encode(data);
+    hex_str.insert_str(0, "0x");
+    hex_str
 }
 
 fn init_shard(shard: &ShardIdentifier) {

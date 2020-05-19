@@ -3605,8 +3605,8 @@ dependencies = [
 
 [[package]]
 name = "substrate-api-client"
-version = "0.4.4-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.4-sub2.0.0-alpha.7#4009ba7d0ee75cb9cf3e1e2e8ab6e6eb5395d912"
+version = "0.4.5-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.5-sub2.0.0-alpha.7#95df232d7d97bf9501a76d9f0723a787c693bbcf"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
@@ -3691,13 +3691,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "substratee-node-calls"
+name = "substratee-node-primitives"
 version = "0.6.1-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "primitive-types 0.6.2",
+ "sgx_tstd",
  "sp-core",
  "sp-runtime",
  "substrate-api-client",
@@ -3793,7 +3794,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
- "substratee-node-calls",
+ "substratee-node-primitives",
  "substratee-node-runtime",
  "substratee-stf",
  "substratee-worker-api",
@@ -4253,7 +4254,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.5.6",
+ "rand 0.7.3",
 ]
 
 [[package]]

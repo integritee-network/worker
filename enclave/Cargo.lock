@@ -2015,8 +2015,8 @@ dependencies = [
 
 [[package]]
 name = "substrate-api-client"
-version = "0.4.4-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.4-sub2.0.0-alpha.7#4009ba7d0ee75cb9cf3e1e2e8ab6e6eb5395d912"
+version = "0.4.5-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.5-sub2.0.0-alpha.7#95df232d7d97bf9501a76d9f0723a787c693bbcf"
 dependencies = [
  "frame-metadata 11.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2035,6 +2035,16 @@ dependencies = [
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "substratee-node-primitives"
+version = "0.6.1-sub2.0.0-alpha.7"
+dependencies = [
+ "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitive-types 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_tstd 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sp-core 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "substratee-stf"
@@ -2094,7 +2104,8 @@ dependencies = [
  "sp-io 2.0.0-alpha.7 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-api-client 0.4.4-sub2.0.0-alpha.7 (git+https://github.com/scs/substrate-api-client?tag=v0.4.4-sub2.0.0-alpha.7)",
+ "substrate-api-client 0.4.5-sub2.0.0-alpha.7 (git+https://github.com/scs/substrate-api-client?tag=v0.4.5-sub2.0.0-alpha.7)",
+ "substratee-node-primitives 0.6.1-sub2.0.0-alpha.7",
  "substratee-stf 0.2.0",
  "webpki 0.21.2 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
  "webpki-roots 0.19.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
@@ -2551,7 +2562,7 @@ dependencies = [
 "checksum spin 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 "checksum static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 "checksum stream-cipher 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8131256a5896cabcf5eb04f4d6dacbe1aefda854b0d9896e09cb58829ec5638c"
-"checksum substrate-api-client 0.4.4-sub2.0.0-alpha.7 (git+https://github.com/scs/substrate-api-client?tag=v0.4.4-sub2.0.0-alpha.7)" = "<none>"
+"checksum substrate-api-client 0.4.5-sub2.0.0-alpha.7 (git+https://github.com/scs/substrate-api-client?tag=v0.4.5-sub2.0.0-alpha.7)" = "<none>"
 "checksum substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "d2a965994514ab35d3893e9260245f2947fd1981cdd4fffd2c6e6d1a9ce02e6a"
 "checksum subtle 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 "checksum subtle 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7c65d530b10ccaeac294f349038a597e435b18fb456aadd0840a623f83b9e941"

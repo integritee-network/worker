@@ -21,7 +21,7 @@ blake2-rfc      = { version = "0.2.18", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.4-sub2.0.0-alpha.7"
+tag = "v0.4.5-sub2.0.0-alpha.7"
 
 [dependencies.serde]
 features = ["derive"]

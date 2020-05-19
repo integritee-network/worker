@@ -53,21 +53,11 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         println!("  init chain_relay");
         let mut head = init_chain_relay(eid, port);
         println!("  testing process_forwarded_payload()");
-        process_forwarded_payload_works(eid, port);
-        // syncing the chain relay is necessary such that the enclave can verify
-        // the `SubstrateeRegistry::CallConfirmed` inclusion proofs
-        println!("  syncing chain_relay");
-        head = sync_chain_relay(eid, port, head);
-        println!("  testing execute_stf_set_balance()");
-        execute_stf_set_balance_works(eid, port);
-        println!("  syncing chain_relay");
-        head = sync_chain_relay(eid, port, head);
+        head = call_worker_encrypted_set_balance_works(eid, port, head);
         println!("  testing execute_stf_unshield_balance()");
-        execute_stf_unshield_balance_works(eid, port);
-        println!("  syncing chain_relay");
-        head = sync_chain_relay(eid, port, head);
+        head = forward_encrypted_unshield_works(eid, port, head);
         println!("  testing shield_funds");
-        let _head = shield_funds(eid, port, head);
+        let _head = shield_funds_workds(eid, port, head);
     }
     println!("[+] All tests ended!");
 }

@@ -36,6 +36,7 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
+use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_stf::{
     AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
@@ -52,7 +53,7 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use utils::write_slice_and_whitespace_pad;
 
-use crate::constants::SHIELD_FUNDS;
+use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use chain_relay::{Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
@@ -145,121 +146,10 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
         Ok(pair) => pair,
         Err(status) => return status,
     };
-    info!("Restored ECC pubkey: {:?}", signer.public());
+    debug!("Restored ECC pubkey: {:?}", signer.public());
 
     let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
     pubkey_slice.clone_from_slice(&signer.public());
-
-    sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn execute_stf(
-    cyphertext: *const u8,
-    cyphertext_size: u32,
-    shard: *const u8,
-    shard_size: u32,
-    _genesis_hash: *const u8, // Todo: Remove, since light_validation_code is used, genesis hash is no longer needed
-    _genesis_hash_size: u32,
-    nonce: *const u32,
-    node_url: *const u8,
-    node_url_size: u32,
-    unchecked_extrinsic: *mut u8,
-    unchecked_extrinsic_size: u32,
-) -> sgx_status_t {
-    // first verify if all our previous extrinsics have been included
-    let mut validator = match io::light_validation::unseal() {
-        Ok(v) => v,
-        Err(e) => return e,
-    };
-
-    if let Ok(amount) = validator.num_xt_to_be_included(validator.num_relays) {
-        warn!("{} extrinsics still need to be included", amount);
-    }
-
-    let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
-    let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-    let node_url = slice::from_raw_parts(node_url, node_url_size as usize);
-    let extrinsic_slice =
-        slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-
-    debug!("load shielding keypair");
-    let rsa_keypair = match rsa3072::unseal_pair() {
-        Ok(pair) => pair,
-        Err(status) => return status,
-    };
-
-    // decrypt the payload
-    debug!("decrypt the call");
-    let request_vec = rsa3072::decrypt(&cyphertext_slice, &rsa_keypair);
-    let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
-
-    debug!("query mrenclave of self");
-    let mrenclave = match attestation::get_mrenclave_of_self() {
-        Ok(m) => m,
-        Err(status) => return status,
-    };
-
-    debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
-    if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
-        error!("TrustedCallSigned: bad signature");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    let mut state = match state::load(&shard) {
-        Ok(s) => s,
-        Err(status) => return status,
-    };
-
-    debug!("Update STF storage!");
-    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
-        .into_iter()
-        .map(WorkerRequest::ChainStorage)
-        .collect();
-
-    let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url) {
-        Ok(r) => r,
-        Err(status) => return status,
-    };
-
-    let mut update_map = HashMap::new();
-    for response in responses.iter() {
-        match response {
-            WorkerResponse::ChainStorage(key, value, _proof) => {
-                if let Some(val) = value {
-                    update_map.insert(key.clone(), val.clone());
-                }
-            }
-        }
-    }
-
-    Stf::update_storage(&mut state, update_map);
-
-    debug!("execute STF");
-    let mut calls_buffer = Vec::new();
-    Stf::execute(
-        &mut state,
-        stf_call_signed.call,
-        stf_call_signed.nonce,
-        &mut calls_buffer,
-    );
-
-    let state_hash = match state::write(state, &shard) {
-        Ok(h) => h,
-        Err(status) => return status,
-    };
-
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    let call_hash = blake2_256(&request_vec);
-    debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
-
-    calls_buffer.push(OpaqueCall(
-        (xt_call, shard, call_hash.to_vec(), state_hash.encode()).encode(),
-    ));
-
-    if let Err(e) = stf_post_actions(validator, calls_buffer, extrinsic_slice, *nonce) {
-        return e;
-    }
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -328,7 +218,7 @@ pub unsafe extern "C" fn get_state(
         Err(status) => return status,
     };
 
-    debug!("calling ito STF to get state");
+    debug!("calling into STF to get state");
     let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
 
     debug!("returning getter result");
@@ -375,17 +265,18 @@ pub unsafe extern "C" fn init_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
-
 #[no_mangle]
 pub unsafe extern "C" fn sync_chain_relay(
     blocks: *const u8,
     blocks_size: usize,
     nonce: *const u32,
+    node_url: *const u8,
+    node_url_size: usize,
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: usize,
 ) -> sgx_status_t {
     info!("Syncing chain relay!");
+    let node_url = slice::from_raw_parts(node_url, node_url_size as usize);
     let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
     let xt_slice = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size);
 
@@ -416,7 +307,7 @@ pub unsafe extern "C" fn sync_chain_relay(
         }
     }
 
-    let calls = match scan_blocks_for_relevant_xt(blocks) {
+    let calls = match scan_blocks_for_relevant_xt(blocks, node_url) {
         Ok(c) => c,
         Err(e) => return e,
     };
@@ -429,57 +320,140 @@ pub unsafe extern "C" fn sync_chain_relay(
 }
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
-pub fn scan_blocks_for_relevant_xt(blocks: Vec<SignedBlock<Block>>) -> SgxResult<Vec<OpaqueCall>> {
+pub fn scan_blocks_for_relevant_xt(
+    blocks: Vec<SignedBlock<Block>>,
+    node_url: &[u8],
+) -> SgxResult<Vec<OpaqueCall>> {
+    debug!("Scanning blocks for relevant xt");
     let mut calls = Vec::<OpaqueCall>::new();
     for block in blocks.iter() {
         for xt_opaque in block.block.extrinsics.iter() {
             if let Ok(xt) =
                 UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
             {
-                let (call, account_encrypted, amount, shard) = xt.function.clone();
-
                 // confirm call decodes successfully as well
-                if call != [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                    continue;
+                if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
+                    handle_shield_funds_xt(&mut calls, xt)?;
                 }
-
-                info!("Found ShieldFunds extrinsic in block");
-                info!(
-                    "Call: {:?}, Account Encrypted {:?}, Amount: {}, Shard: {:?}",
-                    call, account_encrypted, amount, shard
-                );
-
-                let mut state = state::load(&shard)?;
-
-                debug!("load shielding keypair");
-                let rsa_keypair = rsa3072::unseal_pair()?;
-
-                // decrypt the payload
-                debug!("decrypt the call");
-                let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
-                let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
-
-                Stf::execute(
-                    &mut state,
-                    TrustedCall::balance_shield(account, amount),
-                    Default::default(),
-                    &mut calls,
-                );
-                let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-                let state_hash = state::write(state, &shard)?;
-                calls.push(OpaqueCall(
-                    (
-                        xt_call,
-                        shard,
-                        blake2_256(&xt.encode()).to_vec(),
-                        state_hash.encode(),
-                    )
-                        .encode(),
-                ))
             };
+
+            if let Ok(xt) =
+                UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
+            {
+                if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
+                    handle_call_worker_xt(&mut calls, xt, node_url)?;
+                }
+            }
         }
     }
     Ok(calls)
+}
+
+fn handle_shield_funds_xt(
+    calls: &mut Vec<OpaqueCall>,
+    xt: UncheckedExtrinsicV4<ShieldFundsFn>,
+) -> SgxResult<()> {
+    let (call, account_encrypted, amount, shard) = xt.function.clone();
+    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {:?}",
+        call, account_encrypted, amount, shard
+    );
+
+    let mut state = state::load(&shard)?;
+
+    debug!("decrypt the call");
+    let rsa_keypair = rsa3072::unseal_pair()?;
+    let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
+    let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
+
+    Stf::execute(
+        &mut state,
+        TrustedCall::balance_shield(account, amount),
+        Default::default(),
+        calls,
+    );
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let state_hash = state::write(state, &shard)?;
+    calls.push(OpaqueCall(
+        (
+            xt_call,
+            shard,
+            blake2_256(&xt.encode()).to_vec(),
+            state_hash.encode(),
+        )
+            .encode(),
+    ));
+    Ok(())
+}
+
+fn handle_call_worker_xt(
+    calls: &mut Vec<OpaqueCall>,
+    xt: UncheckedExtrinsicV4<CallWorkerFn>,
+    node_url: &[u8],
+) -> SgxResult<()> {
+    let (call, request) = xt.function;
+    let (shard, cyphertext) = (request.shard, request.cyphertext);
+    info!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
+        call,
+        shard.encode().to_base58(),
+        cyphertext
+    );
+
+    debug!("decrypt the call");
+    let rsa_keypair = rsa3072::unseal_pair()?;
+    let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair);
+    let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
+
+    debug!("query mrenclave of self");
+    let mrenclave = attestation::get_mrenclave_of_self()?;
+
+    debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
+    if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
+        error!("TrustedCallSigned: bad signature");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+
+    let mut state = state::load(&shard)?;
+
+    debug!("Update STF storage!");
+    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
+        .into_iter()
+        .map(WorkerRequest::ChainStorage)
+        .collect();
+
+    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
+
+    let mut update_map = HashMap::new();
+    for response in responses.iter() {
+        match response {
+            WorkerResponse::ChainStorage(key, value, _proof) => {
+                if let Some(val) = value {
+                    update_map.insert(key.clone(), val.clone());
+                }
+            }
+        }
+    }
+
+    Stf::update_storage(&mut state, update_map);
+
+    debug!("execute STF");
+    Stf::execute(
+        &mut state,
+        stf_call_signed.call,
+        stf_call_signed.nonce,
+        calls,
+    );
+
+    let state_hash = state::write(state, &shard)?;
+
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let call_hash = blake2_256(&request_vec);
+    debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+
+    calls.push(OpaqueCall(
+        (xt_call, shard, call_hash.to_vec(), state_hash.encode()).encode(),
+    ));
+
+    Ok(())
 }
 
 extern "C" {

@@ -101,7 +101,7 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.4-sub2.0.0-alpha.7"
+tag = "v0.4.5-sub2.0.0-alpha.7"
 default-features = false
 features = ["full_crypto"]
 
@@ -116,6 +116,11 @@ features = ["sgx"]
 [dependencies.sgx-externalities]
 git = "https://github.com/scs/sgx-runtime"
 default-features = false
+
+[dependencies.substratee-node-primitives]
+path = "../substratee-node-primitives"
+default-features = false
+features = ["sgx"]
 
 [patch.crates-io]
 sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
