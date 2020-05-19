@@ -442,6 +442,11 @@ pub fn sync_chain_relay(
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
         .unwrap();
 
+    if curr_head.block.header.hash() == last_synced_head.hash() {
+        // we are already up to date, do nothing
+        return curr_head.block.header;
+    }
+
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
     blocks_to_sync.push(curr_head.clone());
 
