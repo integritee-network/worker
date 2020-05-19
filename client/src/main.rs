@@ -375,10 +375,7 @@ fn main() {
                         .unwrap();
 
                     println!("shard is {}", shard);
-                    println!("shielding pubkey is {:?}", shielding_pubkey);
                     println!("to ss58 is {}", to);
-                    println!("to_encoded is {:?}", to_encoded);
-                    println!("to_encrypted is {:?}", to_encrypted);
                     println!("amount is {}", amount);
 
                     let arg_signer = "//Alice";
@@ -389,7 +386,7 @@ fn main() {
                         chain_api.clone(),
                         "SubstrateeRegistry",
                         "shield_funds",
-                        to_encoded,
+                        to_encrypted,
                         amount,
                         shard
                     );
