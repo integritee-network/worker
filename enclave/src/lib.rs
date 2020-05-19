@@ -36,7 +36,9 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
-use substratee_stf::{ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned};
+use substratee_stf::{
+    AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
+};
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
@@ -48,11 +50,15 @@ use std::string::String;
 use std::vec::Vec;
 
 use std::collections::HashMap;
-use utils::{hash_from_slice, write_slice_and_whitespace_pad};
+use utils::write_slice_and_whitespace_pad;
 
-use chain_relay::{storage_proof::StorageProof, Block, Header, LightValidation};
+use crate::constants::SHIELD_FUNDS;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
+use chain_relay::{Block, Header, LightValidation};
 use sp_runtime::generic::SignedBlock;
 use sp_runtime::OpaqueExtrinsic;
+use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
+use substratee_stf::sgx::OpaqueCall;
 
 mod aes;
 mod attestation;
@@ -153,8 +159,8 @@ pub unsafe extern "C" fn execute_stf(
     cyphertext_size: u32,
     shard: *const u8,
     shard_size: u32,
-    genesis_hash: *const u8,
-    genesis_hash_size: u32,
+    _genesis_hash: *const u8, // Todo: Remove, since light_validation_code is used, genesis hash is no longer needed
+    _genesis_hash_size: u32,
     nonce: *const u32,
     node_url: *const u8,
     node_url_size: u32,
@@ -162,8 +168,10 @@ pub unsafe extern "C" fn execute_stf(
     unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
     // first verify if all our previous extrinsics have been included
-    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
-    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
+    let mut validator = match io::light_validation::unseal() {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
 
     if let Ok(amount) = validator.num_xt_to_be_included(validator.num_relays) {
         warn!("{} extrinsics still need to be included", amount);
@@ -171,10 +179,6 @@ pub unsafe extern "C" fn execute_stf(
 
     let cyphertext_slice = slice::from_raw_parts(cyphertext, cyphertext_size as usize);
     let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-    let genesis_hash = hash_from_slice(slice::from_raw_parts(
-        genesis_hash,
-        genesis_hash_size as usize,
-    ));
     let node_url = slice::from_raw_parts(node_url, node_url_size as usize);
     let extrinsic_slice =
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
@@ -245,26 +249,39 @@ pub unsafe extern "C" fn execute_stf(
         Err(status) => return status,
     };
 
-    // get information for composing the extrinsic
-    let signer = match ed25519::unseal_pair() {
-        Ok(pair) => pair,
-        Err(status) => return status,
-    };
-    debug!("Restored ECC pubkey: {:?}", signer.public());
-
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     let call_hash = blake2_256(&request_vec);
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    let mut nonce = *nonce;
+    calls_buffer.push(OpaqueCall(
+        (xt_call, shard, call_hash.to_vec(), state_hash.encode()).encode(),
+    ));
 
-    let mut extrinsics_buffer: Vec<Vec<u8>> = calls_buffer
+    if let Err(e) = stf_post_actions(validator, calls_buffer, extrinsic_slice, *nonce) {
+        return e;
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn stf_post_actions(
+    mut validator: LightValidation,
+    calls_buffer: Vec<OpaqueCall>,
+    extrinsics_slice: &mut [u8],
+    mut nonce: u32,
+) -> SgxResult<()> {
+    // get information for composing the extrinsic
+    let signer = ed25519::unseal_pair()?;
+    debug!("Restored ECC pubkey: {:?}", signer.public());
+
+    let extrinsics_buffer: Vec<Vec<u8>> = calls_buffer
         .into_iter()
         .map(|call| {
             let xt = compose_extrinsic_offline!(
                 signer.clone(),
                 call,
                 nonce,
-                genesis_hash,
+                validator.genesis_hash(validator.num_relays).unwrap(),
                 RUNTIME_SPEC_VERSION
             )
             .encode();
@@ -273,24 +290,17 @@ pub unsafe extern "C" fn execute_stf(
         })
         .collect();
 
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    let xt = compose_extrinsic_offline!(
-        signer,
-        (xt_call, shard, call_hash.to_vec(), state_hash.encode()),
-        nonce,
-        genesis_hash,
-        RUNTIME_SPEC_VERSION
-    )
-    .encode();
+    for xt in extrinsics_buffer.iter() {
+        validator
+            .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic(xt.to_vec()))
+            .unwrap();
+    }
 
-    extrinsics_buffer.push(xt.clone());
+    write_slice_and_whitespace_pad(extrinsics_slice, extrinsics_buffer.encode());
 
-    validator
-        .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic(xt))
-        .unwrap();
-    write_slice_and_whitespace_pad(extrinsic_slice, extrinsics_buffer.encode());
+    io::light_validation::seal(validator)?;
 
-    sgx_status_t::SGX_SUCCESS
+    Ok(())
 }
 
 #[no_mangle]
@@ -333,55 +343,143 @@ pub unsafe extern "C" fn init_chain_relay(
     genesis_header_size: usize,
     authority_list: *const u8,
     authority_list_size: usize,
+    latest_header: *mut u8,
+    latest_header_size: usize,
 ) -> sgx_status_t {
     info!("Initializing Chain Relay!");
 
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
+    let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
-    let auth = VersionedAuthorityList::decode(&mut auth).unwrap();
 
-    let mut validator = LightValidation::new();
+    let header = match Header::decode(&mut header) {
+        Ok(h) => h,
+        Err(e) => {
+            error!("Decoding Header failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
-    let _id = validator
-        .initialize_relay(
-            Header::decode(&mut header).unwrap(),
-            auth.into(),
-            StorageProof::default(),
-        )
-        .unwrap();
+    let auth = match VersionedAuthorityList::decode(&mut auth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("Decoding VersionedAuthorityList failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
-    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
+    match io::light_validation::read_or_init_validator(header, auth) {
+        Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
+        Err(e) => return e,
+    }
+    sgx_status_t::SGX_SUCCESS
+}
+
+pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
+
+#[no_mangle]
+pub unsafe extern "C" fn sync_chain_relay(
+    blocks: *const u8,
+    blocks_size: usize,
+    nonce: *const u32,
+    unchecked_extrinsic: *mut u8,
+    unchecked_extrinsic_size: usize,
+) -> sgx_status_t {
+    info!("Syncing chain relay!");
+    let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
+    let xt_slice = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size);
+
+    let blocks: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_slice) {
+        Ok(b) => b,
+        Err(e) => {
+            error!("Decoding signed blocks failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let mut validator = match io::light_validation::unseal() {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    for signed_block in blocks.iter() {
+        validator
+            .check_xt_inclusion(validator.num_relays, &signed_block.block)
+            .unwrap(); // panic can only happen if relay_id is does not exist
+        if let Err(e) = validator.submit_simple_header(
+            validator.num_relays,
+            signed_block.block.header.clone(),
+            signed_block.justification.clone(),
+        ) {
+            error!("Block verification failed. Error : {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    }
+
+    let calls = match scan_blocks_for_relevant_xt(blocks) {
+        Ok(c) => c,
+        Err(e) => return e,
+    };
+
+    if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
     sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn sync_chain_relay(blocks: *const u8, blocks_size: usize) -> sgx_status_t {
-    info!("Syncing chain relay!");
+/// Scans blocks for extrinsics that ask the enclave to execute some actions.
+pub fn scan_blocks_for_relevant_xt(blocks: Vec<SignedBlock<Block>>) -> SgxResult<Vec<OpaqueCall>> {
+    let mut calls = Vec::<OpaqueCall>::new();
+    for block in blocks.iter() {
+        for xt_opaque in block.block.extrinsics.iter() {
+            if let Ok(xt) =
+                UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
+            {
+                let (call, account_encrypted, amount, shard) = xt.function.clone();
 
-    let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
-    let blocks: Vec<SignedBlock<Block>> = Decode::decode(&mut blocks_slice).unwrap();
+                // confirm call decodes successfully as well
+                if call != [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
+                    continue;
+                }
 
-    let val_vec = io::unseal(constants::CHAIN_RELAY_DB).unwrap();
-    let mut validator: LightValidation = Decode::decode(&mut val_vec.as_slice()).unwrap();
+                info!("Found ShieldFunds extrinsic in block");
+                info!(
+                    "Call: {:?}, Account Encrypted {:?}, Amount: {}, Shard: {:?}",
+                    call, account_encrypted, amount, shard
+                );
 
-    blocks.into_iter().for_each(|signed_block| {
-        validator
-            .check_xt_inclusion(validator.num_relays, &signed_block.block)
-            .unwrap(); // panic can only happen if relay_id is unsafe
-        validator
-            .submit_simple_header(
-                validator.num_relays,
-                signed_block.block.header,
-                signed_block.justification,
-            )
-            .unwrap() // panic can only happen if relay_id is unsafe
-    });
+                let mut state = state::load(&shard)?;
 
-    io::seal(validator.encode().as_slice(), constants::CHAIN_RELAY_DB).unwrap();
-    debug!("Synced Relay DB. Current state: {:?}", validator);
+                debug!("load shielding keypair");
+                let rsa_keypair = rsa3072::unseal_pair()?;
 
-    sgx_status_t::SGX_SUCCESS
+                // decrypt the payload
+                debug!("decrypt the call");
+                let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
+                let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
+
+                Stf::execute(
+                    &mut state,
+                    TrustedCall::balance_shield(account, amount),
+                    Default::default(),
+                    &mut calls,
+                );
+                let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+                let state_hash = state::write(state, &shard)?;
+                calls.push(OpaqueCall(
+                    (
+                        xt_call,
+                        shard,
+                        blake2_256(&xt.encode()).to_vec(),
+                        state_hash.encode(),
+                    )
+                        .encode(),
+                ))
+            };
+        }
+    }
+    Ok(calls)
 }
 
 extern "C" {

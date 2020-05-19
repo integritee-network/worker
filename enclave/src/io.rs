@@ -72,3 +72,50 @@ fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
 
     Ok(sgx_status_t::SGX_SUCCESS)
 }
+
+pub mod light_validation {
+    use crate::constants::CHAIN_RELAY_DB;
+    use crate::utils::UnwrapOrSgxErrorUnexpected;
+    use chain_relay::storage_proof::StorageProof;
+    use chain_relay::{Header, LightValidation};
+    use codec::{Decode, Encode};
+    use log::*;
+    use sgx_types::{sgx_status_t, SgxResult};
+    use sp_finality_grandpa::VersionedAuthorityList;
+
+    pub fn unseal() -> SgxResult<LightValidation> {
+        let vec = super::unseal(CHAIN_RELAY_DB)?;
+        LightValidation::decode(&mut vec.as_slice()).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)
+    }
+
+    pub fn seal(validator: LightValidation) -> SgxResult<sgx_status_t> {
+        debug!("Seal Chain Relay State. Current state: {:?}", validator);
+        super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)
+    }
+
+    pub fn read_or_init_validator(
+        header: Header,
+        auth: VersionedAuthorityList,
+    ) -> SgxResult<Header> {
+        if let Ok(validator) = unseal() {
+            let genesis = validator.genesis_hash(validator.num_relays).unwrap();
+            if genesis == header.hash() {
+                info!(
+                    "Found already initialized chain relay with Genesis Hash: {:?}",
+                    genesis
+                );
+                info!("Chain Relay state: {:?}", validator);
+                return Ok(validator.latest_header(validator.num_relays).unwrap());
+            }
+        }
+
+        let mut validator = LightValidation::new();
+
+        validator
+            .initialize_relay(header, auth.into(), StorageProof::default())
+            .sgx_error()?;
+        super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?;
+
+        Ok(validator.latest_header(validator.num_relays).unwrap())
+    }
+}

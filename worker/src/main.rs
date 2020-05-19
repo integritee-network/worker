@@ -33,7 +33,9 @@ use sp_core::{
     sr25519, Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
+use substrate_api_client::{
+    extrinsic::xt_primitives::UncheckedExtrinsicV4, utils::hexstr_to_vec, Api, XtStatus,
+};
 use substratee_node_runtime::{
     substratee_registry::{Request, ShardIdentifier},
     Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
@@ -56,6 +58,8 @@ mod enclave;
 mod ipfs;
 mod tests;
 mod ws_server;
+
+type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
 fn main() {
     // Setup logging
@@ -394,6 +398,13 @@ fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<Strin
                         debug!("    Payload: {:?}", hex::encode(payload));
                         println!();
                     }
+                    substratee_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+                        incognito_account,
+                    ) => {
+                        println!("[+] Received ShieldFunds event");
+                        debug!("    For:    {:?}", incognito_account);
+                        println!();
+                    }
                     _ => {
                         info!("Ignoring unsupported substratee_registry event");
                     }
@@ -449,7 +460,6 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_hash = api.get_genesis_hash();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
-
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
         .map(|g: VersionedAuthorityList| g.into())
@@ -457,16 +467,13 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    enclave_init_chain_relay(
-        eid,
-        genesis_header.clone(),
-        VersionedAuthorityList::from(grandpas),
-    )
-    .unwrap();
+    let latest =
+        enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas))
+            .unwrap();
 
     info!("Finished initializing chain relay, syncing....");
 
-    sync_chain_relay(eid, api, genesis_header)
+    sync_chain_relay(eid, api, latest)
 }
 
 pub fn sync_chain_relay(
@@ -490,18 +497,36 @@ pub fn sync_chain_relay(
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        debug!(
-            "Syncing Block: {}, has justification: {}",
-            head.block.header.number,
-            head.justification.is_some()
-        )
+        debug!("Syncing Block: {:?}", head.block)
     }
     blocks_to_sync.reverse();
     debug!(
         "Got {} headers to sync in chain relay.",
         blocks_to_sync.len()
     );
-    enclave_sync_chain_relay(eid, blocks_to_sync).unwrap();
+
+    let tee_accountid = enclave_account(eid);
+    let tee_nonce = get_nonce(&api, &tee_accountid);
+
+    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
+
+    let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
+    info!(
+        "Sync chain relay: Enclave wants to send {} extrinsics",
+        extrinsics.len()
+    );
+
+    extrinsics
+        .into_iter()
+        .map(|xt_vec| {
+            info!("Encoded xt: {:?}", xt_vec);
+            UncheckedExtrinsicV4::<SubstrateeConfirmCallFn>::decode(&mut xt_vec.as_slice()).unwrap()
+        })
+        .for_each(|xt| {
+            api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                .unwrap();
+        });
+
     curr_head.block.header
 }
 

@@ -18,7 +18,10 @@
 use codec::{Decode, Encode};
 use log::*;
 use sgx_types::*;
-use sp_core::{crypto::AccountId32, sr25519};
+use sp_core::{
+    crypto::{AccountId32, Pair},
+    sr25519, H256,
+};
 use sp_keyring::AccountKeyring;
 use std::fs;
 use substrate_api_client::{Api, XtStatus};
@@ -29,7 +32,9 @@ use crate::constants::*;
 use crate::enclave::api::*;
 use crate::enclave_account;
 use crate::tests::commons::*;
-use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
+use std::thread::sleep;
+use std::time::Duration;
+use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
 use substratee_node_calls::ShardIdentifier;
 use substratee_node_runtime::Header;
 use substratee_stf::BalanceTransferFn;
@@ -134,5 +139,29 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
 
 pub fn sync_chain_relay(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
     let (api, _, _) = setup(eid, None, port);
+    crate::sync_chain_relay(eid, &api, last_synced_head)
+}
+
+pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, H256);
+
+pub fn shield_funds(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
+    let (api, _nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
+
+    let xt: UncheckedExtrinsicV4<ShieldFundsFn> = compose_extrinsic!(
+        api,
+        "SubstrateeRegistry",
+        "shield_funds",
+        encrypted_alice(eid),
+        444u128,
+        shard
+    );
+    let tx_hash = api
+        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+        .unwrap();
+    println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+
+    println!("Sleeping until block with shield funds is finalized...");
+    sleep(Duration::new(10, 0));
+    println!("Syncing Chain Relay to look for shield_funds extrinsic");
     crate::sync_chain_relay(eid, &api, last_synced_head)
 }
