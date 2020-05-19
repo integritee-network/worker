@@ -170,7 +170,7 @@ fn main() {
                         accountid.to_ss58check()
                     );
                     let tx_hash = _api
-                        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                        .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
                         .unwrap();
                     info!(
                         "[+] Pre-Funding transaction got finalized. Hash: {:?}\n",
@@ -249,7 +249,7 @@ fn main() {
                     let _api = api.set_signer(sr25519_core::Pair::from(from));
                     let xt = _api.balance_transfer(to.clone(), amount);
                     let tx_hash = _api
-                        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                        .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
                         .unwrap();
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
                     let result = _api.get_account_data(&to).unwrap();

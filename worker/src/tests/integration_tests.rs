@@ -65,7 +65,7 @@ pub fn call_worker_encrypted_set_balance_works(
     let xt: UncheckedExtrinsicV4<CallWorkerFn> =
         compose_extrinsic!(api, "SubstrateeRegistry", "call_worker", req);
 
-    api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+    api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
         .unwrap();
 
     println!("Sleeping until block with shield funds is finalized...");
@@ -88,7 +88,7 @@ pub fn forward_encrypted_unshield_works(
     let xt: UncheckedExtrinsicV4<CallWorkerFn> =
         compose_extrinsic!(api, "SubstrateeRegistry", "call_worker", req);
 
-    api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+    api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
         .unwrap();
 
     println!("Sleeping until block with shield funds is finalized...");
@@ -115,7 +115,7 @@ pub fn shield_funds_workds(eid: sgx_enclave_id_t, port: &str, last_synced_head: 
         shard
     );
     let tx_hash = api
-        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+        .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
         .unwrap();
     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
 
