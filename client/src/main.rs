@@ -300,6 +300,145 @@ fn main() {
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("shield-funds")
+                .description("Transfer funds from an on-chain account to an incognito account")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("to")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Recipient's AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("shard")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("STRING")
+                            .help("Shard identifier"),
+                    )
+                    .arg(
+                        Arg::with_name("amount")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("U128")
+                            .help("Amount to be transferred"),
+                    )
+                })
+                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                    println!("SHIELD FUNDS");
+
+                    println!("get chain_api");
+                    let chain_api = get_chain_api(matches);
+
+                    println!("get worker_api");
+                    let url = format!(
+                        "{}:{}",
+                        "127.0.0.1",
+                        "2000"
+                    );
+                    let worker_api = WorkerApi::new(url);
+
+                    println!("get shielding_pubkey");
+                    let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+                    println!("got shielding_pubkey");
+                    println!("");
+
+                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                        .expect("amount can't be converted to u128");
+
+                    // get the shard
+                    println!("get shard");
+                    let shard_opt = match matches.value_of("shard") {
+                        Some(s) => match s.from_base58() {
+                            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                            _ => panic!("shard argument must be base58 encoded"),
+                        },
+                        _ => panic!("at least one of `mrenclave` or `shard` arguments must be supplied")
+                    };
+                    let shard = match shard_opt {
+                        Ok(shard) => shard,
+                        Err(e) => panic!(e),
+                    };
+                    println!("shard = {}", shard);
+                    println!("got shard");
+                    println!("");
+
+                    // get the recipient
+                    let arg_to = matches.value_of("to").unwrap();
+                    let to = get_accountid_from_str(arg_to);
+                    let to_encoded = to.encode();
+                    let mut to_encrypted: Vec<u8> = Vec::new();
+                    shielding_pubkey
+                        .encrypt_buffer(&to_encoded, &mut to_encrypted)
+                        .unwrap();
+
+                    println!("shard is {}", shard);
+                    println!("shielding pubkey is {:?}", shielding_pubkey);
+                    println!("to ss58 is {}", to);
+                    println!("to_encoded is {:?}", to_encoded);
+                    println!("to_encrypted is {:?}", to_encrypted);
+                    println!("amount is {}", amount);
+
+                    let arg_signer = "//Alice";
+                    let signer = get_pair_from_str(arg_signer);
+                    let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
+
+                    let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
+                        chain_api.clone(),
+                        "SubstrateeRegistry",
+                        "shield_funds",
+                        to_encoded,
+                        amount,
+                        shard
+                    );
+                    println!("extrinsic composed");
+                    println!("");
+
+                    let tx_hash = chain_api
+                        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                        .unwrap();
+                    println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+
+
+                    // // send and watch extrinsic until finalized
+                    // println!("send extrinsic");
+                    // let tx_hash = _chain_api
+                    //     .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                    //     .unwrap();
+                    // println!("");
+                    // info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
+                    // info!("waiting for confirmation of stf call");
+                    // let (events_in, events_out) = channel();
+                    // _chain_api.subscribe_events(events_in);
+
+                    // let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
+                    // decoder
+                    //     .register_type_size::<Hash>("ShardIdentifier")
+                    //     .unwrap();
+
+                    // loop {
+                    //     let ret: CallConfirmedArgs = _chain_api
+                    //         .wait_for_event(
+                    //             "SubstrateeRegistry",
+                    //             "CallConfirmed",
+                    //             Some(decoder.clone()),
+                    //             &events_out,
+                    //         )
+                    //         .unwrap()
+                    //         .unwrap();
+                    //     let expected = blake2_256(&to_encoded);
+                    //     info!("callConfirmed event received");
+                    //     debug!("Expected stf call Hash: {:?}", expected);
+                    //     debug!("Confirmed stf call Hash: {:?}", ret.payload);
+                    //     if ret.payload == expected {
+                    //         break;
+                    //     }
+                    // }
+                    Ok(())
+                }),
+        )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
