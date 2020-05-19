@@ -320,7 +320,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     loop {
         let msg = receiver.recv().unwrap();
         if let Ok(events) = parse_events(msg.clone()) {
-            print_events(eid, node_url, events, sender.clone())
+            print_events(events, sender.clone())
         } else if let Ok(_header) = parse_header(msg.clone()) {
             latest_head = sync_chain_relay(eid, &api, latest_head)
         } else {
@@ -341,7 +341,7 @@ fn parse_header(header: String) -> Result<Header, String> {
     serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
 }
 
-fn print_events(_eid: u64, _node_url: &str, events: Events, _sender: Sender<String>) {
+fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {
