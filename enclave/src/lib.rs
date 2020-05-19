@@ -146,7 +146,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
         Ok(pair) => pair,
         Err(status) => return status,
     };
-    info!("Restored ECC pubkey: {:?}", signer.public());
+    debug!("Restored ECC pubkey: {:?}", signer.public());
 
     let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
     pubkey_slice.clone_from_slice(&signer.public());
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn get_state(
         Err(status) => return status,
     };
 
-    debug!("calling ito STF to get state");
+    debug!("calling into STF to get state");
     let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
 
     debug!("returning getter result");
@@ -324,7 +324,7 @@ pub fn scan_blocks_for_relevant_xt(
     blocks: Vec<SignedBlock<Block>>,
     node_url: &[u8],
 ) -> SgxResult<Vec<OpaqueCall>> {
-    info!("scanning blocks for relevant xt");
+    debug!("Scanning blocks for relevant xt");
     let mut calls = Vec::<OpaqueCall>::new();
     for block in blocks.iter() {
         for xt_opaque in block.block.extrinsics.iter() {
@@ -354,19 +354,14 @@ fn handle_shield_funds_xt(
     xt: UncheckedExtrinsicV4<ShieldFundsFn>,
 ) -> SgxResult<()> {
     let (call, account_encrypted, amount, shard) = xt.function.clone();
-    info!("Found ShieldFunds extrinsic in block");
-    info!(
-        "Call: {:?}, Account Encrypted {:?}, Amount: {}, Shard: {:?}",
+    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {:?}",
         call, account_encrypted, amount, shard
     );
 
     let mut state = state::load(&shard)?;
 
-    debug!("load shielding keypair");
-    let rsa_keypair = rsa3072::unseal_pair()?;
-
-    // decrypt the payload
     debug!("decrypt the call");
+    let rsa_keypair = rsa3072::unseal_pair()?;
     let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
     let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
 
@@ -397,18 +392,14 @@ fn handle_call_worker_xt(
 ) -> SgxResult<()> {
     let (call, request) = xt.function.clone();
     let (shard, cyphertext) = (request.shard, request.cyphertext);
-    info!("Found CallWorker extrinsic in block");
-    info!(
-        "    Call: {:?} \n Request: \n  shard: {}\n  cyphertext: {:?}",
+    info!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
         call,
         shard.encode().to_base58(),
         cyphertext
     );
 
-    // decrypt the payload
-    debug!("loading shielding key");
-    let rsa_keypair = rsa3072::unseal_pair()?;
     debug!("decrypt the call");
+    let rsa_keypair = rsa3072::unseal_pair()?;
     let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair);
     let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
