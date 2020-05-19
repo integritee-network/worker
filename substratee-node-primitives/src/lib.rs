@@ -6,11 +6,16 @@ use sgx_tstd as std;
 
 use std::vec::Vec;
 
+use codec::{Decode, Encode};
 use sp_core::H256;
 
 pub type ShardIdentifier = H256;
 // Note in the substratee-pallet-registry this is a struct. But for the coded this does not matter.
-pub type Request = (ShardIdentifier, Vec<u8>);
+#[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
+pub struct Request {
+    pub shard: ShardIdentifier,
+    pub cyphertext: Vec<u8>,
+}
 
 pub type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);

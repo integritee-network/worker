@@ -15,29 +15,22 @@
 
 */
 
-use codec::{Decode, Encode};
+use codec::Encode;
 use log::*;
 use sgx_types::*;
-use sp_core::{
-    crypto::{AccountId32, Pair},
-    sr25519,
-};
+use sp_core::crypto::{AccountId32, Pair};
 use sp_keyring::AccountKeyring;
 use std::fs;
-use substrate_api_client::{Api, XtStatus};
-
-use substratee_node_runtime::substratee_registry::Request;
+use substrate_api_client::XtStatus;
 
 use crate::constants::*;
 use crate::enclave::api::*;
-use crate::enclave_account;
 use crate::tests::commons::*;
 use std::thread::sleep;
 use std::time::Duration;
 use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
-use substratee_node_primitives::{ShardIdentifier, ShieldFundsFn, SubstrateeConfirmCallFn};
+use substratee_node_primitives::{CallWorkerFn, Request, ShieldFundsFn};
 use substratee_node_runtime::Header;
-use substratee_stf::BalanceTransferFn;
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
@@ -58,76 +51,50 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     let _xt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.encode()).unwrap();
 }
 
-pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
-    let (_api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
+pub fn call_worker_encrypted_set_balance_works(
+    eid: sgx_enclave_id_t,
+    port: &str,
+    last_synced_head: Header,
+) -> Header {
+    let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
     let req = Request {
+        shard,
         cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap()),
+    };
+
+    let xt: UncheckedExtrinsicV4<CallWorkerFn> =
+        compose_extrinsic!(api, "SubstrateeRegistry", "call_worker", req);
+
+    api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+        .unwrap();
+
+    println!("Sleeping until block with shield funds is finalized...");
+    sleep(Duration::new(10, 0));
+    println!("Syncing Chain Relay to look for shield_funds extrinsic");
+    crate::sync_chain_relay(eid, &api, last_synced_head)
+}
+
+pub fn forward_encrypted_unshield_works(
+    eid: sgx_enclave_id_t,
+    port: &str,
+    last_synced_head: Header,
+) -> Header {
+    let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
+    let req = Request {
+        cyphertext: encrypted_unshield(eid, AccountKeyring::Alice, nonce.unwrap()),
         shard,
     };
 
-    crate::process_request(eid, req, format!("ws://{}:{}", "127.0.0.1", port).as_str());
-}
+    let xt: UncheckedExtrinsicV4<CallWorkerFn> =
+        compose_extrinsic!(api, "SubstrateeRegistry", "call_worker", req);
 
-pub fn execute_stf_set_balance_works(eid: sgx_enclave_id_t, port: &str) {
-    let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
-    let cyphertext = encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap());
-    execute_stf(eid, api, cyphertext, port, shard)
-}
-
-pub fn execute_stf_unshield_balance_works(eid: sgx_enclave_id_t, port: &str) {
-    let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
-    let cyphertext = encrypted_unshield(eid, AccountKeyring::Alice, nonce.unwrap());
-    execute_stf(eid, api, cyphertext, port, shard)
-}
-
-pub fn execute_stf(
-    eid: sgx_enclave_id_t,
-    api: Api<sr25519::Pair>,
-    cyphertext: Vec<u8>,
-    port: &str,
-    shard: ShardIdentifier,
-) {
-    let node_url = format!("ws://{}:{}", "127.0.0.1", port);
-    let tee_accountid = enclave_account(eid);
-    info!("Executing STF");
-
-    let nonce = get_nonce(&api, &tee_accountid);
-    let genesis_hash = api.genesis_hash;
-
-    let uxt = enclave_execute_stf(
-        eid,
-        cyphertext,
-        shard.encode(),
-        genesis_hash.encode(),
-        nonce,
-        node_url,
-    )
-    .unwrap();
-
-    let mut extrinsics: Vec<Vec<u8>> = Decode::decode(&mut uxt.as_slice()).unwrap();
-    info!("Enclave wants to send {} extrinsics", extrinsics.len());
-
-    // send all unshield extrinsics
-    while extrinsics.len() > 1 {
-        let xt_vec = extrinsics.remove(0);
-
-        let xt: UncheckedExtrinsicV4<BalanceTransferFn> =
-            Decode::decode(&mut xt_vec.as_slice()).unwrap();
-        info!("STF extrinsic: {:?}", xt);
-
-        api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
-            .unwrap();
-    }
-
-    // the last element is always the confirmaton extrinsic
-    let xt: UncheckedExtrinsicV4<SubstrateeConfirmCallFn> = extrinsics
-        .pop()
-        .map(|xt| Decode::decode(&mut xt.as_slice()).unwrap())
-        .unwrap();
-
-    info!("Call Confirm extrinsic: {:?}", xt);
     api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
         .unwrap();
+
+    println!("Sleeping until block with shield funds is finalized...");
+    sleep(Duration::new(10, 0));
+    println!("Syncing Chain Relay to look for shield_funds extrinsic");
+    crate::sync_chain_relay(eid, &api, last_synced_head)
 }
 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
@@ -136,12 +103,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
     crate::init_chain_relay(eid, &api)
 }
 
-pub fn sync_chain_relay(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
-    let (api, _, _) = setup(eid, None, port);
-    crate::sync_chain_relay(eid, &api, last_synced_head)
-}
-
-pub fn shield_funds(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
+pub fn shield_funds_workds(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
     let (api, _nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
 
     let xt: UncheckedExtrinsicV4<ShieldFundsFn> = compose_extrinsic!(

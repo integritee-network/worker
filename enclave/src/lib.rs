@@ -506,10 +506,12 @@ fn handle_call_worker_xt(
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
     node_url: &[u8],
 ) -> SgxResult<()> {
-    let (call, (shard, cyphertext)) = xt.function.clone();
+    let (call, request) = xt.function.clone();
+    let (shard, cyphertext) = (request.shard, request.cyphertext);
     info!("Found CallWorker extrinsic in block");
     info!(
-        "    Request: \n  shard: {}\n  cyphertext: {:?}",
+        "    Call: {:?} \n Request: \n  shard: {}\n  cyphertext: {:?}",
+        call,
         shard.encode().to_base58(),
         cyphertext
     );
