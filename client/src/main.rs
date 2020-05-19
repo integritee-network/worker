@@ -95,7 +95,7 @@ fn main() {
             )
             .arg(
                 Arg::with_name("worker-url")
-                    .short("wu")
+                    .short("U")
                     .long("worker-url")
                     .global(true)
                     .takes_value(true)
@@ -105,7 +105,7 @@ fn main() {
             )
             .arg(
                 Arg::with_name("worker-port")
-                    .short("wp")
+                    .short("P")
                     .long("worker-port")
                     .global(true)
                     .takes_value(true)
