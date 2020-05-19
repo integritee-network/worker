@@ -3,6 +3,9 @@
 # setup:
 # run all on localhost:
 #   substratee-node --dev --ws-port 9977 -lruntime=debug
+#   substratee-worker init_shard
+#   substratee-worker shielding-key
+#   substratee-worker signing-key
 #   TODO: MISSING STEPS FOR WORKER (shielding_key, shard, ...)
 #   substratee-worker -p 9977 run
 #
