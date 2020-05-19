@@ -26,6 +26,10 @@ bin/ecc_pubkey.txt
 
 *.log
 
+# keystores
+my_keystore/*
+my_trusted_keystore/*
+
 # generated enclave files
 worker/Enclave_u.*
 worker/libEnclave_u.*
