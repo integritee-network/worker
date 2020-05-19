@@ -38,8 +38,8 @@ sgx_crypto_helper 		= { rev = "v1.1.2", git = "https://github.com/apache/teaclav
 git = "https://github.com/scs/substrate-api-client"
 branch = "cl-make-url-public"
 
-[dependencies.substratee-node-calls]
-path = "../substratee-node-calls"
+[dependencies.substratee-node-primitives]
+path = "../substratee-node-primitives"
 
 [dependencies.substratee-worker-api]
 path = "worker-api"

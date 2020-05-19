@@ -20,7 +20,7 @@ use log::*;
 use sgx_types::*;
 use sp_core::{
     crypto::{AccountId32, Pair},
-    sr25519, H256,
+    sr25519,
 };
 use sp_keyring::AccountKeyring;
 use std::fs;
@@ -35,11 +35,9 @@ use crate::tests::commons::*;
 use std::thread::sleep;
 use std::time::Duration;
 use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
-use substratee_node_calls::ShardIdentifier;
+use substratee_node_primitives::{ShardIdentifier, ShieldFundsFn, SubstrateeConfirmCallFn};
 use substratee_node_runtime::Header;
 use substratee_stf::BalanceTransferFn;
-
-type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node
@@ -66,6 +64,7 @@ pub fn process_forwarded_payload_works(eid: sgx_enclave_id_t, port: &str) {
         cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap()),
         shard,
     };
+
     crate::process_request(eid, req, format!("ws://{}:{}", "127.0.0.1", port).as_str());
 }
 
@@ -141,8 +140,6 @@ pub fn sync_chain_relay(eid: sgx_enclave_id_t, port: &str, last_synced_head: Hea
     let (api, _, _) = setup(eid, None, port);
     crate::sync_chain_relay(eid, &api, last_synced_head)
 }
-
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, H256);
 
 pub fn shield_funds(eid: sgx_enclave_id_t, port: &str, last_synced_head: Header) -> Header {
     let (api, _nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);

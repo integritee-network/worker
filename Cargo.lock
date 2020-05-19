@@ -3691,13 +3691,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "substratee-node-calls"
+name = "substratee-node-primitives"
 version = "0.6.1-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "primitive-types 0.6.2",
+ "sgx_tstd",
  "sp-core",
  "sp-runtime",
  "substrate-api-client",
@@ -3793,7 +3794,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
- "substratee-node-calls",
+ "substratee-node-primitives",
  "substratee-node-runtime",
  "substratee-stf",
  "substratee-worker-api",

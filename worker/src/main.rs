@@ -49,7 +49,10 @@ use enclave::api::{
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::slice;
-use substratee_node_calls::{get_worker_for_shard, get_worker_info};
+use substratee_node_primitives::{
+    calls::{get_worker_for_shard, get_worker_info},
+    SubstrateeConfirmCallFn,
+};
 use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 
@@ -58,8 +61,6 @@ mod enclave;
 mod ipfs;
 mod tests;
 mod ws_server;
-
-type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, Vec<u8>, Vec<u8>);
 
 fn main() {
     // Setup logging
@@ -346,7 +347,7 @@ fn parse_header(header: String) -> Result<Header, String> {
     serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
 }
 
-fn handle_events(eid: u64, node_url: &str, events: Events, _sender: Sender<String>) {
+fn handle_events(_eid: u64, _node_url: &str, events: Events, _sender: Sender<String>) {
     for evr in &events {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {

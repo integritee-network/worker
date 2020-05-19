@@ -36,6 +36,7 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
+use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_stf::{
     AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
@@ -428,12 +429,6 @@ pub unsafe extern "C" fn sync_chain_relay(
 
     sgx_status_t::SGX_SUCCESS
 }
-
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
-
-// Note in the substratee-pallet-registry this is a struct. But for the coded this does not matter.
-type Request = (ShardIdentifier, Vec<u8>);
-pub type CallWorkerFn = ([u8; 2], Request);
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 pub fn scan_blocks_for_relevant_xt(
