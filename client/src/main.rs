@@ -39,7 +39,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
-use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
@@ -50,8 +50,8 @@ use std::thread;
 
 use std::convert::TryFrom;
 use substrate_api_client::{
-    compose_extrinsic, events::EventsDecoder, node_metadata::Metadata, utils::hexstr_to_vec, Api,
-    XtStatus,
+    compose_extrinsic, events::EventsDecoder, extrinsic::xt_primitives::UncheckedExtrinsicV4,
+    node_metadata::Metadata, utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Enclave, Request},
