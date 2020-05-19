@@ -29,30 +29,63 @@ read MRENCLAVE <<< $(${CLIENT} list-workers | awk '/  MRENCLAVE:[[:space:]]/ { p
 echo "  MRENCLAVE = ${MRENCLAVE}"
 echo ""
 
-# echo "* Create a new on-chain account and fund it from faucet"
-# OCACCOUNT=$(${CLIENT} new-account)
-# echo "  On-chain account = ${OCACCOUNT}"
-# echo ""
-# echo "  ** Funding that account from faucet"
-# $CLIENT faucet ${OCACCOUNT}
-# echo ""
-
-# echo "* Get balance of new on-chain account"
-# ${CLIENT} balance ${OCACCOUNT}
-# echo ""
-
-echo "* Get balance of //Alice's on-chain account"
-${CLIENT} balance //Alice
+echo "* Create a new on-chain account for Alice"
+ACCOUNTALICEOC=$(${CLIENT} new-account)
+echo "  Alice's on-chain account = ${ACCOUNTALICEOC}"
 echo ""
 
-echo "* Create a new incognito account"
-ICGACCOUNT=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
-echo "  Incognito account = ${ICGACCOUNT}"
+echo "* Create a new on-chain account for Bob"
+ACCOUNTBOBOC=$(${CLIENT} new-account)
+echo "  Bob's on-chain account = ${ACCOUNTBOBOC}"
 echo ""
 
-echo "* Fund the incognito account"
-${CLIENT} shield-funds ${ICGACCOUNT} ${MRENCLAVE} 50
+echo "* Get balance of Alice's on-chain account"
+${CLIENT} balance ${ACCOUNTALICEOC}
 echo ""
+
+echo "* Get balance of Bob's on-chain account"
+${CLIENT} balance ${ACCOUNTBOBOC}
+echo ""
+
+echo "* Fund Alice's on-chain account from faucet"
+${CLIENT} faucet ${ACCOUNTALICEOC}
+echo ""
+
+echo "* Get balance of Alice's on-chain account"
+${CLIENT} balance ${ACCOUNTALICEOC}
+echo ""
+
+echo "* Create a new incognito account for Alice"
+ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
+echo ""
+
+echo "* Create a new incognito account for Bob"
+ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
+echo ""
+
+echo "* Fund Alice's incognito account"
+${CLIENT} shield-funds ${ICGACCOUNTALICE} ${MRENCLAVE} 50
+echo ""
+
+exit 0
+
+
+echo -n "Alice's incognito account balance"
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+
+echo -n "Bob's incognito account balance"
+${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+
+echo "* Send 40 funds from Alice's incognito account to Bob's incognito account"
+$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} 40 --mrenclave ${MRENCLAVE}
+
+echo -n "Alice's incognito account balance"
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+
+echo -n "Bob's incognito account balance"
+${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
 
 exit 0
 
@@ -73,8 +106,6 @@ $CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
 account1p=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
 echo "created new incognito account: $account1p"
 
-#send 10M funds from AliceIncognito to new account
-$CLIENT trusted transfer //AliceIncognito $account1p 23456789 --mrenclave $MRENCLAVE
 
 echo -n "receiver balance: "
 $CLIENT trusted balance $account1p --mrenclave $MRENCLAVE
