@@ -260,7 +260,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     // send the extrinsic and wait for confirmation
     println!("[>] Register the enclave (send the extrinsic)");
-    let tx_hash = api.send_extrinsic(_xthex, XtStatus::Finalized).unwrap();
+    let tx_hash = api.send_extrinsic(_xthex, XtStatus::InBlock).unwrap();
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
     // browse enclave registry
@@ -472,7 +472,7 @@ pub fn sync_chain_relay(
     );
 
     for xt in extrinsics.into_iter() {
-        api.send_extrinsic(hex_encode(xt), XtStatus::Finalized)
+        api.send_extrinsic(hex_encode(xt), XtStatus::InBlock)
             .unwrap();
     }
 
@@ -537,7 +537,7 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
         println!("[+] bootstrap funding Enclave form Alice's funds");
         let xt = api.balance_transfer(accountid.clone(), 1_000_000_000_000);
         let xt_hash = api
-            .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+            .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
             .unwrap();
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
