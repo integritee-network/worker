@@ -26,6 +26,7 @@ use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
+use encointer_balances::BalanceType;
 
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
@@ -143,7 +144,8 @@ pub fn cmd<'a>(
                     let tcall = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
                         to,
-                        amount,
+                        shard, // for encointer we assume that every currency has its own shard. so shard == cid
+                        BalanceType::from_num(amount),
                     );
                     let nonce = 0; // FIXME: hard coded for now
                     let tscall =
@@ -152,53 +154,6 @@ pub fn cmd<'a>(
                         "send trusted call transfer from {} to {}: {}",
                         tscall.call.account(),
                         to,
-                        amount
-                    );
-                    let _ = perform_operation(matches, &TrustedOperationSigned::call(tscall));
-                    Ok(())
-                }),
-        )
-        .add_cmd(
-            Command::new("set-balance")
-                .description("ROOT call to set some account balance to an arbitrary number")
-                .options(|app| {
-                    app.arg(
-                        Arg::with_name("account")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58")
-                            .help("sender's AccountId in ss58check format"),
-                    )
-                    .arg(
-                        Arg::with_name("amount")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("U128")
-                            .help("amount to be transferred"),
-                    )
-                })
-                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_who = matches.value_of("account").unwrap();
-                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
-                        .expect("amount can be converted to u128");
-                    let who = get_pair_from_str(matches, arg_who);
-                    let signer = get_pair_from_str(matches, "//AliceIncognito");
-                    info!("account ss58 is {}", who.public().to_ss58check());
-
-                    let (mrenclave, shard) = get_identifiers(matches);
-
-                    let tcall = TrustedCall::balance_set_balance(
-                        sr25519_core::Public::from(signer.public()),
-                        sr25519_core::Public::from(who.public()),
-                        amount,
-                        amount,
-                    );
-                    let nonce = 0; // FIXME: hard coded for now
-                    let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard);
-                    println!(
-                        "send trusted call set-balance({}, {})",
-                        tscall.call.account(),
                         amount
                     );
                     let _ = perform_operation(matches, &TrustedOperationSigned::call(tscall));
@@ -221,12 +176,13 @@ pub fn cmd<'a>(
                     let arg_who = matches.value_of("accountid").unwrap();
                     println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
+                    let (mrenclave, shard) = get_identifiers(matches);
                     let tgetter =
-                        TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
+                        TrustedGetter::balance(sr25519_core::Public::from(who.public()), shard);
                     let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
                     let res = perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
                     let bal = if let Some(v) = res {
-                        if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
+                        if let Ok(vd) = <u128>::decode(&mut v.as_slice()) {
                             vd
                         } else {
                             info!("could not decode value. maybe hasn't been set? {:x?}", v);
@@ -240,66 +196,33 @@ pub fn cmd<'a>(
                 }),
         )
         .add_cmd(
-            Command::new("unshield-funds")
-                .description("Transfer funds from an incognito account to an on-chain account")
+            Command::new("register-participant")
+                .description("register participant for next encointer ceremony")
                 .options(|app| {
                     app.arg(
-                        Arg::with_name("from")
+                        Arg::with_name("accountid")
                             .takes_value(true)
                             .required(true)
                             .value_name("SS58")
-                            .help("Sender's incognito AccountId in ss58check format"),
-                    )
-                    .arg(
-                        Arg::with_name("to")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58")
-                            .help("Recipient's on-chain AccountId in ss58check format"),
-                    )
-                    .arg(
-                        Arg::with_name("amount")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("U128")
-                            .help("Amount to be transferred"),
-                    )
-                    .arg(
-                        Arg::with_name("shard")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("STRING")
-                            .help("Shard identifier"),
+                            .help("AccountId in ss58check format"),
                     )
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_from = matches.value_of("from").unwrap();
-                    let arg_to = matches.value_of("to").unwrap();
-                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
-                        .expect("amount can be converted to u128");
-                    let from = get_pair_from_str(matches, arg_from);
-                    let to = get_accountid_from_str(arg_to);
-                    println!("from ss58 is {}", from.public().to_ss58check());
-                    println!("to   ss58 is {}", to.to_ss58check());
-
+                    let arg_who = matches.value_of("accountid").unwrap();
+                    let who = get_pair_from_str(matches, arg_who);
                     let (mrenclave, shard) = get_identifiers(matches);
-
-                    println!(
-                        "send trusted call unshield_funds from {} to {}: {}",
-                        from.public(),
-                        to,
-                        amount
-                    );
-
-                    let tcall = TrustedCall::balance_unshield(
-                        sr25519_core::Public::from(from.public()),
-                        to,
-                        amount,
-                        shard,
+                    let tcall = TrustedCall::ceremonies_register_participant(
+                        sr25519_core::Public::from(who.public()),
+                        shard, // for encointer we assume that every currency has its own shard. so shard == cid
+                        None
                     );
                     let nonce = 0; // FIXME: hard coded for now
                     let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
+                        tcall.sign(&sr25519_core::Pair::from(who), nonce, &mrenclave, &shard);
+                    println!(
+                        "send trusted call register_participant for {}",
+                        tscall.call.account(),
+                    );
                     perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),

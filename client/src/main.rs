@@ -52,7 +52,7 @@ use substrate_api_client::{
     compose_extrinsic, events::EventsDecoder, extrinsic::xt_primitives::UncheckedExtrinsicV4,
     node_metadata::Metadata, utils::hexstr_to_vec, Api, XtStatus,
 };
-use substratee_node_runtime::{
+use my_node_runtime::{
     substratee_registry::{Enclave, Request},
     AccountId, Event, Hash, Signature,
 };
@@ -583,27 +583,21 @@ fn listen(matches: &ArgMatches<'_>) {
                             println!(">>>>>>>>>> substraTEE event: {:?}", ee);
                             count += 1;
                             match &ee {
-                                substratee_node_runtime::substratee_registry::RawEvent::AddedEnclave(accountid, url) => {
+                                my_node_runtime::substratee_registry::RawEvent::AddedEnclave(accountid, url) => {
                                     println!("AddedEnclave: {:?} at url {}", accountid, String::from_utf8(url.to_vec()).unwrap_or_else(|_| "error".to_string()));
                                 },
-                                substratee_node_runtime::substratee_registry::RawEvent::RemovedEnclave(accountid) => {
+                                my_node_runtime::substratee_registry::RawEvent::RemovedEnclave(accountid) => {
                                     println!("RemovedEnclave: {:?}", accountid);
                                 },
-                                substratee_node_runtime::substratee_registry::RawEvent::UpdatedIpfsHash(shard, idx, ipfs_hash) => {
+                                my_node_runtime::substratee_registry::RawEvent::UpdatedIpfsHash(shard, idx, ipfs_hash) => {
                                     println!("UpdatedIpfsHash for shard {}, worker index {}, ipfs# {:?}", shard.encode().to_base58(), idx, ipfs_hash);
                                 },
-                                substratee_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
+                                my_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
                                     let request_hash = hex::encode(request.cyphertext.clone());
                                     println!("Forwarded request for shard {}: {}", request.shard.encode().to_base58(), request_hash);
                                 },
-                                substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(accountid, call_hash) => {
+                                my_node_runtime::substratee_registry::RawEvent::CallConfirmed(accountid, call_hash) => {
                                     println!("CallConfirmed from {} with hash {:?}", accountid, call_hash);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::ShieldFunds(incognito_account) => {
-                                    println!("ShieldFunds for {:?}", incognito_account);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(public_account) => {
-                                    println!("UnshieldFunds for {:?}", public_account);
                                 },
                             }
                         }
@@ -641,7 +635,7 @@ where
             for evr in &evts {
                 info!("received event {:?}", evr.event);
                 if let Event::substratee_registry(pe) = &evr.event {
-                    if let substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                    if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
                         payload,
                     ) = &pe

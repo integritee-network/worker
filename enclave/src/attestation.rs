@@ -651,7 +651,7 @@ pub unsafe extern "C" fn perform_ra(
     );
 
     let encoded = xt.encode();
-    debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
+    debug!("    [Enclave] Encoded extrinsic ( len = {} B) = {}", encoded.len(), hex::encode_hex(&encoded));
 
     write_slice_and_whitespace_pad(extrinsic_slice, encoded);
 

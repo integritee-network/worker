@@ -30,9 +30,10 @@ extern crate clap;
 
 use codec::{Compact, Decode, Encode};
 use sp_core::{sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, AnySignature};
-//pub use my_node_runtime::substratee_registry::ShardIdentifier;
+use sp_runtime::{traits::Verify, AnySignature, MultiSignature, AccountId32};
 pub type ShardIdentifier = H256;
+pub use encointer_currencies::CurrencyIdentifier;
+pub use encointer_ceremonies::ProofOfAttendance;
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
@@ -44,8 +45,7 @@ pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
 pub type Hash = sp_core::H256;
-pub type Balance = u128;
-
+pub use encointer_balances::BalanceType;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub static BALANCE_MODULE: u8 = 4u8;
 pub static BALANCE_TRANSFER: u8 = 0u8;
@@ -66,19 +66,15 @@ pub enum TrustedOperationSigned {
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
-    balance_set_balance(AccountId, AccountId, Balance, Balance),
-    balance_transfer(AccountId, AccountId, Balance),
-    balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
-    balance_shield(AccountId, Balance),                               // (AccountIncognito, Amount)
+    balance_transfer(AccountId, AccountId, CurrencyIdentifier, BalanceType),
+    ceremonies_register_participant(AccountId, CurrencyIdentifier, Option<ProofOfAttendance<MultiSignature, AccountId32>>)
 }
 
 impl TrustedCall {
     fn account(&self) -> &AccountId {
         match self {
-            TrustedCall::balance_set_balance(account, _, _, _) => account,
-            TrustedCall::balance_transfer(account, _, _) => account,
-            TrustedCall::balance_unshield(account, _, _, _) => account,
-            TrustedCall::balance_shield(account, _) => account,
+            TrustedCall::balance_transfer(account, _, _, _) => account,
+            TrustedCall::ceremonies_register_participant(account, _, _) => account,
         }
     }
 
@@ -105,15 +101,13 @@ impl TrustedCall {
 #[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
-    free_balance(AccountId),
-    reserved_balance(AccountId),
+    balance(AccountId, CurrencyIdentifier),
 }
 
 impl TrustedGetter {
     pub fn account(&self) -> &AccountId {
         match self {
-            TrustedGetter::free_balance(account) => account,
-            TrustedGetter::reserved_balance(account) => account,
+            TrustedGetter::balance(account, _) => account,
         }
     }
 

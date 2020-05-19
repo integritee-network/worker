@@ -395,17 +395,6 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =
-            UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
-        {
-            // confirm call decodes successfully as well
-            if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
-                    error!("Error performing shieldfunds. Error: {:?}", e);
-                }
-            }
-        };
-
-        if let Ok(xt) =
             UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
@@ -416,54 +405,6 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
         }
     }
     Ok(calls)
-}
-
-fn handle_shield_funds_xt(
-    calls: &mut Vec<OpaqueCall>,
-    xt: UncheckedExtrinsicV4<ShieldFundsFn>,
-) -> SgxResult<()> {
-    let (call, account_encrypted, amount, shard) = xt.function.clone();
-    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {:?}",
-        call, account_encrypted, amount, shard
-    );
-
-    let mut state = if state::exists(&shard) {
-        state::load(&shard)?
-    } else {
-        state::init_shard(&shard)?;
-        Stf::init_state()
-    };
-
-    debug!("decrypt the call");
-    let rsa_keypair = rsa3072::unseal_pair()?;
-    let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
-    let account = AccountId::decode(&mut account_vec.as_slice())
-        .sgx_error_with_log("[ShieldFunds] Could not decode account")?;
-
-    if let Err(e) = Stf::execute(
-        &mut state,
-        TrustedCallSigned::new(
-            TrustedCall::balance_shield(account, amount),
-            0,
-            Default::default(),
-        ),
-        calls,
-    ) {
-        error!("Error performing Stf::execute. Error: {:?}", e);
-        return Ok(());
-    }
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    let state_hash = state::write(state, &shard)?;
-    calls.push(OpaqueCall(
-        (
-            xt_call,
-            shard,
-            blake2_256(&xt.encode()),
-            state_hash.encode(),
-        )
-            .encode(),
-    ));
-    Ok(())
 }
 
 fn handle_call_worker_xt(

@@ -41,40 +41,13 @@ pub struct Message {
 
 /// Who must be root account
 pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
-    info!("*** Get the public key from the TEE\n");
-    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
-    info!("deserialized rsa key");
-
-    let call = TrustedCall::balance_set_balance(who.public(), who.public(), 33, 44);
-    encrypt_payload(
-        rsa_pubkey,
-        call.sign(
-            &who.pair(),
-            nonce,
-            &enclave_mrenclave(eid).unwrap(),
-            &ShardIdentifier::default(),
-        )
-        .encode(),
-    )
+    error!("not implemented in encointer");
+    vec![]
 }
 
 pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
-    info!("*** Get the public key from the TEE\n");
-    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
-    info!("deserialized rsa key");
-
-    let call =
-        TrustedCall::balance_unshield(who.public(), who.public(), 40, ShardIdentifier::default());
-    encrypt_payload(
-        rsa_pubkey,
-        call.sign(
-            &who.pair(),
-            nonce,
-            &enclave_mrenclave(eid).unwrap(),
-            &ShardIdentifier::default(),
-        )
-        .encode(),
-    )
+    error!("not implemented in encointer");
+    vec![]
 }
 
 pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
@@ -86,7 +59,7 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
 }
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
-    let getter = TrustedGetter::free_balance(who.public());
+    let getter = TrustedGetter::balance(who.public(), Default::default());
     getter.sign(&who.pair())
 }
 

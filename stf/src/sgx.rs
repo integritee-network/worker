@@ -10,6 +10,10 @@ use sgx_runtime::{Balance, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
+use encointer_scheduler::{CeremonyIndexType, CeremonyPhaseType};
+use encointer_balances::BalanceType;
+use encointer_currencies::CurrencyIdentifier;
+use sgx_runtime::Moment;
 
 use crate::{
     AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
@@ -28,7 +32,7 @@ impl Encode for OpaqueCall {
 }
 
 type Index = u32;
-type AccountData = balances::AccountData<Balance>;
+type AccountData = ();//balances::AccountData<Balance>;
 type AccountInfo = system::AccountInfo<Index, AccountData>;
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
@@ -40,29 +44,19 @@ impl Stf {
         debug!("initializing stf state");
         let mut ext = State::new();
         ext.execute_with(|| {
+            // do not set genesis for pallets that are meant to be on-chain
+            // use get_storage_hashes_to_update instead
             sp_io::storage::set(
-                &storage_value_key("Balances", "TotalIssuance"),
-                &11u128.encode(),
+                &storage_value_key("EncointerCeremonies", "CeremonyReward"),
+                &BalanceType::from_num(1).encode(),
             );
             sp_io::storage::set(
-                &storage_value_key("Balances", "CreationFee"),
-                &1u128.encode(),
+                &storage_value_key("EncointerCeremonies", "TimeTolerance"),
+                &Moment::from(600_000u32).encode(), // +-10min
             );
             sp_io::storage::set(
-                &storage_value_key("Balances", "TransferFee"),
-                &1u128.encode(),
-            );
-            sp_io::storage::set(
-                &storage_value_key("Balances", "TransactionBaseFee"),
-                &1u128.encode(),
-            );
-            sp_io::storage::set(
-                &storage_value_key("Balances", "TransfactionByteFee"),
-                &1u128.encode(),
-            );
-            sp_io::storage::set(
-                &storage_value_key("Balances", "ExistentialDeposit"),
-                &1u128.encode(),
+                &storage_value_key("EncointerCeremonies", "LocationTolerance"),
+                &1_000u32.encode(),// [m]
             );
             sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
         });
@@ -83,62 +77,28 @@ impl Stf {
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
         ext.execute_with(|| match call.call {
-            TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-                Self::ensure_root(root)?;
-                sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                    AccountId32::from(who),
-                    free_balance,
-                    reserved_balance,
-                )
-                .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?;
-                Ok(())
-            }
-            TrustedCall::balance_transfer(from, to, value) => {
-                let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
-                sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
-                    .dispatch(origin)
-                    .map_err(|_| StfError::Dispatch)?;
-                Ok(())
-            }
-            TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                Self::unshield_funds(account_incognito, value)?;
-                calls.push(OpaqueCall(
-                    (
-                        [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-                        beneficiary,
-                        value,
-                        shard,
-                        blake2_256(&call.encode()),
-                    )
-                        .encode(),
-                ));
-                Ok(())
-            }
-            TrustedCall::balance_shield(who, value) => {
-                Self::shield_funds(who, value)?;
-                Ok(())
+                TrustedCall::balance_transfer(from, to, cid, value) => {
+                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                    sgx_runtime::EncointerBalancesCall::<Runtime>::transfer(AccountId32::from(to), cid, value)
+                        .dispatch(origin)
+                        .map_err(|_| StfError::Dispatch)?;
+                    Ok(())
+                }
+                TrustedCall::ceremonies_register_participant(from, cid, proof) => {
+                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                    sgx_runtime::EncointerCeremoniesCall::<Runtime>::register_participant(cid, proof)
+                        .dispatch(origin)
+                        .map_err(|_| StfError::Dispatch)?;
+                    Ok(())
+                }
             }
         })
     }
 
     pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
         ext.execute_with(|| match getter {
-            TrustedGetter::free_balance(who) => {
-                if let Some(info) = get_account_info(&who) {
-                    debug!("AccountInfo for {:?} is {:?}", who, info);
-                    Some(info.data.free.encode())
-                } else {
-                    None
-                }
-            }
-            TrustedGetter::reserved_balance(who) => {
-                if let Some(info) = get_account_info(&who) {
-                    debug!("AccountInfo for {:?} is {:?}", who, info);
-                    Some(info.data.reserved.encode())
-                } else {
-                    None
-                }
+            TrustedGetter::balance(who, cid) => {
+                Some(get_encointer_balance(&who, &cid).encode())
             }
         })
     }
@@ -151,55 +111,17 @@ impl Stf {
         }
     }
 
-    fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
-        match get_account_info(&account) {
-            Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                account.into(),
-                account_info.data.free + amount,
-                account_info.data.reserved,
-            )
-            .dispatch(sgx_runtime::Origin::ROOT)
-            .map_err(|_| StfError::Dispatch)?,
-            None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
-                .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?,
-        };
-        Ok(())
-    }
-
-    fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
-        match get_account_info(&account) {
-            Some(account_info) => {
-                if account_info.data.free < amount {
-                    return Err(StfError::MissingFunds);
-                }
-
-                sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                    account.into(),
-                    account_info.data.free - amount,
-                    account_info.data.reserved,
-                )
-                .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?;
-                Ok(())
-            }
-            None => Err(StfError::InexistentAccount(account)),
-        }
-    }
-
     pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
         match call.call {
-            TrustedCall::balance_set_balance(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
+            TrustedCall::balance_transfer(account, _, _, _) => {
+                key_hashes.push(nonce_key_hash(account))
+            },
+            TrustedCall::ceremonies_register_participant(account, _, _) => {
+                key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
+                key_hashes.push(storage_value_key("EncointerScheduler", "CurrentCeremonyIndex"));
+                key_hashes.push(storage_value_key("EncointerCurrencies", "CurrencyIdentifiers"));
             }
-            TrustedCall::balance_transfer(account, _, _) => {
-                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
-            }
-            TrustedCall::balance_unshield(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(&account))
-            }
-            TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };
         key_hashes
     }
@@ -242,6 +164,25 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
         }
     } else {
         None
+    }
+}
+
+fn get_encointer_balance(who: &AccountId, cid: &CurrencyIdentifier) -> BalanceType {
+    if let Some(balvec) = sp_io::storage::get(&storage_double_map_key(
+        "EncointerBalances",
+        "Balance",
+        cid,
+        &StorageHasher::Blake2_128Concat,
+        who,
+        &StorageHasher::Blake2_128Concat,
+    )) {
+        if let Ok(bal) = BalanceType::decode(&mut balvec.as_slice()) {
+            bal
+        } else {
+            BalanceType::from_num(0)
+        }
+    } else {
+        BalanceType::from_num(0)
     }
 }
 

@@ -22,7 +22,8 @@ std = [
     "sc-keystore",
     "system/std",
     "metadata/std",
-    "sp-core/std"
+    "sp-core/std",
+    "encointer-ceremonies/std",
 ]
 
 [dependencies]
@@ -46,10 +47,29 @@ package = "parity-scale-codec"
 version = "1.0.0"
 features = ["derive"]
 
-[dependencies.balances]
+[dependencies.encointer-scheduler]
 default-features = false
-package = 'pallet-balances'
-version = '2.0.0-alpha.7'
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-scheduler"
+
+[dependencies.encointer-ceremonies]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-ceremonies"
+
+[dependencies.encointer-currencies]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-currencies"
+
+[dependencies.encointer-balances]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-balances"
 
 [dependencies.system]
 default-features = false
@@ -79,13 +99,13 @@ default-features = false
 version = '2.0.0-alpha.7'
 default-features = false
 optional = true
-git = "https://github.com/scs/sgx-runtime"
+git = "https://github.com/encointer/sgx-runtime"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx-runtime]
 default-features = false
-git = "https://github.com/scs/sgx-runtime"
-tag = "v2.0.0-alpha.7"
+git = "https://github.com/encointer/sgx-runtime"
+#tag = "v2.0.0-alpha.6"
 optional = true
 
 [dependencies.sc-keystore]

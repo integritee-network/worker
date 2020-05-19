@@ -16,10 +16,10 @@ features = ["untrusted_fs","net","backtrace"]
 rev = "v1.1.2"
 optional = true
 
-[dependencies.substratee-node-runtime]
-git = "https://github.com/scs/substraTEE-node"
-tag = "v0.6.6-sub2.0.0-alpha.7"
-package = "substratee-node-runtime"
+[dependencies.my-node-runtime]
+git = "https://github.com/encointer/encointer-node"
+branch = "sgx-master"
+package = "encointer-node-runtime"
 optional = true
 default-features = false
 
@@ -40,7 +40,7 @@ optional = true
 [features]
 default = ['std']
 std = [ 'substrate-api-client',
-        'substratee-node-runtime',
+        'my-node-runtime',
         'sp-core/std',
         'sp-runtime',
         'base58',

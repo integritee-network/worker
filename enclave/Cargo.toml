@@ -72,8 +72,7 @@ rev      = "sgx_1.1.2"
 features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
-git = "https://github.com/scs/sgx-runtime"
-tag = "v2.0.0-alpha.7"
+git = "https://github.com/encointer/sgx-runtime"
 default-features = false
 optional = true
 package = "sp-io"
@@ -115,7 +114,7 @@ default-features = false
 features = ["sgx"]
 
 [dependencies.sgx-externalities]
-git = "https://github.com/scs/sgx-runtime"
+git = "https://github.com/encointer/sgx-runtime"
 default-features = false
 
 [dependencies.substratee-node-primitives]
@@ -124,4 +123,4 @@ default-features = false
 features = ["sgx"]
 
 [patch.crates-io]
-sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sp-io = { git = "https://github.com/encointer/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
