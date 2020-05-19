@@ -33,22 +33,6 @@ use substratee_node_runtime::{Header, SignedBlock};
 extern "C" {
     fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
-    fn execute_stf(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        cyphertext_encrypted: *const u8,
-        cyphertext_encrypted_size: u32,
-        shard_encrypted: *const u8,
-        shard_encrypted_size: u32,
-        hash: *const u8,
-        hash_size: u32,
-        nonce: *const u32,
-        node_url: *const u8,
-        node_url_size: u32,
-        unchecked_extrinsic: *mut u8,
-        unchecked_extrinsic_size: u32,
-    ) -> sgx_status_t;
-
     fn get_state(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
@@ -252,7 +236,7 @@ pub fn enclave_sync_chain_relay(
 ) -> SgxResult<Vec<u8>> {
     let mut status = sgx_status_t::SGX_SUCCESS;
 
-    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE as usize];
+    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
     let result = unsafe {
         blocks.using_encoded(|b| {
@@ -371,42 +355,6 @@ pub fn enclave_dump_ra(eid: sgx_enclave_id_t) -> SgxResult<()> {
         return Err(result);
     }
     Ok(())
-}
-
-pub fn enclave_execute_stf(
-    eid: sgx_enclave_id_t,
-    cyphertext: Vec<u8>,
-    shard: Vec<u8>,
-    genesis_hash: Vec<u8>,
-    nonce: u32,
-    node_url: String,
-) -> SgxResult<Vec<u8>> {
-    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
-    let mut status = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe {
-        execute_stf(
-            eid,
-            &mut status,
-            cyphertext.as_ptr(),
-            cyphertext.len() as u32,
-            shard.as_ptr(),
-            shard.len() as u32,
-            genesis_hash.as_ptr(),
-            genesis_hash.len() as u32,
-            &nonce,
-            node_url.as_bytes().as_ptr(),
-            node_url.into_bytes().len() as u32,
-            unchecked_extrinsics.as_mut_ptr(),
-            EXTRINSIC_MAX_SIZE as u32,
-        )
-    };
-    if status != sgx_status_t::SGX_SUCCESS {
-        return Err(status);
-    }
-    if result != sgx_status_t::SGX_SUCCESS {
-        return Err(result);
-    }
-    Ok(unchecked_extrinsics)
 }
 
 pub fn enclave_perform_ra(
