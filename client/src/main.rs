@@ -93,6 +93,26 @@ fn main() {
                     .default_value("9944")
                     .help("node port"),
             )
+            .arg(
+                Arg::with_name("worker-url")
+                    .short("wu")
+                    .long("worker-url")
+                    .global(true)
+                    .takes_value(true)
+                    .value_name("STRING")
+                    .default_value("127.0.0.1")
+                    .help("worker url"),
+            )
+            .arg(
+                Arg::with_name("worker-port")
+                    .short("wp")
+                    .long("worker-port")
+                    .global(true)
+                    .takes_value(true)
+                    .value_name("STRING")
+                    .default_value("2000")
+                    .help("worker port"),
+            )
             .name("substratee-client")
             .version(VERSION)
             .author("Supercomputing Systems AG <info@scs.ch>")
@@ -333,12 +353,7 @@ fn main() {
                     let chain_api = get_chain_api(matches);
 
                     println!("get worker_api");
-                    let url = format!(
-                        "{}:{}",
-                        "127.0.0.1",
-                        "2000"
-                    );
-                    let worker_api = WorkerApi::new(url);
+                    let worker_api = get_worker_api(matches);
 
                     println!("get shielding_pubkey");
                     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
@@ -377,6 +392,9 @@ fn main() {
                     println!("shard is {}", shard);
                     println!("to ss58 is {}", to);
                     println!("amount is {}", amount);
+
+                    println!("to_encoded   = {:?}", to_encoded);
+                    println!("to_encrypted = {:?}", to_encrypted);
 
                     let arg_signer = "//Alice";
                     let signer = get_pair_from_str(arg_signer);
@@ -464,6 +482,7 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
         matches.value_of("worker-url").unwrap(),
         matches.value_of("worker-port").unwrap()
     );
+    info!("Connecting to substraTEE-worker on '{}'", url);
     WorkerApi::new(url)
 }
 

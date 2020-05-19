@@ -35,26 +35,6 @@ pub fn cmd<'a>(
     Commander::new()
         .options(|app| {
             app.arg(
-                Arg::with_name("worker-url")
-                    .short("wu")
-                    .long("worker-url")
-                    .global(true)
-                    .takes_value(true)
-                    .value_name("STRING")
-                    .default_value("127.0.0.1")
-                    .help("worker url"),
-            )
-            .arg(
-                Arg::with_name("worker-port")
-                    .short("wp")
-                    .long("worker-port")
-                    .global(true)
-                    .takes_value(true)
-                    .value_name("STRING")
-                    .default_value("2000")
-                    .help("worker port"),
-            )
-            .arg(
                 Arg::with_name("mrenclave")
                     .short("m")
                     .long("mrenclave")
