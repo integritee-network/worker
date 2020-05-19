@@ -18,4 +18,4 @@ version = '2.0.0-alpha.7'
 
 [dependencies.substratee-stf]
 path = "../../stf"
-default-features = false
+
