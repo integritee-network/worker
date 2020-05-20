@@ -65,7 +65,7 @@ pub enum TrustedOperationSigned {
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
-    balance_set_balance(AccountId, Balance, Balance),
+    balance_set_balance(AccountId, AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
     balance_unshield(AccountId, Balance),
     balance_shield(AccountId, Balance),
@@ -74,7 +74,7 @@ pub enum TrustedCall {
 impl TrustedCall {
     fn account(&self) -> &AccountId {
         match self {
-            TrustedCall::balance_set_balance(account, _, _) => account,
+            TrustedCall::balance_set_balance(account, _, _, _) => account,
             TrustedCall::balance_transfer(account, _, _) => account,
             TrustedCall::balance_unshield(account, _) => account,
             TrustedCall::balance_shield(account, _) => account,
