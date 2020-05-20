@@ -30,7 +30,9 @@ use codec::{Decode, Encode};
 use log::*;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
-    sr25519, Pair,
+    sr25519,
+    storage::StorageKey,
+    Pair,
 };
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
@@ -416,7 +418,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
     let grandpas: AuthorityList = api
-        .get_storage_by_key_hash(GRANDPA_AUTHORITIES_KEY.to_vec())
+        .get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()))
         .map(|g: VersionedAuthorityList| g.into())
         .unwrap();
 
@@ -628,8 +630,9 @@ pub unsafe extern "C" fn ocall_worker_request(
             //let res =
             WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
                 key.clone(),
-                api.get_opaque_storage_by_key_hash(key),
-                None,
+                api.get_opaque_storage_by_key_hash(StorageKey(key.clone())),
+                api.get_storage_proof_by_keys(vec![StorageKey(key)])
+                    .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()),
             ),
         })
         .collect();

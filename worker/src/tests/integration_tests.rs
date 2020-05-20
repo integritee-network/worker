@@ -93,7 +93,7 @@ pub fn forward_encrypted_unshield_works(
 
     println!("Sleeping until block with shield funds is finalized...");
     sleep(Duration::new(10, 0));
-    println!("Syncing Chain Relay to look for shield_funds extrinsic");
+    println!("Syncing Chain Relay to look for CallWorker with TrustedCall::unshield extrinsic");
     crate::sync_chain_relay(eid, &api, last_synced_head)
 }
 

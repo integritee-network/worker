@@ -101,7 +101,8 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.5-sub2.0.0-alpha.7"
+#tag = "v0.4.5-sub2.0.0-alpha.7"
+branch = "cl-read-proof-rpc"
 default-features = false
 features = ["full_crypto"]
 
