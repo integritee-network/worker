@@ -86,7 +86,8 @@ impl Stf {
             // );
 
             let _result = match call {
-                TrustedCall::balance_set_balance(who, free_balance, reserved_balance) => {
+                TrustedCall::balance_set_balance(_, who, free_balance, reserved_balance) => {
+                    //TODO: ensure this can only be called by ROOT account
                     sgx_runtime::BalancesCall::<Runtime>::set_balance(
                         AccountId32::from(who),
                         free_balance,
@@ -151,11 +152,11 @@ impl Stf {
     pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
         match call {
-            TrustedCall::balance_set_balance(account, _, _) => {
-                key_hashes.push(nonce_key_hash(account))
+            TrustedCall::balance_set_balance(account, _, _, _) => {
+                key_hashes.push(nonce_key_hash(account)) // dummy, actually not necessary
             }
             TrustedCall::balance_transfer(account, _, _) => {
-                key_hashes.push(nonce_key_hash(account))
+                key_hashes.push(nonce_key_hash(account)) // dummy, actually not necessary
             }
             TrustedCall::balance_unshield(account, _) => key_hashes.push(nonce_key_hash(account)),
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),

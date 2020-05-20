@@ -46,11 +46,15 @@ pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: 
         .unwrap();
     info!("deserialized rsa key");
 
-    let call = TrustedCall::balance_set_balance(who.public(), 33, 44);
+    let call = TrustedCall::balance_set_balance(
+        who.public(),// TODO: this should actually be ROOT acount
+        who.public(), 
+        33, 
+        44);
     encrypt_payload(
         rsa_pubkey,
         call.sign(
-            &who.pair(),
+            &who.pair(), // TODO: this should actually be ROOT acount
             nonce,
             &enclave_mrenclave(eid).unwrap(),
             &ShardIdentifier::default(),

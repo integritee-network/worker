@@ -208,6 +208,7 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
 
                     let tcall = TrustedCall::balance_set_balance(
+                        sr25519_core::Public::from(signer.public()),
                         sr25519_core::Public::from(who.public()),
                         amount,
                         amount,
