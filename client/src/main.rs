@@ -415,42 +415,6 @@ fn main() {
                         .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
                         .unwrap();
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
-
-
-                    // // send and watch extrinsic until finalized
-                    // println!("send extrinsic");
-                    // let tx_hash = _chain_api
-                    //     .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
-                    //     .unwrap();
-                    // println!("");
-                    // info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
-                    // info!("waiting for confirmation of stf call");
-                    // let (events_in, events_out) = channel();
-                    // _chain_api.subscribe_events(events_in);
-
-                    // let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
-                    // decoder
-                    //     .register_type_size::<Hash>("ShardIdentifier")
-                    //     .unwrap();
-
-                    // loop {
-                    //     let ret: CallConfirmedArgs = _chain_api
-                    //         .wait_for_event(
-                    //             "SubstrateeRegistry",
-                    //             "CallConfirmed",
-                    //             Some(decoder.clone()),
-                    //             &events_out,
-                    //         )
-                    //         .unwrap()
-                    //         .unwrap();
-                    //     let expected = blake2_256(&to_encoded);
-                    //     info!("callConfirmed event received");
-                    //     debug!("Expected stf call Hash: {:?}", expected);
-                    //     debug!("Confirmed stf call Hash: {:?}", ret.payload);
-                    //     if ret.payload == expected {
-                    //         break;
-                    //     }
-                    // }
                     Ok(())
                 }),
         )
