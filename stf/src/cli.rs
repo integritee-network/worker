@@ -23,14 +23,14 @@ use codec::Encode;
 use log::*;
 use sc_keystore::Store;
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
-    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperationSigned),
+    perform_operation: &'a dyn Fn<R>(&ArgMatches<'_>, &TrustedOperationSigned) -> Option<R>,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {
@@ -154,7 +154,7 @@ pub fn cmd<'a>(
                         to,
                         amount
                     );
-                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    let _: Option<H256> = perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
         )
@@ -201,7 +201,7 @@ pub fn cmd<'a>(
                         tscall.call.account(),
                         amount
                     );
-                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    let _ : Option<H256> = perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
         )
@@ -224,7 +224,9 @@ pub fn cmd<'a>(
                     let tgetter =
                         TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
                     let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
-                    perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                    let res: Option<i128> = perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                    let bal = if let Some(bal) = res { bal } else { 0 };
+                    println!("{}", bal);
                     Ok(())
                 }),
         )

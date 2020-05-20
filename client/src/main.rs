@@ -436,7 +436,7 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     WorkerApi::new(url)
 }
 
-fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) {
+fn perform_trusted_operation<R>(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) -> R {
     match top {
         TrustedOperationSigned::call(call) => send_request(matches, call.clone()),
         TrustedOperationSigned::get(getter) => get_state(matches, getter.clone()),
@@ -445,7 +445,7 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSig
 
 //FIXME: even better would be if the interpretation of the getter result is left to the stf crate
 // here we assume that the getter result is a u128, but how should we know here in this crate?
-fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
+fn get_state<R>(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<R> {
     let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
     debug!("calling workerapi to get state value");
@@ -460,14 +460,11 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
     );
     let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
     match valopt {
-        Some(v) => {
-            let value = U256::from_little_endian(&v);
-            println!("{}", value);
-        }
-        _ => error!("getter response is None"),
-    };
+        Some(v) => Some(Decode::decode(&mut &v)), 
+        None => None
+    }
 }
-fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
+fn send_request<R>(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> R {
     let chain_api = get_chain_api(matches);
     let worker_api = get_worker_api(matches);
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
@@ -536,7 +533,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
         debug!("Expected stf call Hash: {:?}", expected);
         debug!("Confirmed stf call Hash: {:?}", ret.payload);
         if ret.payload == expected {
-            break;
+            return ret.payload.into();
         }
     }
 }
