@@ -339,7 +339,7 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSig
 }
 
 //FIXME: even better would be if the interpretation of the getter result is left to the stf crate
-// here we assume that the getter result is a u128, but how should we now here in this crate?
+// here we assume that the getter result is a u128, but how should we know here in this crate?
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
     let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
@@ -359,7 +359,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
             let value = U256::from_little_endian(&v);
             println!("{}", value);
         }
-        _ => error!("error getting value"),
+        _ => error!("getter response is None"),
     };
 }
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
