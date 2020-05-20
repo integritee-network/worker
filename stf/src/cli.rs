@@ -219,6 +219,7 @@ pub fn cmd<'a>(
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
                     let arg_who = matches.value_of("accountid").unwrap();
+                    println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
                     let tgetter =
                         TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
@@ -286,6 +287,7 @@ fn get_pair_from_str(matches: &ArgMatches<'_>, account: &str) -> sr25519::AppPai
                     &sr25519::Public::from_ss58check(account).unwrap().into(),
                 )
                 .unwrap();
+            info!("key pair fetched");
             drop(store);
             _pair
         }
