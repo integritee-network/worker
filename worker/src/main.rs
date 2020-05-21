@@ -418,7 +418,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
     let grandpas: AuthorityList = api
-        .get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()))
+        .get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), None)
         .map(|g: VersionedAuthorityList| g.into())
         .unwrap();
 
@@ -628,10 +628,10 @@ pub unsafe extern "C" fn ocall_worker_request(
         .into_iter()
         .map(|req| match req {
             //let res =
-            WorkerRequest::ChainStorage(key) => WorkerResponse::ChainStorage(
+            WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
                 key.clone(),
-                api.get_opaque_storage_by_key_hash(StorageKey(key.clone())),
-                api.get_storage_proof_by_keys(vec![StorageKey(key)])
+                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash),
+                api.get_storage_proof_by_keys(vec![StorageKey(key)], hash)
                     .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()),
             ),
         })
@@ -653,7 +653,7 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage(Vec<u8>), // (storage_key)
+    ChainStorage(Vec<u8>, Option<Hash>), // (storage_key, at_block)
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]

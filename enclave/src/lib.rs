@@ -418,7 +418,7 @@ fn handle_call_worker_xt(
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
         .into_iter()
-        .map(WorkerRequest::ChainStorage)
+        .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
         .collect();
 
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
@@ -429,10 +429,11 @@ fn handle_call_worker_xt(
             WorkerResponse::ChainStorage(key, value, proof) => {
                 warn!("Storage Proof: {:?}", proof);
                 let _storage_check = StorageProofChecker::<<Header as HeaderT>::Hashing>::new(
-                    header.state_root,
+                    header.state_root.clone(),
                     proof.clone().unwrap(),
                 )
                 .expect("Invalid Proof");
+
                 if let Some(val) = value {
                     update_map.insert(key.clone(), val.clone());
                 }
@@ -539,7 +540,7 @@ fn test_ocall_read_write_ipfs() {
 // TODO: this is redundantly defined in worker/src/main.rs
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage(Vec<u8>), // (storage_key)
+    ChainStorage(Vec<u8>, Option<Hash>), // (storage_key, at_block)
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -583,6 +584,7 @@ fn test_ocall_worker_request() {
 
     requests.push(WorkerRequest::ChainStorage(
         storage_key("Balances", "TotalIssuance").0,
+        None,
     ));
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
