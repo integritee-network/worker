@@ -427,21 +427,21 @@ fn handle_call_worker_xt(
     for response in responses.iter() {
         match response {
             WorkerResponse::ChainStorage(key, value, proof) => {
-                warn!("Storage Proof: {:?}", proof);
-                let storage_checker = StorageProofChecker::<<Header as HeaderT>::Hashing>::new(
+                let proof = proof
+                    .as_ref()
+                    .sgx_error_with_log("No Storage Proof Supplied")?;
+
+                let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
                     header.state_root.clone(),
-                    proof.clone().unwrap(),
+                    key,
+                    proof.to_vec(),
                 )
-                .expect("Invalid Proof");
+                .sgx_error_with_log("Erroneous StorageProof")?;
 
-                // Todo: if the read is successful, this would be enough to proof the actual value. Hence we would not need
-                // to get the storage value too.
-                let actual_value = storage_checker.read_value(&key).unwrap();
-
-                if value == &actual_value {
-                    info!("StorageProof correct");
-                } else {
-                    error!("StorageProof erroneous!");
+                // Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
+                if &actual != value {
+                    error!("Wrong storage value supplied");
+                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
                 }
 
                 if let Some(val) = value {
