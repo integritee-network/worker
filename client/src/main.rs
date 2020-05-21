@@ -591,7 +591,7 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 }
 
 fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
-    if let Some(count) = api.get_storage_value("SubstrateeRegistry", "EnclaveCount") {
+    if let Some(count) = api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None) {
         count
     } else {
         0
@@ -599,5 +599,5 @@ fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
 }
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
-    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex)
+    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None)
 }

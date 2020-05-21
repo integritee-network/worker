@@ -65,6 +65,16 @@ where
     fn trie(&self) -> Result<TrieDB<H>, Error> {
         TrieDB::new(&self.db, &self.root).map_err(|_| Error::StorageRootMismatch)
     }
+
+    pub fn check_proof(
+        root: H::Out,
+        storage_key: &[u8],
+        proof: StorageProof,
+    ) -> Result<Option<Vec<u8>>, Error> {
+        let storage_checker = StorageProofChecker::<H>::new(root, proof)?;
+
+        storage_checker.read_value(storage_key)
+    }
 }
 
 #[cfg(test)]

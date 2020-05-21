@@ -35,7 +35,7 @@ use base58::ToBase58;
 use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::storage_value_key_vec};
+use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_stf::{
     AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
@@ -55,9 +55,9 @@ use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
 use crate::utils::UnwrapOrSgxErrorUnexpected;
-use chain_relay::{Block, Header, LightValidation};
-use sp_runtime::generic::SignedBlock;
+use chain_relay::{storage_proof::StorageProofChecker, Block, Header, LightValidation};
 use sp_runtime::OpaqueExtrinsic;
+use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::OpaqueCall;
 
@@ -341,7 +341,7 @@ pub fn scan_blocks_for_relevant_xt(
                 UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
             {
                 if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
-                    handle_call_worker_xt(&mut calls, xt, node_url)?;
+                    handle_call_worker_xt(&mut calls, xt, block.block.header.clone(), node_url)?;
                 }
             }
         }
@@ -362,7 +362,7 @@ fn handle_shield_funds_xt(
 
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
-    let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
+    let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
     let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
 
     Stf::execute(
@@ -388,6 +388,7 @@ fn handle_shield_funds_xt(
 fn handle_call_worker_xt(
     calls: &mut Vec<OpaqueCall>,
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
+    header: Header,
     node_url: &[u8],
 ) -> SgxResult<()> {
     let (call, request) = xt.function;
@@ -400,7 +401,7 @@ fn handle_call_worker_xt(
 
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
-    let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair);
+    let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
     let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
     debug!("query mrenclave of self");
@@ -417,7 +418,7 @@ fn handle_call_worker_xt(
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
         .into_iter()
-        .map(WorkerRequest::ChainStorage)
+        .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
         .collect();
 
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
@@ -425,7 +426,24 @@ fn handle_call_worker_xt(
     let mut update_map = HashMap::new();
     for response in responses.iter() {
         match response {
-            WorkerResponse::ChainStorage(key, value, _proof) => {
+            WorkerResponse::ChainStorage(key, value, proof) => {
+                let proof = proof
+                    .as_ref()
+                    .sgx_error_with_log("No Storage Proof Supplied")?;
+
+                let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
+                    header.state_root,
+                    key,
+                    proof.to_vec(),
+                )
+                .sgx_error_with_log("Erroneous StorageProof")?;
+
+                // Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
+                if &actual != value {
+                    error!("Wrong storage value supplied");
+                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                }
+
                 if let Some(val) = value {
                     update_map.insert(key.clone(), val.clone());
                 }
@@ -532,7 +550,7 @@ fn test_ocall_read_write_ipfs() {
 // TODO: this is redundantly defined in worker/src/main.rs
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
-    ChainStorage(Vec<u8>), // (storage_key)
+    ChainStorage(Vec<u8>, Option<Hash>), // (storage_key, at_block)
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -545,7 +563,7 @@ fn worker_request<V: Encode + Decode>(
     node_url: &[u8],
 ) -> SgxResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let mut resp: Vec<u8> = vec![0; 500];
+    let mut resp: Vec<u8> = vec![0; 4196];
 
     let res = unsafe {
         ocall_worker_request(
@@ -572,12 +590,12 @@ fn worker_request<V: Encode + Decode>(
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut requests = Vec::new();
-    let node_url = format!("ws://{}:{}", "127.0.0.1", "9944").into_bytes();
+    let node_url = format!("ws://{}:{}", "127.0.0.1", "9991").into_bytes();
 
-    requests.push(WorkerRequest::ChainStorage(storage_value_key_vec(
-        "Balances",
-        "TotalIssuance",
-    )));
+    requests.push(WorkerRequest::ChainStorage(
+        storage_key("Balances", "TotalIssuance").0,
+        None,
+    ));
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
         Ok(response) => response,
@@ -587,9 +605,10 @@ fn test_ocall_worker_request() {
     let first = resp.pop().unwrap();
     info!("Worker response: {:?}", first);
 
-    let total_issuance = match first {
-        WorkerResponse::ChainStorage(_storage_key, value, _proof) => value,
+    let (total_issuance, proof) = match first {
+        WorkerResponse::ChainStorage(_storage_key, value, proof) => (value, proof),
     };
 
     info!("Total Issuance is: {:?}", total_issuance);
+    info!("Proof: {:?}", proof)
 }

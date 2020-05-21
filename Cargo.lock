@@ -909,6 +909,7 @@ version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8764574ff08b701a084482c3c7031349104b07ac897393010494beaa18ce32c6"
 dependencies = [
+ "futures 0.1.29",
  "futures-channel",
  "futures-core",
  "futures-io",
@@ -1332,6 +1333,68 @@ name = "json"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
+
+[[package]]
+name = "jsonrpc-client-transports"
+version = "14.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2307a7e78cf969759e390a8a2151ea12e783849a45bb00aa871b468ba58ea79e"
+dependencies = [
+ "failure",
+ "futures 0.1.29",
+ "jsonrpc-core",
+ "jsonrpc-pubsub",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "url",
+]
+
+[[package]]
+name = "jsonrpc-core"
+version = "14.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25525f6002338fb4debb5167a89a0b47f727a5a48418417545ad3429758b7fec"
+dependencies = [
+ "futures 0.1.29",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
+name = "jsonrpc-core-client"
+version = "14.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87f9382e831a6d630c658df103aac3f971da096deb57c136ea2b760d3b4e3f9f"
+dependencies = [
+ "jsonrpc-client-transports",
+]
+
+[[package]]
+name = "jsonrpc-derive"
+version = "14.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8609af8f63b626e8e211f52441fcdb6ec54f1a446606b10d5c89ae9bf8a20058"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "jsonrpc-pubsub"
+version = "14.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4ca5e391d6c6a2261d4adca029f427fe63ea546ad6cef2957c654c08495ec16"
+dependencies = [
+ "jsonrpc-core",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.10.2",
+ "serde",
+]
 
 [[package]]
 name = "keccak"
@@ -2704,6 +2767,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "sc-rpc-api"
+version = "0.8.0-alpha.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a27aa7d70aec2be0967110b5df9a11ac3aa76fe4c8576455c266d3135d8fe63a"
+dependencies = [
+ "derive_more",
+ "futures 0.3.5",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "jsonrpc-pubsub",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "parking_lot 0.10.2",
+ "serde",
+ "serde_json",
+ "sp-chain-spec",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+ "sp-transaction-pool",
+ "sp-version",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3152,6 +3240,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-chain-spec"
+version = "2.0.0-alpha.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9af65a2d6c4c46b027132dd334a5fbe6996cc9b2c2a8371d991cabb42f72c75"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "sp-consensus-aura"
 version = "0.8.0-alpha.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3339,6 +3437,16 @@ checksum = "acec634cd613519673edad420f56d5bbd087da9923c05aa66708882ee9676d20"
 dependencies = [
  "backtrace",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sp-rpc"
+version = "2.0.0-alpha.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bd0ae1f6a934590356ce844ce9d0ef71993cab223f6c9371c2fdea98b23c334"
+dependencies = [
+ "serde",
+ "sp-core",
 ]
 
 [[package]]
@@ -3605,8 +3713,8 @@ dependencies = [
 
 [[package]]
 name = "substrate-api-client"
-version = "0.4.5-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.5-sub2.0.0-alpha.7#95df232d7d97bf9501a76d9f0723a787c693bbcf"
+version = "0.4.6-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.6-sub2.0.0-alpha.7#3546fc10f88008a68ba102adbcea66e75ffc5885"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
@@ -3617,6 +3725,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types 0.6.2",
+ "sc-rpc-api",
  "serde",
  "serde_json",
  "sp-core",
@@ -3660,7 +3769,7 @@ checksum = "d2a965994514ab35d3893e9260245f2947fd1981cdd4fffd2c6e6d1a9ce02e6a"
 
 [[package]]
 name = "substratee-client"
-version = "0.6.1-sub2.0.0-alpha.7"
+version = "0.6.2-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -3692,7 +3801,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-primitives"
-version = "0.6.1-sub2.0.0-alpha.7"
+version = "0.6.2-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3764,7 +3873,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker"
-version = "0.6.1-sub2.0.0-alpha.7"
+version = "0.6.2-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "cid",
@@ -3803,7 +3912,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-api"
-version = "0.6.1-sub2.0.0-alpha.7"
+version = "0.6.2-sub2.0.0-alpha.7"
 dependencies = [
  "hex 0.4.2",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4254,7 +4363,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.3.23",
 ]
 
 [[package]]
