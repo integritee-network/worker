@@ -428,11 +428,21 @@ fn handle_call_worker_xt(
         match response {
             WorkerResponse::ChainStorage(key, value, proof) => {
                 warn!("Storage Proof: {:?}", proof);
-                let _storage_check = StorageProofChecker::<<Header as HeaderT>::Hashing>::new(
+                let storage_checker = StorageProofChecker::<<Header as HeaderT>::Hashing>::new(
                     header.state_root.clone(),
                     proof.clone().unwrap(),
                 )
                 .expect("Invalid Proof");
+
+                // Todo: if the read is successful, this would be enough to proof the actual value. Hence we would not need
+                // to get the storage value too.
+                let actual_value = storage_checker.read_value(&key).unwrap();
+
+                if value == &actual_value {
+                    info!("StorageProof correct");
+                } else {
+                    error!("StorageProof erroneous!");
+                }
 
                 if let Some(val) = value {
                     update_map.insert(key.clone(), val.clone());
