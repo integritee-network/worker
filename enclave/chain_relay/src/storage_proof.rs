@@ -68,7 +68,7 @@ where
 
     pub fn check_proof(
         root: H::Out,
-        storage_key: &Vec<u8>,
+        storage_key: &[u8],
         proof: StorageProof,
     ) -> Result<Option<Vec<u8>>, Error> {
         let storage_checker = StorageProofChecker::<H>::new(root, proof)?;

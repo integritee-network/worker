@@ -432,7 +432,7 @@ fn handle_call_worker_xt(
                     .sgx_error_with_log("No Storage Proof Supplied")?;
 
                 let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
-                    header.state_root.clone(),
+                    header.state_root,
                     key,
                     proof.to_vec(),
                 )
@@ -511,8 +511,8 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
-        // state::test_encrypted_state_io_works,
-        // test_ocall_read_write_ipfs,
+        state::test_encrypted_state_io_works,
+        test_ocall_read_write_ipfs,
         test_ocall_worker_request
     )
 }
