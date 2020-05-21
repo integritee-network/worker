@@ -63,10 +63,9 @@ pub fn seal(pair: &[u8]) -> SgxResult<sgx_status_t> {
     io::seal(pair, RSA3072_SEALED_KEY_FILE)
 }
 
-pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Vec<u8> {
+pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> SgxResult<Vec<u8>> {
     let mut decrypted_buffer = Vec::new();
-    rsa_pair
-        .decrypt_buffer(ciphertext_slice, &mut decrypted_buffer)
-        .unwrap();
-    decrypted_buffer
+
+    rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer)?;
+    Ok(decrypted_buffer)
 }

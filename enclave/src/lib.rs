@@ -362,7 +362,7 @@ fn handle_shield_funds_xt(
 
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
-    let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair);
+    let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
     let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
 
     Stf::execute(
@@ -401,7 +401,7 @@ fn handle_call_worker_xt(
 
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
-    let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair);
+    let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
     let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
 
     debug!("query mrenclave of self");
