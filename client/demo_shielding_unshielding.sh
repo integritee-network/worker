@@ -85,7 +85,7 @@ ${CLIENT} trusted balance ${ICGACCOUNTBOB} ${WORKERPORT} --mrenclave ${MRENCLAVE
 echo ""
 
 echo "* Un-shield ${AMOUNTUNSHIELD} funds from Alice's incognito account"
-${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} --xt-signer //Alice ${MRENCLAVE} ${WORKERPORT} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} ${WORKERPORT} --mrenclave ${MRENCLAVE} --xt-signer //Alice
 echo ""
 
 echo "* Waiting 10 seconds"
