@@ -23,7 +23,7 @@ echo "Using node-port ${NPORT}"
 echo "Using worker-port ${WPORT}"
 echo ""
 
-CLIENT="${HOME}/substraTEE-worker/target/release/substratee-client -p ${NPORT} "
+CLIENT="../target/release/substratee-client -p ${NPORT} "
 WORKERPORT="--worker-port ${WPORT}"
 
 AMOUNTSHIELD=50000000000
