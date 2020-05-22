@@ -2,7 +2,7 @@ use sgx_tstd as std;
 use std::collections::HashMap;
 use std::prelude::v1::*;
 
-use codec::{Compact, Decode, Encode};
+use codec::{Decode, Encode};
 use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, Runtime};
@@ -104,7 +104,7 @@ impl Stf {
                         .dispatch(origin)
                 }
                 TrustedCall::balance_unshield(account_public, account_incognito, value, shard) => {
-                    if let Ok(_) = Self::unshield_funds(account_incognito, value) {
+                    if Self::unshield_funds(account_incognito, value).is_ok() {
                         calls.push(OpaqueCall(
                             (
                                 [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
