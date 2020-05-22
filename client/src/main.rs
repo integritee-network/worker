@@ -325,11 +325,18 @@ fn main() {
                 .description("Transfer funds from an on-chain account to an incognito account")
                 .options(|app| {
                     app.arg(
+                        Arg::with_name("from")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Sender's on-chain account in ss58check format"),
+                    )
+                    .arg(
                         Arg::with_name("to")
                             .takes_value(true)
                             .required(true)
                             .value_name("SS58")
-                            .help("Recipient's AccountId in ss58check format"),
+                            .help("Recipient's incognito AccountId in ss58check format"),
                     )
                     .arg(
                         Arg::with_name("shard")
@@ -347,24 +354,13 @@ fn main() {
                     )
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    println!("SHIELD FUNDS");
-
-                    println!("get chain_api");
                     let chain_api = get_chain_api(matches);
-
-                    println!("get worker_api");
                     let worker_api = get_worker_api(matches);
-
-                    println!("get shielding_pubkey");
                     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
-                    println!("got shielding_pubkey");
-                    println!("");
 
                     let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
                         .expect("amount can't be converted to u128");
 
-                    // get the shard
-                    println!("get shard");
                     let shard_opt = match matches.value_of("shard") {
                         Some(s) => match s.from_base58() {
                             Ok(s) => ShardIdentifier::decode(&mut &s[..]),
@@ -376,9 +372,11 @@ fn main() {
                         Ok(shard) => shard,
                         Err(e) => panic!(e),
                     };
-                    println!("shard = {}", shard);
-                    println!("got shard");
-                    println!("");
+
+                    // get the sender
+                    let arg_from = matches.value_of("from").unwrap();
+                    let from = get_pair_from_str(arg_from);
+                    let chain_api = chain_api.set_signer(sr25519_core::Pair::from(from));
 
                     // get the recipient
                     let arg_to = matches.value_of("to").unwrap();
@@ -389,17 +387,7 @@ fn main() {
                         .encrypt_buffer(&to_encoded, &mut to_encrypted)
                         .unwrap();
 
-                    println!("shard is {}", shard);
-                    println!("to ss58 is {}", to);
-                    println!("amount is {}", amount);
-
-                    println!("to_encoded   = {:?}", to_encoded);
-                    println!("to_encrypted = {:?}", to_encrypted);
-
-                    let arg_signer = "//Alice";
-                    let signer = get_pair_from_str(arg_signer);
-                    let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
-
+                    // compose the extrinsic
                     let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
                         chain_api.clone(),
                         "SubstrateeRegistry",
@@ -408,8 +396,6 @@ fn main() {
                         amount,
                         shard
                     );
-                    println!("extrinsic composed");
-                    println!("");
 
                     let tx_hash = chain_api
                         .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
