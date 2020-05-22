@@ -71,7 +71,8 @@ pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32
         .unwrap();
     info!("deserialized rsa key");
 
-    let call = TrustedCall::balance_unshield(who.public(), 33);
+    let call =
+        TrustedCall::balance_unshield(who.public(), who.public(), 40, ShardIdentifier::default());
     encrypt_payload(
         rsa_pubkey,
         call.sign(

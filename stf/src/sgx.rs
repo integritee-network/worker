@@ -2,7 +2,7 @@ use sgx_tstd as std;
 use std::collections::HashMap;
 use std::prelude::v1::*;
 
-use codec::{Compact, Decode, Encode};
+use codec::{Decode, Encode};
 use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, Runtime};
@@ -10,7 +10,9 @@ use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
-use crate::{AccountId, State, Stf, TrustedCall, TrustedGetter, BALANCE_MODULE, BALANCE_TRANSFER};
+use crate::{
+    AccountId, State, Stf, TrustedCall, TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+};
 
 /// Simple blob that holds a call in encoded format
 #[derive(Clone, Debug)]
@@ -101,10 +103,18 @@ impl Stf {
                     sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
                         .dispatch(origin)
                 }
-                TrustedCall::balance_unshield(who, value) => {
-                    calls.push(OpaqueCall(
-                        ([BALANCE_MODULE, BALANCE_TRANSFER], who, Compact(value)).encode(),
-                    ));
+                TrustedCall::balance_unshield(account_public, account_incognito, value, shard) => {
+                    if Self::unshield_funds(account_incognito, value).is_ok() {
+                        calls.push(OpaqueCall(
+                            (
+                                [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
+                                account_public,
+                                value,
+                                shard,
+                            )
+                                .encode(),
+                        ));
+                    }
                     Ok(Default::default())
                 }
                 TrustedCall::balance_shield(who, value) => {
@@ -149,6 +159,28 @@ impl Stf {
         };
     }
 
+    fn unshield_funds(account: AccountId, amount: u128) -> Result<(), ()> {
+        match get_account_info(&account) {
+            Some(account_info) => {
+                sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                    account.into(),
+                    account_info.data.free - amount,
+                    account_info.data.reserved,
+                )
+                .dispatch(sgx_runtime::Origin::ROOT)
+                .map_err(|_| ())?;
+                Ok(())
+            }
+            None => {
+                error!(
+                    "Unshield called on inexistent incognito account: {:?}",
+                    account
+                );
+                Err(())
+            }
+        }
+    }
+
     pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
         match call {
@@ -158,7 +190,9 @@ impl Stf {
             TrustedCall::balance_transfer(account, _, _) => {
                 key_hashes.push(nonce_key_hash(account)) // dummy, actually not necessary
             }
-            TrustedCall::balance_unshield(account, _) => key_hashes.push(nonce_key_hash(account)),
+            TrustedCall::balance_unshield(account, _, _, _) => {
+                key_hashes.push(nonce_key_hash(account))
+            }
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };
         key_hashes
