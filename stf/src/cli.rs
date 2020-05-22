@@ -262,7 +262,6 @@ pub fn cmd<'a>(
                     )
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_signer = matches.value_of("signer").unwrap();
                     let arg_from = matches.value_of("from").unwrap();
                     let arg_to = matches.value_of("to").unwrap();
                     let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
@@ -281,7 +280,10 @@ pub fn cmd<'a>(
                         amount
                     );
 
-                    let tcall = TrustedCall::balance_unshield(sr25519_core::Public::from(from.public()), amount);
+                    let tcall = TrustedCall::balance_unshield(
+                        sr25519_core::Public::from(from.public()),
+                        amount,
+                    );
                     let nonce = 0; // FIXME: hard coded for now
                     let tscall =
                         tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
