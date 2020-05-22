@@ -10,13 +10,19 @@
 #
 # then run this script
 
-# using default port if none given as first argument
-PORT=${1:-9944}
+# usage:
+#  demo_shielding_unshielding.sh <NODEPORT> <WORKERPORT>
 
-echo "Using port ${PORT}"
+# using default port if none given as first argument
+NPORT=${1:-9944}
+WPORT=${2:-2000}
+
+echo "Using node-port ${NPORT}"
+echo "Using worker-port ${WPORT}"
 echo ""
 
-CLIENT="./target/release/substratee-client -p ${PORT} "
+CLIENT="${HOME}/substraTEE-worker/target/release/substratee-client -p ${NPORT} "
+WORKERPORT="--worker-port ${WPORT}"
 
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
@@ -28,51 +34,36 @@ read MRENCLAVE <<< $(${CLIENT} list-workers | awk '/  MRENCLAVE:[[:space:]]/ { p
 echo "  MRENCLAVE = ${MRENCLAVE}"
 echo ""
 
-echo "* Create a new on-chain account for Alice"
-ACCOUNTALICEOC=$(${CLIENT} new-account)
-echo "  Alice's on-chain account = ${ACCOUNTALICEOC}"
-echo ""
-
-echo "* Create a new on-chain account for Bob"
-ACCOUNTBOBOC=$(${CLIENT} new-account)
-echo "  Bob's on-chain account = ${ACCOUNTBOBOC}"
-echo ""
-
 echo "* Get balance of Alice's on-chain account"
-${CLIENT} balance ${ACCOUNTALICEOC}
+${CLIENT} balance "//Alice"
 echo ""
 
 echo "* Get balance of Bob's on-chain account"
-${CLIENT} balance ${ACCOUNTBOBOC}
-echo ""
-
-echo "* Fund Alice's on-chain account from faucet"
-${CLIENT} faucet ${ACCOUNTALICEOC}
-echo ""
-
-echo "* Get balance of Alice's on-chain account"
-${CLIENT} balance ${ACCOUNTALICEOC}
+${CLIENT} balance "//Bob"
 echo ""
 
 echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTALICE=$(${CLIENT} trusted new-account ${WORKERPORT} --mrenclave ${MRENCLAVE})
 echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
 echo "* Create a new incognito account for Bob"
-ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTBOB=$(${CLIENT} trusted new-account ${WORKERPORT} --mrenclave ${MRENCLAVE})
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
 echo "* Fund Alice's incognito account"
-${CLIENT} shield-funds ${ICGACCOUNTALICE} ${MRENCLAVE} 50
+${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${MRENCLAVE} 50000000000 ${WORKERPORT}
 echo ""
 
-exit 0
-
+echo "* Waiting 20 seconds"
+sleep 20
+echo ""
 
 echo -n "Alice's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} ${WORKERPORT}
+
+exit 0
 
 echo -n "Bob's incognito account balance"
 ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
