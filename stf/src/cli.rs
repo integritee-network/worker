@@ -251,14 +251,7 @@ pub fn cmd<'a>(
                             .takes_value(true)
                             .required(true)
                             .value_name("U128")
-                            .help("amount to be transferred"),
-                    )
-                    .arg(
-                        Arg::with_name("signer")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58")
-                            .help("Sender's account for signing"),
+                            .help("Amount to be transferred"),
                     )
                     .arg(
                         Arg::with_name("shard")
@@ -274,7 +267,6 @@ pub fn cmd<'a>(
                     let arg_to = matches.value_of("to").unwrap();
                     let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
                         .expect("amount can be converted to u128");
-                    let signer = get_pair_from_str(matches, arg_signer);
                     let from = get_pair_from_str(matches, arg_from);
                     let to = get_accountid_from_str(arg_to);
                     println!("from ss58 is {}", from.public().to_ss58check());
@@ -282,16 +274,17 @@ pub fn cmd<'a>(
 
                     let (mrenclave, shard) = get_identifiers(matches);
 
-                    let tcall = TrustedCall::balance_unshield(to, amount);
-                    let nonce = 0; // FIXME: hard coded for now
-                    let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard);
                     println!(
                         "send trusted call unshield_funds from {} to {}: {}",
                         from.public(),
                         to,
                         amount
                     );
+
+                    let tcall = TrustedCall::balance_unshield(sr25519_core::Public::from(from.public()), amount);
+                    let nonce = 0; // FIXME: hard coded for now
+                    let tscall =
+                        tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
                     perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
