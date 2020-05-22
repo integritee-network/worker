@@ -228,6 +228,74 @@ pub fn cmd<'a>(
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("unshield-funds")
+                .description("Transfer funds from an incognito account to an on-chain account")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("from")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Sender's incognito AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("to")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Recipient's on-chain AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("amount")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("U128")
+                            .help("amount to be transferred"),
+                    )
+                    .arg(
+                        Arg::with_name("signer")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Sender's account for signing"),
+                    )
+                    .arg(
+                        Arg::with_name("shard")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("STRING")
+                            .help("Shard identifier"),
+                    )
+                })
+                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                    let arg_signer = matches.value_of("signer").unwrap();
+                    let arg_from = matches.value_of("from").unwrap();
+                    let arg_to = matches.value_of("to").unwrap();
+                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                        .expect("amount can be converted to u128");
+                    let signer = get_pair_from_str(matches, arg_signer);
+                    let from = get_pair_from_str(matches, arg_from);
+                    let to = get_accountid_from_str(arg_to);
+                    println!("from ss58 is {}", from.public().to_ss58check());
+                    println!("to   ss58 is {}", to.to_ss58check());
+
+                    let (mrenclave, shard) = get_identifiers(matches);
+
+                    let tcall = TrustedCall::balance_unshield(to, amount);
+                    let nonce = 0; // FIXME: hard coded for now
+                    let tscall =
+                        tcall.sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard);
+                    println!(
+                        "send trusted call unshield_funds from {} to {}: {}",
+                        from.public(),
+                        to,
+                        amount
+                    );
+                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    Ok(())
+                }),
+        )
         .into_cmd("trusted")
 }
 
