@@ -284,7 +284,7 @@ pub fn cmd<'a>(
                         sr25519_core::Public::from(from.public()),
                         sr25519_core::Public::from(to),
                         amount,
-                        shard
+                        shard,
                     );
                     let nonce = 0; // FIXME: hard coded for now
                     let tscall =
