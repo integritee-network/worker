@@ -68,7 +68,7 @@ pub enum TrustedOperationSigned {
 pub enum TrustedCall {
     balance_set_balance(AccountId, AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
-    balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountPublic, AccountIncognito, Amount, Shard)
+    balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
     balance_shield(AccountId, Balance),                               // (AccountIncognito, Amount)
 }
 

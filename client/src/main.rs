@@ -39,7 +39,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use primitive_types::U256;
-use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
@@ -50,8 +50,8 @@ use std::thread;
 
 use std::convert::TryFrom;
 use substrate_api_client::{
-    compose_extrinsic, events::EventsDecoder, node_metadata::Metadata, utils::hexstr_to_vec, Api,
-    XtStatus,
+    compose_extrinsic, events::EventsDecoder, extrinsic::xt_primitives::UncheckedExtrinsicV4,
+    node_metadata::Metadata, utils::hexstr_to_vec, Api, XtStatus,
 };
 use substratee_node_runtime::{
     substratee_registry::{Enclave, Request},
@@ -92,6 +92,26 @@ fn main() {
                     .value_name("STRING")
                     .default_value("9944")
                     .help("node port"),
+            )
+            .arg(
+                Arg::with_name("worker-url")
+                    .short("U")
+                    .long("worker-url")
+                    .global(true)
+                    .takes_value(true)
+                    .value_name("STRING")
+                    .default_value("127.0.0.1")
+                    .help("worker url"),
+            )
+            .arg(
+                Arg::with_name("worker-port")
+                    .short("P")
+                    .long("worker-port")
+                    .global(true)
+                    .takes_value(true)
+                    .value_name("STRING")
+                    .default_value("2000")
+                    .help("worker port"),
             )
             .name("substratee-client")
             .version(VERSION)
@@ -300,6 +320,90 @@ fn main() {
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("shield-funds")
+                .description("Transfer funds from an on-chain account to an incognito account")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("from")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Sender's on-chain AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("to")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Recipient's incognito AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("amount")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("U128")
+                            .help("Amount to be transferred"),
+                    )
+                    .arg(
+                        Arg::with_name("shard")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("STRING")
+                            .help("Shard identifier"),
+                    )
+                })
+                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                    let chain_api = get_chain_api(matches);
+                    let worker_api = get_worker_api(matches);
+                    let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+
+                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                        .expect("amount can't be converted to u128");
+
+                    let shard_opt = match matches.value_of("shard") {
+                        Some(s) => match s.from_base58() {
+                            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                            _ => panic!("shard argument must be base58 encoded"),
+                        },
+                        _ => panic!("at least one of `mrenclave` or `shard` arguments must be supplied")
+                    };
+                    let shard = match shard_opt {
+                        Ok(shard) => shard,
+                        Err(e) => panic!(e),
+                    };
+
+                    // get the sender
+                    let arg_from = matches.value_of("from").unwrap();
+                    let from = get_pair_from_str(arg_from);
+                    let chain_api = chain_api.set_signer(sr25519_core::Pair::from(from));
+
+                    // get the recipient
+                    let arg_to = matches.value_of("to").unwrap();
+                    let to = get_accountid_from_str(arg_to);
+                    let to_encoded = to.encode();
+                    let mut to_encrypted: Vec<u8> = Vec::new();
+                    shielding_pubkey
+                        .encrypt_buffer(&to_encoded, &mut to_encrypted)
+                        .unwrap();
+
+                    // compose the extrinsic
+                    let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
+                        chain_api,
+                        "SubstrateeRegistry",
+                        "shield_funds",
+                        to_encrypted,
+                        amount,
+                        shard
+                    );
+
+                    let tx_hash = chain_api
+                        .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
+                        .unwrap();
+                    println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+                    Ok(())
+                }),
+        )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
@@ -328,6 +432,7 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
         matches.value_of("worker-url").unwrap(),
         matches.value_of("worker-port").unwrap()
     );
+    info!("Connecting to substraTEE-worker on '{}'", url);
     WorkerApi::new(url)
 }
 
