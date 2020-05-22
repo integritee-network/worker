@@ -389,7 +389,7 @@ fn main() {
 
                     // compose the extrinsic
                     let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
-                        chain_api.clone(),
+                        chain_api,
                         "SubstrateeRegistry",
                         "shield_funds",
                         to_encrypted,

@@ -282,7 +282,7 @@ pub fn cmd<'a>(
 
                     let tcall = TrustedCall::balance_unshield(
                         sr25519_core::Public::from(from.public()),
-                        sr25519_core::Public::from(to),
+                        to,
                         amount,
                         shard,
                     );
