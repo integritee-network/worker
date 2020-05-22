@@ -36,7 +36,7 @@ echo ""
 
 # TODO: This does not work when multiple workers are in the registry
 echo "* Reading MRENCLAVE of first worker"
-read MRENCLAVE <<< $(${CLIENT} list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+read MRENCLAVE <<< $(${CLIENT} list-workers | awk '/  MRENCLAVE: / { print $2 }')
 echo "  MRENCLAVE = ${MRENCLAVE}"
 echo ""
 
