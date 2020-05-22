@@ -329,7 +329,7 @@ fn main() {
                             .takes_value(true)
                             .required(true)
                             .value_name("SS58")
-                            .help("Sender's on-chain account in ss58check format"),
+                            .help("Sender's on-chain AccountId in ss58check format"),
                     )
                     .arg(
                         Arg::with_name("to")
@@ -339,18 +339,18 @@ fn main() {
                             .help("Recipient's incognito AccountId in ss58check format"),
                     )
                     .arg(
-                        Arg::with_name("shard")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("STRING")
-                            .help("Shard identifier"),
-                    )
-                    .arg(
                         Arg::with_name("amount")
                             .takes_value(true)
                             .required(true)
                             .value_name("U128")
                             .help("Amount to be transferred"),
+                    )
+                    .arg(
+                        Arg::with_name("shard")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("STRING")
+                            .help("Shard identifier"),
                     )
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
