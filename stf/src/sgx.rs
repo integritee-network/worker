@@ -103,12 +103,12 @@ impl Stf {
                     sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
                         .dispatch(origin)
                 }
-                TrustedCall::balance_unshield(account_public, account_incognito, value, shard) => {
+                TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
                     if Self::unshield_funds(account_incognito, value).is_ok() {
                         calls.push(OpaqueCall(
                             (
                                 [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-                                account_public,
+                                beneficiary,
                                 value,
                                 shard,
                             )

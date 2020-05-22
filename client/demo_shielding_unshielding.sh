@@ -2,11 +2,13 @@
 
 # setup:
 # run all on localhost:
+#   substratee-node purge-chain --dev
 #   substratee-node --dev --ws-port 9977 -lruntime=debug
+#   rm chain_relay_db.bin
 #   substratee-worker init_shard
 #   substratee-worker shielding-key
 #   substratee-worker signing-key
-#   substratee-worker -p 9977 run
+#   substratee-worker -p 9977 -w 2077 run
 #
 # then run this script
 
@@ -56,7 +58,7 @@ ICGACCOUNTBOB=$(${CLIENT} trusted new-account ${WORKERPORT} --mrenclave ${MRENCL
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Shield ${AMOUNTSHIELD} funds to Alice's incognito account"
+echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
 ${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
 echo ""
 
@@ -84,7 +86,7 @@ echo "* Bob's incognito account balance"
 ${CLIENT} trusted balance ${ICGACCOUNTBOB} ${WORKERPORT} --mrenclave ${MRENCLAVE}
 echo ""
 
-echo "* Un-shield ${AMOUNTUNSHIELD} funds from Alice's incognito account"
+echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
 ${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} ${WORKERPORT} --mrenclave ${MRENCLAVE} --xt-signer //Alice
 echo ""
 
