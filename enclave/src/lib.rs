@@ -402,7 +402,13 @@ fn handle_call_worker_xt(
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
     let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
-    let stf_call_signed = TrustedCallSigned::decode(&mut request_vec.as_slice()).unwrap();
+    let stf_call_signed = if let Ok(call) = TrustedCallSigned::decode(&mut request_vec.as_slice()) {
+        call 
+    } else { 
+        error!("could not decode TrustedCallSigned");
+        // do not panic here or users will be able to shoot workers dead by supplying funky calls
+        return Ok(())
+    };
 
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
@@ -410,7 +416,8 @@ fn handle_call_worker_xt(
     debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
     if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
         error!("TrustedCallSigned: bad signature");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        // do not panic here or users will be able to shoot workers dead by supplying a bad signature
+        return Ok(());
     }
 
     let mut state = state::load(&shard)?;
