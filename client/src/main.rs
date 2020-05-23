@@ -426,7 +426,26 @@ fn main() {
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("next-phase")
+                .description("Advance ceremony state machine to next phase by ROOT call")
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let api = get_chain_api(matches)
+                        .set_signer(AccountKeyring::Alice.pair());
 
+                    let xt: UncheckedExtrinsicV4<_> =
+                        compose_extrinsic!(api.clone(), "EncointerScheduler", "next_phase");
+            
+                    // send and watch extrinsic until finalized
+                    let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
+                    let phase = get_current_phase(&api);
+                    println!(
+                        "Transaction got finalized. Phase is now: {:?}. tx hash: {:?}",
+                        phase, tx_hash
+                    );              
+                    Ok(())
+                }),
+        )
         // stop encointer stuff
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
