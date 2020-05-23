@@ -18,6 +18,31 @@ primitive-types = { version = "0.6.1", default-features = false, features = ["co
 base58 			        = "0.1"
 chrono = "*"
 blake2-rfc      = { version = "0.2.18", default-features = false}
+geojson = "0.17"
+
+[dependencies.encointer-scheduler]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-scheduler"
+
+[dependencies.encointer-ceremonies]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-ceremonies"
+
+[dependencies.encointer-currencies]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-currencies"
+
+[dependencies.encointer-balances]
+default-features = false
+git = "https://github.com/encointer/pallets"
+tag = "v0.3.0"
+package = "pallet-encointer-balances"
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"

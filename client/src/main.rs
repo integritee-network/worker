@@ -46,7 +46,9 @@ use sp_runtime::{
 
 use std::sync::mpsc::channel;
 use std::thread;
-
+use geojson::GeoJson;
+use serde_json;
+use std::fs;
 use std::convert::TryFrom;
 use substrate_api_client::{
     compose_extrinsic, events::EventsDecoder, extrinsic::xt_primitives::UncheckedExtrinsicV4,
@@ -54,8 +56,15 @@ use substrate_api_client::{
 };
 use my_node_runtime::{
     substratee_registry::{Enclave, Request},
-    AccountId, Event, Hash, Signature,
+    AccountId, Event, Hash, Signature, Moment, ONE_DAY, BalanceType, BalanceEntry, BlockNumber, Header
 };
+use encointer_ceremonies::{
+    Attestation, AttestationIndexType, ClaimOfAttendance,
+    CurrencyCeremony, MeetupIndexType, ParticipantIndexType, ProofOfAttendance, Reputation
+};
+use encointer_scheduler::{CeremonyIndexType, CeremonyPhaseType};
+use encointer_currencies::{CurrencyIdentifier, CurrencyPropertiesType, Location, Degree};
+
 use substratee_stf::{
     cli::get_identifiers, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
     TrustedOperationSigned,
@@ -319,6 +328,83 @@ fn main() {
                     Ok(())
                 }),
         )
+        // start encointer stuff
+        .add_cmd(
+            Command::new("new-currency")
+                .description("listen to on-chain events")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("signer")
+                            .short("s")
+                            .long("signer")
+                            .takes_value(true)
+                            .help("a bootstrapper account to sign the registration extrinsic"),
+                    )
+                    .arg(
+                        Arg::with_name("specfile")
+                            .short("f")
+                            .long("file")
+                            .takes_value(true)
+                            .help("enhanced geojson file that specifies a currency"),
+                    )
+                })
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let p_arg = matches.value_of("signer").unwrap();
+                    let signer = get_pair_from_str(p_arg);
+            
+                    let spec_file = matches.value_of("specfile").unwrap();
+            
+                    let spec_str = fs::read_to_string(spec_file).unwrap();
+                    let geoloc = spec_str.parse::<GeoJson>().unwrap();
+            
+                    let mut loc = Vec::with_capacity(100);
+                    match geoloc {
+                        GeoJson::FeatureCollection(ref ctn) => {
+                            for feature in &ctn.features {
+                                let val = &feature.geometry.as_ref().unwrap().value;
+                                if let geojson::Value::Point(pt) = val {
+                                    let l = Location {
+                                        lon: Degree::from_num(pt[0]),
+                                        lat: Degree::from_num(pt[1]),
+                                    };
+                                    loc.push(l);
+                                    debug!("lon: {} lat {} => {:?}", pt[0], pt[1], l);
+                                }
+                            }
+                        }
+                        _ => (),
+                    };
+                    let meta: serde_json::Value = serde_json::from_str(&spec_str).unwrap();
+                    debug!("meta: {:?}", meta["currency_meta"]);
+                    let bootstrappers: Vec<AccountId> = meta["currency_meta"]["bootstrappers"]
+                        .as_array()
+                        .expect("bootstrappers must be array")
+                        .iter()
+                        .map(|a| get_accountid_from_str(&a.as_str().unwrap()))
+                        .collect();
+            
+                    let cid = blake2_256(&(loc.clone(), bootstrappers.clone()).encode());
+                    let name = meta["currency_meta"]["name"].as_str().unwrap();
+                    info!("bootstrappers: {:?}", bootstrappers);
+                    info!("name: {}", name);
+                    info!("Currency registered by {}", signer.public().to_ss58check());
+                    let api = get_chain_api(matches);            
+                    let _api = api.clone().set_signer(sr25519_core::Pair::from(signer));
+                    let xt: UncheckedExtrinsicV4<_> = compose_extrinsic!(
+                        _api.clone(),
+                        "EncointerCurrencies",
+                        "new_currency",
+                        loc,
+                        bootstrappers
+                    );
+                    let tx_hash = _api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
+                    info!("[+] Transaction got included. Hash: {:?}\n", tx_hash);
+                    println!("{}", cid.to_base58());
+                    Ok(())
+                }),
+        )
+
+        // stop encointer stuff
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
@@ -515,6 +601,12 @@ fn listen(matches: &ArgMatches<'_>) {
                                 my_node_runtime::substratee_registry::RawEvent::CallConfirmed(accountid, call_hash) => {
                                     println!("CallConfirmed from {} with hash {:?}", accountid, call_hash);
                                 },
+                                my_node_runtime::substratee_registry::RawEvent::ShieldFunds(incognito_account) => {
+                                    println!("ShieldFunds for {:?}", incognito_account);
+                                },
+                                my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(public_account) => {
+                                    println!("UnshieldFunds for {:?}", public_account);
+                                },                                
                             }
                         }
                         _ => debug!("ignoring unsupported module event: {:?}", evr.event),
