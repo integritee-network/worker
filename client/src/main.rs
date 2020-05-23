@@ -331,22 +331,20 @@ fn main() {
         // start encointer stuff
         .add_cmd(
             Command::new("new-currency")
-                .description("listen to on-chain events")
+                .description("regsiter new currency")
                 .options(|app| {
                     app.arg(
-                        Arg::with_name("signer")
-                            .short("s")
-                            .long("signer")
-                            .takes_value(true)
-                            .help("a bootstrapper account to sign the registration extrinsic"),
-                    )
-                    .arg(
                         Arg::with_name("specfile")
-                            .short("f")
-                            .long("file")
                             .takes_value(true)
+                            .required(true)
                             .help("enhanced geojson file that specifies a currency"),
                     )
+                    .arg(
+                        Arg::with_name("signer")
+                            .takes_value(true)
+                            .required(true)
+                            .help("a bootstrapper account to sign the registration extrinsic"),
+                    )                    
                 })
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let p_arg = matches.value_of("signer").unwrap();
