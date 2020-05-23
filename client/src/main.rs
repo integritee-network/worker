@@ -403,7 +403,19 @@ fn main() {
                     Ok(())
                 }),
         )
-
+        .add_cmd(
+            Command::new("list-currencies")
+                .description("list all registered currencies")
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let api = get_chain_api(matches);
+                    let cids = get_currency_identifiers(&api).expect("no currency registered");
+                    println!("number of currencies:  {}", cids.len());
+                    for cid in cids.iter() {
+                        println!("currency with cid {}", cid.encode().to_base58());
+                    }
+                    Ok(())
+                }),
+        )
         // stop encointer stuff
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
@@ -703,4 +715,10 @@ fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
     api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None)
+}
+
+
+// encointer stuff
+fn get_currency_identifiers(api: &Api<sr25519::Pair>) -> Option<Vec<CurrencyIdentifier>> {
+    api.get_storage_value("EncointerCurrencies", "CurrencyIdentifiers", None)
 }
