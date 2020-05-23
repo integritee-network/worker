@@ -227,6 +227,30 @@ pub fn cmd<'a>(
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("ceremony-registration")
+                .description("query state if registration for this ceremony")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("accountid")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("AccountId in ss58check format"),
+                    )
+                })
+                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                    let arg_who = matches.value_of("accountid").unwrap();
+                    println!("arg_who = {:?}", arg_who);
+                    let who = get_pair_from_str(matches, arg_who);
+                    let (mrenclave, shard) = get_identifiers(matches);
+                    let tgetter =
+                        TrustedGetter::ceremony_registration(sr25519_core::Public::from(who.public()), shard);
+                    let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
+                    perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                    Ok(())
+                }),
+        )
         .into_cmd("trusted")
 }
 

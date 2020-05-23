@@ -7,12 +7,13 @@ use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, Runtime};
-use sp_core::crypto::AccountId32;
+use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 use encointer_scheduler::{CeremonyIndexType, CeremonyPhaseType};
 use encointer_balances::BalanceType;
 use encointer_currencies::CurrencyIdentifier;
+use encointer_ceremonies::{ParticipantIndexType, MeetupIndexType};
 use sgx_runtime::Moment;
 
 use crate::{
@@ -99,7 +100,10 @@ impl Stf {
         ext.execute_with(|| match getter {
             TrustedGetter::balance(who, cid) => {
                 Some(get_encointer_balance(&who, &cid).encode())
-            }
+            },
+            TrustedGetter::ceremony_registration(who, cid) => {
+                Some(get_ceremony_registration(&who, &cid).encode())
+            }            
         })
     }
 
@@ -164,6 +168,34 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
         }
     } else {
         None
+    }
+}
+
+fn get_ceremony_registration(who: &AccountId, cid: &CurrencyIdentifier) -> ParticipantIndexType {
+    let cindex = match sp_io::storage::get(&storage_value_key(
+        "EncointerScheduler",
+        "CurrentCeremonyIndex")) {
+            Some(val) => if let Ok(v) = CeremonyIndexType::decode(&mut val.as_slice()) { v } else { 0 },
+            None => 0
+    };
+    info!("cindex = {}", cindex);
+    if let Some(res) = sp_io::storage::get(&storage_double_map_key(
+        "EncointerCeremonies",
+        "ParticipantIndex",
+        &(cid,cindex), 
+        &StorageHasher::Blake2_128Concat,
+        who,
+        &StorageHasher::Blake2_128Concat,
+    )) {
+        if let Ok(pindex) = ParticipantIndexType::decode(&mut res.as_slice()) {
+            pindex
+        } else {
+            debug!("can't decode ParticipantIndexType for {:x?}", res);
+            0
+        }
+    } else {
+        debug!("no registration for caller");
+        0
     }
 }
 

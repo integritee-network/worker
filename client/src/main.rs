@@ -331,7 +331,7 @@ fn main() {
         // start encointer stuff
         .add_cmd(
             Command::new("new-currency")
-                .description("regsiter new currency")
+                .description("register new currency")
                 .options(|app| {
                     app.arg(
                         Arg::with_name("specfile")
