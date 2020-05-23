@@ -19,7 +19,7 @@ use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOpera
 use base58::{FromBase58, ToBase58};
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
-use codec::Encode;
+use codec::{Decode, Encode};
 use log::*;
 use sc_keystore::Store;
 use sp_application_crypto::{ed25519, sr25519};
@@ -30,7 +30,7 @@ use std::path::PathBuf;
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
-    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperationSigned),
+    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperationSigned) -> Option<Vec<u8>>,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {
@@ -154,7 +154,7 @@ pub fn cmd<'a>(
                         to,
                         amount
                     );
-                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    let _ = perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
         )
@@ -201,7 +201,7 @@ pub fn cmd<'a>(
                         tscall.call.account(),
                         amount
                     );
-                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    let _ = perform_operation(matches, &TrustedOperationSigned::call(tscall));
                     Ok(())
                 }),
         )
@@ -224,7 +224,18 @@ pub fn cmd<'a>(
                     let tgetter =
                         TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
                     let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
-                    perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                    let res = perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                    let bal = if let Some(v) = res {
+                        if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
+                            vd
+                        } else {
+                            info!("could not decode value. maybe hasn't been set? {:x?}", v);
+                            0
+                        }
+                    } else {
+                        0
+                    };
+                    println!("{}", bal);
                     Ok(())
                 }),
         )

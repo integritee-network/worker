@@ -3769,7 +3769,7 @@ checksum = "d2a965994514ab35d3893e9260245f2947fd1981cdd4fffd2c6e6d1a9ce02e6a"
 
 [[package]]
 name = "substratee-client"
-version = "0.6.2-sub2.0.0-alpha.7"
+version = "0.6.3-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -3801,7 +3801,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-primitives"
-version = "0.6.2-sub2.0.0-alpha.7"
+version = "0.6.3-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3873,7 +3873,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker"
-version = "0.6.2-sub2.0.0-alpha.7"
+version = "0.6.3-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "cid",
@@ -3912,7 +3912,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-api"
-version = "0.6.2-sub2.0.0-alpha.7"
+version = "0.6.3-sub2.0.0-alpha.7"
 dependencies = [
  "hex 0.4.2",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",

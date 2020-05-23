@@ -159,10 +159,7 @@ fn main() {
         match _matches.values_of("shard") {
             Some(values) => {
                 for shard in values {
-                    if shard.len() != 2 * 32 {
-                        panic!("shard must be 256bit hex string")
-                    }
-                    match hex::decode(shard) {
+                    match shard.from_base58() {
                         Ok(s) => {
                             init_shard(&ShardIdentifier::from_slice(&s[..]));
                         }

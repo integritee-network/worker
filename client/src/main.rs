@@ -38,7 +38,6 @@ use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
-use primitive_types::U256;
 use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
@@ -436,38 +435,34 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     WorkerApi::new(url)
 }
 
-fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) {
+fn perform_trusted_operation(
+    matches: &ArgMatches<'_>,
+    top: &TrustedOperationSigned,
+) -> Option<Vec<u8>> {
     match top {
         TrustedOperationSigned::call(call) => send_request(matches, call.clone()),
         TrustedOperationSigned::get(getter) => get_state(matches, getter.clone()),
-    };
+    }
 }
 
-//FIXME: even better would be if the interpretation of the getter result is left to the stf crate
-// here we assume that the getter result is a u128, but how should we know here in this crate?
-fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) {
+fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<Vec<u8>> {
     let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
     debug!("calling workerapi to get state value");
     let ret = worker_api
         .get_stf_state(getter, &shard)
         .expect("getting value failed");
-    let ret_cropped = &ret[..9 * 2];
-
-    debug!(
-        "got getter response from worker: {:?}\ncropping to {:?}",
-        ret, ret_cropped
-    );
-    let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
-    match valopt {
-        Some(v) => {
-            let value = U256::from_little_endian(&v);
-            println!("{}", value);
-        }
-        _ => error!("getter response is None"),
-    };
+    // strip whitespace padding through decoding
+    if let Ok(vd) = Decode::decode(&mut ret.as_slice()) {
+        debug!("decoded return value: {:?} ", vd);
+        vd
+    } else {
+        debug!("decoding failed");
+        None
+    }
 }
-fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
+
+fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     let chain_api = get_chain_api(matches);
     let worker_api = get_worker_api(matches);
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
@@ -536,7 +531,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) {
         debug!("Expected stf call Hash: {:?}", expected);
         debug!("Confirmed stf call Hash: {:?}", ret.payload);
         if ret.payload == expected {
-            break;
+            return Some(ret.payload.encode());
         }
     }
 }
