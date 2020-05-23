@@ -436,35 +436,27 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     WorkerApi::new(url)
 }
 
-fn perform_trusted_operation<R>(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) -> R {
+fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) -> Option<Vec<u8>> {
     match top {
         TrustedOperationSigned::call(call) => send_request(matches, call.clone()),
         TrustedOperationSigned::get(getter) => get_state(matches, getter.clone()),
-    };
+    }
 }
 
-//FIXME: even better would be if the interpretation of the getter result is left to the stf crate
-// here we assume that the getter result is a u128, but how should we know here in this crate?
-fn get_state<R>(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<R> {
+fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<Vec<u8>> {
     let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
     debug!("calling workerapi to get state value");
     let ret = worker_api
         .get_stf_state(getter, &shard)
         .expect("getting value failed");
-    let ret_cropped = &ret[..9 * 2];
-
-    debug!(
-        "got getter response from worker: {:?}\ncropping to {:?}",
-        ret, ret_cropped
-    );
-    let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
-    match valopt {
-        Some(v) => Some(Decode::decode(&mut &v)), 
-        None => None
-    }
+    // strip whitespace padding through decoding
+    if let Ok(vd) = Decode::decode(&mut ret.as_slice()) {
+        Some(vd)
+    } else { None }
 }
-fn send_request<R>(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> R {
+
+fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     let chain_api = get_chain_api(matches);
     let worker_api = get_worker_api(matches);
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
@@ -533,7 +525,7 @@ fn send_request<R>(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> R {
         debug!("Expected stf call Hash: {:?}", expected);
         debug!("Confirmed stf call Hash: {:?}", ret.payload);
         if ret.payload == expected {
-            return ret.payload.into();
+            return Some(ret.payload.encode());
         }
     }
 }

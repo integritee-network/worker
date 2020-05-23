@@ -70,11 +70,11 @@ impl Api {
                 let value_slice = hex::decode(&res).unwrap();
                 let value: Option<Vec<u8>> = Decode::decode(&mut &value_slice[..]).unwrap();
                 match value {
-                    Some(val) => Ok(val),
-                    None => Err(()),
+                    Some(val) => Ok(val),  // val is still an encoded option! can be None.encode() if storage doesn't exist
+                    None => Err(()), // there must've been an SgxResult::Err inside enclave
                 }
             }
-            Err(_) => Err(()),
+            Err(_) => Err(()), // ws error
         }
     }
 

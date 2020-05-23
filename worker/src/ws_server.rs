@@ -82,6 +82,7 @@ fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str, shard_str: 
             None
         }
     };
+    // we could strip the whitespace padding here, but actually constant message size is a privacy feature!
     debug!("get_state result: {:?}", value);
     Message::text(hex::encode(value.encode()))
 }
