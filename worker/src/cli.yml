@@ -41,8 +41,8 @@ subcommands:
         about: Start the substraTEE-worker
         args:
             - shard:
-                short: s
-                long: shard
+                required: false
+                index: 1
                 help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
     - shielding-key:
         about: Get the public RSA3072 key from the TEE to be used to encrypt requests
