@@ -416,6 +416,17 @@ fn main() {
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("get-phase")
+                .description("read current ceremony phase from chain")
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let api = get_chain_api(matches);
+                    let phase = get_current_phase(&api);
+                    println!("{:?}", phase);                    
+                    Ok(())
+                }),
+        )
+
         // stop encointer stuff
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
@@ -719,6 +730,13 @@ fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountI
 
 
 // encointer stuff
+
 fn get_currency_identifiers(api: &Api<sr25519::Pair>) -> Option<Vec<CurrencyIdentifier>> {
     api.get_storage_value("EncointerCurrencies", "CurrencyIdentifiers", None)
+}
+
+fn get_current_phase(api: &Api<sr25519::Pair>) -> CeremonyPhaseType {
+    api.get_storage_value("EncointerScheduler", "CurrentPhase", None)
+        .or(Some(CeremonyPhaseType::default()))
+        .unwrap()
 }
