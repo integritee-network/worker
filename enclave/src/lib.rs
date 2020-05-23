@@ -403,11 +403,11 @@ fn handle_call_worker_xt(
     let rsa_keypair = rsa3072::unseal_pair()?;
     let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
     let stf_call_signed = if let Ok(call) = TrustedCallSigned::decode(&mut request_vec.as_slice()) {
-        call 
-    } else { 
+        call
+    } else {
         error!("could not decode TrustedCallSigned");
         // do not panic here or users will be able to shoot workers dead by supplying funky calls
-        return Ok(())
+        return Ok(());
     };
 
     debug!("query mrenclave of self");

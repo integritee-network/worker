@@ -38,7 +38,6 @@ use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
-use primitive_types::U256;
 use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
@@ -436,7 +435,10 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     WorkerApi::new(url)
 }
 
-fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperationSigned) -> Option<Vec<u8>> {
+fn perform_trusted_operation(
+    matches: &ArgMatches<'_>,
+    top: &TrustedOperationSigned,
+) -> Option<Vec<u8>> {
     match top {
         TrustedOperationSigned::call(call) => send_request(matches, call.clone()),
         TrustedOperationSigned::get(getter) => get_state(matches, getter.clone()),
@@ -452,8 +454,12 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<Ve
         .expect("getting value failed");
     // strip whitespace padding through decoding
     if let Ok(vd) = Decode::decode(&mut ret.as_slice()) {
-        Some(vd)
-    } else { None }
+        debug!("decoded return value: {:?} ", vd);
+        vd
+    } else {
+        debug!("decoding failed");
+        None
+    }
 }
 
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {

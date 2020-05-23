@@ -66,12 +66,11 @@ impl Api {
         let request = format!("{}::{}::{}", MSG_GET_STF_STATE, getter_str, shard_str);
         match Self::get(&self, &request) {
             Ok(res) => {
-                debug!("got a response from worker: {:?}", res);
                 let value_slice = hex::decode(&res).unwrap();
                 let value: Option<Vec<u8>> = Decode::decode(&mut &value_slice[..]).unwrap();
                 match value {
-                    Some(val) => Ok(val),  // val is still an encoded option! can be None.encode() if storage doesn't exist
-                    None => Err(()), // there must've been an SgxResult::Err inside enclave
+                    Some(val) => Ok(val), // val is still an encoded option! can be None.encode() if storage doesn't exist
+                    None => Err(()),      // there must've been an SgxResult::Err inside enclave
                 }
             }
             Err(_) => Err(()), // ws error

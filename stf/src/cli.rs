@@ -19,11 +19,11 @@ use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOpera
 use base58::{FromBase58, ToBase58};
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use log::*;
 use sc_keystore::Store;
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 
@@ -225,12 +225,16 @@ pub fn cmd<'a>(
                         TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
                     let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
                     let res = perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
-                    let bal = if let Some(v) = res { 
-                        if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) { vd } else {
+                    let bal = if let Some(v) = res {
+                        if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
+                            vd
+                        } else {
                             info!("could not decode value. maybe hasn't been set? {:x?}", v);
                             0
                         }
-                    } else { 0 };
+                    } else {
+                        0
+                    };
                     println!("{}", bal);
                     Ok(())
                 }),
