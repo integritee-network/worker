@@ -20,12 +20,12 @@ The tag has the following format: `<Ubuntu version>-<Intel SGX SDK version>-<Rus
 
 If you execute
 ```
-$ docker pull scssubstratee/substratee_dev:18.04-2.9.1-1.2
+$ docker pull scssubstratee/substratee_dev:18.04-2.9.1-1.1.2
 ```
 you get a docker image with
 - Ubuntu 18.04
-- Intel SGX SDK 2.9
-- Rust SGX SDK 1.1.1 (which includes the correct Rust version)
+- Intel SGX SDK 2.9.1
+- Rust SGX SDK 1.1.2 (which includes the correct Rust version)
 - IPF 0.4.21
 
 To start developing with the docker image, perform these steps:
