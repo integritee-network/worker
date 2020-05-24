@@ -249,24 +249,30 @@ impl LightValidation {
         Ok(relay.last_finalized_block_header.clone())
     }
 
-    fn apply_validator_set_change(relay: &mut RelayState<Block>, header: &Header) {
+    fn apply_validator_set_change<Block: BlockT>(
+        relay: &mut RelayState<Block>,
+        header: &Block::Header,
+    ) {
         if let Some(change) = relay.scheduled_change.take() {
-            if change.at_block == header.number {
+            if &change.at_block == header.number() {
                 relay.current_validator_set = change.next_authority_list;
                 relay.current_validator_set_id += 1;
             }
         }
     }
 
-    fn schedule_validator_set_change(relay: &mut RelayState<Block>, header: &Header) {
-        if let Some(log) = pending_change(&header.digest) {
+    fn schedule_validator_set_change<Block: BlockT>(
+        relay: &mut RelayState<Block>,
+        header: &Block::Header,
+    ) {
+        if let Some(log) = pending_change::<Block::Header>(&header.digest()) {
             if relay.scheduled_change.is_some() {
                 error!(
                     "Tried to scheduled authorities change even though one is already scheduled!!"
                 ); // should not happen if blockchain is configured properly
             } else {
                 relay.scheduled_change = Some(ScheduledChangeAtBlock {
-                    at_block: log.delay + header.number,
+                    at_block: log.delay + *header.number(),
                     next_authority_list: log.next_authorities,
                 })
             }
@@ -353,13 +359,13 @@ impl LightValidation {
     }
 }
 
-pub fn grandpa_log(digest: &Digest) -> Option<ConsensusLog<Blocknumber>> {
+pub fn grandpa_log<H: HeaderT>(digest: &DigestG<H::Hash>) -> Option<ConsensusLog<H::Number>> {
     let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
-    digest.convert_first(|l| l.try_to::<ConsensusLog<Blocknumber>>(id))
+    digest.convert_first(|l| l.try_to::<ConsensusLog<H::Number>>(id))
 }
 
-pub fn pending_change(digest: &Digest) -> Option<ScheduledChange<Blocknumber>> {
-    grandpa_log(digest).and_then(|log| log.try_into_change())
+pub fn pending_change<H: HeaderT>(digest: &DigestG<H::Hash>) -> Option<ScheduledChange<H::Number>> {
+    grandpa_log::<H>(digest).and_then(|log| log.try_into_change())
 }
 
 impl fmt::Debug for LightValidation {
