@@ -13,6 +13,13 @@ pub struct RelayState<Block: BlockT> {
     pub headers: Vec<Block::Header>,
     pub unjustified_headers: Vec<Block::Header>, // Finalized headers without grandpa proof
     pub verify_tx_inclusion: Vec<OpaqueExtrinsic>, // Transactions sent by the relay
+    pub scheduled_change: Option<ScheduledChangeAtBlock<Block::Header>>, // Scheduled Authorities change as indicated in the header's digest.
+}
+
+#[derive(Encode, Decode, Clone, PartialEq)]
+pub struct ScheduledChangeAtBlock<Header: HeaderT> {
+    pub at_block: Header::Number,
+    pub next_authority_list: AuthorityList,
 }
 
 impl<Block: BlockT> RelayState<Block> {
@@ -24,6 +31,7 @@ impl<Block: BlockT> RelayState<Block> {
             headers: vec![block_header],
             unjustified_headers: Vec::new(),
             verify_tx_inclusion: Vec::new(),
+            scheduled_change: None,
         }
     }
 }

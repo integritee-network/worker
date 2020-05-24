@@ -36,20 +36,31 @@ use justification::GrandpaJustification;
 use state::RelayState;
 use storage_proof::StorageProof;
 
+use crate::state::ScheduledChangeAtBlock;
+use crate::storage_proof::StorageProofChecker;
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
-use log::info;
-use sp_finality_grandpa::{AuthorityId, AuthorityList, SetId};
-use sp_runtime::generic::{Block as BlockG, Header as HeaderG};
+use log::{error, info};
+use sp_finality_grandpa::{
+    AuthorityId, AuthorityList, AuthorityWeight, ConsensusLog, ScheduledChange, SetId,
+    GRANDPA_ENGINE_ID,
+};
+use sp_runtime::generic::{
+    Block as BlockG, Digest as DigestG, Header as HeaderG, OpaqueDigestItemId,
+};
 use sp_runtime::traits::{
     BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor,
 };
 use sp_runtime::{Justification, OpaqueExtrinsic};
 
 type RelayId = u64;
-pub type Header = HeaderG<u32, BlakeTwo256>;
+pub type Blocknumber = u32;
+pub type Header = HeaderG<Blocknumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
+pub type Digest = DigestG<<BlakeTwo256 as HashT>::Output>;
+
+pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
 #[derive(Encode, Decode, Clone, Default)]
 pub struct LightValidation {
@@ -66,15 +77,14 @@ impl LightValidation {
         &mut self,
         block_header: Header,
         validator_set: AuthorityList,
-        _validator_set_proof: StorageProof,
+        validator_set_proof: StorageProof,
     ) -> Result<RelayId, Error> {
-        // Todo: Enable when we get proofs
-        // let state_root = block_header.state_root();
-        // Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
-        //     state_root,
-        //     validator_set_proof,
-        //     &validator_set,
-        // )?;
+        let state_root = block_header.state_root();
+        Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
+            state_root,
+            validator_set_proof,
+            &validator_set,
+        )?;
 
         let relay_info = RelayState::new(block_header, validator_set);
 
@@ -95,7 +105,7 @@ impl LightValidation {
         validator_set_id: SetId,
         grandpa_proof: Option<Justification>,
     ) -> Result<(), Error> {
-        let relay = self
+        let mut relay = self
             .tracked_relays
             .get_mut(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
@@ -129,6 +139,8 @@ impl LightValidation {
 
         relay.last_finalized_block_header = header.clone();
 
+        Self::schedule_validator_set_change(&mut relay, &header);
+
         // a valid grandpa proof proofs finalization of all previous unjustified blocks
         relay.headers.append(&mut relay.unjustified_headers);
         relay.headers.push(header);
@@ -147,15 +159,18 @@ impl LightValidation {
         header: Header,
         grandpa_proof: Option<Justification>,
     ) -> Result<(), Error> {
-        let relay = self
+        let mut relay = self
             .tracked_relays
-            .get(&relay_id)
+            .get_mut(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
 
         if relay.last_finalized_block_header.hash() != *header.parent_hash() {
             return Err(Error::HeaderAncestryMismatch);
         }
         let ancestry_proof = vec![];
+
+        Self::apply_validator_set_change(&mut relay, &header);
+
         let validator_set = relay.current_validator_set.clone();
         let validator_set_id = relay.current_validator_set_id;
         self.submit_finalized_headers(
@@ -237,28 +252,57 @@ impl LightValidation {
         Ok(relay.last_finalized_block_header.clone())
     }
 
-    //
-    // fn check_validator_set_proof<Hash: HashT>(
-    //     state_root: &Hash::Out,
-    //     proof: StorageProof,
-    //     validator_set: &Vec<(AuthorityId, AuthorityWeight)>,
-    // ) -> Result<(), Error> {
-    //     let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
-    //
-    //     // By encoding the given set we should have an easy way to compare
-    //     // with the stuff we get out of storage via `read_value`
-    //     let mut encoded_validator_set = validator_set.encode();
-    //     encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
-    //     let actual_validator_set = checker
-    //         .read_value(b":grandpa_authorities")?
-    //         .ok_or(Error::StorageValueUnavailable)?;
-    //
-    //     if encoded_validator_set == actual_validator_set {
-    //         Ok(())
-    //     } else {
-    //         Err(Error::ValidatorSetMismatch)
-    //     }
-    // }
+    fn apply_validator_set_change<Block: BlockT>(
+        relay: &mut RelayState<Block>,
+        header: &Block::Header,
+    ) {
+        if let Some(change) = relay.scheduled_change.take() {
+            if &change.at_block == header.number() {
+                relay.current_validator_set = change.next_authority_list;
+                relay.current_validator_set_id += 1;
+            }
+        }
+    }
+
+    fn schedule_validator_set_change<Block: BlockT>(
+        relay: &mut RelayState<Block>,
+        header: &Block::Header,
+    ) {
+        if let Some(log) = pending_change::<Block::Header>(&header.digest()) {
+            if relay.scheduled_change.is_some() {
+                error!(
+                    "Tried to scheduled authorities change even though one is already scheduled!!"
+                ); // should not happen if blockchain is configured properly
+            } else {
+                relay.scheduled_change = Some(ScheduledChangeAtBlock {
+                    at_block: log.delay + *header.number(),
+                    next_authority_list: log.next_authorities,
+                })
+            }
+        }
+    }
+
+    fn check_validator_set_proof<Hash: HashT>(
+        state_root: &Hash::Out,
+        proof: StorageProof,
+        validator_set: AuthorityListRef,
+    ) -> Result<(), Error> {
+        let checker = StorageProofChecker::<Hash>::new(*state_root, proof)?;
+
+        // By encoding the given set we should have an easy way to compare
+        // with the stuff we get out of storage via `read_value`
+        let mut encoded_validator_set = validator_set.encode();
+        encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
+        let actual_validator_set = checker
+            .read_value(b":grandpa_authorities")?
+            .ok_or(Error::StorageValueUnavailable)?;
+
+        if encoded_validator_set == actual_validator_set {
+            Ok(())
+        } else {
+            Err(Error::ValidatorSetMismatch)
+        }
+    }
 
     fn verify_grandpa_proof<Block>(
         justification: Justification,
@@ -315,6 +359,15 @@ impl LightValidation {
 
         Err(Error::InvalidAncestryProof)
     }
+}
+
+pub fn grandpa_log<H: HeaderT>(digest: &DigestG<H::Hash>) -> Option<ConsensusLog<H::Number>> {
+    let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
+    digest.convert_first(|l| l.try_to::<ConsensusLog<H::Number>>(id))
+}
+
+pub fn pending_change<H: HeaderT>(digest: &DigestG<H::Hash>) -> Option<ScheduledChange<H::Number>> {
+    grandpa_log::<H>(digest).and_then(|log| log.try_into_change())
 }
 
 impl fmt::Debug for LightValidation {

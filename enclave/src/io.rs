@@ -82,6 +82,7 @@ pub mod light_validation {
     use log::*;
     use sgx_types::{sgx_status_t, SgxResult};
     use sp_finality_grandpa::VersionedAuthorityList;
+    use std::sgxfs::SgxFile;
 
     pub fn unseal() -> SgxResult<LightValidation> {
         let vec = super::unseal(CHAIN_RELAY_DB)?;
@@ -96,23 +97,40 @@ pub mod light_validation {
     pub fn read_or_init_validator(
         header: Header,
         auth: VersionedAuthorityList,
+        proof: StorageProof,
     ) -> SgxResult<Header> {
-        if let Ok(validator) = unseal() {
-            let genesis = validator.genesis_hash(validator.num_relays).unwrap();
-            if genesis == header.hash() {
-                info!(
-                    "Found already initialized chain relay with Genesis Hash: {:?}",
-                    genesis
-                );
-                info!("Chain Relay state: {:?}", validator);
-                return Ok(validator.latest_header(validator.num_relays).unwrap());
-            }
+        if SgxFile::open(CHAIN_RELAY_DB).is_err() {
+            info!(
+                "[Enclave] ChainRelay DB not found, creating new! {}",
+                CHAIN_RELAY_DB
+            );
+            return init_validator(header, auth, proof);
         }
 
+        let validator = unseal().sgx_error_with_log("Error reading validator")?;
+
+        let genesis = validator.genesis_hash(validator.num_relays).unwrap();
+        if genesis == header.hash() {
+            info!(
+                "Found already initialized chain relay with Genesis Hash: {:?}",
+                genesis
+            );
+            info!("Chain Relay state: {:?}", validator);
+            Ok(validator.latest_header(validator.num_relays).unwrap())
+        } else {
+            init_validator(header, auth, proof)
+        }
+    }
+
+    fn init_validator(
+        header: Header,
+        auth: VersionedAuthorityList,
+        proof: StorageProof,
+    ) -> SgxResult<Header> {
         let mut validator = LightValidation::new();
 
         validator
-            .initialize_relay(header, auth.into(), StorageProof::default())
+            .initialize_relay(header, auth.into(), proof)
             .sgx_error()?;
         super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?;
 

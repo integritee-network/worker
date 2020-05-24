@@ -415,15 +415,30 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
     let grandpas: AuthorityList = api
-        .get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), None)
+        .get_storage_by_key_hash(
+            StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
+            Some(genesis_header.hash()),
+        )
         .map(|g: VersionedAuthorityList| g.into())
+        .unwrap();
+
+    let grandpa_proof = api
+        .get_storage_proof_by_keys(
+            vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
+            Some(genesis_header.hash()),
+        )
+        .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
         .unwrap();
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    let latest =
-        enclave_init_chain_relay(eid, genesis_header, VersionedAuthorityList::from(grandpas))
-            .unwrap();
+    let latest = enclave_init_chain_relay(
+        eid,
+        genesis_header,
+        VersionedAuthorityList::from(grandpas),
+        grandpa_proof,
+    )
+    .unwrap();
 
     info!("Finished initializing chain relay, syncing....");
 

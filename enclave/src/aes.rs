@@ -15,12 +15,14 @@
 
 */
 
+use std::sgxfs::SgxFile;
 use std::vec::Vec;
 
 use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
 use aes::Aes128;
+use log::info;
 use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 use ofb::Ofb;
 
@@ -32,14 +34,15 @@ type AesOfb = Ofb<Aes128>;
 
 pub type Aes = (Vec<u8>, Vec<u8>);
 
-pub fn read_or_create_sealed() -> SgxResult<Aes> {
-    match read_sealed() {
-        Ok((k, i)) => Ok((k, i)),
-        Err(_) => {
-            create_sealed()?;
-            read_sealed()
-        }
+pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
+    if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
+        info!(
+            "[Enclave] Keyfile not found, creating new! {}",
+            AES_KEY_FILE_AND_INIT_V
+        );
+        create_sealed()?;
     }
+    Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 pub fn read_sealed() -> SgxResult<Aes> {
@@ -68,7 +71,7 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 
 /// If AES acts on the encrypted data it decrypts and vice versa
 pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<()> {
-    read_or_create_sealed()
+    read_sealed()
         .map(|(key, iv)| AesOfb::new_var(&key, &iv))
         .sgx_error_with_log("    [Enclave]  Failed to Initialize AES")?
         .map(|mut ofb| ofb.apply_keystream(bytes))
