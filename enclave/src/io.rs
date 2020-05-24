@@ -96,6 +96,7 @@ pub mod light_validation {
     pub fn read_or_init_validator(
         header: Header,
         auth: VersionedAuthorityList,
+        proof: StorageProof,
     ) -> SgxResult<Header> {
         if let Ok(validator) = unseal() {
             let genesis = validator.genesis_hash(validator.num_relays).unwrap();
@@ -112,7 +113,7 @@ pub mod light_validation {
         let mut validator = LightValidation::new();
 
         validator
-            .initialize_relay(header, auth.into(), StorageProof::default())
+            .initialize_relay(header, auth.into(), proof)
             .sgx_error()?;
         super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?;
 

@@ -37,6 +37,7 @@ use state::RelayState;
 use storage_proof::StorageProof;
 
 use crate::state::ScheduledChangeAtBlock;
+use crate::storage_proof::StorageProofChecker;
 use codec::{Decode, Encode};
 use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
@@ -73,15 +74,14 @@ impl LightValidation {
         &mut self,
         block_header: Header,
         validator_set: AuthorityList,
-        _validator_set_proof: StorageProof,
+        validator_set_proof: StorageProof,
     ) -> Result<RelayId, Error> {
-        // Todo: Enable when we get proofs
-        // let state_root = block_header.state_root();
-        // Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
-        //     state_root,
-        //     validator_set_proof,
-        //     &validator_set,
-        // )?;
+        let state_root = block_header.state_root();
+        Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
+            state_root,
+            validator_set_proof,
+            &validator_set,
+        )?;
 
         let relay_info = RelayState::new(block_header, validator_set);
 
@@ -279,28 +279,27 @@ impl LightValidation {
         }
     }
 
-    //
-    // fn check_validator_set_proof<Hash: HashT>(
-    //     state_root: &Hash::Out,
-    //     proof: StorageProof,
-    //     validator_set: &Vec<(AuthorityId, AuthorityWeight)>,
-    // ) -> Result<(), Error> {
-    //     let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
-    //
-    //     // By encoding the given set we should have an easy way to compare
-    //     // with the stuff we get out of storage via `read_value`
-    //     let mut encoded_validator_set = validator_set.encode();
-    //     encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
-    //     let actual_validator_set = checker
-    //         .read_value(b":grandpa_authorities")?
-    //         .ok_or(Error::StorageValueUnavailable)?;
-    //
-    //     if encoded_validator_set == actual_validator_set {
-    //         Ok(())
-    //     } else {
-    //         Err(Error::ValidatorSetMismatch)
-    //     }
-    // }
+    fn check_validator_set_proof<Hash: HashT>(
+        state_root: &Hash::Out,
+        proof: StorageProof,
+        validator_set: &AuthorityList,
+    ) -> Result<(), Error> {
+        let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
+
+        // By encoding the given set we should have an easy way to compare
+        // with the stuff we get out of storage via `read_value`
+        let mut encoded_validator_set = validator_set.encode();
+        encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
+        let actual_validator_set = checker
+            .read_value(b":grandpa_authorities")?
+            .ok_or(Error::StorageValueUnavailable)?;
+
+        if encoded_validator_set == actual_validator_set {
+            Ok(())
+        } else {
+            Err(Error::ValidatorSetMismatch)
+        }
+    }
 
     fn verify_grandpa_proof<Block>(
         justification: Justification,

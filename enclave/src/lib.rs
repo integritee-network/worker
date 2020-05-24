@@ -55,7 +55,10 @@ use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
 use crate::utils::UnwrapOrSgxErrorUnexpected;
-use chain_relay::{storage_proof::StorageProofChecker, Block, Header, LightValidation};
+use chain_relay::{
+    storage_proof::{StorageProof, StorageProofChecker},
+    Block, Header, LightValidation,
+};
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
@@ -233,6 +236,8 @@ pub unsafe extern "C" fn init_chain_relay(
     genesis_header_size: usize,
     authority_list: *const u8,
     authority_list_size: usize,
+    authority_proof: *const u8,
+    authority_proof_size: usize,
     latest_header: *mut u8,
     latest_header_size: usize,
 ) -> sgx_status_t {
@@ -241,6 +246,7 @@ pub unsafe extern "C" fn init_chain_relay(
     let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
     let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
     let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
+    let mut proof = slice::from_raw_parts(authority_proof, authority_proof_size);
 
     let header = match Header::decode(&mut header) {
         Ok(h) => h,
@@ -258,7 +264,15 @@ pub unsafe extern "C" fn init_chain_relay(
         }
     };
 
-    match io::light_validation::read_or_init_validator(header, auth) {
+    let proof = match StorageProof::decode(&mut proof) {
+        Ok(h) => h,
+        Err(e) => {
+            error!("Decoding Header failed. Error: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    match io::light_validation::read_or_init_validator(header, auth, proof) {
         Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
         Err(e) => return e,
     }

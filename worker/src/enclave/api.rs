@@ -51,6 +51,8 @@ extern "C" {
         genesis_hash_size: usize,
         authority_list: *const u8,
         authority_list_size: usize,
+        authority_proof: *const u8,
+        authority_proof_size: usize,
         latest_header: *mut u8,
         latest_header_size: usize,
     ) -> sgx_status_t;
@@ -194,8 +196,9 @@ pub fn enclave_init() -> SgxResult<SgxEnclave> {
 
 pub fn enclave_init_chain_relay(
     eid: sgx_enclave_id_t,
-    genesis_hash: Header,
+    genesis_header: Header,
     authority_list: VersionedAuthorityList,
+    authority_proof: Vec<Vec<u8>>,
 ) -> SgxResult<Header> {
     let mut latest_header = vec![0u8; 200];
 
@@ -206,10 +209,12 @@ pub fn enclave_init_chain_relay(
             init_chain_relay(
                 eid,
                 &mut status,
-                genesis_hash.encode().as_ptr(),
-                genesis_hash.encode().len(),
+                genesis_header.encode().as_ptr(),
+                genesis_header.encode().len(),
                 authorities.as_ptr(),
                 authorities.len(),
+                authority_proof.encode().as_ptr(),
+                authority_proof.encode().len(),
                 latest_header.as_mut_ptr(),
                 latest_header.len(),
             )
