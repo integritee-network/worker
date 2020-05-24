@@ -153,7 +153,7 @@ fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig
 
 fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
     let shielding_key = rsa3072::unseal_pair().sgx_error()?;
-    let aes = aes::read_or_create_sealed().sgx_error()?;
+    let aes = aes::read_sealed().sgx_error()?;
     let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
     let enc_state = io::read(ENCRYPTED_STATE_FILE).sgx_error()?;
 

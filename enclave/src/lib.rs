@@ -105,7 +105,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 
     // create the aes key that is used for state encryption such that a key is always present in tests.
     // It will be overwritten anyway if mutual remote attastation is performed with the primary worker
-    if let Err(status) = aes::read_or_create_sealed() {
+    if let Err(status) = aes::create_sealed_if_absent() {
         return status;
     }
 
