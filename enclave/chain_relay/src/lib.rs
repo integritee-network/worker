@@ -43,7 +43,8 @@ use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
 use log::{error, info};
 use sp_finality_grandpa::{
-    AuthorityId, AuthorityList, ConsensusLog, ScheduledChange, SetId, GRANDPA_ENGINE_ID,
+    AuthorityId, AuthorityList, AuthorityWeight, ConsensusLog, ScheduledChange, SetId,
+    GRANDPA_ENGINE_ID,
 };
 use sp_runtime::generic::{
     Block as BlockG, Digest as DigestG, Header as HeaderG, OpaqueDigestItemId,
@@ -58,6 +59,8 @@ pub type Blocknumber = u32;
 pub type Header = HeaderG<Blocknumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type Digest = DigestG<<BlakeTwo256 as HashT>::Output>;
+
+pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
 #[derive(Encode, Decode, Clone, Default)]
 pub struct LightValidation {
@@ -282,9 +285,9 @@ impl LightValidation {
     fn check_validator_set_proof<Hash: HashT>(
         state_root: &Hash::Out,
         proof: StorageProof,
-        validator_set: &AuthorityList,
+        validator_set: AuthorityListRef,
     ) -> Result<(), Error> {
-        let checker = StorageProofChecker::<Hash>::new(*state_root, proof.clone())?;
+        let checker = StorageProofChecker::<Hash>::new(*state_root, proof)?;
 
         // By encoding the given set we should have an easy way to compare
         // with the stuff we get out of storage via `read_value`

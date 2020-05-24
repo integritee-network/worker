@@ -116,9 +116,9 @@ pub mod light_validation {
                 genesis
             );
             info!("Chain Relay state: {:?}", validator);
-            return Ok(validator.latest_header(validator.num_relays).unwrap());
+            Ok(validator.latest_header(validator.num_relays).unwrap())
         } else {
-            return init_validator(header, auth, proof);
+            init_validator(header, auth, proof)
         }
     }
 
