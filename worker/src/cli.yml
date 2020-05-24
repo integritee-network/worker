@@ -14,27 +14,32 @@ settings:
 args:
     - node-server:
         long: ns
-        help: Set the node server IP address
+        help: Set the node server protocol and IP address
         takes_value: true
+        default_value: "ws://127.0.0.1"
     - node-port:
         short: p
         long: node-port
         help: Set the websocket port to listen for substrate events
         takes_value: true
+        default_value: "9944"
     - w-server:
         long: ws
         help: Set the worker's IP address
         takes_value: true
+        default_value: "127.0.0.1"
     - w-port:
         short: w
         long: worker-port
         help: Set the websocket port to listen for worker requests
         takes_value: true
+        default_value: "2000"
     - mu-ra-port:
         short: r
         long: mu-ra-port
         help: Set the websocket port to listen for mu-ra requests
         takes_value: true
+        default_value: "3443"
 
 subcommands:
     - run:
@@ -49,11 +54,11 @@ subcommands:
     - signing-key:
         about: Get the public ed25519 key the TEE uses to sign messages and extrinsics
     - dump-ra:
-        about: perform RA and dump cert to disk
+        about: Perform RA and dump cert to disk
     - mrenclave:
         about: Dump mrenclave to stdout. base58 encoded.
     - init-shard:
-        about: initialize new shard (do this only if you run the first worker for that shard). if shard is not specified, the MRENCLAVE is used instead
+        about: Initialize new shard (do this only if you run the first worker for that shard). if shard is not specified, the MRENCLAVE is used instead
         args:
             - shard:
                 required: false
@@ -88,5 +93,3 @@ subcommands:
                     help: Run TEE server for MU-RA key provisioning
                 - provisioning-client:
                     help: Run TEE client for MU-RA key provisioning
-                     
-
