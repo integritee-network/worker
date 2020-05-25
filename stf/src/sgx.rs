@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::prelude::v1::*;
 
 use codec::{Decode, Encode};
+use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, Runtime};
@@ -69,25 +70,14 @@ impl Stf {
         });
     }
 
-    pub fn execute(ext: &mut State, call: TrustedCall, _nonce: u32, calls: &mut Vec<OpaqueCall>) {
+    pub fn execute(
+        ext: &mut State,
+        call: TrustedCall,
+        _nonce: u32,
+        calls: &mut Vec<OpaqueCall>,
+    ) -> Result<(), StfError> {
         ext.execute_with(|| {
-            // TODO: enclave should not panic here.
-            // assert_eq!(
-            //     nonce,
-            //     Decode::decode(
-            //         &mut sp_io::storage::get(&nonce_key_hash(call.account()))
-            //             .unwrap_or_else(|| 0u32.encode())
-            //             .as_slice()
-            //     )
-            //     .unwrap()
-            // );
-            //
-            // sp_io::storage::set(
-            //     &nonce_key_hash(call.account()),
-            //     (nonce + 1).encode().as_slice(),
-            // );
-
-            let _result = match call {
+            match call {
                 TrustedCall::balance_set_balance(_, who, free_balance, reserved_balance) => {
                     //TODO: ensure this can only be called by ROOT account
                     sgx_runtime::BalancesCall::<Runtime>::set_balance(
@@ -96,33 +86,35 @@ impl Stf {
                         reserved_balance,
                     )
                     .dispatch(sgx_runtime::Origin::ROOT)
+                    .map_err(|_| StfError::Dispatch)?;
+                    Ok(())
                 }
                 TrustedCall::balance_transfer(from, to, value) => {
-                    //FIXME: here would be a good place to really verify a signature
                     let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
                     sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
                         .dispatch(origin)
+                        .map_err(|_| StfError::Dispatch)?;
+                    Ok(())
                 }
                 TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                    if Self::unshield_funds(account_incognito, value).is_ok() {
-                        calls.push(OpaqueCall(
-                            (
-                                [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-                                beneficiary,
-                                value,
-                                shard,
-                            )
-                                .encode(),
-                        ));
-                    }
-                    Ok(Default::default())
+                    Self::unshield_funds(account_incognito, value)?;
+                    calls.push(OpaqueCall(
+                        (
+                            [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
+                            beneficiary,
+                            value,
+                            shard,
+                        )
+                            .encode(),
+                    ));
+                    Ok(())
                 }
                 TrustedCall::balance_shield(who, value) => {
-                    Self::shield_funds(who, value);
-                    Ok(Default::default())
+                    Self::shield_funds(who, value)?;
+                    Ok(())
                 }
-            };
-        });
+            }
+        })
     }
 
     pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
@@ -146,38 +138,39 @@ impl Stf {
         })
     }
 
-    fn shield_funds(account: AccountId, amount: u128) {
-        let _result = match get_account_info(&account) {
+    fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+        match get_account_info(&account) {
             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
                 account.into(),
                 account_info.data.free + amount,
                 account_info.data.reserved,
             )
-            .dispatch(sgx_runtime::Origin::ROOT),
+            .dispatch(sgx_runtime::Origin::ROOT)
+            .map_err(|_| StfError::Dispatch)?,
             None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
-                .dispatch(sgx_runtime::Origin::ROOT),
+                .dispatch(sgx_runtime::Origin::ROOT)
+                .map_err(|_| StfError::Dispatch)?,
         };
+        Ok(())
     }
 
-    fn unshield_funds(account: AccountId, amount: u128) -> Result<(), ()> {
+    fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
         match get_account_info(&account) {
             Some(account_info) => {
+                if account_info.data.free < amount {
+                    return Err(StfError::MissingFunds);
+                }
+
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
                     account.into(),
                     account_info.data.free - amount,
                     account_info.data.reserved,
                 )
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| ())?;
+                .map_err(|_| StfError::Dispatch)?;
                 Ok(())
             }
-            None => {
-                error!(
-                    "Unshield called on inexistent incognito account: {:?}",
-                    account
-                );
-                Err(())
-            }
+            None => Err(StfError::InexistentAccount(account)),
         }
     }
 
@@ -279,4 +272,14 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
         StorageHasher::Twox256 => sp_core::twox_256(&encoded_key).to_vec(),
         StorageHasher::Twox64Concat => sp_core::twox_64(&encoded_key).to_vec(),
     }
+}
+
+#[derive(Debug, Display)]
+pub enum StfError {
+    #[display(fmt = "Error dispatching runtime call")]
+    Dispatch,
+    #[display(fmt = "Not enough funds to perform operation")]
+    MissingFunds,
+    #[display(fmt = "Account does not exist {:?}", _0)]
+    InexistentAccount(AccountId),
 }

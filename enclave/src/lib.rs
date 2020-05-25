@@ -347,7 +347,9 @@ pub fn scan_blocks_for_relevant_xt(
             {
                 // confirm call decodes successfully as well
                 if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                    handle_shield_funds_xt(&mut calls, xt)?;
+                    if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
+                        error!("Error performing shieldfunds. Error: {:?}", e);
+                    }
                 }
             };
 
@@ -355,7 +357,11 @@ pub fn scan_blocks_for_relevant_xt(
                 UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
             {
                 if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
-                    handle_call_worker_xt(&mut calls, xt, block.block.header.clone(), node_url)?;
+                    if let Err(e) =
+                        handle_call_worker_xt(&mut calls, xt, block.block.header.clone(), node_url)
+                    {
+                        error!("Error performing worker call: Error: {:?}", e);
+                    }
                 }
             }
         }
@@ -379,12 +385,15 @@ fn handle_shield_funds_xt(
     let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
     let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
 
-    Stf::execute(
+    if let Err(e) = Stf::execute(
         &mut state,
         TrustedCall::balance_shield(account, amount),
         Default::default(),
         calls,
-    );
+    ) {
+        error!("Error performing Stf::execute. Error: {:?}", e);
+        return Ok(());
+    }
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     let state_hash = state::write(state, &shard)?;
     calls.push(OpaqueCall(
@@ -475,12 +484,15 @@ fn handle_call_worker_xt(
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
-    Stf::execute(
+    if let Err(e) = Stf::execute(
         &mut state,
         stf_call_signed.call,
         stf_call_signed.nonce,
         calls,
-    );
+    ) {
+        error!("Error performing Stf::execute. Error: {:?}", e);
+        return Ok(());
+    }
 
     let state_hash = state::write(state, &shard)?;
 
