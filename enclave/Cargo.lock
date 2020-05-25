@@ -2050,6 +2050,7 @@ dependencies = [
 name = "substratee-stf"
 version = "0.2.0"
 dependencies = [
+ "derive_more 0.99.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (git+https://github.com/mesalock-linux/env_logger-sgx)",
  "frame-metadata 11.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
