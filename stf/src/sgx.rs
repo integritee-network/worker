@@ -274,7 +274,6 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
     }
 }
 
-/// Substrate Client error
 #[derive(Debug, Display)]
 pub enum StfError {
     #[display(fmt = "Error dispatching runtime call")]

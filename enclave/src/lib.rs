@@ -347,8 +347,8 @@ pub fn scan_blocks_for_relevant_xt(
             {
                 // confirm call decodes successfully as well
                 if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                    if let Err(_e) = handle_shield_funds_xt(&mut calls, xt) {
-                        error!("Error performing shieldfunds");
+                    if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
+                        error!("Error performing shieldfunds. Error: {:?}", e);
                     }
                 }
             };
@@ -357,10 +357,10 @@ pub fn scan_blocks_for_relevant_xt(
                 UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
             {
                 if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
-                    if let Err(_e) =
+                    if let Err(e) =
                         handle_call_worker_xt(&mut calls, xt, block.block.header.clone(), node_url)
                     {
-                        error!("Error performing worker call");
+                        error!("Error performing worker call: Error: {:?}", e);
                     }
                 }
             }
@@ -392,7 +392,7 @@ fn handle_shield_funds_xt(
         calls,
     ) {
         error!("Error performing Stf::execute. Error: {:?}", e);
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        return Ok(());
     }
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     let state_hash = state::write(state, &shard)?;
@@ -491,7 +491,7 @@ fn handle_call_worker_xt(
         calls,
     ) {
         error!("Error performing Stf::execute. Error: {:?}", e);
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        return Ok(());
     }
 
     let state_hash = state::write(state, &shard)?;
