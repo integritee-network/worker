@@ -75,7 +75,7 @@ impl Stf {
         call: TrustedCall,
         _nonce: u32,
         calls: &mut Vec<OpaqueCall>,
-    ) -> Result<Option<OpaqueCall>, StfError> {
+    ) -> Result<(), StfError> {
         ext.execute_with(|| {
             match call {
                 TrustedCall::balance_set_balance(_, who, free_balance, reserved_balance) => {
@@ -87,15 +87,14 @@ impl Stf {
                     )
                     .dispatch(sgx_runtime::Origin::ROOT)
                     .map_err(|_| StfError::Dispatch)?;
-                    Ok(None)
+                    Ok(())
                 }
                 TrustedCall::balance_transfer(from, to, value) => {
-                    //FIXME: here would be a good place to really verify a signature
                     let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
                     sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
                         .dispatch(origin)
                         .map_err(|_| StfError::Dispatch)?;
-                    Ok(None)
+                    Ok(())
                 }
                 TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
                     Self::unshield_funds(account_incognito, value)?;
@@ -108,11 +107,11 @@ impl Stf {
                         )
                             .encode(),
                     ));
-                    Ok(None)
+                    Ok(())
                 }
                 TrustedCall::balance_shield(who, value) => {
                     Self::shield_funds(who, value)?;
-                    Ok(None)
+                    Ok(())
                 }
             }
         })
