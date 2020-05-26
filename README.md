@@ -1,4 +1,7 @@
 # substraTEE-worker
+
+![badge](https://img.shields.io/badge/substrate-2.0.0--alpha.7-success)
+
 SubstraTEE worker for SubstraTEE node
 
 This is part of [substraTEE](https://github.com/scs/substraTEE)
