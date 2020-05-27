@@ -543,8 +543,6 @@ pub fn create_attestation_report(
 
     let (attn_report, sig, cert) = get_report_from_intel(ias_sock, quote_vec)?;
     Ok((attn_report, sig, cert))
-
-    //TODO: return context as well
 }
 
 fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {

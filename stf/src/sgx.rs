@@ -28,6 +28,10 @@ impl Encode for OpaqueCall {
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
 type AccountInfo = system::AccountInfo<Index, AccountData>;
+const ALICE_ENCODED: [u8; 32] = [
+    212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
+    76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
+];
 
 impl Stf {
     pub fn init_state() -> State {
@@ -58,6 +62,7 @@ impl Stf {
                 &storage_value_key("Balances", "ExistentialDeposit"),
                 &1u128.encode(),
             );
+            sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
         });
         ext
     }
@@ -76,43 +81,41 @@ impl Stf {
         _nonce: u32,
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
-        ext.execute_with(|| {
-            match call {
-                TrustedCall::balance_set_balance(_, who, free_balance, reserved_balance) => {
-                    //TODO: ensure this can only be called by ROOT account
-                    sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                        AccountId32::from(who),
-                        free_balance,
-                        reserved_balance,
-                    )
-                    .dispatch(sgx_runtime::Origin::ROOT)
+        ext.execute_with(|| match call {
+            TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
+                Self::ensure_root(root)?;
+                sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                    AccountId32::from(who),
+                    free_balance,
+                    reserved_balance,
+                )
+                .dispatch(sgx_runtime::Origin::ROOT)
+                .map_err(|_| StfError::Dispatch)?;
+                Ok(())
+            }
+            TrustedCall::balance_transfer(from, to, value) => {
+                let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
+                    .dispatch(origin)
                     .map_err(|_| StfError::Dispatch)?;
-                    Ok(())
-                }
-                TrustedCall::balance_transfer(from, to, value) => {
-                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
-                    sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
-                        .dispatch(origin)
-                        .map_err(|_| StfError::Dispatch)?;
-                    Ok(())
-                }
-                TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                    Self::unshield_funds(account_incognito, value)?;
-                    calls.push(OpaqueCall(
-                        (
-                            [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-                            beneficiary,
-                            value,
-                            shard,
-                        )
-                            .encode(),
-                    ));
-                    Ok(())
-                }
-                TrustedCall::balance_shield(who, value) => {
-                    Self::shield_funds(who, value)?;
-                    Ok(())
-                }
+                Ok(())
+            }
+            TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+                Self::unshield_funds(account_incognito, value)?;
+                calls.push(OpaqueCall(
+                    (
+                        [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
+                        beneficiary,
+                        value,
+                        shard,
+                    )
+                        .encode(),
+                ));
+                Ok(())
+            }
+            TrustedCall::balance_shield(who, value) => {
+                Self::shield_funds(who, value)?;
+                Ok(())
             }
         })
     }
@@ -136,6 +139,14 @@ impl Stf {
                 }
             }
         })
+    }
+
+    fn ensure_root(account: AccountId) -> Result<(), StfError> {
+        if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
+            Ok(())
+        } else {
+            Err(StfError::MissingPrivileges(account))
+        }
     }
 
     fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
@@ -276,6 +287,8 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
 
 #[derive(Debug, Display)]
 pub enum StfError {
+    #[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+    MissingPrivileges(AccountId),
     #[display(fmt = "Error dispatching runtime call")]
     Dispatch,
     #[display(fmt = "Not enough funds to perform operation")]
