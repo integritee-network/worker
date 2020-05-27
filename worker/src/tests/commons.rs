@@ -39,6 +39,7 @@ pub struct Message {
     pub sha256: sgx_sha256_hash_t,
 }
 
+/// Who must be root account
 pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
     let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid)
@@ -46,16 +47,11 @@ pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: 
         .unwrap();
     info!("deserialized rsa key");
 
-    let call = TrustedCall::balance_set_balance(
-        who.public(), // TODO: this should actually be ROOT acount
-        who.public(),
-        33,
-        44,
-    );
+    let call = TrustedCall::balance_set_balance(who.public(), who.public(), 33, 44);
     encrypt_payload(
         rsa_pubkey,
         call.sign(
-            &who.pair(), // TODO: this should actually be ROOT acount
+            &who.pair(),
             nonce,
             &enclave_mrenclave(eid).unwrap(),
             &ShardIdentifier::default(),
