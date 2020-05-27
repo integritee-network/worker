@@ -56,10 +56,11 @@ pub fn call_worker_encrypted_set_balance_works(
     port: &str,
     last_synced_head: Header,
 ) -> Header {
-    let (api, nonce, shard) = setup(eid, Some(AccountKeyring::Alice), port);
+    let root = AccountKeyring::Alice; // Alice is configure as root in our STF
+    let (api, nonce, shard) = setup(eid, Some(root), port);
     let req = Request {
         shard,
-        cyphertext: encrypted_set_balance(eid, AccountKeyring::Alice, nonce.unwrap()),
+        cyphertext: encrypted_set_balance(eid, root, nonce.unwrap()),
     };
 
     let xt: UncheckedExtrinsicV4<CallWorkerFn> =
@@ -99,7 +100,6 @@ pub fn forward_encrypted_unshield_works(
 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
     let (api, _, _) = setup(eid, None, port);
-    //
     crate::init_chain_relay(eid, &api)
 }
 

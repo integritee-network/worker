@@ -19,7 +19,10 @@ std = [
     "clap-nested",
     "log",
     "base58",
-    "sc-keystore"
+    "sc-keystore",
+    "system/std",
+    "metadata/std",
+    "sp-core/std"
 ]
 
 [dependencies]
@@ -91,4 +94,3 @@ optional = true
 
 [dev-dependencies.sp-keyring]
 version = '2.0.0-alpha.7'
-

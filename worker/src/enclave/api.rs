@@ -285,7 +285,7 @@ pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<ed25519::Public> 
     Ok(ed25519::Public::from_raw(pubkey))
 }
 
-pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
+pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Rsa3072PubKey> {
     let pubkey_size = 8192;
     let mut pubkey = vec![0u8; pubkey_size as usize];
 
@@ -300,9 +300,9 @@ pub fn enclave_shielding_key(eid: sgx_enclave_id_t) -> SgxResult<Vec<u8>> {
         return Err(result);
     }
 
-    let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(&pubkey[..]).unwrap();
+    let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(pubkey.as_slice()).unwrap();
     debug!("got RSA pubkey {:?}", rsa_pubkey);
-    Ok(pubkey)
+    Ok(rsa_pubkey)
 }
 
 pub fn enclave_query_state(

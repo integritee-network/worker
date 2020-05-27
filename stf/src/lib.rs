@@ -186,7 +186,6 @@ pub struct Stf {}
 mod tests {
     use super::*;
     use sp_keyring::AccountKeyring;
-    use std::vec::Vec;
 
     #[test]
     fn verify_signature_works() {
@@ -194,7 +193,12 @@ mod tests {
         let mrenclave = [0u8; 32];
         let shard = ShardIdentifier::default();
 
-        let call = TrustedCall::balance_set_balance(AccountId::from(AccountKeyring::Alice), 42, 42);
+        let call = TrustedCall::balance_set_balance(
+            AccountKeyring::Alice.public(),
+            AccountKeyring::Alice.public(),
+            42,
+            42,
+        );
         let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
 
         assert!(signed_call.verify_signature(&mrenclave, &shard));

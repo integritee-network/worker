@@ -18,7 +18,6 @@
 use std::str;
 use std::thread;
 
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 
 use codec::Encode;
@@ -88,10 +87,7 @@ fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str, shard_str: 
 }
 
 fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
-    // request the key
-    let pubkey = enclave_shielding_key(eid).unwrap();
-    let rsa_pubkey: Rsa3072PubKey =
-        serde_json::from_str(str::from_utf8(&pubkey[..]).unwrap()).unwrap();
+    let rsa_pubkey = enclave_shielding_key(eid).unwrap();
     debug!("     [WS Server] RSA pubkey {:?}\n", rsa_pubkey);
 
     let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();

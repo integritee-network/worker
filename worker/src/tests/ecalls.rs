@@ -24,9 +24,6 @@ use sp_keyring::AccountKeyring;
 use sgx_types::*;
 use sp_core::hash::H256;
 
-// TODO: test get_ecc_signing_pubkey
-// TODO: test get_rsa_encryption_pubkey
-
 pub fn get_state_works(eid: sgx_enclave_id_t) {
     let alice = AccountKeyring::Alice;
     let trusted_getter_signed = test_trusted_getter_signed(alice).encode();
