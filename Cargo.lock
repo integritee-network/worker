@@ -1998,7 +1998,7 @@ dependencies = [
 [[package]]
 name = "pallet-template"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/scs/sgx-runtime#32f212bbefffc095bb5ef470b86fd7f776338dbb"
+source = "git+https://github.com/scs/sgx-runtime?tag=v2.0.0-alpha.7#32f212bbefffc095bb5ef470b86fd7f776338dbb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2960,7 +2960,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/scs/sgx-runtime#32f212bbefffc095bb5ef470b86fd7f776338dbb"
+source = "git+https://github.com/scs/sgx-runtime?tag=v2.0.0-alpha.7#32f212bbefffc095bb5ef470b86fd7f776338dbb"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3714,7 +3714,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.4.6-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.6-sub2.0.0-alpha.7#3546fc10f88008a68ba102adbcea66e75ffc5885"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.6-sub2.0.0-alpha.7#cce8441c09224ab641619ea077b5b7fb118f6bf6"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",

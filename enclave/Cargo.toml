@@ -73,6 +73,7 @@ features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
 git = "https://github.com/scs/sgx-runtime"
+tag = "v2.0.0-alpha.7"
 default-features = false
 optional = true
 package = "sp-io"
