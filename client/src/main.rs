@@ -291,7 +291,7 @@ fn main() {
                         };
                         let enclave = enclave.unwrap();
                         let timestamp = DateTime::<Utc>::from(
-                            UNIX_EPOCH + Duration::from_secs(enclave.timestamp as u64),
+                            UNIX_EPOCH + Duration::from_millis(enclave.timestamp as u64),
                         );
                         println!("Enclave {}", w);
                         println!("   AccountId: {}", enclave.pubkey.to_ss58check());
@@ -514,6 +514,9 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
     decoder
         .register_type_size::<Hash>("ShardIdentifier")
+        .unwrap();
+    decoder
+        .register_type_size::<(Hash, Vec<u8>)>("Request")
         .unwrap();
 
     loop {
