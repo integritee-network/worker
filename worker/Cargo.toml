@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker"
-version = "0.6.3-sub2.0.0-alpha.7"
+version = "0.6.4-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 edition = "2018"
@@ -46,7 +46,7 @@ path = "worker-api"
 
 [dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "v0.6.3-sub2.0.0-alpha.7"
+tag = "v0.6.5-sub2.0.0-alpha.7"
 package = "substratee-node-runtime"
 
 [dependencies.sp-finality-grandpa]

@@ -174,6 +174,8 @@ fn stf_post_actions(
                 signer.clone(),
                 call,
                 nonce,
+                Era::Immortal,
+                validator.genesis_hash(validator.num_relays).unwrap(),
                 validator.genesis_hash(validator.num_relays).unwrap(),
                 RUNTIME_SPEC_VERSION
             )

@@ -644,6 +644,8 @@ pub unsafe extern "C" fn perform_ra(
         signer,
         (call, cert_der.to_vec(), url_slice.to_vec()),
         *nonce,
+        Era::Immortal,
+        genesis_hash,
         genesis_hash,
         RUNTIME_SPEC_VERSION
     );
