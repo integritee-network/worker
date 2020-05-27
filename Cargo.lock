@@ -1183,7 +1183,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.0"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.5-sub2.0.0-alpha.7#9d664bbb96e7b529dcb66abf661b2564a3d8f609"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.7-sub2.0.0-alpha.7#c4bcb69975b96a52a68b95a852d3c4a02c84c241"
 dependencies = [
  "base64",
  "chrono",
@@ -1968,15 +1968,17 @@ dependencies = [
 
 [[package]]
 name = "pallet-substratee-registry"
-version = "0.6.5-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.5-sub2.0.0-alpha.7#9d664bbb96e7b529dcb66abf661b2564a3d8f609"
+version = "0.6.7-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.7-sub2.0.0-alpha.7#c4bcb69975b96a52a68b95a852d3c4a02c84c241"
 dependencies = [
  "frame-support",
  "frame-system",
  "ias-verify",
+ "pallet-timestamp",
  "parity-scale-codec",
  "sp-core",
  "sp-io 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -1998,7 +2000,7 @@ dependencies = [
 [[package]]
 name = "pallet-template"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/scs/sgx-runtime#32f212bbefffc095bb5ef470b86fd7f776338dbb"
+source = "git+https://github.com/scs/sgx-runtime?tag=v2.0.0-alpha.7#32f212bbefffc095bb5ef470b86fd7f776338dbb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2960,7 +2962,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/scs/sgx-runtime#32f212bbefffc095bb5ef470b86fd7f776338dbb"
+source = "git+https://github.com/scs/sgx-runtime?tag=v2.0.0-alpha.7#32f212bbefffc095bb5ef470b86fd7f776338dbb"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3714,7 +3716,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.4.6-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.6-sub2.0.0-alpha.7#3546fc10f88008a68ba102adbcea66e75ffc5885"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.4.6-sub2.0.0-alpha.7#cce8441c09224ab641619ea077b5b7fb118f6bf6"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
@@ -3769,7 +3771,7 @@ checksum = "d2a965994514ab35d3893e9260245f2947fd1981cdd4fffd2c6e6d1a9ce02e6a"
 
 [[package]]
 name = "substratee-client"
-version = "0.6.3-sub2.0.0-alpha.7"
+version = "0.6.4-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -3801,7 +3803,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-primitives"
-version = "0.6.3-sub2.0.0-alpha.7"
+version = "0.6.4-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3816,8 +3818,8 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-runtime"
-version = "0.6.3-sub2.0.0-alpha.7"
-source = "git+https://github.com/scs/substraTEE-node?tag=v0.6.3-sub2.0.0-alpha.7#b75d1fe59d8ca8764ca486b3c5ca19e0ba9a8039"
+version = "0.6.5-sub2.0.0-alpha.7"
+source = "git+https://github.com/scs/substraTEE-node?tag=v0.6.5-sub2.0.0-alpha.7#6b0ef0b840c34e0a9beb418125a6dc7904a7862c"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3849,7 +3851,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-stf"
-version = "0.2.0"
+version = "0.6.4-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "clap",
@@ -3874,7 +3876,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker"
-version = "0.6.3-sub2.0.0-alpha.7"
+version = "0.6.4-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "cid",
@@ -3913,7 +3915,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-api"
-version = "0.6.3-sub2.0.0-alpha.7"
+version = "0.6.4-sub2.0.0-alpha.7"
 dependencies = [
  "hex 0.4.2",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",

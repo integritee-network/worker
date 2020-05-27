@@ -23,12 +23,12 @@ pub type CallWorkerFn = ([u8; 2], Request);
 
 #[cfg(feature = "std")]
 pub mod calls {
-    pub use my_node_runtime::{
+    use sp_core::crypto::Pair;
+    use sp_runtime::MultiSignature;
+    pub use substratee_node_runtime::{
         substratee_registry::{Enclave, ShardIdentifier},
         AccountId,
     };
-    use sp_core::crypto::Pair;
-    use sp_runtime::MultiSignature;
 
     pub fn get_worker_info<P: Pair>(
         api: &substrate_api_client::Api<P>,
