@@ -206,6 +206,7 @@ fn main() {
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", mu_ra_port),
+                shard[0],
             )
             .unwrap();
             println!("[+] Done!");
@@ -293,6 +294,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
                     eid,
                     sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                     &mura_url,
+                    *shard,
                 )
                 .unwrap();
                 debug!("key provisioning successfully performed");

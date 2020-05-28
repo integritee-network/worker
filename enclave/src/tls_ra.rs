@@ -8,14 +8,17 @@ use sgx_types::*;
 
 use log::*;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
+use sgx_externalities::SgxExternalitiesTrait;
+use std::slice;
+use substratee_node_primitives::ShardIdentifier;
 
-use crate::aes;
 use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
 use crate::cert;
 use crate::constants::ENCRYPTED_STATE_FILE;
 use crate::io;
 use crate::rsa3072;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
+use crate::{aes, state};
 use crate::{ocall_read_ipfs, ocall_write_ipfs};
 
 struct ClientAuth {
@@ -117,10 +120,18 @@ pub unsafe extern "C" fn run_key_provisioning_server(
     let mut tls = rustls::Stream::new(&mut sess, &mut conn);
     println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
-    let (rsa_pair, aes, enc_state) = match read_files_to_send() {
-        Ok((r, a, s)) => (r, a, s),
-        Err(e) => return e,
-    };
+    let mut shard = [0u8; 32];
+    // warn!("shard len: {:?}", shard.len());
+    // match tls.read(&mut shard) {
+    //     Ok(_) => info!("    [Enclave] (MU-RA-Server) Received Shard"),
+    //     Err(_e) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+    // };
+
+    let (rsa_pair, aes, enc_state) =
+        match read_files_to_send(&ShardIdentifier::from_slice(&shard[..])) {
+            Ok((r, a, s)) => (r, a, s),
+            Err(e) => return e,
+        };
 
     match send_files(&mut tls, &rsa_pair, &aes, &enc_state) {
         Ok(_) => println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n"),
@@ -151,11 +162,11 @@ fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig
     Ok(cfg)
 }
 
-fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
+fn read_files_to_send(shard: &ShardIdentifier) -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
     let shielding_key = rsa3072::unseal_pair().sgx_error()?;
     let aes = aes::read_sealed().sgx_error()?;
     let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
-    let enc_state = io::read(ENCRYPTED_STATE_FILE).sgx_error()?;
+    let enc_state = state::load(shard).sgx_error()?.encode();
 
     let rsa_len = rsa_pair.as_bytes().len();
     info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
@@ -210,11 +221,14 @@ fn send_files(
 }
 
 #[no_mangle]
-pub extern "C" fn request_key_provisioning(
+pub unsafe extern "C" fn request_key_provisioning(
     socket_fd: c_int,
     sign_type: sgx_quote_sign_type_t,
+    shard: *const u8,
+    shard_size: usize,
 ) -> sgx_status_t {
     let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
+    let shard = slice::from_raw_parts(shard, shard_size);
 
     let cfg = match tls_client_config(sign_type) {
         Ok(cfg) => cfg,
@@ -230,6 +244,8 @@ pub extern "C" fn request_key_provisioning(
 
     println!();
     println!("    [Enclave] (MU-RA-Client) MU-RA successful waiting for keys...");
+    //
+    // tls.write(shard).unwrap();
 
     match receive_files(&mut tls) {
         Ok(_) => println!("    [Enclave] (MU-RA-Client) Registration procedure successful!\n"),

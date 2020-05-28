@@ -19,7 +19,9 @@ use std::os::unix::io::AsRawFd;
 
 use sgx_types::*;
 
+use codec::Encode;
 use log::*;
+use substratee_node_primitives::ShardIdentifier;
 
 extern "C" {
     fn run_key_provisioning_server(
@@ -33,6 +35,8 @@ extern "C" {
         retval: *mut sgx_status_t,
         socket_fd: c_int,
         sign_type: sgx_quote_sign_type_t,
+        shard: *const u8,
+        shard_size: usize,
     ) -> sgx_status_t;
 }
 
@@ -72,12 +76,24 @@ pub fn enclave_request_key_provisioning(
     eid: sgx_enclave_id_t,
     sign_type: sgx_quote_sign_type_t,
     addr: &str,
+    shard: ShardIdentifier,
 ) -> SgxResult<()> {
     info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
     let socket = TcpStream::connect(addr).unwrap();
     let mut status = sgx_status_t::SGX_SUCCESS;
-    let result =
-        unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type) };
+
+    warn!("Shard len: {:?}", shard.encode().len());
+
+    let result = unsafe {
+        request_key_provisioning(
+            eid,
+            &mut status,
+            socket.as_raw_fd(),
+            sign_type,
+            shard.encode().as_ptr(),
+            shard.encode().len(),
+        )
+    };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }
