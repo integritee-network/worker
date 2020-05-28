@@ -25,6 +25,11 @@ pipeline {
         sh 'make'
       }
     }
+    stage('Archive build output') {
+      steps {
+        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/substratee-*', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
+      }
+    }
     stage('Test') {
       steps {
         sh 'cd client  && cargo test 2>&1 | tee ${WORKSPACE}/test_client.log'
@@ -77,10 +82,9 @@ pipeline {
         }
       }
     }
-    stage('Archive build output') {
+    stage('Archive logs') {
       steps {
         archiveArtifacts artifacts: '*.log'
-        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/substratee-*, *.log', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
       }
     }
   }
