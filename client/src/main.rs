@@ -515,9 +515,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     decoder
         .register_type_size::<Hash>("ShardIdentifier")
         .unwrap();
-    decoder
-        .register_type_size::<(Hash, Vec<u8>)>("Request")
-        .unwrap();
+    decoder.register_type_size::<Hash>("H256").unwrap();
 
     loop {
         let ret: CallConfirmedArgs = _chain_api
@@ -529,7 +527,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
             )
             .unwrap()
             .unwrap();
-        let expected = blake2_256(&call_encoded);
+        let expected = H256::from(blake2_256(&call_encoded));
         info!("callConfirmed event received");
         debug!("Expected stf call Hash: {:?}", expected);
         debug!("Confirmed stf call Hash: {:?}", ret.payload);
@@ -543,7 +541,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
 #[derive(Decode)]
 struct CallConfirmedArgs {
     signer: AccountId,
-    payload: Vec<u8>,
+    payload: H256,
 }
 
 fn listen(matches: &ArgMatches<'_>) {
@@ -619,7 +617,7 @@ fn listen(matches: &ArgMatches<'_>) {
 }
 
 // subscribes to he substratee_registry events of type CallConfirmed
-pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> Vec<u8>
+pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> H256
 where
     MultiSignature: From<P::Signature>,
 {
@@ -649,7 +647,7 @@ where
                     ) = &pe
                     {
                         println!("[+] Received confirm call from {}", sender);
-                        return payload.to_vec();
+                        return payload.clone().to_owned();
                     } else {
                         debug!(
                             "received unknown event from SubstraTeeRegistry: {:?}",
