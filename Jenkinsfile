@@ -80,6 +80,7 @@ pipeline {
     stage('Archive build output') {
       steps {
         archiveArtifacts artifacts: '*.log'
+        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/substratee-*, *.log', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
       }
     }
   }
