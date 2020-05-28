@@ -251,7 +251,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     info!("Enclave nonce = {:?}", nonce);
 
     let uxt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.as_bytes().to_vec()).unwrap();
-    let mut latest_head = init_chain_relay(eid, &api);
 
     let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
     let mut _xthex = hex::encode(ue.encode());
@@ -293,6 +292,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
             ensure_shard_initialized(shard);
         }
     }
+
+    let mut latest_head = init_chain_relay(eid, &api);
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
