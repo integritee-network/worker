@@ -173,7 +173,7 @@ fn send_files(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn request_key_provisioning(
+pub extern "C" fn request_key_provisioning(
     socket_fd: c_int,
     sign_type: sgx_quote_sign_type_t,
 ) -> sgx_status_t {
