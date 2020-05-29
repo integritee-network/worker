@@ -76,6 +76,7 @@ pub fn enclave_request_key_provisioning(
     info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
     let socket = TcpStream::connect(addr).unwrap();
     let mut status = sgx_status_t::SGX_SUCCESS;
+
     let result =
         unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type) };
     if status != sgx_status_t::SGX_SUCCESS {

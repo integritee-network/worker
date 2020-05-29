@@ -90,6 +90,10 @@ subcommands:
                     help: Run integration tests
                     takes_value: false
                 - provisioning-server:
+                    long: provisioning-server
                     help: Run TEE server for MU-RA key provisioning
+                    takes_value: false
                 - provisioning-client:
+                    long: provisioning-client
                     help: Run TEE client for MU-RA key provisioning
+                    takes_value: false

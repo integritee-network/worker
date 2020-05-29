@@ -43,11 +43,12 @@ pub mod calls {
     pub fn get_worker_for_shard<P: Pair>(
         api: &substrate_api_client::Api<P>,
         shard: &ShardIdentifier,
-    ) -> Option<u64>
+    ) -> Option<Enclave<AccountId, Vec<u8>>>
     where
         MultiSignature: From<P::Signature>,
     {
         api.get_storage_map("SubstrateeRegistry", "WorkerForShard", shard, None)
+            .and_then(|w| get_worker_info(&api, w))
     }
 
     pub fn get_worker_amount<P: Pair>(api: &substrate_api_client::Api<P>) -> Option<u64>
@@ -55,6 +56,22 @@ pub mod calls {
         MultiSignature: From<P::Signature>,
     {
         api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None)
+    }
+
+    pub fn get_first_worker_that_is_not_equal_to_self<P: Pair>(
+        api: &substrate_api_client::Api<P>,
+        self_account: &AccountId,
+    ) -> Option<Enclave<AccountId, Vec<u8>>>
+    where
+        MultiSignature: From<P::Signature>,
+    {
+        for n in 0..api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None)? {
+            let worker = get_worker_info(api, n)?;
+            if &worker.pubkey != self_account {
+                return Some(worker);
+            }
+        }
+        None
     }
 
     pub fn get_latest_state<P: Pair>(
