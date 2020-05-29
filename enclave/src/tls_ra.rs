@@ -8,18 +8,12 @@ use sgx_types::*;
 
 use log::*;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
-use sgx_externalities::SgxExternalitiesTrait;
-use std::slice;
-use substratee_node_primitives::ShardIdentifier;
 
+use crate::aes;
 use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
 use crate::cert;
-use crate::constants::ENCRYPTED_STATE_FILE;
-use crate::io;
 use crate::rsa3072;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
-use crate::{aes, state};
-use crate::{ocall_read_ipfs, ocall_write_ipfs};
 
 struct ClientAuth {
     outdated_ok: bool,
@@ -40,7 +34,7 @@ impl rustls::ClientCertVerifier for ClientAuth {
         &self,
         _certs: &[rustls::Certificate],
     ) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
-        info!("client cert: {:?}", _certs);
+        debug!("client cert: {:?}", _certs);
         // This call will automatically verify cert is properly signed
         match cert::verify_mra_cert(&_certs[0].0) {
             Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
@@ -79,7 +73,7 @@ impl rustls::ServerCertVerifier for ServerAuth {
         _hostname: webpki::DNSNameRef,
         _ocsp: &[u8],
     ) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-        info!("server cert: {:?}", _certs);
+        debug!("server cert: {:?}", _certs);
         // This call will automatically verify cert is properly signed
         match cert::verify_mra_cert(&_certs[0].0) {
             Ok(()) => Ok(rustls::ServerCertVerified::assertion()),
@@ -120,21 +114,13 @@ pub unsafe extern "C" fn run_key_provisioning_server(
     let mut tls = rustls::Stream::new(&mut sess, &mut conn);
     println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
-    let mut shard = [0u8; 32];
-    // warn!("shard len: {:?}", shard.len());
-    // match tls.read(&mut shard) {
-    //     Ok(_) => info!("    [Enclave] (MU-RA-Server) Received Shard"),
-    //     Err(_e) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    // };
+    let (rsa_pair, aes) = match read_files_to_send() {
+        Ok((r, a)) => (r, a),
+        Err(e) => return e,
+    };
 
-    let (rsa_pair, aes, enc_state) =
-        match read_files_to_send(&ShardIdentifier::from_slice(&shard[..])) {
-            Ok((r, a, s)) => (r, a, s),
-            Err(e) => return e,
-        };
-
-    match send_files(&mut tls, &rsa_pair, &aes, &enc_state) {
-        Ok(_) => println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n"),
+    match send_files(&mut tls, &rsa_pair, &aes) {
+        Ok(_) => println!("    [Enclave] (MU-RA-Server) Successfully provisioned keys!\n"),
         Err(e) => return e,
     }
 
@@ -162,61 +148,27 @@ fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig
     Ok(cfg)
 }
 
-fn read_files_to_send(shard: &ShardIdentifier) -> SgxResult<(Vec<u8>, aes::Aes, Vec<u8>)> {
+fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes)> {
     let shielding_key = rsa3072::unseal_pair().sgx_error()?;
     let aes = aes::read_sealed().sgx_error()?;
     let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
-    let enc_state = state::load(shard).sgx_error()?.encode();
 
     let rsa_len = rsa_pair.as_bytes().len();
     info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
     info!("    [Enclave] Read AES key {:?}\nIV: {:?}\n", aes.0, aes.1);
 
-    Ok((rsa_pair.as_bytes().to_vec(), aes, enc_state))
+    Ok((rsa_pair.as_bytes().to_vec(), aes))
 }
 
 fn send_files(
     tls: &mut Stream<ServerSession, TcpStream>,
     rsa_pair: &[u8],
     aes: &(Vec<u8>, Vec<u8>),
-    enc_state: &[u8],
 ) -> SgxResult<()> {
     tls.write(&rsa_pair.len().to_le_bytes()).sgx_error()?;
     tls.write(&rsa_pair).sgx_error()?;
     tls.write(&aes.0[..]).sgx_error()?;
     tls.write(&aes.1[..]).sgx_error()?;
-
-    println!(
-        "    [Enclave] (MU-RA-Server) Keys sent, writing state to IPFS (= file hosting service)"
-    );
-    info!("    [Enclave] (MU-RA-Server) Sending encrypted state length");
-
-    tls.write(&enc_state.len().to_le_bytes()).sgx_error()?;
-    if enc_state.is_empty() {
-        println!(
-            "    [Enclave] (MU-RA-Server) No state has been written yet. Nothing to write to ipfs."
-        );
-        println!("    [Enclave] (MU-RA-Server) Registration procedure successful!\n");
-        return Ok(());
-    }
-    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let mut cid_buf: [u8; 46] = [0; 46];
-    let res = unsafe {
-        ocall_write_ipfs(
-            &mut rt as *mut sgx_status_t,
-            enc_state.as_ptr() as *const u8,
-            enc_state.len() as u32,
-            cid_buf.as_mut_ptr() as *mut u8,
-            cid_buf.len() as u32,
-        )
-    };
-
-    if res == sgx_status_t::SGX_ERROR_UNEXPECTED || rt == sgx_status_t::SGX_ERROR_UNEXPECTED {
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    }
-
-    println!("    [Enclave] (MU-RA-Server) Write to IPFS successful, sending storage hash");
-    tls.write(&cid_buf).sgx_error()?;
     Ok(())
 }
 
@@ -224,11 +176,8 @@ fn send_files(
 pub unsafe extern "C" fn request_key_provisioning(
     socket_fd: c_int,
     sign_type: sgx_quote_sign_type_t,
-    shard: *const u8,
-    shard_size: usize,
 ) -> sgx_status_t {
     let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
-    let shard = slice::from_raw_parts(shard, shard_size);
 
     let cfg = match tls_client_config(sign_type) {
         Ok(cfg) => cfg,
@@ -244,8 +193,6 @@ pub unsafe extern "C" fn request_key_provisioning(
 
     println!();
     println!("    [Enclave] (MU-RA-Client) MU-RA successful waiting for keys...");
-    //
-    // tls.write(shard).unwrap();
 
     match receive_files(&mut tls) {
         Ok(_) => println!("    [Enclave] (MU-RA-Client) Registration procedure successful!\n"),
@@ -292,49 +239,7 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
 
     aes::seal(aes_key, aes_iv)?;
 
-    println!("    [Enclave] (MU-RA-Client) Received and stored keys, waiting for storage hash...");
-
-    let mut state_len_arr = [0u8; 8];
-    let state_len = tls
-        .read(&mut state_len_arr)
-        .map(|_| usize::from_le_bytes(state_len_arr))
-        .sgx_error_with_log("Error receiving state length")?;
-
-    if state_len == 0 {
-        println!("    [Enclave] (MU-RA-Client) No state has been written yet, nothing to fetch from IPFS");
-        println!("    [Enclave] (MU-RA-Client) Registration Procedure successful!\n");
-        return Ok(());
-    }
-
-    let mut cid = [0u8; 46];
-    tls.read(&mut cid)
-        .map(|_| {
-            info!(
-                "    [Enclave] (MU-RA-Client) Received ipfs CID: {:?}",
-                &cid[..]
-            )
-        })
-        .sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving ipfs CID")?;
-
-    println!("    [Enclave] (MU-RA-Client) Received IPFS storage hash, reading from IPFS...");
-
-    let mut enc_state = vec![0u8; state_len];
-    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let _res = unsafe {
-        ocall_read_ipfs(
-            &mut rt as *mut sgx_status_t,
-            enc_state.as_mut_ptr(),
-            enc_state.len() as u32,
-            cid.as_ptr(),
-            cid.len() as u32,
-        )
-    };
-    println!(
-        "    [Enclave] (MU-RA-Client) Got encrypted state from ipfs: {:?}\n",
-        enc_state
-    );
-    io::write(&enc_state, ENCRYPTED_STATE_FILE)?;
-    println!("    [Enclave] (MU-RA-Client) Successfully read state from IPFS");
+    println!("    [Enclave] (MU-RA-Client) Successfully received keys.");
 
     Ok(())
 }

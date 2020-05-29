@@ -188,25 +188,10 @@ fn main() {
         } else if _matches.is_present("provisioning-client") {
             println!("*** Running Enclave MU-RA TLS client\n");
             let enclave = enclave_init().unwrap();
-            let shard = match _matches.values_of("shard") {
-                Some(values) => values
-                    .map(|shard| {
-                        shard
-                            .from_base58()
-                            .unwrap_or_else(|_| panic!("shard must be hex encoded"))
-                    })
-                    .map(|s| ShardIdentifier::from_slice(s.as_slice()))
-                    .collect(),
-                _ => vec![ShardIdentifier::from_slice(
-                    &enclave_mrenclave(enclave.geteid()).unwrap(),
-                )],
-            };
-
             enclave_request_key_provisioning(
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", mu_ra_port),
-                shard[0],
             )
             .unwrap();
             println!("[+] Done!");
@@ -294,7 +279,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
                     eid,
                     sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                     &mura_url,
-                    *shard,
                 )
                 .unwrap();
                 debug!("key provisioning successfully performed");

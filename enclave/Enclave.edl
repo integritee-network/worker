@@ -71,11 +71,7 @@ enclave {
 		public sgx_status_t dump_ra_to_disk();
 
 		public sgx_status_t run_key_provisioning_server(int fd,sgx_quote_sign_type_t quote_type);
-        public sgx_status_t request_key_provisioning(
-            int fd,
-            sgx_quote_sign_type_t quote_type,
-            [in, size=shard_size] uint8_t* shard, size_t shard_size
-        );
+        public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type);
 
 		public size_t test_main_entrance();
 	};
