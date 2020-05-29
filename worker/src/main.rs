@@ -18,6 +18,7 @@ use std::fs::{self, File};
 use std::io::stdin;
 use std::io::Write;
 use std::path::Path;
+use std::slice;
 use std::str;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
@@ -47,8 +48,7 @@ use enclave::api::{
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use std::slice;
-use substratee_node_primitives::calls::{get_worker_for_shard, get_worker_info};
+use substratee_node_primitives::calls::get_first_worker_that_is_not_equal_to_self;
 use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 
@@ -262,33 +262,24 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
     // browse enclave registry
-    match get_worker_for_shard(&api, shard) {
+    match get_first_worker_that_is_not_equal_to_self(&api, &tee_accountid) {
         Some(w) => {
-            let master_worker = get_worker_info(&api, w).unwrap();
-            if master_worker.pubkey == tee_accountid {
-                info!("the most recently active worker is myself");
-                ensure_shard_initialized(shard);
-            } else {
-                let _url = String::from_utf8_lossy(&master_worker.url[..]).to_string();
-                let _w_api = WorkerApi::new(_url.clone());
-                let _url_split: Vec<_> = _url.split(':').collect();
-                let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
+            let _url = String::from_utf8_lossy(&w.url[..]).to_string();
+            let _w_api = WorkerApi::new(_url.clone());
+            let _url_split: Vec<_> = _url.split(':').collect();
+            let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
 
-                info!("Requesting key provisioning from worker at {}", mura_url);
-                enclave_request_key_provisioning(
-                    eid,
-                    sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                    &mura_url,
-                )
-                .unwrap();
-                debug!("key provisioning successfully performed");
-            }
+            info!("Requesting key provisioning from worker at {}", mura_url);
+            enclave_request_key_provisioning(
+                eid,
+                sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+                &mura_url,
+            )
+            .unwrap();
+            debug!("key provisioning successfully performed");
         }
         None => {
-            info!(
-                "no worker has ever published a state update for shard {}",
-                shard.encode().to_base58()
-            );
+            info!("there are no other workers");
             ensure_shard_initialized(shard);
         }
     }
