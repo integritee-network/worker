@@ -402,10 +402,12 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
         // TODO: lack security check here
         let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
 
-        let ti: sgx_target_info_t = sgx_target_info_t::default();
-
-        if sgx_quote.report_body.mr_enclave.m != ti.mr_enclave.m {
-            error!("mr_enclave is not equal to self");
+        let ti = crate::attestation::get_mrenclave_of_self().sgx_error()?;
+        if sgx_quote.report_body.mr_enclave.m != ti.m {
+            error!(
+                "mr_enclave is not equal to self {:?} != {:?}",
+                sgx_quote.report_body.mr_enclave.m, ti.m
+            );
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
 
