@@ -209,6 +209,7 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // ------------------------------------------------------------------------
     // check for required files
     check_files();
+    ensure_shard_initialized(shard);
     // ------------------------------------------------------------------------
     // initialize the enclave
     #[cfg(feature = "production")]
@@ -280,7 +281,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
         }
         None => {
             info!("there are no other workers");
-            ensure_shard_initialized(shard);
         }
     }
 
