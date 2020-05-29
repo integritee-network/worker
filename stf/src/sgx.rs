@@ -12,8 +12,10 @@ use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, State, Stf, TrustedCall, TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+    AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
+    SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
+use sp_core::blake2_256;
 
 /// Simple blob that holds a call in encoded format
 #[derive(Clone, Debug)]
@@ -77,11 +79,10 @@ impl Stf {
 
     pub fn execute(
         ext: &mut State,
-        call: TrustedCall,
-        _nonce: u32,
+        call: TrustedCallSigned,
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
-        ext.execute_with(|| match call {
+        ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
@@ -108,6 +109,7 @@ impl Stf {
                         beneficiary,
                         value,
                         shard,
+                        blake2_256(&call.encode()),
                     )
                         .encode(),
                 ));
@@ -185,17 +187,17 @@ impl Stf {
         }
     }
 
-    pub fn get_storage_hashes_to_update(call: &TrustedCall) -> Vec<Vec<u8>> {
+    pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
         let mut key_hashes = Vec::new();
-        match call {
+        match call.call {
             TrustedCall::balance_set_balance(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(account)) // dummy, actually not necessary
+                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
             }
             TrustedCall::balance_transfer(account, _, _) => {
-                key_hashes.push(nonce_key_hash(account)) // dummy, actually not necessary
+                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
             }
             TrustedCall::balance_unshield(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(account))
+                key_hashes.push(nonce_key_hash(&account))
             }
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };

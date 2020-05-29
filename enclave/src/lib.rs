@@ -385,12 +385,16 @@ fn handle_shield_funds_xt(
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
     let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
-    let account = AccountId::decode(&mut account_vec.as_slice()).sgx_error()?;
+    let account = AccountId::decode(&mut account_vec.as_slice())
+        .sgx_error_with_log("[ShieldFunds] Could not decode account")?;
 
     if let Err(e) = Stf::execute(
         &mut state,
-        TrustedCall::balance_shield(account, amount),
-        Default::default(),
+        TrustedCallSigned::new(
+            TrustedCall::balance_shield(account, amount),
+            0,
+            Default::default(),
+        ),
         calls,
     ) {
         error!("Error performing Stf::execute. Error: {:?}", e);
@@ -402,7 +406,7 @@ fn handle_shield_funds_xt(
         (
             xt_call,
             shard,
-            blake2_256(&xt.encode()).to_vec(),
+            blake2_256(&xt.encode()),
             state_hash.encode(),
         )
             .encode(),
@@ -448,7 +452,7 @@ fn handle_call_worker_xt(
     let mut state = state::load(&shard)?;
 
     debug!("Update STF storage!");
-    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed.call)
+    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
         .into_iter()
         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
         .collect();
@@ -486,12 +490,7 @@ fn handle_call_worker_xt(
     Stf::update_storage(&mut state, update_map);
 
     debug!("execute STF");
-    if let Err(e) = Stf::execute(
-        &mut state,
-        stf_call_signed.call,
-        stf_call_signed.nonce,
-        calls,
-    ) {
+    if let Err(e) = Stf::execute(&mut state, stf_call_signed, calls) {
         error!("Error performing Stf::execute. Error: {:?}", e);
         return Ok(());
     }
@@ -503,7 +502,7 @@ fn handle_call_worker_xt(
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
     calls.push(OpaqueCall(
-        (xt_call, shard, call_hash.to_vec(), state_hash.encode()).encode(),
+        (xt_call, shard, call_hash, state_hash.encode()).encode(),
     ));
 
     Ok(())

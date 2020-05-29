@@ -398,6 +398,13 @@ fn print_events(events: Events, _sender: Sender<String>) {
                         debug!("    For:    {:?}", incognito_account);
                         println!();
                     }
+                    substratee_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+                        incognito_account,
+                    ) => {
+                        println!("[+] Received UnshieldedFunds event");
+                        debug!("    For:    {:?}", incognito_account);
+                        println!();
+                    }
                     _ => {
                         info!("Ignoring unsupported substratee_registry event");
                     }
