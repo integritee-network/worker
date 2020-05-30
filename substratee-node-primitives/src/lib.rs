@@ -65,8 +65,9 @@ pub mod calls {
     where
         MultiSignature: From<P::Signature>,
     {
-        for n in 0..api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None)? {
-            let worker = get_worker_info(api, n)?;
+        // the registry starts indexing its map at one
+        for n in 1..=api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None)? {
+            let worker = get_worker_info(api, n).unwrap();
             if &worker.pubkey != self_account {
                 return Some(worker);
             }
