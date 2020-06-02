@@ -399,7 +399,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
                         debug!("    For:    {:?}", incognito_account);
                         println!();
                     }
-                    substratee_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+                    my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
                         incognito_account,
                     ) => {
                         println!("[+] Received UnshieldedFunds event");

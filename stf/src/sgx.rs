@@ -78,20 +78,19 @@ impl Stf {
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
         ext.execute_with(|| match call.call {
-                TrustedCall::balance_transfer(from, to, cid, value) => {
-                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
-                    sgx_runtime::EncointerBalancesCall::<Runtime>::transfer(AccountId32::from(to), cid, value)
-                        .dispatch(origin)
-                        .map_err(|_| StfError::Dispatch)?;
-                    Ok(())
-                }
-                TrustedCall::ceremonies_register_participant(from, cid, proof) => {
-                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
-                    sgx_runtime::EncointerCeremoniesCall::<Runtime>::register_participant(cid, proof)
-                        .dispatch(origin)
-                        .map_err(|_| StfError::Dispatch)?;
-                    Ok(())
-                }
+            TrustedCall::balance_transfer(from, to, cid, value) => {
+                let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                sgx_runtime::EncointerBalancesCall::<Runtime>::transfer(AccountId32::from(to), cid, value)
+                    .dispatch(origin)
+                    .map_err(|_| StfError::Dispatch)?;
+                Ok(())
+            }
+            TrustedCall::ceremonies_register_participant(from, cid, proof) => {
+                let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                sgx_runtime::EncointerCeremoniesCall::<Runtime>::register_participant(cid, proof)
+                    .dispatch(origin)
+                    .map_err(|_| StfError::Dispatch)?;
+                Ok(())
             }
         })
     }
@@ -119,7 +118,7 @@ impl Stf {
         let mut key_hashes = Vec::new();
         match call.call {
             TrustedCall::balance_transfer(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(account))
+                key_hashes.push(nonce_key_hash(&account))
             },
             TrustedCall::ceremonies_register_participant(account, _, _) => {
                 key_hashes.push(storage_value_key("EncointerScheduler", "CurrentPhase"));
