@@ -309,7 +309,8 @@ pub unsafe extern "C" fn sync_chain_relay(
         Err(e) => return e,
     };
 
-    for signed_block in blocks.iter() {
+    let mut calls = Vec::new();
+    for signed_block in blocks.into_iter() {
         validator
             .check_xt_inclusion(validator.num_relays, &signed_block.block)
             .unwrap(); // panic can only happen if relay_id is does not exist
@@ -321,23 +322,16 @@ pub unsafe extern "C" fn sync_chain_relay(
             error!("Block verification failed. Error : {:?}", e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
+
+        match scan_block_for_relevant_xt(&signed_block.block, node_url) {
+            Ok(c) => calls.extend(c.into_iter()),
+            Err(e) => return e,
+        };
+
+        if let Err(_) = update_states(signed_block.block.header, node_url) {
+            error!("Error performing state updates upon block import")
+        }
     }
-
-    let calls = match scan_blocks_for_relevant_xt(blocks, node_url) {
-        Ok(c) => c,
-        Err(e) => return e,
-    };
-
-    // debug!("Update STF storage upon block import!");
-    // let requests = Stf::storage_hashes_to_update_on_block()
-    //     .into_iter()
-    //     .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-    //     .collect();
-    //
-    // let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
-    //
-    // let update_map = verify_worker_responses(responses, header)?;
-    // Stf::update_storage(&mut state, update_map);
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -346,35 +340,50 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
+pub fn update_states(header: Header, node_url: &[u8]) -> SgxResult<()> {
+    debug!("Update STF storage upon block import!");
+    let requests = Stf::storage_hashes_to_update_on_block()
+        .into_iter()
+        .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+        .collect();
+
+    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
+    let update_map = verify_worker_responses(responses, header)?;
+
+    let shards = state::list_shards()?;
+    debug!("found shards: {:?}", shards);
+    for s in shards {
+        let mut state = state::load(&s)?;
+        Stf::update_storage(&mut state, &update_map);
+        state::write(state, &s)?;
+    }
+    Ok(())
+}
+
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
-pub fn scan_blocks_for_relevant_xt(
-    blocks: Vec<SignedBlock<Block>>,
-    node_url: &[u8],
-) -> SgxResult<Vec<OpaqueCall>> {
+pub fn scan_block_for_relevant_xt(block: &Block, node_url: &[u8]) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Scanning blocks for relevant xt");
     let mut calls = Vec::<OpaqueCall>::new();
-    for block in blocks.iter() {
-        for xt_opaque in block.block.extrinsics.iter() {
-            if let Ok(xt) =
-                UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
-            {
-                // confirm call decodes successfully as well
-                if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                    if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
-                        error!("Error performing shieldfunds. Error: {:?}", e);
-                    }
+    for xt_opaque in block.extrinsics.iter() {
+        if let Ok(xt) =
+            UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
+        {
+            // confirm call decodes successfully as well
+            if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
+                if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
+                    error!("Error performing shieldfunds. Error: {:?}", e);
                 }
-            };
+            }
+        };
 
-            if let Ok(xt) =
-                UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
-            {
-                if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
-                    if let Err(e) =
-                        handle_call_worker_xt(&mut calls, xt, block.block.header.clone(), node_url)
-                    {
-                        error!("Error performing worker call: Error: {:?}", e);
-                    }
+        if let Ok(xt) =
+            UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
+        {
+            if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
+                if let Err(e) =
+                    handle_call_worker_xt(&mut calls, xt, block.header.clone(), node_url)
+                {
+                    error!("Error performing worker call: Error: {:?}", e);
                 }
             }
         }
@@ -472,7 +481,7 @@ fn handle_call_worker_xt(
 
     let update_map = verify_worker_responses(responses, header)?;
 
-    Stf::update_storage(&mut state, update_map);
+    Stf::update_storage(&mut state, &update_map);
 
     debug!("execute STF");
     if let Err(e) = Stf::execute(&mut state, stf_call_signed, calls) {

@@ -69,7 +69,7 @@ impl Stf {
         ext
     }
 
-    pub fn update_storage(ext: &mut State, map_update: HashMap<Vec<u8>, Vec<u8>>) {
+    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Vec<u8>>) {
         ext.execute_with(|| {
             map_update
                 .iter()

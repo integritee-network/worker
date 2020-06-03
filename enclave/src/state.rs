@@ -15,6 +15,7 @@
 
 */
 
+use std::fs;
 use std::vec::Vec;
 
 use log::*;
@@ -25,8 +26,9 @@ use crate::aes;
 use crate::constants::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use crate::hex;
 use crate::io;
-use base58::ToBase58;
-use codec::Encode;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
+use base58::{FromBase58, ToBase58};
+use codec::{Decode, Encode};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::H256;
 use substratee_stf::{ShardIdentifier, State as StfState, Stf};
@@ -106,6 +108,22 @@ fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
 fn encrypt(mut state: Vec<u8>) -> SgxResult<Vec<u8>> {
     aes::de_or_encrypt(&mut state)?;
     Ok(state)
+}
+
+pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
+    let files = fs::read_dir(SHARDS_PATH).sgx_error()?;
+    let mut shards = Vec::new();
+    for file in files {
+        let s = file
+            .sgx_error()?
+            .file_name()
+            .into_string()
+            .sgx_error()?
+            .from_base58()
+            .sgx_error()?;
+        shards.push(ShardIdentifier::decode(&mut s.as_slice()).sgx_error()?);
+    }
+    Ok(shards)
 }
 
 pub fn test_encrypted_state_io_works() {
