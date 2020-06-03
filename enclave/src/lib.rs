@@ -459,6 +459,33 @@ fn handle_call_worker_xt(
 
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
 
+    let update_map = verify_worker_responses(responses, header)?;
+
+    Stf::update_storage(&mut state, update_map);
+
+    debug!("execute STF");
+    if let Err(e) = Stf::execute(&mut state, stf_call_signed, calls) {
+        error!("Error performing Stf::execute. Error: {:?}", e);
+        return Ok(());
+    }
+
+    let state_hash = state::write(state, &shard)?;
+
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let call_hash = blake2_256(&request_vec);
+    debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+
+    calls.push(OpaqueCall(
+        (xt_call, shard, call_hash, state_hash.encode()).encode(),
+    ));
+
+    Ok(())
+}
+
+fn verify_worker_responses(
+    responses: Vec<WorkerResponse<Vec<u8>>>,
+    header: Header,
+) -> SgxResult<HashMap<Vec<u8>, Vec<u8>>> {
     let mut update_map = HashMap::new();
     for response in responses.iter() {
         match response {
@@ -486,26 +513,7 @@ fn handle_call_worker_xt(
             }
         }
     }
-
-    Stf::update_storage(&mut state, update_map);
-
-    debug!("execute STF");
-    if let Err(e) = Stf::execute(&mut state, stf_call_signed, calls) {
-        error!("Error performing Stf::execute. Error: {:?}", e);
-        return Ok(());
-    }
-
-    let state_hash = state::write(state, &shard)?;
-
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    let call_hash = blake2_256(&request_vec);
-    debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
-
-    calls.push(OpaqueCall(
-        (xt_call, shard, call_hash, state_hash.encode()).encode(),
-    ));
-
-    Ok(())
+    Ok(update_map)
 }
 
 extern "C" {
