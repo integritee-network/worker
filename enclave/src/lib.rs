@@ -328,7 +328,7 @@ pub unsafe extern "C" fn sync_chain_relay(
             Err(e) => return e,
         };
 
-        if let Err(_) = update_states(signed_block.block.header, node_url) {
+        if update_states(signed_block.block.header, node_url).is_err() {
             error!("Error performing state updates upon block import")
         }
     }
@@ -400,9 +400,10 @@ fn handle_shield_funds_xt(
         call, account_encrypted, amount, shard
     );
 
-    let mut state = match state::exists(&shard) {
-        true => state::load(&shard)?,
-        false => Stf::init_state(),
+    let mut state = if state::exists(&shard) {
+        state::load(&shard)?
+    } else {
+        Stf::init_state()
     };
 
     debug!("decrypt the call");
@@ -472,9 +473,10 @@ fn handle_call_worker_xt(
         return Ok(());
     }
 
-    let mut state = match state::exists(&shard) {
-        true => state::load(&shard)?,
-        false => Stf::init_state(),
+    let mut state = if state::exists(&shard) {
+        state::load(&shard)?
+    } else {
+        Stf::init_state()
     };
 
     debug!("Update STF storage!");
