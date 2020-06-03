@@ -209,7 +209,6 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
     // ------------------------------------------------------------------------
     // check for required files
     check_files();
-    ensure_shard_initialized(shard);
     // ------------------------------------------------------------------------
     // initialize the enclave
     #[cfg(feature = "production")]
@@ -581,21 +580,6 @@ fn get_balance(api: &Api<sr25519::Pair>, who: &AccountId32) -> u128 {
     } else {
         0
     }
-}
-
-fn ensure_shard_initialized(shard: &ShardIdentifier) {
-    let shardenc = shard.encode().to_base58();
-    if !Path::new(&format!(
-        "{}/{}/{}",
-        constants::SHARDS_PATH,
-        &shardenc,
-        constants::ENCRYPTED_STATE_FILE
-    ))
-    .exists()
-    {
-        panic!("shard {} hasn't been initialized", shardenc);
-    }
-    debug!("state file is present for shard {}", shardenc);
 }
 
 pub fn check_files() {
