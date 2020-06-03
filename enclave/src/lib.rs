@@ -328,6 +328,17 @@ pub unsafe extern "C" fn sync_chain_relay(
         Err(e) => return e,
     };
 
+    // debug!("Update STF storage upon block import!");
+    // let requests = Stf::storage_hashes_to_update_on_block()
+    //     .into_iter()
+    //     .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+    //     .collect();
+    //
+    // let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
+    //
+    // let update_map = verify_worker_responses(responses, header)?;
+    // Stf::update_storage(&mut state, update_map);
+
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }

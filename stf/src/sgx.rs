@@ -203,6 +203,13 @@ impl Stf {
         };
         key_hashes
     }
+
+    pub fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
+        // let key_hashes = Vec::new();
+        // key_hashes.push(storage_value_key("dummy", "dummy"));
+        // key_hashes
+        Vec::new()
+    }
 }
 
 // get the AccountInfo key where the nonce is stored
