@@ -342,10 +342,14 @@ pub unsafe extern "C" fn sync_chain_relay(
 
 pub fn update_states(header: Header, node_url: &[u8]) -> SgxResult<()> {
     debug!("Update STF storage upon block import!");
-    let requests = Stf::storage_hashes_to_update_on_block()
+    let requests: Vec<WorkerRequest> = Stf::storage_hashes_to_update_on_block()
         .into_iter()
         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
         .collect();
+
+    if requests.is_empty() {
+        return Ok(());
+    }
 
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
     let update_map = verify_worker_responses(responses, header)?;
