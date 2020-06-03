@@ -48,7 +48,6 @@ enclave {
         public sgx_status_t sync_chain_relay(
             [in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
             [in] uint32_t* nonce,
-            [in, size=node_url_size] uint8_t* node_url, size_t node_url_size,
             [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, size_t unchecked_extrinsic_size
         );
 
@@ -64,7 +63,7 @@ enclave {
 		public sgx_status_t perform_ra(
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
 			[in] uint32_t* nonce,
-			[in, size=url_size] uint8_t* url, uint32_t url_size,
+			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
@@ -110,7 +109,6 @@ enclave {
 
 		sgx_status_t ocall_worker_request(
 	        [in, size = req_size] uint8_t * request, uint32_t req_size,
-   	        [in, size = node_url_size] uint8_t * node_url, uint32_t node_url_size,
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
 	    );
 	};

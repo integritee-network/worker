@@ -3888,6 +3888,7 @@ dependencies = [
  "hex 0.3.2",
  "hyper",
  "ipfs-api",
+ "lazy_static",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "multihash",
  "pallet-balances",

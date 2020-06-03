@@ -20,7 +20,10 @@ use std::io::Write;
 use std::path::Path;
 use std::slice;
 use std::str;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::{
+    mpsc::{channel, Sender},
+    Mutex,
+};
 use std::thread;
 
 use sgx_types::*;
@@ -28,6 +31,7 @@ use sgx_types::*;
 use base58::{FromBase58, ToBase58};
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
+use lazy_static::lazy_static;
 use log::*;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
@@ -69,6 +73,7 @@ fn main() {
     let node_port = matches.value_of("node-port").unwrap_or("9944");
     let n_url = format!("{}:{}", node_ip, node_port);
     info!("Interacting with node on {}", n_url);
+    *NODE_URL.lock().unwrap() = n_url;
 
     let w_ip = matches.value_of("w-server").unwrap_or("127.0.0.1");
     let w_port = matches.value_of("w-port").unwrap_or("2000");
@@ -96,7 +101,7 @@ fn main() {
                 ShardIdentifier::from_slice(&mrenclave[..])
             }
         };
-        worker(&n_url, w_ip, w_port, mu_ra_port, &shard);
+        worker(w_ip, w_port, mu_ra_port, &shard);
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
@@ -204,7 +209,7 @@ fn main() {
     }
 }
 
-fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
+fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
     // check for required files
@@ -237,7 +242,8 @@ fn worker(node_url: &str, w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &Sh
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let mut api = Api::new(node_url.to_string()).set_signer(AccountKeyring::Alice.pair());
+    let mut api =
+        Api::new(NODE_URL.lock().unwrap().clone()).set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = enclave_account(eid);
@@ -480,7 +486,7 @@ pub fn sync_chain_relay(
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce, &api.url).unwrap();
+    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
 
     let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
     info!(
@@ -598,6 +604,11 @@ pub fn check_files() {
     }
 }
 
+lazy_static! {
+    // todo: replace with &str, but use &str in api-client first
+    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
+}
+
 /// # Safety
 ///
 /// FFI are always unsafe
@@ -605,17 +616,14 @@ pub fn check_files() {
 pub unsafe extern "C" fn ocall_worker_request(
     request: *const u8,
     req_size: u32,
-    node_url: *const u8,
-    node_url_size: u32,
     response: *mut u8,
     resp_size: u32,
 ) -> sgx_status_t {
     debug!("    Entering ocall_worker_request");
     let mut req_slice = slice::from_raw_parts(request, req_size as usize);
     let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
-    let url_slice = slice::from_raw_parts(node_url, node_url_size as usize);
 
-    let api = Api::<sr25519::Pair>::new(String::from_utf8(url_slice.to_vec()).unwrap());
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
 
     let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
 
