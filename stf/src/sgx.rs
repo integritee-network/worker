@@ -12,7 +12,7 @@ use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
+    AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
     SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
@@ -201,6 +201,14 @@ impl Stf {
             }
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };
+        key_hashes
+    }
+
+    pub fn get_storage_hashes_to_update_for_getter(getter: &TrustedGetterSigned) -> Vec<Vec<u8>> {
+        let key_hashes = Vec::new();
+        match getter.getter {
+            _ => info!("No storage updates needed for getter: {:?}", getter.getter), // dummy is currently not needed
+        }
         key_hashes
     }
 

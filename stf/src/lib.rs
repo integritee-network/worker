@@ -102,7 +102,7 @@ impl TrustedCall {
     }
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
     free_balance(AccountId),

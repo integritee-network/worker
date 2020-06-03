@@ -223,6 +223,34 @@ pub unsafe extern "C" fn get_state(
         Err(status) => return status,
     };
 
+    let validator = match io::light_validation::unseal() {
+        Ok(val) => val,
+        Err(e) => return e,
+    };
+
+    let latest_header = validator.latest_header(validator.num_relays).unwrap();
+
+    debug!("Update STF storage!");
+    let requests: Vec<WorkerRequest> =
+        Stf::get_storage_hashes_to_update_for_getter(&tusted_getter_signed)
+            .into_iter()
+            .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
+            .collect();
+
+    if !requests.is_empty() {
+        let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
+            Ok(resp) => resp,
+            Err(e) => return e,
+        };
+
+        let update_map = match verify_worker_responses(responses, latest_header) {
+            Ok(map) => map,
+            Err(e) => return e,
+        };
+
+        Stf::update_storage(&mut state, &update_map);
+    }
+
     debug!("calling into STF to get state");
     let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
 
