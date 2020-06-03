@@ -430,6 +430,7 @@ fn handle_shield_funds_xt(
     let mut state = if state::exists(&shard) {
         state::load(&shard)?
     } else {
+        state::init_shard(&shard)?;
         Stf::init_state()
     };
 
@@ -502,6 +503,7 @@ fn handle_call_worker_xt(
     let mut state = if state::exists(&shard) {
         state::load(&shard)?
     } else {
+        state::init_shard(&shard)?;
         Stf::init_state()
     };
 
