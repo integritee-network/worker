@@ -31,6 +31,7 @@ use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::H256;
+use std::path::Path;
 use substratee_stf::{ShardIdentifier, State as StfState, Stf};
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
@@ -79,6 +80,16 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
 
     io::write(&cyphertext, &state_path)?;
     Ok(state_hash.into())
+}
+
+pub fn exists(shard: &ShardIdentifier) -> bool {
+    Path::new(&format!(
+        "{}/{}/{}",
+        SHARDS_PATH,
+        shard.encode().to_base58(),
+        ENCRYPTED_STATE_FILE
+    ))
+    .exists()
 }
 
 fn read(path: &str) -> SgxResult<Vec<u8>> {

@@ -400,7 +400,10 @@ fn handle_shield_funds_xt(
         call, account_encrypted, amount, shard
     );
 
-    let mut state = state::load(&shard)?;
+    let mut state = match state::exists(&shard) {
+        true => state::load(&shard)?,
+        false => Stf::init_state(),
+    };
 
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
@@ -469,7 +472,10 @@ fn handle_call_worker_xt(
         return Ok(());
     }
 
-    let mut state = state::load(&shard)?;
+    let mut state = match state::exists(&shard) {
+        true => state::load(&shard)?,
+        false => Stf::init_state(),
+    };
 
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
