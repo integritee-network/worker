@@ -223,6 +223,34 @@ pub unsafe extern "C" fn get_state(
         Err(status) => return status,
     };
 
+    let validator = match io::light_validation::unseal() {
+        Ok(val) => val,
+        Err(e) => return e,
+    };
+
+    let latest_header = validator.latest_header(validator.num_relays).unwrap();
+
+    debug!("Update STF storage!");
+    let requests: Vec<WorkerRequest> =
+        Stf::get_storage_hashes_to_update_for_getter(&tusted_getter_signed)
+            .into_iter()
+            .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
+            .collect();
+
+    if !requests.is_empty() {
+        let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
+            Ok(resp) => resp,
+            Err(e) => return e,
+        };
+
+        let update_map = match verify_worker_responses(responses, latest_header) {
+            Ok(map) => map,
+            Err(e) => return e,
+        };
+
+        Stf::update_storage(&mut state, &update_map);
+    }
+
     debug!("calling into STF to get state");
     let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
 
@@ -286,13 +314,10 @@ pub unsafe extern "C" fn sync_chain_relay(
     blocks: *const u8,
     blocks_size: usize,
     nonce: *const u32,
-    node_url: *const u8,
-    node_url_size: usize,
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: usize,
 ) -> sgx_status_t {
     info!("Syncing chain relay!");
-    let node_url = slice::from_raw_parts(node_url, node_url_size as usize);
     let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
     let xt_slice = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size);
 
@@ -323,12 +348,12 @@ pub unsafe extern "C" fn sync_chain_relay(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 
-        match scan_block_for_relevant_xt(&signed_block.block, node_url) {
+        match scan_block_for_relevant_xt(&signed_block.block) {
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
 
-        if update_states(signed_block.block.header, node_url).is_err() {
+        if update_states(signed_block.block.header).is_err() {
             error!("Error performing state updates upon block import")
         }
     }
@@ -340,14 +365,18 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn update_states(header: Header, node_url: &[u8]) -> SgxResult<()> {
+pub fn update_states(header: Header) -> SgxResult<()> {
     debug!("Update STF storage upon block import!");
-    let requests = Stf::storage_hashes_to_update_on_block()
+    let requests: Vec<WorkerRequest> = Stf::storage_hashes_to_update_on_block()
         .into_iter()
         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
         .collect();
 
-    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
+    if requests.is_empty() {
+        return Ok(());
+    }
+
+    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
     let update_map = verify_worker_responses(responses, header)?;
 
     let shards = state::list_shards()?;
@@ -361,7 +390,7 @@ pub fn update_states(header: Header, node_url: &[u8]) -> SgxResult<()> {
 }
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
-pub fn scan_block_for_relevant_xt(block: &Block, node_url: &[u8]) -> SgxResult<Vec<OpaqueCall>> {
+pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Scanning blocks for relevant xt");
     let mut calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
@@ -380,9 +409,7 @@ pub fn scan_block_for_relevant_xt(block: &Block, node_url: &[u8]) -> SgxResult<V
             UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
-                if let Err(e) =
-                    handle_call_worker_xt(&mut calls, xt, block.header.clone(), node_url)
-                {
+                if let Err(e) = handle_call_worker_xt(&mut calls, xt, block.header.clone()) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
             }
@@ -403,6 +430,7 @@ fn handle_shield_funds_xt(
     let mut state = if state::exists(&shard) {
         state::load(&shard)?
     } else {
+        state::init_shard(&shard)?;
         Stf::init_state()
     };
 
@@ -442,7 +470,6 @@ fn handle_call_worker_xt(
     calls: &mut Vec<OpaqueCall>,
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
     header: Header,
-    node_url: &[u8],
 ) -> SgxResult<()> {
     let (call, request) = xt.function;
     let (shard, cyphertext) = (request.shard, request.cyphertext);
@@ -476,6 +503,7 @@ fn handle_call_worker_xt(
     let mut state = if state::exists(&shard) {
         state::load(&shard)?
     } else {
+        state::init_shard(&shard)?;
         Stf::init_state()
     };
 
@@ -485,7 +513,7 @@ fn handle_call_worker_xt(
         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
         .collect();
 
-    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests, node_url)?;
+    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
 
     let update_map = verify_worker_responses(responses, header)?;
 
@@ -565,8 +593,6 @@ extern "C" {
         ret_val: *mut sgx_status_t,
         request: *const u8,
         req_size: u32,
-        node_url: *const u8,
-        node_url_size: u32,
         response: *mut u8,
         resp_size: u32,
     ) -> sgx_status_t;
@@ -630,7 +656,6 @@ pub enum WorkerResponse<V: Encode + Decode> {
 
 fn worker_request<V: Encode + Decode>(
     req: Vec<WorkerRequest>,
-    node_url: &[u8],
 ) -> SgxResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut resp: Vec<u8> = vec![0; 4196];
@@ -640,8 +665,6 @@ fn worker_request<V: Encode + Decode>(
             &mut rt as *mut sgx_status_t,
             req.encode().as_ptr(),
             req.encode().len() as u32,
-            node_url.as_ptr(),
-            node_url.len() as u32,
             resp.as_mut_ptr(),
             resp.len() as u32,
         )
@@ -660,14 +683,13 @@ fn worker_request<V: Encode + Decode>(
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut requests = Vec::new();
-    let node_url = format!("ws://{}:{}", "127.0.0.1", "9991").into_bytes();
 
     requests.push(WorkerRequest::ChainStorage(
         storage_key("Balances", "TotalIssuance").0,
         None,
     ));
 
-    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests, node_url.as_ref()) {
+    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
         Ok(response) => response,
         Err(e) => panic!("Worker response decode failed. Error: {:?}", e),
     };

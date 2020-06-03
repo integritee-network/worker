@@ -92,6 +92,10 @@ pub fn exists(shard: &ShardIdentifier) -> bool {
     .exists()
 }
 
+pub fn init_shard(shard: &ShardIdentifier) -> SgxResult<()> {
+    fs::create_dir_all(format!("{}/{}", SHARDS_PATH, shard.encode().to_base58())).sgx_error()
+}
+
 fn read(path: &str) -> SgxResult<Vec<u8>> {
     let mut bytes = match io::read(path) {
         Ok(vec) => match vec.len() {

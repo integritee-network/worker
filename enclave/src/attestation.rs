@@ -609,8 +609,8 @@ pub unsafe extern "C" fn perform_ra(
     genesis_hash: *const u8,
     genesis_hash_size: u32,
     nonce: *const u32,
-    url: *const u8,
-    url_size: u32,
+    w_url: *const u8,
+    w_url_size: u32,
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
@@ -625,7 +625,7 @@ pub unsafe extern "C" fn perform_ra(
     info!("    [Enclave] Compose extrinsic");
     let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
     //let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
-    let url_slice = slice::from_raw_parts(url, url_size as usize);
+    let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
     let extrinsic_slice =
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
     let signer = match ed25519::unseal_pair() {

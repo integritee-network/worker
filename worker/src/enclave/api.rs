@@ -63,8 +63,6 @@ extern "C" {
         blocks: *const u8,
         blocks_size: usize,
         nonce: *const u32,
-        node_url: *const u8,
-        url_size: usize,
         unchecked_extrinsic: *mut u8,
         unchecked_extrinsic_size: usize,
     ) -> sgx_status_t;
@@ -96,8 +94,8 @@ extern "C" {
         genesis_hash: *const u8,
         genesis_hash_size: u32,
         nonce: *const u32,
-        url: *const u8,
-        url_size: u32,
+        w_url: *const u8,
+        w_url_size: u32,
         unchecked_extrinsic: *mut u8,
         unchecked_extrinsic_size: u32,
     ) -> sgx_status_t;
@@ -237,7 +235,6 @@ pub fn enclave_sync_chain_relay(
     eid: sgx_enclave_id_t,
     blocks: Vec<SignedBlock>,
     tee_nonce: u32,
-    node_url: &str,
 ) -> SgxResult<Vec<u8>> {
     let mut status = sgx_status_t::SGX_SUCCESS;
 
@@ -251,8 +248,6 @@ pub fn enclave_sync_chain_relay(
                 b.as_ptr(),
                 b.len(),
                 &tee_nonce,
-                node_url.as_ptr(),
-                node_url.len(),
                 unchecked_extrinsics.as_mut_ptr(),
                 EXTRINSIC_MAX_SIZE,
             )
@@ -366,7 +361,7 @@ pub fn enclave_perform_ra(
     eid: sgx_enclave_id_t,
     genesis_hash: Vec<u8>,
     nonce: u32,
-    url: Vec<u8>,
+    w_url: Vec<u8>,
 ) -> SgxResult<Vec<u8>> {
     let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
     let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
@@ -378,8 +373,8 @@ pub fn enclave_perform_ra(
             genesis_hash.as_ptr(),
             genesis_hash.len() as u32,
             &nonce,
-            url.as_ptr(),
-            url.len() as u32,
+            w_url.as_ptr(),
+            w_url.len() as u32,
             unchecked_extrinsic.as_mut_ptr(),
             unchecked_extrinsic_size as u32,
         )
