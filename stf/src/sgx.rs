@@ -69,7 +69,7 @@ impl Stf {
         ext
     }
 
-    pub fn update_storage(ext: &mut State, map_update: HashMap<Vec<u8>, Vec<u8>>) {
+    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Vec<u8>>) {
         ext.execute_with(|| {
             map_update
                 .iter()
@@ -202,6 +202,13 @@ impl Stf {
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };
         key_hashes
+    }
+
+    pub fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
+        // let key_hashes = Vec::new();
+        // key_hashes.push(storage_value_key("dummy", "dummy"));
+        // key_hashes
+        Vec::new()
     }
 }
 
