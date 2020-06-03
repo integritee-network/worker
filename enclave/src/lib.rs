@@ -325,7 +325,7 @@ pub unsafe extern "C" fn sync_chain_relay(
 
         match scan_block_for_relevant_xt(&signed_block.block, node_url) {
             Ok(c) => calls.extend(c.into_iter()),
-            Err(e) => return e,
+            Err(_) => error!("Error executing relevant extrinsics"),
         };
 
         if update_states(signed_block.block.header, node_url).is_err() {
