@@ -206,9 +206,7 @@ impl Stf {
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &TrustedGetterSigned) -> Vec<Vec<u8>> {
         let key_hashes = Vec::new();
-        match getter.getter {
-            _ => info!("No storage updates needed for getter: {:?}", getter.getter), // dummy is currently not needed
-        }
+        info!("No storage updates needed for getter: {:?}", getter.getter); // dummy. Is currently not needed
         key_hashes
     }
 
