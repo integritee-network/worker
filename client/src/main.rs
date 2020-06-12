@@ -108,7 +108,7 @@ fn main() {
                     .global(true)
                     .takes_value(true)
                     .value_name("STRING")
-                    .default_value("127.0.0.1")
+                    .default_value("ws://127.0.0.1")
                     .help("worker url"),
             )
             .arg(
@@ -344,17 +344,17 @@ fn main() {
                             .takes_value(true)
                             .required(true)
                             .help("a bootstrapper account to sign the registration extrinsic"),
-                    )                    
+                    )
                 })
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let p_arg = matches.value_of("signer").unwrap();
                     let signer = get_pair_from_str(p_arg);
-            
+
                     let spec_file = matches.value_of("specfile").unwrap();
-            
+
                     let spec_str = fs::read_to_string(spec_file).unwrap();
                     let geoloc = spec_str.parse::<GeoJson>().unwrap();
-            
+
                     let mut loc = Vec::with_capacity(100);
                     match geoloc {
                         GeoJson::FeatureCollection(ref ctn) => {
@@ -380,13 +380,13 @@ fn main() {
                         .iter()
                         .map(|a| get_accountid_from_str(&a.as_str().unwrap()))
                         .collect();
-            
+
                     let cid = blake2_256(&(loc.clone(), bootstrappers.clone()).encode());
                     let name = meta["currency_meta"]["name"].as_str().unwrap();
                     info!("bootstrappers: {:?}", bootstrappers);
                     info!("name: {}", name);
                     info!("Currency registered by {}", signer.public().to_ss58check());
-                    let api = get_chain_api(matches);            
+                    let api = get_chain_api(matches);
                     let _api = api.clone().set_signer(sr25519_core::Pair::from(signer));
                     let xt: UncheckedExtrinsicV4<_> = compose_extrinsic!(
                         _api.clone(),
@@ -420,7 +420,7 @@ fn main() {
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
                     let phase = get_current_phase(&api);
-                    println!("{:?}", phase);                    
+                    println!("{:?}", phase);
                     Ok(())
                 }),
         )
@@ -433,14 +433,42 @@ fn main() {
 
                     let xt: UncheckedExtrinsicV4<_> =
                         compose_extrinsic!(api.clone(), "EncointerScheduler", "next_phase");
-            
+
                     // send and watch extrinsic until finalized
-                    let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
+                    let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
                     let phase = get_current_phase(&api);
                     println!(
                         "Transaction got finalized. Phase is now: {:?}. tx hash: {:?}",
                         phase, tx_hash
-                    );              
+                    );
+                    Ok(())
+                }),
+        )
+        .add_cmd(
+            Command::new("sign-claim")
+                .description("Advance ceremony state machine to next phase by ROOT call")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("signer")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("AccountId in ss58check format"),
+                    )
+                        .arg(
+                            Arg::with_name("claim")
+                                .takes_value(true)
+                                .required(true)
+                        )
+                })
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let signer_arg = matches.value_of("signer").unwrap();
+                    let claim = ClaimOfAttendance::decode(
+                        &mut &hex::decode(matches.value_of("claim").unwrap()).unwrap()[..],
+                    )
+                        .unwrap();
+                    let attestation = sign_claim(claim, signer_arg);
+                    println!("{}", hex::encode(attestation.encode()));
                     Ok(())
                 }),
         )
@@ -490,7 +518,7 @@ fn perform_trusted_operation(
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<Vec<u8>> {
     let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
-    debug!("calling workerapi to get state value");
+    debug!("calling workerapi to get state value, {:?}", getter.getter);
     let ret = worker_api
         .get_stf_state(getter, &shard)
         .expect("getting value failed");
@@ -579,6 +607,17 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     }
 }
 
+fn sign_claim(claim: ClaimOfAttendance<AccountId, Moment>, account_str: &str) -> Attestation<Signature, AccountId, Moment> {
+    info!("second call to get_pair_from_str");
+    let pair = get_pair_from_str(account_str);
+    let accountid = get_accountid_from_str(account_str);
+    Attestation {
+        claim: claim.clone(),
+        signature: Signature::from(sr25519_core::Signature::from(pair.sign(&claim.encode()))),
+        public: accountid,
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Decode)]
 struct CallConfirmedArgs {
@@ -605,7 +644,7 @@ fn listen(matches: &ArgMatches<'_>) {
         match _events {
             Ok(evts) => {
                 for evr in &evts {
-                    debug!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
+                    println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
                     match &evr.event {
                         /*                            Event::balances(be) => {
                             println!(">>>>>>>>>> balances event: {:?}", be);
@@ -646,7 +685,7 @@ fn listen(matches: &ArgMatches<'_>) {
                                 },
                                 my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(public_account) => {
                                     println!("UnshieldFunds for {:?}", public_account);
-                                },                                
+                                },
                             }
                         }
                         _ => debug!("ignoring unsupported module event: {:?}", evr.event),

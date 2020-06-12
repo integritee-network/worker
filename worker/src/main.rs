@@ -249,7 +249,6 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     let tee_accountid = enclave_account(eid);
     ensure_account_has_funds(&mut api, &tee_accountid);
 
-    let mut latest_head = init_chain_relay(eid, &api);
     // ------------------------------------------------------------------------
     // perform a remote attestation and get an unchecked extrinsic back
 
@@ -272,28 +271,34 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
     // browse enclave registry
-    match get_first_worker_that_is_not_equal_to_self(&api, &tee_accountid) {
-        Some(w) => {
-            let _url = String::from_utf8_lossy(&w.url[..]).to_string();
-            let _w_api = WorkerApi::new(_url.clone());
-            let _url_split: Vec<_> = _url.split(':').collect();
-            let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
+    // Todo: Currently, we have not designed how to unregister workers. We assume currently that each worker is on its
+    // own.
+    // match get_first_worker_that_is_not_equal_to_self(&api, &tee_accountid) {
+    //     Some(w) => {
+    //         let _url = String::from_utf8_lossy(&w.url[..]).to_string();
+    //         let _w_api = WorkerApi::new(_url.clone());
+    //         let _url_split: Vec<_> = _url.split(':').collect();
+    //         let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
+    //
+    //         info!("Requesting key provisioning from worker at {}", mura_url);
+    //         enclave_request_key_provisioning(
+    //             eid,
+    //             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+    //             &mura_url,
+    //         )
+    //         .unwrap();
+    //         debug!("key provisioning successfully performed");
+    //     }
+    //     None => {
+    //         info!("there are no other workers");
+    //     }
+    // }
 
-            info!("Requesting key provisioning from worker at {}", mura_url);
-            enclave_request_key_provisioning(
-                eid,
-                sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &mura_url,
-            )
-            .unwrap();
-            debug!("key provisioning successfully performed");
-        }
-        None => {
-            info!("there are no other workers");
-        }
-    }
+    println!("*** [+] finished remote attestation\n");
 
+    println!("*** Syncing chain relay\n\n");
     let mut latest_head = init_chain_relay(eid, &api);
+    println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
@@ -474,33 +479,49 @@ pub fn sync_chain_relay(
 
     // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
     let mut head = curr_head.clone();
+
+
+    let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
+
+    if no_blocks_to_sync > 1 {
+        println!("Chain Relay is synced until block: {:?}", last_synced_head.number);
+        println!("Last finalized block number: {:?}\n", head.block.header.number);
+    }
+
     while head.block.header.parent_hash != last_synced_head.hash() {
         head = api
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        debug!("Syncing Block: {:?}", head.block)
+
+        if head.block.header.number % 100 == 0 {
+            println!("Remaining blocks to fetch until last synced header: {:?}", head.block.header.number - last_synced_head.number)
+        }
     }
     blocks_to_sync.reverse();
-    debug!(
-        "Got {} headers to sync in chain relay.",
-        blocks_to_sync.len()
-    );
 
     let tee_accountid = enclave_account(eid);
-    let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
+    // only feed 100 blocks at a time into the enclave to save enclave state regularly
+    let mut i = blocks_to_sync[0].block.header.number as usize;
+    for chunk in blocks_to_sync.chunks(100) {
+        let tee_nonce = get_nonce(&api, &tee_accountid);
+        let xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
+        let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
 
-    let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
-    info!(
-        "Sync chain relay: Enclave wants to send {} extrinsics",
-        extrinsics.len()
-    );
+        if !extrinsics.is_empty() {
+            println!(
+                "Sync chain relay: Enclave wants to send {} extrinsics",
+                extrinsics.len()
+            );
+        }
+        for xt in extrinsics.into_iter() {
+            api.send_extrinsic(hex_encode(xt), XtStatus::InBlock)
+                .unwrap();
+        }
 
-    for xt in extrinsics.into_iter() {
-        api.send_extrinsic(hex_encode(xt), XtStatus::InBlock)
-            .unwrap();
+        i += chunk.len();
+        println!("Synced {} blocks out of {} finalized blocks", i ,  blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len())
     }
 
     curr_head.block.header

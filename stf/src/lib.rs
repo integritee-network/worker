@@ -34,9 +34,14 @@ use sp_runtime::{traits::Verify, AnySignature, MultiSignature, AccountId32};
 pub type ShardIdentifier = H256;
 pub use encointer_currencies::CurrencyIdentifier;
 pub use encointer_ceremonies::ProofOfAttendance;
+pub use encointer_ceremonies::Attestation;
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
+
+#[cfg(feature = "sgx")]
+use sgx_tstd as std;
+use std::vec::Vec;
 
 #[cfg(feature = "std")]
 pub mod cli;
@@ -63,11 +68,13 @@ pub enum TrustedOperationSigned {
     get(TrustedGetterSigned),
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
     balance_transfer(AccountId, AccountId, CurrencyIdentifier, BalanceType),
-    ceremonies_register_participant(AccountId, CurrencyIdentifier, Option<ProofOfAttendance<MultiSignature, AccountId32>>)
+    ceremonies_register_participant(AccountId, CurrencyIdentifier, Option<ProofOfAttendance<MultiSignature, AccountId32>>),
+    ceremonies_register_attestations(AccountId, Vec<Attestation<MultiSignature, AccountId32, u64>>),
+    ceremonies_grant_reputation(AccountId, CurrencyIdentifier, AccountId32)
 }
 
 impl TrustedCall {
@@ -75,6 +82,8 @@ impl TrustedCall {
         match self {
             TrustedCall::balance_transfer(account, _, _, _) => account,
             TrustedCall::ceremonies_register_participant(account, _, _) => account,
+            TrustedCall::ceremonies_register_attestations(account, _) => account,
+            TrustedCall::ceremonies_grant_reputation(account, _, _) => account,
         }
     }
 
@@ -102,14 +111,18 @@ impl TrustedCall {
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
     balance(AccountId, CurrencyIdentifier),
-    ceremony_registration(AccountId, CurrencyIdentifier)
+    registration(AccountId, CurrencyIdentifier),
+    meetup_index_time_and_location(AccountId, CurrencyIdentifier),
+    attestations(AccountId, CurrencyIdentifier)
 }
 
 impl TrustedGetter {
     pub fn account(&self) -> &AccountId {
         match self {
             TrustedGetter::balance(account, _) => account,
-            TrustedGetter::ceremony_registration(account, _) => account,
+            TrustedGetter::registration(account, _) => account,
+            TrustedGetter::meetup_index_time_and_location(account, _) => account,
+            TrustedGetter::attestations(account, _) => account,
         }
     }
 

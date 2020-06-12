@@ -1,94 +1,95 @@
 #!/bin/bash
 
-# setup:
-# run all on localhost:
-#   encointer-node purge-chain --dev
-#   encointer-node --dev --ws-port 9979 -lruntime=debug
-#   rm chain_relay_db.bin
-#   encointer-worker init-shard 3LjCHdiNbNLKEtwGtBf6qHGZnfKFyjLu9v3uxVgDL35C
-#   encointer-worker shielding-key
-#   encointer-worker signing-key
-#   encointer-worker -p 9979 -w 2079 run 3LjCHdiNbNLKEtwGtBf6qHGZnfKFyjLu9v3uxVgDL35C
+# M1 Demo
 #
-# then run this script
+# bootstrap a bot currency on Encointer Cantillon Testnet
 
-# usage:
-#  demo_shielding_unshielding.sh <NODEPORT> <WORKERPORT>
+# Cantillon node endpoint
+NURL=wss://cantillon.encointer.org
+NPORT=443
+# Cantillon worker endpoint
+WURL=wss://substratee03.scs.ch
+WPORT=443
 
-# using default port if none given as first argument
-NPORT=${1:-9944}
-WPORT=${2:-2000}
+CLIENT="./encointer-client -u $NURL -p $NPORT -U $WURL -P $WPORT"
 
-echo "Using node-port ${NPORT}"
-echo "Using worker-port ${WPORT}"
+wait_for_phase() {
+  current_phase=$($CLIENT get-phase)
+
+  echo "waiting for phase: $1 ..."
+
+  while  [ "$current_phase" != "$1" ]; do
+    echo "current phase: $current_phase ... waiting for phase $1"
+    sleep 10
+    current_phase=$($CLIENT get-phase)
+  done
+
+  echo "current_phase is $1, progress script"
+}
+
+echo "Using node address: $NURL:$NPORT"
+echo "Using worker address: $WURL:$WPORT"
 echo ""
 
-CLIENT="../target/release/encointer-client -p ${NPORT} "
-WORKERPORT="--worker-port ${WPORT}"
-SHARD="3LjCHdiNbNLKEtwGtBf6qHGZnfKFyjLu9v3uxVgDL35C"
 
-# register new currency
-cid=$($CLIENT new-currency test-locations-mediterranean.json //Alice)
+#WORKERADDR="--worker-url ${WURL} --worker-port ${WPORT}"
+
+# register new currency (with any funded on-chain account)
+cid=$($CLIENT new-currency test-locations-sea-of-crete.json //Alice)
 echo $cid
 
 # list currenies
 $CLIENT list-currencies
 
-# bootstrap currency with well-known keys
-phase=$($CLIENT get-phase)
-echo "phase is $phase"
-if [ "$phase" == "REGISTERING" ]; then
-   echo "that's fine"
-elif [ "$phase" == "ASSIGNING" ]; then
-   echo "need to advance"
-   $CLIENT next-phase   
-   $CLIENT next-phase
-elif [ "$phase" == "ATTESTING" ]; then
-   echo "need to advance"
-   $CLIENT next-phase   
-fi
-phase=$($CLIENT get-phase)
-echo "phase is now: $phase"
+wait_for_phase REGISTERING
 
-read MRENCLAVE <<< $(${CLIENT} list-workers | awk '/  MRENCLAVE: / { print $2 }')
+#read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2 }')
+#cid=7eLSZLSMShw4ju9GvuMmoVgeZxZimtvsGTSvLEdvcRqQ
+MRENCLAVE=HVmtypxe23ngaWWaRYmAtKWThuYeXL5V1nUALpQQvC3A
+
 echo "  MRENCLAVE = ${MRENCLAVE}"
 
 # new account with
-# $CLIENT trusted new-account --mrenclave $MRENCLAVE --shard $SHARD
+# $CLIENT trusted new-account --mrenclave $MRENCLAVE --shard $cid
 
+# these must be registered bootstrappers
 account1=//AliceIncognito
 account2=//BobIncognito
 account3=//CharlieIncognito
 
-$CLIENT trusted ceremony-registration $account1 --mrenclave $MRENCLAVE --shard $SHARD $WORKERPORT 
+$CLIENT trusted get-registration $account1 --mrenclave $MRENCLAVE --shard $cid
 # should be zero
 
-$CLIENT trusted register-participant $account1 --mrenclave $MRENCLAVE --shard $SHARD $WORKERPORT
-$CLIENT trusted register-participant $account2 --mrenclave $MRENCLAVE --shard $SHARD $WORKERPORT
-$CLIENT trusted register-participant $account3 --mrenclave $MRENCLAVE --shard $SHARD $WORKERPORT
+$CLIENT trusted register-participant $account1 --mrenclave $MRENCLAVE --shard $cid
+$CLIENT trusted register-participant $account2 --mrenclave $MRENCLAVE --shard $cid
+$CLIENT trusted register-participant $account3 --mrenclave $MRENCLAVE --shard $cid
 
-$CLIENT trusted ceremony-registration $account1 --mrenclave $MRENCLAVE --shard $SHARD $WORKERPORT 
-# should be 1
+echo "*** registered participants"
+sleep 10 # the above returns before TrustedCalls have been executed
 
-$CLIENT --cid $cid register-participant $account1
-$CLIENT --cid $cid register-participant $account2
-$CLIENT --cid $cid register-participant $account3
+# should be 1,2 and 3
+$CLIENT trusted get-registration $account1 --mrenclave $MRENCLAVE --shard $cid 
+$CLIENT trusted get-registration $account2 --mrenclave $MRENCLAVE --shard $cid 
+$CLIENT trusted get-registration $account3 --mrenclave $MRENCLAVE --shard $cid 
 
-# list registry
-$CLIENT --cid $cid list-participant-registry
+wait_for_phase ASSIGNING
 
-$CLIENT next-phase
-# should now be ASSIGNING
+# nothing to do here until we can have debug getters
 
-$CLIENT --cid $cid list-meetup-registry
+wait_for_phase ATTESTING
 
-$CLIENT next-phase
-# should now be ATTESTING
+echo "* Waiting 5 seconds such that phase change happened in enclave"
+sleep 5
+echo ""
 
 echo "*** start meetup"
-claim1=$($CLIENT --cid $cid new-claim $account1 3)
-claim2=$($CLIENT --cid $cid new-claim $account2 3)
-claim3=$($CLIENT --cid $cid new-claim $account3 3)
+claim1=$($CLIENT trusted new-claim $account1 3 --mrenclave $MRENCLAVE --shard $cid )
+claim2=$($CLIENT trusted new-claim $account2 3 --mrenclave $MRENCLAVE --shard $cid )
+claim3=$($CLIENT trusted new-claim $account3 3 --mrenclave $MRENCLAVE --shard $cid )
+
+echo "Claim1 = ${claim1}"
+echo "Claim2 = ${claim2}"
+echo "Claim3 = ${claim3}"
 
 echo "*** sign each others claims"
 witness1_2=$($CLIENT sign-claim $account1 $claim2)
@@ -101,15 +102,22 @@ witness3_1=$($CLIENT sign-claim $account3 $claim1)
 witness3_2=$($CLIENT sign-claim $account3 $claim2)
 
 echo "*** send witnesses to chain"
-$CLIENT register-attestations $account1 $witness2_1 $witness3_1
-$CLIENT register-attestations $account2 $witness1_2 $witness3_2
-$CLIENT register-attestations $account3 $witness1_3 $witness2_3
+$CLIENT trusted register-attestations $account1 $witness2_1 $witness3_1 --mrenclave $MRENCLAVE --shard $cid 
+$CLIENT trusted register-attestations $account2 $witness1_2 $witness3_2 --mrenclave $MRENCLAVE --shard $cid 
+$CLIENT trusted register-attestations $account3 $witness1_3 $witness2_3 --mrenclave $MRENCLAVE --shard $cid 
 
-$CLIENT --cid $cid list-attestations-registry
 
-$CLIENT next-phase
-# should now be REGISTERING
+$CLIENT trusted get-attestations $account1 --mrenclave $MRENCLAVE --shard $cid 
+$CLIENT trusted get-attestations $account2 --mrenclave $MRENCLAVE --shard $cid 
+$CLIENT trusted get-attestations $account3 --mrenclave $MRENCLAVE --shard $cid 
+
+wait_for_phase REGISTERING
+
+echo "* Waiting 5 seconds such that phase change happened in enclave"
+sleep 5
+echo ""
 
 echo "account balances for new currency with cid $cid"
-$CLIENT --cid $cid get-balance //Alice
-$CLIENT --cid $cid get-balance //Bob
+$CLIENT trusted balance $account1 --mrenclave $MRENCLAVE --shard $cid
+$CLIENT trusted balance $account2 --mrenclave $MRENCLAVE --shard $cid
+$CLIENT trusted balance $account3 --mrenclave $MRENCLAVE --shard $cid

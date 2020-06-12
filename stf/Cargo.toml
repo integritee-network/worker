@@ -12,7 +12,7 @@ sgx = [
     "log-sgx",
     "sp-io",
     "sgx-runtime",
-    "derive_more"
+    "derive_more",
 ]
 std = [
     "clap",
@@ -24,6 +24,8 @@ std = [
     "metadata/std",
     "sp-core/std",
     "encointer-ceremonies/std",
+    "hex",
+    "substrate-api-client"
 ]
 
 [dependencies]
@@ -34,6 +36,7 @@ clap-nested         = { version = "0.3.1", optional = true }
 log                 = { version = "0.4", optional = true }
 base58 			    = { version = "0.1", optional = true }
 derive_more         = { version = "0.99.5", optional = true }
+hex                 = { version = "*", optional = true }
 
 [dependencies.sgx_tstd]
 git = "https://github.com/apache/teaclave-sgx-sdk.git"
@@ -106,6 +109,11 @@ features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 default-features = false
 git = "https://github.com/encointer/sgx-runtime"
 #tag = "v2.0.0-alpha.6"
+optional = true
+
+[dependencies.substrate-api-client]
+git = "https://github.com/scs/substrate-api-client"
+tag = "v0.4.6-sub2.0.0-alpha.7"
 optional = true
 
 [dependencies.sc-keystore]

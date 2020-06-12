@@ -4008,6 +4008,7 @@ dependencies = [
  "env_logger 0.7.1 (git+https://github.com/mesalock-linux/env_logger-sgx)",
  "frame-metadata",
  "frame-system",
+ "hex 0.3.2",
  "log 0.4.8 (git+https://github.com/mesalock-linux/log-sgx)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-encointer-balances",
@@ -4023,6 +4024,7 @@ dependencies = [
  "sp-io 2.0.0-alpha.7 (git+https://github.com/encointer/sgx-runtime)",
  "sp-keyring",
  "sp-runtime",
+ "substrate-api-client",
 ]
 
 [[package]]
