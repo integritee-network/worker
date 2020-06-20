@@ -2152,7 +2152,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-enclave"
-version = "0.6.5-sub2.0.0-alpha.7"
+version = "0.6.6-sub2.0.0-alpha.7"
 dependencies = [
  "aes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.10.1 (git+https://github.com/mesalock-linux/rust-base64-sgx)",

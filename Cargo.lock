@@ -638,7 +638,7 @@ dependencies = [
 
 [[package]]
 name = "encointer-worker"
-version = "0.6.5-sub2.0.0-alpha.7"
+version = "0.6.6-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "cid",
