@@ -420,7 +420,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
-    debug!("Scanning blocks for relevant xt");
+    debug!("Scanning block {} for relevant xt", block.header.number());
     let mut calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =

@@ -62,6 +62,9 @@ mod ipfs;
 mod tests;
 mod ws_server;
 
+/// how many blocks will be synced before storing the chain db to disk
+const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
+
 fn main() {
     // Setup logging
     env_logger::init();
@@ -494,7 +497,7 @@ pub fn sync_chain_relay(
             .unwrap();
         blocks_to_sync.push(head.clone());
 
-        if head.block.header.number % 100 == 0 {
+        if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
             println!("Remaining blocks to fetch until last synced header: {:?}", head.block.header.number - last_synced_head.number)
         }
     }
@@ -502,9 +505,9 @@ pub fn sync_chain_relay(
 
     let tee_accountid = enclave_account(eid);
 
-    // only feed 100 blocks at a time into the enclave to save enclave state regularly
+    // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
     let mut i = blocks_to_sync[0].block.header.number as usize;
-    for chunk in blocks_to_sync.chunks(100) {
+    for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
         let xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
         let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
