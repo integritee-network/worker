@@ -121,10 +121,10 @@ fn main() {
                     .default_value("2000")
                     .help("worker port"),
             )
-            .name("substratee-client")
+            .name("encointer-client-teeproxy")
             .version(VERSION)
             .author("Supercomputing Systems AG <info@scs.ch>")
-            .about("interact with substraTEE node and workers")
+            .about("interact with encointer-node-teeproxy and workers")
             .after_help("stf subcommands depend on the stf crate this has been built against")
         })
         .args(|_args, matches| matches.value_of("environment").unwrap_or("dev"))
@@ -419,6 +419,20 @@ fn main() {
                 .description("read current ceremony phase from chain")
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
+
+                    // >>>> add some debug info as well     
+                    let bn = get_block_number(&api);
+                    info!("block number: {}", bn);
+                    let cindex = get_ceremony_index(&api);
+                    info!("ceremony index: {}", cindex);
+                    let tnext: Moment = api.get_storage_value(
+                        "EncointerScheduler",
+                        "NextPhaseTimestamp",
+                        None
+                    ).unwrap();
+                    info!("next phase timestamp: {}", tnext);
+                    // <<<<
+
                     let phase = get_current_phase(&api);
                     println!("{:?}", phase);
                     Ok(())
@@ -794,5 +808,17 @@ fn get_currency_identifiers(api: &Api<sr25519::Pair>) -> Option<Vec<CurrencyIden
 fn get_current_phase(api: &Api<sr25519::Pair>) -> CeremonyPhaseType {
     api.get_storage_value("EncointerScheduler", "CurrentPhase", None)
         .or(Some(CeremonyPhaseType::default()))
+        .unwrap()
+}
+
+fn get_block_number(api: &Api<sr25519::Pair>) -> BlockNumber {
+    let hdr: Header = api.get_header(None).unwrap();
+    debug!("decoded: {:?}", hdr);
+    //let hdr: Header= Decode::decode(&mut .as_bytes()).unwrap();
+    hdr.number
+}
+
+fn get_ceremony_index(api: &Api<sr25519::Pair>) -> CeremonyIndexType {
+    api.get_storage_value("EncointerScheduler", "CurrentCeremonyIndex", None)
         .unwrap()
 }

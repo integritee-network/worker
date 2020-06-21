@@ -109,7 +109,7 @@ Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Pa
 
 Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
-Client_Binary := encointer-client
+Client_Binary := encointer-client-teeproxy
 Client_Name := $(Client_Path)/$(Client_Binary)
 
 ######## Enclave settings ########

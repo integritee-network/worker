@@ -562,8 +562,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 
 [[package]]
-name = "encointer-client"
-version = "0.6.5-sub2.0.0-alpha.7"
+name = "encointer-client-teeproxy"
+version = "0.6.6-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
  "blake2-rfc",
