@@ -62,6 +62,9 @@ mod ipfs;
 mod tests;
 mod ws_server;
 
+/// how many blocks will be synced before storing the chain db to disk
+const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
+
 fn main() {
     // Setup logging
     env_logger::init();
@@ -475,7 +478,10 @@ pub fn sync_chain_relay(
             .get_signed_block(Some(head.block.header.parent_hash))
             .unwrap();
         blocks_to_sync.push(head.clone());
-        debug!("Syncing Block: {:?}", head.block)
+
+        if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
+            println!("Remaining blocks to fetch until last synced header: {:?}", head.block.header.number - last_synced_head.number)
+        }
     }
     blocks_to_sync.reverse();
     debug!(
@@ -486,13 +492,23 @@ pub fn sync_chain_relay(
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let xts = enclave_sync_chain_relay(eid, blocks_to_sync, tee_nonce).unwrap();
+    // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
+    let mut i = blocks_to_sync[0].block.header.number as usize;
+    for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
+        let tee_nonce = get_nonce(&api, &tee_accountid);
+        let xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
+        let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
 
-    let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
-    info!(
-        "Sync chain relay: Enclave wants to send {} extrinsics",
-        extrinsics.len()
-    );
+        if !extrinsics.is_empty() {
+            println!(
+                "Sync chain relay: Enclave wants to send {} extrinsics",
+                extrinsics.len()
+            );
+        }
+        for xt in extrinsics.into_iter() {
+            api.send_extrinsic(hex_encode(xt), XtStatus::InBlock)
+                .unwrap();
+        }
 
     for xt in extrinsics.into_iter() {
         api.send_extrinsic(hex_encode(xt), XtStatus::InBlock)

@@ -42,21 +42,21 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
         shard.encode().to_base58(),
         ENCRYPTED_STATE_FILE
     );
-    debug!("loading state from: {}", state_path);
+    trace!("loading state from: {}", state_path);
     let state_vec = read(&state_path)?;
 
     // state is now decrypted!
     let state: StfState = match state_vec.len() {
         0 => {
-            debug!("state is empty. will initialize it.");
+            debug!("state at {} is empty. will initialize it.", state_path);
             Stf::init_state()
         }
         n => {
-            debug!("State loaded with size {}B, deserializing...", n);
+            debug!("State loaded from {} with size {}B, deserializing...", state_path, n);
             StfState::decode(state_vec)
         }
     };
-    debug!("state decoded successfully");
+    trace!("state decoded successfully");
     Ok(state)
 }
 
@@ -67,7 +67,7 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
         shard.encode().to_base58(),
         ENCRYPTED_STATE_FILE
     );
-    debug!("writing state to: {}", state_path);
+    trace!("writing state to: {}", state_path);
 
     let cyphertext = encrypt(state.encode())?;
 
@@ -76,7 +76,7 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
         Err(status) => return Err(status),
     };
 
-    debug!("new state hash=0x{}", hex::encode_hex(&state_hash));
+    debug!("new state with hash=0x{} written to {}", hex::encode_hex(&state_hash), state_path);
 
     io::write(&cyphertext, &state_path)?;
     Ok(state_hash.into())
@@ -106,7 +106,7 @@ fn read(path: &str) -> SgxResult<Vec<u8>> {
     };
 
     aes::de_or_encrypt(&mut bytes)?;
-    debug!("buffer decrypted = {:?}", bytes);
+    trace!("buffer decrypted = {:?}", bytes);
 
     Ok(bytes)
 }

@@ -14,7 +14,7 @@
     limitations under the License.
 
 */
-use std::fs::File;
+use std::fs;
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 use std::string::String;
@@ -31,7 +31,7 @@ pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
 }
 
 pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {
-    File::open(filepath)
+    fs::File::open(filepath)
         .map(_read)
         .sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
 }
@@ -46,7 +46,7 @@ fn _read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
 
 pub fn read_to_string(filepath: &str) -> SgxResult<String> {
     let mut contents = String::new();
-    File::open(filepath)
+    fs::File::open(filepath)
         .map(|mut f| f.read_to_string(&mut contents))
         .sgx_error_with_log(&format!("[Enclave] Could not read '{}'", filepath))?
         .sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
@@ -61,7 +61,7 @@ pub fn seal(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
 }
 
 pub fn write(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-    File::create(filepath)
+    fs::File::create(filepath)
         .map(|f| _write(bytes, f))
         .sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
 }
@@ -83,6 +83,7 @@ pub mod light_validation {
     use sgx_types::{sgx_status_t, SgxResult};
     use sp_finality_grandpa::VersionedAuthorityList;
     use std::sgxfs::SgxFile;
+    use std::fs;
 
     pub fn unseal() -> SgxResult<LightValidation> {
         let vec = super::unseal(CHAIN_RELAY_DB)?;
@@ -90,6 +91,10 @@ pub mod light_validation {
     }
 
     pub fn seal(validator: LightValidation) -> SgxResult<sgx_status_t> {
+        debug!("backup chain relay state");
+        if fs::copy(CHAIN_RELAY_DB, format!("{}.1", CHAIN_RELAY_DB)).is_err() {
+            warn!("could not backup previous chain relay state");
+        };
         debug!("Seal Chain Relay State. Current state: {:?}", validator);
         super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)
     }
