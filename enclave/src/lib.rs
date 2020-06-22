@@ -62,7 +62,7 @@ use chain_relay::{
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
-use substratee_stf::sgx::OpaqueCall;
+use substratee_stf::sgx::{OpaqueCall, shards_key_hash, storage_hashes_to_update_per_shard};
 
 mod aes;
 mod attestation;
@@ -218,9 +218,16 @@ pub unsafe extern "C" fn get_state(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
+    if !state::exists(&shard) {
+        info!("Initialized new shard that was queried chain: {:?}", shard);
+        if let Err(e) = state::init_shard(&shard) {
+            return e;
+        }
+    }
+
     let mut state = match state::load(&shard) {
         Ok(s) => s,
-        Err(status) => return status,
+        Err(status) => return status
     };
 
     let validator = match io::light_validation::unseal() {
@@ -348,14 +355,15 @@ pub unsafe extern "C" fn sync_chain_relay(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 
+        if update_states(signed_block.block.header.clone()).is_err() {
+            error!("Error performing state updates upon block import")
+        }
+
         match scan_block_for_relevant_xt(&signed_block.block) {
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
 
-        if update_states(signed_block.block.header).is_err() {
-            error!("Error performing state updates upon block import")
-        }
     }
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
@@ -376,16 +384,37 @@ pub fn update_states(header: Header) -> SgxResult<()> {
         return Ok(());
     }
 
+    // global requests they are the same for every shard
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
-    let update_map = verify_worker_responses(responses, header)?;
+    let update_map = verify_worker_responses(responses, header.clone())?;
+    // look for new shards an initialize them
+    if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
+        match maybe_shards {
+            Some(shards) => {
+                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice()).sgx_error_with_log("error decoding shards")?;
+                for s in shards {
+                    if !state::exists(&s) {
+                        info!("Initialized new shard that was found on chain: {:?}", s);
+                        state::init_shard(&s)?;
+                    }
+                    // per shard (cid) requests
+                    let per_shard_request = storage_hashes_to_update_per_shard(&s)
+                        .into_iter()
+                        .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+                        .collect();
 
-    let shards = state::list_shards()?;
-    debug!("found shards: {:?}", shards);
-    for s in shards {
-        let mut state = state::load(&s)?;
-        Stf::update_storage(&mut state, &update_map);
-        state::write(state, &s)?;
-    }
+                    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(per_shard_request)?;
+                    let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
+
+                    let mut state = state::load(&s)?;
+                    Stf::update_storage(&mut state, &per_shard_update_map);
+                    Stf::update_storage(&mut state, &update_map);
+                    state::write(state, &s)?;
+                }
+            }
+            None => info!("No shards are on the chain yet")
+        };
+    };
     Ok(())
 }
 
@@ -500,12 +529,7 @@ fn handle_call_worker_xt(
         return Ok(());
     }
 
-    let mut state = if state::exists(&shard) {
-        state::load(&shard)?
-    } else {
-        state::init_shard(&shard)?;
-        Stf::init_state()
-    };
+    let mut state = state::load(&shard)?;
 
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
@@ -541,7 +565,7 @@ fn handle_call_worker_xt(
 fn verify_worker_responses(
     responses: Vec<WorkerResponse<Vec<u8>>>,
     header: Header,
-) -> SgxResult<HashMap<Vec<u8>, Vec<u8>>> {
+) -> SgxResult<HashMap<Vec<u8>, Option<Vec<u8>>>> {
     let mut update_map = HashMap::new();
     for response in responses.iter() {
         match response {
@@ -562,10 +586,7 @@ fn verify_worker_responses(
                     error!("Wrong storage value supplied");
                     return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
                 }
-
-                if let Some(val) = value {
-                    update_map.insert(key.clone(), val.clone());
-                }
+                update_map.insert(key.clone(), value.clone());
             }
         }
     }
@@ -658,7 +679,7 @@ fn worker_request<V: Encode + Decode>(
     req: Vec<WorkerRequest>,
 ) -> SgxResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    let mut resp: Vec<u8> = vec![0; 4196];
+    let mut resp: Vec<u8> = vec![0; 4196 * 4];
 
     let res = unsafe {
         ocall_worker_request(

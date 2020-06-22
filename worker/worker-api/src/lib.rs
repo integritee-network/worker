@@ -39,7 +39,7 @@ pub struct Api {
 impl Api {
     pub fn new(url: String) -> Api {
         Api {
-            url: format!("ws://{}", url),
+            url,
         }
     }
 

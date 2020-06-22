@@ -13,7 +13,7 @@ use sp_runtime::traits::Dispatchable;
 
 use crate::{
     AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
-    SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+    ShardIdentifier, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
 
@@ -69,11 +69,16 @@ impl Stf {
         ext
     }
 
-    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Vec<u8>>) {
+    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
         ext.execute_with(|| {
             map_update
                 .iter()
-                .for_each(|(k, v)| sp_io::storage::set(k, v))
+                .for_each(|(k, v)| {
+                    match v {
+                        Some(value) => sp_io::storage::set(k, value),
+                        None => sp_io::storage::clear(k)
+                    };
+                });
         });
     }
 
@@ -205,17 +210,26 @@ impl Stf {
     }
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &TrustedGetterSigned) -> Vec<Vec<u8>> {
-        let key_hashes = Vec::new();
-        info!("No storage updates needed for getter: {:?}", getter.getter); // dummy. Is currently not needed
-        key_hashes
+        info!("No specific storage updates needed for getter. Returning those for on block: {:?}", getter.getter);
+        Self::storage_hashes_to_update_on_block()
     }
 
     pub fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
-        // let key_hashes = Vec::new();
-        // key_hashes.push(storage_value_key("dummy", "dummy"));
-        // key_hashes
-        Vec::new()
+        let mut key_hashes = Vec::new();
+
+        // get all shards that are currently registered
+        key_hashes.push(shards_key_hash());
+
+        key_hashes
     }
+}
+
+pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
+    Vec::new()
+}
+
+pub fn shards_key_hash() -> Vec<u8> {
+    storage_value_key("EncointerCurrencies", "CurrencyIdentifiers")
 }
 
 // get the AccountInfo key where the nonce is stored
