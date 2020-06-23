@@ -357,6 +357,7 @@ pub unsafe extern "C" fn sync_chain_relay(
 
         if update_states(signed_block.block.header.clone()).is_err() {
             error!("Error performing state updates upon block import")
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 
         match scan_block_for_relevant_xt(&signed_block.block) {
