@@ -11,7 +11,13 @@ NPORT=443
 WURL=wss://substratee03.scs.ch
 WPORT=443
 
-CLIENT="./encointer-client -u $NURL -p $NPORT -U $WURL -P $WPORT"
+# locals
+#NURL=ws://127.0.0.1
+#NPORT=9991
+#WURL=ws://127.0.0.1
+#WPORT=2000
+
+CLIENT="./../bin/encointer-client-teeproxy -u $NURL -p $NPORT -U $WURL -P $WPORT"
 
 wait_for_phase() {
   current_phase=$($CLIENT get-phase)
@@ -45,7 +51,7 @@ wait_for_phase REGISTERING
 
 #read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2 }')
 #cid=7eLSZLSMShw4ju9GvuMmoVgeZxZimtvsGTSvLEdvcRqQ
-MRENCLAVE=HVmtypxe23ngaWWaRYmAtKWThuYeXL5V1nUALpQQvC3A
+MRENCLAVE=ATuyb9taa4cPmvH2yoZksNmopzYYZk3uc1RGXKJy9sqM
 
 echo "  MRENCLAVE = ${MRENCLAVE}"
 

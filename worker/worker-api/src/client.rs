@@ -17,20 +17,21 @@
 
 use std::sync::mpsc::Sender as ThreadOut;
 
+use crate::requests::ClientRequest;
+use codec::Encode;
 use log::*;
 use ws::{CloseCode, Handler, Handshake, Message, Result, Sender};
 
 pub struct WsClient {
     pub out: Sender,
-    pub request: String,
+    pub request: ClientRequest,
     pub result: ThreadOut<String>,
 }
 
 impl Handler for WsClient {
     fn on_open(&mut self, _: Handshake) -> Result<()> {
-        info!("sending request: {}", self.request);
-
-        match self.out.send(self.request.clone()) {
+        debug!("sending request: {:?}", self.request);
+        match self.out.send(Message::Binary(self.request.encode())) {
             Ok(_) => Ok(()),
             Err(e) => Err(e),
         }

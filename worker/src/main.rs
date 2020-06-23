@@ -55,6 +55,8 @@ use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORI
 use substratee_node_primitives::calls::get_first_worker_that_is_not_equal_to_self;
 use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
+use substratee_worker_api::requests::ClientRequest;
+use std::time::Duration;
 
 mod constants;
 mod enclave;
@@ -78,7 +80,7 @@ fn main() {
     info!("Interacting with node on {}", n_url);
     *NODE_URL.lock().unwrap() = n_url;
 
-    let w_ip = matches.value_of("w-server").unwrap_or("127.0.0.1");
+    let w_ip = matches.value_of("w-server").unwrap_or("ws://127.0.0.1");
     let w_port = matches.value_of("w-port").unwrap_or("2000");
     info!("Worker listening on {}:{}", w_ip, w_port);
 
@@ -228,8 +230,9 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     let eid = enclave.geteid();
     // ------------------------------------------------------------------------
     // start the ws server to listen for worker requests
+    let (ws_sender, ws_receiver) = channel();
     let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(eid, w_url.clone(), mu_ra_port.to_string());
+    start_ws_server(w_url.clone(),ws_sender.clone());
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
@@ -325,14 +328,17 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
 
     println!("[+] Subscribed to events. waiting...");
 
+    let timeout = Duration::from_millis(10);
     loop {
-        let msg = receiver.recv().unwrap();
-        if let Ok(events) = parse_events(msg.clone()) {
-            print_events(events, sender.clone())
-        } else if let Ok(_header) = parse_header(msg.clone()) {
-            latest_head = sync_chain_relay(eid, &api, latest_head)
-        } else {
-            println!("[-] Unable to parse received message!")
+        if let Ok(msg) = receiver.recv_timeout(timeout) {
+            if let Ok(events) = parse_events(msg.clone()) {
+                print_events(events, sender.clone())
+            } else if let Ok(_header) = parse_header(msg.clone()) {
+                latest_head = sync_chain_relay(eid, &api, latest_head)
+            }
+        }
+        if let Ok(req) = ws_receiver.recv_timeout(timeout) {
+            ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
         }
     }
 }

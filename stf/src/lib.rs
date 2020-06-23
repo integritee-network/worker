@@ -135,7 +135,7 @@ impl TrustedGetter {
     }
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub struct TrustedGetterSigned {
     pub getter: TrustedGetter,
     pub signature: AnySignature,
@@ -152,7 +152,7 @@ impl TrustedGetterSigned {
     }
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub struct TrustedCallSigned {
     pub call: TrustedCall,
     pub nonce: u32,
