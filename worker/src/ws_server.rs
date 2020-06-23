@@ -20,37 +20,50 @@ use std::thread;
 
 use sgx_types::*;
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use log::*;
-use substratee_stf::ShardIdentifier;
+use std::sync::mpsc::Sender as MpscSender;
+use substratee_stf::{ShardIdentifier, TrustedGetter, TrustedGetterSigned};
 use substratee_worker_api::requests::*;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
 use crate::enclave::api::{enclave_query_state, enclave_shielding_key};
 
-pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) {
+#[derive(Clone, Debug)]
+pub struct WsServerRequest {
+    client: Sender,
+    request: ClientRequest,
+}
+
+impl WsServerRequest {
+    pub fn new(client: Sender, request: ClientRequest) -> Self {
+        Self { client, request }
+    }
+}
+
+pub fn start_ws_server(addr: String, worker: MpscSender<WsServerRequest>) {
     // Server WebSocket handler
     struct Server {
-        out: Sender,
-        eid: sgx_enclave_id_t,
-        mu_ra_port: String,
+        client: Sender,
+        worker: MpscSender<WsServerRequest>,
     }
 
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
-            info!("     [WS Server] Got message '{}'. ", msg);
+            info!(
+                "[WS Server] Forwarding message to worker event loop: {:?}",
+                msg
+            );
 
-            let msg_txt = msg.into_text().unwrap();
-            let args: Vec<&str> = msg_txt.split("::").collect();
-
-            let answer = match args[0] {
-                MSG_GET_PUB_KEY_WORKER => get_worker_pub_key(self.eid),
-                MSG_GET_MU_RA_PORT => Message::text(self.mu_ra_port.clone()),
-                MSG_GET_STF_STATE => handle_get_stf_state_msg(self.eid, args[1], args[2]),
-                _ => Message::text("[WS Server]: unrecognized msg pattern"),
-            };
-
-            self.out.send(answer)
+            match ClientRequest::decode(&mut msg.into_data().as_slice()) {
+                Ok(req) => {
+                    self.worker
+                        .send(WsServerRequest::new(self.client.clone(), req))
+                        .unwrap();
+                }
+                Err(e) => self.client.send("Could not decode request").unwrap()
+            }
+            Ok(())
         }
 
         fn on_close(&mut self, code: CloseCode, reason: &str) {
@@ -61,20 +74,35 @@ pub fn start_ws_server(eid: sgx_enclave_id_t, addr: String, mu_ra_port: String) 
     info!("Starting WebSocket server on {}", addr);
     thread::spawn(move || {
         listen(addr, |out| Server {
-            out,
-            eid,
-            mu_ra_port: mu_ra_port.clone(),
+            client: out,
+            worker: worker.clone(),
         })
         .unwrap()
     });
 }
 
-fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str, shard_str: &str) -> Message {
-    info!("     [WS Server] Query state");
-    let getter_vec = hex::decode(getter_str).unwrap();
-    let shard = ShardIdentifier::from_slice(&hex::decode(shard_str).unwrap());
+pub fn handle_request(
+    req: WsServerRequest,
+    eid: sgx_enclave_id_t,
+    mu_ra_port: String,
+) -> Result<()> {
+    info!("     [WS Server] Got message '{:?}'. ", req);
+    let answer = match req.request {
+        ClientRequest::PubKeyWorker => get_pubkey(eid),
+        ClientRequest::MuRaPortWorker => Message::text(mu_ra_port),
+        ClientRequest::StfState(getter, shard) => get_stf_state(eid, getter, shard),
+    };
 
-    let value = match enclave_query_state(eid, getter_vec, shard.encode()) {
+    req.client.send(answer)
+}
+
+fn get_stf_state(
+    eid: sgx_enclave_id_t,
+    getter: TrustedGetterSigned,
+    shard: ShardIdentifier,
+) -> Message {
+    info!("     [WS Server] Query state");
+    let value = match enclave_query_state(eid, getter.encode(), shard.encode()) {
         Ok(val) => Some(val),
         Err(_) => {
             error!("query state failed");
@@ -86,7 +114,7 @@ fn handle_get_stf_state_msg(eid: sgx_enclave_id_t, getter_str: &str, shard_str: 
     Message::text(hex::encode(value.encode()))
 }
 
-fn get_worker_pub_key(eid: sgx_enclave_id_t) -> Message {
+fn get_pubkey(eid: sgx_enclave_id_t) -> Message {
     let rsa_pubkey = enclave_shielding_key(eid).unwrap();
     debug!("     [WS Server] RSA pubkey {:?}\n", rsa_pubkey);
 

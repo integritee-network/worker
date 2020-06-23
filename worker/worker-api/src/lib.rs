@@ -20,7 +20,7 @@ use std::thread;
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
-use codec::{Decode, Encode};
+use codec::{Decode};
 use log::*;
 use ws::connect;
 
@@ -37,18 +37,16 @@ pub struct Api {
 }
 
 impl Api {
-    pub fn new(url: String) -> Api {
-        Api {
-            url: format!("ws://{}", url),
-        }
+    pub fn new(url: String) -> Self {
+        Self { url }
     }
 
     pub fn get_mu_ra_port(&self) -> Result<String, ()> {
-        Self::get(&self, MSG_GET_MU_RA_PORT)
+        Self::get(&self, ClientRequest::MuRaPortWorker)
     }
 
     pub fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, ()> {
-        let keystr = Self::get(&self, MSG_GET_PUB_KEY_WORKER)?;
+        let keystr = Self::get(&self, ClientRequest::PubKeyWorker)?;
 
         let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&keystr).unwrap();
         info!("[+] Got RSA public key of enclave");
@@ -61,10 +59,8 @@ impl Api {
         getter: TrustedGetterSigned,
         shard: &ShardIdentifier,
     ) -> Result<Vec<u8>, ()> {
-        let getter_str = hex::encode(getter.encode());
-        let shard_str = hex::encode(shard.encode());
-        let request = format!("{}::{}::{}", MSG_GET_STF_STATE, getter_str, shard_str);
-        match Self::get(&self, &request) {
+        let req = ClientRequest::StfState(getter, shard.to_owned());
+        match Self::get(&self, req) {
             Ok(res) => {
                 let value_slice = hex::decode(&res).unwrap();
                 let value: Option<Vec<u8>> = Decode::decode(&mut &value_slice[..]).unwrap();
@@ -77,16 +73,15 @@ impl Api {
         }
     }
 
-    fn get(&self, request: &str) -> Result<String, ()> {
+    fn get(&self, request: ClientRequest) -> Result<String, ()> {
         let url = self.url.clone();
-        let req = request.to_string();
         let (port_in, port_out) = channel();
 
-        info!("[Worker Api]: Sending request: {}", req);
+        info!("[Worker Api]: Sending request: {:?}", request);
         let client = thread::spawn(move || {
             match connect(url, |out| WsClient {
                 out,
-                request: req.clone(),
+                request: request.clone(),
                 result: port_in.clone(),
             }) {
                 Ok(c) => c,
