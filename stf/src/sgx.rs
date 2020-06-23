@@ -12,7 +12,7 @@ use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
+    AccountId, State, Stf, TrustedCall, TrustedCallSigned, Getter, PublicGetter, TrustedGetter, TrustedGetterSigned, ShardIdentifier,
     SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
@@ -140,7 +140,7 @@ impl Stf {
                     None
                 }
             }
-        })
+        )
     }
 
     fn ensure_root(account: AccountId) -> Result<(), StfError> {
@@ -204,10 +204,9 @@ impl Stf {
         key_hashes
     }
 
-    pub fn get_storage_hashes_to_update_for_getter(getter: &TrustedGetterSigned) -> Vec<Vec<u8>> {
-        let key_hashes = Vec::new();
-        info!("No storage updates needed for getter: {:?}", getter.getter); // dummy. Is currently not needed
-        key_hashes
+    pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
+        info!("No specific storage updates needed for getter. Returning those for on block: {:?}", getter);
+        Self::storage_hashes_to_update_on_block()
     }
 
     pub fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
