@@ -570,7 +570,7 @@ dependencies = [
  "chrono",
  "clap",
  "clap-nested",
- "encointer-node-runtime",
+ "encointer-node-teeproxy-runtime",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system",
  "geojson",
@@ -578,10 +578,10 @@ dependencies = [
  "json",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-balances",
- "pallet-encointer-balances",
- "pallet-encointer-ceremonies",
- "pallet-encointer-currencies",
- "pallet-encointer-scheduler",
+ "pallet-encointer-balances 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-ceremonies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-scheduler 0.3.1",
  "parity-scale-codec",
  "primitive-types 0.6.2",
  "sc-keystore",
@@ -599,25 +599,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "encointer-node-runtime"
-version = "0.3.0"
-source = "git+https://github.com/encointer/encointer-node?branch=sgx-master#4ee5d6f419f403be10ffa8de918e8f5cc49fcb89"
+name = "encointer-node-teeproxy-runtime"
+version = "0.3.2"
+source = "git+https://github.com/encointer/encointer-node?branch=sgx-master#59ef144fa0b5d44c9c0ef003086facd848ad9b17"
 dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-system-rpc-runtime-api",
  "pallet-aura",
  "pallet-balances",
- "pallet-encointer-balances",
- "pallet-encointer-ceremonies",
- "pallet-encointer-currencies",
- "pallet-encointer-scheduler",
+ "pallet-encointer-balances 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-ceremonies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-scheduler 0.3.1",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-substratee-registry",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -644,7 +646,7 @@ dependencies = [
  "cid",
  "clap",
  "dirs",
- "encointer-node-runtime",
+ "encointer-node-teeproxy-runtime",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system",
  "futures 0.1.29",
@@ -902,6 +904,16 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-version",
+]
+
+[[package]]
+name = "frame-system-rpc-runtime-api"
+version = "2.0.0-alpha.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd46f144dd3e1a29dc7bac5f5d3cce95b43dcaf9f352880d95e94a5019fd2191"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
@@ -2032,7 +2044,26 @@ dependencies = [
  "frame-system",
  "impl-trait-for-tuples",
  "num-traits",
- "pallet-encointer-currencies",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "parity-scale-codec",
+ "safe-mix",
+ "serde",
+ "sp-io 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
+ "sp-std",
+ "substrate-fixed",
+]
+
+[[package]]
+name = "pallet-encointer-balances"
+version = "0.3.0"
+source = "git+https://github.com/encointer/pallets?tag=v0.3.1#21f1fba74f66052564764d93c119a712d27d0aa3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
  "parity-scale-codec",
  "safe-mix",
  "serde",
@@ -2050,9 +2081,29 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-encointer-balances",
- "pallet-encointer-currencies",
- "pallet-encointer-scheduler",
+ "pallet-encointer-balances 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-scheduler 0.3.0",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-encointer-ceremonies"
+version = "0.3.0"
+source = "git+https://github.com/encointer/pallets?tag=v0.3.1#21f1fba74f66052564764d93c119a712d27d0aa3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-encointer-balances 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.1)",
+ "pallet-encointer-scheduler 0.3.1",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
@@ -2080,9 +2131,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-encointer-currencies"
+version = "0.3.0"
+source = "git+https://github.com/encointer/pallets?tag=v0.3.1#21f1fba74f66052564764d93c119a712d27d0aa3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
+ "sp-std",
+ "substrate-fixed",
+]
+
+[[package]]
 name = "pallet-encointer-scheduler"
 version = "0.3.0"
 source = "git+https://github.com/encointer/pallets?tag=v0.3.0#f60169a908675bb90ae54cfa8b9000fc08ca45e7"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
+ "sp-std",
+ "sp-timestamp",
+]
+
+[[package]]
+name = "pallet-encointer-scheduler"
+version = "0.3.1"
+source = "git+https://github.com/encointer/pallets?tag=v0.3.1#21f1fba74f66052564764d93c119a712d27d0aa3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3168,10 +3253,10 @@ dependencies = [
  "frame-system",
  "pallet-aura",
  "pallet-balances",
- "pallet-encointer-balances",
- "pallet-encointer-ceremonies",
- "pallet-encointer-currencies",
- "pallet-encointer-scheduler",
+ "pallet-encointer-balances 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-ceremonies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-scheduler 0.3.0",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
@@ -3987,7 +4072,7 @@ name = "substratee-node-primitives"
 version = "0.6.5-sub2.0.0-alpha.7"
 dependencies = [
  "base58",
- "encointer-node-runtime",
+ "encointer-node-teeproxy-runtime",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "primitive-types 0.6.2",
@@ -4011,10 +4096,10 @@ dependencies = [
  "hex 0.3.2",
  "log 0.4.8 (git+https://github.com/mesalock-linux/log-sgx)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-encointer-balances",
- "pallet-encointer-ceremonies",
- "pallet-encointer-currencies",
- "pallet-encointer-scheduler",
+ "pallet-encointer-balances 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-ceremonies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-currencies 0.3.0 (git+https://github.com/encointer/pallets?tag=v0.3.0)",
+ "pallet-encointer-scheduler 0.3.0",
  "parity-scale-codec",
  "sc-keystore",
  "sgx-runtime",

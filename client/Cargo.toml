@@ -23,25 +23,25 @@ geojson = "0.17"
 [dependencies.encointer-scheduler]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.1"
 package = "pallet-encointer-scheduler"
 
 [dependencies.encointer-ceremonies]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.1"
 package = "pallet-encointer-ceremonies"
 
 [dependencies.encointer-currencies]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.1"
 package = "pallet-encointer-currencies"
 
 [dependencies.encointer-balances]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.1"
 package = "pallet-encointer-balances"
 
 [dependencies.substrate-api-client]
@@ -79,7 +79,7 @@ default-features=false
 [dependencies.my-node-runtime]
 git = "https://github.com/encointer/encointer-node"
 branch = "sgx-master"
-package = "encointer-node-runtime"
+package = "encointer-node-teeproxy-runtime"
 
 [dependencies.substratee-stf]
 path = "../stf"

@@ -48,7 +48,7 @@ path = "worker-api"
 [dependencies.my-node-runtime]
 git = "https://github.com/encointer/encointer-node"
 branch = "sgx-master"
-package = "encointer-node-runtime"
+package = "encointer-node-teeproxy-runtime"
 
 [dependencies.sp-finality-grandpa]
 version = "2.0.0-alpha.7"

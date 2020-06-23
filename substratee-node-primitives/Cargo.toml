@@ -19,7 +19,7 @@ optional = true
 [dependencies.my-node-runtime]
 git = "https://github.com/encointer/encointer-node"
 branch = "sgx-master"
-package = "encointer-node-runtime"
+package = "encointer-node-teeproxy-runtime"
 optional = true
 default-features = false
 
