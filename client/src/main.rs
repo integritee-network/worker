@@ -67,7 +67,7 @@ use encointer_currencies::{CurrencyIdentifier, CurrencyPropertiesType, Location,
 
 use substratee_stf::{
     cli::get_identifiers, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
-    TrustedOperationSigned,
+    TrustedOperation, Getter
 };
 use substratee_worker_api::Api as WorkerApi;
 
@@ -521,18 +521,18 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
 
 fn perform_trusted_operation(
     matches: &ArgMatches<'_>,
-    top: &TrustedOperationSigned,
+    top: &TrustedOperation,
 ) -> Option<Vec<u8>> {
     match top {
-        TrustedOperationSigned::call(call) => send_request(matches, call.clone()),
-        TrustedOperationSigned::get(getter) => get_state(matches, getter.clone()),
+        TrustedOperation::call(call) => send_request(matches, call.clone()),
+        TrustedOperation::get(getter) => get_state(matches, getter.clone()),
     }
 }
 
-fn get_state(matches: &ArgMatches<'_>, getter: TrustedGetterSigned) -> Option<Vec<u8>> {
+fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
     let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
-    debug!("calling workerapi to get state value, {:?}", getter.getter);
+    debug!("calling workerapi to get state value, {:?}", getter);
     let ret = worker_api
         .get_stf_state(getter, &shard)
         .expect("getting value failed");

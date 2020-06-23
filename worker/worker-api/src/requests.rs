@@ -16,11 +16,11 @@
 */
 
 use codec::{Encode, Decode};
-use substratee_stf::{TrustedGetterSigned, ShardIdentifier};
+use substratee_stf::{Getter, ShardIdentifier};
 
 #[derive(Encode, Decode, Clone, Debug)]
 pub enum ClientRequest {
     PubKeyWorker,
     MuRaPortWorker,
-    StfState(TrustedGetterSigned, ShardIdentifier), // (trusted_getter_encrypted, shard)
+    StfState(Getter, ShardIdentifier), // (trusted_getter_encrypted, shard)
 }

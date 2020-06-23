@@ -63,9 +63,60 @@ pub type State = sp_io::SgxExternalities;
 
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
-pub enum TrustedOperationSigned {
+pub enum TrustedOperation {
     call(TrustedCallSigned),
-    get(TrustedGetterSigned),
+    get(Getter),
+}
+
+impl From<TrustedCallSigned> for TrustedOperation {
+    fn from(item: TrustedCallSigned) -> Self {
+        TrustedOperation::call(item)
+    }
+}
+
+impl From<Getter> for TrustedOperation {
+    fn from(item: Getter) -> Self {
+        TrustedOperation::get(item)
+    }
+}
+
+impl From<TrustedGetterSigned> for TrustedOperation {
+    fn from(item: TrustedGetterSigned) -> Self {
+        TrustedOperation::get(item.into())
+    }
+}
+
+impl From<PublicGetter> for TrustedOperation {
+    fn from(item: PublicGetter) -> Self {
+        TrustedOperation::get(item.into())
+    }
+}
+
+
+
+#[derive(Encode, Decode, Clone, Debug)]
+#[allow(non_camel_case_types)]
+pub enum Getter {
+    public(PublicGetter),   
+    trusted(TrustedGetterSigned)
+}
+
+impl From<PublicGetter> for Getter {
+    fn from(item: PublicGetter) -> Self {
+        Getter::public(item)
+    }
+}
+
+impl From<TrustedGetterSigned> for Getter {
+    fn from(item: TrustedGetterSigned) -> Self {
+        Getter::trusted(item)
+    }
+}
+
+#[derive(Encode, Decode, Clone, Debug)]
+#[allow(non_camel_case_types)]
+pub enum PublicGetter {
+    total_issuance(CurrencyIdentifier),   
 }
 
 #[derive(Encode, Decode, Clone, Debug)]
@@ -113,7 +164,7 @@ pub enum TrustedGetter {
     balance(AccountId, CurrencyIdentifier),
     registration(AccountId, CurrencyIdentifier),
     meetup_index_time_and_location(AccountId, CurrencyIdentifier),
-    attestations(AccountId, CurrencyIdentifier)
+    attestations(AccountId, CurrencyIdentifier),
 }
 
 impl TrustedGetter {

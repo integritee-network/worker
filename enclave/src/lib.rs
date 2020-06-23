@@ -38,7 +38,7 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, Sg
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::CallWorkerFn;
 use substratee_stf::{
-    ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned,
+    ShardIdentifier, Stf, TrustedCallSigned, Getter,
 };
 
 use codec::{Decode, Encode};
@@ -210,12 +210,14 @@ pub unsafe extern "C" fn get_state(
     let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
     let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
     let value_slice = slice::from_raw_parts_mut(value, value_size as usize);
-    let tusted_getter_signed = TrustedGetterSigned::decode(&mut trusted_op_slice).unwrap();
-
-    debug!("verifying signature of TrustedCallSigned");
-    if let false = tusted_getter_signed.verify_signature() {
-        error!("bad signature");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let getter = Getter::decode(&mut trusted_op_slice).unwrap();
+    
+    if let Getter::trusted(trusted_getter_signed) = getter.clone() {
+        debug!("verifying signature of TrustedGetterSigned");
+        if let false = trusted_getter_signed.verify_signature() {
+            error!("bad signature");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     if !state::exists(&shard) {
@@ -237,9 +239,11 @@ pub unsafe extern "C" fn get_state(
 
     let latest_header = validator.latest_header(validator.num_relays).unwrap();
 
+    // FIXME: not sure we will ever need this as we are querying trusted state, not onchain state
+    // i.e. demurrage could be correctly applied with this, but the client could do that too.
     debug!("Update STF storage!");
     let requests: Vec<WorkerRequest> =
-        Stf::get_storage_hashes_to_update_for_getter(&tusted_getter_signed)
+        Stf::get_storage_hashes_to_update_for_getter(&getter)
             .into_iter()
             .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
             .collect();
@@ -259,7 +263,7 @@ pub unsafe extern "C" fn get_state(
     }
 
     debug!("calling into STF to get state");
-    let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
+    let value_opt = Stf::get_state(&mut state, getter);
 
     debug!("returning getter result");
     write_slice_and_whitespace_pad(value_slice, value_opt.encode());
@@ -356,7 +360,7 @@ pub unsafe extern "C" fn sync_chain_relay(
         }
 
         if update_states(signed_block.block.header.clone()).is_err() {
-            error!("Error performing state updates upon block import")
+            error!("Error performing state updates upon block import");
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 

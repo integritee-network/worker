@@ -4,18 +4,18 @@
 #
 # bootstrap a bot currency on Encointer Cantillon Testnet
 
-# Cantillon node endpoint
-NURL=wss://cantillon.encointer.org
-NPORT=443
-# Cantillon worker endpoint
-WURL=wss://substratee03.scs.ch
-WPORT=443
+## Cantillon node endpoint
+#NURL=wss://cantillon.encointer.org
+#NPORT=443
+## Cantillon worker endpoint
+#WURL=wss://substratee03.scs.ch
+#WPORT=443
 
 # locals
-#NURL=ws://127.0.0.1
-#NPORT=9991
-#WURL=ws://127.0.0.1
-#WPORT=2000
+NURL=ws://127.0.0.1
+NPORT=9979
+WURL=ws://127.0.0.1
+WPORT=2000
 
 CLIENT="./../bin/encointer-client-teeproxy -u $NURL -p $NPORT -U $WURL -P $WPORT"
 
@@ -51,7 +51,7 @@ wait_for_phase REGISTERING
 
 #read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2 }')
 #cid=7eLSZLSMShw4ju9GvuMmoVgeZxZimtvsGTSvLEdvcRqQ
-MRENCLAVE=ATuyb9taa4cPmvH2yoZksNmopzYYZk3uc1RGXKJy9sqM
+MRENCLAVE=6AkpQeSLGSwESvKMiygJzDTLHXvnwBG9c8Q8FV9LiDuN
 
 echo "  MRENCLAVE = ${MRENCLAVE}"
 
@@ -127,3 +127,5 @@ echo "account balances for new currency with cid $cid"
 $CLIENT trusted balance $account1 --mrenclave $MRENCLAVE --shard $cid
 $CLIENT trusted balance $account2 --mrenclave $MRENCLAVE --shard $cid
 $CLIENT trusted balance $account3 --mrenclave $MRENCLAVE --shard $cid
+echo "total issuance (publicly readable)"
+$CLIENT trusted total-issuance --mrenclave $MRENCLAVE --shard $cid

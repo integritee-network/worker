@@ -26,7 +26,7 @@ use ws::connect;
 
 use client::WsClient;
 use requests::*;
-use substratee_stf::{ShardIdentifier, TrustedGetterSigned};
+use substratee_stf::{ShardIdentifier, Getter};
 
 pub mod client;
 pub mod requests;
@@ -56,7 +56,7 @@ impl Api {
 
     pub fn get_stf_state(
         &self,
-        getter: TrustedGetterSigned,
+        getter: Getter,
         shard: &ShardIdentifier,
     ) -> Result<Vec<u8>, ()> {
         let req = ClientRequest::StfState(getter, shard.to_owned());

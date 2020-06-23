@@ -23,7 +23,7 @@ use sgx_types::*;
 use codec::{Decode, Encode};
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
-use substratee_stf::{ShardIdentifier, TrustedGetter, TrustedGetterSigned};
+use substratee_stf::{ShardIdentifier, Getter};
 use substratee_worker_api::requests::*;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
@@ -98,7 +98,7 @@ pub fn handle_request(
 
 fn get_stf_state(
     eid: sgx_enclave_id_t,
-    getter: TrustedGetterSigned,
+    getter: Getter,
     shard: ShardIdentifier,
 ) -> Message {
     info!("     [WS Server] Query state");
