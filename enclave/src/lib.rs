@@ -386,15 +386,39 @@ pub fn update_states(header: Header) -> SgxResult<()> {
     }
 
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
-    let update_map = verify_worker_responses(responses, header)?;
+    let update_map = verify_worker_responses(responses, header.clone())?;
+    // look for new shards an initialize them
+    if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
+        match maybe_shards {
+            Some(shards) => {
+                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice()).sgx_error_with_log("error decoding shards")?;
+                for s in shards {
+                    if !state::exists(&s) {
+                        info!("Initialized new shard that was found on chain: {:?}", s);
+                        state::init_shard(&s)?;
+                    }
+                    // per shard (cid) requests
+                    let per_shard_request = storage_hashes_to_update_per_shard(&s)
+                        .into_iter()
+                        .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+                        .collect();
 
-    let shards = state::list_shards()?;
-    debug!("found shards: {:?}", shards);
-    for s in shards {
-        let mut state = state::load(&s)?;
-        Stf::update_storage(&mut state, &update_map);
-        state::write(state, &s)?;
-    }
+                    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(per_shard_request)?;
+                    let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
+
+                    let mut state = state::load(&s)?;
+                    Stf::update_storage(&mut state, &per_shard_update_map);
+                    Stf::update_storage(&mut state, &update_map);
+
+                    // block number is purged from the substrate state so it can't be read like other storage values
+                    Stf::update_block_number(&mut state, header.number);
+
+                    state::write(state, &s)?;
+                }
+            }
+            None => info!("No shards are on the chain yet")
+        };
+    };
     Ok(())
 }
 
