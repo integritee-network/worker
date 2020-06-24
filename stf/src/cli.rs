@@ -208,10 +208,11 @@ pub fn cmd<'a>(
                 }),
         )
         .add_cmd(
-            Command::new("total-issuance")
-                .description("query total issuance for currency (public information)")
+            Command::new("info")
+                .description("query various statistics and settings for a currency (public information)")
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
                     let (_mrenclave, shard) = get_identifiers(matches);
+                    println!("Public information about currency {}", shard.encode().to_base58());
                     let top: TrustedOperation = PublicGetter::total_issuance(shard)
                         .into();
                     let res = perform_operation(matches, &top);
@@ -229,7 +230,48 @@ pub fn cmd<'a>(
                     } else {
                         BalanceType::from_num(0)
                     };
-                    println!("{}", bal);
+                    println!("  total issuance: {}", bal);
+
+                    let top: TrustedOperation = PublicGetter::participant_count(shard)
+                        .into();
+                    if let Some(v) = perform_operation(matches, &top) {
+                        if let Ok(vd) = ParticipantIndexType::decode(&mut v.as_slice()) {
+                            println!("  participant count: {}", vd);
+                        } else { println!("  participant count: error decoding"); }
+                    } else { println!("  participant count: undisclosed (might be REGISTERING phase?)"); };
+                    
+                    let top: TrustedOperation = PublicGetter::meetup_count(shard)
+                        .into();
+                    if let Some(v) = perform_operation(matches, &top) {
+                        if let Ok(vd) = MeetupIndexType::decode(&mut v.as_slice()) {
+                            println!("  meetup count: {}", vd);
+                        } else { println!("  meetup count: error decoding"); }
+                    } else { println!("  meetup count: unknown"); };
+
+                    let top: TrustedOperation = PublicGetter::ceremony_reward(shard)
+                        .into();
+                    if let Some(v) = perform_operation(matches, &top) {
+                        if let Ok(vd) = BalanceType::decode(&mut v.as_slice()) {
+                            println!("  ceremony reward: {}", vd);
+                        } else { println!("  ceremony reward: error decoding"); }
+                    } else { println!("  ceremony reward: unknown"); };
+
+                    let top: TrustedOperation = PublicGetter::location_tolerance(shard)
+                        .into();
+                    if let Some(v) = perform_operation(matches, &top) {
+                        if let Ok(vd) = u32::decode(&mut v.as_slice()) {
+                            println!("  location tolerance: {}m", vd);
+                        } else { println!("  location tolerance: error decoding"); }
+                    } else { println!("  location tolerance: unknown"); };
+
+                    let top: TrustedOperation = PublicGetter::time_tolerance(shard)
+                        .into();
+                    if let Some(v) = perform_operation(matches, &top) {
+                        if let Ok(vd) = Moment::decode(&mut v.as_slice()) {
+                            println!("  time tolerance: {}m", vd);
+                        } else { println!("  time tolerance: unknown nodecode"); }
+                    } else { println!("  time tolerance: unknown"); };
+
                     Ok(())
                 }),
         )

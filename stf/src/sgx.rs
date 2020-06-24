@@ -170,7 +170,37 @@ impl Stf {
                         let c_index = encointer_scheduler::Module::<sgx_runtime::Runtime>::current_ceremony_index();
                         let balance: BalanceEntry<BlockNumber> = encointer_balances::Module::<sgx_runtime::Runtime>::total_issuance_entry(cid);
                         Some(balance.encode())
-                    }
+                    },
+                    PublicGetter::participant_count(cid) => {
+                        let c_index = encointer_scheduler::Module::<sgx_runtime::Runtime>::current_ceremony_index();
+                        match encointer_scheduler::Module::<sgx_runtime::Runtime>::current_phase() {
+                            CeremonyPhaseType::REGISTERING => {
+                                warn!("querying participant count during registering phase not allowed for privacy reasons");
+                                None
+                            },
+                            _ => { 
+                                let count = encointer_ceremonies::Module::<sgx_runtime::Runtime>::participant_count((cid, c_index));
+                                Some(count.encode())
+                            }
+                        }
+                    },
+                    PublicGetter::meetup_count(cid) => {
+                        let c_index = encointer_scheduler::Module::<sgx_runtime::Runtime>::current_ceremony_index();
+                        let count = encointer_ceremonies::Module::<sgx_runtime::Runtime>::meetup_count((cid, c_index));
+                        Some(count.encode())
+                    },
+                    PublicGetter::ceremony_reward(cid) => {
+                        let reward = encointer_ceremonies::Module::<sgx_runtime::Runtime>::ceremony_reward();
+                        Some(reward.encode())
+                    },
+                    PublicGetter::location_tolerance(cid) => {
+                        let tol = encointer_ceremonies::Module::<sgx_runtime::Runtime>::location_tolerance();
+                        Some(tol.encode())
+                    },
+                    PublicGetter::time_tolerance(cid)   => {
+                        let tol = encointer_ceremonies::Module::<sgx_runtime::Runtime>::time_tolerance();
+                        Some(tol.encode())
+                    }              
                 }
             }
         )

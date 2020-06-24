@@ -1,6 +1,6 @@
 [package]
 name = "substratee-node-primitives"
-version = "0.6.8-sub2.0.0-alpha.7"
+version = "0.6.9-sub2.0.0-alpha.7"
 authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"
 

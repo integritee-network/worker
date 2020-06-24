@@ -449,7 +449,7 @@ fn main() {
                         compose_extrinsic!(api.clone(), "EncointerScheduler", "next_phase");
 
                     // send and watch extrinsic until finalized
-                    let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+                    let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
                     let phase = get_current_phase(&api);
                     println!(
                         "Transaction got finalized. Phase is now: {:?}. tx hash: {:?}",

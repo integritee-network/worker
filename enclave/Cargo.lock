@@ -172,7 +172,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "chain-relay"
-version = "0.6.8-sub2.0.0-alpha.7"
+version = "0.6.9-sub2.0.0-alpha.7"
 dependencies = [
  "derive_more 0.99.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "finality-grandpa 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2120,7 +2120,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "substratee-node-primitives"
-version = "0.6.8-sub2.0.0-alpha.7"
+version = "0.6.9-sub2.0.0-alpha.7"
 dependencies = [
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitive-types 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2130,7 +2130,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-stf"
-version = "0.6.8-sub2.0.0-alpha.7"
+version = "0.6.9-sub2.0.0-alpha.7"
 dependencies = [
  "derive_more 0.99.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (git+https://github.com/mesalock-linux/env_logger-sgx)",
@@ -2153,12 +2153,12 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-enclave"
-version = "0.6.8-sub2.0.0-alpha.7"
+version = "0.6.9-sub2.0.0-alpha.7"
 dependencies = [
  "aes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.10.1 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
  "bit-vec 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "chain-relay 0.6.8-sub2.0.0-alpha.7",
+ "chain-relay 0.6.9-sub2.0.0-alpha.7",
  "chrono 0.4.11 (git+https://github.com/mesalock-linux/chrono-sgx)",
  "env_logger 0.7.1 (git+https://github.com/mesalock-linux/env_logger-sgx)",
  "httparse 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2192,8 +2192,8 @@ dependencies = [
  "sp-runtime 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-alpha.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-api-client 0.4.6-sub2.0.0-alpha.7 (git+https://github.com/scs/substrate-api-client?tag=v0.4.6-sub2.0.0-alpha.7)",
- "substratee-node-primitives 0.6.8-sub2.0.0-alpha.7",
- "substratee-stf 0.6.8-sub2.0.0-alpha.7",
+ "substratee-node-primitives 0.6.9-sub2.0.0-alpha.7",
+ "substratee-stf 0.6.9-sub2.0.0-alpha.7",
  "webpki 0.21.2 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
  "webpki-roots 0.19.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna 0.3.1 (git+https://github.com/mesalock-linux/yasna.rs-sgx?rev=sgx_1.1.2)",

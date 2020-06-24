@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-api"
-version = "0.6.8-sub2.0.0-alpha.7"
+version = "0.6.9-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 

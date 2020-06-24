@@ -80,12 +80,16 @@ $CLIENT trusted get-registration $account3 --mrenclave $MRENCLAVE --shard $cid
 
 wait_for_phase ASSIGNING
 
-# nothing to do here until we can have debug getters
+echo "* Waiting 30 seconds such that phase change happened in enclave"
+sleep 30
+echo ""
+
+$CLIENT trusted info --mrenclave $MRENCLAVE --shard $cid
 
 wait_for_phase ATTESTING
 
-echo "* Waiting 5 seconds such that phase change happened in enclave"
-sleep 5
+echo "* Waiting 30 seconds such that phase change happened in enclave"
+sleep 30
 echo ""
 
 echo "*** start meetup"
@@ -119,13 +123,13 @@ $CLIENT trusted get-attestations $account3 --mrenclave $MRENCLAVE --shard $cid
 
 wait_for_phase REGISTERING
 
-echo "* Waiting 5 seconds such that phase change happened in enclave"
-sleep 5
+echo "* Waiting 30 seconds such that phase change happened in enclave"
+sleep 30
 echo ""
 
 echo "account balances for new currency with cid $cid"
 $CLIENT trusted balance $account1 --mrenclave $MRENCLAVE --shard $cid
 $CLIENT trusted balance $account2 --mrenclave $MRENCLAVE --shard $cid
 $CLIENT trusted balance $account3 --mrenclave $MRENCLAVE --shard $cid
-echo "total issuance (publicly readable)"
-$CLIENT trusted total-issuance --mrenclave $MRENCLAVE --shard $cid
+echo "currency info (publicly readable)"
+$CLIENT trusted info --mrenclave $MRENCLAVE --shard $cid
