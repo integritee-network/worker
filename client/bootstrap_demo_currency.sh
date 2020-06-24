@@ -49,9 +49,9 @@ $CLIENT list-currencies
 
 wait_for_phase REGISTERING
 
-#read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2 }')
+read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2 }')
 #cid=7eLSZLSMShw4ju9GvuMmoVgeZxZimtvsGTSvLEdvcRqQ
-MRENCLAVE=6AkpQeSLGSwESvKMiygJzDTLHXvnwBG9c8Q8FV9LiDuN
+#MRENCLAVE=6AkpQeSLGSwESvKMiygJzDTLHXvnwBG9c8Q8FV9LiDuN
 
 echo "  MRENCLAVE = ${MRENCLAVE}"
 

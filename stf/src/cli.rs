@@ -26,8 +26,11 @@ use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
-use encointer_balances::BalanceType;
-use encointer_currencies::Location;
+use fixed::traits::LossyInto;
+use fixed::transcendental::exp;
+use my_node_runtime::{BlockNumber, Header};
+use encointer_balances::{BalanceType, BalanceEntry};
+use encointer_currencies::{Location, CurrencyIdentifier, CurrencyPropertiesType};
 use encointer_ceremonies::{MeetupIndexType, ClaimOfAttendance, ParticipantIndexType};
 use hex;
 use substrate_api_client::Api;
@@ -187,8 +190,12 @@ pub fn cmd<'a>(
                         .into();
                     let res = perform_operation(matches, &top);
                     let bal = if let Some(v) = res {
-                        if let Ok(vd) = <BalanceType>::decode(&mut v.as_slice()) {
-                            vd
+                        if let Ok(vd) = <BalanceEntry<BlockNumber>>::decode(&mut v.as_slice()) {
+                            let api = get_chain_api(matches);
+                            let bn = get_block_number(&api);
+                            let dr = get_demurrage_per_block(&api, shard);
+                            debug!("will apply demurrage to {:?}. blocknumber {}, demurrage rate {}", vd, bn, dr);
+                            apply_demurrage(vd, bn, dr)
                         } else {
                             info!("could not decode value. maybe hasn't been set? {:x?}", v);
                             BalanceType::from_num(0)
@@ -209,8 +216,12 @@ pub fn cmd<'a>(
                         .into();
                     let res = perform_operation(matches, &top);
                     let bal = if let Some(v) = res {
-                        if let Ok(vd) = <BalanceType>::decode(&mut v.as_slice()) {
-                            vd
+                        if let Ok(vd) = <BalanceEntry<BlockNumber>>::decode(&mut v.as_slice()) {
+                            let api = get_chain_api(matches);
+                            let bn = get_block_number(&api);
+                            let dr = get_demurrage_per_block(&api, shard);
+                            debug!("will apply demurrage to {:?}. blocknumber {}, demurrage rate {}", vd, bn, dr);
+                            apply_demurrage(vd, bn, dr)                            
                         } else {
                             info!("could not decode value. maybe hasn't been set? {:x?}", v);
                             BalanceType::from_num(0)
@@ -492,64 +503,28 @@ fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
     Api::<sr25519::Pair>::new(url)
 }
 
-/*
-pub fn call_trusted_stf<P: Pair>(
-    api: &Api<P>,
-    call: TrustedCallSigned,
-    rsa_pubkey: Rsa3072PubKey,
-    shard: &ShardIdentifier,
-) where
-    MultiSignature: From<P::Signature>,
-{
-    let call_encoded = call.encode();
-    let mut call_encrypted: Vec<u8> = Vec::new();
-    rsa_pubkey
-        .encrypt_buffer(&call_encoded, &mut call_encrypted)
+fn get_block_number(api: &Api<sr25519::Pair>) -> BlockNumber {
+    let hdr: Header = api.get_header(None).unwrap();
+    debug!("decoded: {:?}", hdr);
+    //let hdr: Header= Decode::decode(&mut .as_bytes()).unwrap();
+    hdr.number
+}
+
+fn get_demurrage_per_block(api: &Api<sr25519::Pair>, cid: CurrencyIdentifier) -> BalanceType {
+    let cp: CurrencyPropertiesType = api
+        .get_storage_map("EncointerCurrencies", "CurrencyProperties", cid, None)
         .unwrap();
-    let request = Request {
-        shard: shard.clone(),
-        cyphertext: call_encrypted.clone(),
-    };
-
-    let xt = compose_extrinsic!(api.clone(), "SubstraTEERegistry", "call_worker", request);
-
-    // send and watch extrinsic until finalized
-    let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
-    info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
-    info!("waiting for confirmation of stf call");
-    let act_hash = subscribe_to_call_confirmed(api.clone());
-    info!("callConfirmed event received");
-    debug!(
-        "Expected stf call Hash: {:?}",
-        blake2s(32, &[0; 32], &call_encrypted).as_bytes()
-    );
-    debug!("confirmation stf call Hash:   {:?}", act_hash);
+    debug!("CurrencyProperties are {:?}", cp);
+    cp.demurrage_per_block
 }
 
-pub fn get_trusted_stf_state(
-    workerapi: &WorkerApi,
-    getter: TrustedGetterSigned,
-    shard: &ShardIdentifier,
-) {
-    //TODO: #91
-    //  encrypt getter
-    //  decrypt response and verify signature
-    debug!("calling workerapi to get value");
-    let ret = workerapi
-        .get_stf_state(getter, shard)
-        .expect("getting value failed");
-    let ret_cropped = &ret[..9 * 2];
-    debug!(
-        "got getter response from worker: {:?}\ncropping to {:?}",
-        ret, ret_cropped
-    );
-    let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
-    match valopt {
-        Some(v) => {
-            let value = U256::from_little_endian(&v);
-            println!("    value = {}", value);
-        }
-        _ => error!("error getting value"),
-    };
+fn apply_demurrage(entry: BalanceEntry<BlockNumber>, current_block: BlockNumber, demurrage_per_block: BalanceType) -> BalanceType {
+    let elapsed_time_block_number = current_block.checked_sub(entry.last_update).unwrap();
+    let elapsed_time_u32: u32 = elapsed_time_block_number.into();
+    let elapsed_time = BalanceType::from_num(elapsed_time_u32);
+    let exponent : BalanceType = -demurrage_per_block * elapsed_time;
+    debug!("demurrage per block {}, current_block {}, last {}, elapsed_blocks {}", demurrage_per_block, current_block, entry.last_update, elapsed_time);
+    let exp_result : BalanceType = exp(exponent).unwrap();
+    entry.principal.checked_mul(exp_result).unwrap()
 }
-*/
+

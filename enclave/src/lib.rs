@@ -414,6 +414,10 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     let mut state = state::load(&s)?;
                     Stf::update_storage(&mut state, &per_shard_update_map);
                     Stf::update_storage(&mut state, &update_map);
+
+                    // block number is purged from the substrate state so it can't be read like other storage values
+                    Stf::update_block_number(&mut state, header.number);
+
                     state::write(state, &s)?;
                 }
             }

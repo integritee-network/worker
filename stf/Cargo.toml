@@ -1,6 +1,6 @@
 [package]
 name = "substratee-stf"
-version = "0.6.7-sub2.0.0-alpha.7"
+version = "0.6.8-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -25,7 +25,8 @@ std = [
     "sp-core/std",
     "encointer-ceremonies/std",
     "hex",
-    "substrate-api-client"
+    "substrate-api-client",
+    "my-node-runtime"
 ]
 
 [dependencies]
@@ -53,26 +54,38 @@ features = ["derive"]
 [dependencies.encointer-scheduler]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.2"
 package = "pallet-encointer-scheduler"
 
 [dependencies.encointer-ceremonies]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.2"
 package = "pallet-encointer-ceremonies"
 
 [dependencies.encointer-currencies]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.2"
 package = "pallet-encointer-currencies"
 
 [dependencies.encointer-balances]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.0"
+tag = "v0.3.2"
 package = "pallet-encointer-balances"
+
+[dependencies.fixed]
+default-features = false
+git = "https://github.com/encointer/substrate-fixed"
+tag = "v0.5.4+sub_v0.1"
+package = "substrate-fixed"
+
+[dependencies.my-node-runtime]
+git = "https://github.com/encointer/encointer-node"
+branch = "sgx-master"
+package = "encointer-node-teeproxy-runtime"
+optional = true
 
 [dependencies.system]
 default-features = false
