@@ -22,43 +22,40 @@ use std::sync::mpsc::channel;
 
 use sgx_types::*;
 
-use futures::Future;
-use futures::Stream;
+use futures::TryStreamExt;
 use ipfs_api::IpfsClient;
 use log::*;
 
 pub type Cid = [u8; 46];
 
-fn write_to_ipfs(data: &'static [u8]) -> Cid {
+#[tokio::main]
+async fn write_to_ipfs(data: &'static [u8]) -> Cid {
     // Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
     // If not found, tries to connect to `localhost:5001`.
     let client = IpfsClient::default();
 
-    let req = client
-        .version()
-        .map(|version| info!("version: {:?}", version.version));
-
-    hyper::rt::run(req.map_err(|e| eprintln!("{}", e)));
+    match client.version().await {
+        Ok(version) => info!("version: {:?}", version.version),
+        Err(e) => eprintln!("error getting version: {}", e),
+    }
 
     let datac = Cursor::new(data);
     let (tx, rx) = channel();
 
-    let req = client
-        .add(datac)
-        .map(move |res| {
+    match client.add(datac).await {
+        Ok(res) => {
             info!("Result Hash {}", res.hash);
             tx.send(res.hash.into_bytes()).unwrap();
-        })
-        .map_err(|e| eprintln!("{}", e));
-
-    hyper::rt::run(req);
-
+        },
+        Err(e) => eprintln!("error adding file: {}", e)
+    }
     let mut cid: Cid = [0; 46];
     cid.clone_from_slice(&rx.recv().unwrap());
     cid
 }
 
-pub fn read_from_ipfs(cid: Cid) -> Vec<u8> {
+#[tokio::main]
+pub async fn read_from_ipfs(cid: Cid) -> Vec<u8> {
     // Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
     // If not found, tries to connect to `localhost:5001`.
     let client = IpfsClient::default();
@@ -68,14 +65,15 @@ pub fn read_from_ipfs(cid: Cid) -> Vec<u8> {
 
     let (tx, rx) = channel();
 
-    let req = client
-        .cat(h)
-        .concat2()
-        .map(move |res| {
-            tx.send(res).unwrap();
-        })
-        .map_err(|e| eprintln!("{}", e));
-    hyper::rt::run(req);
+    match client.cat(h)
+        .map_ok(|chunk| chunk.to_vec())
+        .try_concat()
+		.await
+		{
+            Ok(res) => { tx.send(res).unwrap(); },
+            Err(e) => eprintln!("error reading file: {}", e)
+        }
+
     rx.recv().unwrap().to_vec()
 }
 
