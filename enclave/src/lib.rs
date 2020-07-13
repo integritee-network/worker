@@ -596,8 +596,6 @@ fn verify_worker_responses(
 extern "C" {
     pub fn ocall_read_ipfs(
         ret_val: *mut sgx_status_t,
-        enc_state: *mut u8,
-        enc_state_size: u32,
         cid: *const u8,
         cid_size: u32,
     ) -> sgx_status_t;
@@ -650,18 +648,15 @@ fn test_ocall_read_write_ipfs() {
         )
     };
 
-    let mut ret_state = vec![0; 36];
-    let _res = unsafe {
+    let res = unsafe {
         ocall_read_ipfs(
             &mut rt as *mut sgx_status_t,
-            ret_state.as_mut_ptr(),
-            ret_state.len() as u32,
             cid_buf.as_ptr(),
             cid_buf.len() as u32,
         )
     };
 
-    assert_eq!(enc_state, ret_state);
+    assert_eq!(res, sgx_status_t::SGX_SUCCESS);
 }
 
 // TODO: this is redundantly defined in worker/src/main.rs
