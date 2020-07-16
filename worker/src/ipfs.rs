@@ -65,7 +65,7 @@ pub async fn read_from_ipfs(cid: Cid) -> Result<Vec<u8>, String> {
     info!("Fetching content from: {}", h);
 
     client
-        .get(h)
+        .cat(h)
         .map_ok(|chunk| chunk.to_vec())
         .map_err(|e| e.to_string())
         .try_concat()

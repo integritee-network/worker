@@ -51,6 +51,7 @@ use std::string::String;
 use std::vec::Vec;
 
 use std::collections::HashMap;
+use ipfs::IpfsContent;
 use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
@@ -69,6 +70,7 @@ mod attestation;
 mod constants;
 mod ed25519;
 mod io;
+mod ipfs;
 mod rsa3072;
 mod state;
 mod utils;
@@ -636,7 +638,7 @@ fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut cid_buf: Vec<u8> = vec![0; 46];
-    let enc_state: Vec<u8> = vec![20; 36];
+    let enc_state: Vec<u8> = vec![20; 512*1024];
 
     let _res = unsafe {
         ocall_write_ipfs(
@@ -656,7 +658,17 @@ fn test_ocall_read_write_ipfs() {
         )
     };
 
-    assert_eq!(res, sgx_status_t::SGX_SUCCESS);
+    let mut cid_slice = vec![0; 46];
+	unsafe {
+		cid_slice = slice::from_raw_parts(cid_buf.as_ptr(), cid_buf.len()).to_vec();
+	}
+	if res == sgx_status_t::SGX_SUCCESS {
+		let ipfs_content = IpfsContent::new(cid_slice);
+		assert_eq!(ipfs_content.verify(), true);
+	} else {
+		error!("was not able to write to file");
+		assert!(false);
+	}
 }
 
 // TODO: this is redundantly defined in worker/src/main.rs
