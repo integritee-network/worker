@@ -8,7 +8,9 @@
 # binaries
 bin/*.so
 bin/substratee-*
+bin/encointer-*
 bin/*.wasm
+bin2/encointer-*
 
 # sealed data
 bin/*.bin
