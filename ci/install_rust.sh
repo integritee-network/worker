@@ -15,6 +15,7 @@ chmod +x ./rustup.sh
 source $HOME/.cargo/env
 
 # Install and set specific nightly version as default
+rustup install nightly
 rustup install nightly-2020-04-07
 rustup default nightly-2020-04-07
 
