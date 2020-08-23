@@ -66,6 +66,7 @@ mod ws_server;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     // Setup logging
@@ -215,6 +216,7 @@ fn main() {
 }
 
 fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
+    println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
     // check for required files

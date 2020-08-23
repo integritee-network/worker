@@ -150,12 +150,11 @@ impl Stf {
                         let part: ParticipantIndexType = encointer_ceremonies::Module::<sgx_runtime::Runtime>::participant_index((cid, c_index), AccountId32::from(who));
                         Some(part.encode())
                     }
-                    TrustedGetter::meetup_index_time_and_location(who, cid) => {
+                    TrustedGetter::meetup_index_and_location(who, cid) => {
                         let c_index = encointer_scheduler::Module::<sgx_runtime::Runtime>::current_ceremony_index();
                         let meetup_index: MeetupIndexType = encointer_ceremonies::Module::<sgx_runtime::Runtime>::meetup_index((cid, c_index), AccountId32::from(who));
-                        let time: Option<Moment> =  encointer_ceremonies::Module::<sgx_runtime::Runtime>::get_meetup_time(&cid, meetup_index);
                         let location: Option<Location> = encointer_ceremonies::Module::<sgx_runtime::Runtime>::get_meetup_location(&cid, meetup_index);
-                        let enc = (meetup_index, location, time).encode();
+                        let enc = (meetup_index, location).encode();
                         Some(enc)
                     }
                     TrustedGetter::attestations(who, cid) => {
