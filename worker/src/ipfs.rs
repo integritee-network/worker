@@ -47,8 +47,8 @@ async fn write_to_ipfs(data: &'static [u8]) -> Cid {
         Ok(res) => {
             info!("Result Hash {}", res.hash);
             tx.send(res.hash.into_bytes()).unwrap();
-        },
-        Err(e) => eprintln!("error adding file: {}", e)
+        }
+        Err(e) => eprintln!("error adding file: {}", e),
     }
     let mut cid: Cid = [0; 46];
     cid.clone_from_slice(&rx.recv().unwrap());

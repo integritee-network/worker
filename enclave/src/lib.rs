@@ -638,7 +638,7 @@ fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut cid_buf: Vec<u8> = vec![0; 46];
-    let enc_state: Vec<u8> = vec![20; 512*1024];
+    let enc_state: Vec<u8> = vec![20; 512 * 1024];
 
     let _res = unsafe {
         ocall_write_ipfs(
@@ -658,17 +658,16 @@ fn test_ocall_read_write_ipfs() {
         )
     };
 
-    let mut cid_slice = vec![0; 46];
-	unsafe {
-		cid_slice = slice::from_raw_parts(cid_buf.as_ptr(), cid_buf.len()).to_vec();
-	}
-	if res == sgx_status_t::SGX_SUCCESS {
-		let ipfs_content = IpfsContent::new(cid_slice);
-		assert_eq!(ipfs_content.verify(), true);
-	} else {
-		error!("was not able to write to file");
-		assert!(false);
-	}
+    if res == sgx_status_t::SGX_SUCCESS {
+        let mut ipfs_content = IpfsContent::new(cid_buf.to_vec());
+        assert_eq!(ipfs_content.file_content, enc_state);
+
+        ipfs_content.verify();
+        assert_eq!(ipfs_content.verified, true);
+    } else {
+        error!("was not able to write to file");
+        assert!(false);
+    }
 }
 
 // TODO: this is redundantly defined in worker/src/main.rs
