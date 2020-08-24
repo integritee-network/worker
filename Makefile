@@ -164,7 +164,7 @@ $(Worker_Enclave_u_Object): worker/Enclave_u.o
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
 	@echo "Building the encointer-worker"
-	@cd worker && SGX_SDK=$(SGX_SDK) cargo +nightly build $(Worker_Rust_Flags)
+	@cd worker && SGX_SDK=$(SGX_SDK) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/encointer-worker ./bin
 	cp $(Worker_Rust_Path)/encointer-worker ./bin2
@@ -173,7 +173,7 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 $(Client_Name): $(Client_SRC_Files)
 	@echo
 	@echo "Building the substraTEE-client"
-	@cd $(Client_SRC_Path) && cargo +nightly build $(Client_Rust_Flags)
+	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 

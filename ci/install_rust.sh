@@ -15,12 +15,13 @@ chmod +x ./rustup.sh
 source $HOME/.cargo/env
 
 # Install and set specific nightly version as default
-rustup install nightly
+#rustup install nightly
 rustup install nightly-2020-04-07
 rustup default nightly-2020-04-07
 
 # install targets
 rustup target install wasm32-unknown-unknown
+#rustup target install wasm32-unknown-unknown --toolchain=nightly
 
 # Install aux components, clippy for linter, rustfmt for formatting
 rustup component add clippy --toolchain=nightly-2020-04-07
