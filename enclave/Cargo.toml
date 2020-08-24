@@ -131,9 +131,8 @@ features = ["sgx"]
 sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 
 [dependencies.ipfs-unixfs]
-# git = "https://github.com/whalelephant/rust-ipfs"
-# branch = "w-nstd"
-path = "../../rust-ipfs/unixfs"
+git = "https://github.com/whalelephant/rust-ipfs"
+branch = "w-nstd"
 default-features = false
 
 
