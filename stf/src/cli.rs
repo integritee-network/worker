@@ -409,8 +409,9 @@ pub fn cmd<'a>(
                         )
                         .sign(&sr25519_core::Pair::from(who))
                         .into();
-                    let attestations = perform_operation(matches, &top).unwrap();
-                    println!("Attestations: {:?}", hex::encode(attestations));
+                    let att_enc = perform_operation(matches, &top).unwrap();
+                    let attestations: Vec<AccountId> = Decode::decode(&mut att_enc.as_slice()).unwrap();
+                    println!("Attestations: {:?}", attestations);
                     Ok(())
                 }),
         )
