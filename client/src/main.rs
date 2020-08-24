@@ -458,34 +458,6 @@ fn main() {
                     Ok(())
                 }),
         )
-        .add_cmd(
-            Command::new("sign-claim")
-                .description("Advance ceremony state machine to next phase by ROOT call")
-                .options(|app| {
-                    app.arg(
-                        Arg::with_name("signer")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58")
-                            .help("AccountId in ss58check format"),
-                    )
-                        .arg(
-                            Arg::with_name("claim")
-                                .takes_value(true)
-                                .required(true)
-                        )
-                })
-                .runner(|_args: &str, matches: &ArgMatches<'_>| {
-                    let signer_arg = matches.value_of("signer").unwrap();
-                    let claim = ClaimOfAttendance::decode(
-                        &mut &hex::decode(matches.value_of("claim").unwrap()).unwrap()[..],
-                    )
-                        .unwrap();
-                    let attestation = sign_claim(claim, signer_arg);
-                    println!("{}", hex::encode(attestation.encode()));
-                    Ok(())
-                }),
-        )
         // stop encointer stuff
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
@@ -618,17 +590,6 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
         if ret.payload == expected {
             return Some(ret.payload.encode());
         }
-    }
-}
-
-fn sign_claim(claim: ClaimOfAttendance<AccountId, Moment>, account_str: &str) -> Attestation<Signature, AccountId, Moment> {
-    info!("second call to get_pair_from_str");
-    let pair = get_pair_from_str(account_str);
-    let accountid = get_accountid_from_str(account_str);
-    Attestation {
-        claim: claim.clone(),
-        signature: Signature::from(sr25519_core::Signature::from(pair.sign(&claim.encode()))),
-        public: accountid,
     }
 }
 

@@ -28,7 +28,7 @@ use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 use fixed::traits::LossyInto;
 use fixed::transcendental::exp;
-use my_node_runtime::{BlockNumber, Header, ONE_DAY};
+use my_node_runtime::{BlockNumber, Header, ONE_DAY, Signature};
 use encointer_balances::{BalanceType, BalanceEntry};
 use encointer_currencies::{Location, CurrencyIdentifier, CurrencyPropertiesType};
 use encointer_ceremonies::{MeetupIndexType, ClaimOfAttendance, ParticipantIndexType};
@@ -416,7 +416,7 @@ pub fn cmd<'a>(
         )
         .add_cmd(
             Command::new("new-claim")
-                .description("read current ceremony phase from chain")
+                .description("create a fresh claim of attendance for account")
                 .options(|app| {
                     app.arg(
                         Arg::with_name("accountid")
@@ -475,6 +475,35 @@ pub fn cmd<'a>(
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("sign-claim")
+                .description("sign someone's claim to attest personhood")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("signer")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("AccountId in ss58check format"),
+                    )
+                        .arg(
+                            Arg::with_name("claim")
+                                .takes_value(true)
+                                .required(true)
+                        )
+                })
+                .runner(|_args: &str, matches: &ArgMatches<'_>| {
+                    let signer_arg = matches.value_of("signer").unwrap();
+                    let claim = ClaimOfAttendance::decode(
+                        &mut &hex::decode(matches.value_of("claim").unwrap()).unwrap()[..],
+                    )
+                        .unwrap();
+                    let attestation = sign_claim(matches, claim, signer_arg);
+                    println!("{}", hex::encode(attestation.encode()));
+                    Ok(())
+                }),
+        )
+
         .into_cmd("trusted")
 }
 
@@ -611,4 +640,14 @@ fn get_meetup_time(api: &Api<sr25519::Pair>, mlocation: Location) -> Option<Mome
     - (mlon * (ONE_DAY as f64) / 360.0) as Moment;
     debug!("meetup time: {}", t);
     Some(t)
+}
+
+fn sign_claim(matches: &ArgMatches<'_>, claim: ClaimOfAttendance<AccountId, Moment>, account_str: &str) -> Attestation<Signature, AccountId, Moment> {
+    let pair = get_pair_from_str(matches, account_str);
+    let accountid = get_accountid_from_str(account_str);
+    Attestation {
+        claim: claim.clone(),
+        signature: Signature::from(sr25519_core::Signature::from(pair.sign(&claim.encode()))),
+        public: accountid,
+    }
 }
