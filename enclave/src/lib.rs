@@ -672,8 +672,8 @@ fn test_ocall_read_write_ipfs() {
 		info!("reading file {:?} of size {} bytes", f, &content_buf.len());
 
         let mut ipfs_content = IpfsContent::new(cid, content_buf);
-        ipfs_content.verify();
-        assert_eq!(ipfs_content.verified, true);
+        let verification = ipfs_content.verify();
+        assert_eq!(verification.is_ok(), true);
     } else {
         error!("was not able to write to file");
         assert!(false);
