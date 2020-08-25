@@ -1,9 +1,9 @@
 use cid::{Cid, Result as CidResult};
 use ipfs_unixfs::file::adder::FileAdder;
+use log::*;
 use multibase::Base;
 use std::convert::TryFrom;
 use std::vec::Vec;
-use log::*;
 
 pub struct IpfsContent {
     pub cid: CidResult<Cid>,
@@ -12,13 +12,12 @@ pub struct IpfsContent {
 }
 #[derive(Debug, PartialEq)]
 pub enum IpfsError {
-	InputCidInvalid,
-	FinalCidMissing,
-	Verification,
+    InputCidInvalid,
+    FinalCidMissing,
+    Verification,
 }
 
 impl IpfsContent {
-
     pub fn new(_cid: &str, _content: Vec<u8>) -> IpfsContent {
         IpfsContent {
             cid: Cid::try_from(_cid),
@@ -27,7 +26,7 @@ impl IpfsContent {
         }
     }
 
-    pub fn verify(&mut self) -> Result<(), IpfsError>{
+    pub fn verify(&mut self) -> Result<(), IpfsError> {
         let mut adder: FileAdder = FileAdder::default();
         let mut total: usize = 0;
         while total < self.file_content.len() {
@@ -45,14 +44,14 @@ impl IpfsContent {
                 cid_str, self.stats.blocks, self.stats.block_bytes
             );
             if let Some(initial_cid) = self.cid.as_ref().ok() {
-				if last_cid.hash().eq(&initial_cid.hash()) {
-					Ok(())
-				} else {
-					Err(IpfsError::Verification)
-				}
+                if last_cid.hash().eq(&initial_cid.hash()) {
+                    Ok(())
+                } else {
+                    Err(IpfsError::Verification)
+                }
             } else {
-				Err(IpfsError::InputCidInvalid)
-			}
+                Err(IpfsError::InputCidInvalid)
+            }
         } else {
             Err(IpfsError::FinalCidMissing)
         }
@@ -75,28 +74,28 @@ impl Stats {
     }
 }
 
-pub fn test_creates_ipfs_content_struct_works(){
-	let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
-	let content: Vec<u8> = vec![20; 512 * 1024];
-	let ipfs_content = IpfsContent::new(cid, content.clone());
+pub fn test_creates_ipfs_content_struct_works() {
+    let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
+    let content: Vec<u8> = vec![20; 512 * 1024];
+    let ipfs_content = IpfsContent::new(cid, content.clone());
 
-	let cid_str = Base::Base58Btc.encode(ipfs_content.cid.as_ref().unwrap().hash().as_bytes());
-	assert_eq!(cid_str, cid);
-	assert_eq!(ipfs_content.file_content, content);
+    let cid_str = Base::Base58Btc.encode(ipfs_content.cid.as_ref().unwrap().hash().as_bytes());
+    assert_eq!(cid_str, cid);
+    assert_eq!(ipfs_content.file_content, content);
 }
 
-pub fn test_verification_ok_for_correct_content(){
-	let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
-	let content: Vec<u8> = vec![20; 512 * 1024];
-	let mut ipfs_content = IpfsContent::new(cid, content);
-	let verification = ipfs_content.verify();
-	assert_eq!(verification.is_ok(), true);
+pub fn test_verification_ok_for_correct_content() {
+    let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
+    let content: Vec<u8> = vec![20; 512 * 1024];
+    let mut ipfs_content = IpfsContent::new(cid, content);
+    let verification = ipfs_content.verify();
+    assert_eq!(verification.is_ok(), true);
 }
 
-pub fn test_verification_fails_for_incorrect_content(){
-	let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
-	let content: Vec<u8> = vec![10; 512 * 1024];
-	let mut ipfs_content = IpfsContent::new(cid, content);
-	let verification = ipfs_content.verify();
-	assert_eq!(verification.unwrap_err(), IpfsError::Verification);
+pub fn test_verification_fails_for_incorrect_content() {
+    let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
+    let content: Vec<u8> = vec![10; 512 * 1024];
+    let mut ipfs_content = IpfsContent::new(cid, content);
+    let verification = ipfs_content.verify();
+    assert_eq!(verification.unwrap_err(), IpfsError::Verification);
 }

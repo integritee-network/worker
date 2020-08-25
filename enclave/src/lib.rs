@@ -50,10 +50,10 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
+use ipfs::IpfsContent;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use ipfs::IpfsContent;
 use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
@@ -65,7 +65,7 @@ use chain_relay::{
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
-use substratee_stf::sgx::{OpaqueCall, shards_key_hash, storage_hashes_to_update_per_shard};
+use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 
 mod aes;
 mod attestation;
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn get_state(
 
     let mut state = match state::load(&shard) {
         Ok(s) => s,
-        Err(status) => return status
+        Err(status) => return status,
     };
 
     let validator = match io::light_validation::unseal() {
@@ -367,7 +367,6 @@ pub unsafe extern "C" fn sync_chain_relay(
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
-
     }
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
@@ -395,7 +394,8 @@ pub fn update_states(header: Header) -> SgxResult<()> {
     if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
         match maybe_shards {
             Some(shards) => {
-                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice()).sgx_error_with_log("error decoding shards")?;
+                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
+                    .sgx_error_with_log("error decoding shards")?;
                 for s in shards {
                     if !state::exists(&s) {
                         info!("Initialized new shard that was found on chain: {:?}", s);
@@ -407,7 +407,8 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
                         .collect();
 
-                    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(per_shard_request)?;
+                    let responses: Vec<WorkerResponse<Vec<u8>>> =
+                        worker_request(per_shard_request)?;
                     let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
 
                     let mut state = state::load(&s)?;
@@ -416,7 +417,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     state::write(state, &s)?;
                 }
             }
-            None => info!("No shards are on the chain yet")
+            None => info!("No shards are on the chain yet"),
         };
     };
     Ok(())
@@ -630,10 +631,10 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
-		state::test_encrypted_state_io_works,
-		ipfs::test_creates_ipfs_content_struct_works,
-		ipfs::test_verification_ok_for_correct_content,
-		ipfs::test_verification_fails_for_incorrect_content,
+        state::test_encrypted_state_io_works,
+        ipfs::test_creates_ipfs_content_struct_works,
+        ipfs::test_verification_ok_for_correct_content,
+        ipfs::test_verification_fails_for_incorrect_content,
         test_ocall_read_write_ipfs,
         test_ocall_worker_request
     )
@@ -664,12 +665,11 @@ fn test_ocall_read_write_ipfs() {
     };
 
     if res == sgx_status_t::SGX_SUCCESS {
-
-		let cid = std::str::from_utf8(&cid_buf).unwrap();
-		let mut f = File::open(&cid).unwrap();
-		let mut content_buf = Vec::new();
-		f.read_to_end(&mut content_buf).unwrap();
-		info!("reading file {:?} of size {} bytes", f, &content_buf.len());
+        let cid = std::str::from_utf8(&cid_buf).unwrap();
+        let mut f = File::open(&cid).unwrap();
+        let mut content_buf = Vec::new();
+        f.read_to_end(&mut content_buf).unwrap();
+        info!("reading file {:?} of size {} bytes", f, &content_buf.len());
 
         let mut ipfs_content = IpfsContent::new(cid, content_buf);
         let verification = ipfs_content.verify();

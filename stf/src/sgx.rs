@@ -12,8 +12,8 @@ use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
-    ShardIdentifier, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+    AccountId, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
+    TrustedGetterSigned, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
 
@@ -71,14 +71,12 @@ impl Stf {
 
     pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
         ext.execute_with(|| {
-            map_update
-                .iter()
-                .for_each(|(k, v)| {
-                    match v {
-                        Some(value) => sp_io::storage::set(k, value),
-                        None => sp_io::storage::clear(k)
-                    };
-                });
+            map_update.iter().for_each(|(k, v)| {
+                match v {
+                    Some(value) => sp_io::storage::set(k, value),
+                    None => sp_io::storage::clear(k),
+                };
+            });
         });
     }
 
@@ -210,7 +208,10 @@ impl Stf {
     }
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &TrustedGetterSigned) -> Vec<Vec<u8>> {
-        info!("No specific storage updates needed for getter. Returning those for on block: {:?}", getter.getter);
+        info!(
+            "No specific storage updates needed for getter. Returning those for on block: {:?}",
+            getter.getter
+        );
         Self::storage_hashes_to_update_on_block()
     }
 

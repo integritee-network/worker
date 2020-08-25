@@ -477,8 +477,14 @@ pub fn sync_chain_relay(
 
     let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
     if no_blocks_to_sync > 1 {
-        println!("Chain Relay is synced until block: {:?}", last_synced_head.number);
-        println!("Last finalized block number: {:?}\n", head.block.header.number);
+        println!(
+            "Chain Relay is synced until block: {:?}",
+            last_synced_head.number
+        );
+        println!(
+            "Last finalized block number: {:?}\n",
+            head.block.header.number
+        );
     }
 
     while head.block.header.parent_hash != last_synced_head.hash() {
@@ -488,7 +494,10 @@ pub fn sync_chain_relay(
         blocks_to_sync.push(head.clone());
 
         if head.block.header.number % 100 == 0 {
-            println!("Remaining blocks to fetch until last synced header: {:?}", head.block.header.number - last_synced_head.number)
+            println!(
+                "Remaining blocks to fetch until last synced header: {:?}",
+                head.block.header.number - last_synced_head.number
+            )
         }
     }
     blocks_to_sync.reverse();
@@ -514,7 +523,11 @@ pub fn sync_chain_relay(
         }
 
         i += chunk.len();
-        println!("Synced {} blocks out of {} finalized blocks", i ,  blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len())
+        println!(
+            "Synced {} blocks out of {} finalized blocks",
+            i,
+            blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
+        )
     }
 
     curr_head.block.header
