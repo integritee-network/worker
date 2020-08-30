@@ -126,3 +126,5 @@ features = ["sgx"]
 
 [patch.crates-io]
 sp-io = { git = "https://github.com/encointer/sgx-runtime", tag = "v0.6.10-sub2.0.0-alpha.7", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+log = { git = "https://github.com/mesalock-linux/log-sgx", version = "0.4" }
+env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", version = "0.7" } 
