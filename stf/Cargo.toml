@@ -1,6 +1,6 @@
 [package]
 name = "substratee-stf"
-version = "0.6.10-sub2.0.0-alpha.7"
+version = "0.6.11-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -54,25 +54,25 @@ features = ["derive"]
 [dependencies.encointer-scheduler]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.3"
+tag = "v0.3.4"
 package = "pallet-encointer-scheduler"
 
 [dependencies.encointer-ceremonies]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.3"
+tag = "v0.3.4"
 package = "pallet-encointer-ceremonies"
 
 [dependencies.encointer-currencies]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.3"
+tag = "v0.3.4"
 package = "pallet-encointer-currencies"
 
 [dependencies.encointer-balances]
 default-features = false
 git = "https://github.com/encointer/pallets"
-tag = "v0.3.3"
+tag = "v0.3.4"
 package = "pallet-encointer-balances"
 
 [dependencies.fixed]
@@ -90,6 +90,11 @@ optional = true
 [dependencies.system]
 default-features = false
 package = 'frame-system'
+version = '2.0.0-alpha.7'
+
+[dependencies.support]
+default-features = false
+package = 'frame-support'
 version = '2.0.0-alpha.7'
 
 [dependencies.metadata]
@@ -115,13 +120,13 @@ default-features = false
 default-features = false
 optional = true
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.10-sub2.0.0-alpha.7"
+tag = "v0.6.11-sub2.0.0-alpha.7"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sgx-runtime]
 default-features = false
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.10-sub2.0.0-alpha.7"
+tag = "v0.6.11-sub2.0.0-alpha.7"
 optional = true
 
 [dependencies.substrate-api-client]

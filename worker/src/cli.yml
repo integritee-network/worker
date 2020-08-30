@@ -1,5 +1,5 @@
 name: "substraTEE-worker"
-version: "0.6.10"
+version: "0.6.11"
 about: Worker using Intel SGX TEE for SubstraTEE-node
 authors: "Supercomputing Systems AG <info@scs.ch>"
 

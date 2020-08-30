@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-enclave"
-version = "0.6.10-sub2.0.0-alpha.7"
+version = "0.6.11-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -73,7 +73,7 @@ features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.10-sub2.0.0-alpha.7"
+tag = "v0.6.11-sub2.0.0-alpha.7"
 default-features = false
 optional = true
 package = "sp-io"
@@ -116,7 +116,7 @@ features = ["sgx"]
 
 [dependencies.sgx-externalities]
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.10-sub2.0.0-alpha.7"
+tag = "v0.6.11-sub2.0.0-alpha.7"
 default-features = false
 
 [dependencies.substratee-node-primitives]
@@ -125,6 +125,6 @@ default-features = false
 features = ["sgx"]
 
 [patch.crates-io]
-sp-io = { git = "https://github.com/encointer/sgx-runtime", tag = "v0.6.10-sub2.0.0-alpha.7", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sp-io = { git = "https://github.com/encointer/sgx-runtime", tag = "v0.6.11-sub2.0.0-alpha.7", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 log = { git = "https://github.com/mesalock-linux/log-sgx", version = "0.4" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", version = "0.7" } 

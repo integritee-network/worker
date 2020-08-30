@@ -1,6 +1,6 @@
 [package]
 name = "chain-relay"
-version = "0.6.10-sub2.0.0-alpha.7"
+version = "0.6.11-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -34,7 +34,7 @@ default-features = false
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.10-sub2.0.0-alpha.7"
+tag = "v0.6.11-sub2.0.0-alpha.7"
 package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 

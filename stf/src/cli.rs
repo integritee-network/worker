@@ -269,7 +269,7 @@ pub fn cmd<'a>(
                         .into();
                     if let Some(v) = perform_operation(matches, &top) {
                         if let Ok(vd) = Moment::decode(&mut v.as_slice()) {
-                            println!("  time tolerance: {}m", vd);
+                            println!("  time tolerance: {}ms", vd);
                         } else { println!("  time tolerance: unknown nodecode"); }
                     } else { println!("  time tolerance: unknown"); };
 
@@ -369,6 +369,7 @@ pub fn cmd<'a>(
                         let w = Attestation::decode(&mut &hex::decode(arg).unwrap()[..]).unwrap();
                         attestations.push(w);
                     }
+                    debug!("attestations: {:?}", attestations);
                     println!(
                         "send TrustedCall::register_attestations for {}",
                         who.public()
@@ -472,6 +473,7 @@ pub fn cmd<'a>(
                         timestamp: mtime.unwrap(),
                         number_of_participants_confirmed: n_participants,
                     };
+                    debug!("claim: {:?}", claim);
                     println!("{}", hex::encode(claim.encode()));
                     Ok(())
                 }),
@@ -614,6 +616,8 @@ fn get_current_phase(api: &Api<sr25519::Pair>) -> CeremonyPhaseType {
 
 fn get_meetup_time(api: &Api<sr25519::Pair>, mlocation: Location) -> Option<Moment> {
     let mlon: f64 = mlocation.lon.lossy_into();
+    // as long as the runtime pallet is rounding lon, we should do so too
+    let mlon = mlon.round();
     debug!("meetup longitude: {}", mlon);
     let next_phase_timestamp: Moment = api.get_storage_value(
         "EncointerScheduler",

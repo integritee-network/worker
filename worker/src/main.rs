@@ -393,7 +393,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
                     }
                     my_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
                         println!("[+] Received trusted call");
-                        info!(
+                        trace!(
                             "    Request: \n  shard: {}\n  cyphertext: {:?}",
                             request.shard.encode().to_base58(),
                             request.cyphertext.clone()
