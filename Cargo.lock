@@ -2284,7 +2284,7 @@ dependencies = [
 [[package]]
 name = "pallet-template"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/encointer/sgx-runtime#931bc07ce7331cf00aba14db08f5220ca5f4533e"
+source = "git+https://github.com/encointer/sgx-runtime?tag=v0.6.10-sub2.0.0-alpha.7#931bc07ce7331cf00aba14db08f5220ca5f4533e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3234,7 +3234,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.2.0"
-source = "git+https://github.com/encointer/sgx-runtime#931bc07ce7331cf00aba14db08f5220ca5f4533e"
+source = "git+https://github.com/encointer/sgx-runtime?tag=v0.6.10-sub2.0.0-alpha.7#931bc07ce7331cf00aba14db08f5220ca5f4533e"
 dependencies = [
  "environmental",
  "log 0.4.8 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -3246,7 +3246,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/encointer/sgx-runtime#931bc07ce7331cf00aba14db08f5220ca5f4533e"
+source = "git+https://github.com/encointer/sgx-runtime?tag=v0.6.10-sub2.0.0-alpha.7#931bc07ce7331cf00aba14db08f5220ca5f4533e"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3660,7 +3660,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "2.0.0-alpha.7"
-source = "git+https://github.com/encointer/sgx-runtime#931bc07ce7331cf00aba14db08f5220ca5f4533e"
+source = "git+https://github.com/encointer/sgx-runtime?tag=v0.6.10-sub2.0.0-alpha.7#931bc07ce7331cf00aba14db08f5220ca5f4533e"
 dependencies = [
  "environmental",
  "hash-db",
@@ -4107,7 +4107,7 @@ dependencies = [
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io 2.0.0-alpha.7 (git+https://github.com/encointer/sgx-runtime)",
+ "sp-io 2.0.0-alpha.7 (git+https://github.com/encointer/sgx-runtime?tag=v0.6.10-sub2.0.0-alpha.7)",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
