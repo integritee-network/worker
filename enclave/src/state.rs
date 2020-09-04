@@ -16,8 +16,8 @@
 */
 
 use std::fs;
-use std::vec::Vec;
 use std::io::Write;
+use std::vec::Vec;
 
 use log::*;
 use sgx_tcrypto::rsgx_sha256_slice;

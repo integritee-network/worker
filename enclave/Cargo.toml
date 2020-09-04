@@ -50,6 +50,10 @@ itertools       = { version = "0.8",  default-features = false, features = []}
 bit-vec         = { version = "0.6",    default-features = false }
 base58          = { rev = "sgx_1.1.2", package="rust-base58", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features=["mesalock_sgx"] }
 
+cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", default-features = false }
+multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
+
+
 [dependencies.webpki]
 git              = "https://github.com/mesalock-linux/webpki"
 branch           = "mesalock_sgx"
@@ -125,3 +129,10 @@ features = ["sgx"]
 
 [patch.crates-io]
 sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+
+[dependencies.ipfs-unixfs]
+git = "https://github.com/whalelephant/rust-ipfs"
+branch = "w-nstd"
+default-features = false
+
+

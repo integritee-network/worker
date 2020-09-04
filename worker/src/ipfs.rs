@@ -15,7 +15,8 @@
 
 */
 
-use std::io::Cursor;
+use std::fs::File;
+use std::io::{Cursor, Write};
 use std::slice;
 use std::str;
 use std::sync::mpsc::channel;
@@ -46,8 +47,8 @@ async fn write_to_ipfs(data: &'static [u8]) -> Cid {
         Ok(res) => {
             info!("Result Hash {}", res.hash);
             tx.send(res.hash.into_bytes()).unwrap();
-        },
-        Err(e) => eprintln!("error adding file: {}", e)
+        }
+        Err(e) => eprintln!("error adding file: {}", e),
     }
     let mut cid: Cid = [0; 46];
     cid.clone_from_slice(&rx.recv().unwrap());
@@ -55,7 +56,7 @@ async fn write_to_ipfs(data: &'static [u8]) -> Cid {
 }
 
 #[tokio::main]
-pub async fn read_from_ipfs(cid: Cid) -> Vec<u8> {
+pub async fn read_from_ipfs(cid: Cid) -> Result<Vec<u8>, String> {
     // Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
     // If not found, tries to connect to `localhost:5001`.
     let client = IpfsClient::default();
@@ -63,18 +64,12 @@ pub async fn read_from_ipfs(cid: Cid) -> Vec<u8> {
 
     info!("Fetching content from: {}", h);
 
-    let (tx, rx) = channel();
-
-    match client.cat(h)
+    client
+        .cat(h)
         .map_ok(|chunk| chunk.to_vec())
+        .map_err(|e| e.to_string())
         .try_concat()
-		.await
-		{
-            Ok(res) => { tx.send(res).unwrap(); },
-            Err(e) => eprintln!("error reading file: {}", e)
-        }
-
-    rx.recv().unwrap().to_vec()
+        .await
 }
 
 #[no_mangle]
@@ -95,22 +90,32 @@ pub unsafe extern "C" fn ocall_write_ipfs(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ocall_read_ipfs(
-    enc_state: *mut u8,
-    enc_state_size: u32,
-    cid: *const u8,
-    cid_size: u32,
-) -> sgx_status_t {
+pub unsafe extern "C" fn ocall_read_ipfs(cid: *const u8, cid_size: u32) -> sgx_status_t {
     debug!("Entering ocall_read_ipfs");
 
-    let state = slice::from_raw_parts_mut(enc_state, enc_state_size as usize);
     let _cid = slice::from_raw_parts(cid, cid_size as usize);
 
     let mut cid = [0; 46];
     cid.clone_from_slice(_cid);
 
-    let res = read_from_ipfs(cid);
-    state.clone_from_slice(&res);
-
-    sgx_status_t::SGX_SUCCESS
+    let result = read_from_ipfs(cid);
+    match result {
+        Ok(res) => {
+            let filename = str::from_utf8(&cid).unwrap();
+            match File::create(filename) {
+                Ok(mut f) => f.write_all(&res).map_or_else(
+                    |e| {
+                        error!("ocall_read_ipfs failed writing to file. {}", e);
+                        sgx_status_t::SGX_ERROR_UNEXPECTED
+                    },
+                    |_| sgx_status_t::SGX_SUCCESS,
+                ),
+                Err(e) => {
+                    error!("ocall_read_ipfs failed at creating file. {}", e);
+                    sgx_status_t::SGX_ERROR_UNEXPECTED
+                }
+            }
+        }
+        Err(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+    }
 }

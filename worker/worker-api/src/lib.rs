@@ -38,9 +38,7 @@ pub struct Api {
 
 impl Api {
     pub fn new(url: String) -> Api {
-        Api {
-            url,
-        }
+        Api { url }
     }
 
     pub fn get_mu_ra_port(&self) -> Result<String, ()> {
