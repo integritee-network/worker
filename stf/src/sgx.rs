@@ -6,7 +6,7 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
-use sgx_runtime::{Balance, Runtime};
+use sgx_runtime::{Balance, Runtime, BlockNumber};
 use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
@@ -69,14 +69,16 @@ impl Stf {
         ext
     }
 
-    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Vec<u8>>) {
+    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
         ext.execute_with(|| {
-            map_update.iter().for_each(|(k, v)| {
-                match v {
-                    Some(value) => sp_io::storage::set(k, value),
-                    None => sp_io::storage::clear(k),
-                };
-            });
+            map_update
+                .iter()
+                .for_each(|(k, v)| {
+                    match v {
+                        Some(value) => sp_io::storage::set(k, value),
+                        None => sp_io::storage::clear(k)
+                    };
+                });
         });
     }
 
@@ -133,7 +135,7 @@ impl Stf {
         })
     }
 
-    pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
+    pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
         ext.execute_with(|| 
             match getter {
             Getter::trusted(g) => match g.getter {
@@ -159,15 +161,8 @@ impl Stf {
                     Some(42u32.encode())
                 },
             }
+            }
         )
-    }
-
-    fn ensure_root(account: AccountId) -> Result<(), StfError> {
-        if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
-            Ok(())
-        } else {
-            Err(StfError::MissingPrivileges(account))
-        }
     }
 
     fn ensure_root(account: AccountId) -> Result<(), StfError> {
