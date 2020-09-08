@@ -15,7 +15,7 @@
 
 */
 
-use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, PublicGetter, TrustedOperation, Attestation};
+use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
 use base58::{FromBase58, ToBase58};
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -149,8 +149,7 @@ pub fn cmd<'a>(
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
                         to,
-                        shard, // for encointer we assume that every currency has its own shard. so shard == cid
-                        BalanceType::from_num(amount))
+                        amount)
                         .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
                         .into();
                     let _ = perform_operation(matches, &top);
@@ -168,66 +167,8 @@ pub fn cmd<'a>(
                             .value_name("SS58")
                             .help("sender's AccountId in ss58check format"),
                     )
-                })
-                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_who = matches.value_of("accountid").unwrap();
-                    println!("arg_who = {:?}", arg_who);
-                    let who = get_pair_from_str(matches, arg_who);
-                    let (_mrenclave, shard) = get_identifiers(matches);
-                    let top: TrustedOperation = TrustedGetter::balance(sr25519_core::Public::from(who.public()), shard)
-                        .sign(&sr25519_core::Pair::from(who))
-                        .into();
-                    let res = perform_operation(matches, &top);
-                    let bal = if let Some(v) = res {
-                        if let Ok(vd) = <BalanceEntry<BlockNumber>>::decode(&mut v.as_slice()) {
-                            let api = get_chain_api(matches);
-                            let bn = get_block_number(&api);
-                            let dr = get_demurrage_per_block(&api, shard);
-                            debug!("will apply demurrage to {:?}. blocknumber {}, demurrage rate {}", vd, bn, dr);
-                            apply_demurrage(vd, bn, dr)
-                        } else {
-                            info!("could not decode value. maybe hasn't been set? {:x?}", v);
-                            BalanceType::from_num(0)
-                        }
-                    } else {
-                        BalanceType::from_num(0)
-                    };
-                    println!("{}", bal);
-                    Ok(())
-                }),
-        )
-        .add_cmd(
-            Command::new("total-issuance")
-                .description("query total issuance for currency (public information)")
-                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let (_mrenclave, shard) = get_identifiers(matches);
-                    let top: TrustedOperation = PublicGetter::total_issuance(shard)
-                        .into();
-                    let res = perform_operation(matches, &top);
-                    let bal = if let Some(v) = res {
-                        if let Ok(vd) = <BalanceEntry<BlockNumber>>::decode(&mut v.as_slice()) {
-                            let api = get_chain_api(matches);
-                            let bn = get_block_number(&api);
-                            let dr = get_demurrage_per_block(&api, shard);
-                            debug!("will apply demurrage to {:?}. blocknumber {}, demurrage rate {}", vd, bn, dr);
-                            apply_demurrage(vd, bn, dr)                            
-                        } else {
-                            info!("could not decode value. maybe hasn't been set? {:x?}", v);
-                            BalanceType::from_num(0)
-                        }
-                    } else {
-                        BalanceType::from_num(0)
-                    };
-                    println!("{}", bal);
-                    Ok(())
-                }),
-        )
-        .add_cmd(
-            Command::new("register-participant")
-                .description("register participant for next encointer ceremony")
-                .options(|app| {
-                    app.arg(
-                        Arg::with_name("accountid")
+                    .arg(
+                        Arg::with_name("amount")
                             .takes_value(true)
                             .required(true)
                             .value_name("U128")
@@ -241,20 +182,25 @@ pub fn cmd<'a>(
                     let who = get_pair_from_str(matches, arg_who);
                     let signer = get_pair_from_str(matches, "//AliceIncognito");
                     info!("account ss58 is {}", who.public().to_ss58check());
+                    
+                    println!(
+                        "send trusted call set-balance({}, {})",
+                        who.public(),
+                        amount
+                    );
 
                     let (mrenclave, shard) = get_identifiers(matches);
+
                     let nonce = 0; // FIXME: hard coded for now
-                    println!(
-                        "send TrustedCall::register_participant for {}",
-                        who.public(),
-                    );
-                    let top: TrustedOperation = TrustedCall::ceremonies_register_participant(
+
+                    let top: TrustedOperation = TrustedCall::balance_set_balance(
+                        sr25519_core::Public::from(signer.public()),
                         sr25519_core::Public::from(who.public()),
-                        shard, // for encointer we assume that every currency has its own shard. so shard == cid
-                        None)
-                        .sign(&sr25519_core::Pair::from(who), nonce, &mrenclave, &shard)
+                        amount,
+                        amount,)
+                        .sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard)
                         .into();
-                    perform_operation(matches, &top);
+                    let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
         )
@@ -275,19 +221,21 @@ pub fn cmd<'a>(
                     println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
                     let (_mrenclave, shard) = get_identifiers(matches);
-                    println!(
-                        "send TrustedGetter::get_registration for {}",
-                        who.public()
-                    );
-                    let top: TrustedOperation = TrustedGetter::registration(
-                        sr25519_core::Public::from(who.public()),
-                        shard, // for encointer we assume that every currency has its own shard. so shard == cid
-                        )
+                    let top: TrustedOperation = TrustedGetter::free_balance(sr25519_core::Public::from(who.public()))
                         .sign(&sr25519_core::Pair::from(who))
                         .into();
-                    let part = perform_operation(matches, &top).unwrap();
-                    let participant: ParticipantIndexType = Decode::decode(&mut part.as_slice()).unwrap();
-                    println!("Participant index: {:?}", participant);
+                    let res = perform_operation(matches, &top);
+                    let bal = if let Some(v) = res {
+                        if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
+                            vd
+                        } else {
+                            info!("could not decode value. maybe hasn't been set? {:x?}", v);
+                            0
+                        }
+                    } else {
+                        0
+                    };
+                    println!("{}", bal);
                     Ok(())
                 }),
         )
@@ -302,76 +250,15 @@ pub fn cmd<'a>(
                             .value_name("SS58")
                             .help("Sender's incognito AccountId in ss58check format"),
                     )
-                        .arg(
-                            Arg::with_name("attestations")
-                                .takes_value(true)
-                                .required(true)
-                                .multiple(true)
-                                .min_values(2)
-                        )
-                })
-                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_who = matches.value_of("accountid").unwrap();
-                    let who = get_pair_from_str(matches, arg_who);
-                    let (mrenclave, shard) = get_identifiers(matches);
-                    let nonce = 0; // FIXME: hard coded for now
-                    let attestation_args: Vec<_> = matches.values_of("attestations").unwrap().collect();
-                    let mut attestations: Vec<Attestation<MultiSignature, AccountId32, Moment>> = vec![];
-                    for arg in attestation_args.iter() {
-                        let w = Attestation::decode(&mut &hex::decode(arg).unwrap()[..]).unwrap();
-                        attestations.push(w);
-                    }
-                    println!(
-                        "send TrustedCall::register_attestations for {}",
-                        who.public()
-                    );
-                    let top: TrustedOperation = TrustedCall::ceremonies_register_attestations(
-                        sr25519_core::Public::from(who.public()),
-                        attestations
-                        )
-                        .sign(&sr25519_core::Pair::from(who), nonce, &mrenclave, &shard)
-                        .into();
-                    perform_operation(matches, &top);
-                    Ok(())
-                }),
-        )
-        .add_cmd(
-            Command::new("get-attestations")
-                .description("get attestations registration index for this encointer ceremony")
-                .options(|app| {
-                    app.arg(
-                        Arg::with_name("accountid")
+                    .arg(
+                        Arg::with_name("to")
                             .takes_value(true)
                             .required(true)
                             .value_name("SS58")
                             .help("Recipient's on-chain AccountId in ss58check format"),
                     )
-                })
-                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_who = matches.value_of("accountid").unwrap();
-                    let who = get_pair_from_str(matches, arg_who);
-                    let (_mrenclave, shard) = get_identifiers(matches);
-                    println!(
-                        "send TrustedGetter::get_attestations for {}",
-                        who.public(),
-                    );
-                    let top: TrustedOperation = TrustedGetter::attestations(
-                        sr25519_core::Public::from(who.public()),
-                        shard, // for encointer we assume that every currency has its own shard. so shard == cid
-                        )
-                        .sign(&sr25519_core::Pair::from(who))
-                        .into();
-                    let attestations = perform_operation(matches, &top).unwrap();
-                    println!("Attestations: {:?}", hex::encode(attestations));
-                    Ok(())
-                }),
-        )
-        .add_cmd(
-            Command::new("new-claim")
-                .description("read current ceremony phase from chain")
-                .options(|app| {
-                    app.arg(
-                        Arg::with_name("accountid")
+                    .arg(
+                        Arg::with_name("amount")
                             .takes_value(true)
                             .required(true)
                             .value_name("U128")
@@ -386,40 +273,33 @@ pub fn cmd<'a>(
                     )
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                    let arg_who = matches.value_of("accountid").unwrap();
-                    // println!("arg_who = {:?}", arg_who);
-                    let who = get_pair_from_str(matches, arg_who);
+                    let arg_from = matches.value_of("from").unwrap();
+                    let arg_to = matches.value_of("to").unwrap();
+                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                        .expect("amount can be converted to u128");
+                    let from = get_pair_from_str(matches, arg_from);
+                    let to = get_accountid_from_str(arg_to);
+                    println!("from ss58 is {}", from.public().to_ss58check());
+                    println!("to   ss58 is {}", to.to_ss58check());
 
-                    let n_participants = matches
-                        .value_of("n-participants")
-                        .unwrap()
-                        .parse::<u32>()
-                        .unwrap();
+                    println!(
+                        "send trusted call unshield_funds from {} to {}: {}",
+                        from.public(),
+                        to,
+                        amount
+                    );
 
-                    let (_mrenclave, shard) = get_identifiers(matches);
-                    let top: TrustedOperation = TrustedGetter::meetup_index_time_and_location(who.public().into(), shard)
-                        .sign(&sr25519_core::Pair::from(who.clone()))
-                        .into();
+                    let (mrenclave, shard) = get_identifiers(matches);
+                    let nonce = 0; // FIXME: hard coded for now
 
-                    let res = perform_operation(matches, &top).unwrap();
-                    let (mindex, mlocation, mtime): (MeetupIndexType, Option<Location>, Option<Moment>) = Decode::decode(&mut res.as_slice()).unwrap();
-                    info!("got mindex: {:?}", mindex);
-                    info!("got time: {:?}", mtime);
-                    info!("got location: {:?}", mlocation);
-                    let api = get_chain_api(matches);
-                    let cindex = api.get_storage_value("EncointerScheduler", "CurrentCeremonyIndex", None)
-                        .unwrap();
-
-                    let tcall = TrustedCall::balance_unshield(
+                    let top: TrustedOperation = TrustedCall::balance_unshield(
                         sr25519_core::Public::from(from.public()),
                         to,
                         amount,
-                        shard,
-                    );
-                    let nonce = 0; // FIXME: hard coded for now
-                    let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
-                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                        shard)
+                        .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                        .into();
+                    let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
         )
@@ -510,21 +390,43 @@ pub fn call_trusted_stf<P: Pair>(
 
     let xt = compose_extrinsic!(api.clone(), "SubstraTEERegistry", "call_worker", request);
 
-fn get_demurrage_per_block(api: &Api<sr25519::Pair>, cid: CurrencyIdentifier) -> BalanceType {
-    let cp: CurrencyPropertiesType = api
-        .get_storage_map("EncointerCurrencies", "CurrencyProperties", cid, None)
-        .unwrap();
-    debug!("CurrencyProperties are {:?}", cp);
-    cp.demurrage_per_block
+    // send and watch extrinsic until finalized
+    let tx_hash = api.send_extrinsic(xt.hex_encode()).unwrap();
+    info!("stf call extrinsic got finalized. Hash: {:?}", tx_hash);
+    info!("waiting for confirmation of stf call");
+    let act_hash = subscribe_to_call_confirmed(api.clone());
+    info!("callConfirmed event received");
+    debug!(
+        "Expected stf call Hash: {:?}",
+        blake2s(32, &[0; 32], &call_encrypted).as_bytes()
+    );
+    debug!("confirmation stf call Hash:   {:?}", act_hash);
 }
 
-fn apply_demurrage(entry: BalanceEntry<BlockNumber>, current_block: BlockNumber, demurrage_per_block: BalanceType) -> BalanceType {
-    let elapsed_time_block_number = current_block.checked_sub(entry.last_update).unwrap();
-    let elapsed_time_u32: u32 = elapsed_time_block_number.into();
-    let elapsed_time = BalanceType::from_num(elapsed_time_u32);
-    let exponent : BalanceType = -demurrage_per_block * elapsed_time;
-    debug!("demurrage per block {}, current_block {}, last {}, elapsed_blocks {}", demurrage_per_block, current_block, entry.last_update, elapsed_time);
-    let exp_result : BalanceType = exp(exponent).unwrap();
-    entry.principal.checked_mul(exp_result).unwrap()
+pub fn get_trusted_stf_state(
+    workerapi: &WorkerApi,
+    getter: TrustedGetterSigned,
+    shard: &ShardIdentifier,
+) {
+    //TODO: #91
+    //  encrypt getter
+    //  decrypt response and verify signature
+    debug!("calling workerapi to get value");
+    let ret = workerapi
+        .get_stf_state(getter, shard)
+        .expect("getting value failed");
+    let ret_cropped = &ret[..9 * 2];
+    debug!(
+        "got getter response from worker: {:?}\ncropping to {:?}",
+        ret, ret_cropped
+    );
+    let valopt: Option<Vec<u8>> = Decode::decode(&mut &ret_cropped[..]).unwrap();
+    match valopt {
+        Some(v) => {
+            let value = U256::from_little_endian(&v);
+            println!("    value = {}", value);
+        }
+        _ => error!("error getting value"),
+    };
 }
-
+*/

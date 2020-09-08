@@ -134,22 +134,30 @@ impl Stf {
     }
 
     pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
-        ext.execute_with(|| match getter {
-            TrustedGetter::free_balance(who) => {
-                if let Some(info) = get_account_info(&who) {
-                    debug!("AccountInfo for {:?} is {:?}", who, info);
-                    Some(info.data.free.encode())
-                } else {
-                    None
+        ext.execute_with(|| 
+            match getter {
+            Getter::trusted(g) => match g.getter {
+                TrustedGetter::free_balance(who) => {
+                    if let Some(info) = get_account_info(&who) {
+                        debug!("AccountInfo for {:?} is {:?}", who, info);
+                        Some(info.data.free.encode())
+                    } else {
+                        None
+                    }
                 }
-            }
-            TrustedGetter::reserved_balance(who) => {
-                if let Some(info) = get_account_info(&who) {
-                    debug!("AccountInfo for {:?} is {:?}", who, info);
-                    Some(info.data.reserved.encode())
-                } else {
-                    None
-                }
+                TrustedGetter::reserved_balance(who) => {
+                    if let Some(info) = get_account_info(&who) {
+                        debug!("AccountInfo for {:?} is {:?}", who, info);
+                        Some(info.data.reserved.encode())
+                    } else {
+                        None
+                    }
+                },
+            },
+            Getter::public(g) => match g {
+                PublicGetter::some_value => {
+                    Some(42u32.encode())
+                },
             }
         )
     }

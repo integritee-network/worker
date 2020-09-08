@@ -111,7 +111,7 @@ impl From<TrustedGetterSigned> for Getter {
 #[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
-    total_issuance(CurrencyIdentifier),   
+    some_value,   
 }
 
 #[derive(Encode, Decode, Clone, Debug)]
