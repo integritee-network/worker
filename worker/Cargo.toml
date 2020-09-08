@@ -1,11 +1,6 @@
 [package]
-<<<<<<< HEAD
 name = "substratee-worker"
-version = "0.6.5-sub2.0.0-alpha.7"
-=======
-name = "encointer-worker"
-version = "0.6.8-sub2.0.0-alpha.7"
->>>>>>> a8772b6... update Block number in state and apply demurrage in client (#17)
+version = "0.6.11-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 edition = "2018"
