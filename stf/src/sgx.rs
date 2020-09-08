@@ -71,9 +71,12 @@ impl Stf {
 
     pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Vec<u8>>) {
         ext.execute_with(|| {
-            map_update
-                .iter()
-                .for_each(|(k, v)| sp_io::storage::set(k, v))
+            map_update.iter().for_each(|(k, v)| {
+                match v {
+                    Some(value) => sp_io::storage::set(k, value),
+                    None => sp_io::storage::clear(k),
+                };
+            });
         });
     }
 
@@ -159,6 +162,14 @@ impl Stf {
         }
     }
 
+    fn ensure_root(account: AccountId) -> Result<(), StfError> {
+        if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
+            Ok(())
+        } else {
+            Err(StfError::MissingPrivileges(account))
+        }
+    }
+
     fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
         match get_account_info(&account) {
             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
@@ -211,6 +222,7 @@ impl Stf {
         };
         key_hashes
     }
+
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
         info!("No specific storage updates needed for getter. Returning those for on block: {:?}", getter);

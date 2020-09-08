@@ -114,7 +114,7 @@ pub enum PublicGetter {
     total_issuance(CurrencyIdentifier),   
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
     balance_set_balance(AccountId, AccountId, Balance, Balance),
