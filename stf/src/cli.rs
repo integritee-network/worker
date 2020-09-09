@@ -149,9 +149,10 @@ pub fn cmd<'a>(
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
                         to,
-                        amount)
-                        .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
-                        .into();
+                        amount,
+                    )
+                    .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                    .into();
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
@@ -182,7 +183,7 @@ pub fn cmd<'a>(
                     let who = get_pair_from_str(matches, arg_who);
                     let signer = get_pair_from_str(matches, "//AliceIncognito");
                     info!("account ss58 is {}", who.public().to_ss58check());
-                    
+
                     println!(
                         "send trusted call set-balance({}, {})",
                         who.public(),
@@ -197,9 +198,10 @@ pub fn cmd<'a>(
                         sr25519_core::Public::from(signer.public()),
                         sr25519_core::Public::from(who.public()),
                         amount,
-                        amount,)
-                        .sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard)
-                        .into();
+                        amount,
+                    )
+                    .sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard)
+                    .into();
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
@@ -221,9 +223,10 @@ pub fn cmd<'a>(
                     println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
                     let (_mrenclave, shard) = get_identifiers(matches);
-                    let top: TrustedOperation = TrustedGetter::free_balance(sr25519_core::Public::from(who.public()))
-                        .sign(&sr25519_core::Pair::from(who))
-                        .into();
+                    let top: TrustedOperation =
+                        TrustedGetter::free_balance(sr25519_core::Public::from(who.public()))
+                            .sign(&sr25519_core::Pair::from(who))
+                            .into();
                     let res = perform_operation(matches, &top);
                     let bal = if let Some(v) = res {
                         if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
@@ -296,9 +299,10 @@ pub fn cmd<'a>(
                         sr25519_core::Public::from(from.public()),
                         to,
                         amount,
-                        shard)
-                        .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
-                        .into();
+                        shard,
+                    )
+                    .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                    .into();
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),

@@ -20,13 +20,13 @@ use std::thread;
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
-use codec::{Decode};
+use codec::Decode;
 use log::*;
 use ws::connect;
 
 use client::WsClient;
 use requests::*;
-use substratee_stf::{ShardIdentifier, Getter};
+use substratee_stf::{Getter, ShardIdentifier};
 
 pub mod client;
 pub mod requests;
@@ -54,11 +54,7 @@ impl Api {
         Ok(rsa_pubkey)
     }
 
-    pub fn get_stf_state(
-        &self,
-        getter: Getter,
-        shard: &ShardIdentifier,
-    ) -> Result<Vec<u8>, ()> {
+    pub fn get_stf_state(&self, getter: Getter, shard: &ShardIdentifier) -> Result<Vec<u8>, ()> {
         let req = ClientRequest::StfState(getter, shard.to_owned());
         match Self::get(&self, req) {
             Ok(res) => {

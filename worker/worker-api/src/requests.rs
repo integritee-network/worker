@@ -15,7 +15,7 @@
 
 */
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use substratee_stf::{Getter, ShardIdentifier};
 
 #[derive(Encode, Decode, Clone, Debug)]

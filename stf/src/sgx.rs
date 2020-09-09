@@ -6,14 +6,14 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
-use sgx_runtime::{Balance, Runtime, BlockNumber};
+use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, State, Stf, TrustedCall, TrustedCallSigned, Getter, PublicGetter, TrustedGetter, ShardIdentifier,
-    SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+    AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
+    TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
 
@@ -71,14 +71,12 @@ impl Stf {
 
     pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
         ext.execute_with(|| {
-            map_update
-                .iter()
-                .for_each(|(k, v)| {
-                    match v {
-                        Some(value) => sp_io::storage::set(k, value),
-                        None => sp_io::storage::clear(k)
-                    };
-                });
+            map_update.iter().for_each(|(k, v)| {
+                match v {
+                    Some(value) => sp_io::storage::set(k, value),
+                    None => sp_io::storage::clear(k),
+                };
+            });
         });
     }
 
@@ -89,7 +87,6 @@ impl Stf {
         });
     }
 
-
     pub fn execute(
         ext: &mut State,
         call: TrustedCallSigned,
@@ -98,7 +95,12 @@ impl Stf {
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
-                debug!("balance_set_balance({:x?}, {}, {})", who.encode(), free_balance, reserved_balance);
+                debug!(
+                    "balance_set_balance({:x?}, {}, {})",
+                    who.encode(),
+                    free_balance,
+                    reserved_balance
+                );
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
                     AccountId32::from(who),
                     free_balance,
@@ -110,7 +112,12 @@ impl Stf {
             }
             TrustedCall::balance_transfer(from, to, value) => {
                 let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
-                debug!("balance_transfer({:x?}, {:x?}, {})", from.encode(), to.encode(), value);
+                debug!(
+                    "balance_transfer({:x?}, {:x?}, {})",
+                    from.encode(),
+                    to.encode(),
+                    value
+                );
                 if let Some(info) = get_account_info(&from) {
                     debug!("sender balance is {}", info.data.free);
                 } else {
@@ -122,7 +129,13 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                debug!("balance_unshield({:x?}, {:x?}, {}, {})", account_incognito.encode(), beneficiary.encode(), value, shard);
+                debug!(
+                    "balance_unshield({:x?}, {:x?}, {}, {})",
+                    account_incognito.encode(),
+                    beneficiary.encode(),
+                    value,
+                    shard
+                );
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -145,8 +158,7 @@ impl Stf {
     }
 
     pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
-        ext.execute_with(|| 
-            match getter {
+        ext.execute_with(|| match getter {
             Getter::trusted(g) => match g.getter {
                 TrustedGetter::free_balance(who) => {
                     if let Some(info) = get_account_info(&who) {
@@ -165,15 +177,12 @@ impl Stf {
                     } else {
                         None
                     }
-                },
+                }
             },
             Getter::public(g) => match g {
-                PublicGetter::some_value => {
-                    Some(42u32.encode())
-                },
-            }
-            }
-        )
+                PublicGetter::some_value => Some(42u32.encode()),
+            },
+        })
     }
 
     fn ensure_root(account: AccountId) -> Result<(), StfError> {
@@ -226,9 +235,7 @@ impl Stf {
             TrustedCall::balance_set_balance(account, _, _, _) => {
                 debug!("No storage updates needed...")
             }
-            TrustedCall::balance_transfer(account, _, _) => {
-                debug!("No storage updates needed...")
-            }
+            TrustedCall::balance_transfer(account, _, _) => debug!("No storage updates needed..."),
             TrustedCall::balance_unshield(account, _, _, _) => {
                 debug!("No storage updates needed...")
             }
@@ -237,9 +244,11 @@ impl Stf {
         key_hashes
     }
 
-
     pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
-        info!("No specific storage updates needed for getter. Returning those for on block: {:?}", getter);
+        info!(
+            "No specific storage updates needed for getter. Returning those for on block: {:?}",
+            getter
+        );
         Self::storage_hashes_to_update_on_block()
     }
 

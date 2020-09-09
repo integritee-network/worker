@@ -57,8 +57,8 @@ use substratee_node_runtime::{
     AccountId, Event, Hash, Signature,
 };
 use substratee_stf::{
-    cli::get_identifiers, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
-    TrustedOperation, Getter
+    cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
+    TrustedOperation,
 };
 use substratee_worker_api::Api as WorkerApi;
 
@@ -435,10 +435,7 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     WorkerApi::new(url)
 }
 
-fn perform_trusted_operation(
-    matches: &ArgMatches<'_>,
-    top: &TrustedOperation,
-) -> Option<Vec<u8>> {
+fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
     match top {
         TrustedOperation::call(call) => send_request(matches, call.clone()),
         TrustedOperation::get(getter) => get_state(matches, getter.clone()),

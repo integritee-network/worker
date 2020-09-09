@@ -87,13 +87,11 @@ impl From<PublicGetter> for TrustedOperation {
     }
 }
 
-
-
 #[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum Getter {
-    public(PublicGetter),   
-    trusted(TrustedGetterSigned)
+    public(PublicGetter),
+    trusted(TrustedGetterSigned),
 }
 
 impl From<PublicGetter> for Getter {
@@ -111,7 +109,7 @@ impl From<TrustedGetterSigned> for Getter {
 #[derive(Encode, Decode, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
-    some_value,   
+    some_value,
 }
 
 #[derive(Encode, Decode, Clone, Debug)]
