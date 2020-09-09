@@ -6,14 +6,14 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
-use sgx_runtime::{Balance, Runtime};
+use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
-    TrustedGetterSigned, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+    AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
+    TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
 
@@ -80,6 +80,13 @@ impl Stf {
         });
     }
 
+    pub fn update_block_number(ext: &mut State, number: BlockNumber) {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "Number");
+            sp_io::storage::set(&key, &number.encode());
+        });
+    }
+
     pub fn execute(
         ext: &mut State,
         call: TrustedCallSigned,
@@ -88,23 +95,47 @@ impl Stf {
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
+                debug!(
+                    "balance_set_balance({:x?}, {}, {})",
+                    who.encode(),
+                    free_balance,
+                    reserved_balance
+                );
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
                     AccountId32::from(who),
                     free_balance,
                     reserved_balance,
                 )
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?;
+                .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
                 Ok(())
             }
             TrustedCall::balance_transfer(from, to, value) => {
                 let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                debug!(
+                    "balance_transfer({:x?}, {:x?}, {})",
+                    from.encode(),
+                    to.encode(),
+                    value
+                );
+                if let Some(info) = get_account_info(&from) {
+                    debug!("sender balance is {}", info.data.free);
+                } else {
+                    debug!("sender balance is zero");
+                }
                 sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
                     .dispatch(origin)
-                    .map_err(|_| StfError::Dispatch)?;
+                    .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+                debug!(
+                    "balance_unshield({:x?}, {:x?}, {}, {})",
+                    account_incognito.encode(),
+                    beneficiary.encode(),
+                    value,
+                    shard
+                );
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -119,30 +150,38 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_shield(who, value) => {
+                debug!("balance_shield({:x?}, {})", who.encode(), value);
                 Self::shield_funds(who, value)?;
                 Ok(())
             }
         })
     }
 
-    pub fn get_state(ext: &mut State, getter: TrustedGetter) -> Option<Vec<u8>> {
+    pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
         ext.execute_with(|| match getter {
-            TrustedGetter::free_balance(who) => {
-                if let Some(info) = get_account_info(&who) {
-                    debug!("AccountInfo for {:?} is {:?}", who, info);
-                    Some(info.data.free.encode())
-                } else {
-                    None
+            Getter::trusted(g) => match g.getter {
+                TrustedGetter::free_balance(who) => {
+                    if let Some(info) = get_account_info(&who) {
+                        debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+                        debug!("Account free balance is {}", info.data.free);
+                        Some(info.data.free.encode())
+                    } else {
+                        None
+                    }
                 }
-            }
-            TrustedGetter::reserved_balance(who) => {
-                if let Some(info) = get_account_info(&who) {
-                    debug!("AccountInfo for {:?} is {:?}", who, info);
-                    Some(info.data.reserved.encode())
-                } else {
-                    None
+                TrustedGetter::reserved_balance(who) => {
+                    if let Some(info) = get_account_info(&who) {
+                        debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+                        debug!("Account reserved balance is {}", info.data.reserved);
+                        Some(info.data.reserved.encode())
+                    } else {
+                        None
+                    }
                 }
-            }
+            },
+            Getter::public(g) => match g {
+                PublicGetter::some_value => Some(42u32.encode()),
+            },
         })
     }
 
@@ -162,10 +201,10 @@ impl Stf {
                 account_info.data.reserved,
             )
             .dispatch(sgx_runtime::Origin::ROOT)
-            .map_err(|_| StfError::Dispatch)?,
+            .map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
             None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?,
+                .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
         };
         Ok(())
     }
@@ -183,7 +222,7 @@ impl Stf {
                     account_info.data.reserved,
                 )
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?;
+                .map_err(|_| StfError::Dispatch("unshield_funds::set_balance".to_string()))?;
                 Ok(())
             }
             None => Err(StfError::InexistentAccount(account)),
@@ -191,37 +230,29 @@ impl Stf {
     }
 
     pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
-        let mut key_hashes = Vec::new();
+        let key_hashes = Vec::new();
         match call.call {
-            TrustedCall::balance_set_balance(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
-            }
-            TrustedCall::balance_transfer(account, _, _) => {
-                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
-            }
-            TrustedCall::balance_unshield(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(&account))
-            }
+            TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
+            TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
+            TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };
         key_hashes
     }
 
-    pub fn get_storage_hashes_to_update_for_getter(getter: &TrustedGetterSigned) -> Vec<Vec<u8>> {
+    pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
         info!(
             "No specific storage updates needed for getter. Returning those for on block: {:?}",
-            getter.getter
+            getter
         );
         Self::storage_hashes_to_update_on_block()
     }
 
     pub fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
-        let mut key_hashes = Vec::new();
-
-        // get all shards that are currently registered
-        key_hashes.push(shards_key_hash());
-
-        key_hashes
+        // let key_hashes = Vec::new();
+        // key_hashes.push(storage_value_key("dummy", "dummy"));
+        // key_hashes
+        Vec::new()
     }
 }
 
@@ -230,6 +261,8 @@ pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u
 }
 
 pub fn shards_key_hash() -> Vec<u8> {
+    // here you have to point to a storage value containing a Vec of ShardIdentifiers
+    // the enclave uses this to autosubscribe to no shards
     storage_value_key("EncointerCurrencies", "CurrencyIdentifiers")
 }
 
@@ -320,7 +353,7 @@ pub enum StfError {
     #[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
     MissingPrivileges(AccountId),
     #[display(fmt = "Error dispatching runtime call")]
-    Dispatch,
+    Dispatch(String),
     #[display(fmt = "Not enough funds to perform operation")]
     MissingFunds,
     #[display(fmt = "Account does not exist {:?}", _0)]

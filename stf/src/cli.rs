@@ -15,7 +15,7 @@
 
 */
 
-use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperationSigned};
+use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
 use base58::{FromBase58, ToBase58};
 use clap::{Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -30,7 +30,7 @@ use std::path::PathBuf;
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
-    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperationSigned) -> Option<Vec<u8>>,
+    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation) -> Option<Vec<u8>>,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {
@@ -138,23 +138,22 @@ pub fn cmd<'a>(
                     info!("from ss58 is {}", from.public().to_ss58check());
                     info!("to ss58 is {}", to.to_ss58check());
 
-                    let (mrenclave, shard) = get_identifiers(matches);
-
-                    let tcall = TrustedCall::balance_transfer(
-                        sr25519_core::Public::from(from.public()),
-                        to,
-                        amount,
-                    );
-                    let nonce = 0; // FIXME: hard coded for now
-                    let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
                     println!(
                         "send trusted call transfer from {} to {}: {}",
-                        tscall.call.account(),
+                        from.public(),
                         to,
                         amount
                     );
-                    let _ = perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    let (mrenclave, shard) = get_identifiers(matches);
+                    let nonce = 0; // FIXME: hard coded for now
+                    let top: TrustedOperation = TrustedCall::balance_transfer(
+                        sr25519_core::Public::from(from.public()),
+                        to,
+                        amount,
+                    )
+                    .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                    .into();
+                    let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
         )
@@ -185,23 +184,25 @@ pub fn cmd<'a>(
                     let signer = get_pair_from_str(matches, "//AliceIncognito");
                     info!("account ss58 is {}", who.public().to_ss58check());
 
+                    println!(
+                        "send trusted call set-balance({}, {})",
+                        who.public(),
+                        amount
+                    );
+
                     let (mrenclave, shard) = get_identifiers(matches);
 
-                    let tcall = TrustedCall::balance_set_balance(
+                    let nonce = 0; // FIXME: hard coded for now
+
+                    let top: TrustedOperation = TrustedCall::balance_set_balance(
                         sr25519_core::Public::from(signer.public()),
                         sr25519_core::Public::from(who.public()),
                         amount,
                         amount,
-                    );
-                    let nonce = 0; // FIXME: hard coded for now
-                    let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard);
-                    println!(
-                        "send trusted call set-balance({}, {})",
-                        tscall.call.account(),
-                        amount
-                    );
-                    let _ = perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    )
+                    .sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard)
+                    .into();
+                    let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
         )
@@ -221,10 +222,11 @@ pub fn cmd<'a>(
                     let arg_who = matches.value_of("accountid").unwrap();
                     println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
-                    let tgetter =
-                        TrustedGetter::free_balance(sr25519_core::Public::from(who.public()));
-                    let tsgetter = tgetter.sign(&sr25519_core::Pair::from(who));
-                    let res = perform_operation(matches, &TrustedOperationSigned::get(tsgetter));
+                    let top: TrustedOperation =
+                        TrustedGetter::free_balance(sr25519_core::Public::from(who.public()))
+                            .sign(&sr25519_core::Pair::from(who))
+                            .into();
+                    let res = perform_operation(matches, &top);
                     let bal = if let Some(v) = res {
                         if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
                             vd
@@ -282,8 +284,6 @@ pub fn cmd<'a>(
                     println!("from ss58 is {}", from.public().to_ss58check());
                     println!("to   ss58 is {}", to.to_ss58check());
 
-                    let (mrenclave, shard) = get_identifiers(matches);
-
                     println!(
                         "send trusted call unshield_funds from {} to {}: {}",
                         from.public(),
@@ -291,16 +291,18 @@ pub fn cmd<'a>(
                         amount
                     );
 
-                    let tcall = TrustedCall::balance_unshield(
+                    let (mrenclave, shard) = get_identifiers(matches);
+                    let nonce = 0; // FIXME: hard coded for now
+
+                    let top: TrustedOperation = TrustedCall::balance_unshield(
                         sr25519_core::Public::from(from.public()),
                         to,
                         amount,
                         shard,
-                    );
-                    let nonce = 0; // FIXME: hard coded for now
-                    let tscall =
-                        tcall.sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
-                    perform_operation(matches, &TrustedOperationSigned::call(tscall));
+                    )
+                    .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                    .into();
+                    let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
         )

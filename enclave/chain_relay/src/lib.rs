@@ -116,7 +116,7 @@ impl LightValidation {
 
         if grandpa_proof.is_none() {
             relay.last_finalized_block_header = header.clone();
-            relay.unjustified_headers.push(header);
+            relay.unjustified_headers.push(header.hash());
             info!(
                 "Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
                 relay.unjustified_headers.len()
@@ -142,8 +142,8 @@ impl LightValidation {
         Self::schedule_validator_set_change(&mut relay, &header);
 
         // a valid grandpa proof proofs finalization of all previous unjustified blocks
-        relay.headers.append(&mut relay.unjustified_headers);
-        relay.headers.push(header);
+        relay.header_hashes.append(&mut relay.unjustified_headers);
+        relay.header_hashes.push(header.hash());
 
         if validator_set_id > relay.current_validator_set_id {
             relay.current_validator_set = validator_set;
@@ -241,7 +241,7 @@ impl LightValidation {
             .tracked_relays
             .get(&relay_id)
             .ok_or(Error::NoSuchRelayExists)?;
-        Ok(relay.headers[0].hash())
+        Ok(relay.header_hashes[0])
     }
 
     pub fn latest_header(&self, relay_id: RelayId) -> Result<Header, Error> {

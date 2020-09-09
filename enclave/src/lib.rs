@@ -37,9 +37,6 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, Sg
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
-use substratee_stf::{
-    AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
-};
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
@@ -66,6 +63,7 @@ use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
+use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
 mod aes;
 mod attestation;
@@ -112,6 +110,14 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     if let Err(status) = aes::create_sealed_if_absent() {
         return status;
     }
+
+    // for debug purposes, list shards. no problem to panic if fails
+    let shards = state::list_shards().unwrap();
+    debug!("found the following {} shards on disk:", shards.len());
+    for s in shards {
+        debug!("{}", s.encode().to_base58())
+    }
+    //shards.into_iter().map(|s| debug!("{}", s.encode().to_base58()));
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -214,12 +220,14 @@ pub unsafe extern "C" fn get_state(
     let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
     let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
     let value_slice = slice::from_raw_parts_mut(value, value_size as usize);
-    let tusted_getter_signed = TrustedGetterSigned::decode(&mut trusted_op_slice).unwrap();
+    let getter = Getter::decode(&mut trusted_op_slice).unwrap();
 
-    debug!("verifying signature of TrustedCallSigned");
-    if let false = tusted_getter_signed.verify_signature() {
-        error!("bad signature");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    if let Getter::trusted(trusted_getter_signed) = getter.clone() {
+        debug!("verifying signature of TrustedGetterSigned");
+        if let false = trusted_getter_signed.verify_signature() {
+            error!("bad signature");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     if !state::exists(&shard) {
@@ -241,12 +249,13 @@ pub unsafe extern "C" fn get_state(
 
     let latest_header = validator.latest_header(validator.num_relays).unwrap();
 
+    // FIXME: not sure we will ever need this as we are querying trusted state, not onchain state
+    // i.e. demurrage could be correctly applied with this, but the client could do that too.
     debug!("Update STF storage!");
-    let requests: Vec<WorkerRequest> =
-        Stf::get_storage_hashes_to_update_for_getter(&tusted_getter_signed)
-            .into_iter()
-            .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
-            .collect();
+    let requests: Vec<WorkerRequest> = Stf::get_storage_hashes_to_update_for_getter(&getter)
+        .into_iter()
+        .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
+        .collect();
 
     if !requests.is_empty() {
         let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
@@ -263,7 +272,7 @@ pub unsafe extern "C" fn get_state(
     }
 
     debug!("calling into STF to get state");
-    let value_opt = Stf::get_state(&mut state, tusted_getter_signed.getter);
+    let value_opt = Stf::get_state(&mut state, getter);
 
     debug!("returning getter result");
     write_slice_and_whitespace_pad(value_slice, value_opt.encode());
@@ -360,7 +369,8 @@ pub unsafe extern "C" fn sync_chain_relay(
         }
 
         if update_states(signed_block.block.header.clone()).is_err() {
-            error!("Error performing state updates upon block import")
+            error!("Error performing state updates upon block import");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 
         match scan_block_for_relevant_xt(&signed_block.block) {
@@ -387,7 +397,6 @@ pub fn update_states(header: Header) -> SgxResult<()> {
         return Ok(());
     }
 
-    // global requests they are the same for every shard
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
     let update_map = verify_worker_responses(responses, header.clone())?;
     // look for new shards an initialize them
@@ -396,6 +405,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
             Some(shards) => {
                 let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
                     .sgx_error_with_log("error decoding shards")?;
+
                 for s in shards {
                     if !state::exists(&s) {
                         info!("Initialized new shard that was found on chain: {:?}", s);
@@ -414,6 +424,10 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     let mut state = state::load(&s)?;
                     Stf::update_storage(&mut state, &per_shard_update_map);
                     Stf::update_storage(&mut state, &update_map);
+
+                    // block number is purged from the substrate state so it can't be read like other storage values
+                    Stf::update_block_number(&mut state, header.number);
+
                     state::write(state, &s)?;
                 }
             }
@@ -425,7 +439,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
-    debug!("Scanning blocks for relevant xt");
+    debug!("Scanning block {} for relevant xt", block.header.number());
     let mut calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =
@@ -457,8 +471,8 @@ fn handle_shield_funds_xt(
     xt: UncheckedExtrinsicV4<ShieldFundsFn>,
 ) -> SgxResult<()> {
     let (call, account_encrypted, amount, shard) = xt.function.clone();
-    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {:?}",
-        call, account_encrypted, amount, shard
+    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
+        call, account_encrypted, amount, shard.encode().to_base58(),
     );
 
     let mut state = if state::exists(&shard) {
@@ -478,25 +492,25 @@ fn handle_shield_funds_xt(
         &mut state,
         TrustedCallSigned::new(
             TrustedCall::balance_shield(account, amount),
-            0,
-            Default::default(),
+            0,                  //nonce
+            Default::default(), //don't care about signature here
         ),
         calls,
     ) {
         error!("Error performing Stf::execute. Error: {:?}", e);
         return Ok(());
     }
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+
     let state_hash = state::write(state, &shard)?;
+
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let call_hash = blake2_256(&xt.encode());
+    debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+
     calls.push(OpaqueCall(
-        (
-            xt_call,
-            shard,
-            blake2_256(&xt.encode()),
-            state_hash.encode(),
-        )
-            .encode(),
+        (xt_call, shard, call_hash, state_hash.encode()).encode(),
     ));
+
     Ok(())
 }
 
@@ -534,7 +548,12 @@ fn handle_call_worker_xt(
         return Ok(());
     }
 
-    let mut state = state::load(&shard)?;
+    let mut state = if state::exists(&shard) {
+        state::load(&shard)?
+    } else {
+        state::init_shard(&shard)?;
+        Stf::init_state()
+    };
 
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)

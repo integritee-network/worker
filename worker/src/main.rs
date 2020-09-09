@@ -52,8 +52,9 @@ use enclave::api::{
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use substratee_node_primitives::calls::get_first_worker_that_is_not_equal_to_self;
-use substratee_worker_api::Api as WorkerApi;
+use std::time::Duration;
+//use substratee_worker_api::requests::ClientRequest;
+//use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 
 mod constants;
@@ -61,6 +62,9 @@ mod enclave;
 mod ipfs;
 mod tests;
 mod ws_server;
+
+/// how many blocks will be synced before storing the chain db to disk
+const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 
 fn main() {
     // Setup logging
@@ -75,7 +79,7 @@ fn main() {
     info!("Interacting with node on {}", n_url);
     *NODE_URL.lock().unwrap() = n_url;
 
-    let w_ip = matches.value_of("w-server").unwrap_or("127.0.0.1");
+    let w_ip = matches.value_of("w-server").unwrap_or("ws://127.0.0.1");
     let w_port = matches.value_of("w-port").unwrap_or("2000");
     info!("Worker listening on {}:{}", w_ip, w_port);
 
@@ -225,12 +229,12 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     let eid = enclave.geteid();
     // ------------------------------------------------------------------------
     // start the ws server to listen for worker requests
+    let (ws_sender, ws_receiver) = channel();
     let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(eid, w_url.clone(), mu_ra_port.to_string());
+    start_ws_server(w_url.clone(), ws_sender);
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
-    let eid = enclave.geteid();
     let ra_url = format!("{}:{}", w_ip, mu_ra_port);
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
@@ -267,33 +271,29 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     let tx_hash = api.send_extrinsic(_xthex, XtStatus::InBlock).unwrap();
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-    // browse enclave registry
-    match get_first_worker_that_is_not_equal_to_self(&api, &tee_accountid) {
-        Some(w) => {
-            let _url = String::from_utf8_lossy(&w.url[..]).to_string();
-            let _w_api = WorkerApi::new(_url.clone());
-            let _url_split: Vec<_> = _url.split(':').collect();
-            let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
+    // // browse enclave registry
+    // match get_first_worker_that_is_not_equal_to_self(&api, &tee_accountid) {
+    //     Some(w) => {
+    //         let _url = String::from_utf8_lossy(&w.url[..]).to_string();
+    //         let _w_api = WorkerApi::new(_url.clone());
+    //         let _url_split: Vec<_> = _url.split(':').collect();
+    //         let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
 
-            info!("Requesting key provisioning from worker at {}", mura_url);
-            enclave_request_key_provisioning(
-                eid,
-                sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &mura_url,
-            )
-            .unwrap();
-            debug!("key provisioning successfully performed");
-        }
-        None => {
-            info!("there are no other workers");
-        }
-    }
+    //         info!("Requesting key provisioning from worker at {}", mura_url);
+    //         enclave_request_key_provisioning(
+    //             eid,
+    //             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+    //             &mura_url,
+    //         )
+    //         .unwrap();
+    //         debug!("key provisioning successfully performed");
+    //     }
+    //     None => {
+    //         info!("there are no other workers");
+    //     }
+    // }
 
-    println!("*** [+] finished remote attestation\n");
-
-    println!("*** Syncing chain relay\n\n");
     let mut latest_head = init_chain_relay(eid, &api);
-    println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
@@ -317,14 +317,17 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
 
     println!("[+] Subscribed to events. waiting...");
 
+    let timeout = Duration::from_millis(10);
     loop {
-        let msg = receiver.recv().unwrap();
-        if let Ok(events) = parse_events(msg.clone()) {
-            print_events(events, sender.clone())
-        } else if let Ok(_header) = parse_header(msg.clone()) {
-            latest_head = sync_chain_relay(eid, &api, latest_head)
-        } else {
-            println!("[-] Unable to parse received message!")
+        if let Ok(msg) = receiver.recv_timeout(timeout) {
+            if let Ok(events) = parse_events(msg.clone()) {
+                print_events(events, sender.clone())
+            } else if let Ok(_header) = parse_header(msg.clone()) {
+                latest_head = sync_chain_relay(eid, &api, latest_head)
+            }
+        }
+        if let Ok(req) = ws_receiver.recv_timeout(timeout) {
+            ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
         }
     }
 }
@@ -493,7 +496,7 @@ pub fn sync_chain_relay(
             .unwrap();
         blocks_to_sync.push(head.clone());
 
-        if head.block.header.number % 100 == 0 {
+        if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
             println!(
                 "Remaining blocks to fetch until last synced header: {:?}",
                 head.block.header.number - last_synced_head.number
@@ -504,9 +507,9 @@ pub fn sync_chain_relay(
 
     let tee_accountid = enclave_account(eid);
 
-    // only feed 100 blocks at a time into the enclave to save enclave state regularly
+    // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
     let mut i = blocks_to_sync[0].block.header.number as usize;
-    for chunk in blocks_to_sync.chunks(100) {
+    for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
         let xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
         let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();

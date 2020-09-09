@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-enclave"
-version = "0.6.5-sub2.0.0-alpha.7"
+version = "0.6.11-sub2.0.0-alpha.7"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -127,12 +127,18 @@ path = "../substratee-node-primitives"
 default-features = false
 features = ["sgx"]
 
-[patch.crates-io]
-sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-
 [dependencies.ipfs-unixfs]
 git = "https://github.com/whalelephant/rust-ipfs"
 branch = "w-nstd"
 default-features = false
+
+[patch.crates-io]
+sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+log = { git = "https://github.com/mesalock-linux/log-sgx", version = "0.4" }
+env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", version = "0.7" } 
+
+
+
+
 
 
