@@ -98,23 +98,31 @@ impl Stf {
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
+                debug!("balance_set_balance({:?}, {}, {})", who, free_balance, reserved_balance);
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
                     AccountId32::from(who),
                     free_balance,
                     reserved_balance,
                 )
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?;
+                .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
                 Ok(())
             }
             TrustedCall::balance_transfer(from, to, value) => {
                 let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                debug!("balance_transfer({:?}, {:?}, {})", from, to, value);
+                if let Some(info) = get_account_info(&from) {
+                    debug!("sender balance is {}", info.data.free);
+                } else {
+                    debug!("sender balance is zero");
+                }
                 sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
                     .dispatch(origin)
-                    .map_err(|_| StfError::Dispatch)?;
+                    .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+                debug!("balance_unshield({:?}, {:?}, {}, {})", account_incognito, beneficiary, value, shard);
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -129,6 +137,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_shield(who, value) => {
+                debug!("balance_shield({:?}, {})", who, value);
                 Self::shield_funds(who, value)?;
                 Ok(())
             }
@@ -181,10 +190,10 @@ impl Stf {
                 account_info.data.reserved,
             )
             .dispatch(sgx_runtime::Origin::ROOT)
-            .map_err(|_| StfError::Dispatch)?,
+            .map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
             None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?,
+                .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
         };
         Ok(())
     }
@@ -202,7 +211,7 @@ impl Stf {
                     account_info.data.reserved,
                 )
                 .dispatch(sgx_runtime::Origin::ROOT)
-                .map_err(|_| StfError::Dispatch)?;
+                .map_err(|_| StfError::Dispatch("unshield_funds::set_balance".to_string()))?;
                 Ok(())
             }
             None => Err(StfError::InexistentAccount(account)),
@@ -337,7 +346,7 @@ pub enum StfError {
     #[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
     MissingPrivileges(AccountId),
     #[display(fmt = "Error dispatching runtime call")]
-    Dispatch,
+    Dispatch(String),
     #[display(fmt = "Not enough funds to perform operation")]
     MissingFunds,
     #[display(fmt = "Account does not exist {:?}", _0)]
