@@ -57,8 +57,7 @@ use substratee_node_runtime::{
     AccountId, Event, Hash, Signature,
 };
 use substratee_stf::{
-    cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
-    TrustedOperation,
+    cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
 };
 use substratee_worker_api::Api as WorkerApi;
 

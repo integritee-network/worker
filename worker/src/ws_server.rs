@@ -61,7 +61,7 @@ pub fn start_ws_server(addr: String, worker: MpscSender<WsServerRequest>) {
                         .send(WsServerRequest::new(self.client.clone(), req))
                         .unwrap();
                 }
-                Err(e) => self.client.send("Could not decode request").unwrap(),
+                Err(_) => self.client.send("Could not decode request").unwrap(),
             }
             Ok(())
         }

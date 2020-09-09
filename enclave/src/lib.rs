@@ -111,6 +111,14 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
         return status;
     }
 
+    // for debug purposes, list shards. no problem to panic if fails
+    let shards = state::list_shards().unwrap();
+    debug!("found the following {} shards on disk:", shards.len());
+    for s in shards {
+        debug!("{}", s.encode().to_base58())
+    }
+    //shards.into_iter().map(|s| debug!("{}", s.encode().to_base58()));
+
     sgx_status_t::SGX_SUCCESS
 }
 

@@ -53,9 +53,8 @@ use enclave::api::{
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
-use substratee_node_primitives::calls::get_first_worker_that_is_not_equal_to_self;
-use substratee_worker_api::requests::ClientRequest;
-use substratee_worker_api::Api as WorkerApi;
+//use substratee_worker_api::requests::ClientRequest;
+//use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 
 mod constants;
@@ -232,11 +231,10 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     // start the ws server to listen for worker requests
     let (ws_sender, ws_receiver) = channel();
     let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(w_url.clone(), ws_sender.clone());
+    start_ws_server(w_url.clone(), ws_sender);
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
-    let eid = enclave.geteid();
     let ra_url = format!("{}:{}", w_ip, mu_ra_port);
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
@@ -508,7 +506,6 @@ pub fn sync_chain_relay(
     blocks_to_sync.reverse();
 
     let tee_accountid = enclave_account(eid);
-    let tee_nonce = get_nonce(&api, &tee_accountid);
 
     // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
     let mut i = blocks_to_sync[0].block.header.number as usize;
