@@ -372,10 +372,6 @@ pub unsafe extern "C" fn sync_chain_relay(
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
-
-        if update_states(signed_block.block.header).is_err() {
-            error!("Error performing state updates upon block import")
-        }
     }
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
@@ -497,17 +493,17 @@ fn handle_shield_funds_xt(
         error!("Error performing Stf::execute. Error: {:?}", e);
         return Ok(());
     }
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    
     let state_hash = state::write(state, &shard)?;
+
+    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let call_hash = blake2_256(&xt.encode());
+    debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+
     calls.push(OpaqueCall(
-        (
-            xt_call,
-            shard,
-            blake2_256(&xt.encode()),
-            state_hash.encode(),
-        )
-            .encode(),
+        (xt_call, shard, call_hash, state_hash.encode()).encode(),
     ));
+
     Ok(())
 }
 
