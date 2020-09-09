@@ -37,9 +37,6 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, Sg
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
-use substratee_stf::{
-    ShardIdentifier, Stf, TrustedCallSigned, Getter,
-};
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
@@ -65,6 +62,9 @@ use chain_relay::{
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
+use substratee_stf::{
+    AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, Getter,
+};
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 
 mod aes;
@@ -586,7 +586,7 @@ fn handle_call_worker_xt(
 fn verify_worker_responses(
     responses: Vec<WorkerResponse<Vec<u8>>>,
     header: Header,
-) -> SgxResult<HashMap<Vec<u8>, Vec<u8>>> {
+) -> SgxResult<HashMap<Vec<u8>, Option<Vec<u8>>>> {
     let mut update_map = HashMap::new();
     for response in responses.iter() {
         match response {

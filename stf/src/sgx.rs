@@ -12,7 +12,7 @@ use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
 
 use crate::{
-    AccountId, State, Stf, TrustedCall, TrustedCallSigned, Getter, PublicGetter, TrustedGetter, TrustedGetterSigned, ShardIdentifier,
+    AccountId, State, Stf, TrustedCall, TrustedCallSigned, Getter, PublicGetter, TrustedGetter, ShardIdentifier,
     SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use sp_core::blake2_256;
@@ -238,6 +238,16 @@ impl Stf {
         // key_hashes
         Vec::new()
     }
+}
+
+pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
+    Vec::new()
+}
+
+pub fn shards_key_hash() -> Vec<u8> {
+    // here you have to point to a storage value containing a Vec of ShardIdentifiers
+    // the enclave uses this to autosubscribe to no shards
+    storage_value_key("EncointerCurrencies", "CurrencyIdentifiers")
 }
 
 // get the AccountInfo key where the nonce is stored
