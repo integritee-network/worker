@@ -62,10 +62,8 @@ use chain_relay::{
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
-use substratee_stf::{
-    AccountId, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, Getter,
-};
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
+use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
 mod aes;
 mod attestation;
@@ -215,7 +213,7 @@ pub unsafe extern "C" fn get_state(
     let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
     let value_slice = slice::from_raw_parts_mut(value, value_size as usize);
     let getter = Getter::decode(&mut trusted_op_slice).unwrap();
-    
+
     if let Getter::trusted(trusted_getter_signed) = getter.clone() {
         debug!("verifying signature of TrustedGetterSigned");
         if let false = trusted_getter_signed.verify_signature() {
@@ -246,11 +244,10 @@ pub unsafe extern "C" fn get_state(
     // FIXME: not sure we will ever need this as we are querying trusted state, not onchain state
     // i.e. demurrage could be correctly applied with this, but the client could do that too.
     debug!("Update STF storage!");
-    let requests: Vec<WorkerRequest> =
-        Stf::get_storage_hashes_to_update_for_getter(&getter)
-            .into_iter()
-            .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
-            .collect();
+    let requests: Vec<WorkerRequest> = Stf::get_storage_hashes_to_update_for_getter(&getter)
+        .into_iter()
+        .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
+        .collect();
 
     if !requests.is_empty() {
         let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
@@ -398,7 +395,8 @@ pub fn update_states(header: Header) -> SgxResult<()> {
     if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
         match maybe_shards {
             Some(shards) => {
-                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice()).sgx_error_with_log("error decoding shards")?;
+                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
+                    .sgx_error_with_log("error decoding shards")?;
 
                 for s in shards {
                     if !state::exists(&s) {
@@ -411,7 +409,8 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
                         .collect();
 
-                    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(per_shard_request)?;
+                    let responses: Vec<WorkerResponse<Vec<u8>>> =
+                        worker_request(per_shard_request)?;
                     let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
 
                     let mut state = state::load(&s)?;
@@ -424,7 +423,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     state::write(state, &s)?;
                 }
             }
-            None => info!("No shards are on the chain yet")
+            None => info!("No shards are on the chain yet"),
         };
     };
     Ok(())
@@ -485,7 +484,7 @@ fn handle_shield_funds_xt(
         &mut state,
         TrustedCallSigned::new(
             TrustedCall::balance_shield(account, amount),
-            0, //nonce
+            0,                  //nonce
             Default::default(), //don't care about signature here
         ),
         calls,
@@ -493,7 +492,7 @@ fn handle_shield_funds_xt(
         error!("Error performing Stf::execute. Error: {:?}", e);
         return Ok(());
     }
-    
+
     let state_hash = state::write(state, &shard)?;
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];

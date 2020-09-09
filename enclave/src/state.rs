@@ -53,7 +53,10 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
             Stf::init_state()
         }
         n => {
-            debug!("State loaded from {} with size {}B, deserializing...", state_path, n);
+            debug!(
+                "State loaded from {} with size {}B, deserializing...",
+                state_path, n
+            );
             StfState::decode(state_vec)
         }
     };
@@ -77,7 +80,11 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
         Err(status) => return Err(status),
     };
 
-    debug!("new encrypted state with hash=0x{} written to {}", hex::encode_hex(&state_hash), state_path);
+    debug!(
+        "new encrypted state with hash=0x{} written to {}",
+        hex::encode_hex(&state_hash),
+        state_path
+    );
 
     io::write(&cyphertext, &state_path)?;
     Ok(state_hash.into())
@@ -109,7 +116,11 @@ fn read(path: &str) -> SgxResult<Vec<u8>> {
         Ok(h) => h,
         Err(status) => return Err(status),
     };
-    debug!("read encrypted state with hash 0x{} from {}", hex::encode_hex(&state_hash), path);
+    debug!(
+        "read encrypted state with hash 0x{} from {}",
+        hex::encode_hex(&state_hash),
+        path
+    );
 
     aes::de_or_encrypt(&mut bytes)?;
     trace!("buffer decrypted = {:?}", bytes);

@@ -82,8 +82,8 @@ pub mod light_validation {
     use log::*;
     use sgx_types::{sgx_status_t, SgxResult};
     use sp_finality_grandpa::VersionedAuthorityList;
-    use std::sgxfs::SgxFile;
     use std::fs;
+    use std::sgxfs::SgxFile;
 
     pub fn unseal() -> SgxResult<LightValidation> {
         let vec = super::unseal(CHAIN_RELAY_DB)?;
