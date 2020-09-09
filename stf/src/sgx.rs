@@ -98,7 +98,7 @@ impl Stf {
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
-                debug!("balance_set_balance({:?}, {}, {})", who, free_balance, reserved_balance);
+                debug!("balance_set_balance({:x?}, {}, {})", who.encode(), free_balance, reserved_balance);
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
                     AccountId32::from(who),
                     free_balance,
@@ -110,7 +110,7 @@ impl Stf {
             }
             TrustedCall::balance_transfer(from, to, value) => {
                 let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
-                debug!("balance_transfer({:?}, {:?}, {})", from, to, value);
+                debug!("balance_transfer({:x?}, {:x?}, {})", from.encode(), to.encode(), value);
                 if let Some(info) = get_account_info(&from) {
                     debug!("sender balance is {}", info.data.free);
                 } else {
@@ -122,7 +122,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                debug!("balance_unshield({:?}, {:?}, {}, {})", account_incognito, beneficiary, value, shard);
+                debug!("balance_unshield({:x?}, {:x?}, {}, {})", account_incognito.encode(), beneficiary.encode(), value, shard);
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -137,7 +137,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_shield(who, value) => {
-                debug!("balance_shield({:?}, {})", who, value);
+                debug!("balance_shield({:x?}, {})", who.encode(), value);
                 Self::shield_funds(who, value)?;
                 Ok(())
             }
@@ -150,7 +150,8 @@ impl Stf {
             Getter::trusted(g) => match g.getter {
                 TrustedGetter::free_balance(who) => {
                     if let Some(info) = get_account_info(&who) {
-                        debug!("AccountInfo for {:?} is {:?}", who, info);
+                        debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+                        debug!("Account free balance is {}", info.data.free);
                         Some(info.data.free.encode())
                     } else {
                         None
@@ -158,7 +159,8 @@ impl Stf {
                 }
                 TrustedGetter::reserved_balance(who) => {
                     if let Some(info) = get_account_info(&who) {
-                        debug!("AccountInfo for {:?} is {:?}", who, info);
+                        debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+                        debug!("Account reserved balance is {}", info.data.reserved);
                         Some(info.data.reserved.encode())
                     } else {
                         None
@@ -222,13 +224,13 @@ impl Stf {
         let mut key_hashes = Vec::new();
         match call.call {
             TrustedCall::balance_set_balance(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
+                debug!("No storage updates needed...")
             }
             TrustedCall::balance_transfer(account, _, _) => {
-                key_hashes.push(nonce_key_hash(&account)) // dummy, actually not necessary
+                debug!("No storage updates needed...")
             }
             TrustedCall::balance_unshield(account, _, _, _) => {
-                key_hashes.push(nonce_key_hash(&account))
+                debug!("No storage updates needed...")
             }
             TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
         };

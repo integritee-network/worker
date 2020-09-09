@@ -464,8 +464,8 @@ fn handle_shield_funds_xt(
     xt: UncheckedExtrinsicV4<ShieldFundsFn>,
 ) -> SgxResult<()> {
     let (call, account_encrypted, amount, shard) = xt.function.clone();
-    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {:?}",
-        call, account_encrypted, amount, shard
+    info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
+        call, account_encrypted, amount, shard.encode().to_base58(),
     );
 
     let mut state = if state::exists(&shard) {
@@ -485,8 +485,8 @@ fn handle_shield_funds_xt(
         &mut state,
         TrustedCallSigned::new(
             TrustedCall::balance_shield(account, amount),
-            0,
-            Default::default(),
+            0, //nonce
+            Default::default(), //don't care about signature here
         ),
         calls,
     ) {

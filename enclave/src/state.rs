@@ -77,7 +77,7 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
         Err(status) => return Err(status),
     };
 
-    debug!("new state with hash=0x{} written to {}", hex::encode_hex(&state_hash), state_path);
+    debug!("new encrypted state with hash=0x{} written to {}", hex::encode_hex(&state_hash), state_path);
 
     io::write(&cyphertext, &state_path)?;
     Ok(state_hash.into())
@@ -105,6 +105,11 @@ fn read(path: &str) -> SgxResult<Vec<u8>> {
         },
         Err(e) => return Err(e),
     };
+    let state_hash = match rsgx_sha256_slice(&bytes) {
+        Ok(h) => h,
+        Err(status) => return Err(status),
+    };
+    debug!("read encrypted state with hash 0x{} from {}", hex::encode_hex(&state_hash), path);
 
     aes::de_or_encrypt(&mut bytes)?;
     trace!("buffer decrypted = {:?}", bytes);
