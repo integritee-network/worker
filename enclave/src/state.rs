@@ -143,7 +143,10 @@ fn encrypt(mut state: Vec<u8>) -> SgxResult<Vec<u8>> {
 }
 
 pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
-    let files = fs::read_dir(SHARDS_PATH).sgx_error()?;
+    let files = match fs::read_dir(SHARDS_PATH).sgx_error() {
+        Ok(f) => f,
+        Err(_) => return Ok(Vec::new()),
+    };
     let mut shards = Vec::new();
     for file in files {
         let s = file
