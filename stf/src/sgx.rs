@@ -9,7 +9,7 @@ use metadata::StorageHasher;
 use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
-use sp_runtime::traits::Dispatchable;
+use support::traits::UnfilteredDispatchable;
 
 use crate::{
     AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
@@ -106,7 +106,7 @@ impl Stf {
                     free_balance,
                     reserved_balance,
                 )
-                .dispatch(sgx_runtime::Origin::ROOT)
+                .dispatch_bypass_filter(sgx_runtime::Origin::root())
                 .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
                 Ok(())
             }
@@ -124,7 +124,7 @@ impl Stf {
                     debug!("sender balance is zero");
                 }
                 sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
-                    .dispatch(origin)
+                    .dispatch_bypass_filter(origin)
                     .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                 Ok(())
             }
@@ -200,10 +200,10 @@ impl Stf {
                 account_info.data.free + amount,
                 account_info.data.reserved,
             )
-            .dispatch(sgx_runtime::Origin::ROOT)
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
             .map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
             None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
-                .dispatch(sgx_runtime::Origin::ROOT)
+                .dispatch_bypass_filter(sgx_runtime::Origin::root())
                 .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
         };
         Ok(())
@@ -221,7 +221,7 @@ impl Stf {
                     account_info.data.free - amount,
                     account_info.data.reserved,
                 )
-                .dispatch(sgx_runtime::Origin::ROOT)
+                .dispatch_bypass_filter(sgx_runtime::Origin::root())
                 .map_err(|_| StfError::Dispatch("unshield_funds::set_balance".to_string()))?;
                 Ok(())
             }

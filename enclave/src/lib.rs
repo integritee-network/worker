@@ -42,7 +42,7 @@ use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
-use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
+use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE};
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
@@ -187,7 +187,8 @@ fn stf_post_actions(
                 Era::Immortal,
                 validator.genesis_hash(validator.num_relays).unwrap(),
                 validator.genesis_hash(validator.num_relays).unwrap(),
-                RUNTIME_SPEC_VERSION
+                RUNTIME_SPEC_VERSION,
+                RUNTIME_TRANSACTION_VERSION
             )
             .encode();
             nonce += 1;
@@ -197,7 +198,7 @@ fn stf_post_actions(
 
     for xt in extrinsics_buffer.iter() {
         validator
-            .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic(xt.to_vec()))
+            .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap())
             .unwrap();
     }
 
@@ -443,7 +444,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =
-            UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.0.encode().as_slice())
+            UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             // confirm call decodes successfully as well
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
@@ -454,7 +455,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
         };
 
         if let Ok(xt) =
-            UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
+            UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Err(e) = handle_call_worker_xt(&mut calls, xt, block.header.clone()) {
