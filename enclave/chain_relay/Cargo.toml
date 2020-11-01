@@ -1,6 +1,6 @@
 [package]
 name = "chain-relay"
-version = "0.6.12-sub2.0.0-rc5"
+version = "0.6.12-sub2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -28,39 +28,39 @@ default-features = false
 features = ["derive-codec"]
 
 [dependencies.frame-system]
-version = "2.0.0-rc5"
+version = "2.0.0"
 default-features = false
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.6.12-sub2.0.0-rc5"
+tag = "v0.6.12-sub2.0.0"
 package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sp-core]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-application-crypto]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-finality-grandpa]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features = false
 
 [dependencies.sp-runtime]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features = false
 
 [dependencies.sp-runtime-interface]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features = false
 features = ["disable_target_static_assertions"]
 
 [dependencies.sp-trie]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features = false

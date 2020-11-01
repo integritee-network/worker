@@ -348,7 +348,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {
-            Event::balances(be) => {
+            Event::pallet_balances(be) => {
                 println!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
