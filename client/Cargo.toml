@@ -1,6 +1,6 @@
 [package]
 name = "substratee-client"
-version = "0.6.12-sub2.0.0-rc5"
+version = "0.6.12-sub2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -21,7 +21,7 @@ blake2-rfc      = { version = "0.2.18", default-features = false}
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.7-sub2.0.0-rc5"
+tag = "v0.4.10-sub2.0.0"
 
 [dependencies.serde]
 features = ["derive"]
@@ -35,25 +35,25 @@ features = ["derive"]
 version = "1.3.1"
 
 [dependencies.sp-core]
-version = '2.0.0-rc5'
+version = '2.0.0'
 
 [dependencies.sp-runtime]
-version = '2.0.0-rc5'
+version = '2.0.0'
 
 [dependencies.sc-keystore]
-version = '2.0.0-rc5'
+version = '2.0.0'
 
 [dependencies.pallet-balances]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features=false
 
 [dependencies.frame-system]
-version = '2.0.0-rc5'
+version = '2.0.0'
 default-features=false
 
 [dependencies.substratee-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "v0.6.11-sub2.0.0-rc5"
+tag = "v0.6.12-sub2.0.0"
 package = "substratee-node-runtime"
 
 [dependencies.substratee-stf]
@@ -63,10 +63,10 @@ path = "../stf"
 path = "../worker/worker-api"
 
 [dependencies.sp-keyring]
-version = '2.0.0-rc5'
+version = '2.0.0'
 
 [dependencies.sp-application-crypto]
-version = '2.0.0-rc5'
+version = '2.0.0'
 
 #[patch.crates-io]
 #ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}
