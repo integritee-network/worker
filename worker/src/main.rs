@@ -57,7 +57,6 @@ use std::time::Duration;
 //use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 use substratee_worker_api::requests::ClientRequest;
-use std::time::Duration;
 
 mod constants;
 mod enclave;
@@ -67,6 +66,7 @@ mod ws_server;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     // Setup logging

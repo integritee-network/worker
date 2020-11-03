@@ -112,7 +112,7 @@ impl Stf {
                 TrustedCall::balance_transfer(from, to, cid, value) => {
                     let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
                     sgx_runtime::EncointerBalancesCall::<Runtime>::transfer(AccountId32::from(to), cid, value)
-                        .dispatch(origin)
+                        .dispatch_bypass_filter(origin)
                         .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                     Ok(())
                 }
@@ -124,7 +124,7 @@ impl Stf {
                     }
 
                     sgx_runtime::EncointerCeremoniesCall::<Runtime>::register_participant(cid, proof)
-                        .dispatch(origin)
+                        .dispatch_bypass_filter(origin)
                         .map_err(|_| StfError::Dispatch("ceremonies_register_participant".to_string()))?;
                     Ok(())
                 }
@@ -142,7 +142,7 @@ impl Stf {
         
                     let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
                     sgx_runtime::EncointerCeremoniesCall::<Runtime>::register_attestations(attestations)
-                        .dispatch(origin)
+                        .dispatch_bypass_filter(origin)
                         .map_err(|_| StfError::Dispatch("ceremonies_register_attestations".to_string()))?;
                     Ok(())
                 }
@@ -150,7 +150,7 @@ impl Stf {
                     Self::ensure_ceremony_master(ceremony_master)?;
                     let origin = sgx_runtime::Origin::signed(AccountId32::from(ceremony_master));
                     sgx_runtime::EncointerCeremoniesCall::<Runtime>::grant_reputation(cid, reputable)
-                        .dispatch(origin)
+                        .dispatch_bypass_filter(origin)
                         .map_err(|_| StfError::Dispatch("ceremonies_grant_reputation".to_string()))?;
                     Ok(())
                 }
@@ -236,7 +236,7 @@ impl Stf {
 
     // only add key hashes that are not already updated on block
     pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
-        let key_hashes = Vec::new();
+        let mut key_hashes = Vec::new();
         match call.call {
             TrustedCall::balance_transfer(account, _, _, _) => {
                 key_hashes.push(nonce_key_hash(&account))

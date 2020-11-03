@@ -447,7 +447,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =
-            UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.0.encode().as_slice())
+            UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Err(e) = handle_call_worker_xt(&mut calls, xt, block.header.clone()) {
@@ -493,7 +493,12 @@ fn handle_call_worker_xt(
         return Ok(());
     }
 
-    let mut state = state::load(&shard)?;
+    let mut state = if state::exists(&shard) {
+        state::load(&shard)?
+    } else {
+        state::init_shard(&shard)?;
+        Stf::init_state()
+    };
 
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
