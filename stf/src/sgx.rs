@@ -10,6 +10,7 @@ use sgx_runtime::{Runtime, BlockNumber};
 use sp_core::crypto::AccountId32;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::traits::Dispatchable;
+use support::traits::UnfilteredDispatchable;
 use encointer_scheduler::{CeremonyPhaseType, OnCeremonyPhaseChange, CeremonyIndexType};
 use encointer_balances::{BalanceType, BalanceEntry};
 use encointer_currencies::{CurrencyIdentifier, Location};
@@ -235,7 +236,7 @@ impl Stf {
 
     // only add key hashes that are not already updated on block
     pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
-        let mut key_hashes = Vec::new();
+        let key_hashes = Vec::new();
         match call.call {
             TrustedCall::balance_transfer(account, _, _, _) => {
                 key_hashes.push(nonce_key_hash(&account))

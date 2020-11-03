@@ -52,8 +52,9 @@ use enclave::api::{
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use substratee_node_primitives::calls::get_first_worker_that_is_not_equal_to_self;
-use substratee_worker_api::Api as WorkerApi;
+use std::time::Duration;
+//use substratee_worker_api::requests::ClientRequest;
+//use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 use substratee_worker_api::requests::ClientRequest;
 use std::time::Duration;
@@ -66,7 +67,6 @@ mod ws_server;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     // Setup logging
@@ -234,11 +234,10 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     // start the ws server to listen for worker requests
     let (ws_sender, ws_receiver) = channel();
     let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(w_url.clone(),ws_sender.clone());
+    start_ws_server(w_url.clone(), ws_sender);
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
-    let eid = enclave.geteid();
     let ra_url = format!("{}:{}", w_ip, mu_ra_port);
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
@@ -302,9 +301,6 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     //     }
     // }
 
-    println!("*** [+] finished remote attestation\n");
-
-    println!("*** Syncing chain relay\n\n");
     let mut latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
 
@@ -361,7 +357,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {
-            Event::balances(be) => {
+            Event::pallet_balances(be) => {
                 println!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
@@ -491,12 +487,16 @@ pub fn sync_chain_relay(
     // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
     let mut head = curr_head.clone();
 
-
     let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
-
     if no_blocks_to_sync > 1 {
-        println!("Chain Relay is synced until block: {:?}", last_synced_head.number);
-        println!("Last finalized block number: {:?}\n", head.block.header.number);
+        println!(
+            "Chain Relay is synced until block: {:?}",
+            last_synced_head.number
+        );
+        println!(
+            "Last finalized block number: {:?}\n",
+            head.block.header.number
+        );
     }
 
     while head.block.header.parent_hash != last_synced_head.hash() {
@@ -506,7 +506,10 @@ pub fn sync_chain_relay(
         blocks_to_sync.push(head.clone());
 
         if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
-            println!("Remaining blocks to fetch until last synced header: {:?}", head.block.header.number - last_synced_head.number)
+            println!(
+                "Remaining blocks to fetch until last synced header: {:?}",
+                head.block.header.number - last_synced_head.number
+            )
         }
     }
     blocks_to_sync.reverse();
@@ -532,7 +535,11 @@ pub fn sync_chain_relay(
         }
 
         i += chunk.len();
-        println!("Synced {} blocks out of {} finalized blocks", i ,  blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len())
+        println!(
+            "Synced {} blocks out of {} finalized blocks",
+            i,
+            blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
+        )
     }
 
     curr_head.block.header

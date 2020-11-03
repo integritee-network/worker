@@ -49,8 +49,8 @@ use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::constants::{
-    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-    SUBSRATEE_REGISTRY_MODULE,
+    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, 
+    RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
 };
 use crate::ed25519;
 use crate::io;
@@ -647,7 +647,8 @@ pub unsafe extern "C" fn perform_ra(
         Era::Immortal,
         genesis_hash,
         genesis_hash,
-        RUNTIME_SPEC_VERSION
+        RUNTIME_SPEC_VERSION,
+        RUNTIME_TRANSACTION_VERSION
     );
 
     let encoded = xt.encode();

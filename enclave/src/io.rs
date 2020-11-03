@@ -82,6 +82,7 @@ pub mod light_validation {
     use log::*;
     use sgx_types::{sgx_status_t, SgxResult};
     use sp_finality_grandpa::VersionedAuthorityList;
+    use std::fs;
     use std::sgxfs::SgxFile;
     use std::fs;
 

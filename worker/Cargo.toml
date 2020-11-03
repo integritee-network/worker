@@ -1,6 +1,6 @@
 [package]
 name = "encointer-worker"
-version = "0.6.11-sub2.0.0-alpha.7"
+version = "0.6.12-sub2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
 edition = "2018"
@@ -21,14 +21,14 @@ serde_json 				= "1.0"
 serde_derive 			= "1.0"
 
 # ipfs
-ipfs-api				= "0.5.0-alpha2"
-futures 				= "0.1"
-hyper 					= "0.12"
+ipfs-api				= "0.7.2"
+futures					= "0.3"
+tokio 					= { version = "0.2", features = ["macros"] }
 multihash 				= "0.8"
 cid 					= "<0.3.1"
 sha2 					= { version = "0.7", default-features = false }
 
-codec           		= { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+codec           		= { package = "parity-scale-codec", version = "1.3.1", default-features = false, features = ["derive"] }
 primitive-types    		= { version = "0.6", default-features = false, features = ["codec"] }
 
 sgx_urts				= { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -37,7 +37,7 @@ sgx_crypto_helper 		= { rev = "v1.1.2", git = "https://github.com/apache/teaclav
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.6-sub2.0.0-alpha.7"
+tag = "v0.4.10-sub2.0.0"
 
 [dependencies.substratee-node-primitives]
 path = "../substratee-node-primitives"
@@ -51,22 +51,22 @@ branch = "sgx-master"
 package = "encointer-node-teeproxy-runtime"
 
 [dependencies.sp-finality-grandpa]
-version = "2.0.0-alpha.7"
+version = "2.0.0"
 
 [dependencies.sp-runtime]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 
 [dependencies.pallet-balances]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 
 [dependencies.sp-keyring]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 
 [dependencies.frame-system]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 
 [dependencies.substratee-stf]
 path = "../stf"

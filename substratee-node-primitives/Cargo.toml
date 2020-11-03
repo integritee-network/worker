@@ -1,12 +1,12 @@
 [package]
 name = "substratee-node-primitives"
-version = "0.6.11-sub2.0.0-alpha.7"
+version = "0.6.12-sub2.0.0"
 authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"
 
 [dependencies]
 log             = { version = "0.4", optional = true }
-codec           = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+codec           = { package = "parity-scale-codec", version = "1.3.1", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.6", default-features = false, features = ["codec"] }
 base58 			= { version = "0.1", optional = true }
 
@@ -25,15 +25,15 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.6-sub2.0.0-alpha.7"
+tag = "v0.4.10-sub2.0.0"
 optional = true
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 default-features = false
 
 [dependencies.sp-runtime]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 default-features = false
 optional = true
 

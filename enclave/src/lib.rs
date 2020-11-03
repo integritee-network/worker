@@ -45,12 +45,15 @@ use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
-use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, SUBSRATEE_REGISTRY_MODULE};
+use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE};
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
+use ipfs::IpfsContent;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::CALL_WORKER;
@@ -69,6 +72,7 @@ mod attestation;
 mod constants;
 mod ed25519;
 mod io;
+mod ipfs;
 mod rsa3072;
 mod state;
 mod utils;
@@ -108,6 +112,14 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     if let Err(status) = aes::create_sealed_if_absent() {
         return status;
     }
+
+    // for debug purposes, list shards. no problem to panic if fails
+    let shards = state::list_shards().unwrap();
+    debug!("found the following {} shards on disk:", shards.len());
+    for s in shards {
+        debug!("{}", s.encode().to_base58())
+    }
+    //shards.into_iter().map(|s| debug!("{}", s.encode().to_base58()));
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -177,7 +189,8 @@ fn stf_post_actions(
                 Era::Immortal,
                 validator.genesis_hash(validator.num_relays).unwrap(),
                 validator.genesis_hash(validator.num_relays).unwrap(),
-                RUNTIME_SPEC_VERSION
+                RUNTIME_SPEC_VERSION,
+                RUNTIME_TRANSACTION_VERSION
             )
             .encode();
             nonce += 1;
@@ -187,7 +200,7 @@ fn stf_post_actions(
 
     for xt in extrinsics_buffer.iter() {
         validator
-            .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic(xt.to_vec()))
+            .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap())
             .unwrap();
     }
 
@@ -211,7 +224,7 @@ pub unsafe extern "C" fn get_state(
     let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
     let value_slice = slice::from_raw_parts_mut(value, value_size as usize);
     let getter = Getter::decode(&mut trusted_op_slice).unwrap();
-    
+
     if let Getter::trusted(trusted_getter_signed) = getter.clone() {
         debug!("verifying signature of TrustedGetterSigned");
         if let false = trusted_getter_signed.verify_signature() {
@@ -242,11 +255,10 @@ pub unsafe extern "C" fn get_state(
     // FIXME: not sure we will ever need this as we are querying trusted state, not onchain state
     // i.e. demurrage could be correctly applied with this, but the client could do that too.
     debug!("Update STF storage!");
-    let requests: Vec<WorkerRequest> =
-        Stf::get_storage_hashes_to_update_for_getter(&getter)
-            .into_iter()
-            .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
-            .collect();
+    let requests: Vec<WorkerRequest> = Stf::get_storage_hashes_to_update_for_getter(&getter)
+        .into_iter()
+        .map(|key| WorkerRequest::ChainStorage(key, Some(latest_header.hash())))
+        .collect();
 
     if !requests.is_empty() {
         let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
@@ -368,7 +380,6 @@ pub unsafe extern "C" fn sync_chain_relay(
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
-
     }
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
@@ -396,7 +407,9 @@ pub fn update_states(header: Header) -> SgxResult<()> {
     if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
         match maybe_shards {
             Some(shards) => {
-                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice()).sgx_error_with_log("error decoding shards")?;
+                let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
+                    .sgx_error_with_log("error decoding shards")?;
+
                 for s in shards {
                     if !state::exists(&s) {
                         info!("Initialized new shard that was found on chain: {:?}", s);
@@ -408,7 +421,8 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                         .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
                         .collect();
 
-                    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(per_shard_request)?;
+                    let responses: Vec<WorkerResponse<Vec<u8>>> =
+                        worker_request(per_shard_request)?;
                     let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
 
                     let mut state = state::load(&s)?;
@@ -421,7 +435,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     state::write(state, &s)?;
                 }
             }
-            None => info!("No shards are on the chain yet")
+            None => info!("No shards are on the chain yet"),
         };
     };
     Ok(())
@@ -546,8 +560,6 @@ fn verify_worker_responses(
 extern "C" {
     pub fn ocall_read_ipfs(
         ret_val: *mut sgx_status_t,
-        enc_state: *mut u8,
-        enc_state_size: u32,
         cid: *const u8,
         cid_size: u32,
     ) -> sgx_status_t;
@@ -579,6 +591,9 @@ extern "C" {
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
         state::test_encrypted_state_io_works,
+        ipfs::test_creates_ipfs_content_struct_works,
+        ipfs::test_verification_ok_for_correct_content,
+        ipfs::test_verification_fails_for_incorrect_content,
         test_ocall_read_write_ipfs,
         test_ocall_worker_request
     )
@@ -588,7 +603,7 @@ fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut cid_buf: Vec<u8> = vec![0; 46];
-    let enc_state: Vec<u8> = vec![20; 36];
+    let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
 
     let _res = unsafe {
         ocall_write_ipfs(
@@ -600,18 +615,28 @@ fn test_ocall_read_write_ipfs() {
         )
     };
 
-    let mut ret_state = vec![0; 36];
-    let _res = unsafe {
+    let res = unsafe {
         ocall_read_ipfs(
             &mut rt as *mut sgx_status_t,
-            ret_state.as_mut_ptr(),
-            ret_state.len() as u32,
             cid_buf.as_ptr(),
             cid_buf.len() as u32,
         )
     };
 
-    assert_eq!(enc_state, ret_state);
+    if res == sgx_status_t::SGX_SUCCESS {
+        let cid = std::str::from_utf8(&cid_buf).unwrap();
+        let mut f = File::open(&cid).unwrap();
+        let mut content_buf = Vec::new();
+        f.read_to_end(&mut content_buf).unwrap();
+        info!("reading file {:?} of size {} bytes", f, &content_buf.len());
+
+        let mut ipfs_content = IpfsContent::new(cid, content_buf);
+        let verification = ipfs_content.verify();
+        assert_eq!(verification.is_ok(), true);
+    } else {
+        error!("was not able to write to file");
+        assert!(false);
+    }
 }
 
 // TODO: this is redundantly defined in worker/src/main.rs

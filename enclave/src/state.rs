@@ -16,6 +16,7 @@
 */
 
 use std::fs;
+
 use std::vec::Vec;
 use std::io::Write;
 
@@ -53,7 +54,10 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
             Stf::init_state()
         }
         n => {
-            debug!("State loaded from {} with size {}B, deserializing...", state_path, n);
+            debug!(
+                "State loaded from {} with size {}B, deserializing...",
+                state_path, n
+            );
             StfState::decode(state_vec)
         }
     };
@@ -77,7 +81,11 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
         Err(status) => return Err(status),
     };
 
-    debug!("new state with hash=0x{} written to {}", hex::encode_hex(&state_hash), state_path);
+    debug!(
+        "new encrypted state with hash=0x{} written to {}",
+        hex::encode_hex(&state_hash),
+        state_path
+    );
 
     io::write(&cyphertext, &state_path)?;
     Ok(state_hash.into())
@@ -108,6 +116,15 @@ fn read(path: &str) -> SgxResult<Vec<u8>> {
         },
         Err(e) => return Err(e),
     };
+    let state_hash = match rsgx_sha256_slice(&bytes) {
+        Ok(h) => h,
+        Err(status) => return Err(status),
+    };
+    debug!(
+        "read encrypted state with hash 0x{} from {}",
+        hex::encode_hex(&state_hash),
+        path
+    );
 
     aes::de_or_encrypt(&mut bytes)?;
     trace!("buffer decrypted = {:?}", bytes);
@@ -127,6 +144,25 @@ fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
 fn encrypt(mut state: Vec<u8>) -> SgxResult<Vec<u8>> {
     aes::de_or_encrypt(&mut state)?;
     Ok(state)
+}
+
+pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
+    let files = match fs::read_dir(SHARDS_PATH).sgx_error() {
+        Ok(f) => f,
+        Err(_) => return Ok(Vec::new()),
+    };
+    let mut shards = Vec::new();
+    for file in files {
+        let s = file
+            .sgx_error()?
+            .file_name()
+            .into_string()
+            .sgx_error()?
+            .from_base58()
+            .sgx_error()?;
+        shards.push(ShardIdentifier::decode(&mut s.as_slice()).sgx_error()?);
+    }
+    Ok(shards)
 }
 
 pub fn test_encrypted_state_io_works() {

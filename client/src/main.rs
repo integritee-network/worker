@@ -491,10 +491,7 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     WorkerApi::new(url)
 }
 
-fn perform_trusted_operation(
-    matches: &ArgMatches<'_>,
-    top: &TrustedOperation,
-) -> Option<Vec<u8>> {
+fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
     match top {
         TrustedOperation::call(call) => send_request(matches, call.clone()),
         TrustedOperation::get(getter) => get_state(matches, getter.clone()),

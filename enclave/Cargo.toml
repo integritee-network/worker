@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-enclave"
-version = "0.6.11-sub2.0.0-alpha.7"
+version = "0.6.12-sub2.0.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 
@@ -31,7 +31,7 @@ sgx_tunittest = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-
 [dependencies]
 aes               = { version = "0.3.2" }
 ofb               = { version = "0.1.1" }
-codec             = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+codec             = { package = "parity-scale-codec", version = "1.3.1", default-features = false, features = ["derive"] }
 primitive-types   = { version = "0.6", default-features = false, features = ["codec"] }
 sgx-crypto-helper = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
 log               = { version = "0.4", git = "https://github.com/mesalock-linux/log-sgx" }
@@ -49,6 +49,10 @@ httparse        = { version = "1.3",  default-features = false }
 itertools       = { version = "0.8",  default-features = false, features = []}
 bit-vec         = { version = "0.6",    default-features = false }
 base58          = { rev = "sgx_1.1.2", package="rust-base58", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features=["mesalock_sgx"] }
+
+cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", default-features = false }
+multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
+
 
 [dependencies.webpki]
 git              = "https://github.com/mesalock-linux/webpki"
@@ -73,7 +77,7 @@ features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.11-sub2.0.0-alpha.7"
+tag = "v0.6.12-sub2.0.0"
 default-features = false
 optional = true
 package = "sp-io"
@@ -84,25 +88,25 @@ git = "https://github.com/apache/teaclave-sgx-sdk.git"
 rev = "v1.1.2"
 
 [dependencies.sp-core]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-finality-grandpa]
-version = "2.0.0-alpha.7"
+version = "2.0.0"
 default-features = false
 
 [dependencies.sp-runtime]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 default-features = false
 
 [dependencies.sp-std]
-version = '2.0.0-alpha.7'
+version = '2.0.0'
 default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.6-sub2.0.0-alpha.7"
+tag = "v0.4.10-sub2.0.0"
 default-features = false
 features = ["full_crypto"]
 
@@ -116,7 +120,7 @@ features = ["sgx"]
 
 [dependencies.sgx-externalities]
 git = "https://github.com/encointer/sgx-runtime"
-tag = "v0.6.11-sub2.0.0-alpha.7"
+tag = "v0.6.12-sub2.0.0"
 default-features = false
 
 [dependencies.substratee-node-primitives]
@@ -124,7 +128,12 @@ path = "../substratee-node-primitives"
 default-features = false
 features = ["sgx"]
 
+[dependencies.ipfs-unixfs]
+git = "https://github.com/whalelephant/rust-ipfs"
+branch = "w-nstd"
+default-features = false
+
 [patch.crates-io]
-sp-io = { git = "https://github.com/encointer/sgx-runtime", tag = "v0.6.11-sub2.0.0-alpha.7", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sp-io = { git = "https://github.com/encointer/sgx-runtime", tag = "v0.6.12-sub2.0.0", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 log = { git = "https://github.com/mesalock-linux/log-sgx", version = "0.4" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", version = "0.7" } 

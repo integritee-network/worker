@@ -23,7 +23,7 @@ use sgx_types::*;
 use codec::{Decode, Encode};
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
-use substratee_stf::{ShardIdentifier, Getter};
+use substratee_stf::{Getter, ShardIdentifier};
 use substratee_worker_api::requests::*;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
@@ -61,7 +61,7 @@ pub fn start_ws_server(addr: String, worker: MpscSender<WsServerRequest>) {
                         .send(WsServerRequest::new(self.client.clone(), req))
                         .unwrap();
                 }
-                Err(e) => self.client.send("Could not decode request").unwrap()
+                Err(_) => self.client.send("Could not decode request").unwrap(),
             }
             Ok(())
         }
@@ -96,11 +96,7 @@ pub fn handle_request(
     req.client.send(answer)
 }
 
-fn get_stf_state(
-    eid: sgx_enclave_id_t,
-    getter: Getter,
-    shard: ShardIdentifier,
-) -> Message {
+fn get_stf_state(eid: sgx_enclave_id_t, getter: Getter, shard: ShardIdentifier) -> Message {
     info!("     [WS Server] Query state");
     let value = match enclave_query_state(eid, getter.encode(), shard.encode()) {
         Ok(val) => Some(val),
