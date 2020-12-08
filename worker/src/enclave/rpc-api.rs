@@ -76,34 +76,22 @@ pub trait AuthorApi<Hash, BlockHash> {
 }
 
 
-/// Blockchain backend API
-trait ChainBackend<Client, Block: BlockT>: Send + Sync + 'static
-	where
-		Block: BlockT + 'static,
-		Client: HeaderBackend<Block> + BlockchainEvents<Block> + 'static,
-{
-	/// Get client reference.
-	fn client(&self) -> &Arc<Client>;
+#[rpc]
+pub trait ChainApi<Number, Hash, Header, SignedBlock> {
+	/// RPC metadata
+	type Metadata;
 
-	/// Get subscriptions reference.
-	fn subscriptions(&self) -> &SubscriptionManager;
+	/// All head subscription
+	#[pubsub(subscription = "chain_allHead", subscribe, name = "chain_subscribeAllHeads")]
+	fn subscribe_all_heads(&self, metadata: Self::Metadata, subscriber: Subscriber<Header>);
 
-	/// All new head subscription
-	fn subscribe_all_heads(
+	/// Unsubscribe from all head subscription.
+	#[pubsub(subscription = "chain_allHead", unsubscribe, name = "chain_unsubscribeAllHeads")]
+	fn unsubscribe_all_heads(
 		&self,
-		_metadata: crate::Metadata,
-		subscriber: Subscriber<Block::Header>,
-	) {
-		subscribe_headers(
-			self.client(),
-			self.subscriptions(),
-			subscriber,
-			|| self.client().info().best_hash,
-			|| self.client().import_notification_stream()
-				.map(|notification| Ok::<_, ()>(notification.header))
-				.compat(),
-		)
-	}
+		metadata: Option<Self::Metadata>,
+		id: SubscriptionId,
+	) -> RpcResult<bool>;
 }
 
 /// Substrate state API
