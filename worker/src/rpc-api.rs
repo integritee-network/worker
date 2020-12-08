@@ -21,7 +21,7 @@
 //! Substrate block-author/full-node API.
 
 use jsonrpc_derive::rpc;
-use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId};
+use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId, manager::SubscriptionManager};
 use sp_core::Bytes;
 use sp_transaction_pool::TransactionStatus;
 use self::error::{FutureResult, Result};
@@ -74,7 +74,6 @@ pub trait AuthorApi<Hash, BlockHash> {
 		)
 	}
 }
-
 
 #[rpc]
 pub trait ChainApi<Number, Hash, Header, SignedBlock> {
