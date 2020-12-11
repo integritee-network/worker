@@ -1,46 +1,53 @@
-// TODO: Adapt this copyright according to licencse
+extern crate json_rpc;
+use json_rpc::{Server, Json, Error};
 
-// This file is part of Substrate.
+use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
+use substratee_node_runtime::{
+    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
+};
 
-// Copyright (C) 2017-2020 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+#[no_mangle]
+pub unsafe extern "C" fn start_rpc_server(
+    socket_fd: c_int,
+    sign_type: sgx_quote_sign_type_t,
+) -> sgx_status_t {
+	let mut rpc_server = Server::new();
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+	// Register rpc methods
+    // rpc_method(server, method_name, parameters)	
+    
+    /// Submit hex-encoded extrinsic for inclusion in block.
+	rpc_method!(rpc_server, author_submitExtrinsic, ext<Bytes>, {
+        let xt = match Decode::decode(&mut &ext[..]) {
+			Ok(xt) => xt,
+			Err(err) => return Json::String("Not ok"),
+        };
+        submit_extrinsic(TX_source, xt);    
+        
 
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+        Ok(Json::String("Ok"))
+    });
 
-//! Substrate block-author/full-node API.
+    /// Returns all pending extrinsics, potentially grouped by sender.
+    rpc_method!(rpc_server, author_pendingExtrinsics  {
+        Vec<Bytes> pendingExtrinsics = Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect());
+        Ok(Json::Vec<Bytes>())
+        /*fn pending_extrinsics(&self) -> Result<Vec<Bytes>> {
+		Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect())
+	}*/
+    });
 
-use jsonrpc_derive::rpc;
-use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId, manager::SubscriptionManager};
-use sp_core::Bytes;
-use sp_transaction_pool::TransactionStatus;
-use self::error::{FutureResult, Result};
+    sgx_status_t::SGX_SUCCESS
+}
 
-pub use self::gen_client::Client as AuthorClient;
-
+/*
 /// Substrate authoring RPC API
 #[rpc]
 pub trait AuthorApi<Hash, BlockHash> {
 	/// RPC metadata
 	type Metadata;
 
-	/// Submit hex-encoded extrinsic for inclusion in block.
-	#[rpc(name = "author_submitExtrinsic")]
-	fn submit_extrinsic(&self, extrinsic: Bytes) -> FutureResult<Hash>;
-
-	/// Returns all pending extrinsics, potentially grouped by sender.
-	#[rpc(name = "author_pendingExtrinsics")]
-	fn pending_extrinsics(&self) -> Result<Vec<Bytes>>;
 
 	/// Submit an extrinsic to watch.
 	///
@@ -76,10 +83,6 @@ pub trait AuthorApi<Hash, BlockHash> {
 }
 
 #[rpc]
-pub trait ChainApi<Number, Hash, Header, SignedBlock> {
-	/// RPC metadata
-	type Metadata;
-
 	/// All head subscription
 	#[pubsub(subscription = "chain_allHead", subscribe, name = "chain_subscribeAllHeads")]
 	fn subscribe_all_heads(&self, metadata: Self::Metadata, subscriber: Subscriber<Header>);
@@ -91,13 +94,7 @@ pub trait ChainApi<Number, Hash, Header, SignedBlock> {
 		metadata: Option<Self::Metadata>,
 		id: SubscriptionId,
 	) -> RpcResult<bool>;
-}
 
-/// Substrate state API
-#[rpc]
-pub trait StateApi<Hash> {
-	/// RPC Metadata
-	type Metadata;
 
 	/// TODO: custom getter for either public data (permissionless) or private data (authenticated, only over wss://)
 	#[rpc(name = "state_get")]
@@ -110,12 +107,7 @@ pub trait StateApi<Hash> {
 	/// Get the runtime version.
 	#[rpc(name = "state_getRuntimeVersion", alias("chain_getRuntimeVersion"))]
 	fn runtime_version(&self, hash: Option<Hash>) -> FutureResult<RuntimeVersion>;
-}
 
-
-/// Substrate system RPC API
-#[rpc]
-pub trait SystemApi<Hash, Number> {
 	/// Get the node's implementation name. Plain old string.
 	#[rpc(name = "system_name")]
 	fn system_name(&self) -> SystemResult<String>;
@@ -133,7 +125,6 @@ pub trait SystemApi<Hash, Number> {
 	fn system_health(&self) -> Receiver<Health>;
 
 }
-
-//TODO: rpc_methods: what is meant with that?
-
-
+// RPC Methods: Get all available RPC methods (see ZIM)
+curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "rpc_methods"}' http://localhost:9933/
+*/

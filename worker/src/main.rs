@@ -51,6 +51,7 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use enclave::rpc_server::{enclave_start_rpc_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
 use ws_server::start_ws_server;
@@ -85,6 +86,10 @@ fn main() {
     };
     let w_port = matches.value_of("w-port").unwrap_or("2000");
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
+
+    
+    let rpc_port = matches.value_of("rpc-port").unwrap_or("9994");
+    info!("RPC server on port {}", rpc_port);
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -320,6 +325,16 @@ fn worker(
 
     let mut latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
+
+    // ------------------------------------------------------------------------
+    // start rpc server
+    enclave_start_rpc_server(
+        enclave.geteid(),
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        &format!("localhost:{}", rpc_port), 
+        api.clone(),
+    );
+
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
