@@ -31,7 +31,11 @@ extern crate clap;
 use codec::{Compact, Decode, Encode};
 use sp_core::{sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, AnySignature};
-//pub use my_node_runtime::substratee_registry::ShardIdentifier;
+#[cfg(feature = "sgx")]
+use sgx_runtime::Balance;
+#[cfg(feature = "std")]
+use my_node_runtime::Balance;
+
 pub type ShardIdentifier = H256;
 
 #[cfg(feature = "sgx")]
@@ -44,8 +48,6 @@ pub type Signature = AnySignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
 pub type Hash = sp_core::H256;
-pub type Balance = u128;
-
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub static BALANCE_MODULE: u8 = 4u8;
 pub static BALANCE_TRANSFER: u8 = 0u8;

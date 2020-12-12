@@ -42,7 +42,13 @@ pub fn enclave_run_key_provisioning_server(
     addr: &str,
 ) {
     info!("Starting MU-RA-Server on: {}", addr);
-    let listener = TcpListener::bind(addr).unwrap();
+    let listener = match TcpListener::bind(addr) {
+        Ok(l) => l,
+        Err(e) => {
+            error!("error starting MU-RA server on {}: {}", addr, e);
+            return;
+        }
+    };
     loop {
         match listener.accept() {
             Ok((socket, addr)) => {
@@ -74,7 +80,13 @@ pub fn enclave_request_key_provisioning(
     addr: &str,
 ) -> SgxResult<()> {
     info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
-    let socket = TcpStream::connect(addr).unwrap();
+    let socket = match TcpStream::connect(addr) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("error connecting to {}: {}", addr, e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    };
     let mut status = sgx_status_t::SGX_SUCCESS;
 
     let result =

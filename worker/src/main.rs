@@ -33,6 +33,9 @@ use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
+use my_node_runtime::{
+    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
+};
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519,
@@ -40,10 +43,7 @@ use sp_core::{
     Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
-use substratee_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
-};
+use substrate_api_client::{utils::hexstr_to_vec, Api, GenericAddress, XtStatus};
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_sync_chain_relay};
 use enclave::api::{
@@ -53,8 +53,6 @@ use enclave::api::{
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
-//use substratee_worker_api::requests::ClientRequest;
-//use substratee_worker_api::Api as WorkerApi;
 use ws_server::start_ws_server;
 
 mod constants;
@@ -65,6 +63,7 @@ mod ws_server;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     // Setup logging
@@ -79,16 +78,17 @@ fn main() {
     info!("Interacting with node on {}", n_url);
     *NODE_URL.lock().unwrap() = n_url;
 
-    let w_ip = matches.value_of("w-server").unwrap_or("ws://127.0.0.1");
+    let w_ip = if matches.is_present("ws-external") {
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
+    };
     let w_port = matches.value_of("w-port").unwrap_or("2000");
-    info!("Worker listening on {}:{}", w_ip, w_port);
-
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
-    info!("MU-RA server on port {}", mu_ra_port);
 
-    if let Some(_matches) = matches.subcommand_matches("run") {
+    if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
-        let shard: ShardIdentifier = match _matches.value_of("shard") {
+        let shard: ShardIdentifier = match smatches.value_of("shard") {
             Some(value) => {
                 let shard_vec = value.from_base58().unwrap();
                 let mut shard = [0u8; 32];
@@ -105,7 +105,34 @@ fn main() {
                 ShardIdentifier::from_slice(&mrenclave[..])
             }
         };
-        worker(w_ip, w_port, mu_ra_port, &shard);
+        let ext_api_url = smatches
+            .value_of("w-server")
+            .unwrap_or("ws://127.0.0.1:2000");
+        println!("Advertising worker api at {}", ext_api_url);
+        let skip_ra = smatches.is_present("skip-ra");
+        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, skip_ra);
+    } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
+        let shard: ShardIdentifier = match smatches.value_of("shard") {
+            Some(value) => {
+                let shard_vec = value.from_base58().unwrap();
+                let mut shard = [0u8; 32];
+                shard.copy_from_slice(&shard_vec[..]);
+                shard.into()
+            }
+            _ => {
+                let enclave = enclave_init().unwrap();
+                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
+                info!(
+                    "no shard specified. using mrenclave as id: {}",
+                    mrenclave.to_base58()
+                );
+                ShardIdentifier::from_slice(&mrenclave[..])
+            }
+        };
+        let provider_url = smatches
+            .value_of("provider")
+            .expect("provider must be specified");
+        request_keys(provider_url, &shard);
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
@@ -213,7 +240,15 @@ fn main() {
     }
 }
 
-fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
+fn worker(
+    w_ip: &str,
+    w_port: &str,
+    mu_ra_port: &str,
+    shard: &ShardIdentifier,
+    ext_api_url: &str,
+    skip_ra: bool,
+) {
+    println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
     // check for required files
@@ -226,15 +261,19 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     println!("*** Starting enclave in development mode");
 
     let enclave = enclave_init().unwrap();
+    let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
+    println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
     // ------------------------------------------------------------------------
     // start the ws server to listen for worker requests
+    println!("worker api listening on ws://{}:{}", w_ip, w_port);
     let (ws_sender, ws_receiver) = channel();
     let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(w_url.clone(), ws_sender);
+    start_ws_server(w_url, ws_sender);
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
+    println!("MU-RA server listening on ws://{}:{}", w_ip, mu_ra_port);
     let ra_url = format!("{}:{}", w_ip, mu_ra_port);
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
@@ -256,44 +295,31 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     // ------------------------------------------------------------------------
     // perform a remote attestation and get an unchecked extrinsic back
 
-    // get enclaves's account nonce
-    let nonce = get_nonce(&api, &tee_accountid);
-    info!("Enclave nonce = {:?}", nonce);
+    if skip_ra {
+        println!("[!] skipping remote attestation. will not register this enclave on chain");
+    } else {
+        // get enclaves's account nonce
+        let nonce = get_nonce(&api, &tee_accountid);
+        info!("Enclave nonce = {:?}", nonce);
 
-    let uxt = enclave_perform_ra(eid, genesis_hash, nonce, w_url.as_bytes().to_vec()).unwrap();
+        let uxt =
+            enclave_perform_ra(eid, genesis_hash, nonce, ext_api_url.as_bytes().to_vec()).unwrap();
 
-    let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
-    let mut _xthex = hex::encode(ue.encode());
-    _xthex.insert_str(0, "0x");
+        let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
 
-    // send the extrinsic and wait for confirmation
-    println!("[>] Register the enclave (send the extrinsic)");
-    let tx_hash = api.send_extrinsic(_xthex, XtStatus::InBlock).unwrap();
-    println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+        debug!("RA extrinsic: {:?}", ue);
 
-    // // browse enclave registry
-    // match get_first_worker_that_is_not_equal_to_self(&api, &tee_accountid) {
-    //     Some(w) => {
-    //         let _url = String::from_utf8_lossy(&w.url[..]).to_string();
-    //         let _w_api = WorkerApi::new(_url.clone());
-    //         let _url_split: Vec<_> = _url.split(':').collect();
-    //         let mura_url = format!("{}:{}", _url_split[0], _w_api.get_mu_ra_port().unwrap());
+        let mut _xthex = hex::encode(ue.encode());
+        _xthex.insert_str(0, "0x");
 
-    //         info!("Requesting key provisioning from worker at {}", mura_url);
-    //         enclave_request_key_provisioning(
-    //             eid,
-    //             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-    //             &mura_url,
-    //         )
-    //         .unwrap();
-    //         debug!("key provisioning successfully performed");
-    //     }
-    //     None => {
-    //         info!("there are no other workers");
-    //     }
-    // }
+        // send the extrinsic and wait for confirmation
+        println!("[>] Register the enclave (send the extrinsic)");
+        let tx_hash = api.send_extrinsic(_xthex, XtStatus::InBlock).unwrap();
+        println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+    }
 
     let mut latest_head = init_chain_relay(eid, &api);
+    println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
@@ -332,6 +358,32 @@ fn worker(w_ip: &str, w_port: &str, mu_ra_port: &str, shard: &ShardIdentifier) {
     }
 }
 
+fn request_keys(provider_url: &str, _shard: &ShardIdentifier) {
+    // FIXME: we now assume that keys are equal for all shards
+
+    // initialize the enclave
+    #[cfg(feature = "production")]
+    println!("*** Starting enclave in production mode");
+    #[cfg(not(feature = "production"))]
+    println!("*** Starting enclave in development mode");
+
+    let enclave = enclave_init().unwrap();
+    let eid = enclave.geteid();
+
+    println!(
+        "Requesting key provisioning from worker at {}",
+        provider_url
+    );
+
+    enclave_request_key_provisioning(
+        eid,
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        &provider_url,
+    )
+    .unwrap();
+    println!("key provisioning successfully performed");
+}
+
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
 fn parse_events(event: String) -> Result<Events, String> {
@@ -349,24 +401,23 @@ fn print_events(events: Events, _sender: Sender<String>) {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {
             Event::pallet_balances(be) => {
-                println!("[+] Received balances event");
+                info!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
                     pallet_balances::RawEvent::Transfer(transactor, dest, value) => {
-                        println!("    Transactor:  {:?}", transactor.to_ss58check());
-                        println!("    Destination: {:?}", dest.to_ss58check());
-                        println!("    Value:       {:?}", value);
-                        println!();
+                        debug!("    Transactor:  {:?}", transactor.to_ss58check());
+                        debug!("    Destination: {:?}", dest.to_ss58check());
+                        debug!("    Value:       {:?}", value);
                     }
                     _ => {
-                        info!("Ignoring unsupported balances event");
+                        trace!("Ignoring unsupported balances event");
                     }
                 }
             }
             Event::substratee_registry(re) => {
                 debug!("{:?}", re);
                 match &re {
-                    substratee_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+                    my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
                         sender,
                         worker_url,
                     ) => {
@@ -376,46 +427,40 @@ fn print_events(events: Events, _sender: Sender<String>) {
                             "    Registered URL: {:?}",
                             str::from_utf8(worker_url).unwrap()
                         );
-                        println!();
                     }
-                    substratee_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
-                        println!("[+] Received trusted call");
-                        info!(
-                            "    Request: \n  shard: {}\n  cyphertext: {:?}",
-                            request.shard.encode().to_base58(),
-                            request.cyphertext.clone()
+                    my_node_runtime::substratee_registry::RawEvent::Forwarded(shard) => {
+                        println!(
+                            "[+] Received trusted call for shard {}",
+                            shard.encode().to_base58()
                         );
                     }
-                    substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                    my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
                         payload,
                     ) => {
-                        println!("[+] Received CallConfirmed event");
+                        info!("[+] Received CallConfirmed event");
                         debug!("    From:    {:?}", sender);
                         debug!("    Payload: {:?}", hex::encode(payload));
-                        println!();
                     }
-                    substratee_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+                    my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
                         incognito_account,
                     ) => {
-                        println!("[+] Received ShieldFunds event");
+                        info!("[+] Received ShieldFunds event");
                         debug!("    For:    {:?}", incognito_account);
-                        println!();
                     }
-                    substratee_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+                    my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
                         incognito_account,
                     ) => {
-                        println!("[+] Received UnshieldedFunds event");
+                        info!("[+] Received UnshieldedFunds event");
                         debug!("    For:    {:?}", incognito_account);
-                        println!();
                     }
                     _ => {
-                        info!("Ignoring unsupported substratee_registry event");
+                        trace!("Ignoring unsupported substratee_registry event");
                     }
                 }
             }
             _ => {
-                info!("Ignoring event {:?}", evr);
+                trace!("Ignoring event {:?}", evr);
             }
         }
     }
@@ -519,10 +564,15 @@ pub fn sync_chain_relay(
                 "Sync chain relay: Enclave wants to send {} extrinsics",
                 extrinsics.len()
             );
-        }
-        for xt in extrinsics.into_iter() {
-            api.send_extrinsic(hex_encode(xt), XtStatus::InBlock)
-                .unwrap();
+            for xt in extrinsics.into_iter() {
+                api.send_extrinsic(hex_encode(xt), XtStatus::Ready).unwrap();
+            }
+            // await next block to avoid #37
+            let (events_in, events_out) = channel();
+            api.subscribe_events(events_in);
+            let _ = events_out.recv().unwrap();
+            let _ = events_out.recv().unwrap();
+            // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
         }
 
         i += chunk.len();
@@ -564,7 +614,7 @@ fn init_shard(shard: &ShardIdentifier) {
 // get the public signing key of the TEE
 fn enclave_account(eid: sgx_enclave_id_t) -> AccountId32 {
     let tee_public = enclave_signing_key(eid).unwrap();
-    info!(
+    trace!(
         "[+] Got ed25519 account of TEE = {}",
         tee_public.to_ss58check()
     );
@@ -592,7 +642,7 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
         api.signer = Some(alice);
 
         println!("[+] bootstrap funding Enclave form Alice's funds");
-        let xt = api.balance_transfer(accountid.clone(), 1_000_000_000_000);
+        let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), 1_000_000_000_000);
         let xt_hash = api
             .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
             .unwrap();

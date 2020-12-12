@@ -58,7 +58,15 @@ impl Api {
         let req = ClientRequest::StfState(getter, shard.to_owned());
         match Self::get(&self, req) {
             Ok(res) => {
-                let value_slice = hex::decode(&res).unwrap();
+                let value_slice = if let Ok(v) = hex::decode(&res) {
+                    v
+                } else {
+                    error!(
+                        "worker api returned a value that can't be hex decoded: {}",
+                        res
+                    );
+                    return Err(());
+                };
                 let value: Option<Vec<u8>> = Decode::decode(&mut &value_slice[..]).unwrap();
                 match value {
                     Some(val) => Ok(val), // val is still an encoded option! can be None.encode() if storage doesn't exist

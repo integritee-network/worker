@@ -49,7 +49,7 @@ use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use crate::constants::{
-    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, 
+    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
     RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
 };
 use crate::ed25519;
@@ -652,7 +652,11 @@ pub unsafe extern "C" fn perform_ra(
     );
 
     let encoded = xt.encode();
-    debug!("    [Enclave] Encoded extrinsic = {:?}", encoded);
+    debug!(
+        "    [Enclave] Encoded extrinsic ( len = {} B) = {}",
+        encoded.len(),
+        hex::encode_hex(&encoded)
+    );
 
     write_slice_and_whitespace_pad(extrinsic_slice, encoded);
 

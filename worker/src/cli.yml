@@ -1,5 +1,5 @@
 name: "substraTEE-worker"
-version: "0.6.0"
+version: "0.7.0"
 about: Worker using Intel SGX TEE for SubstraTEE-node
 authors: "Supercomputing Systems AG <info@scs.ch>"
 
@@ -13,7 +13,8 @@ settings:
 # are part of a Hash
 args:
     - node-server:
-        long: ns
+        short: u
+        long: node-url
         help: Set the node server protocol and IP address
         takes_value: true
         default_value: "ws://127.0.0.1"
@@ -23,31 +24,51 @@ args:
         help: Set the websocket port to listen for substrate events
         takes_value: true
         default_value: "9944"
-    - w-server:
-        long: ws
-        help: Set the worker's IP address
-        takes_value: true
-        default_value: "127.0.0.1"
     - w-port:
-        short: w
+        short: P
         long: worker-port
-        help: Set the websocket port to listen for worker requests
+        help: Set the websocket port where the worker api listens
         takes_value: true
         default_value: "2000"
+    - ws-external:
+        long: ws-external
+        help: let worker api listen to external requests too      
     - mu-ra-port:
         short: r
         long: mu-ra-port
         help: Set the websocket port to listen for mu-ra requests
         takes_value: true
         default_value: "3443"
-
+    
 subcommands:
     - run:
         about: Start the substraTEE-worker
         args:
+            - skip-ra:
+                long: skip-ra
+                short: s
+                help: skip remote attestation. Set this flag if running enclave in SW mode
+            - w-server:
+                short: U
+                long: worker-url
+                help: Set the worker's IP address to be advertised in onchain registry. Include port if not 443
+                takes_value: true
+                default_value: "ws://127.0.0.1:2000"
             - shard:
                 required: false
                 index: 1
+                help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
+    - request-keys:
+        about: join a shard by requesting key provisioning from another worker
+        args:
+            - provider:
+                required: true
+                index: 1
+                help: URL and port of a peer worker providing provisioning (i.e. 'my.server.io:3443')
+            - shard:
+                long: shard
+                short: s
+                required: false
                 help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
     - shielding-key:
         about: Get the public RSA3072 key from the TEE to be used to encrypt requests

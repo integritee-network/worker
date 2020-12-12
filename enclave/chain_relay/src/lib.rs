@@ -39,9 +39,8 @@ use storage_proof::StorageProof;
 use crate::state::ScheduledChangeAtBlock;
 use crate::storage_proof::StorageProofChecker;
 use codec::{Decode, Encode};
-use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
-use log::{error, info};
+use log::*;
 use sp_finality_grandpa::{
     AuthorityId, AuthorityList, AuthorityWeight, ConsensusLog, ScheduledChange, SetId,
     GRANDPA_ENGINE_ID,
@@ -117,7 +116,7 @@ impl LightValidation {
         if grandpa_proof.is_none() {
             relay.last_finalized_block_header = header.clone();
             relay.unjustified_headers.push(header.hash());
-            info!(
+            debug!(
                 "Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
                 relay.unjustified_headers.len()
             );
@@ -128,7 +127,8 @@ impl LightValidation {
         let block_num = *header.number();
 
         // Check that the header has been finalized
-        let voter_set = VoterSet::from_iter(validator_set.clone());
+        let voter_set =
+            VoterSet::new(validator_set.clone().into_iter()).expect("VoterSet may not be empty");
         Self::verify_grandpa_proof::<Block>(
             grandpa_proof.unwrap(),
             block_hash,
@@ -215,6 +215,9 @@ impl LightValidation {
                 found_xts.push(index);
             }
         });
+
+        // sort highest index first
+        found_xts.sort_by(|a, b| b.cmp(a));
 
         let rm: Vec<OpaqueExtrinsic> = found_xts
             .into_iter()

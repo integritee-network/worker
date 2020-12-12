@@ -7,7 +7,7 @@
 #
 # then run this script
 
-CLIENT="../target/release/substratee-client -p 9979"
+CLIENT="./substratee-client -p 9979 -P 2079"
 
 echo "query on-chain enclave registry:"
 $CLIENT list-workers

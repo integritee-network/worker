@@ -3,12 +3,12 @@
 # setup:
 # run all on localhost:
 #   substratee-node purge-chain --dev
-#   substratee-node --dev --ws-port 9977 -lruntime=debug
+#   substratee-node --dev --ws-port 9979 -lruntime=debug
 #   rm chain_relay_db.bin
 #   substratee-worker init_shard
 #   substratee-worker shielding-key
 #   substratee-worker signing-key
-#   substratee-worker -p 9977 -w 2077 run
+#   substratee-worker -p 9979 -w 2079 run
 #
 # then run this script
 
@@ -16,15 +16,14 @@
 #  demo_shielding_unshielding.sh <NODEPORT> <WORKERPORT>
 
 # using default port if none given as first argument
-NPORT=${1:-9944}
-WPORT=${2:-2000}
+NPORT=${1:-9979}
+WPORT=${2:-2079}
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-port ${WPORT}"
 echo ""
 
-CLIENT="../target/release/substratee-client -p ${NPORT} "
-WORKERPORT="--worker-port ${WPORT}"
+CLIENT="./substratee-client -p ${NPORT} -P ${WPORT}"
 
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=25000000000
@@ -49,12 +48,12 @@ ${CLIENT} balance "//Bob"
 echo ""
 
 echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=$(${CLIENT} trusted new-account ${WORKERPORT} --mrenclave ${MRENCLAVE})
+ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
 echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
 echo "* Create a new incognito account for Bob"
-ICGACCOUNTBOB=$(${CLIENT} trusted new-account ${WORKERPORT} --mrenclave ${MRENCLAVE})
+ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
@@ -67,7 +66,7 @@ sleep 10
 echo ""
 
 echo -n "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} ${WORKERPORT} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Get balance of Alice's on-chain account"
@@ -75,19 +74,19 @@ ${CLIENT} balance "//Alice"
 echo ""
 
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} ${WORKERPORT} --mrenclave ${MRENCLAVE}
+$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} ${WORKERPORT} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Bob's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTBOB} ${WORKERPORT} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
-${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} ${WORKERPORT} --mrenclave ${MRENCLAVE} --xt-signer //Alice
+${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -95,7 +94,7 @@ sleep 10
 echo ""
 
 echo -n "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} ${WORKERPORT} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Get balance of Alice's on-chain account"

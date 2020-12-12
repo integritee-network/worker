@@ -24,7 +24,7 @@ use codec::{Decode, Encode};
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
 use substratee_stf::{Getter, ShardIdentifier};
-use substratee_worker_api::requests::*;
+use substratee_worker_api::requests::ClientRequest;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
 use crate::enclave::api::{enclave_query_state, enclave_shielding_key};
@@ -50,10 +50,7 @@ pub fn start_ws_server(addr: String, worker: MpscSender<WsServerRequest>) {
 
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
-            info!(
-                "[WS Server] Forwarding message to worker event loop: {:?}",
-                msg
-            );
+            debug!("Forwarding message to worker event loop: {:?}", msg);
 
             match ClientRequest::decode(&mut msg.into_data().as_slice()) {
                 Ok(req) => {
@@ -61,23 +58,30 @@ pub fn start_ws_server(addr: String, worker: MpscSender<WsServerRequest>) {
                         .send(WsServerRequest::new(self.client.clone(), req))
                         .unwrap();
                 }
-                Err(_) => self.client.send("Could not decode request").unwrap(),
+                Err(_) => {
+                    warn!("Could not decode request");
+                    self.client.send("Could not decode request").unwrap()
+                }
             }
             Ok(())
         }
 
         fn on_close(&mut self, code: CloseCode, reason: &str) {
-            info!("[WS Server] WebSocket closing for ({:?}) {}", code, reason);
+            debug!("WebSocket closing for ({:?}) {}", code, reason);
         }
     }
     // Server thread
     info!("Starting WebSocket server on {}", addr);
     thread::spawn(move || {
-        listen(addr, |out| Server {
+        match listen(addr.clone(), |out| Server {
             client: out,
             worker: worker.clone(),
-        })
-        .unwrap()
+        }) {
+            Ok(_) => (),
+            Err(e) => {
+                error!("error starting worker api server on {}: {}", addr, e);
+            }
+        };
     });
 }
 
@@ -86,7 +90,7 @@ pub fn handle_request(
     eid: sgx_enclave_id_t,
     mu_ra_port: String,
 ) -> Result<()> {
-    info!("     [WS Server] Got message '{:?}'. ", req);
+    info!("Got message '{:?}'. ", req.request);
     let answer = match req.request {
         ClientRequest::PubKeyWorker => get_pubkey(eid),
         ClientRequest::MuRaPortWorker => Message::text(mu_ra_port),
@@ -97,7 +101,7 @@ pub fn handle_request(
 }
 
 fn get_stf_state(eid: sgx_enclave_id_t, getter: Getter, shard: ShardIdentifier) -> Message {
-    info!("     [WS Server] Query state");
+    debug!("Query state");
     let value = match enclave_query_state(eid, getter.encode(), shard.encode()) {
         Ok(val) => Some(val),
         Err(_) => {
@@ -112,7 +116,7 @@ fn get_stf_state(eid: sgx_enclave_id_t, getter: Getter, shard: ShardIdentifier) 
 
 fn get_pubkey(eid: sgx_enclave_id_t) -> Message {
     let rsa_pubkey = enclave_shielding_key(eid).unwrap();
-    debug!("     [WS Server] RSA pubkey {:?}\n", rsa_pubkey);
+    debug!("RSA pubkey {:?}\n", rsa_pubkey);
 
     let rsa_pubkey_json = serde_json::to_string(&rsa_pubkey).unwrap();
     Message::text(rsa_pubkey_json)
