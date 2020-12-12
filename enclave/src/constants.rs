@@ -43,7 +43,6 @@ pub static CALL_WORKER: u8 = 2u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 pub static SHIELD_FUNDS: u8 = 4u8;
 
-
 // bump this to be consistent with SubstraTEE-node runtime
 pub static RUNTIME_SPEC_VERSION: u32 = 1;
 pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;

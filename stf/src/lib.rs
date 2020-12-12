@@ -29,12 +29,12 @@ extern crate alloc;
 extern crate clap;
 
 use codec::{Compact, Decode, Encode};
-use sp_core::{sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, AnySignature};
-#[cfg(feature = "sgx")]
-use sgx_runtime::Balance;
 #[cfg(feature = "std")]
 use my_node_runtime::Balance;
+#[cfg(feature = "sgx")]
+use sgx_runtime::Balance;
+use sp_core::{sr25519, Pair, H256};
+use sp_runtime::{traits::Verify, AnySignature};
 
 pub type ShardIdentifier = H256;
 

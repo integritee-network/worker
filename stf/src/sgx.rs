@@ -7,10 +7,10 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
-use sgx_runtime::{BlockNumber, Runtime, Balance};
+use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
+use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
-use sp_io::hashing::blake2_256; 
 use sp_runtime::MultiAddress;
 use support::traits::UnfilteredDispatchable;
 
@@ -130,11 +130,11 @@ impl Stf {
                     debug!("sender balance is zero");
                 }
                 sgx_runtime::BalancesCall::<Runtime>::transfer(
-                    MultiAddress::Id(AccountId32::from(to))
-                    , value
+                    MultiAddress::Id(AccountId32::from(to)),
+                    value,
                 )
-                    .dispatch_bypass_filter(origin)
-                    .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+                .dispatch_bypass_filter(origin)
+                .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -153,7 +153,8 @@ impl Stf {
                         value,
                         shard,
                         blake2_256(&call.encode()),
-                    ).encode(),
+                    )
+                        .encode(),
                 ));
                 Ok(())
             }
@@ -192,7 +193,7 @@ impl Stf {
             },
         })
     }
-    
+
     fn ensure_root(account: AccountId) -> Result<(), StfError> {
         if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
             Ok(())
@@ -211,12 +212,12 @@ impl Stf {
             .dispatch_bypass_filter(sgx_runtime::Origin::root())
             .map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
             None => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                MultiAddress::Id(account.into()), 
-                amount, 
-                0
+                MultiAddress::Id(account.into()),
+                amount,
+                0,
             )
-                .dispatch_bypass_filter(sgx_runtime::Origin::root())
-                .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
+            .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
         };
         Ok(())
     }

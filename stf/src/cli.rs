@@ -16,24 +16,18 @@
 */
 
 use crate::{
-    AccountId, PublicGetter, ShardIdentifier, TrustedCall, TrustedGetter,
-    TrustedOperation,
+    AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation,
 };
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
 use codec::{Decode, Encode};
 use log::*;
-use my_node_runtime::{BlockNumber, Header, Signature, Balance};
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
-use sp_runtime::{AccountId32, MultiSignature};
 use std::path::PathBuf;
-use substrate_api_client::Api;
 use substrate_client_keystore::LocalKeystore;
-
-type Moment = u64;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
@@ -218,7 +212,7 @@ pub fn cmd<'a>(
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
-        )       
+        )
         .add_cmd(
             Command::new("balance")
                 .description("query balance for incognito account in keystore")
@@ -318,7 +312,7 @@ pub fn cmd<'a>(
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
-        )        
+        )
         .into_cmd("trusted")
 }
 
@@ -385,21 +379,3 @@ fn get_pair_from_str(matches: &ArgMatches<'_>, account: &str) -> sr25519::AppPai
         }
     }
 }
-
-fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
-    let url = format!(
-        "{}:{}",
-        matches.value_of("node-url").unwrap(),
-        matches.value_of("node-port").unwrap()
-    );
-    info!("connecting to {}", url);
-    Api::<sr25519::Pair>::new(url)
-}
-
-fn get_block_number(api: &Api<sr25519::Pair>) -> BlockNumber {
-    let hdr: Header = api.get_header(None).unwrap();
-    debug!("decoded: {:?}", hdr);
-    //let hdr: Header= Decode::decode(&mut .as_bytes()).unwrap();
-    hdr.number
-}
-

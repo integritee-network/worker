@@ -36,11 +36,10 @@ use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
-use geojson::GeoJson;
 use log::*;
 use my_node_runtime::{
     substratee_registry::{Enclave, Request},
-    AccountId, BalancesCall, BlockNumber, Call, Event, Hash, Header, Moment, Signature,
+    AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
 use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
@@ -48,7 +47,6 @@ use sp_runtime::{
     MultiSignature,
 };
 use std::convert::TryFrom;
-use std::fs;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{
@@ -423,7 +421,7 @@ fn main() {
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
                     Ok(())
                 }),
-        )        
+        )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
