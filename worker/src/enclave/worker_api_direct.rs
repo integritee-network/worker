@@ -33,19 +33,18 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-pub fn enclave_start_rpc_server(
+pub fn enclave_start_worker_api_direct(
 	eid: sgx_enclave_id_t,
     sign_type: sgx_quote_sign_type_t,
     addr: &str,
-    api: API,
 ) {
-	info!("Starting RPC-Server on: {}", addr);
+	info!("Starting worker API on: {}", addr);
     let listener = TcpListener::bind(addr).unwrap();
     loop {
         match listener.accept() {
             Ok((socket, addr)) => {
                 info!(
-                    "[RPC-Server] a worker at {} is requesting key provisiong",
+                    "[worker-API-direct] a worker at {} is requesting an rpc method",
                     addr
                 );
                 let mut retval = sgx_status_t::SGX_SUCCESS;
@@ -54,10 +53,10 @@ pub fn enclave_start_rpc_server(
                 };
                 match result {
                     sgx_status_t::SGX_SUCCESS => {
-                        debug!("[RPC-Server] ECALL success!");
+                        debug!("[worker-API-direct] ECALL success!");
                     }
                     _ => {
-                        error!("[RPC-Server] ECALL Enclave Failed {}!", result.as_str());
+                        error!("[worker-API-direct] ECALL Enclave Failed {}!", result.as_str());
                     }
                 }
             }

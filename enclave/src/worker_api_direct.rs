@@ -6,16 +6,18 @@ use substratee_node_runtime::{
     substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
 };
 
+const TX_SOURCE: TransactionSource = TransactionSource::External;
+
 
 #[no_mangle]
-pub unsafe extern "C" fn start_rpc_server(
+pub unsafe extern "C" fn start_worker_api_direct(
     socket_fd: c_int,
-    sign_type: sgx_quote_sign_type_t,
+	sign_type: sgx_quote_sign_type_t,
 ) -> sgx_status_t {
 	let mut rpc_server = Server::new();
 
 	// Register rpc methods
-    // rpc_method(server, method_name, parameters)	
+	// rpc_method(server, method_name, parameters)	
     
     /// Submit hex-encoded extrinsic for inclusion in block.
 	rpc_method!(rpc_server, author_submitExtrinsic, ext<Bytes>, {
@@ -23,9 +25,15 @@ pub unsafe extern "C" fn start_rpc_server(
 			Ok(xt) => xt,
 			Err(err) => return Json::String("Not ok"),
         };
-        submit_extrinsic(TX_source, xt);    
+		let best_block_hash = self.client.info().best_hash;
+		Box::new(self.pool
+			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, xt)
+			.compat()
+			.map_err(|e| e.into_pool_error()
+				.map(Into::into)
+				.unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into()))
+		)
         
-
         Ok(Json::String("Ok"))
     });
 
@@ -39,6 +47,22 @@ pub unsafe extern "C" fn start_rpc_server(
     });
 
     sgx_status_t::SGX_SUCCESS
+
+}
+
+fn submit_extrinsic(&self, ext: Bytes) -> FutureResult<TxHash<P>> {
+	let xt = match Decode::decode(&mut &ext[..]) {
+		Ok(xt) => xt,
+		Err(err) => return Box::new(result(Err(err.into()))),
+	};
+	let best_block_hash = self.client.info().best_hash;
+	Box::new(self.pool
+		.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, xt)
+		.compat()
+		.map_err(|e| e.into_pool_error()
+			.map(Into::into)
+			.unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into()))
+	)
 }
 
 /*
