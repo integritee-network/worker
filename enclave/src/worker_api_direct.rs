@@ -20,10 +20,10 @@ pub unsafe extern "C" fn start_worker_api_direct(
     /// Submit hex-encoded extrinsic for inclusion in block.
 	rpc_method!(rpc_server, author_submitExtrinsic, ext<Bytes>, {
 		// TODO: decode with shielding key
-        let xt = match Decode::decode(&mut &ext[..]) {
+     /*   let xt = match Decode::decode(&mut &ext[..]) {
 			Ok(xt) => xt,
 			Err(err) => return Json::String("Not ok"),
-		};
+		};*/
 		// TODO authentification
 		// TODO: state update (in worker)
 
@@ -31,18 +31,18 @@ pub unsafe extern "C" fn start_worker_api_direct(
     });
 
     /// Returns all pending extrinsics, potentially grouped by sender.
-    rpc_method!(rpc_server, author_pendingExtrinsics  {
+   /* rpc_method!(rpc_server, author_pendingExtrinsics  {
         Vec<Bytes> pendingExtrinsics = Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect());
         Ok(Json::Vec<Bytes>())
         /*fn pending_extrinsics(&self) -> Result<Vec<Bytes>> {
 		Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect())
 	}*/
-    });
+    });*/
 
     sgx_status_t::SGX_SUCCESS
 
 }
-
+/*
 fn submit_extrinsic(&self, ext: Bytes) -> FutureResult<TxHash<P>> {
 	let xt = match Decode::decode(&mut &ext[..]) {
 		Ok(xt) => xt,
@@ -56,7 +56,7 @@ fn submit_extrinsic(&self, ext: Bytes) -> FutureResult<TxHash<P>> {
 			.map(Into::into)
 			.unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into()))
 	)
-}
+}*/
 
 /*
 /// Substrate authoring RPC API

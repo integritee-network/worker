@@ -4946,7 +4946,7 @@ dependencies = [
  "frame-metadata",
  "frame-support",
  "frame-system",
- "hex 0.3.2",
+ "hex 0.4.2",
  "log 0.4.11 (git+https://github.com/mesalock-linux/log-sgx)",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-balances",
@@ -4977,8 +4977,6 @@ dependencies = [
  "futures 0.3.8",
  "hex 0.3.2",
  "ipfs-api",
- "jsonrpc-core",
- "jsonrpc-derive",
  "lazy_static",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "multihash 0.8.0",
@@ -5414,7 +5412,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

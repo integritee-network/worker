@@ -423,6 +423,8 @@ fn main() {
                 }),
         )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
+        // direct invocation commands
+        .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
