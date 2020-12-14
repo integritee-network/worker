@@ -114,7 +114,7 @@ fn main() {
             .unwrap_or("ws://127.0.0.1:2000");
         println!("Advertising worker api at {}", ext_api_url);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, skip_ra);
+        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, worker_api_direct_port, skip_ra);
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard: ShardIdentifier = match smatches.value_of("shard") {
             Some(value) => {
@@ -250,6 +250,7 @@ fn worker(
     mu_ra_port: &str,
     shard: &ShardIdentifier,
     ext_api_url: &str,
+    worker_api_direct_port: &str,
     skip_ra: bool,
 ) {
     println!("Encointer Worker v{}", VERSION);
@@ -326,7 +327,7 @@ fn worker(
     println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
-    // start worker api direct
+    // start worker api direct invocation
     enclave_start_worker_api_direct(
         enclave.geteid(),
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,

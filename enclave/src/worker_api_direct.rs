@@ -1,3 +1,4 @@
+#[macro_use(rpc_method)]
 extern crate json_rpc;
 use json_rpc::{Server, Json, Error};
 
@@ -5,9 +6,6 @@ use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
 use substratee_node_runtime::{
     substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
 };
-
-const TX_SOURCE: TransactionSource = TransactionSource::External;
-
 
 #[no_mangle]
 pub unsafe extern "C" fn start_worker_api_direct(
@@ -21,19 +19,14 @@ pub unsafe extern "C" fn start_worker_api_direct(
     
     /// Submit hex-encoded extrinsic for inclusion in block.
 	rpc_method!(rpc_server, author_submitExtrinsic, ext<Bytes>, {
+		// TODO: decode with shielding key
         let xt = match Decode::decode(&mut &ext[..]) {
 			Ok(xt) => xt,
 			Err(err) => return Json::String("Not ok"),
-        };
-		let best_block_hash = self.client.info().best_hash;
-		Box::new(self.pool
-			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, xt)
-			.compat()
-			.map_err(|e| e.into_pool_error()
-				.map(Into::into)
-				.unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into()))
-		)
-        
+		};
+		// TODO authentification
+		// TODO: state update (in worker)
+
         Ok(Json::String("Ok"))
     });
 
