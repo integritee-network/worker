@@ -1,23 +1,71 @@
-#[macro_use(rpc_method)]
-extern crate json_rpc;
-use json_rpc::{Server, Json, Error};
+//#[macro_use(rpc_method)]
+//#[cfg(feature = "std")]
+//extern crate json_rpc;
+//use json_rpc::{Server, Json, Error};
+
+
+use std::backtrace::{self, PrintFormat};
+//use std::io::{Read, Write};
+//use std::net::TcpStream;
+use std::sync::Arc;
+use std::vec::Vec;
+
+//use sgx_types::*;
+
+use log::*;
+use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
+
+use crate::aes;
+use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
+use crate::cert;
+use crate::rsa3072;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 
 use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
 use substratee_node_runtime::{
     substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
 };
 
+#[rpc]
+pub trait AuthorRpc {
+    #[rpc(name = "author_submitExtrinsic")]
+    fn silly_7(&self) -> Result<u64>;
+}
+
+pub struct Author;
+
+impl AuthorRpc for Author {
+    fn silly_7(&self) -> Result<u64> {
+        Ok(7)
+    }
+
+
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn start_worker_api_direct(
     socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 ) -> sgx_status_t {
+	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
+
 	let mut rpc_server = Server::new();
+
+	mod author_rpc;
+
+	let mut io = jsonrpc_core::IoHandler::default();
+
+    // Add a silly RPC that returns constant values
+    io.extend_with(crate::author_rpc::AuthorRpc::to_delegate(
+        crate::author_rpc::Author {},
+    ));
+
 
 	// Register rpc methods
 	// rpc_method(server, method_name, parameters)	
     
     /// Submit hex-encoded extrinsic for inclusion in block.
+	/*#[rpc(name = "silly_seven")]
 	rpc_method!(rpc_server, author_submitExtrinsic, ext<Bytes>, {
 		// TODO: decode with shielding key
      /*   let xt = match Decode::decode(&mut &ext[..]) {
@@ -26,9 +74,11 @@ pub unsafe extern "C" fn start_worker_api_direct(
 		};*/
 		// TODO authentification
 		// TODO: state update (in worker)
+		let results = "Ok";
+		let returnValue = results.toString;
 
-        Ok(Json::String("Ok"))
-    });
+        Ok(Json::String(returnValue))
+    });*/
 
     /// Returns all pending extrinsics, potentially grouped by sender.
    /* rpc_method!(rpc_server, author_pendingExtrinsics  {
