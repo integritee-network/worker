@@ -27,39 +27,43 @@ extern crate chrono;
 use chrono::{DateTime, Utc};
 use std::time::{Duration, UNIX_EPOCH};
 
-use sc_keystore::Store;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_keyring::AccountKeyring;
 use std::path::PathBuf;
 
 use base58::{FromBase58, ToBase58};
 
-use clap::{Arg, ArgMatches};
+use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
+use my_node_runtime::{
+    substratee_registry::{Enclave, Request},
+    AccountId, BalancesCall, Call, Event, Hash, Signature,
+};
 use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
 };
-
+use std::convert::TryFrom;
 use std::sync::mpsc::channel;
 use std::thread;
-
-use std::convert::TryFrom;
 use substrate_api_client::{
-    compose_extrinsic, events::EventsDecoder, extrinsic::xt_primitives::UncheckedExtrinsicV4,
-    node_metadata::Metadata, utils::hexstr_to_vec, Api, XtStatus,
+    compose_extrinsic, compose_extrinsic_offline,
+    events::EventsDecoder,
+    extrinsic::xt_primitives::{GenericAddress, UncheckedExtrinsicV4},
+    node_metadata::Metadata,
+    utils::hexstr_to_vec,
+    Api, XtStatus,
 };
-use substratee_node_runtime::{
-    substratee_registry::{Enclave, Request},
-    AccountId, Event, Hash, Signature,
-};
+
 use substratee_stf::{
     cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
 };
 use substratee_worker_api::Api as WorkerApi;
+
+use substrate_client_keystore::LocalKeystore;
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -71,7 +75,8 @@ fn main() {
 
     let res = Commander::new()
         .options(|app| {
-            app.arg(
+            app.setting(AppSettings::ColoredHelp)
+            .arg(
                 Arg::with_name("node-url")
                     .short("u")
                     .long("node-url")
@@ -114,7 +119,7 @@ fn main() {
             .name("substratee-client")
             .version(VERSION)
             .author("Supercomputing Systems AG <info@scs.ch>")
-            .about("interact with substraTEE node and workers")
+            .about("interact with substratee-node and workers")
             .after_help("stf subcommands depend on the stf crate this has been built against")
         })
         .args(|_args, matches| matches.value_of("environment").unwrap_or("dev"))
@@ -122,8 +127,8 @@ fn main() {
             Command::new("new-account")
                 .description("generates a new account for the substraTEE chain")
                 .runner(|_args: &str, _matches: &ArgMatches<'_>| {
-                    let store = Store::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
-                    let key: sr25519::AppPair = store.write().generate().unwrap();
+                    let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
+                    let key: sr25519::AppPair = store.generate().unwrap();
                     drop(store);
                     println!("{}", key.public().to_ss58check());
                     Ok(())
@@ -133,10 +138,9 @@ fn main() {
             Command::new("list-accounts")
                 .description("lists all accounts in keystore for the substraTEE chain")
                 .runner(|_args: &str, _matches: &ArgMatches<'_>| {
-                    let store = Store::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
+                    let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
                     println!("sr25519 keys:");
                     for pubkey in store
-                        .read()
                         .public_keys::<sr25519::AppPublic>()
                         .unwrap()
                         .into_iter()
@@ -145,7 +149,6 @@ fn main() {
                     }
                     println!("ed25519 keys:");
                     for pubkey in store
-                        .read()
                         .public_keys::<ed25519::AppPublic>()
                         .unwrap()
                         .into_iter()
@@ -167,39 +170,47 @@ fn main() {
         )
         .add_cmd(
             Command::new("faucet")
-                .description("send some bootstrapping funds to an account")
+                .description("send some bootstrapping funds to supplied account(s)")
                 .options(|app| {
-                    app.arg(
-                        Arg::with_name("AccountId")
+                    app.setting(AppSettings::ColoredHelp).arg(
+                        Arg::with_name("accounts")
                             .takes_value(true)
                             .required(true)
-                            .value_name("SS58")
-                            .help("AccountId to be funded"),
+                            .value_name("ACCOUNT")
+                            .multiple(true)
+                            .min_values(1)
+                            .help("Account(s) to be funded, ss58check encoded"),
                     )
                 })
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
-                    let account = matches.value_of("AccountId").unwrap();
-                    let accountid = get_accountid_from_str(account);
                     let _api = api.set_signer(AccountKeyring::Alice.pair());
-                    let xt = _api.balance_transfer(accountid.clone(), PREFUNDING_AMOUNT);
-                    info!(
-                        "[+] Alice is generous and pre funds account {}\n",
-                        accountid.to_ss58check()
-                    );
-                    let tx_hash = _api
-                        .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
-                        .unwrap();
-                    info!(
-                        "[+] Pre-Funding transaction got finalized. Hash: {:?}\n",
-                        tx_hash
-                    );
-                    let result = _api.get_account_data(&accountid).unwrap();
-                    println!(
-                        "balance for {} is now {}",
-                        accountid.to_ss58check(),
-                        result.free
-                    );
+                    let accounts: Vec<_> = matches.values_of("accounts").unwrap().collect();
+
+                    let mut nonce = _api.get_nonce().unwrap();
+                    for account in accounts.into_iter() {
+                        let to = get_accountid_from_str(account);
+                        #[allow(clippy::redundant_clone)]
+                        let xt: UncheckedExtrinsicV4<_> = compose_extrinsic_offline!(
+                            _api.clone().signer.unwrap(),
+                            Call::Balances(BalancesCall::transfer(
+                                GenericAddress::Id(to.clone()),
+                                PREFUNDING_AMOUNT
+                            )),
+                            nonce,
+                            Era::Immortal,
+                            _api.genesis_hash,
+                            _api.genesis_hash,
+                            _api.runtime_version.spec_version,
+                            _api.runtime_version.transaction_version
+                        );
+                        // send and watch extrinsic until finalized
+                        println!("Faucet drips to {} (Alice's nonce={})", to, nonce);
+                        let _blockh = _api
+                            .send_extrinsic(xt.hex_encode(), XtStatus::Ready)
+                            .unwrap();
+                        nonce += 1;
+                    }
                     Ok(())
                 }),
         )
@@ -207,7 +218,7 @@ fn main() {
             Command::new("balance")
                 .description("query on-chain balance for AccountId")
                 .options(|app| {
-                    app.arg(
+                    app.setting(AppSettings::ColoredHelp).arg(
                         Arg::with_name("AccountId")
                             .takes_value(true)
                             .required(true)
@@ -232,27 +243,28 @@ fn main() {
             Command::new("transfer")
                 .description("transfer funds from one on-chain account to another")
                 .options(|app| {
-                    app.arg(
-                        Arg::with_name("from")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58")
-                            .help("sender's AccountId in ss58check format"),
-                    )
-                    .arg(
-                        Arg::with_name("to")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58")
-                            .help("recipient's AccountId in ss58check format"),
-                    )
-                    .arg(
-                        Arg::with_name("amount")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("U128")
-                            .help("amount to be transferred"),
-                    )
+                    app.setting(AppSettings::ColoredHelp)
+                        .arg(
+                            Arg::with_name("from")
+                                .takes_value(true)
+                                .required(true)
+                                .value_name("SS58")
+                                .help("sender's AccountId in ss58check format"),
+                        )
+                        .arg(
+                            Arg::with_name("to")
+                                .takes_value(true)
+                                .required(true)
+                                .value_name("SS58")
+                                .help("recipient's AccountId in ss58check format"),
+                        )
+                        .arg(
+                            Arg::with_name("amount")
+                                .takes_value(true)
+                                .required(true)
+                                .value_name("U128")
+                                .help("amount to be transferred"),
+                        )
                 })
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
@@ -265,7 +277,7 @@ fn main() {
                     info!("from ss58 is {}", from.public().to_ss58check());
                     info!("to ss58 is {}", to.to_ss58check());
                     let _api = api.set_signer(sr25519_core::Pair::from(from));
-                    let xt = _api.balance_transfer(to.clone(), amount);
+                    let xt = _api.balance_transfer(GenericAddress::Id(to.clone()), amount);
                     let tx_hash = _api
                         .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
                         .unwrap();
@@ -305,13 +317,21 @@ fn main() {
             Command::new("listen")
                 .description("listen to on-chain events")
                 .options(|app| {
-                    app.arg(
-                        Arg::with_name("events")
-                            .short("e")
-                            .long("exit-after")
-                            .takes_value(true)
-                            .help("exit after given number of SubstraTEE events"),
-                    )
+                    app.setting(AppSettings::ColoredHelp)
+                        .arg(
+                            Arg::with_name("events")
+                                .short("e")
+                                .long("exit-after")
+                                .takes_value(true)
+                                .help("exit after given number of SubstraTEE events"),
+                        )
+                        .arg(
+                            Arg::with_name("blocks")
+                                .short("b")
+                                .long("await-blocks")
+                                .takes_value(true)
+                                .help("exit after given number of blocks"),
+                        )
                 })
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     listen(matches);
@@ -447,7 +467,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
     debug!("calling workerapi to get state value, {:?}", getter);
     let ret = worker_api
         .get_stf_state(getter, &shard)
-        .expect("getting value failed");
+        .expect("getting value from worker API failed");
     // strip whitespace padding through decoding
     if let Ok(vd) = Decode::decode(&mut ret.as_slice()) {
         debug!("decoded return value: {:?} ", vd);
@@ -545,6 +565,7 @@ fn listen(matches: &ArgMatches<'_>) {
     info!("Subscribing to events");
     let (events_in, events_out) = channel();
     let mut count = 0u32;
+    let mut blocks = 0u32;
     api.subscribe_events(events_in);
     loop {
         if matches.is_present("events")
@@ -552,14 +573,20 @@ fn listen(matches: &ArgMatches<'_>) {
         {
             return;
         };
+        if matches.is_present("blocks")
+            && blocks > value_t!(matches.value_of("blocks"), u32).unwrap()
+        {
+            return;
+        };
         let event_str = events_out.recv().unwrap();
         let _unhex = hexstr_to_vec(event_str).unwrap();
         let mut _er_enc = _unhex.as_slice();
         let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
+        blocks += 1;
         match _events {
             Ok(evts) => {
                 for evr in &evts {
-                    debug!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
+                    println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
                     match &evr.event {
                         /*                            Event::balances(be) => {
                             println!(">>>>>>>>>> balances event: {:?}", be);
@@ -579,28 +606,61 @@ fn listen(matches: &ArgMatches<'_>) {
                             println!(">>>>>>>>>> substraTEE event: {:?}", ee);
                             count += 1;
                             match &ee {
-                                substratee_node_runtime::substratee_registry::RawEvent::AddedEnclave(accountid, url) => {
-                                    println!("AddedEnclave: {:?} at url {}", accountid, String::from_utf8(url.to_vec()).unwrap_or_else(|_| "error".to_string()));
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::RemovedEnclave(accountid) => {
+                                my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+                                    accountid,
+                                    url,
+                                ) => {
+                                    println!(
+                                        "AddedEnclave: {:?} at url {}",
+                                        accountid,
+                                        String::from_utf8(url.to_vec())
+                                            .unwrap_or_else(|_| "error".to_string())
+                                    );
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::RemovedEnclave(
+                                    accountid,
+                                ) => {
                                     println!("RemovedEnclave: {:?}", accountid);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::UpdatedIpfsHash(shard, idx, ipfs_hash) => {
-                                    println!("UpdatedIpfsHash for shard {}, worker index {}, ipfs# {:?}", shard.encode().to_base58(), idx, ipfs_hash);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::Forwarded(request) => {
-                                    let request_hash = hex::encode(request.cyphertext.clone());
-                                    println!("Forwarded request for shard {}: {}", request.shard.encode().to_base58(), request_hash);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(accountid, call_hash) => {
-                                    println!("CallConfirmed from {} with hash {:?}", accountid, call_hash);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::ShieldFunds(incognito_account) => {
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::UpdatedIpfsHash(
+                                    shard,
+                                    idx,
+                                    ipfs_hash,
+                                ) => {
+                                    println!(
+                                        "UpdatedIpfsHash for shard {}, worker index {}, ipfs# {:?}",
+                                        shard.encode().to_base58(),
+                                        idx,
+                                        ipfs_hash
+                                    );
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::Forwarded(
+                                    shard,
+                                ) => {
+                                    println!(
+                                        "Forwarded request for shard {}",
+                                        shard.encode().to_base58()
+                                    );
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                                    accountid,
+                                    call_hash,
+                                ) => {
+                                    println!(
+                                        "CallConfirmed from {} with hash {:?}",
+                                        accountid, call_hash
+                                    );
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+                                    incognito_account,
+                                ) => {
                                     println!("ShieldFunds for {:?}", incognito_account);
-                                },
-                                substratee_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(public_account) => {
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+                                    public_account,
+                                ) => {
                                     println!("UnshieldFunds for {:?}", public_account);
-                                },
+                                }
                             }
                         }
                         _ => debug!("ignoring unsupported module event: {:?}", evr.event),
@@ -637,7 +697,7 @@ where
             for evr in &evts {
                 info!("received event {:?}", evr.event);
                 if let Event::substratee_registry(pe) = &evr.event {
-                    if let substratee_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+                    if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
                         payload,
                     ) = &pe
@@ -672,11 +732,10 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
         _ => {
             info!("fetching from keystore at {}", &KEYSTORE_PATH);
             // open store without password protection
-            let store =
-                Store::open(PathBuf::from(&KEYSTORE_PATH), None).expect("store should exist");
+            let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None)
+                .expect("store should exist");
             info!("store opened");
             let _pair = store
-                .read()
                 .key_pair::<sr25519::AppPair>(
                     &sr25519::Public::from_ss58check(account).unwrap().into(),
                 )

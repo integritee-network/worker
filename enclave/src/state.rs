@@ -17,6 +17,7 @@
 
 use std::fs;
 
+use std::io::Write;
 use std::vec::Vec;
 
 use log::*;
@@ -101,7 +102,10 @@ pub fn exists(shard: &ShardIdentifier) -> bool {
 }
 
 pub fn init_shard(shard: &ShardIdentifier) -> SgxResult<()> {
-    fs::create_dir_all(format!("{}/{}", SHARDS_PATH, shard.encode().to_base58())).sgx_error()
+    let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
+    fs::create_dir_all(path.clone()).sgx_error()?;
+    let mut file = fs::File::create(format!("{}/{}", path, ENCRYPTED_STATE_FILE)).sgx_error()?;
+    file.write_all(b"").sgx_error()
 }
 
 fn read(path: &str) -> SgxResult<Vec<u8>> {

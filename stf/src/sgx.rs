@@ -1,6 +1,7 @@
 use sgx_tstd as std;
 use std::collections::HashMap;
 use std::prelude::v1::*;
+use std::vec;
 
 use codec::{Decode, Encode};
 use derive_more::Display;
@@ -8,14 +9,15 @@ use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
+use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
+use sp_runtime::MultiAddress;
 use support::traits::UnfilteredDispatchable;
 
 use crate::{
     AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
     TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
-use sp_core::blake2_256;
 
 /// Simple blob that holds a call in encoded format
 #[derive(Clone, Debug)]
@@ -30,6 +32,7 @@ impl Encode for OpaqueCall {
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
 type AccountInfo = system::AccountInfo<Index, AccountData>;
+
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
     76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
@@ -40,6 +43,10 @@ impl Stf {
         debug!("initializing stf state");
         let mut ext = State::new();
         ext.execute_with(|| {
+            // do not set genesis for pallets that are meant to be on-chain
+            // use get_storage_hashes_to_update instead
+            sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
+
             sp_io::storage::set(
                 &storage_value_key("Balances", "TotalIssuance"),
                 &11u128.encode(),
@@ -64,7 +71,6 @@ impl Stf {
                 &storage_value_key("Balances", "ExistentialDeposit"),
                 &1u128.encode(),
             );
-            sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
         });
         ext
     }
@@ -102,7 +108,7 @@ impl Stf {
                     reserved_balance
                 );
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                    AccountId32::from(who),
+                    MultiAddress::Id(AccountId32::from(who)),
                     free_balance,
                     reserved_balance,
                 )
@@ -123,9 +129,12 @@ impl Stf {
                 } else {
                     debug!("sender balance is zero");
                 }
-                sgx_runtime::BalancesCall::<Runtime>::transfer(AccountId32::from(to), value)
-                    .dispatch_bypass_filter(origin)
-                    .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+                sgx_runtime::BalancesCall::<Runtime>::transfer(
+                    MultiAddress::Id(AccountId32::from(to)),
+                    value,
+                )
+                .dispatch_bypass_filter(origin)
+                .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -196,15 +205,19 @@ impl Stf {
     fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
         match get_account_info(&account) {
             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                account.into(),
+                MultiAddress::Id(account.into()),
                 account_info.data.free + amount,
                 account_info.data.reserved,
             )
             .dispatch_bypass_filter(sgx_runtime::Origin::root())
             .map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
-            None => sgx_runtime::BalancesCall::<Runtime>::set_balance(account.into(), amount, 0)
-                .dispatch_bypass_filter(sgx_runtime::Origin::root())
-                .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
+            None => sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                MultiAddress::Id(account.into()),
+                amount,
+                0,
+            )
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
+            .map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
         };
         Ok(())
     }
@@ -217,7 +230,7 @@ impl Stf {
                 }
 
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                    account.into(),
+                    MultiAddress::Id(account.into()),
                     account_info.data.free - amount,
                     account_info.data.reserved,
                 )
@@ -241,7 +254,7 @@ impl Stf {
     }
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
-        info!(
+        debug!(
             "No specific storage updates needed for getter. Returning those for on block: {:?}",
             getter
         );
@@ -249,10 +262,11 @@ impl Stf {
     }
 
     pub fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
-        // let key_hashes = Vec::new();
-        // key_hashes.push(storage_value_key("dummy", "dummy"));
-        // key_hashes
-        Vec::new()
+        let mut key_hashes = Vec::new();
+
+        // get all shards that are currently registered
+        key_hashes.push(shards_key_hash());
+        key_hashes
     }
 }
 
@@ -263,7 +277,7 @@ pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u
 pub fn shards_key_hash() -> Vec<u8> {
     // here you have to point to a storage value containing a Vec of ShardIdentifiers
     // the enclave uses this to autosubscribe to no shards
-    storage_value_key("EncointerCurrencies", "CurrencyIdentifiers")
+    vec![]
 }
 
 // get the AccountInfo key where the nonce is stored

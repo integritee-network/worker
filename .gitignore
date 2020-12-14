@@ -9,6 +9,7 @@
 bin/*.so
 bin/substratee-*
 bin/*.wasm
+bin2/substratee-*
 
 # sealed data
 bin/*.bin

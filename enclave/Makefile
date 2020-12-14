@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Rust_Enclave_Name := libenclave.a
-Rust_Enclave_Files := $(wildcard src/*.rs)
+Rust_Enclave_Files := $(wildcard src/*.rs) $(wildcard ../stf/src/*.rs)
 Rust_Target_Path := $(CURDIR)/../../../xargo
 
 ifeq ($(SGX_DEBUG), 1)

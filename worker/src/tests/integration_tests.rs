@@ -26,11 +26,11 @@ use substrate_api_client::XtStatus;
 use crate::constants::*;
 use crate::enclave::api::*;
 use crate::tests::commons::*;
+use my_node_runtime::Header;
 use std::thread::sleep;
 use std::time::Duration;
 use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
 use substratee_node_primitives::{CallWorkerFn, Request, ShieldFundsFn};
-use substratee_node_runtime::Header;
 
 pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     // start the substrate-api-client to communicate with the node

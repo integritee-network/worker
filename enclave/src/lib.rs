@@ -42,7 +42,9 @@ use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
-use constants::{CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE};
+use constants::{
+    CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
+};
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
@@ -198,7 +200,10 @@ fn stf_post_actions(
 
     for xt in extrinsics_buffer.iter() {
         validator
-            .submit_xt_to_be_included(validator.num_relays, OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap())
+            .submit_xt_to_be_included(
+                validator.num_relays,
+                OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap(),
+            )
             .unwrap();
     }
 
@@ -338,7 +343,7 @@ pub unsafe extern "C" fn sync_chain_relay(
     unchecked_extrinsic: *mut u8,
     unchecked_extrinsic_size: usize,
 ) -> sgx_status_t {
-    info!("Syncing chain relay!");
+    debug!("Syncing chain relay!");
     let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
     let xt_slice = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size);
 
@@ -398,6 +403,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
         return Ok(());
     }
 
+    // global requests they are the same for every shard
     let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
     let update_map = verify_worker_responses(responses, header.clone())?;
     // look for new shards an initialize them
@@ -522,7 +528,7 @@ fn handle_call_worker_xt(
 ) -> SgxResult<()> {
     let (call, request) = xt.function;
     let (shard, cyphertext) = (request.shard, request.cyphertext);
-    info!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
+    debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
         call,
         shard.encode().to_base58(),
         cyphertext
