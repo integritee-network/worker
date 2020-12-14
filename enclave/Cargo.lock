@@ -1424,8 +1424,8 @@ checksum = "3b181ba2dcf07aaccad5448e8ead58db5b742cf85dfe035e2227f137a539a189"
 
 [[package]]
 name = "ring"
-version = "0.16.11"
-source = "git+https://github.com/mesalock-linux/ring-sgx?tag=v0.16.5#c009987701af4b604d33d0e315456f3c59162d29"
+version = "0.16.19"
+source = "git+https://github.com/mesalock-linux/ring-sgx?tag=v0.16.5"
 dependencies = [
  "cc",
  "sgx_tstd",
@@ -2529,8 +2529,8 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "webpki"
-version = "0.21.2"
-source = "git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx#45d331af41bde4a9651b26c760f15c6c9366d637"
+version = "0.21.4"
+source = "git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx"
 dependencies = [
  "ring",
  "sgx_tstd",
@@ -2539,8 +2539,8 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.19.0"
-source = "git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx#feac680d6721ff11c6af52f05a647a16615d4e01"
+version = "0.21.0"
+source = "git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx"
 dependencies = [
  "sgx_tstd",
  "webpki",
