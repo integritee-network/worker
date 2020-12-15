@@ -8,11 +8,19 @@ pipeline {
       '''
     }
   }
+  environment {
+    SGX_SDK='/opt/intel/sgxsdk'
+  }
   options {
     timeout(time: 2, unit: 'HOURS')
     buildDiscarder(logRotator(numToKeepStr: '14'))
   }
   stages {
+    stage('rustup') {
+      steps {
+        sh './ci/install_rust.sh'
+      }
+    }
     stage('Information') {
       steps {
         sh 'cargo --version'
