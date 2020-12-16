@@ -13,7 +13,9 @@
 # then run this script
 
 # usage:
-#  demo_shielding_unshielding.sh <NODEPORT> <WORKERPORT>
+#  demo_shielding_unshielding.sh <NODEPORT> <WORKERPORT> <TEST_BALANCE_RUN>
+#
+# TEST_BALANCE_RUN is either "first" or "second"
 
 # using default port if none given as first argument
 NPORT=${1:-9944}
@@ -102,15 +104,28 @@ echo "* Get balance of Alice's on-chain account"
 ${CLIENT} balance "//Alice"
 echo ""
 
-if [ "10000000000" = "$RESULT" ]; then
-    echo "test passed (1st time)"
-    exit 1
-else
-  if [ "20000000000" = "$RESULT" ]; then
-    echo "test passed (2nd time)"
-    exit 2
-  else
-    echo "test failed or ran more than twice after genesis"
-    exit 255
-  fi
-fi
+
+# the following tests are for automated CI
+# they only work if you're running from fresh genesis
+case "$3" in 
+    first)
+        if [ "10000000000" = "$RESULT" ]; then
+            echo "test passed (1st time)"
+            exit 0
+        else
+            echo "test ran through but balance is wrong. have you run the script from fresh genesis?"
+            exit 1
+        fi
+        ;;
+    second)
+        if [ "20000000000" = "$RESULT" ]; then
+            echo "test passed (2nd time)"
+            exit 0
+        else
+            echo "test ran through but balance is wrong. is this really the second time you run this since genesis?"
+            exit 1
+        fi
+        ;;
+esac
+
+exit 0
