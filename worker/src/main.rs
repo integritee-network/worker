@@ -105,12 +105,15 @@ fn main() {
                 ShardIdentifier::from_slice(&mrenclave[..])
             }
         };
-        let ext_api_url = smatches
-            .value_of("w-server")
-            .unwrap_or("ws://127.0.0.1:2000");
+
+        let ext_api_url = if let Some(url) = smatches.value_of("w-server") {
+            url.to_string()
+        } else {
+            format!("ws://127.0.0.1:{}", w_port)
+        };
         println!("Advertising worker api at {}", ext_api_url);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, skip_ra);
+        worker(w_ip, w_port, mu_ra_port, &shard, &ext_api_url, skip_ra);
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard: ShardIdentifier = match smatches.value_of("shard") {
             Some(value) => {
