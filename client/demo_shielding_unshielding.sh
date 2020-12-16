@@ -48,7 +48,8 @@ ${CLIENT} balance "//Bob"
 echo ""
 
 echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+#ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTALICE=//AliceIncognito
 echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
@@ -65,7 +66,7 @@ echo "* Waiting 10 seconds"
 sleep 10
 echo ""
 
-echo -n "Get balance of Alice's incognito account"
+echo "Get balance of Alice's incognito account"
 ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
@@ -93,10 +94,23 @@ echo "* Waiting 10 seconds"
 sleep 10
 echo ""
 
-echo -n "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
-echo ""
+echo "Get balance of Alice's incognito account"
+RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+echo $RESULT
 
 echo "* Get balance of Alice's on-chain account"
 ${CLIENT} balance "//Alice"
 echo ""
+
+if [ "10000000000" = "$RESULT" ]; then
+    echo "test passed (1st time)"
+    exit 1
+else
+  if [ "20000000000" = "$RESULT" ]; then
+    echo "test passed (2nd time)"
+    exit 2
+  else
+    echo "test failed or ran more than twice after genesis"
+    exit 255
+  fi
+fi

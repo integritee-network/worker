@@ -235,7 +235,7 @@ fn main() {
                     } else {
                         0
                     };
-                    println!("balance for {} is {}", account, balance);
+                    println!("{}", balance);
                     Ok(())
                 }),
         )

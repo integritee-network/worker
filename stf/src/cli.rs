@@ -227,7 +227,7 @@ pub fn cmd<'a>(
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
                     let arg_who = matches.value_of("accountid").unwrap();
-                    println!("arg_who = {:?}", arg_who);
+                    info!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
                     let top: TrustedOperation =
                         TrustedGetter::free_balance(sr25519_core::Public::from(who.public()))
