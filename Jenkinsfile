@@ -8,9 +8,6 @@ pipeline {
       '''
     }
   }
-  environment {
-    SGX_SDK='/opt/intel/sgxsdk'
-  }
   options {
     timeout(time: 2, unit: 'HOURS')
     buildDiscarder(logRotator(numToKeepStr: '14'))
@@ -30,6 +27,7 @@ pipeline {
     }
     stage('Build') {
       steps {
+        sh 'export SGX_SDK=/opt/intel/sgxsdk'
         sh 'make'
       }
     }
@@ -49,13 +47,13 @@ pipeline {
       steps {
         sh 'cargo clean'
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd client  && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
+          sh 'cd client  && cargo clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd worker  && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'
+          sh 'cd worker  && cargo clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd enclave && cargo +nightly-2020-04-07 clippy 2>&1 | tee ${WORKSPACE}/clippy_enclave.log'
+          sh 'cd enclave && cargo clippy 2>&1 | tee ${WORKSPACE}/clippy_enclave.log'
         }
       }
     }
