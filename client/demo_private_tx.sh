@@ -2,12 +2,12 @@
 
 # setup:
 # run all on localhost:
-# run substratee-node --dev --ws-port 9979 -lruntime=debug
-# run substratee-worker -p 9979 run
+# run substratee-node --dev -lruntime=debug
+# run substratee-worker run
 #
 # then run this script
 
-CLIENT="./substratee-client -p 9979 -P 2079"
+CLIENT="./substratee-client"
 
 echo "query on-chain enclave registry:"
 $CLIENT list-workers

@@ -3,12 +3,12 @@
 # setup:
 # run all on localhost:
 #   substratee-node purge-chain --dev
-#   substratee-node --dev --ws-port 9979 -lruntime=debug
+#   substratee-node --dev -lruntime=debug
 #   rm chain_relay_db.bin
 #   substratee-worker init_shard
 #   substratee-worker shielding-key
 #   substratee-worker signing-key
-#   substratee-worker -p 9979 -w 2079 run
+#   substratee-worker run
 #
 # then run this script
 
@@ -16,8 +16,8 @@
 #  demo_shielding_unshielding.sh <NODEPORT> <WORKERPORT>
 
 # using default port if none given as first argument
-NPORT=${1:-9979}
-WPORT=${2:-2079}
+NPORT=${1:-9944}
+WPORT=${2:-2000}
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-port ${WPORT}"
