@@ -134,10 +134,10 @@ git = "https://github.com/whalelephant/rust-ipfs"
 branch = "w-nstd"
 default-features = false
 
-#[dependencies.jsonrpc-core]
-#git = "https://github.com/scs/jsonrpc"
-#branch = "601/no-std-core"
-#default-features = false
+[dependencies.jsonrpc-core]
+git = "https://github.com/scs/jsonrpc"
+branch = "601/no-std-core"
+default-features = false
 
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
