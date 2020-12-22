@@ -53,7 +53,6 @@ subcommands:
                 long: worker-url
                 help: Set the worker's IP address to be advertised in onchain registry. Include port if not 443
                 takes_value: true
-                default_value: "ws://127.0.0.1:2000"
             - shard:
                 required: false
                 index: 1
