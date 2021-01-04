@@ -51,7 +51,7 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
-use enclave::worker_api_direct::{enclave_start_worker_api_direct};
+use enclave::worker_api_direct::{start_worker_api_direct_server, handle_direct_invocation_request};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
 use ws_server::start_ws_server;
@@ -88,7 +88,6 @@ fn main() {
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
 
     let worker_api_direct_port = matches.value_of("worker-api-direct-port").unwrap_or("4000");
-    info!("Worker-api-direct listening on port {}", worker_api_direct_port);
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -287,6 +286,14 @@ fn worker(
             &ra_url,
         )
     });
+    
+    // ------------------------------------------------------------------------
+    // start worker api direct invocation server
+    println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_api_direct_port);
+    let direct_url = format!("{}:{}", w_ip, worker_api_direct_port);
+    let (direct_sender, direct_receiver) = channel();
+    start_worker_api_direct_server(direct_url, direct_sender);
+
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
@@ -327,15 +334,6 @@ fn worker(
     println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
-    // start worker api direct invocation
-    enclave_start_worker_api_direct(
-        enclave.geteid(),
-        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-        &format!("localhost:{}", worker_api_direct_port), 
-    );
-
-
-    // ------------------------------------------------------------------------
     // subscribe to events and react on firing
     println!("*** Subscribing to events");
     let (sender, receiver) = channel();
@@ -368,6 +366,9 @@ fn worker(
         }
         if let Ok(req) = ws_receiver.recv_timeout(timeout) {
             ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
+        }
+        if let Ok(rpc_req) = direct_receiver.recv_timeout(timeout) {
+            handle_direct_invocation_request(rpc_req, eid).unwrap()
         }
     }
 }

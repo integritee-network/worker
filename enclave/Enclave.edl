@@ -73,7 +73,7 @@ enclave {
 		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type);
         public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type);
 
-		public sgx_status_t start_worker_api_direct(int fd, sgx_quote_sign_type_t quote_type);
+		public sgx_status_t call_rpc_methods([in] uint8_t* rpc_call);
 
 		public size_t test_main_entrance();
 	};
