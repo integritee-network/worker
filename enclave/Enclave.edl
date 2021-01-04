@@ -25,6 +25,7 @@ enclave {
 	from "sgx_net.edl" import *;
 	from "sgx_time.edl" import *;
 	from "sgx_env.edl" import *;
+	from "sgx_thread.edl" import *;
 
 	include "sgx_quote.h"
 
@@ -69,10 +70,10 @@ enclave {
 
 		public sgx_status_t dump_ra_to_disk();
 
-		public sgx_status_t run_key_provisioning_server(int fd,sgx_quote_sign_type_t quote_type);
+		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type);
         public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type);
 
-		public sgx_status_t start_worker_api_direct(int fd,sgx_quote_sign_type_t quote_type);
+		public sgx_status_t start_worker_api_direct(int fd, sgx_quote_sign_type_t quote_type);
 
 		public size_t test_main_entrance();
 	};

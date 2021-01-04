@@ -1,8 +1,11 @@
+cargo-features = ["resolver"]
+
 [package]
 name = "substratee-worker-enclave"
 version = "0.7.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
+resolver = "2"
 
 [workspace]
 members = [
@@ -155,4 +158,8 @@ sp-io = { tag = "v0.7.0", git = "https://github.com/scs/sgx-runtime", default-fe
 #sgx-runtime = { path = "../../sgx-runtime/runtime", default-features = false }
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 #sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities", default-features = false}
+
+
+#[patch."https://github.com/scs/jsonrpc"]
+#jsonrpc-core = { path = "../../jsonrpc-fork/core"}
 

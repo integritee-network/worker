@@ -1,9 +1,6 @@
-//#[macro_use(rpc_method)]
-//#[cfg(feature = "std")]
-//#![no_std]
-/*extern crate json_rpc_core;
+//extern crate json_rpc_core;
 //extern crate json_rpc;
-//use json_rpc::{Server, Json, Error};
+/*use json_rpc::{Server, Json, Error};
 
 
 use std::backtrace::{self, PrintFormat};
@@ -42,14 +39,33 @@ impl AuthorRpc for Author {
     }
 
 
-}
+}*/
+
+use std::backtrace::{self, PrintFormat};
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::sync::Arc;
+use std::vec::Vec;
+
+use sgx_types::*;
+
+use log::*;
+use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
+
+use webpki::DNSName;
+
+use crate::aes;
+use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
+use crate::cert;
+use crate::rsa3072;
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 
 #[no_mangle]
 pub unsafe extern "C" fn start_worker_api_direct(
     socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 ) -> sgx_status_t {
-	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
+	/*let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
 	let mut rpc_server = Server::new();
 
@@ -60,7 +76,7 @@ pub unsafe extern "C" fn start_worker_api_direct(
    / // Add a silly RPC that returns constant values
     io.extend_with(crate::author_rpc::AuthorRpc::to_delegate(
         crate::author_rpc::Author {},
-    ));
+    ));*/
 
 
 	// Register rpc methods
@@ -94,7 +110,6 @@ pub unsafe extern "C" fn start_worker_api_direct(
     sgx_status_t::SGX_SUCCESS
 
 }
-*/
 /*
 fn submit_extrinsic(&self, ext: Bytes) -> FutureResult<TxHash<P>> {
 	let xt = match Decode::decode(&mut &ext[..]) {
