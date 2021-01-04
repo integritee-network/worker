@@ -9,6 +9,8 @@ use sgx_types::*;
 use log::*;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
 
+use webpki::DNSName;
+
 use crate::aes;
 use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
 use crate::cert;
@@ -26,13 +28,14 @@ impl ClientAuth {
 }
 
 impl rustls::ClientCertVerifier for ClientAuth {
-    fn client_auth_root_subjects(&self) -> rustls::DistinguishedNames {
-        rustls::DistinguishedNames::new()
+    fn client_auth_root_subjects(&self, sni: Option<&DNSName>) -> Option<rustls::DistinguishedNames>{
+        Some(rustls::DistinguishedNames::new())
     }
 
     fn verify_client_cert(
         &self,
         _certs: &[rustls::Certificate],
+        sni: Option<&DNSName>,
     ) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
         debug!("client cert: {:?}", _certs);
         // This call will automatically verify cert is properly signed
