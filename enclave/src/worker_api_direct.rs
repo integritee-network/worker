@@ -61,22 +61,23 @@ pub unsafe extern "C" fn call_rpc_methods(
 
     io.add_sync_method("say_hello", |_: Params| Ok(Value::String("Hello World!".to_owned())));
 
-    let req = from_raw_parts(request, request_len as usize);
-    let request_string = match from_utf8(req) {
-       Ok(req) => req.to_string(),
-       Err(_) => String::from("Empty"),
-    };
+    let req: &[u8]= from_raw_parts(request, request_len as usize);
+   /* let request_string = match from_utf8(req) {
+       Ok(req) => req,
+       Err(_) => "Empty",
+    };*/
 
-    let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
-    response_string = io.handle_request_sync(request_test).unwrap().to_string();
-    
-    /*
-    if request_string.contains("method") {
-        response_string = "[Enclave] found".to_string();
-    } else {
-        response_string = "[Enclave] not found".to_string();
-    }
-*/
+    let request_vec = req.to_vec();
+    //let request_json: Value = serde_json::from_str(request_string).unwrap();
+    //response_string = io.handle_request_sync(request_string).unwrap().to_string();
+
+    //response_string = from_utf8(&request_string).unwrap().to_string();
+     let request_string = match from_utf8(&request_vec) {
+       Ok(req) => req,
+       Err(_) => "Empty",
+    };
+    //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
+    response_string = io.handle_request_sync(request_string).unwrap().to_string();
 
    
     let response_slice = from_raw_parts_mut(response, response_len as usize);

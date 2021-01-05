@@ -98,13 +98,11 @@ pub fn handle_direct_invocation_request(
 	let mut response: Vec<u8> = vec![0u8; response_len as usize];
 	//let response_len: *mut u32 = &mut (response.len() as u32) as *mut u32;
 
-   // let msg: Vec<char> = req.request.chars().collect();
-	let msg = req.request.as_bytes().as_ptr();
-	let msg_len: u32 = req.request.len() as u32;
+	let msg: Vec<u8> = req.request.as_bytes().to_vec();
 
 
     let result = unsafe {
-        call_rpc_methods(eid, &mut retval, msg, msg_len, response.as_mut_ptr(), response_len)
+        call_rpc_methods(eid, &mut retval, msg.as_ptr(), msg.len() as u32, response.as_mut_ptr(), response_len)
     };
 
     match result {
@@ -117,6 +115,7 @@ pub fn handle_direct_invocation_request(
 	}
 	let response_string: String = String::from_utf8(response).expect("Found invalid UTF-8");
 
+	req.client.send(req.request);
 	req.client.send(response_string)
 	
 
