@@ -1,8 +1,8 @@
-use std::backtrace::{self, PrintFormat};
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::sync::Arc;
-use std::vec::Vec;
+
+pub extern crate alloc;
+use alloc::string::{String, ToString};
+use alloc::str::from_utf8;
+use alloc::slice::from_raw_parts;
 
 use sgx_types::*;
 
@@ -49,11 +49,24 @@ fn add(&self, a: u64, b: u64) -> Result<u64> {
 
 #[no_mangle]
 pub unsafe extern "C" fn call_rpc_methods(
-	msg: *const u8,
+    request: *const u8,
+    request_len: u32,
+    response: *mut u8,
+    response_len: *mut u32,
 ) -> sgx_status_t {
 
+  let mut response_string = String::new();
+   let req = from_raw_parts(request, request_len as usize);
+   let request_string = match from_utf8(req) {
+       Ok(req) => req.to_string(),
+       Err(_) => String::from("Empty"),
+   };
+    
+    if request_string.contains("method") {
+        response_string = String::from("Method contained");
+    }
+    let mut response = response_string.as_bytes().as_ptr();
 	//let mut io = IoHandler::new();
 	//io.extend_with()
 	sgx_status_t::SGX_SUCCESS
-
 }
