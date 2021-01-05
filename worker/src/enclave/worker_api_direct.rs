@@ -14,18 +14,12 @@
     limitations under the License.
 
 */
-use std::net::{TcpListener, TcpStream};
-use std::os::unix::io::AsRawFd;
-
 use sgx_types::*;
 
-use codec::{Decode, Encode};
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
-use substratee_stf::{Getter, ShardIdentifier};
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 use std::thread;
-
 
 
 extern "C" {
@@ -93,10 +87,8 @@ pub fn handle_direct_invocation_request(
     info!("Got message '{:?}'. ", req.request);
     // forwarding rpc string directly to enclave
 	let mut retval = sgx_status_t::SGX_SUCCESS;
-	//let mut response: &[u8] = "not valid".as_bytes();
 	let response_len = 8192;
 	let mut response: Vec<u8> = vec![0u8; response_len as usize];
-	//let response_len: *mut u32 = &mut (response.len() as u32) as *mut u32;
 
 	let msg: Vec<u8> = req.request.as_bytes().to_vec();
 
@@ -114,16 +106,8 @@ pub fn handle_direct_invocation_request(
         }
 	}
 	let response_string: String = String::from_utf8(response).expect("Found invalid UTF-8");
-
-	req.client.send(req.request);
 	req.client.send(response_string)
-	
 
-	//response_string.clone_from_slice(&response.to_vec())
-    //let answer_json = serde_json::to_string(&answer).unwrap();
-    //Message::text(answer);
-
-   // req.client.send(answer)
 }
 
 

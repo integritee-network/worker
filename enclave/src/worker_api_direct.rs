@@ -1,6 +1,22 @@
+/*
+    Copyright 2019 Supercomputing Systems AG
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+*/
 
 pub extern crate alloc;
-use alloc::string::{String, ToString};
+use alloc::string::ToString;
 use alloc::str::from_utf8;
 use alloc::slice::{from_raw_parts, from_raw_parts_mut};
 use core::iter::Iterator;
@@ -10,43 +26,8 @@ use alloc::borrow::ToOwned;
 use sgx_types::*;
 
 use log::*;
-use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
 
 use jsonrpc_core::*;
-use serde_derive::Deserialize;
-
-use crate::aes;
-use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
-use crate::cert;
-use crate::rsa3072;
-
-/*use json_rpc::{Server, Json, Error};
-
-use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
-use substratee_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
-};
-
-#[rpc]
-pub trait AuthorRpc {
-    #[rpc(name = "author_submitExtrinsic")]
-    fn silly_7(&self) -> Result<u64>;
-}
-
-pub struct Author;
-
-impl AuthorRpc for Author {
-    fn silly_7(&self) -> Result<u64> {
-        Ok(7)
-    }
-
-
-}
-
-fn add(&self, a: u64, b: u64) -> Result<u64> {
-	Ok(a + b)
-}
-*/
 
 #[no_mangle]
 pub unsafe extern "C" fn call_rpc_methods(
@@ -61,21 +42,12 @@ pub unsafe extern "C" fn call_rpc_methods(
 
     io.add_sync_method("say_hello", |_: Params| Ok(Value::String("Hello World!".to_owned())));
 
-    let req: &[u8]= from_raw_parts(request, request_len as usize);
-   /* let request_string = match from_utf8(req) {
-       Ok(req) => req,
-       Err(_) => "Empty",
-    };*/
-
-    let request_vec = req.to_vec();
-    //let request_json: Value = serde_json::from_str(request_string).unwrap();
-    //response_string = io.handle_request_sync(request_string).unwrap().to_string();
-
-    //response_string = from_utf8(&request_string).unwrap().to_string();
-     let request_string = match from_utf8(&request_vec) {
+    let req: Vec<u8> = from_raw_parts(request, request_len as usize).to_vec(); 
+    let request_string = match from_utf8(&req) {
        Ok(req) => req,
        Err(_) => "Empty",
     };
+
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
     response_string = io.handle_request_sync(request_string).unwrap().to_string();
 
