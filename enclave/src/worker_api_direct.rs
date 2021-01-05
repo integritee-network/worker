@@ -5,21 +5,21 @@ use alloc::str::from_utf8;
 use alloc::slice::{from_raw_parts, from_raw_parts_mut};
 use core::iter::Iterator;
 use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 
 use sgx_types::*;
 
 use log::*;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
 
-use jsonrpc_core::{Error, IoHandler, Result};
+use jsonrpc_core::*;
+use serde_derive::Deserialize;
 
 use crate::aes;
 use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
 use crate::cert;
 use crate::rsa3072;
 
-//extern crate json_rpc_core;
-//extern crate json_rpc;
 /*use json_rpc::{Server, Json, Error};
 
 use substrate_api_client::{utils::hexstr_to_vec, Api, XtStatus};
@@ -56,28 +56,33 @@ pub unsafe extern "C" fn call_rpc_methods(
     response_len: u32,
 ) -> sgx_status_t {
 
-   let req = from_raw_parts(request, request_len as usize);
-   let request_string = match from_utf8(req) {
+    let mut io = IoHandler::new();
+    let mut response_string = "test".to_string();
+
+    io.add_sync_method("say_hello", |_: Params| Ok(Value::String("Hello World!".to_owned())));
+
+    let req = from_raw_parts(request, request_len as usize);
+    let request_string = match from_utf8(req) {
        Ok(req) => req.to_string(),
        Err(_) => String::from("Empty"),
-   };
+    };
+
+    let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
+    response_string = io.handle_request_sync(request_test).unwrap().to_string();
     
-   let mut response_string = "test".to_string();
+    /*
     if request_string.contains("method") {
         response_string = "[Enclave] found".to_string();
     } else {
         response_string = "[Enclave] not found".to_string();
     }
+*/
 
-    
-  // let response = response_string.as_bytes();
+   
     let response_slice = from_raw_parts_mut(response, response_len as usize);
-   write_slice_and_whitespace_padding(response_slice, response_string.as_bytes().to_vec());
+    write_slice_and_whitespace_padding(response_slice, response_string.as_bytes().to_vec());
 
-    
-    //response.clone_from_slice(&response.to_vec());
-	//let mut io = IoHandler::new();
-	//io.extend_with()
+
 	sgx_status_t::SGX_SUCCESS
 }
 
