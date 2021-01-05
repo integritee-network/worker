@@ -35,7 +35,7 @@ extern "C" {
 		request: *const u8,
 		request_len: u32,
 		response: *mut u8,
-		response_len: *mut u32,
+		response_len: u32,
     ) -> sgx_status_t;
 }
 
@@ -94,12 +94,14 @@ pub fn handle_direct_invocation_request(
     // forwarding rpc string directly to enclave
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 	//let mut response: &[u8] = "not valid".as_bytes();
-	let mut response = vec![0u8];
-	let response_len: *mut u32 = &mut (response.len() as u32) as *mut u32;
+	let response_len = 8192;
+	let mut response: Vec<u8> = vec![0u8; response_len as usize];
+	//let response_len: *mut u32 = &mut (response.len() as u32) as *mut u32;
 
    // let msg: Vec<char> = req.request.chars().collect();
 	let msg = req.request.as_bytes().as_ptr();
 	let msg_len: u32 = req.request.len() as u32;
+
 
     let result = unsafe {
         call_rpc_methods(eid, &mut retval, msg, msg_len, response.as_mut_ptr(), response_len)
@@ -107,15 +109,18 @@ pub fn handle_direct_invocation_request(
 
     match result {
         sgx_status_t::SGX_SUCCESS => {
-            debug!("[RPC-Call] ECALL success!");
+			debug!("[RPC-Call] ECALL success!");
         }
         _ => {
-            error!("[RPC-call] ECALL Enclave Failed {}!", result.as_str());
+			error!("[RPC-call] ECALL Enclave Failed {}!", result.as_str());
         }
-    }
-	let response_string = String::from_utf8(response.to_vec()).unwrap();
-    req.client.send(response_string)
+	}
+	let response_string: String = String::from_utf8(response).expect("Found invalid UTF-8");
 
+	req.client.send(response_string)
+	
+
+	//response_string.clone_from_slice(&response.to_vec())
     //let answer_json = serde_json::to_string(&answer).unwrap();
     //Message::text(answer);
 
