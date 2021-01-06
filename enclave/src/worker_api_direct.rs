@@ -29,6 +29,13 @@ use sgx_types::*;
 use log::*;
 
 use jsonrpc_core::*;
+use serde::Deserialize;
+use serde::de::DeserializeOwned;
+
+#[derive(Deserialize)]
+struct SumbitExtrinsicParams {
+    extrinsic: String,
+}
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability
 fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
@@ -53,10 +60,15 @@ fn init_io_handler() -> IoHandler {
     // author_submitAndWatchExtrinsic
     let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
     rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
-    io.add_sync_method(author_submit_and_watch_extrinsic_name, |_: Params| {
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
-	});
+    io.add_sync_method(author_submit_and_watch_extrinsic_name, |params: Params| {  
+       match params.parse() {
+            Ok(ok) => {
+                let parsed: SumbitExtrinsicParams = ok;
+                Ok(Value::String(format!("hello extrinsic, {}", parsed.extrinsic)))
+            },
+            Err(e) => Ok(Value::String(format!("author_submitAndWatchExtrinsic not called due to {}", e))),
+         }
+    });
 
     // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
@@ -133,7 +145,6 @@ fn init_io_handler() -> IoHandler {
     // returns all rpcs methods
     let rpc_methods_string: String = convert_vec_to_string(rpc_methods_vec);
     io.add_sync_method("rpc_methods", move |_: Params| Ok(Value::String(rpc_methods_string.to_owned())));
-
     io
 }
 
