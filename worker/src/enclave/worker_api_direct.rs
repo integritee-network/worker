@@ -30,7 +30,7 @@ extern "C" {
 		request_len: u32,
 		response: *mut u8,
 		response_len: u32,
-    ) -> sgx_status_t;
+	) -> sgx_status_t;	
 }
 
 #[derive(Clone, Debug)]
@@ -76,7 +76,7 @@ pub fn start_worker_api_direct_server(addr: String, worker: MpscSender<DirectWsS
                 error!("error starting worker direct invocation api server on {}: {}", addr, e);
             }
         };
-    });
+	});	
 }
 
 
