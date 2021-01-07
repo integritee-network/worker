@@ -67,6 +67,7 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
+
 mod aes;
 mod attestation;
 mod constants;
@@ -81,6 +82,7 @@ pub mod cert;
 pub mod hex;
 pub mod tls_ra;
 pub mod worker_api_direct;
+pub mod transaction_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 

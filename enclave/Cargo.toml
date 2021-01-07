@@ -42,6 +42,8 @@ env_logger        = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 serde        	  = { git = "https://github.com/mesalock-linux/serde-sgx" }
 serde_json        = { git = "https://github.com/mesalock-linux/serde-json-sgx"}
 lazy_static       = { version = "1.1.0", features = ["spin_no_std"] }
+#parking_lot       = { version = "0.11.1", default-features = false}
+#wasm-timer        = { version = "0.2.5", default-features = false}
 
 # for attestation
 chrono          = { git = "https://github.com/mesalock-linux/chrono-sgx" }
