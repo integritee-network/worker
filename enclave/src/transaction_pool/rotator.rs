@@ -25,10 +25,7 @@ use sgx_tstd::{
 	collections::HashMap,
 	hash,
 	iter,
-	time::Duration,
-	vec::Vec,
-	string::String,
-	time::Instant,
+	time::{Instant, Duration},
 	untrusted::time::InstantEx
 };
 
@@ -45,7 +42,7 @@ pub struct PoolRotator<Hash> {
 	/// How long the extrinsic is banned for.
 	ban_time: Duration,
 	/// Currently banned extrinsics.
-	banned_until: RwLock<HashMap<Hash, Instant>>,
+	banned_until: HashMap<Hash, Instant>,
 }
 
 impl<Hash: hash::Hash + Eq> Default for PoolRotator<Hash> {
@@ -60,12 +57,12 @@ impl<Hash: hash::Hash + Eq> Default for PoolRotator<Hash> {
 impl<Hash: hash::Hash + Eq + Clone> PoolRotator<Hash> {
 	/// Returns `true` if extrinsic hash is currently banned.
 	pub fn is_banned(&self, hash: &Hash) -> bool {
-		self.banned_until.read().contains_key(hash)
+		self.banned_until.contains_key(hash)
 	}
 
 	/// Bans given set of hashes.
 	pub fn ban(&self, now: &Instant, hashes: impl IntoIterator<Item=Hash>) {
-		let mut banned = self.banned_until.write();
+		let mut banned = self.banned_until.clone();
 
 		for hash in hashes {
 			banned.insert(hash, *now + self.ban_time);
@@ -95,7 +92,7 @@ impl<Hash: hash::Hash + Eq + Clone> PoolRotator<Hash> {
 
 	/// Removes timed bans.
 	pub fn clear_timeouts(&self, now: &Instant) {
-		let mut banned = self.banned_until.write();
+		let mut banned = self.banned_until.clone();
 
 		banned.retain(|_, &mut v| v >= *now);
 	}

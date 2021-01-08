@@ -6,7 +6,7 @@ mod primitives;
 mod watcher;
 //mod pool;
 //mod validated_pool;
-//mod rotator;
+mod rotator;
 //mod listener;
 
 

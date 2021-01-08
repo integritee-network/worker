@@ -26,7 +26,6 @@ use alloc::{
 	string::String,
 	boxed::Box,
 };
-use sgx_tstd::error;
 
 /// Transaction pool result.
 pub type Result<T> = core::result::Result<T, Error>;
