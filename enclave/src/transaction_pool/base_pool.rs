@@ -28,13 +28,12 @@ use alloc::{
 	vec::Vec,
 	boxed::Box,
 };
-use core::{hash, iter, hash::Hash};
+use core::{hash, iter};
 
 use sp_runtime::{
-	generic::BlockId,
-	traits::{Block as BlockT, Member, NumberFor},
+	traits::Member,
 	transaction_validity::{
-		TransactionLongevity, TransactionPriority, TransactionTag, TransactionSource,
+		TransactionLongevity, TransactionPriority, TransactionTag,
 	},
 };
 
@@ -49,48 +48,12 @@ use sp_runtime::transaction_validity::{
 };
 //use sp_transaction_pool::{error, PoolStatus};
 
-use crate::transaction_pool::future::{FutureTransactions, WaitingTransaction};
-use crate::transaction_pool::ready::ReadyTransactions;
-use crate::transaction_pool::error;
-
-/// Transaction pool status.
-#[derive(Debug)]
-pub struct PoolStatus {
-	/// Number of transactions in the ready queue.
-	pub ready: usize,
-	/// Sum of bytes of ready transaction encodings.
-	pub ready_bytes: usize,
-	/// Number of transactions in the future queue.
-	pub future: usize,
-	/// Sum of bytes of ready transaction encodings.
-	pub future_bytes: usize,
-}
-
-/// In-pool transaction interface.
-///
-/// The pool is container of transactions that are implementing this trait.
-/// See `sp_runtime::ValidTransaction` for details about every field.
-pub trait InPoolTransaction {
-	/// Transaction type.
-	type Transaction;
-	/// Transaction hash type.
-	type Hash;
-
-	/// Get the reference to the transaction data.
-	fn data(&self) -> &Self::Transaction;
-	/// Get hash of the transaction.
-	fn hash(&self) -> &Self::Hash;
-	/// Get priority of the transaction.
-	fn priority(&self) -> &TransactionPriority;
-	/// Get longevity of the transaction.
-	fn longevity(&self) -> &TransactionLongevity;
-	/// Get transaction dependencies.
-	fn requires(&self) -> &[TransactionTag];
-	/// Get tags that transaction provides.
-	fn provides(&self) -> &[TransactionTag];
-	/// Return a flag indicating if the transaction should be propagated to other peers.
-	fn is_propagable(&self) -> bool;
-}
+use crate::transaction_pool::{
+	future::{FutureTransactions, WaitingTransaction},
+    ready::ReadyTransactions,
+	error,
+	primitives::{PoolStatus, InPoolTransaction},
+};
 
 
 /// Successful import result.
@@ -552,7 +515,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex: fmt::Debug> BasePool<Hash,
 			let hash = tx.transaction.hash.clone();
 			match self.import_to_ready(tx) {
 				Ok(res) => promoted.push(res),
-				Err(e) => {
+				Err(_e) => {
 					warn!(target: "txpool", "[{:?}] Failed to promote during pruning", hash);
 					failed.push(hash)
 				},

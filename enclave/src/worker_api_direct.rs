@@ -30,7 +30,6 @@ use log::*;
 
 use jsonrpc_core::*;
 use serde::Deserialize;
-use serde::de::DeserializeOwned;
 
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {

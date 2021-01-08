@@ -24,13 +24,12 @@ use alloc::{
 	sync::Arc,
 	vec::Vec,
 };
-use core::{hash, cmp, hash::Hash, cmp::Ord};
+use core::{hash, cmp::Ord};
 
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::{
 	TransactionTag as Tag,
 };
-//use wasm_timer::Instant;
 
 use crate::transaction_pool::base_pool::Transaction;
 

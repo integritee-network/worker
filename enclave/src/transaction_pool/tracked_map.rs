@@ -21,10 +21,9 @@ use alloc::{
 	collections::BTreeMap,
 	collections::btree_map::Values,
 	sync::Arc,
-	vec::Vec,
 };
 use core::sync::atomic::{AtomicIsize, Ordering as AtomicOrdering};
-use core::{hash, cmp, hash::Hash, cmp::Ord, clone::Clone};
+use core::{hash, cmp, cmp::Ord, clone::Clone};
 
 //use parking_lot::{RwLock, RwLockWriteGuard, RwLockReadGuard};
 

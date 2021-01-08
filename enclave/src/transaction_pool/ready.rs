@@ -23,8 +23,7 @@ use alloc::{
 	vec::Vec,
 };
 use core::{
-	hash, 
-	hash::Hash,
+	hash,
 	cmp,
 	default::Default,
 };

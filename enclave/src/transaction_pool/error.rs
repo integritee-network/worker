@@ -20,18 +20,19 @@
 use sp_runtime::transaction_validity::{
 	TransactionPriority as Priority, InvalidTransaction, UnknownTransaction,
 };
-//use thiserror::Error;
 
 pub extern crate alloc;
 use alloc::{
 	string::String,
 	boxed::Box,
 };
+use sgx_tstd::error;
 
 /// Transaction pool result.
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Transaction pool error type.
+#[derive(Debug)]
 #[allow(missing_docs)]
 pub enum Error {
 	//#[error("Unknown transaction validity: {0:?}")]
@@ -73,9 +74,9 @@ pub enum Error {
 	//#[error("The pool is not accepting future transactions")]
 	RejectedFutureTransaction,
 }
-
-/*/// Transaction pool error conversion.
-pub trait IntoPoolError: std::error::Error + Send + Sized {
+/*
+/// Transaction pool error conversion.
+pub trait IntoPoolError: error::Error + Send + Sized {
 	/// Try to extract original `Error`
 	///
 	/// This implementation is optional and used only to
