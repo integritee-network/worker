@@ -35,11 +35,11 @@ use sp_runtime::transaction_validity::{
 	TransactionTag as Tag,
 };
 
-use crate::{
-	transaction_pool::base_pool::Transaction,
-	transaction_pool::future::WaitingTransaction,
-	transaction_pool::tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
-	transaction_pool::error,
+use crate::transaction_pool::{
+	base_pool::Transaction,
+	future::WaitingTransaction,
+	tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
+	error,
 };
 
 /// An in-pool transaction reference.

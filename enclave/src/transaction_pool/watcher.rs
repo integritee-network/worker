@@ -22,10 +22,23 @@ extern crate alloc;
 use alloc::{
 	vec::Vec,
 	string::String
-	};
-use futures::Stream;
-use sp_transaction_pool::TransactionStatus;
-use sp_utils::mpsc::{tracing_unbounded, TracingUnboundedSender, TracingUnboundedReceiver};
+};
+use jsonrpc_core::futures::{
+	Stream,
+	channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
+};
+
+use crate::transaction_pool::primitives::TransactionStatus;
+
+// just aliased, non performance implications
+// for more implications see / use substrate file
+// primitives/utils/src/mpsc.rs:
+//use sp_utils::mpsc::{tracing_unbounded, TracingUnboundedSender, TracingUnboundedReceiver};
+pub type TracingUnboundedSender<T> = UnboundedSender<T>;
+pub type TracingUnboundedReceiver<T> = UnboundedReceiver<T>;
+pub fn tracing_unbounded<T>(_key: &'static str) ->(TracingUnboundedSender<T>, TracingUnboundedReceiver<T>) {
+	mpsc::unbounded()
+}
 
 /// Extrinsic watcher.
 ///
