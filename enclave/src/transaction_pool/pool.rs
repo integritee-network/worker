@@ -16,15 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub extern crate alloc;
-use alloc::{
-	collections::BTreeMap,
-	sync::Arc,
+use sgx_tstd::{
+	collections::HashMap,
+    sync::Arc,
+    vec::Vec,
+    string::String,
+    time::Instant,
+    untrusted::time::InstantEx,
 };
-
-use crate::{base_pool as base, watcher::Watcher};
-
-use futures::Future;
+use jsonrpc_core::futures::{
+    Future, 
+    channel::mpsc::Receiver, 
+    future
+};
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion, Block as BlockT},
@@ -32,12 +36,14 @@ use sp_runtime::{
 		TransactionValidity, TransactionTag as Tag, TransactionValidityError, TransactionSource,
 	},
 };
-use sp_transaction_pool::error;
-use wasm_timer::Instant;
-use futures::channel::mpsc::Receiver;
+use crate::transaction_pool::{
+    base_pool as base,
+    watcher::Watcher,
+    error,
+    validated_pool::ValidatedPool,
+};
 
-use crate::validated_pool::ValidatedPool;
-pub use crate::validated_pool::ValidatedTransaction;
+pub use crate::transaction_pool::validated_pool::ValidatedTransaction;
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -138,7 +144,7 @@ enum CheckBannedBeforeVerify {
 pub struct Pool<B: ChainApi> {
 	validated_pool: Arc<ValidatedPool<B>>,
 }
-
+/*
 #[cfg(not(target_os = "unknown"))]
 impl<B: ChainApi> parity_util_mem::MallocSizeOf for Pool<B>
 where
@@ -148,7 +154,7 @@ where
 		self.validated_pool.size_of(ops)
 	}
 }
-
+*/
 impl<B: ChainApi> Pool<B> {
 	/// Create a new transaction pool.
 	pub fn new(options: Options, api: Arc<B>) -> Self {
@@ -382,7 +388,7 @@ impl<B: ChainApi> Pool<B> {
 		// we need a block number to compute tx validity
 		let block_number = self.resolve_block_number(at)?;
 
-		let res = futures::future::join_all(
+		let res = future::join_all(
 			xts.into_iter()
 				.map(|(source, xt)| self.verify_one(at, block_number, source, xt, check))
 		).await.into_iter().collect::<HashMap<_, _>>();

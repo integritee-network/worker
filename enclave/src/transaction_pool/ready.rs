@@ -18,14 +18,18 @@
 
 pub extern crate alloc;
 use alloc::{
-	collections::{BTreeMap, BTreeSet},
 	sync::Arc,
 	vec::Vec,
+	collections::BTreeSet,
 };
+
+use sgx_tstd::collections::{HashMap, HashSet};
+
 use core::{
 	hash,
 	cmp,
 	default::Default,
+	cmp::Ord,
 };
 
 use serde::Serialize;
@@ -114,11 +118,11 @@ qed
 "#;
 
 #[derive(Debug)]
-pub struct ReadyTransactions<Hash: hash::Hash + Eq, Ex> {
+pub struct ReadyTransactions<Hash: hash::Hash + Eq + Ord, Ex> {
 	/// Insertion id
 	insertion_id: u64,
 	/// tags that are provided by Ready transactions
-	provided_tags: BTreeMap<Tag, Hash>,
+	provided_tags: HashMap<Tag, Hash>,
 	/// Transactions that are ready (i.e. don't have any requirements external to the pool)
 	ready: TrackedMap<Hash, ReadyTx<Hash, Ex>>,
 	/// Best transactions that are ready to be included to the block without any other previous transaction.
@@ -144,7 +148,7 @@ impl<Hash: hash::Hash + Eq + Ord, Ex> Default for ReadyTransactions<Hash, Ex> {
 
 impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex> {
 	/// Borrows a map of tags that are provided by transactions in this queue.
-	pub fn provided_tags(&self) -> &BTreeMap<Tag, Hash> {
+	pub fn provided_tags(&self) -> &HashMap<Tag, Hash> {
 		&self.provided_tags
 	}
 
@@ -276,7 +280,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex
 	fn remove_subtree_with_tag_filter(
 		&mut self,
 		mut to_remove: Vec<Hash>,
-		provides_tag_filter: Option<BTreeSet<Tag>>,
+		provides_tag_filter: Option<HashSet<Tag>>,
 	) -> Vec<Arc<Transaction<Hash, Ex>>> {
 		let mut removed = vec![];
 		let mut ready = self.ready.write();
@@ -427,7 +431,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex
 			let replace_hashes = tx.provides
 				.iter()
 				.filter_map(|tag| self.provided_tags.get(tag))
-				.collect::<BTreeSet<_>>();
+				.collect::<HashSet<_>>();
 
 			// early exit if we are not replacing anything.
 			if replace_hashes.is_empty() {
@@ -468,7 +472,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex
 			)
 		};
 
-		let new_provides = tx.provides.iter().cloned().collect::<BTreeSet<_>>();
+		let new_provides = tx.provides.iter().cloned().collect::<HashSet<_>>();
 		let removed = self.remove_subtree_with_tag_filter(to_remove, Some(new_provides));
 
 		Ok((
@@ -491,7 +495,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex
 /// Iterator of ready transactions ordered by priority.
 pub struct BestIterator<Hash, Ex> {
 	all: ReadOnlyTrackedMap<Hash, ReadyTx<Hash, Ex>>,
-	awaiting: BTreeMap<Hash, (usize, TransactionRef<Hash, Ex>)>,
+	awaiting: HashMap<Hash, (usize, TransactionRef<Hash, Ex>)>,
 	best: BTreeSet<TransactionRef<Hash, Ex>>,
 }
 

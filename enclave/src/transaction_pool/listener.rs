@@ -17,14 +17,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{
-	collections::HashMap, hash, fmt::Debug,
+use sgx_tstd::{
+	collections::HashMap,
+	hash, 
+	fmt::Debug,
+	vec::Vec,
+	string::String,
 };
 use linked_hash_map::LinkedHashMap;
 use serde::Serialize;
-use crate::{watcher, ChainApi, ExtrinsicHash, BlockHash};
 use log::{debug, trace, warn};
 use sp_runtime::traits;
+
+use crate::transaction_pool::{
+	watcher,
+	pool::{ExtrinsicHash, BlockHash, ChainApi},	
+};
+
 
 /// Extrinsic pool default listener.
 pub struct Listener<H: hash::Hash + Eq, C: ChainApi> {

@@ -17,13 +17,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 pub extern crate alloc;
-use alloc::{
-	collections::BTreeMap,
-	collections::btree_map::Values,
-	sync::Arc,
-};
+use alloc::sync::Arc;
+
+use sgx_tstd::collections::{HashMap, hash_map::Values};
+
 use core::sync::atomic::{AtomicIsize, Ordering as AtomicOrdering};
-use core::{hash, cmp, cmp::Ord, clone::Clone};
+use core::{hash, cmp, clone::Clone};
 
 //use parking_lot::{RwLock, RwLockWriteGuard, RwLockReadGuard};
 
@@ -37,16 +36,15 @@ pub trait Size {
 /// Size reported might be slightly off and only approximately true.
 #[derive(Debug)]
 pub struct TrackedMap<K, V> {
-	//index: Arc<RwLock<BTreeMap<K, V>>>,
-	index: Arc<BTreeMap<K, V>>,
+	index: Arc<HashMap<K, V>>,
 	bytes: AtomicIsize,
 	length: AtomicIsize,
 }
 
-impl<K: Ord, V> Default for TrackedMap<K, V> {
+impl<K, V> Default for TrackedMap<K, V> {
 	fn default() -> Self {
 		Self {
-			index: Arc::new(BTreeMap::new().into()),
+			index: Arc::new(HashMap::new().into()),
 			bytes: 0.into(),
 			length: 0.into(),
 		}
@@ -54,7 +52,7 @@ impl<K: Ord, V> Default for TrackedMap<K, V> {
 }
 
 
-impl<K: Ord + Clone, V: Clone> TrackedMap<K, V> {
+impl<K: Clone, V: Clone> TrackedMap<K, V> {
 	/// Current tracked length of the content.
 	pub fn len(&self) -> usize {
 		cmp::max(self.length.load(AtomicOrdering::Relaxed), 0) as usize
@@ -92,10 +90,9 @@ impl<K: Ord + Clone, V: Clone> TrackedMap<K, V> {
 /// Read-only access to map.
 ///
 /// The only thing can be done is .read().
-//pub struct ReadOnlyTrackedMap<K, V>(Arc<RwLock<BTreeMap<K, V>>>);
-pub struct ReadOnlyTrackedMap<K, V>(Arc<BTreeMap<K, V>>);
+pub struct ReadOnlyTrackedMap<K, V>(Arc<HashMap<K, V>>);
 
-impl<K: Ord, V> ReadOnlyTrackedMap<K, V>
+impl<K, V> ReadOnlyTrackedMap<K, V>
 where
 	K: Eq + hash::Hash
 {
@@ -109,11 +106,11 @@ where
 
 
 pub struct TrackedMapReadAccess<K, V> {
-	inner_guard: Arc<BTreeMap<K, V>>,
+	inner_guard: Arc<HashMap<K, V>>,
 }
 
 
-impl<K: Ord, V> TrackedMapReadAccess<K, V>
+impl<K, V> TrackedMapReadAccess<K, V>
 where
 	K: Eq + hash::Hash
 {
@@ -136,10 +133,10 @@ where
 pub struct TrackedMapWriteAccess<'a, K, V> {
 	bytes: &'a AtomicIsize,
 	length: &'a AtomicIsize,
-	inner_guard: &'a mut BTreeMap<K, V>,
+	inner_guard: &'a mut HashMap<K, V>,
 }
 
-impl<'a, K: Ord, V> TrackedMapWriteAccess<'a, K, V>
+impl<'a, K, V> TrackedMapWriteAccess<'a, K, V>
 where
 	K: Eq + hash::Hash, V: Size
 {

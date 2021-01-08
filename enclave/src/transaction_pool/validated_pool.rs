@@ -16,33 +16,42 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{
+use sgx_tstd::{
 	collections::{HashSet, HashMap},
 	hash,
 	sync::Arc,
+	vec::Vec,
+	string::String,
+	time::Instant,
+	untrusted::time::InstantEx
 };
 
-use crate::base_pool as base;
-use crate::listener::Listener;
-use crate::rotator::PoolRotator;
-use crate::watcher::Watcher;
+use crate::transaction_pool::{
+    base_pool as base,
+	watcher::Watcher,
+	listener::Listener,
+	rotator::PoolRotator,
+	error,
+	primitives::PoolStatus,
+	pool::{
+		EventStream, Options, ChainApi, BlockHash, ExtrinsicHash, ExtrinsicFor, TransactionFor,
+	},
+	base_pool::PruneStatus;
+};
+
 use serde::Serialize;
 
-use parking_lot::{Mutex, RwLock};
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion},
 	transaction_validity::{TransactionTag as Tag, ValidTransaction, TransactionSource},
 };
-use sp_transaction_pool::{error, PoolStatus};
-use wasm_timer::Instant;
-use futures::channel::mpsc::{channel, Sender};
-use retain_mut::RetainMut;
 
-use crate::base_pool::PruneStatus;
-use crate::pool::{
-	EventStream, Options, ChainApi, BlockHash, ExtrinsicHash, ExtrinsicFor, TransactionFor,
-};
+use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
+
+//use retain_mut::RetainMut;
+
+
 
 /// Pre-validated transaction. Validated pool only accepts transactions wrapped in this enum.
 #[derive(Debug)]
@@ -94,15 +103,15 @@ pub type ValidatedTransactionFor<B> = ValidatedTransaction<
 pub struct ValidatedPool<B: ChainApi> {
 	api: Arc<B>,
 	options: Options,
-	listener: RwLock<Listener<ExtrinsicHash<B>, B>>,
-	pool: RwLock<base::BasePool<
+	listener: Listener<ExtrinsicHash<B>, B>,
+	pool: base::BasePool<
 		ExtrinsicHash<B>,
 		ExtrinsicFor<B>,
-	>>,
-	import_notification_sinks: Mutex<Vec<Sender<ExtrinsicHash<B>>>>,
+	>,
+	import_notification_sinks: Vec<Sender<ExtrinsicHash<B>>>,
 	rotator: PoolRotator<ExtrinsicHash<B>>,
 }
-
+/*
 #[cfg(not(target_os = "unknown"))]
 impl<B: ChainApi> parity_util_mem::MallocSizeOf for ValidatedPool<B>
 where
@@ -113,7 +122,7 @@ where
 		self.pool.size_of(ops)
 	}
 }
-
+*/
 impl<B: ChainApi> ValidatedPool<B> {
 	/// Create a new transaction pool.
 	pub fn new(options: Options, api: Arc<B>) -> Self {
@@ -122,7 +131,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 			options,
 			listener: Default::default(),
 			api,
-			pool: RwLock::new(base_pool),
+			pool: base_pool,
 			import_notification_sinks: Default::default(),
 			rotator: Default::default(),
 		}
@@ -150,7 +159,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 	) -> Result<(), B::Error> {
 		if !ignore_banned && self.is_banned(tx_hash) {
 			Err(error::Error::TemporarilyBanned.into())
-		} else if self.pool.read().is_imported(tx_hash) {
+		} else if self.pool.clone().is_imported(tx_hash) {
 			Err(error::Error::AlreadyImported(Box::new(tx_hash.clone())).into())
 		} else {
 			Ok(())
@@ -207,7 +216,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 				Ok(imported.hash().clone())
 			},
 			ValidatedTransaction::Invalid(hash, err) => {
-				self.rotator.ban(&Instant::now(), std::iter::once(hash));
+				self.rotator.ban(&Instant::now(), core::iter::once(hash));
 				Err(err.into())
 			},
 			ValidatedTransaction::Unknown(hash, err) => {
@@ -267,13 +276,13 @@ impl<B: ChainApi> ValidatedPool<B> {
 			ValidatedTransaction::Valid(tx) => {
 				let hash = self.api.hash_and_length(&tx.data).0;
 				let watcher = self.listener.write().create_watcher(hash);
-				self.submit(std::iter::once(ValidatedTransaction::Valid(tx)))
+				self.submit(core::iter::once(ValidatedTransaction::Valid(tx)))
 					.pop()
 					.expect("One extrinsic passed; one result returned; qed")
 					.map(|_| watcher)
 			},
 			ValidatedTransaction::Invalid(hash, err) => {
-				self.rotator.ban(&Instant::now(), std::iter::once(hash));
+				self.rotator.ban(&Instant::now(), core::iter::once(hash));
 				Err(err.into())
 			},
 			ValidatedTransaction::Unknown(_, err) => Err(err.into()),
@@ -545,7 +554,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 		const CHANNEL_BUFFER_SIZE: usize = 1024;
 
 		let (sink, stream) = channel(CHANNEL_BUFFER_SIZE);
-		self.import_notification_sinks.lock().push(sink);
+		self.import_notification_sinks.push(sink);
 		stream
 	}
 

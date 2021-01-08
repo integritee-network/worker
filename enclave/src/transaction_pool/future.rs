@@ -19,12 +19,13 @@
 pub extern crate alloc;
 
 use alloc::{
-	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 	fmt,
 	sync::Arc,
 	vec::Vec,
 };
-use core::{hash, cmp::Ord};
+use core::hash;
+
+use sgx_tstd::collections::{HashMap, HashSet};
 
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::{
@@ -40,7 +41,7 @@ pub struct WaitingTransaction<Hash, Ex> {
 	/// Transaction details.
 	pub transaction: Arc<Transaction<Hash, Ex>>,
 	/// Tags that are required and have not been satisfied yet by other transactions in the pool.
-	pub missing_tags: BTreeSet<Tag>,	
+	pub missing_tags: HashSet<Tag>,	
 	/// Time of import to the Future Queue.
 	pub imported_at: Instant,
 }
@@ -79,8 +80,8 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 	/// are provided by all transactions in the ready queue.
 	pub fn new(
 		transaction: Transaction<Hash, Ex>,
-		provided: &BTreeMap<Tag, Hash>,
-		recently_pruned: &[BTreeSet<Tag>],
+		provided: &HashMap<Tag, Hash>,
+		recently_pruned: &[HashSet<Tag>],
 	) -> Self {
 		let missing_tags = transaction.requires
 			.iter()
@@ -118,12 +119,12 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 #[derive(Debug)]
 pub struct FutureTransactions<Hash: hash::Hash + Eq, Ex> {
 	/// tags that are not yet provided by any transaction and we await for them
-	wanted_tags: BTreeMap<Tag, BTreeSet<Hash>>,
+	wanted_tags: HashMap<Tag, HashSet<Hash>>,
 	/// Transactions waiting for a particular other transaction
-	waiting: BTreeMap<Hash, WaitingTransaction<Hash, Ex>>,
+	waiting: HashMap<Hash, WaitingTransaction<Hash, Ex>>,
 }
 
-impl<Hash: hash::Hash + Eq + Ord, Ex> Default for FutureTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq, Ex> Default for FutureTransactions<Hash, Ex> {
 	fn default() -> Self {
 		FutureTransactions {
 			wanted_tags: Default::default(),
@@ -139,7 +140,7 @@ every hash from `wanted_tags` is always present in `waiting`;
 qed
 #";
 
-impl<Hash: hash::Hash + Eq + Clone + Ord, Ex> FutureTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
 	/// Import transaction to Future queue.
 	///
 	/// Only transactions that don't have all their tags satisfied should occupy
@@ -152,7 +153,7 @@ impl<Hash: hash::Hash + Eq + Clone + Ord, Ex> FutureTransactions<Hash, Ex> {
 
 		// Add all tags that are missing
 		for tag in &tx.missing_tags {
-			let entry = self.wanted_tags.entry(tag.clone()).or_insert_with(BTreeSet::new);
+			let entry = self.wanted_tags.entry(tag.clone()).or_insert_with(HashSet::new);
 			entry.insert(tx.transaction.hash.clone());
 		}
 
@@ -236,10 +237,10 @@ impl<Hash: hash::Hash + Eq + Clone + Ord, Ex> FutureTransactions<Hash, Ex> {
 	/// Removes and returns all future transactions.
 	pub fn clear(&mut self) -> Vec<Arc<Transaction<Hash, Ex>>> {
 		self.wanted_tags.clear();
-		//let values = self.waiting.drain().map(|(_, tx)| tx.transaction).collect();
-		let values: Vec<Arc<Transaction<Hash, Ex>>> = self.waiting.values().map(|tx| tx.transaction.clone()).collect();
-		self.waiting.clear();
-		values
+		self.waiting.drain().map(|(_, tx)| tx.transaction).collect()
+		//let values: Vec<Arc<Transaction<Hash, Ex>>> = self.waiting.values().map(|tx| tx.transaction.clone()).collect();
+		//self.waiting.clear();
+		//values
 	}
 
 	/// Returns number of transactions in the Future queue.

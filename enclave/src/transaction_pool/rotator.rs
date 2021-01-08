@@ -21,16 +21,18 @@
 //! Keeps only recent extrinsic and discard the ones kept for a significant amount of time.
 //! Discarded extrinsics are banned so that they don't get re-imported again.
 
-use std::{
+use sgx_tstd::{
 	collections::HashMap,
 	hash,
 	iter,
 	time::Duration,
+	vec::Vec,
+	string::String,
+	time::Instant,
+	untrusted::time::InstantEx
 };
-use parking_lot::RwLock;
-use wasm_timer::Instant;
 
-use crate::base_pool::Transaction;
+use crate::transaction_pool::base_pool::Transaction;
 
 /// Expected size of the banned extrinsics cache.
 const EXPECTED_SIZE: usize = 2048;

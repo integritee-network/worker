@@ -1,6 +1,7 @@
+// File replacing substrate crate sp_transaction_pool::{error, PoolStatus};
+
 extern crate alloc;
 use alloc::{
-    collections::BTreeMap,
 	sync::Arc,    
     vec::Vec,
     boxed::Box,
@@ -10,6 +11,8 @@ use core::{
     hash::Hash,
     pin::Pin,
 };
+use sgx_tstd::collections::HashMap;
+
 use jsonrpc_core::futures::{Future, Stream, channel};
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -227,7 +230,7 @@ pub trait TransactionPool: Send + Sync {
 
 	// *** networking
 	/// Notify the pool about transactions broadcast.
-	fn on_broadcasted(&self, propagations: BTreeMap<TxHash<Self>, Vec<String>>);
+	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
 
 	/// Returns transaction hash
 	fn hash_of(&self, xt: &TransactionFor<Self>) -> TxHash<Self>;
@@ -235,6 +238,7 @@ pub trait TransactionPool: Send + Sync {
 	/// Return specific ready transaction by hash, if there is one.
 	fn ready_transaction(&self, hash: &TxHash<Self>) -> Option<Arc<Self::InPoolTransaction>>;
 }
+
 /*
 /// Events that the transaction pool listens for.
 pub enum ChainEvent<B: BlockT> {

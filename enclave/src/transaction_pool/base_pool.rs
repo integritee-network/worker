@@ -22,12 +22,14 @@
 
 pub extern crate alloc;
 use alloc::{
-	collections::btree_set::BTreeSet,
 	fmt,
 	sync::Arc,
 	vec::Vec,
 	boxed::Box,
 };
+
+use sgx_tstd::collections::HashSet;
+
 use core::{hash, iter};
 
 use sp_runtime::{
@@ -238,7 +240,7 @@ pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
 	///
 	/// This is used to make sure we don't accidentally put
 	/// transactions to future in case they were just stuck in verification.
-	recently_pruned: [BTreeSet<Tag>; RECENTLY_PRUNED_TAGS],
+	recently_pruned: [HashSet<Tag>; RECENTLY_PRUNED_TAGS],
 	recently_pruned_index: usize,
 }
 
