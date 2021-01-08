@@ -18,12 +18,13 @@
 
 pub extern crate alloc;
 use alloc::{
-	collections::{BTreeMap, btree_map::Values},
+	collections::BTreeMap,
+	collections::btree_map::Values,
 	sync::Arc,
 	vec::Vec,
 };
 use core::sync::atomic::{AtomicIsize, Ordering as AtomicOrdering};
-use core::{hash, cmp, hash::Hash};
+use core::{hash, cmp, hash::Hash, cmp::Ord, clone::Clone};
 
 //use parking_lot::{RwLock, RwLockWriteGuard, RwLockReadGuard};
 
@@ -43,17 +44,18 @@ pub struct TrackedMap<K, V> {
 	length: AtomicIsize,
 }
 
-impl<K, V> Default for TrackedMap<K, V> {
+impl<K: Ord, V> Default for TrackedMap<K, V> {
 	fn default() -> Self {
 		Self {
-			index: Arc::new(BTreeMap::default().into()),
+			index: Arc::new(BTreeMap::new().into()),
 			bytes: 0.into(),
 			length: 0.into(),
 		}
 	}
 }
 
-impl<K, V> TrackedMap<K, V> {
+
+impl<K: Ord + Clone, V: Clone> TrackedMap<K, V> {
 	/// Current tracked length of the content.
 	pub fn len(&self) -> usize {
 		cmp::max(self.length.load(AtomicOrdering::Relaxed), 0) as usize
@@ -69,21 +71,23 @@ impl<K, V> TrackedMap<K, V> {
 		ReadOnlyTrackedMap(self.index.clone())
 	}
 
-	/// Lock map for read.
-	pub fn read<'a>(&'a self) -> TrackedMapReadAccess<'a, K, V> {
+	/// Read Access - no data race safety
+	pub fn read(&self) -> TrackedMapReadAccess<K, V> {
 		TrackedMapReadAccess {
-			inner_guard: self.index.read(),
+			inner_guard: self.index.clone(),
 		}
 	}
 
-	/// Lock map for write.
-	pub fn write<'a>(&'a self) -> TrackedMapWriteAccess<'a, K, V> {
+	/// Write Access - no data race safety
+	pub fn write(&mut self) -> TrackedMapWriteAccess<K, V> {
 		TrackedMapWriteAccess {
-			inner_guard: self.index.write(),
+			//inner_guard: self.index.make_mut(&self),
+			inner_guard: Arc::make_mut(&mut self.index),
 			bytes: &self.bytes,
 			length: &self.length,
 		}
 	}
+	
 }
 
 /// Read-only access to map.
@@ -92,25 +96,25 @@ impl<K, V> TrackedMap<K, V> {
 //pub struct ReadOnlyTrackedMap<K, V>(Arc<RwLock<BTreeMap<K, V>>>);
 pub struct ReadOnlyTrackedMap<K, V>(Arc<BTreeMap<K, V>>);
 
-impl<K, V> ReadOnlyTrackedMap<K, V>
+impl<K: Ord, V> ReadOnlyTrackedMap<K, V>
 where
 	K: Eq + hash::Hash
 {
 	/// Lock map for read.
-	pub fn read<'a>(&'a self) -> TrackedMapReadAccess<'a, K, V> {
+	pub fn read(&self) -> TrackedMapReadAccess<K, V> {
 		TrackedMapReadAccess {
-			inner_guard: self.0.read(),
+			inner_guard: self.0.clone(),
 		}
 	}
 }
 
 
-pub struct TrackedMapReadAccess<'a, K, V> {
-	inner_guard: Values<'a, K, V>,
+pub struct TrackedMapReadAccess<K, V> {
+	inner_guard: Arc<BTreeMap<K, V>>,
 }
 
 
-impl<'a, K, V> TrackedMapReadAccess<'a, K, V>
+impl<K: Ord, V> TrackedMapReadAccess<K, V>
 where
 	K: Eq + hash::Hash
 {
@@ -125,7 +129,7 @@ where
 	}
 
 	/// Returns iterator over all values.
-	pub fn values(&self) -> Values<'a, K, V> {
+	pub fn values(&self) -> Values<K, V> {
 		self.inner_guard.values()
 	}
 }
@@ -133,10 +137,10 @@ where
 pub struct TrackedMapWriteAccess<'a, K, V> {
 	bytes: &'a AtomicIsize,
 	length: &'a AtomicIsize,
-	inner_guard: Values<'a, K, V>,
+	inner_guard: &'a mut BTreeMap<K, V>,
 }
 
-impl<'a, K, V> TrackedMapWriteAccess<'a, K, V>
+impl<'a, K: Ord, V> TrackedMapWriteAccess<'a, K, V>
 where
 	K: Eq + hash::Hash, V: Size
 {
@@ -167,7 +171,7 @@ where
 		self.inner_guard.get_mut(key)
 	}
 }
-
+/*
 #[cfg(test)]
 mod tests {
 
@@ -195,4 +199,4 @@ mod tests {
 		assert_eq!(map.bytes(), 1);
 		assert_eq!(map.len(), 1);
 	}
-}
+}*/

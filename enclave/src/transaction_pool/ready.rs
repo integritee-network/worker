@@ -126,13 +126,13 @@ pub struct ReadyTransactions<Hash: hash::Hash + Eq, Ex> {
 	best: BTreeSet<TransactionRef<Hash, Ex>>,
 }
 
-/*impl<Hash, Ex> tracked_map::Size for ReadyTx<Hash, Ex> {
+impl<Hash, Ex> tracked_map::Size for ReadyTx<Hash, Ex> {
 	fn size(&self) -> usize {
 		self.transaction.transaction.bytes
 	}
-}*/
+}
 
-impl<Hash: hash::Hash + Eq, Ex> Default for ReadyTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq + Ord, Ex> Default for ReadyTransactions<Hash, Ex> {
 	fn default() -> Self {
 		ReadyTransactions {
 			insertion_id: Default::default(),
@@ -143,7 +143,7 @@ impl<Hash: hash::Hash + Eq, Ex> Default for ReadyTransactions<Hash, Ex> {
 	}
 }
 
-impl<Hash: hash::Hash + Member + Serialize, Ex> ReadyTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex> {
 	/// Borrows a map of tags that are provided by transactions in this queue.
 	pub fn provided_tags(&self) -> &BTreeMap<Tag, Hash> {
 		&self.provided_tags
@@ -347,10 +347,10 @@ impl<Hash: hash::Hash + Member + Serialize, Ex> ReadyTransactions<Hash, Ex> {
 
 				// prune previous transactions as well
 				{
-					let hash = &tx.hash;
-					let mut ready = self.ready.write();
-					let mut find_previous = |tag| -> Option<Vec<Tag>> {
+					let hash = &tx.hash;					
+					let mut find_previous = |tag| -> Option<Vec<Tag>> {			
 						let prev_hash = self.provided_tags.get(tag)?;
+						let mut ready = self.ready.write();
 						let tx2 = ready.get_mut(&prev_hash)?;
 						remove_item(&mut tx2.unlocks, hash);
 						// We eagerly prune previous transactions as well.
@@ -496,7 +496,17 @@ pub struct BestIterator<Hash, Ex> {
 	best: BTreeSet<TransactionRef<Hash, Ex>>,
 }
 
-impl<Hash: hash::Hash + Member, Ex> BestIterator<Hash, Ex> {
+/*impl Default for BestIterator<Hash, Ex> {
+	let insertion_id = 0;
+	let transaction = Arc::new(with_priority(3, 3))
+	let tx_default = TransactionRef {
+		insertion_id,
+		transaction
+	};
+	fn default() ->  self.awaiting.insert("NA", (0, tx_default))
+}*/
+
+impl<Hash: hash::Hash + Member + Ord, Ex> BestIterator<Hash, Ex> {
 	/// Depending on number of satisfied requirements insert given ref
 	/// either to awaiting set or to best set.
 	fn best_or_awaiting(&mut self, satisfied: usize, tx_ref: TransactionRef<Hash, Ex>) {
@@ -511,7 +521,7 @@ impl<Hash: hash::Hash + Member, Ex> BestIterator<Hash, Ex> {
 	}
 }
 
-impl<Hash: hash::Hash + Member, Ex> Iterator for BestIterator<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
 	type Item = Arc<Transaction<Hash, Ex>>;
 
 	fn next(&mut self) -> Option<Self::Item> {

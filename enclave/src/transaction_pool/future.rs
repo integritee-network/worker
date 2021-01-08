@@ -24,7 +24,7 @@ use alloc::{
 	sync::Arc,
 	vec::Vec,
 };
-use core::{hash, cmp, hash::Hash};
+use core::{hash, cmp, hash::Hash, cmp::Ord};
 
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::{
@@ -48,7 +48,7 @@ pub struct WaitingTransaction<Hash, Ex> {
 impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTransaction<Hash, Ex> {
 	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
 		write!(fmt, "WaitingTransaction {{ ")?;
-		write!(fmt, "imported_at: {:?}, ", self.imported_at)?;
+		//write!(fmt, "imported_at: {:?}, ", self.imported_at)?;
 		write!(fmt, "transaction: {:?}, ", self.transaction)?;
 		write!(fmt, "missing_tags: {{")?;
 		let mut it = self.missing_tags.iter().map(|tag| HexDisplay::from(tag));
@@ -67,7 +67,7 @@ impl<Hash, Ex> Clone for WaitingTransaction<Hash, Ex> {
 		WaitingTransaction {
 			transaction: self.transaction.clone(),
 			missing_tags: self.missing_tags.clone(),
-			imported_at: self.imported_at.clone(),
+			//imported_at: self.imported_at.clone(),
 		}
 	}
 }
@@ -123,7 +123,7 @@ pub struct FutureTransactions<Hash: hash::Hash + Eq, Ex> {
 	waiting: BTreeMap<Hash, WaitingTransaction<Hash, Ex>>,
 }
 
-impl<Hash: hash::Hash + Eq, Ex> Default for FutureTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq + Ord, Ex> Default for FutureTransactions<Hash, Ex> {
 	fn default() -> Self {
 		FutureTransactions {
 			wanted_tags: Default::default(),
@@ -139,7 +139,7 @@ every hash from `wanted_tags` is always present in `waiting`;
 qed
 #";
 
-impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq + Clone + Ord, Ex> FutureTransactions<Hash, Ex> {
 	/// Import transaction to Future queue.
 	///
 	/// Only transactions that don't have all their tags satisfied should occupy
@@ -236,7 +236,10 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
 	/// Removes and returns all future transactions.
 	pub fn clear(&mut self) -> Vec<Arc<Transaction<Hash, Ex>>> {
 		self.wanted_tags.clear();
-		self.waiting.drain().map(|(_, tx)| tx.transaction).collect()
+		//let values = self.waiting.drain().map(|(_, tx)| tx.transaction).collect();
+		let values: Vec<Arc<Transaction<Hash, Ex>>> = self.waiting.values().map(|tx| tx.transaction.clone()).collect();
+		self.waiting.clear();
+		values
 	}
 
 	/// Returns number of transactions in the Future queue.

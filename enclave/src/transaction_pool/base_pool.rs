@@ -268,7 +268,7 @@ const RECENTLY_PRUNED_TAGS: usize = 2;
 /// Most likely it is required to revalidate them and recompute set of
 /// required tags.
 #[derive(Debug)]
-pub struct BasePool<Hash: hash::Hash + Eq, Ex> {
+pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
 	reject_future_transactions: bool,
 	future: FutureTransactions<Hash, Ex>,
 	ready: ReadyTransactions<Hash, Ex>,
@@ -280,13 +280,13 @@ pub struct BasePool<Hash: hash::Hash + Eq, Ex> {
 	recently_pruned_index: usize,
 }
 
-impl<Hash: hash::Hash + Member + Serialize, Ex: fmt::Debug> Default for BasePool<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Serialize + Ord, Ex: fmt::Debug> Default for BasePool<Hash, Ex> {
 	fn default() -> Self {
 		Self::new(false)
 	}
 }
 
-impl<Hash: hash::Hash + Member + Serialize, Ex: fmt::Debug> BasePool<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Serialize + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// Create new pool given reject_future_transactions flag.
 	pub fn new(reject_future_transactions: bool) -> Self {
 		BasePool {
@@ -488,9 +488,9 @@ impl<Hash: hash::Hash + Member + Serialize, Ex: fmt::Debug> BasePool<Hash, Ex> {
 				.fold(|minimal, current| {
 					match minimal {
 						None => Some(current.clone()),
-						Some(ref tx) if tx.imported_at > current.imported_at => {
+						/*Some(ref tx) if tx.imported_at > current.imported_at => {
 							Some(current.clone())
-						},
+						},*/
 						other => other,
 					}
 				});
@@ -553,7 +553,7 @@ impl<Hash: hash::Hash + Member + Serialize, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			match self.import_to_ready(tx) {
 				Ok(res) => promoted.push(res),
 				Err(e) => {
-					warn!(target: "txpool", "[{:?}] Failed to promote during pruning: {:?}", hash, e);
+					warn!(target: "txpool", "[{:?}] Failed to promote during pruning", hash);
 					failed.push(hash)
 				},
 			}
