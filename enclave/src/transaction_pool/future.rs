@@ -31,6 +31,8 @@ use sp_runtime::transaction_validity::{
 	TransactionTag as Tag,
 };
 
+use sgx_tstd::{time::Instant, untrusted::time::InstantEx};
+
 use crate::transaction_pool::base_pool::Transaction;
 
 /// Transaction with partially satisfied dependencies.
@@ -38,10 +40,9 @@ pub struct WaitingTransaction<Hash, Ex> {
 	/// Transaction details.
 	pub transaction: Arc<Transaction<Hash, Ex>>,
 	/// Tags that are required and have not been satisfied yet by other transactions in the pool.
-	pub missing_tags: BTreeSet<Tag>,
-	/*
+	pub missing_tags: BTreeSet<Tag>,	
 	/// Time of import to the Future Queue.
-	pub imported_at: Instant,*/
+	pub imported_at: Instant,
 }
 
 impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTransaction<Hash, Ex> {
@@ -66,7 +67,7 @@ impl<Hash, Ex> Clone for WaitingTransaction<Hash, Ex> {
 		WaitingTransaction {
 			transaction: self.transaction.clone(),
 			missing_tags: self.missing_tags.clone(),
-			//imported_at: self.imported_at.clone(),
+			imported_at: self.imported_at.clone(),
 		}
 	}
 }
@@ -95,7 +96,7 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 		WaitingTransaction {
 			transaction: Arc::new(transaction),
 			missing_tags,
-			//imported_at: Instant::now(),
+			imported_at: Instant::now(),
 		}
 	}
 
@@ -251,7 +252,7 @@ impl<Hash: hash::Hash + Eq + Clone + Ord, Ex> FutureTransactions<Hash, Ex> {
 		self.waiting.values().fold(0, |acc, tx| acc + tx.transaction.bytes)
 	}
 }
-/*
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -279,4 +280,4 @@ mod tests {
 		// data is at least 1024!
 		assert!(parity_util_mem::malloc_size(&future) > 1024);
 	}
-}*/
+}
