@@ -18,12 +18,18 @@
 
 use sgx_tstd::{
 	collections::{HashSet, HashMap},
-	hash,
 	sync::Arc,
 	vec::Vec,
 	string::String,
 	time::Instant,
-	untrusted::time::InstantEx
+	untrusted::time::InstantEx,
+	boxed::Box,
+	sync::{SgxRwLock, SgxMutex},
+};
+
+use core::{
+	result::Result,
+	hash,
 };
 
 use crate::transaction_pool::{
@@ -36,7 +42,7 @@ use crate::transaction_pool::{
 	pool::{
 		EventStream, Options, ChainApi, BlockHash, ExtrinsicHash, ExtrinsicFor, TransactionFor,
 	},
-	base_pool::PruneStatus;
+	base_pool::PruneStatus,
 };
 
 use serde::Serialize;
@@ -49,7 +55,7 @@ use sp_runtime::{
 
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 
-//use retain_mut::RetainMut;
+use retain_mut::RetainMut;
 
 
 
@@ -98,17 +104,16 @@ pub type ValidatedTransactionFor<B> = ValidatedTransaction<
 	ExtrinsicFor<B>,
 	<B as ChainApi>::Error,
 >;
-
 /// Pool that deals with validated transactions.
 pub struct ValidatedPool<B: ChainApi> {
 	api: Arc<B>,
 	options: Options,
-	listener: Listener<ExtrinsicHash<B>, B>,
-	pool: base::BasePool<
+	listener: SgxRwLock<Listener<ExtrinsicHash<B>, B>>,
+	pool: SgxRwLock<base::BasePool<
 		ExtrinsicHash<B>,
 		ExtrinsicFor<B>,
-	>,
-	import_notification_sinks: Vec<Sender<ExtrinsicHash<B>>>,
+	>>,
+	import_notification_sinks: SgxMutex<Vec<Sender<ExtrinsicHash<B>>>>,
 	rotator: PoolRotator<ExtrinsicHash<B>>,
 }
 /*
@@ -123,7 +128,11 @@ where
 	}
 }
 */
-impl<B: ChainApi> ValidatedPool<B> {
+
+impl<B: ChainApi> ValidatedPool<B>
+where
+ <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
+{
 	/// Create a new transaction pool.
 	pub fn new(options: Options, api: Arc<B>) -> Self {
 		let base_pool = base::BasePool::new(options.reject_future_transactions);
@@ -131,7 +140,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 			options,
 			listener: Default::default(),
 			api,
-			pool: base_pool,
+			pool: SgxRwLock::new(base_pool),
 			import_notification_sinks: Default::default(),
 			rotator: Default::default(),
 		}
@@ -159,7 +168,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 	) -> Result<(), B::Error> {
 		if !ignore_banned && self.is_banned(tx_hash) {
 			Err(error::Error::TemporarilyBanned.into())
-		} else if self.pool.clone().is_imported(tx_hash) {
+		} else if self.pool.read().unwrap().is_imported(tx_hash) {
 			Err(error::Error::AlreadyImported(Box::new(tx_hash.clone())).into())
 		} else {
 			Ok(())
@@ -192,11 +201,11 @@ impl<B: ChainApi> ValidatedPool<B> {
 	fn submit_one(&self, tx: ValidatedTransactionFor<B>) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
 			ValidatedTransaction::Valid(tx) => {
-				let imported = self.pool.write().import(tx)?;
+				let imported = self.pool.write().unwrap().import(tx)?;
 
 				if let base::Imported::Ready { ref hash, .. } = imported {
-					self.import_notification_sinks.lock()
-						.retain_mut(|sink| {
+					self.import_notification_sinks.lock().unwrap()
+					.retain_mut(|sink| {
 							match sink.try_send(hash.clone()) {
 								Ok(()) => true,
 								Err(e) => {
@@ -211,8 +220,8 @@ impl<B: ChainApi> ValidatedPool<B> {
 						});
 				}
 
-				let mut listener = self.listener.write();
-				fire_events(&mut *listener, &imported);
+				let mut listener = self.listener.write().unwrap();
+				fire_events(&mut listener, &imported);
 				Ok(imported.hash().clone())
 			},
 			ValidatedTransaction::Invalid(hash, err) => {
@@ -220,14 +229,14 @@ impl<B: ChainApi> ValidatedPool<B> {
 				Err(err.into())
 			},
 			ValidatedTransaction::Unknown(hash, err) => {
-				self.listener.write().invalid(&hash, false);
+				self.listener.write().unwrap().invalid(&hash, false);
 				Err(err.into())
 			},
 		}
 	}
 
 	fn enforce_limits(&self) -> HashSet<ExtrinsicHash<B>> {
-		let status = self.pool.read().status();
+		let status = self.pool.read().unwrap().status();
 		let ready_limit = &self.options.ready;
 		let future_limit = &self.options.future;
 
@@ -244,7 +253,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 
 			// clean up the pool
 			let removed = {
-				let mut pool = self.pool.write();
+				let mut pool = self.pool.write().unwrap();
 				let removed = pool.enforce_limits(ready_limit, future_limit)
 					.into_iter().map(|x| x.hash.clone()).collect::<HashSet<_>>();
 				// ban all removed transactions
@@ -256,7 +265,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 			}
 
 			// run notifications
-			let mut listener = self.listener.write();
+			let mut listener = self.listener.write().unwrap();
 			for h in &removed {
 				listener.dropped(h, None);
 			}
@@ -275,7 +284,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 		match tx {
 			ValidatedTransaction::Valid(tx) => {
 				let hash = self.api.hash_and_length(&tx.data).0;
-				let watcher = self.listener.write().create_watcher(hash);
+				let watcher = self.listener.write().unwrap().create_watcher(hash);
 				self.submit(core::iter::once(ValidatedTransaction::Valid(tx)))
 					.pop()
 					.expect("One extrinsic passed; one result returned; qed")
@@ -298,7 +307,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 		enum Status { Future, Ready, Failed, Dropped };
 
 		let (mut initial_statuses, final_statuses) = {
-			let mut pool = self.pool.write();
+			let mut pool = self.pool.write().unwrap();
 
 			// remove all passed transactions from the ready/future queues
 			// (this may remove additional transactions as well)
@@ -371,7 +380,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 								// => let's just notify listeners (and issue debug message)
 								log::warn!(
 									target: "txpool",
-									"[{:?}] Removing invalid transaction from update: {}",
+									"[{:?}] Removing invalid transaction from update: {:?}",
 									hash,
 									err,
 								);
@@ -397,7 +406,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 		};
 
 		// and now let's notify listeners about status changes
-		let mut listener = self.listener.write();
+		let mut listener = self.listener.write().unwrap();
 		for (hash, final_status) in final_statuses {
 			let initial_status = initial_statuses.remove(&hash);
 			if initial_status.is_none() || Some(final_status) != initial_status {
@@ -413,7 +422,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 
 	/// For each extrinsic, returns tags that it provides (if known), or None (if it is unknown).
 	pub fn extrinsics_tags(&self, hashes: &[ExtrinsicHash<B>]) -> Vec<Option<Vec<Tag>>> {
-		self.pool.read().by_hashes(&hashes)
+		self.pool.read().unwrap().by_hashes(&hashes)
 			.into_iter()
 			.map(|existing_in_pool| existing_in_pool
 				.map(|transaction| transaction.provides.iter().cloned().collect()))
@@ -422,7 +431,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 
 	/// Get ready transaction by hash
 	pub fn ready_by_hash(&self, hash: &ExtrinsicHash<B>) -> Option<TransactionFor<B>> {
-		self.pool.read().ready_by_hash(hash)
+		self.pool.read().unwrap().ready_by_hash(hash)
 	}
 
 	/// Prunes ready transactions that provide given list of tags.
@@ -431,11 +440,11 @@ impl<B: ChainApi> ValidatedPool<B> {
 		tags: impl IntoIterator<Item=Tag>,
 	) -> Result<PruneStatus<ExtrinsicHash<B>, ExtrinsicFor<B>>, B::Error> {
 		// Perform tag-based pruning in the base pool
-		let status = self.pool.write().prune_tags(tags);
+		let status = self.pool.write().unwrap().prune_tags(tags);		
 		// Notify event listeners of all transactions
 		// that were promoted to `Ready` or were dropped.
 		{
-			let mut listener = self.listener.write();
+			let mut listener = self.listener.write().unwrap();
 			for promoted in &status.promoted {
 				fire_events(&mut *listener, promoted);
 			}
@@ -454,7 +463,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 		known_imported_hashes: impl IntoIterator<Item=ExtrinsicHash<B>> + Clone,
 		pruned_hashes: Vec<ExtrinsicHash<B>>,
 		pruned_xts: Vec<ValidatedTransactionFor<B>>,
-	) -> Result<(), B::Error> {
+	) -> Result<(), B::Error> where <B as ChainApi>::Error: error::IntoPoolError {
 		debug_assert_eq!(pruned_hashes.len(), pruned_xts.len());
 
 		// Resubmit pruned transactions
@@ -464,7 +473,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 		let hashes = results
 			.into_iter()
 			.enumerate()
-			.filter_map(|(idx, r)| match r.map_err(_) {
+			.filter_map(|(idx, r)| match r.map_err(error::IntoPoolError::into_pool_error) {
 				Err(Ok(error::Error::InvalidTransaction(_))) => Some(pruned_hashes[idx].clone()),
 				_ => None,
 			});
@@ -487,7 +496,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 	) -> Result<(), B::Error> {
 		let header_hash = self.api.block_id_to_hash(at)?
 			.ok_or_else(|| error::Error::InvalidBlockId(format!("{:?}", at)).into())?;
-		let mut listener = self.listener.write();
+		let mut listener = self.listener.write().unwrap();
 		let mut set = HashSet::with_capacity(hashes.size_hint().0);
 		for h in hashes {
 			// `hashes` has possibly duplicate hashes.
@@ -517,7 +526,7 @@ impl<B: ChainApi> ValidatedPool<B> {
 				.collect::<Vec<_>>()
 		};
 		let futures_to_remove: Vec<ExtrinsicHash<B>> = {
-			let p = self.pool.read();
+			let p = self.pool.read().unwrap();
 			let mut hashes = Vec::new();
 			for tx in p.futures() {
 				if self.rotator.ban_if_stale(&now, block_number, &tx) {
@@ -554,13 +563,13 @@ impl<B: ChainApi> ValidatedPool<B> {
 		const CHANNEL_BUFFER_SIZE: usize = 1024;
 
 		let (sink, stream) = channel(CHANNEL_BUFFER_SIZE);
-		self.import_notification_sinks.push(sink);
+		self.import_notification_sinks.lock().unwrap().push(sink);
 		stream
 	}
 
 	/// Invoked when extrinsics are broadcasted.
 	pub fn on_broadcasted(&self, propagated: HashMap<ExtrinsicHash<B>, Vec<String>>) {
-		let mut listener = self.listener.write();
+		let mut listener = self.listener.write().unwrap();
 		for (hash, peers) in propagated.into_iter() {
 			listener.broadcasted(&hash, peers);
 		}
@@ -583,11 +592,11 @@ impl<B: ChainApi> ValidatedPool<B> {
 		// temporarily ban invalid transactions
 		self.rotator.ban(&Instant::now(), hashes.iter().cloned());
 
-		let invalid = self.pool.write().remove_subtree(hashes);
+		let invalid = self.pool.write().unwrap().remove_subtree(hashes);
 
 		log::debug!(target: "txpool", "Removed invalid transactions: {:?}", invalid);
 
-		let mut listener = self.listener.write();
+		let mut listener = self.listener.write().unwrap();
 		for tx in &invalid {
 			listener.invalid(&tx.hash, true);
 		}
@@ -597,24 +606,27 @@ impl<B: ChainApi> ValidatedPool<B> {
 
 	/// Get an iterator for ready transactions ordered by priority
 	pub fn ready(&self) -> impl Iterator<Item=TransactionFor<B>> + Send {
-		self.pool.read().ready()
+		self.pool.read().unwrap().ready()
 	}
 
 	/// Returns pool status.
 	pub fn status(&self) -> PoolStatus {
-		self.pool.read().status()
+		self.pool.read().unwrap().status()
 	}
 
 	/// Notify all watchers that transactions in the block with hash have been finalized
-	pub async fn on_block_finalized(&self, block_hash: BlockHash<B>) -> Result<(), B::Error> {
+	pub async fn on_block_finalized(&self, block_hash: BlockHash<B>) -> Result<(), B::Error>
+	where
+		<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: core::fmt::Display
+	 {
 		log::trace!(target: "txpool", "Attempting to notify watchers of finalization for {}", block_hash);
-		self.listener.write().finalized(block_hash);
+		self.listener.write().unwrap().finalized(block_hash);
 		Ok(())
 	}
 
 	/// Notify the listener of retracted blocks
 	pub fn on_block_retracted(&self, block_hash: BlockHash<B>) {
-		self.listener.write().retracted(block_hash)
+		self.listener.write().unwrap().retracted(block_hash)
 	}
 }
 

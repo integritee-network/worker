@@ -985,6 +985,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "linked-hash-map"
+version = "0.5.2"
+source = "git+https://github.com/mesalock-linux/linked-hash-map-sgx#03e763f7c251c16e0b85e2fb058ba47be52f2a49"
+dependencies = [
+ "sgx_tstd",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1666,6 +1674,12 @@ name = "regex-syntax"
 version = "0.6.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b181ba2dcf07aaccad5448e8ead58db5b742cf85dfe035e2227f137a539a189"
+
+[[package]]
+name = "retain_mut"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53552c6c49e1e13f1a203ef0080ab3bbef0beb570a528993e83df057a9d9bba1"
 
 [[package]]
 name = "ring"
@@ -2557,12 +2571,14 @@ dependencies = [
  "itertools 0.8.2",
  "jsonrpc-core",
  "lazy_static",
+ "linked-hash-map",
  "log",
  "multibase",
  "num-bigint",
  "ofb",
  "parity-scale-codec",
  "primitive-types 0.6.2",
+ "retain_mut",
  "rust-base58",
  "rustls",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",

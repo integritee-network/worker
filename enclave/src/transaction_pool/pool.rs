@@ -36,6 +36,9 @@ use sp_runtime::{
 		TransactionValidity, TransactionTag as Tag, TransactionValidityError, TransactionSource,
 	},
 };
+
+use serde::Serialize;
+
 use crate::transaction_pool::{
     base_pool as base,
     watcher::Watcher,
@@ -155,9 +158,13 @@ where
 	}
 }
 */
-impl<B: ChainApi> Pool<B> {
+impl<B: ChainApi> Pool<B> 
+where
+    <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
+    <B as ChainApi>::Error: error::IntoPoolError
+ {
 	/// Create a new transaction pool.
-	pub fn new(options: Options, api: Arc<B>) -> Self {
+    pub fn new(options: Options, api: Arc<B>) -> Self{
 		Pool {
 			validated_pool: Arc::new(ValidatedPool::new(options, api)),
 		}
@@ -356,9 +363,9 @@ impl<B: ChainApi> Pool<B> {
 		).await?;
 
 		log::trace!(target: "txpool", "Pruning at {:?}. Resubmitting transactions.", at);
-		// And finally - submit reverified transactions back to the pool
-
-		self.validated_pool.resubmit_pruned(
+        // And finally - submit reverified transactions back to the pool
+        
+        self.validated_pool.resubmit_pruned(
 			&at,
 			known_imported_hashes,
 			pruned_hashes,

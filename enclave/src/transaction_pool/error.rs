@@ -81,7 +81,7 @@ pub trait IntoPoolError: Send + Sized {
 	/// This implementation is optional and used only to
 	/// provide more descriptive error messages for end users
 	/// of RPC API.
-	fn into_pool_error(self) -> core::result::Result<Error, Self> { Err(self) }
+	fn into_pool_error(self) -> core::result::Result<Error, Self>  { Err(self) }
 }
 
 impl IntoPoolError for Error {
