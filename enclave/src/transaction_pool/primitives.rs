@@ -176,8 +176,7 @@ pub trait TransactionPool: Send + Sync {
 		Hash = TxHash<Self>
 	>;
 	/// Error type.
-    //type Error: From<error::Error> + error::IntoPoolError;
-    type Error: From<error::Error>;
+    type Error: From<error::Error> + error::IntoPoolError;
 
 	// *** RPC
 
@@ -272,8 +271,7 @@ pub trait LocalTransactionPool: Send + Sync {
 	/// Transaction hash type.
 	type Hash: Hash + Eq + Member + Serialize;
 	/// Error type.
-    //type Error: From<crate::error::Error> + crate::error::IntoPoolError;
-    type Error: From<error::Error>;
+    type Error: From<error::Error> + error::IntoPoolError;
 
 	/// Submits the given local unverified transaction to the pool blocking the
 	/// current thread for any necessary pre-verification.

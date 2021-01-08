@@ -73,9 +73,9 @@ pub enum Error {
 	//#[error("The pool is not accepting future transactions")]
 	RejectedFutureTransaction,
 }
-/*
+
 /// Transaction pool error conversion.
-pub trait IntoPoolError: error::Error + Send + Sized {
+pub trait IntoPoolError: Send + Sized {
 	/// Try to extract original `Error`
 	///
 	/// This implementation is optional and used only to
@@ -86,4 +86,4 @@ pub trait IntoPoolError: error::Error + Send + Sized {
 
 impl IntoPoolError for Error {
 	fn into_pool_error(self) -> core::result::Result<Error, Self> { Ok(self) }
-}*/
+}
