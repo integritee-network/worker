@@ -34,9 +34,6 @@ use core::{hash, iter};
 
 use sp_runtime::{
 	traits::Member,
-	transaction_validity::{
-		TransactionLongevity, TransactionPriority, TransactionTag,
-	},
 };
 
 use log::{trace, debug, warn};

@@ -9,5 +9,4 @@ mod validated_pool;
 mod rotator;
 mod listener;
 
-
 pub mod base_pool;

@@ -43,6 +43,7 @@ serde        	  = { git = "https://github.com/mesalock-linux/serde-sgx" }
 serde_json        = { git = "https://github.com/mesalock-linux/serde-json-sgx"}
 lazy_static       = { version = "1.1.0", features = ["spin_no_std"] }
 retain_mut        = { version = "0.1.2"}
+derive_more       = { version = "0.99.5" }
 
 
 # for attestation
@@ -115,6 +116,11 @@ rev = "a208da16"
 default-features = false
 
 [dependencies.sp-utils]
+git = "https://github.com/paritytech/substrate.git"
+rev = "a208da16"
+default-features = false
+
+[dependencies.sp-version]
 git = "https://github.com/paritytech/substrate.git"
 rev = "a208da16"
 default-features = false

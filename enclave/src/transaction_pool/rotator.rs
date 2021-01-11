@@ -26,7 +26,6 @@ use sgx_tstd::{
 	hash,
 	iter,
 	time::{Instant, Duration},
-	untrusted::time::InstantEx
 };
 
 use crate::transaction_pool::base_pool::Transaction;

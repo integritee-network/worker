@@ -20,7 +20,6 @@ use sgx_tstd::{
 	collections::HashMap,
     sync::Arc,
     vec::Vec,
-    string::String,
     time::Instant,
     untrusted::time::InstantEx,
 };

@@ -16,24 +16,66 @@
 */
 
 pub extern crate alloc;
-use alloc::string::{ToString, String};
-use alloc::str::from_utf8;
-use alloc::format;
-use alloc::slice::{from_raw_parts, from_raw_parts_mut};
-use core::iter::Iterator;
-use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
+use alloc::{
+  string::{ToString, String},
+  str::from_utf8,
+  format,
+  slice::{from_raw_parts, from_raw_parts_mut},
+  vec::Vec,
+  borrow::ToOwned,
+};
+
+use core::{
+  iter::Iterator,
+  hash::Hash,
+};
 
 use sgx_types::*;
 
 use log::*;
+use sp_core::Bytes;
+use sp_core::storage::{StorageKey, StorageData, StorageChangeSet};
+
+use crate::rpc_api::error::FutureResult;
 
 use jsonrpc_core::*;
 use serde::Deserialize;
+use sp_version::RuntimeVersion;
 
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
     extrinsic: String,
+}
+
+pub trait AuthorApi<Hash, BlockHash> {
+	/// RPC metadata
+	type Metadata;
+
+	/*/// Submit hex-encoded extrinsic for inclusion in block.
+  fn submit_extrinsic(&self, extrinsic: Bytes) -> FutureResult<Hash>;*/
+
+ /* /// Submit an extrinsic to watch.
+	///
+	/// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
+	/// life cycle.
+ fn watch_extrinsic(&self,
+		metadata: Self::Metadata,
+		subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
+		bytes: Bytes
+  );*/
+  
+}
+
+pub trait StateApi<Hash> {
+	/// RPC Metadata
+  type Metadata;
+
+  /// Returns the runtime metadata as an opaque blob.
+  fn metadata(&self, hash: Option<Hash>) -> FutureResult<Bytes>;
+  
+  /// Get the runtime version.
+	fn runtime_version(&self, hash: Option<Hash>) -> FutureResult<RuntimeVersion>;
+
 }
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability
@@ -72,9 +114,15 @@ fn init_io_handler() -> IoHandler {
     // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
-    io.add_sync_method(author_submit_extrinsic_name, |_: Params| {
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+    io.add_sync_method(author_submit_extrinsic_name, |params: Params| {
+		  match params.parse() {
+        Ok(ok) => {
+            let parsed: SumbitExtrinsicParams = ok;
+           // let result: FutureResult<Hash> = submit_extrinsic(&self, extrinsic: Bytes);
+            Ok(Value::String(format!("hello extrinsic, {}", parsed.extrinsic)))
+        },
+        Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
+     }
     });
     
     // author_pendingExtrinsics
