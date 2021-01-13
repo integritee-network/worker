@@ -18,60 +18,63 @@
 //! Transaction pool errors.
 
 use sp_runtime::transaction_validity::{
-	TransactionPriority as Priority, InvalidTransaction, UnknownTransaction,
+	TransactionPriority as Priority
 };
 
-pub extern crate alloc;
+extern crate alloc;
 use alloc::{
-	string::String,
 	boxed::Box,
+	string::String,
 };
-
+use core::hash;
+use derive_more::{Display, From};
 /// Transaction pool result.
-pub type Result<T> = core::result::Result<T, Error>;
+pub type Result<T> = sgx_tstd::result::Result<T, Error>;
 
 /// Transaction pool error type.
-#[derive(Debug)]
+#[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
-	//#[error("Unknown transaction validity: {0:?}")]
-	UnknownTransaction(UnknownTransaction),
+	#[display("Unknown transaction validity")]
+	UnknownTransaction,
 
-	//#[error("Invalid transaction validity: {0:?}")]
-	InvalidTransaction(InvalidTransaction),
+	#[display("Invalid transaction validity")]
+	InvalidTransaction,
+
+	/// Incorrect extrinsic format.
 
 	/// The transaction validity returned no "provides" tag.
 	///
 	/// Such transactions are not accepted to the pool, since we use those tags
 	/// to define identity of transactions (occupance of the same "slot").
-	//#[error("Transaction does not provide any tags, so the pool can't identify it")]
+	#[display("Transaction does not provide any tags, so the pool can't identify it")]
 	NoTagsProvided,
 
-	//#[error("Transaction temporarily Banned")]
+	#[display("Transaction temporarily Banned")]
 	TemporarilyBanned,
 
-	//#[error("[{0:?}] Already imported")]
-	AlreadyImported(Box<dyn core::any::Any + Send>),
+	#[display("Already imported")]
+	AlreadyImported,
+	
+	#[display("Too low priority")]
+	TooLowPriority(Priority),
 
-	//#[error("Too low priority ({} > {})", old, new)]
-	TooLowPriority {
-		/// Transaction already in the pool.
-		old: Priority,
-		/// Transaction entering the pool.
-		new: Priority
-	},
-	//#[error("Transaction with cyclic dependency")]
+	#[display("Transaction with cyclic dependency")]
 	CycleDetected,
 
-	//#[error("Transaction couldn't enter the pool because of the limit")]
+	#[display("Transaction couldn't enter the pool because of the limit")]
 	ImmediatelyDropped,
 
-	//#[from(ignore)]
-	//#[error("{0}")]
+	#[from(ignore)]
+	#[display("{0}")]
 	InvalidBlockId(String),
 
-	//#[error("The pool is not accepting future transactions")]
+	#[display("The pool is not accepting future transactions")]
 	RejectedFutureTransaction,
+
+	#[display(fmt="Extrinsic verification error")]
+	#[from(ignore)]
+	Verification,
 }
 
 /// Transaction pool error conversion.
@@ -81,9 +84,9 @@ pub trait IntoPoolError: Send + Sized {
 	/// This implementation is optional and used only to
 	/// provide more descriptive error messages for end users
 	/// of RPC API.
-	fn into_pool_error(self) -> core::result::Result<Error, Self>  { Err(self) }
+	fn into_pool_error(self) -> sgx_tstd::result::Result<Error, Self> { Err(self) }
 }
 
 impl IntoPoolError for Error {
-	fn into_pool_error(self) -> core::result::Result<Error, Self> { Ok(self) }
+	fn into_pool_error(self) -> sgx_tstd::result::Result<Error, Self> { Ok(self) }
 }

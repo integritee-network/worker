@@ -289,7 +289,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex: fmt::Debug> BasePool<Hash,
 		tx: Transaction<Hash, Ex>,
 	) -> error::Result<Imported<Hash, Ex>> {
 		if self.is_imported(&tx.hash) {
-			return Err(error::Error::AlreadyImported(Box::new(tx.hash)))
+			return Err(error::Error::AlreadyImported)
 		}
 
 		let tx = WaitingTransaction::new(

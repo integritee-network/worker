@@ -81,7 +81,7 @@ mod utils;
 pub mod cert;
 pub mod hex;
 pub mod tls_ra;
-pub mod rpc_api;
+pub mod rpc;
 pub mod transaction_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;

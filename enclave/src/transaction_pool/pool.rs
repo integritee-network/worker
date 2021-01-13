@@ -32,7 +32,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion, Block as BlockT},
 	transaction_validity::{
-		TransactionValidity, TransactionTag as Tag, TransactionValidityError, TransactionSource,
+		TransactionValidity, TransactionTag as Tag, TransactionValidityError, TransactionSource, ValidTransaction,
 	},
 };
 
@@ -213,7 +213,10 @@ where
 		source: TransactionSource,
 		xt: ExtrinsicFor<B>,
 	) -> Result<Watcher<ExtrinsicHash<B>, ExtrinsicHash<B>>, B::Error> {
-		let block_number = self.resolve_block_number(at)?;
+		//TODO
+		//let block_number = self.resolve_block_number(at)?;
+		// dummy value:
+		let block_number = 0;
 		let (_, tx) = self.verify_one(
 			at,
 			block_number,
@@ -392,8 +395,11 @@ where
 		check: CheckBannedBeforeVerify,
 	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>, B::Error> {
 		// we need a block number to compute tx validity
-		let block_number = self.resolve_block_number(at)?;
-
+		//let block_number = self.resolve_block_number(at)?;
+		// dummy blocknumber
+		//pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
+		let block_number = 0;
+		
 		let res = future::join_all(
 			xts.into_iter()
 				.map(|(source, xt)| self.verify_one(at, block_number, source, xt, check))
@@ -406,7 +412,8 @@ where
 	async fn verify_one(
 		&self,
 		block_id: &BlockId<B::Block>,
-		block_number: NumberFor<B>,
+		//block_number: NumberFor<B>,
+		block_number: i8,
 		source: TransactionSource,
 		xt: ExtrinsicFor<B>,
 		check: CheckBannedBeforeVerify,
@@ -418,17 +425,27 @@ where
 			return (hash.clone(), ValidatedTransaction::Invalid(hash, err.into()))
 		}
 
-		let validation_result = self.validated_pool.api().validate_transaction(
+		// no runtime validation check for now. Issue is open. 
+		/*let validation_result = self.validated_pool.api().validate_transaction(
 			block_id,
 			source,
 			xt.clone(),
 		).await;
+*/		
+		// dummy value
+		let validation_result = Ok(Ok(ValidTransaction {
+			priority: 4,
+			requires: vec![],
+			provides: vec![],
+			longevity: 3,
+			propagate: false,
+		}));
 
 		let status = match validation_result {
 			Ok(status) => status,
 			Err(e) => return (hash.clone(), ValidatedTransaction::Invalid(hash, e)),
 		};
-
+		
 		let validity = match status {
 			Ok(validity) => {
 				if validity.provides.is_empty() {
@@ -445,9 +462,9 @@ where
 				}
 			},
 			Err(TransactionValidityError::Invalid(e)) =>
-				ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTransaction(e).into()),
+				ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTransaction.into()),
 			Err(TransactionValidityError::Unknown(e)) =>
-				ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTransaction(e).into()),
+				ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTransaction.into()),
 		};
 
 		(hash, validity)

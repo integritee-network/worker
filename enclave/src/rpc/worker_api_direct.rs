@@ -23,6 +23,7 @@ use alloc::{
   slice::{from_raw_parts, from_raw_parts_mut},
   vec::Vec,
   borrow::ToOwned,
+  boxed::Box,
 };
 
 use core::{
@@ -31,52 +32,39 @@ use core::{
 };
 
 use sgx_types::*;
+use sgx_tstd::error;
 
 use log::*;
 use sp_core::Bytes;
 use sp_core::storage::{StorageKey, StorageData, StorageChangeSet};
+use sp_runtime::generic;
 
-use crate::rpc_api::error::FutureResult;
+use sp_runtime::transaction_validity::{
+	TransactionSource
+};
+
+use crate::rpc::error::FutureResult;
+use crate::rpc::author::{
+  hash,
+};
+
+use crate::transaction_pool::{
+  primitives::{TransactionPool, InPoolTransaction, TransactionStatus, TransactionFor, TxHash, BlockHash},
+	error::IntoPoolError,
+};
 
 use jsonrpc_core::*;
 use serde::Deserialize;
 use sp_version::RuntimeVersion;
+use codec::{Encode, Decode};
 
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
     extrinsic: String,
 }
 
-pub trait AuthorApi<Hash, BlockHash> {
-	/// RPC metadata
-	type Metadata;
 
-	/*/// Submit hex-encoded extrinsic for inclusion in block.
-  fn submit_extrinsic(&self, extrinsic: Bytes) -> FutureResult<Hash>;*/
 
- /* /// Submit an extrinsic to watch.
-	///
-	/// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
-	/// life cycle.
- fn watch_extrinsic(&self,
-		metadata: Self::Metadata,
-		subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
-		bytes: Bytes
-  );*/
-  
-}
-
-pub trait StateApi<Hash> {
-	/// RPC Metadata
-  type Metadata;
-
-  /// Returns the runtime metadata as an opaque blob.
-  fn metadata(&self, hash: Option<Hash>) -> FutureResult<Bytes>;
-  
-  /// Get the runtime version.
-	fn runtime_version(&self, hash: Option<Hash>) -> FutureResult<RuntimeVersion>;
-
-}
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability
 fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {

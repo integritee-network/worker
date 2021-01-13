@@ -169,7 +169,7 @@ where
 		if !ignore_banned && self.is_banned(tx_hash) {
 			Err(error::Error::TemporarilyBanned.into())
 		} else if self.pool.read().unwrap().is_imported(tx_hash) {
-			Err(error::Error::AlreadyImported(Box::new(tx_hash.clone())).into())
+			Err(error::Error::AlreadyImported.into())
 		} else {
 			Ok(())
 		}
@@ -474,7 +474,7 @@ where
 			.into_iter()
 			.enumerate()
 			.filter_map(|(idx, r)| match r.map_err(error::IntoPoolError::into_pool_error) {
-				Err(Ok(error::Error::InvalidTransaction(_))) => Some(pruned_hashes[idx].clone()),
+				Err(Ok(error::Error::InvalidTransaction)) => Some(pruned_hashes[idx].clone()),
 				_ => None,
 			});
 		// Fire `pruned` notifications for collected hashes and make sure to include

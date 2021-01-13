@@ -451,7 +451,7 @@ impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex
 
 			// bail - the transaction has too low priority to replace the old ones
 			if old_priority >= tx.priority {
-				return Err(error::Error::TooLowPriority { old: old_priority, new: tx.priority })
+				return Err(error::Error::TooLowPriority(tx.priority))
 			}
 
 			// construct a list of unlocked transactions
