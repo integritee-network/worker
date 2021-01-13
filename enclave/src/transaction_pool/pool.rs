@@ -483,7 +483,7 @@ impl<B: ChainApi> Clone for Pool<B> {
 		}
 	}
 }
-
+/*
 #[cfg(test)]
 mod tests {
 	use std::collections::{HashMap, HashSet};
@@ -1054,3 +1054,4 @@ mod tests {
 		}
 	}
 }
+*/

@@ -1233,6 +1233,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-babe"
+version = "2.0.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-authorship",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-application-crypto",
+ "sp-consensus-babe",
+ "sp-consensus-vrf",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-session",
+ "sp-staking",
+ "sp-std",
+ "sp-timestamp",
+]
+
+[[package]]
 name = "pallet-balances"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
@@ -2224,6 +2247,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-consensus-babe"
+version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "merlin",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-consensus-slots",
+ "sp-consensus-vrf",
+ "sp-core",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-std",
+ "sp-timestamp",
+]
+
+[[package]]
+name = "sp-consensus-slots"
+version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "parity-scale-codec",
+ "sp-runtime",
+]
+
+[[package]]
+name = "sp-consensus-vrf"
+version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "parity-scale-codec",
+ "schnorrkel",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "sp-core"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
@@ -2261,6 +2323,17 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.8",
  "syn 1.0.55",
+]
+
+[[package]]
+name = "sp-externalities"
+version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "environmental",
+ "parity-scale-codec",
+ "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
@@ -2384,6 +2457,23 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "sp-state-machine"
+version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "hash-db",
+ "num-traits 0.2.14",
+ "parity-scale-codec",
+ "smallvec",
+ "sp-core",
+ "sp-externalities",
+ "sp-std",
+ "sp-trie",
+ "trie-db",
+ "trie-root",
 ]
 
 [[package]]
@@ -2521,6 +2611,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-test-runtime"
+version = "2.0.0"
+source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
+dependencies = [
+ "cfg-if 0.1.10",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-rpc-runtime-api",
+ "memory-db",
+ "pallet-babe",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-externalities",
+ "sp-finality-grandpa",
+ "sp-inherents",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "sp-session",
+ "sp-state-machine",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-trie",
+ "sp-version",
+ "substrate-wasm-builder-runner",
+ "trie-db",
+]
+
+[[package]]
 name = "substrate-wasm-builder-runner"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
@@ -2605,6 +2733,7 @@ dependencies = [
  "sp-utils",
  "sp-version",
  "substrate-api-client",
+ "substrate-test-runtime",
  "substratee-node-primitives",
  "substratee-stf",
  "webpki",

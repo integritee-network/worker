@@ -62,7 +62,6 @@ use client_error::Error as ClientError;
 pub mod hash;
 use hash::*;
 
-
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
 	/// RPC metadata
@@ -130,9 +129,10 @@ pub trait AuthorApi<Hash, BlockHash> {
 }
 
 /// Authoring API
-pub struct Author<P, Client> {
+//pub struct Author<P, Client> {
+pub struct Author<P> {
 	/// Substrate client
-	client: Arc<Client>,
+	//client: Arc<Client>,
 	/// Transactions pool
 	pool: Arc<P>,
 	/*/// Subscriptions manager
@@ -143,17 +143,18 @@ pub struct Author<P, Client> {
 	deny_unsafe: DenyUnsafe,
 }
 
-impl<P, Client> Author<P, Client> {
+//impl<P, Client> Author<P, Client> {
+impl<P> Author<P> {
 	/// Create new instance of Authoring API.
 	pub fn new(
-		client: Arc<Client>,
+		//client: Arc<Client>,
 		pool: Arc<P>,
 		//subscriptions: SubscriptionManager,
 		//keystore: SyncCryptoStorePtr,
 		deny_unsafe: DenyUnsafe,
 	) -> Self {
 		Author {
-			client,
+			//client,
 			pool,
 			//subscriptions,
 			//keystore,
@@ -169,10 +170,11 @@ impl<P, Client> Author<P, Client> {
 /// some unique transactions via RPC and have them included in the pool.
 const TX_SOURCE: TransactionSource = TransactionSource::External;
 
-impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
+//impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
+impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 	where
 		P: TransactionPool + Sync + Send + 'static,
-		Client: Send + Sync + 'static,
+		//Client: Send + Sync + 'static,
 		//Client::Api: SessionKeys<P::Block, Error = ClientError>,
 {
 	//type Metadata = crate::Metadata;

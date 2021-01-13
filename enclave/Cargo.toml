@@ -110,6 +110,11 @@ git = "https://github.com/paritytech/substrate.git"
 rev = "a208da16"
 default-features = false
 
+[dependencies.substrate-test-runtime]
+git = "https://github.com/paritytech/substrate.git"
+rev = "a208da16"
+default-features = false
+
 [dependencies.sp-std]
 git = "https://github.com/paritytech/substrate.git"
 rev = "a208da16"

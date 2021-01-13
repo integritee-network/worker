@@ -39,9 +39,6 @@ use serde_json;
 /// Author RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// Author RPC future Result type.
-pub type FutureResult<T,E> = Box<dyn rpc_core::futures::Future<Output=core::result::Result<T, E>> + Send>;
-
 /// Author RPC errors.
 #[derive(Debug, Display, From)]
 pub enum Error {

@@ -37,7 +37,7 @@ use derive_more::{Display, From};
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// State RPC future Result type.
-pub type FutureResult<T, E> = Box<dyn rpc::futures::Future<Output=core::result::Result<T, E>> + Send>;
+pub type FutureResult<T,E> = Box<dyn rpc::futures::Future<Output=core::result::Result<T, E>> + Send>;
 
 /// Signifies whether a potentially unsafe RPC should be denied.
 #[derive(Clone, Copy, Debug)]
