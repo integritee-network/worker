@@ -16,15 +16,18 @@
 
 //! Extrinsic helpers for author RPC module.
 
-use sp_core::Bytes;
+extern crate alloc;
+use alloc::vec::Vec;
+use serde::{Serialize, Deserialize};
 
 /// RPC Extrinsic or hash
 ///
 /// Allows to refer to extrinsic either by its raw representation or its hash.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum ExtrinsicOrHash<Hash> {
 	/// The hash of the extrinsic.
 	Hash(Hash),
 	/// Raw extrinsic bytes.
-	Extrinsic(Bytes),
+	Extrinsic(Vec<u8>),
 }

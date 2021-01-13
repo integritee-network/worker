@@ -130,7 +130,7 @@ where
 
 impl<B: ChainApi> ValidatedPool<B>
 where
- <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
+ //<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
 {
 	/// Create a new transaction pool.
 	pub fn new(options: Options, api: Arc<B>) -> Self {
@@ -633,7 +633,7 @@ fn fire_events<H, B, Ex>(
 	listener: &mut Listener<H, B>,
 	imported: &base::Imported<H, Ex>,
 ) where
-	H: hash::Hash + Eq + traits::Member + Serialize,
+	H: hash::Hash + Eq + traits::Member, // + Serialize,
 	B: ChainApi,
 {
 	match *imported {

@@ -146,7 +146,7 @@ impl<Hash: hash::Hash + Eq + Ord, Ex> Default for ReadyTransactions<Hash, Ex> {
 	}
 }
 
-impl<Hash: hash::Hash + Member + Serialize + Ord, Ex> ReadyTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Ord, Ex> ReadyTransactions<Hash, Ex> {
 	/// Borrows a map of tags that are provided by transactions in this queue.
 	pub fn provided_tags(&self) -> &HashMap<Tag, Hash> {
 		&self.provided_tags
@@ -588,7 +588,7 @@ mod tests {
 		}
 	}
 
-	fn import<H: hash::Hash + Eq + Member + Serialize, Ex>(
+	fn import<H: hash::Hash + Eq + Member, Ex>(
 		ready: &mut ReadyTransactions<H, Ex>,
 		tx: Transaction<H, Ex>
 	) -> error::Result<Vec<Arc<Transaction<H, Ex>>>> {

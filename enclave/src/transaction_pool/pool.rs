@@ -45,6 +45,8 @@ use crate::transaction_pool::{
     validated_pool::ValidatedPool,
 };
 
+//use primitive_types::H256 as Hash;
+
 pub use crate::transaction_pool::validated_pool::ValidatedTransaction;
 
 /// Modification notification event stream type;
@@ -159,7 +161,7 @@ where
 */
 impl<B: ChainApi> Pool<B> 
 where
-    <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
+   // <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
     <B as ChainApi>::Error: error::IntoPoolError
  {
 	/// Create a new transaction pool.

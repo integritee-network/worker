@@ -5,7 +5,8 @@ generic::BlockId,
 traits::{Block as BlockT, Hash},
 transaction_validity::{TransactionValidity, TransactionSource, ValidTransaction},
 };
-use substrate_test_runtime::{Block, Extrinsic, H256, Hashing};
+use primitive_types::H256;
+use substrate_test_runtime::{Block, Extrinsic, Hashing};
 use jsonrpc_core::futures::future;
 
 pub extern crate alloc;
@@ -20,7 +21,6 @@ use crate::transaction_pool::{
 };
 
 use jsonrpc_core::*;
-use serde::{Serialize, Deserialize};
 use codec::{Encode};
 
 

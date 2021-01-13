@@ -53,7 +53,8 @@ impl<H: hash::Hash + Eq + Debug, C: ChainApi> Default for Listener<H, C> {
 	}
 }
 
-impl<H: hash::Hash + traits::Member + Serialize, C: ChainApi> Listener<H, C> {
+//impl<H: hash::Hash + traits::Member + Serialize, C: ChainApi> Listener<H, C> {
+impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 	fn fire<F>(&mut self, hash: &H, fun: F) where F: FnOnce(&mut watcher::Sender<H, ExtrinsicHash<C>>) {
 		let clean = if let Some(h) = self.watchers.get_mut(hash) {
 			fun(h);

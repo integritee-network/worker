@@ -25,7 +25,6 @@ use alloc::{
 	fmt,
 	sync::Arc,
 	vec::Vec,
-	boxed::Box,
 };
 
 use sgx_tstd::collections::HashSet;
@@ -241,13 +240,13 @@ pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
 	recently_pruned_index: usize,
 }
 
-impl<Hash: hash::Hash + Member + Serialize + Ord, Ex: fmt::Debug> Default for BasePool<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> Default for BasePool<Hash, Ex> {
 	fn default() -> Self {
 		Self::new(false)
 	}
 }
 
-impl<Hash: hash::Hash + Member + Serialize + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
+impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// Create new pool given reject_future_transactions flag.
 	pub fn new(reject_future_transactions: bool) -> Self {
 		BasePool {

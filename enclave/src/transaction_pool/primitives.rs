@@ -91,8 +91,7 @@ impl PoolStatus {
 /// within 512 blocks. This either indicates that finality is not available for your chain,
 /// or that finality gadget is lagging behind. If you choose to wait for finality longer, you can
 /// re-subscribe for a particular transaction hash manually again.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TransactionStatus<Hash, BlockHash> {
 	/// Transaction is part of the future queue.
 	Future,
@@ -169,7 +168,7 @@ pub trait TransactionPool: Send + Sync {
 	/// Block type.
 	type Block: BlockT;
 	/// Transaction hash type.
-	type Hash: Hash + Eq + Member + Serialize;
+	type Hash: Hash + Eq + Member;
 	/// In-pool transaction type.
 	type InPoolTransaction: InPoolTransaction<
 		Transaction = TransactionFor<Self>,
@@ -269,7 +268,7 @@ pub trait LocalTransactionPool: Send + Sync {
 	/// Block type.
 	type Block: BlockT;
 	/// Transaction hash type.
-	type Hash: Hash + Eq + Member + Serialize;
+	type Hash: Hash + Eq + Member;
 	/// Error type.
     type Error: From<error::Error> + error::IntoPoolError;
 

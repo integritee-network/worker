@@ -33,7 +33,6 @@ use jsonrpc_core::futures::{Sink, Future};
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
 //use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId, manager::SubscriptionManager};
 use codec::{Encode, Decode};
-use sp_core::Bytes;
 //use sp_keystore::{SyncCryptoStorePtr, SyncCryptoStore};
 use sp_runtime::generic;
 //use sp_session::SessionKeys;
@@ -60,7 +59,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	//type Metadata;
 
 	/// Submit hex-encoded extrinsic for inclusion in block.
-	fn submit_extrinsic(&self, extrinsic: Bytes) -> FutureResult<Hash, RpcError>;
+	fn submit_extrinsic(&self, extrinsic: Vec<u8>) -> FutureResult<Hash, RpcError>;
 
 	/*/// Insert a key into the keystore.
 	fn insert_key(
@@ -86,7 +85,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn has_key(&self, public_key: Bytes, key_type: String) -> Result<bool>;*/
 
 	/// Returns all pending extrinsics, potentially grouped by sender.
-	fn pending_extrinsics(&self) -> Result<Vec<Bytes>>;
+	fn pending_extrinsics(&self) -> Result<Vec<Vec<u8>>>;
 
 	/// Remove given extrinsic from the pool and temporarily ban it to prevent reimporting.
 	fn remove_extrinsic(&self,
@@ -217,7 +216,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 
 	//pub type FutureResult<T,E> = Box<dyn rpc::futures::Future<Output = Result<T,E>> + Send>;
 	/// Submit hex-encoded extrinsic for inclusion in block.
-	fn submit_extrinsic(&self, ext: Bytes) -> FutureResult<TxHash<P>, RpcError>
+	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
 	{
 		let xt = match Decode::decode(&mut &ext[..]) {
 			Ok(xt) => xt,
@@ -234,7 +233,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		))
 	}
 
-	fn pending_extrinsics(&self) -> Result<Vec<Bytes>> {
+	fn pending_extrinsics(&self) -> Result<Vec<Vec<u8>>> {
 		Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect())
 	}
 

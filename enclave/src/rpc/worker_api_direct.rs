@@ -36,7 +36,6 @@ use sgx_types::*;
 use sgx_tstd::error;
 
 use log::*;
-use sp_core::Bytes;
 use sp_core::storage::{StorageKey, StorageData, StorageChangeSet};
 use sp_runtime::generic;
 
@@ -54,8 +53,6 @@ use crate::transaction_pool::{
 
 use jsonrpc_core::*;
 use serde::Deserialize;
-use sp_version::RuntimeVersion;
-use codec::{Encode, Decode};
 
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
@@ -79,8 +76,7 @@ fn init_io_handler() -> IoHandler {
     let mut rpc_methods_vec: Vec<&str> = Vec::new();    
     let api = TestApi::default();
     let options = PoolOptions::default();
-    //let author_api = Author::new(transaction_pool, deny_unsafe);
-    //let tx_pool: Pool<TestApi> = Pool::new(options, api.into());
+    let tx_pool: Pool<TestApi> = Pool::new(options, api.into());
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
 
