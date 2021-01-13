@@ -22,11 +22,8 @@ use sp_runtime::transaction_validity::{
 };
 
 extern crate alloc;
-use alloc::{
-	boxed::Box,
-	string::String,
-};
-use core::hash;
+use alloc::string::String;
+
 use derive_more::{Display, From};
 /// Transaction pool result.
 pub type Result<T> = sgx_tstd::result::Result<T, Error>;

@@ -19,10 +19,6 @@
 //! Substrate block-author/full-node API.
 pub extern crate alloc;
 use alloc::{
-  string::{ToString, String},
-  str::from_utf8,
-  format,
-  slice::{from_raw_parts, from_raw_parts_mut},
   vec::Vec,
   borrow::ToOwned,
   boxed::Box,
@@ -31,14 +27,10 @@ use alloc::{
 use sgx_tstd::{sync::Arc, convert::TryInto};
 use log::warn;
 
-use core::{
-	iter::Iterator,
-	hash::Hash,
-  };
+use core::iter::Iterator;
 
-//use jsonrpc_core::futures::{StreamExt as _, compat::Compat};
-use jsonrpc_core::futures::{Sink, Future, StreamExt as _,};
-use jsonrpc_core::futures::future::{ready, FutureExt, TryFutureExt};
+use jsonrpc_core::futures::{Sink, Future};
+use jsonrpc_core::futures::future::{ready, TryFutureExt};
 //use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId, manager::SubscriptionManager};
 use codec::{Encode, Decode};
 use sp_core::Bytes;
@@ -238,7 +230,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, xt)
 			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
 				.map(Into::into)
-				.unwrap_or_else(|e| PoolError::Verification)).into()
+				.unwrap_or_else(|_e| PoolError::Verification)).into()
 		))
 	}
 

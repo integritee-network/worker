@@ -461,9 +461,9 @@ where
 					)
 				}
 			},
-			Err(TransactionValidityError::Invalid(e)) =>
+			Err(TransactionValidityError::Invalid(_e)) =>
 				ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTransaction.into()),
-			Err(TransactionValidityError::Unknown(e)) =>
+			Err(TransactionValidityError::Unknown(_e)) =>
 				ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTransaction.into()),
 		};
 

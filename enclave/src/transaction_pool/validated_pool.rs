@@ -23,7 +23,6 @@ use sgx_tstd::{
 	string::String,
 	time::Instant,
 	untrusted::time::InstantEx,
-	boxed::Box,
 	sync::{SgxRwLock, SgxMutex},
 };
 
