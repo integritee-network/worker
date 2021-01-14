@@ -56,6 +56,8 @@ use jsonrpc_core::*;
 use jsonrpc_core::Error as RpcError;
 use serde::Deserialize;
 
+use substrate_test_runtime::Block; // TestBlock
+
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
     extrinsic: String,
@@ -77,10 +79,9 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();    
-   // let api = Arc::new(FillerChainApi::new());
-   // let tx_pool =  BasicPool::create(PoolOptions::default(), api);
-    
-    //let author = Author::new(tx_pool.into(), DenyUnsafe::No);
+    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let tx_pool = BasicPool::create(PoolOptions::default(), api);    
+    let author = Author::new(tx_pool.into());
     //impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
@@ -89,7 +90,7 @@ fn init_io_handler() -> IoHandler {
     // author_submitAndWatchExtrinsic
     let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
     rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
-    io.add_sync_method(author_submit_and_watch_extrinsic_name, |params: Params| {  
+    io.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {  
        match params.parse() {
             Ok(ok) => {   
                 let parsed: SumbitExtrinsicParams = ok;
@@ -102,11 +103,11 @@ fn init_io_handler() -> IoHandler {
     // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
-    io.add_sync_method(author_submit_extrinsic_name, |params: Params| {
+    io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
 		  match params.parse() {
         Ok(call) => {
             let tx: SumbitExtrinsicParams = call;
-            //let result: FutureResult<Hash, RpcError> = author.submit_extrinsic(tx.extrinsic.into());
+            let result: FutureResult<Hash, RpcError> = author.submit_extrinsic(tx.extrinsic.clone().into());
             Ok(Value::String(format!("hello extrinsic, {}", tx.extrinsic)))
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
