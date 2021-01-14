@@ -30,6 +30,7 @@ use alloc::{
 };
 
 use crate::transaction_pool::error::Error as PoolError;
+use crate::transaction_pool::error::IntoPoolError;
 
 use derive_more::{Display, From};
 
@@ -38,44 +39,6 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// State RPC future Result type.
 pub type FutureResult<T,E> = Box<dyn rpc::futures::Future<Output=core::result::Result<T, E>> + Send>;
-
-/// Signifies whether a potentially unsafe RPC should be denied.
-#[derive(Clone, Copy, Debug)]
-pub enum DenyUnsafe {
-	/// Denies only potentially unsafe RPCs.
-	Yes,
-	/// Allows calling every RPCs.
-	No,
-}
-
-impl DenyUnsafe {
-	/// Returns `Ok(())` if the RPCs considered unsafe are safe to call,
-	/// otherwise returns `Err(UnsafeRpcError)`.
-	pub fn check_if_safe(self) -> core::result::Result<(), UnsafeRpcError> {
-		match self {
-			DenyUnsafe::Yes => Err(UnsafeRpcError),
-			DenyUnsafe::No => Ok(()),
-		}
-	}
-}
-
-/// Signifies whether an RPC considered unsafe is denied to be called externally.
-#[derive(Debug)]
-pub struct UnsafeRpcError;
-
-impl fmt::Display for UnsafeRpcError {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "RPC call is unsafe to be called externally")
-	}
-}
-
-impl error::Error for UnsafeRpcError {}
-
-impl From<UnsafeRpcError> for rpc::Error {
-	fn from(_: UnsafeRpcError) -> rpc::Error {
-		rpc::Error::method_not_found()
-	}
-}
 
 /// State RPC errors.
 #[derive(Debug, Display, From)]
@@ -101,8 +64,6 @@ pub enum Error {
 		/// Maximum allowed value
 		max: u32,
 	},
-	/// Call to an unsafe RPC was denied.
-	UnsafeRpcCalled(UnsafeRpcError),
 
 	/// Wrapping of PoolError to RPC Error
 	PoolError(PoolError),
@@ -116,6 +77,16 @@ impl error::Error for Error {
 		}
 	}
 }
+
+impl IntoPoolError for Error {
+	fn into_pool_error(self) -> sgx_tstd::result::Result<PoolError, Self> {
+		match self {
+			Error::PoolError(e) => Ok(e),
+			e => Err(e),
+		}
+	}
+}
+
 
 /// Base code for all state errors.
 const BASE_ERROR: i64 = 4000;

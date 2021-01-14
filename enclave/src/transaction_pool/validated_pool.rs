@@ -44,8 +44,6 @@ use crate::transaction_pool::{
 	base_pool::PruneStatus,
 };
 
-use serde::Serialize;
-
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion},

@@ -1,6 +1,6 @@
-mod error;
+pub mod error;
 mod author;
 
-
 pub mod worker_api_direct;
-pub mod test_api;
+pub mod api;
+pub mod basic_pool;

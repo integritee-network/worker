@@ -20,16 +20,12 @@
 pub extern crate alloc;
 use alloc::{
   vec::Vec,
-  borrow::ToOwned,
   boxed::Box,
 };
 
-use sgx_tstd::{sync::Arc, convert::TryInto};
-use log::warn;
+use sgx_tstd::{sync::Arc};
 
 use core::iter::Iterator;
-
-use jsonrpc_core::futures::{Sink, Future};
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
 //use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId, manager::SubscriptionManager};
 use codec::{Encode, Decode};
@@ -41,17 +37,19 @@ use sp_runtime::transaction_validity::{
 };
 
 
-use crate::rpc::error::{DenyUnsafe, FutureResult, Result};
+use crate::rpc::error::{FutureResult, Result};
 use crate::rpc::error::Error as StateRpcError;
 use crate::transaction_pool::{
-  primitives::{TransactionPool, InPoolTransaction, TransactionStatus, TransactionFor, TxHash, BlockHash},
-	error::IntoPoolError, error::Error as PoolError
+  primitives::{TransactionPool, InPoolTransaction, TxHash, BlockHash},
+	error::IntoPoolError, error::Error as PoolError,
+	pool::Pool,
 };
 use jsonrpc_core::Error as RpcError;
 pub mod client_error;
 use client_error::Error as ClientError;
 pub mod hash;
 use hash::*;
+use sp_core::H256 as Hash;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -66,23 +64,23 @@ pub trait AuthorApi<Hash, BlockHash> {
 		&self,
 		key_type: String,
 		suri: String,
-		public: Bytes,
+		public: <Vec<u8>,
 	) -> Result<()>;
 
 	/// Generate new session keys and returns the corresponding public keys.
-	fn rotate_keys(&self) -> Result<Bytes>;
+	fn rotate_keys(&self) -> Result<<Vec<u8>>;
 
 	/// Checks if the keystore has private keys for the given session public keys.
 	///
 	/// `session_keys` is the SCALE encoded session keys object from the runtime.
 	///
 	/// Returns `true` iff all private keys could be found.
-	fn has_session_keys(&self, session_keys: Bytes) -> Result<bool>;
+	fn has_session_keys(&self, session_keys: <Vec<u8>) -> Result<bool>;
 
 	/// Checks if the keystore has private keys for the given public key and key type.
 	///
 	/// Returns `true` if a private key could be found.
-	fn has_key(&self, public_key: Bytes, key_type: String) -> Result<bool>;*/
+	fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
 	/// Returns all pending extrinsics, potentially grouped by sender.
 	fn pending_extrinsics(&self) -> Result<Vec<Vec<u8>>>;
@@ -104,7 +102,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn watch_extrinsic(&self,
 		metadata: Self::Metadata,
 		subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
-		bytes: Bytes
+		bytes: <Vec<u8>
 	);
 
 	/// Unsubscribe from extrinsic watching.
@@ -130,8 +128,8 @@ pub struct Author<P> {
 	subscriptions: SubscriptionManager,*/
 	/*/// The key store.
 	keystore: SyncCryptoStorePtr,*/
-	/// Whether to deny unsafe calls
-	deny_unsafe: DenyUnsafe,
+	/*/// Whether to deny unsafe calls
+	deny_unsafe: DenyUnsafe,*/
 }
 
 //impl<P, Client> Author<P, Client> {
@@ -142,14 +140,14 @@ impl<P> Author<P> {
 		pool: Arc<P>,
 		//subscriptions: SubscriptionManager,
 		//keystore: SyncCryptoStorePtr,
-		deny_unsafe: DenyUnsafe,
+		//deny_unsafe: DenyUnsafe,
 	) -> Self {
 		Author {
 			//client,
 			pool,
 			//subscriptions,
 			//keystore,
-			deny_unsafe,
+			//deny_unsafe,
 		}
 	}
 }
@@ -174,7 +172,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		&self,
 		key_type: String,
 		suri: String,
-		public: Bytes,
+		public: <Vec<u8>,
 	) -> Result<()> {
 		self.deny_unsafe.check_if_safe()?;
 
@@ -184,7 +182,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		Ok(())
 	}
 
-	fn rotate_keys(&self) -> Result<Bytes> {
+	fn rotate_keys(&self) -> Result<<Vec<u8>> {
 		self.deny_unsafe.check_if_safe()?;
 
 		let best_block_hash = self.client.info().best_hash;
@@ -194,7 +192,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		).map(Into::into).map_err(|e| ClientError::Client(Box::new(e)))
 	}
 
-	fn has_session_keys(&self, session_keys: Bytes) -> Result<bool> {
+	fn has_session_keys(&self, session_keys: <Vec<u8>) -> Result<bool> {
 		self.deny_unsafe.check_if_safe()?;
 
 		let best_block_hash = self.client.info().best_hash;
@@ -207,7 +205,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		Ok(SyncCryptoStore::has_keys(&*self.keystore, &keys))
 	}
 
-	fn has_key(&self, public_key: Bytes, key_type: String) -> Result<bool> {
+	fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool> {
 		self.deny_unsafe.check_if_safe()?;
 
 		let key_type = key_type.as_str().try_into().map_err(|_| ClientError::BadKeyType)?;
@@ -241,8 +239,6 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		&self,
 		bytes_or_hash: Vec<hash::ExtrinsicOrHash<TxHash<P>>>,
 	) -> Result<Vec<TxHash<P>>> {
-		self.deny_unsafe.check_if_safe()?;
-
 		let hashes = bytes_or_hash.into_iter()
 			.map(|x| match x {
 				hash::ExtrinsicOrHash::Hash(h) => Ok(h),
@@ -265,7 +261,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 	/*fn watch_extrinsic(&self,
 		_metadata: Self::Metadata,
 		subscriber: Subscriber<TransactionStatus<TxHash<P>, BlockHash<P>>>,
-		xt: Bytes,
+		xt: <Vec<u8>,
 	) {
 		let submit = || -> Result<_> {
 			let best_block_hash = self.client.info().best_hash;

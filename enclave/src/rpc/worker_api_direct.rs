@@ -35,14 +35,15 @@ use core::{
 use sgx_types::*;
 use sgx_tstd::error;
 
+use sp_core::H256 as Hash;
+
 use log::*;
-use sp_core::storage::{StorageKey, StorageData, StorageChangeSet};
-use sp_runtime::generic;
 
 use crate::rpc::{
-  error::{DenyUnsafe, FutureResult},
-  author::Author,
-  test_api::TestApi,
+  error::{FutureResult},
+  author::{Author, AuthorApi},
+  api::FillerChainApi,
+  basic_pool::BasicPool,
 };
 
 use crate::transaction_pool::{
@@ -52,6 +53,7 @@ use crate::transaction_pool::{
 };
 
 use jsonrpc_core::*;
+use jsonrpc_core::Error as RpcError;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -71,23 +73,25 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
     format!("methods: [{}]", method_string)
 }
 
+
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();    
-    let api = TestApi::default();
-    let options = PoolOptions::default();
-    let tx_pool: Pool<TestApi> = Pool::new(options, api.into());
+   // let api = Arc::new(FillerChainApi::new());
+   // let tx_pool =  BasicPool::create(PoolOptions::default(), api);
+    
+    //let author = Author::new(tx_pool.into(), DenyUnsafe::No);
+    //impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
 
-    /// Add rpc methods
-    
+    /// Add rpc methods    
     // author_submitAndWatchExtrinsic
     let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
     rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
     io.add_sync_method(author_submit_and_watch_extrinsic_name, |params: Params| {  
        match params.parse() {
-            Ok(ok) => {
+            Ok(ok) => {   
                 let parsed: SumbitExtrinsicParams = ok;
                 Ok(Value::String(format!("hello extrinsic, {}", parsed.extrinsic)))
             },
@@ -102,7 +106,7 @@ fn init_io_handler() -> IoHandler {
 		  match params.parse() {
         Ok(call) => {
             let tx: SumbitExtrinsicParams = call;
-         //   let result: FutureResult<Hash> = author_api.submit_extrinsic(tx.extrinsic);
+            //let result: FutureResult<Hash, RpcError> = author.submit_extrinsic(tx.extrinsic.into());
             Ok(Value::String(format!("hello extrinsic, {}", tx.extrinsic)))
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),

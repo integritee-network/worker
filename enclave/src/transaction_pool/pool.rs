@@ -36,8 +36,6 @@ use sp_runtime::{
 	},
 };
 
-use serde::Serialize;
-
 use crate::transaction_pool::{
     base_pool as base,
     watcher::Watcher,
@@ -159,9 +157,9 @@ where
 	}
 }
 */
-impl<B: ChainApi> Pool<B> 
+impl<B: ChainApi> Pool<B>
 where
-   // <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
+    //<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
     <B as ChainApi>::Error: error::IntoPoolError
  {
 	/// Create a new transaction pool.

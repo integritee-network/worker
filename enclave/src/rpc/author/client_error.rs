@@ -19,22 +19,14 @@
 //! Authoring RPC module errors.
 
 use jsonrpc_core as rpc_core;
-use sp_runtime::transaction_validity::InvalidTransaction;
-
-use crate::rpc::error::UnsafeRpcError;
 
 pub extern crate alloc;
 use alloc::{
 	boxed::Box,
-	fmt,
-	string::String,
 };
-
-use log::warn;
 use derive_more::{Display, From};
 
 use crate::transaction_pool as sp_transaction_pool;
-use serde_json;
 
 /// Author RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;
@@ -71,8 +63,6 @@ pub enum Error {
 	/// Invalid session keys encoding.
 	#[display(fmt="Session keys are not encoded correctly")]
 	InvalidSessionKeys,
-	/// Call to an unsafe RPC was denied.
-	UnsafeRpcCalled(UnsafeRpcError),
 }
 
 impl sgx_tstd::error::Error for Error {
@@ -81,7 +71,6 @@ impl sgx_tstd::error::Error for Error {
 			Error::Client(ref err) => Some(&**err),
 			//Error::Pool(ref err) => Some(err),
 			//Error::Verification(ref err) => Some(&**err),
-			Error::UnsafeRpcCalled(ref err) => Some(err),
 			_ => None,
 		}
 	}
@@ -176,7 +165,6 @@ impl From<Error> for rpc_core::Error {
 					request to insert the key successfully.".into()
 				),
 			},
-			Error::UnsafeRpcCalled(e) => e.into(),
 			e => rpc_core::Error {
 				code: rpc_core::ErrorCode::InternalError,
 				message: "Unknown error occurred".into(),

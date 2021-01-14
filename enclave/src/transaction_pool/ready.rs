@@ -32,7 +32,6 @@ use core::{
 	cmp::Ord,
 };
 
-use serde::Serialize;
 use log::trace;
 use sp_runtime::traits::Member;
 use sp_runtime::transaction_validity::{

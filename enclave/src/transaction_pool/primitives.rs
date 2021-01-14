@@ -14,7 +14,6 @@ use core::{
 use sgx_tstd::collections::HashMap;
 
 use jsonrpc_core::futures::{Future, Stream, channel};
-use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Member, NumberFor},
