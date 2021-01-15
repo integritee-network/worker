@@ -29,6 +29,8 @@ use alloc::{
 	string::String,
 };
 
+use core::pin::Pin;
+
 use crate::transaction_pool::error::Error as PoolError;
 use crate::transaction_pool::error::IntoPoolError;
 
@@ -38,7 +40,7 @@ use derive_more::{Display, From};
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// State RPC future Result type.
-pub type FutureResult<T,E> = Box<dyn rpc::futures::Future<Output=core::result::Result<T, E>> + Send>;
+pub type FutureResult<T,E> = Pin<Box<dyn rpc::futures::Future<Output=core::result::Result<T, E>> + Send>>;
 
 /// State RPC errors.
 #[derive(Debug, Display, From)]

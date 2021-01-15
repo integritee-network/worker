@@ -30,6 +30,8 @@ use alloc::{
 use core::{
   iter::Iterator,
   hash,
+  pin::Pin,
+  result::Result,
 };
 
 use sgx_types::*;
@@ -53,6 +55,8 @@ use crate::transaction_pool::{
 };
 
 use jsonrpc_core::*;
+use jsonrpc_core::futures::future;
+use jsonrpc_core::futures::{future::FutureExt, executor};
 use jsonrpc_core::Error as RpcError;
 use serde::Deserialize;
 
@@ -75,13 +79,14 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
     format!("methods: [{}]", method_string)
 }
 
-
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();    
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    let tx_pool = BasicPool::create(PoolOptions::default(), api);    
-    let author = Author::new(tx_pool.into());
+    let tx_pool = BasicPool::create(PoolOptions::default(), api);  
+    let author = Author::new(tx_pool.into()); 
+    
+    //let author = Author::new(tx_pool.into());
     //impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
@@ -107,8 +112,15 @@ fn init_io_handler() -> IoHandler {
 		  match params.parse() {
         Ok(call) => {
             let tx: SumbitExtrinsicParams = call;
-            let result: FutureResult<Hash, RpcError> = author.submit_extrinsic(tx.extrinsic.clone().into());
-            Ok(Value::String(format!("hello extrinsic, {}", tx.extrinsic)))
+            let result = async {              
+              author.submit_extrinsic(tx.extrinsic.clone().into()).await
+            };
+            let response: Result<Hash, RpcError> =  executor::block_on(result);
+             //.then( |res|
+            match response {
+              Ok(hash_value) => Ok(Value::String(format!("hello extrinsic, {}", hash_value.to_string()))),
+              Err(rpc_error) => Ok(Value::String(format!("something went wrong:, {}", rpc_error.message))),
+            } 
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
      }

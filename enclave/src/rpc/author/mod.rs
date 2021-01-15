@@ -23,6 +23,8 @@ use alloc::{
   boxed::Box,
 };
 
+use core::pin::Pin;
+
 use sgx_tstd::{sync::Arc};
 
 use core::iter::Iterator;
@@ -218,12 +220,12 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 	{
 		let xt = match Decode::decode(&mut &ext[..]) {
 			Ok(xt) => xt,
-			Err(_) => return Box::new(ready(Err(ClientError::BadFormat.into()))),
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
 		};		
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();
-		Box::new(self.pool
+		Box::pin(self.pool
 			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, xt)
 			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
 				.map(Into::into)
