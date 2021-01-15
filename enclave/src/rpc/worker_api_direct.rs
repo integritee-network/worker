@@ -18,7 +18,7 @@
 pub extern crate alloc;
 use alloc::{
   string::{ToString, String},
-  str::from_utf8,
+  str,
   format,
   slice::{from_raw_parts, from_raw_parts_mut},
   vec::Vec,
@@ -83,11 +83,9 @@ fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();    
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    let tx_pool = BasicPool::create(PoolOptions::default(), api);  
-    let author = Author::new(tx_pool.into()); 
-    
-    //let author = Author::new(tx_pool.into());
-    //impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
+    let tx_pool = BasicPool::create(PoolOptions::default(), api);   
+    let author = Author::new(tx_pool.into());    
+
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
 
@@ -105,10 +103,10 @@ fn init_io_handler() -> IoHandler {
          }
     });
 
-    // author_submitExtrinsic
+  /*  // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
-    io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
+    io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {      
 		  match params.parse() {
         Ok(call) => {
             let tx: SumbitExtrinsicParams = call;
@@ -116,22 +114,30 @@ fn init_io_handler() -> IoHandler {
               author.submit_extrinsic(tx.extrinsic.clone().into()).await
             };
             let response: Result<Hash, RpcError> =  executor::block_on(result);
-             //.then( |res|
             match response {
               Ok(hash_value) => Ok(Value::String(format!("hello extrinsic, {}", hash_value.to_string()))),
-              Err(rpc_error) => Ok(Value::String(format!("something went wrong:, {}", rpc_error.message))),
+              Err(rpc_error) => Ok(Value::String(format!("something went wrong: {}", rpc_error.message))),
             } 
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
      }
-    });
+    });*/
     
     // author_pendingExtrinsics
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);
-    io.add_sync_method(author_pending_extrinsic_name, |_: Params| {
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+    io.add_sync_method(author_pending_extrinsic_name, move |_: Params| {
+      let result: Result<Vec<Vec<u8>>, _> = author.pending_extrinsics();
+      match result {
+        Ok(extrinsics) => {
+          let mut response = String::new();
+          for i in 0..extrinsics.len() {
+            response.push_str(str::from_utf8(&extrinsics[i]).unwrap());
+          };
+          Ok(Value::String(format!("hello extrinsic, {}", response)))}
+          ,
+        Err(_) => Ok(Value::String(format!("something went wrong"))),
+      } 
     });
 
     // chain_subscribeAllHeads
@@ -208,7 +214,7 @@ pub unsafe extern "C" fn call_rpc_methods(
     let io = init_io_handler();
     // get request string
     let req: Vec<u8> = from_raw_parts(request, request_len as usize).to_vec(); 
-    let request_string = match from_utf8(&req) {
+    let request_string = match str::from_utf8(&req) {
        Ok(req) => req,
        Err(e) => {
             error!("Decoding Header failed. Error: {:?}", e);

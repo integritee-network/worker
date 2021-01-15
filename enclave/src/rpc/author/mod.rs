@@ -214,7 +214,6 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		Ok(SyncCryptoStore::has_keys(&*self.keystore, &[(public_key.to_vec(), key_type)]))
 	}*/
 
-	//pub type FutureResult<T,E> = Box<dyn rpc::futures::Future<Output = Result<T,E>> + Send>;
 	/// Submit hex-encoded extrinsic for inclusion in block.
 	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
 	{
