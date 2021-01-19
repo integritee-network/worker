@@ -32,10 +32,15 @@ use core::{
   hash,
   pin::Pin,
   result::Result,
+  ops::{Deref, DerefMut},
 };
 
 use sgx_types::*;
-use sgx_tstd::error;
+use sgx_tstd::{
+  error, 
+  sync::{SgxMutex, SgxMutexGuard},
+  sync::atomic::{AtomicPtr, Ordering},
+};
 
 use sp_core::H256 as Hash;
 
@@ -62,10 +67,37 @@ use serde::Deserialize;
 
 use substrate_test_runtime::Block; // TestBlock
 
+static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
+
+
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
     extrinsic: String,
 }
+
+#[no_mangle]
+// initialise tx pool and store within static atomic pointer
+pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
+
+    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let tx_pool = BasicPool::create(PoolOptions::default(), api);   
+    let pool_ptr = Box::new(SgxMutex::<BasicPool<FillerChainApi<Block>, Block>>::new(tx_pool));
+    let ptr = Box::into_raw(pool_ptr);
+    GLOBAL_TX_POOL.store(ptr as *mut (), Ordering::SeqCst);
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
+{
+    let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>);
+    if ptr.is_null() {
+        None
+    } else {
+        Some(unsafe { &* ptr })
+    }
+}
+
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability
 fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
@@ -82,9 +114,18 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();    
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    let tx_pool = BasicPool::create(PoolOptions::default(), api);   
-    let author = Author::new(tx_pool.into());    
+    //let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    //let tx_pool = BasicPool::create(PoolOptions::default(), api);  
+    // Io Handler als Pointer aswell? 
+
+    // reference to tx_pool as mutex
+    let &(ref tx_pool_mutex) = load_tx_pool().unwrap();
+    // acquire tx pool lock (only one thread may access txpool at a time)
+    let tx_pool_guard = tx_pool_mutex.lock().unwrap();
+    // create new thread safe pointer (obsolete?) to tx pool
+    let tx_pool_ptr: Arc<BasicPool<FillerChainApi<Block>, Block>> = unsafe {Arc::from_raw(tx_pool_guard.deref())};
+
+    let author = Author::new(tx_pool_ptr);    
 
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;

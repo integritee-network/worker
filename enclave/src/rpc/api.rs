@@ -30,8 +30,6 @@ use sp_runtime::{
     transaction_validity::{TransactionValidity, TransactionSource, ValidTransaction},
 };
 
-use sp_core::H256 as Hash;
-
 use crate::transaction_pool::{
     pool::{ChainApi, ExtrinsicFor, NumberFor, BlockHash, ExtrinsicHash},
 };

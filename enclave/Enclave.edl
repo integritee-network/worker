@@ -73,6 +73,8 @@ enclave {
 		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type);
         public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type);
 
+		public sgx_status_t initialize_pool();
+
 		public sgx_status_t call_rpc_methods(
 			[in, size=request_len] uint8_t* request, uint32_t request_len,
 			[out, size=response_len] uint8_t* response, uint32_t response_len

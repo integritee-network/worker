@@ -292,7 +292,7 @@ fn worker(
     println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_api_direct_port);
     let direct_url = format!("{}:{}", w_ip, worker_api_direct_port);
     let (direct_sender, direct_receiver) = channel();
-    start_worker_api_direct_server(direct_url, direct_sender);
+    start_worker_api_direct_server(direct_url, direct_sender, eid);
 
 
     // ------------------------------------------------------------------------
