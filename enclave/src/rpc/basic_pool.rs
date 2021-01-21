@@ -20,12 +20,14 @@ use jsonrpc_core::futures::future::{Future, ready, FutureExt};
 use jsonrpc_core::futures::channel::oneshot;
 
 use crate::transaction_pool::{
-  pool::{ExtrinsicFor, ChainApi, Pool, Options as PoolOptions, ExtrinsicHash},
+  pool::{ChainApi, Pool, Options as PoolOptions, ExtrinsicHash},
   primitives::{TxHash, ImportNotificationStream, PoolStatus, PoolFuture,
-     TransactionStatusStreamFor, TransactionPool, TransactionFor},
+     TransactionStatusStreamFor, TransactionPool},
   base_pool::Transaction,
   error::IntoPoolError,
 };
+
+use substratee_stf::TrustedCallSigned;
 
 use crate::rpc::api::FillerChainApi;
 
@@ -34,7 +36,7 @@ type BoxedReadyIterator<Hash, Data> = Box<
 >;
 
 type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<
-	ExtrinsicHash<PoolApi>, ExtrinsicFor<PoolApi>
+	ExtrinsicHash<PoolApi>, TrustedCallSigned
 >;
 
 type PolledIterator<PoolApi> = Pin<Box<dyn Future<Output=ReadyIteratorFor<PoolApi>> + Send>>;
@@ -127,7 +129,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 	type Block = PoolApi::Block;
 	type Hash = ExtrinsicHash<PoolApi>;
 	type InPoolTransaction = Transaction<
-		TxHash<Self>, TransactionFor<Self>
+		TxHash<Self>, TrustedCallSigned
 	>;
 	type Error = PoolApi::Error;
 
@@ -135,7 +137,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		xts: Vec<TransactionFor<Self>>,
+		xts: Vec<TrustedCallSigned>,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
@@ -146,7 +148,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		xt: TransactionFor<Self>,
+		xt: TrustedCallSigned,
 	) -> PoolFuture<TxHash<Self>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
@@ -157,7 +159,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		xt: TransactionFor<Self>,
+		xt: TrustedCallSigned,
 	) -> PoolFuture<Box<TransactionStatusStreamFor<Self>>, Self::Error> {
 		let at = *at;
 		let pool = self.pool.clone();
@@ -181,7 +183,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		self.pool.validated_pool().import_notification_stream()
 	}
 
-	fn hash_of(&self, xt: &TransactionFor<Self>) -> TxHash<Self> {
+	fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self> {
 		self.pool.hash_of(xt)
 	}
 

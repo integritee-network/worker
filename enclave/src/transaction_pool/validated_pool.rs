@@ -39,10 +39,12 @@ use crate::transaction_pool::{
 	error,
 	primitives::PoolStatus,
 	pool::{
-		EventStream, Options, ChainApi, BlockHash, ExtrinsicHash, ExtrinsicFor, TransactionFor,
+		EventStream, Options, ChainApi, BlockHash, ExtrinsicHash, TransactionFor,
 	},
 	base_pool::PruneStatus,
 };
+
+use substratee_stf::TrustedCallSigned;
 
 use sp_runtime::{
 	generic::BlockId,
@@ -98,7 +100,7 @@ impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
 /// A type of validated transaction stored in the pool.
 pub type ValidatedTransactionFor<B> = ValidatedTransaction<
 	ExtrinsicHash<B>,
-	ExtrinsicFor<B>,
+	TrustedCallSigned,
 	<B as ChainApi>::Error,
 >;
 /// Pool that deals with validated transactions.
@@ -108,23 +110,11 @@ pub struct ValidatedPool<B: ChainApi> {
 	listener: SgxRwLock<Listener<ExtrinsicHash<B>, B>>,
 	pool: SgxRwLock<base::BasePool<
 		ExtrinsicHash<B>,
-		ExtrinsicFor<B>,
+		TrustedCallSigned,
 	>>,
 	import_notification_sinks: SgxMutex<Vec<Sender<ExtrinsicHash<B>>>>,
 	rotator: PoolRotator<ExtrinsicHash<B>>,
 }
-/*
-#[cfg(not(target_os = "unknown"))]
-impl<B: ChainApi> parity_util_mem::MallocSizeOf for ValidatedPool<B>
-where
-	ExtrinsicFor<B>: parity_util_mem::MallocSizeOf,
-{
-	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		// other entries insignificant or non-primary references
-		self.pool.size_of(ops)
-	}
-}
-*/
 
 impl<B: ChainApi> ValidatedPool<B>
 where
@@ -435,7 +425,7 @@ where
 	pub fn prune_tags(
 		&self,
 		tags: impl IntoIterator<Item=Tag>,
-	) -> Result<PruneStatus<ExtrinsicHash<B>, ExtrinsicFor<B>>, B::Error> {
+	) -> Result<PruneStatus<ExtrinsicHash<B>, TrustedCallSigned>, B::Error> {
 		// Perform tag-based pruning in the base pool
 		let status = self.pool.write().unwrap().prune_tags(tags);		
 		// Notify event listeners of all transactions

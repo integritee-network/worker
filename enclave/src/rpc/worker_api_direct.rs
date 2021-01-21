@@ -24,7 +24,6 @@ use alloc::{
   vec::Vec,
   borrow::ToOwned,
   boxed::Box,
-  sync::Arc,
 };
 
 use core::{
@@ -38,12 +37,12 @@ use core::{
 use sgx_types::*;
 use sgx_tstd::{
   error, 
-  sync::{SgxMutex, SgxMutexGuard},
+  sync::{SgxMutex, SgxMutexGuard, Arc},
   sync::atomic::{AtomicPtr, Ordering},
 };
 
 use sp_core::H256 as Hash;
-
+use codec::{Encode, Decode};
 use log::*;
 
 use crate::rpc::{
@@ -54,7 +53,7 @@ use crate::rpc::{
 };
 
 use crate::transaction_pool::{
-  pool::{ExtrinsicHash, ExtrinsicFor, NumberFor, ValidatedTransactionFor, 
+  pool::{ExtrinsicHash, NumberFor, ValidatedTransactionFor, 
     ChainApi, BlockHash, Pool, Options as PoolOptions},
   error as txError,
 };
@@ -81,8 +80,8 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
 
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
     let tx_pool = BasicPool::create(PoolOptions::default(), api);   
-    let pool_ptr = Box::new(SgxMutex::<BasicPool<FillerChainApi<Block>, Block>>::new(tx_pool));
-    let ptr = Box::into_raw(pool_ptr);
+    let pool_ptr = Arc::new(SgxMutex::<BasicPool<FillerChainApi<Block>, Block>>::new(tx_pool));
+    let ptr = Arc::into_raw(pool_ptr);
     GLOBAL_TX_POOL.store(ptr as *mut (), Ordering::SeqCst);
 
     sgx_status_t::SGX_SUCCESS
@@ -90,7 +89,7 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
 
 fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
 {
-    let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>);
+    let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
         None
     } else {
@@ -118,33 +117,36 @@ fn init_io_handler() -> IoHandler {
     //let tx_pool = BasicPool::create(PoolOptions::default(), api);  
     // Io Handler als Pointer aswell? 
 
-    // reference to tx_pool as mutex
-    let &(ref tx_pool_mutex) = load_tx_pool().unwrap();
+    // load pointer to tx pool mutex
+    let &ref tx_pool_mutex = load_tx_pool().unwrap();
     // acquire tx pool lock (only one thread may access txpool at a time)
     let tx_pool_guard = tx_pool_mutex.lock().unwrap();
-    // create new thread safe pointer (obsolete?) to tx pool
-    let tx_pool_ptr: Arc<BasicPool<FillerChainApi<Block>, Block>> = unsafe {Arc::from_raw(tx_pool_guard.deref())};
+    // create new thread safe reference pointer (obsolete?) to tx pool
+    let tx_pool: Arc<BasicPool<FillerChainApi<Block>, Block>> = unsafe {Arc::from_raw(tx_pool_guard.deref())};
 
-    let author = Author::new(tx_pool_ptr);    
+    let author = Arc::new(Author::new(tx_pool));    
 
     
     //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
 
-    /// Add rpc methods    
+    // Add rpc methods    
     // author_submitAndWatchExtrinsic
+    let author_clone = Arc::clone(&author);  
     let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
     rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
     io.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {  
        match params.parse() {
             Ok(ok) => {   
                 let parsed: SumbitExtrinsicParams = ok;
+                
                 Ok(Value::String(format!("hello extrinsic, {}", parsed.extrinsic)))
             },
             Err(e) => Ok(Value::String(format!("author_submitAndWatchExtrinsic not called due to {}", e))),
          }
     });
 
-  /*  // author_submitExtrinsic
+    // author_submitExtrinsic
+    let author_clone = Arc::clone(&author);  
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
     io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {      
@@ -152,7 +154,7 @@ fn init_io_handler() -> IoHandler {
         Ok(call) => {
             let tx: SumbitExtrinsicParams = call;
             let result = async {              
-              author.submit_extrinsic(tx.extrinsic.clone().into()).await
+              author_clone.submit_extrinsic(tx.extrinsic.clone().into()).await
             };
             let response: Result<Hash, RpcError> =  executor::block_on(result);
             match response {
@@ -162,13 +164,14 @@ fn init_io_handler() -> IoHandler {
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
      }
-    });*/
+    });
     
     // author_pendingExtrinsics
+    let author_clone = Arc::clone(&author);    
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);
     io.add_sync_method(author_pending_extrinsic_name, move |_: Params| {
-      let result: Result<Vec<Vec<u8>>, _> = author.pending_extrinsics();
+      let result: Result<Vec<Vec<u8>>, _> = author_clone.pending_extrinsics();
       match result {
         Ok(extrinsics) => {
           let mut response = String::new();

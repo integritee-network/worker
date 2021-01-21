@@ -31,8 +31,10 @@ use sp_runtime::{
 };
 
 use crate::transaction_pool::{
-    pool::{ChainApi, ExtrinsicFor, NumberFor, BlockHash, ExtrinsicHash},
+    pool::{ChainApi, NumberFor, BlockHash, ExtrinsicHash},
 };
+
+use substratee_stf::TrustedCallSigned;
 
 use substrate_test_runtime::{Hashing};
 
@@ -61,7 +63,7 @@ where
 	type ValidationFuture = Pin<
 		Box<dyn Future<Output = error::Result<TransactionValidity>> + Send>
 	>;
-	type BodyFuture = Ready<error::Result<Option<Vec<<Self::Block as BlockT>::Extrinsic>>>>;
+	type BodyFuture = Ready<error::Result<Option<Vec<TrustedCallSigned>>>>;
 
 	fn block_body(&self, id: &BlockId<Self::Block>) -> Self::BodyFuture {
         ready(Ok(None))
@@ -71,7 +73,7 @@ where
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		uxt: ExtrinsicFor<Self>,
+		uxt: TrustedCallSigned,
 	) -> Self::ValidationFuture {
 		let transaction = ValidTransaction {
 			priority: 4,
@@ -102,7 +104,7 @@ where
 
 	fn hash_and_length(
 		&self,
-		ex: &ExtrinsicFor<Self>,
+		ex: &TrustedCallSigned,
 	) -> (ExtrinsicHash<Self>, usize) {
 		/*let encoded = ex.encode();
 		let len = encoded.len();

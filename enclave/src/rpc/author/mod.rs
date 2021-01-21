@@ -23,8 +23,6 @@ use alloc::{
   boxed::Box,
 };
 
-use core::pin::Pin;
-
 use sgx_tstd::{sync::Arc};
 
 use core::iter::Iterator;
@@ -35,9 +33,12 @@ use codec::{Encode, Decode};
 use sp_runtime::generic;
 //use sp_session::SessionKeys;
 use sp_runtime::transaction_validity::{
-	TransactionSource
+	TransactionSource,	
 };
 
+use substratee_stf::{
+    Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
+};
 
 use crate::rpc::error::{FutureResult, Result};
 use crate::rpc::error::Error as StateRpcError;
@@ -51,7 +52,8 @@ pub mod client_error;
 use client_error::Error as ClientError;
 pub mod hash;
 use hash::*;
-use sp_core::H256 as Hash;
+use sp_core::H256 as H256;
+
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -60,7 +62,8 @@ pub trait AuthorApi<Hash, BlockHash> {
 
 	/// Submit hex-encoded extrinsic for inclusion in block.
 	fn submit_extrinsic(&self, extrinsic: Vec<u8>) -> FutureResult<Hash, RpcError>;
-
+	//fn submit_extrinsic(&self, extrinsic: Vec<u8>) ->Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>;
+	
 	/*/// Insert a key into the keystore.
 	fn insert_key(
 		&self,
@@ -214,13 +217,18 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		Ok(SyncCryptoStore::has_keys(&*self.keystore, &[(public_key.to_vec(), key_type)]))
 	}*/
 
-	/// Submit hex-encoded extrinsic for inclusion in block.
-	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
+	/// Submit hex-encoded extrinsic for inclusion in block.	
+	/*fn submit_extrinsic(&self, ext: Vec<u8>) ->  Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>
 	{
+		return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
+	}*/
+	
+	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
+	{	
 		let xt = match Decode::decode(&mut &ext[..]) {
 			Ok(xt) => xt,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
-		};		
+		};
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();
@@ -259,14 +267,14 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		)
 	}
 
-	/*fn watch_extrinsic(&self,
+/*	fn watch_extrinsic(&self,
 		_metadata: Self::Metadata,
 		subscriber: Subscriber<TransactionStatus<TxHash<P>, BlockHash<P>>>,
 		xt: <Vec<u8>,
 	) {
 		let submit = || -> Result<_> {
 			let best_block_hash = self.client.info().best_hash;
-			let dxt = TransactionFor::<P>::decode(&mut &xt[..])
+			let dxt = TrustedCallSigned::decode(&mut &xt[..])
 				.map_err(error::Error::from)?;
 			Ok(
 				self.pool

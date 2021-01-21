@@ -40,12 +40,11 @@ use crate::transaction_pool::{
     base_pool as base,
     watcher::Watcher,
     error,
-    validated_pool::ValidatedPool,
+    validated_pool::{ValidatedPool, ValidatedTransaction},
 };
 
-//use primitive_types::H256 as Hash;
+use substratee_stf::TrustedCallSigned;
 
-pub use crate::transaction_pool::validated_pool::ValidatedTransaction;
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -55,15 +54,15 @@ pub type BlockHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 /// Extrinsic hash type for a pool.
 pub type ExtrinsicHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 /// Extrinsic type for a pool.
-pub type ExtrinsicFor<A> = <<A as ChainApi>::Block as traits::Block>::Extrinsic;
+//pub type ExtrinsicFor<A> = <<A as ChainApi>::Block as traits::Block>::Extrinsic;
 /// Block number type for the ChainApi
 pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
 /// A type of transaction stored in the pool
-pub type TransactionFor<A> = Arc<base::Transaction<ExtrinsicHash<A>, ExtrinsicFor<A>>>;
+pub type TransactionFor<A> = Arc<base::Transaction<ExtrinsicHash<A>, TrustedCallSigned>>;
 /// A type of validated transaction stored in the pool.
 pub type ValidatedTransactionFor<A> = ValidatedTransaction<
 	ExtrinsicHash<A>,
-	ExtrinsicFor<A>,
+	TrustedCallSigned,
 	<A as ChainApi>::Error,
 >;
 
@@ -77,7 +76,7 @@ pub trait ChainApi: Send + Sync {
 	type ValidationFuture: Future<Output=Result<TransactionValidity, Self::Error>> + Send + Unpin;
 	/// Body future (since block body might be remote)
 	type BodyFuture: Future<
-		Output = Result<Option<Vec<<Self::Block as traits::Block>::Extrinsic>>, Self::Error>
+		Output = Result<Option<Vec<TrustedCallSigned>>, Self::Error>
 	> + Unpin + Send + 'static;
 
 	/// Verify extrinsic at given block.
@@ -85,7 +84,7 @@ pub trait ChainApi: Send + Sync {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		uxt: ExtrinsicFor<Self>,
+		uxt: TrustedCallSigned,
 	) -> Self::ValidationFuture;
 
 	/// Returns a block number given the block id.
@@ -101,7 +100,7 @@ pub trait ChainApi: Send + Sync {
 	) -> Result<Option<<Self::Block as BlockT>::Hash>, Self::Error>;
 
 	/// Returns hash and encoding length of the extrinsic.
-	fn hash_and_length(&self, uxt: &ExtrinsicFor<Self>) -> (ExtrinsicHash<Self>, usize);
+	fn hash_and_length(&self, uxt: &TrustedCallSigned) -> (ExtrinsicHash<Self>, usize);
 
 	/// Returns a block body given the block id.
 	fn block_body(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;
@@ -146,17 +145,7 @@ enum CheckBannedBeforeVerify {
 pub struct Pool<B: ChainApi> {
 	validated_pool: Arc<ValidatedPool<B>>,
 }
-/*
-#[cfg(not(target_os = "unknown"))]
-impl<B: ChainApi> parity_util_mem::MallocSizeOf for Pool<B>
-where
-	ExtrinsicFor<B>: parity_util_mem::MallocSizeOf,
-{
-	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		self.validated_pool.size_of(ops)
-	}
-}
-*/
+
 impl<B: ChainApi> Pool<B>
 where
     //<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
@@ -174,7 +163,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
-		xts: impl IntoIterator<Item=ExtrinsicFor<B>>,
+		xts: impl IntoIterator<Item=TrustedCallSigned>,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions = self.verify(at, xts, CheckBannedBeforeVerify::Yes).await?;
@@ -188,7 +177,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
-		xts: impl IntoIterator<Item=ExtrinsicFor<B>>,
+		xts: impl IntoIterator<Item=TrustedCallSigned>,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions = self.verify(at, xts, CheckBannedBeforeVerify::No).await?;
@@ -200,7 +189,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
-		xt: ExtrinsicFor<B>,
+		xt: TrustedCallSigned,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		let res = self.submit_at(at, source, std::iter::once(xt)).await?.pop();
 		res.expect("One extrinsic passed; one result returned; qed")
@@ -211,7 +200,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
-		xt: ExtrinsicFor<B>,
+		xt:TrustedCallSigned,
 	) -> Result<Watcher<ExtrinsicHash<B>, ExtrinsicHash<B>>, B::Error> {
 		//TODO
 		//let block_number = self.resolve_block_number(at)?;
@@ -273,7 +262,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		parent: &BlockId<B::Block>,
-		extrinsics: &[ExtrinsicFor<B>],
+		extrinsics: &[TrustedCallSigned],
 	) -> Result<(), B::Error> {
 		log::debug!(
 			target: "txpool",
@@ -376,7 +365,7 @@ where
 	}
 
 	/// Returns transaction hash
-	pub fn hash_of(&self, xt: &ExtrinsicFor<B>) -> ExtrinsicHash<B> {
+	pub fn hash_of(&self, xt: &TrustedCallSigned) -> ExtrinsicHash<B> {
 		self.validated_pool.api().hash_and_length(xt).0
 	}
 
@@ -391,7 +380,7 @@ where
 	async fn verify(
 		&self,
 		at: &BlockId<B::Block>,
-		xts: impl IntoIterator<Item=(TransactionSource, ExtrinsicFor<B>)>,
+		xts: impl IntoIterator<Item=(TransactionSource, TrustedCallSigned)>,
 		check: CheckBannedBeforeVerify,
 	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>, B::Error> {
 		// we need a block number to compute tx validity
@@ -415,7 +404,7 @@ where
 		//block_number: NumberFor<B>,
 		block_number: i8,
 		source: TransactionSource,
-		xt: ExtrinsicFor<B>,
+		xt: TrustedCallSigned,
 		check: CheckBannedBeforeVerify,
 	) -> (ExtrinsicHash<B>, ValidatedTransactionFor<B>) {
 		let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);

@@ -25,7 +25,6 @@ use sgx_tstd::error;
 pub extern crate alloc;
 use alloc::{
 	boxed::Box,
-	fmt,
 	string::String,
 };
 

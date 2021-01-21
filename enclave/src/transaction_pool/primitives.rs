@@ -22,6 +22,8 @@ use sp_runtime::{
 	},
 };
 
+use substratee_stf::TrustedCallSigned;
+
 use crate::transaction_pool::error;
 
 /// Transaction pool status.
@@ -127,11 +129,11 @@ pub type TxHash<P> = <P as TransactionPool>::Hash;
 /// Block hash type for a pool.
 pub type BlockHash<P> = <<P as TransactionPool>::Block as BlockT>::Hash;
 /// Transaction type for a pool.
-pub type TransactionFor<P> = <<P as TransactionPool>::Block as BlockT>::Extrinsic;
+//pub type TransactionFor<P> = <<P as TransactionPool>::Block as BlockT>::TrustedCallSigned;
 /// Type of transactions event stream for a pool.
 pub type TransactionStatusStreamFor<P> = TransactionStatusStream<TxHash<P>, BlockHash<P>>;
 /// Transaction type for a local pool.
-pub type LocalTransactionFor<P> = <<P as LocalTransactionPool>::Block as BlockT>::Extrinsic;
+//pub type LocalTransactionFor<P> = <<P as LocalTransactionPool>::Block as BlockT>::TrustedCallSigned;
 
 /// Typical future type used in transaction pool api.
 pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output=Result<T, E>> + Send>>;
@@ -170,7 +172,7 @@ pub trait TransactionPool: Send + Sync {
 	type Hash: Hash + Eq + Member;
 	/// In-pool transaction type.
 	type InPoolTransaction: InPoolTransaction<
-		Transaction = TransactionFor<Self>,
+		Transaction = TrustedCallSigned,
 		Hash = TxHash<Self>
 	>;
 	/// Error type.
@@ -183,7 +185,7 @@ pub trait TransactionPool: Send + Sync {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		xts: Vec<TransactionFor<Self>>,
+		xts: Vec<TrustedCallSigned>,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
 
 	/// Returns a future that imports one unverified transaction to the pool.
@@ -191,7 +193,7 @@ pub trait TransactionPool: Send + Sync {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		xt: TransactionFor<Self>,
+		xt: TrustedCallSigned,
 	) -> PoolFuture<TxHash<Self>, Self::Error>;
 
 	/// Returns a future that import a single transaction and starts to watch their progress in the pool.
@@ -199,7 +201,7 @@ pub trait TransactionPool: Send + Sync {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
-		xt: TransactionFor<Self>,
+		xt: TrustedCallSigned,
 	) -> PoolFuture<Box<TransactionStatusStreamFor<Self>>, Self::Error>;
 
 	// *** Block production / Networking
@@ -230,7 +232,7 @@ pub trait TransactionPool: Send + Sync {
 	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
 
 	/// Returns transaction hash
-	fn hash_of(&self, xt: &TransactionFor<Self>) -> TxHash<Self>;
+	fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self>;
 
 	/// Return specific ready transaction by hash, if there is one.
 	fn ready_transaction(&self, hash: &TxHash<Self>) -> Option<Arc<Self::InPoolTransaction>>;
@@ -279,7 +281,7 @@ pub trait LocalTransactionPool: Send + Sync {
 	fn submit_local(
 		&self,
 		at: &BlockId<Self::Block>,
-		xt: LocalTransactionFor<Self>,
+		xt: TrustedCallSigned,
 	) -> Result<Self::Hash, Self::Error>;
 }
 /*
