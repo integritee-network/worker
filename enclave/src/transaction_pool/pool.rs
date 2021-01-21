@@ -425,7 +425,7 @@ where
 		let validation_result = Ok(Ok(ValidTransaction {
 			priority: 4,
 			requires: vec![],
-			provides: vec![],
+			provides: vec![vec![0_u8]],
 			longevity: 3,
 			propagate: false,
 		}));
