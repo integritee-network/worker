@@ -54,6 +54,8 @@ pub mod hash;
 use hash::*;
 use sp_core::H256 as H256;
 
+use crate::rsa3072;
+
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -225,15 +227,27 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 	
 	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
 	{	
-		let xt = match Decode::decode(&mut &ext[..]) {
+		// decrypt call
+		/*let rsa_keypair = rsa3072::unseal_pair().unwrap();
+		let request_vec = match rsa3072::decrypt(&ext[..], &rsa_keypair) {
+			Ok(req) => req,
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
+		};*/
+		let stf_call_signed = if let Ok(call) = TrustedCallSigned::decode(&mut ext.as_slice()) {
+			call
+		} else {
+			return Box::pin(ready(Err(ClientError::BadFormat.into())))
+			// do not panic here or users will be able to shoot workers dead by supplying funky calls
+		};
+		/*let xt = match Decode::decode(&mut &ext[..]) {
 			Ok(xt) => xt,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
-		};
+		};*/
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();
 		Box::pin(self.pool
-			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, xt)
+			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, stf_call_signed)
 			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
 				.map(Into::into)
 				.unwrap_or_else(|_e| PoolError::Verification)).into()
@@ -266,10 +280,10 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 				.collect()
 		)
 	}
-
-/*	fn watch_extrinsic(&self,
-		_metadata: Self::Metadata,
-		subscriber: Subscriber<TransactionStatus<TxHash<P>, BlockHash<P>>>,
+/*
+	fn watch_extrinsic(&self,
+	//	_metadata: Self::Metadata,
+	//	subscriber: Subscriber<TransactionStatus<TxHash<P>, BlockHash<P>>>,
 		xt: <Vec<u8>,
 	) {
 		let submit = || -> Result<_> {
@@ -286,7 +300,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 			)
 		};
 
-		let subscriptions = self.subscriptions.clone();
+		/*let subscriptions = self.subscriptions.clone();
 		let future = ready(submit())
 			.and_then(|res| res)
 			// convert the watcher into a `Stream`
@@ -313,10 +327,10 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 			.execute(Box::new(Compat::new(future.map(|_| Ok(())))));
 		if res.is_err() {
 			warn!("Error spawning subscription RPC task.");
-		}
-	}
+		}*/
+	}*/
 
-	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
+/*	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
 		Ok(self.subscriptions.cancel(id))
 	}*/
 }

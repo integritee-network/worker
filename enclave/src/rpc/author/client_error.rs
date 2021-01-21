@@ -46,8 +46,11 @@ pub enum Error {
 	#[from(ignore)]
 	Verification,
 	/// Incorrect extrinsic format.
-	#[display(fmt="Invalid extrinsic format")]
+	#[display(fmt="Invalid trusted call format")]
 	BadFormat,
+	// Incorrect enciphered trusted call format.
+	#[display(fmt="Invalid enciphered trusted call format")]
+	BadFormatDecipher,
 	/// Incorrect seed phrase.
 	#[display(fmt="Invalid seed phrase/SURI")]
 	BadSeedPhrase,
@@ -107,7 +110,12 @@ impl From<Error> for rpc_core::Error {
 		match e {
 			Error::BadFormat => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
-				message: format!("Extrinsic has invalid format").into(),
+				message: format!("Trusted Call has invalid format").into(),
+				data: None,
+			},
+			Error::BadFormatDecipher => rpc_core::Error {
+				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
+				message: format!("Trusted call could not be deciphered").into(),
 				data: None,
 			},
 			Error::Verification => rpc_core::Error {

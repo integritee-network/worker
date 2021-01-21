@@ -71,7 +71,7 @@ static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
-    extrinsic: String,
+    extrinsic: Vec<u8>,
 }
 
 #[no_mangle]
@@ -138,8 +138,10 @@ fn init_io_handler() -> IoHandler {
        match params.parse() {
             Ok(ok) => {   
                 let parsed: SumbitExtrinsicParams = ok;
-                
-                Ok(Value::String(format!("hello extrinsic, {}", parsed.extrinsic)))
+              /*  let result = async {              
+                  author_clone.submit_extrinsic(tx.extrinsic.clone()).await
+                };      */          
+                Ok(Value::String(format!("hello extrinsic, {}", String::from_utf8(parsed.extrinsic).unwrap())))
             },
             Err(e) => Ok(Value::String(format!("author_submitAndWatchExtrinsic not called due to {}", e))),
          }
@@ -154,7 +156,7 @@ fn init_io_handler() -> IoHandler {
         Ok(call) => {
             let tx: SumbitExtrinsicParams = call;
             let result = async {              
-              author_clone.submit_extrinsic(tx.extrinsic.clone().into()).await
+              author_clone.submit_extrinsic(tx.extrinsic.clone()).await
             };
             let response: Result<Hash, RpcError> =  executor::block_on(result);
             match response {
