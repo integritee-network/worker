@@ -415,20 +415,20 @@ where
 		}
 
 		// no runtime validation check for now. Issue is open. 
-		/*let validation_result = self.validated_pool.api().validate_transaction(
+		let validation_result = self.validated_pool.api().validate_transaction(
 			block_id,
 			source,
 			xt.clone(),
-		).await;
-*/		
+		).await;	
+			
 		// dummy value
-		let validation_result = Ok(Ok(ValidTransaction {
+		/*let validation_result = Ok(Ok(ValidTransaction {
 			priority: 4,
 			requires: vec![],
 			provides: vec![vec![0_u8]],
 			longevity: 3,
 			propagate: false,
-		}));
+		}));*/
 
 		let status = match validation_result {
 			Ok(status) => status,

@@ -76,9 +76,9 @@ where
 		uxt: TrustedCallSigned,
 	) -> Self::ValidationFuture {
 		let transaction = ValidTransaction {
-			priority: 4,
+			priority: uxt.nonce.into(),
 			requires: vec![] ,
-			provides:  vec![],
+			provides:  vec![vec![uxt.nonce as u8]],
 			longevity: 3,
 			propagate: true,
 		};

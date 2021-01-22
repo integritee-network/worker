@@ -160,8 +160,8 @@ fn init_io_handler() -> IoHandler {
             };
             let response: Result<Hash, RpcError> =  executor::block_on(result);
             match response {
-              Ok(hash_value) => Ok(Value::String(format!("hello extrinsic, {}", hash_value.to_string()))),
-              Err(rpc_error) => Ok(Value::String(format!("something went wrong: {}", rpc_error.message))),
+              Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
+              Err(rpc_error) => Ok(Value::String(format!("Error within the enclave: {}", rpc_error.message))),
             } 
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
@@ -175,13 +175,17 @@ fn init_io_handler() -> IoHandler {
     io.add_sync_method(author_pending_extrinsic_name, move |_: Params| {
       let result: Result<Vec<Vec<u8>>, _> = author_clone.pending_extrinsics();
       match result {
-        Ok(extrinsics) => {
-          let mut response = String::new();
-          for i in 0..extrinsics.len() {
-            response.push_str(str::from_utf8(&extrinsics[i]).unwrap());
-          };
-          Ok(Value::String(format!("hello extrinsic, {}", response)))}
-          ,
+        Ok(vec_of_calls) => {
+         /* let mut response = String::new();
+          for i in 0..vec_of_calls.len() {
+            let call: Vec<u8> = vec_of_calls[i].clone();
+            match String::from_utf8(call.clone()) {
+                Ok(resp) => response.push_str(&resp),
+                Err(e) => return  Ok(Value::String(format!("hello extrinsic, {:?}", call)))}
+                //response.push_str(&e.to_string()),
+            };
+          Ok(Value::String(format!("hello extrinsic, {}", response)))*/
+          Ok(Value::String(format!("Pending Extrinsics: {:?}", vec_of_calls)))},
         Err(_) => Ok(Value::String(format!("something went wrong"))),
       } 
     });
