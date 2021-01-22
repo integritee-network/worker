@@ -27,11 +27,8 @@ use sgx_tstd::{sync::Arc};
 
 use core::iter::Iterator;
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
-//use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId, manager::SubscriptionManager};
 use codec::{Encode, Decode};
-//use sp_keystore::{SyncCryptoStorePtr, SyncCryptoStore};
 use sp_runtime::generic;
-//use sp_session::SessionKeys;
 use sp_runtime::transaction_validity::{
 	TransactionSource,	
 };
@@ -228,21 +225,17 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
 	{	
 		// decrypt call
-		/*let rsa_keypair = rsa3072::unseal_pair().unwrap();
-		let request_vec = match rsa3072::decrypt(&ext[..], &rsa_keypair) {
+		let rsa_keypair = rsa3072::unseal_pair().unwrap();
+		//let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
+		let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
-		};*/
-		let stf_call_signed = if let Ok(call) = TrustedCallSigned::decode(&mut ext.as_slice()) {
-			call
-		} else {
-			return Box::pin(ready(Err(ClientError::BadFormat.into())))
-			// do not panic here or users will be able to shoot workers dead by supplying funky calls
 		};
-		/*let xt = match Decode::decode(&mut &ext[..]) {
-			Ok(xt) => xt,
+		// encode call
+		let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
+			Ok(call) => call,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
-		};*/
+		};
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();

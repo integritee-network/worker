@@ -419,16 +419,7 @@ where
 			block_id,
 			source,
 			xt.clone(),
-		).await;	
-			
-		// dummy value
-		/*let validation_result = Ok(Ok(ValidTransaction {
-			priority: 4,
-			requires: vec![],
-			provides: vec![vec![0_u8]],
-			longevity: 3,
-			propagate: false,
-		}));*/
+		).await;		
 
 		let status = match validation_result {
 			Ok(status) => status,
