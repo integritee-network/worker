@@ -60,7 +60,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	//type Metadata;
 
 	/// Submit hex-encoded extrinsic for inclusion in block.
-	fn submit_extrinsic(&self, extrinsic: Vec<u8>) -> FutureResult<Hash, RpcError>;
+	fn submit_call(&self, extrinsic: Vec<u8>) -> FutureResult<Hash, RpcError>;
 	//fn submit_extrinsic(&self, extrinsic: Vec<u8>) ->Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>;
 	
 	/*/// Insert a key into the keystore.
@@ -86,11 +86,11 @@ pub trait AuthorApi<Hash, BlockHash> {
 	/// Returns `true` if a private key could be found.
 	fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
-	/// Returns all pending extrinsics, potentially grouped by sender.
-	fn pending_extrinsics(&self) -> Result<Vec<Vec<u8>>>;
+	/// Returns all pending calls, potentially grouped by sender.
+	fn pending_calls(&self) -> Result<Vec<Vec<u8>>>;
 
-	/// Remove given extrinsic from the pool and temporarily ban it to prevent reimporting.
-	fn remove_extrinsic(&self,
+	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
+	fn remove_call(&self,
 		bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>
 	) -> Result<Vec<Hash>>;
 
@@ -222,7 +222,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
 	}*/
 	
-	fn submit_extrinsic(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
+	fn submit_call(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
 	{	
 		// decrypt call
 		let rsa_keypair = rsa3072::unseal_pair().unwrap();
@@ -247,11 +247,11 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		))
 	}
 
-	fn pending_extrinsics(&self) -> Result<Vec<Vec<u8>>> {
+	fn pending_calls(&self) -> Result<Vec<Vec<u8>>> {
 		Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect())
 	}
 
-	fn remove_extrinsic(
+	fn remove_call(
 		&self,
 		bytes_or_hash: Vec<hash::ExtrinsicOrHash<TxHash<P>>>,
 	) -> Result<Vec<TxHash<P>>> {
