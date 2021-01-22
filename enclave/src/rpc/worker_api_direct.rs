@@ -87,14 +87,20 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
+//pub fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
+pub fn load_tx_pool() -> Option<Arc<BasicPool<FillerChainApi<Block>, Block>>>
 {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
-        None
-    } else {
+        return None
+    } /*else {
         Some(unsafe { &* ptr })
-    }
+    }*/
+    let &ref tx_pool_mutex = unsafe { &*ptr };
+    // acquire tx pool lock (only one thread may access txpool at a time)
+    let tx_pool_guard = tx_pool_mutex.lock().unwrap();
+    // create new thread safe reference pointer (obsolete?) to tx pool
+    Some(unsafe {Arc::from_raw(tx_pool_guard.deref())})
 }
 
 
@@ -112,18 +118,16 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
 
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
-    let mut rpc_methods_vec: Vec<&str> = Vec::new();    
-    //let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    //let tx_pool = BasicPool::create(PoolOptions::default(), api);  
+    let mut rpc_methods_vec: Vec<&str> = Vec::new();
     // Io Handler als Pointer aswell? 
 
-    // load pointer to tx pool mutex
+   /* // load pointer to tx pool mutex
     let &ref tx_pool_mutex = load_tx_pool().unwrap();
     // acquire tx pool lock (only one thread may access txpool at a time)
     let tx_pool_guard = tx_pool_mutex.lock().unwrap();
     // create new thread safe reference pointer (obsolete?) to tx pool
-    let tx_pool: Arc<BasicPool<FillerChainApi<Block>, Block>> = unsafe {Arc::from_raw(tx_pool_guard.deref())};
-
+    let tx_pool: Arc<BasicPool<FillerChainApi<Block>, Block>> = unsafe {Arc::from_raw(tx_pool_guard.deref())};*/
+    let tx_pool = load_tx_pool().unwrap();
     let author = Arc::new(Author::new(tx_pool));    
 
     
