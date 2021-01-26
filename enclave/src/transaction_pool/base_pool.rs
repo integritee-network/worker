@@ -44,6 +44,8 @@ use sp_runtime::transaction_validity::{
 	TransactionSource as Source,
 };
 
+use substratee_stf::ShardIdentifier;
+
 use crate::transaction_pool::{
 	future::{FutureTransactions, WaitingTransaction},
     ready::ReadyTransactions,
@@ -271,8 +273,8 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns if the transaction for the given hash is already imported.
-	pub fn is_imported(&self, tx_hash: &Hash) -> bool {
-		self.future.contains(tx_hash) || self.ready.contains(tx_hash)
+	pub fn is_imported(&self, tx_hash: &Hash, shard: ShardIdentifier) -> bool {
+		self.future.contains(tx_hash, shard) || self.ready.contains(tx_hash, shard)
 	}
 
 	/// Imports transaction to the pool.
@@ -285,15 +287,17 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	pub fn import(
 		&mut self,
 		tx: Transaction<Hash, Ex>,
+		shard: ShardIdentifier,
 	) -> error::Result<Imported<Hash, Ex>> {
-		if self.is_imported(&tx.hash) {
+		if self.is_imported(&tx.hash, shard) {
 			return Err(error::Error::AlreadyImported)
 		}
 
 		let tx = WaitingTransaction::new(
 			tx,
-			self.ready.provided_tags(),
+			self.ready.provided_tags(shard),
 			&self.recently_pruned,
+			shard
 		);
 		trace!(target: "txpool", "[{:?}] {:?}", tx.transaction.hash, tx);
 		debug!(
@@ -310,17 +314,21 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			}
 
 			let hash = tx.transaction.hash.clone();
-			self.future.import(tx);
+			self.future.import(tx, shard);
 			return Ok(Imported::Future { hash });
 		}
 
-		self.import_to_ready(tx)
+		self.import_to_ready(tx, shard)
 	}
 
 	/// Imports transaction to ready queue.
 	///
 	/// NOTE the transaction has to have all requirements satisfied.
-	fn import_to_ready(&mut self, tx: WaitingTransaction<Hash, Ex>) -> error::Result<Imported<Hash, Ex>> {
+	fn import_to_ready(
+		&mut self,
+		tx: WaitingTransaction<Hash, Ex>,
+		shard: ShardIdentifier,
+	) -> error::Result<Imported<Hash, Ex>> {
 		let hash = tx.transaction.hash.clone();
 		let mut promoted = vec![];
 		let mut failed = vec![];
@@ -337,11 +345,11 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			};
 
 			// find transactions in Future that it unlocks
-			to_import.append(&mut self.future.satisfy_tags(&tx.transaction.provides));
+			to_import.append(&mut self.future.satisfy_tags(&tx.transaction.provides, shard));
 
 			// import this transaction
 			let current_hash = tx.transaction.hash.clone();
-			match self.ready.import(tx) {
+			match self.ready.import(tx, shard) {
 				Ok(mut replaced) => {
 					if !first {
 						promoted.push(current_hash);
@@ -368,7 +376,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		if removed.iter().any(|tx| tx.hash == hash) {
 			// We still need to remove all transactions that we promoted
 			// since they depend on each other and will never get to the best iterator.
-			self.ready.remove_subtree(&promoted);
+			self.ready.remove_subtree(&promoted, shard);
 
 			debug!(target: "txpool", "[{:?}] Cycle detected, bailing.", hash);
 			return Err(error::Error::CycleDetected)
@@ -383,22 +391,22 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns an iterator over ready transactions in the pool.
-	pub fn ready(&self) -> impl Iterator<Item=Arc<Transaction<Hash, Ex>>> {
-		self.ready.get()
+	pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item=Arc<Transaction<Hash, Ex>>> {
+		self.ready.get(shard)
 	}
 
 	/// Returns an iterator over future transactions in the pool.
-	pub fn futures(&self) -> impl Iterator<Item=&Transaction<Hash, Ex>> {
-		self.future.all()
+	pub fn futures(&self, shard: ShardIdentifier) -> impl Iterator<Item=&Transaction<Hash, Ex>> {
+		self.future.all(shard)
 	}
 
 	/// Returns pool transactions given list of hashes.
 	///
 	/// Includes both ready and future pool. For every hash in the `hashes`
 	/// iterator an `Option` is produced (so the resulting `Vec` always have the same length).
-	pub fn by_hashes(&self, hashes: &[Hash]) -> Vec<Option<Arc<Transaction<Hash, Ex>>>> {
-		let ready = self.ready.by_hashes(hashes);
-		let future = self.future.by_hashes(hashes);
+	pub fn by_hashes(&self, hashes: &[Hash], shard: ShardIdentifier) -> Vec<Option<Arc<Transaction<Hash, Ex>>>> {
+		let ready = self.ready.by_hashes(hashes, shard);
+		let future = self.future.by_hashes(hashes, shard);
 
 		ready
 			.into_iter()
@@ -408,8 +416,8 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns pool transaction by hash.
-	pub fn ready_by_hash(&self, hash: &Hash) -> Option<Arc<Transaction<Hash, Ex>>> {
-		self.ready.by_hash(hash)
+	pub fn ready_by_hash(&self, hash: &Hash, shard: ShardIdentifier) -> Option<Arc<Transaction<Hash, Ex>>> {
+		self.ready.by_hash(hash, shard)
 	}
 
 	/// Makes sure that the transactions in the queues stay within provided limits.
@@ -417,10 +425,15 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// Removes and returns worst transactions from the queues and all transactions that depend on them.
 	/// Technically the worst transaction should be evaluated by computing the entire pending set.
 	/// We use a simplified approach to remove the transaction that occupies the pool for the longest time.
-	pub fn enforce_limits(&mut self, ready: &Limit, future: &Limit) -> Vec<Arc<Transaction<Hash, Ex>>> {
+	pub fn enforce_limits(
+		&mut self, 
+		ready: &Limit, 
+		future: &Limit,
+		shard: ShardIdentifier,
+	) -> Vec<Arc<Transaction<Hash, Ex>>> {
 		let mut removed = vec![];
 
-		while ready.is_exceeded(self.ready.len(), self.ready.bytes()) {
+		while ready.is_exceeded(self.ready.len(shard), self.ready.bytes(shard)) {
 			// find the worst transaction
 			let minimal = self.ready
 				.fold(|minimal, current| {
@@ -432,16 +445,16 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 						},
 						other => other,
 					}
-				});
+				}, shard);
 
 			if let Some(minimal) = minimal {
-				removed.append(&mut self.remove_subtree(&[minimal.transaction.hash.clone()]))
+				removed.append(&mut self.remove_subtree(&[minimal.transaction.hash.clone()], shard))
 			} else {
 				break;
 			}
 		}
 
-		while future.is_exceeded(self.future.len(), self.future.bytes()) {
+		while future.is_exceeded(self.future.len(shard), self.future.bytes(shard)) {
 			// find the worst transaction
 			let minimal = self.future
 				.fold(|minimal, current| {
@@ -452,10 +465,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 						},*/
 						other => other,
 					}
-				});
+				}, shard);
 
 			if let Some(minimal) = minimal {
-				removed.append(&mut self.remove_subtree(&[minimal.transaction.hash.clone()]))
+				removed.append(&mut self.remove_subtree(&[minimal.transaction.hash.clone()], shard))
 			} else {
 				break;
 			}
@@ -472,15 +485,15 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// they were part of a chain, you may attempt to re-import them later.
 	/// NOTE If you want to remove ready transactions that were already used
 	/// and you don't want them to be stored in the pool use `prune_tags` method.
-	pub fn remove_subtree(&mut self, hashes: &[Hash]) -> Vec<Arc<Transaction<Hash, Ex>>> {
-		let mut removed = self.ready.remove_subtree(hashes);
-		removed.extend(self.future.remove(hashes));
+	pub fn remove_subtree(&mut self, hashes: &[Hash], shard: ShardIdentifier) -> Vec<Arc<Transaction<Hash, Ex>>> {
+		let mut removed = self.ready.remove_subtree(hashes, shard);
+		removed.extend(self.future.remove(hashes, shard));
 		removed
 	}
 
 	/// Removes and returns all transactions from the future queue.
-	pub fn clear_future(&mut self) -> Vec<Arc<Transaction<Hash, Ex>>> {
-		self.future.clear()
+	pub fn clear_future(&mut self, shard: ShardIdentifier) -> Vec<Arc<Transaction<Hash, Ex>>> {
+		self.future.clear(shard)
 	}
 
 	/// Prunes transactions that provide given list of tags.
@@ -489,7 +502,11 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// but unlike `remove_subtree`, dependent transactions are not touched.
 	/// Additional transactions from future queue might be promoted to ready if you satisfy tags
 	/// that the pool didn't previously know about.
-	pub fn prune_tags(&mut self, tags: impl IntoIterator<Item=Tag>) -> PruneStatus<Hash, Ex> {
+	pub fn prune_tags(
+		&mut self, 
+		tags: impl IntoIterator<Item=Tag>,
+		shard: ShardIdentifier,
+	) -> PruneStatus<Hash, Ex> {
 		let mut to_import = vec![];
 		let mut pruned = vec![];
 		let recently_pruned = &mut self.recently_pruned[self.recently_pruned_index];
@@ -498,9 +515,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 
 		for tag in tags {
 			// make sure to promote any future transactions that could be unlocked
-			to_import.append(&mut self.future.satisfy_tags(iter::once(&tag)));
+			to_import.append(&mut self.future.satisfy_tags(iter::once(&tag), shard));
 			// and actually prune transactions in ready queue
-			pruned.append(&mut self.ready.prune_tags(tag.clone()));
+			pruned.append(&mut self.ready.prune_tags(tag.clone(), shard.clone()));
 			// store the tags for next submission
 			recently_pruned.insert(tag);
 		}
@@ -509,7 +526,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		let mut failed = vec![];
 		for tx in to_import {
 			let hash = tx.transaction.hash.clone();
-			match self.import_to_ready(tx) {
+			match self.import_to_ready(tx, shard) {
 				Ok(res) => promoted.push(res),
 				Err(_e) => {
 					warn!(target: "txpool", "[{:?}] Failed to promote during pruning", hash);
@@ -526,12 +543,12 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Get pool status.
-	pub fn status(&self) -> PoolStatus {
+	pub fn status(&self, shard: ShardIdentifier) -> PoolStatus {
 		PoolStatus {
-			ready: self.ready.len(),
-			ready_bytes: self.ready.bytes(),
-			future: self.future.len(),
-			future_bytes: self.future.bytes(),
+			ready: self.ready.len(shard),
+			ready_bytes: self.ready.bytes(shard),
+			future: self.future.len(shard),
+			future_bytes: self.future.bytes(shard),
 		}
 	}
 }

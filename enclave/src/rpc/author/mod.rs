@@ -23,6 +23,8 @@ use alloc::{
   boxed::Box,
 };
 
+use log::*;
+
 use sgx_tstd::{sync::Arc};
 
 use core::iter::Iterator;
@@ -52,6 +54,8 @@ use hash::*;
 use sp_core::H256 as H256;
 
 use crate::rsa3072;
+use crate::state;
+use base58::ToBase58;
 
 
 /// Substrate authoring RPC API
@@ -60,7 +64,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	//type Metadata;
 
 	/// Submit hex-encoded extrinsic for inclusion in block.
-	fn submit_call(&self, extrinsic: Vec<u8>) -> FutureResult<Hash, RpcError>;
+	fn submit_call(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
 	//fn submit_extrinsic(&self, extrinsic: Vec<u8>) ->Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>;
 	
 	/*/// Insert a key into the keystore.
@@ -87,11 +91,12 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
 	/// Returns all pending calls, potentially grouped by sender.
-	fn pending_calls(&self) -> Result<Vec<Vec<u8>>>;
+	fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
 	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
 	fn remove_call(&self,
-		bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>
+		bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>,
+		shard: ShardIdentifier,
 	) -> Result<Vec<Hash>>;
 
 	/*/// Submit an extrinsic to watch.
@@ -222,8 +227,13 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
 	}*/
 	
-	fn submit_call(&self, ext: Vec<u8>) -> FutureResult<TxHash<P>, RpcError>
+	fn submit_call(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError>
 	{	
+		// check if shard exists
+		let shards = state::list_shards().unwrap();
+		if !shards.contains(&shard) {
+			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
+		}
 		// decrypt call
 		let rsa_keypair = rsa3072::unseal_pair().unwrap();
 		//let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
@@ -240,20 +250,21 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		// dummy block hash
 		let best_block_hash = Default::default();
 		Box::pin(self.pool
-			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, stf_call_signed)
+			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, stf_call_signed, shard)
 			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
 				.map(Into::into)
 				.unwrap_or_else(|_e| PoolError::Verification)).into()
 		))
 	}
 
-	fn pending_calls(&self) -> Result<Vec<Vec<u8>>> {
-		Ok(self.pool.ready().map(|tx| tx.data().encode().into()).collect())
+	fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
+		Ok(self.pool.ready(shard).map(|tx| tx.data().encode().into()).collect())
 	}
 
 	fn remove_call(
 		&self,
 		bytes_or_hash: Vec<hash::ExtrinsicOrHash<TxHash<P>>>,
+		shard: ShardIdentifier,
 	) -> Result<Vec<TxHash<P>>> {
 		let hashes = bytes_or_hash.into_iter()
 			.map(|x| match x {
@@ -267,7 +278,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 
 		Ok(
 			self.pool
-				.remove_invalid(&hashes)
+				.remove_invalid(&hashes, shard)
 				.into_iter()
 				.map(|tx| tx.hash().clone())
 				.collect()

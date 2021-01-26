@@ -44,7 +44,7 @@ use crate::transaction_pool::{
 	base_pool::PruneStatus,
 };
 
-use substratee_stf::TrustedCallSigned;
+use substratee_stf::{TrustedCallSigned, ShardIdentifier};
 
 use sp_runtime::{
 	generic::BlockId,
@@ -152,10 +152,11 @@ where
 		&self,
 		tx_hash: &ExtrinsicHash<B>,
 		ignore_banned: bool,
+		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		if !ignore_banned && self.is_banned(tx_hash) {
 			Err(error::Error::TemporarilyBanned.into())
-		} else if self.pool.read().unwrap().is_imported(tx_hash) {
+		} else if self.pool.read().unwrap().is_imported(tx_hash, shard) {
 			Err(error::Error::AlreadyImported.into())
 		} else {
 			Ok(())
@@ -166,14 +167,15 @@ where
 	pub fn submit(
 		&self,
 		txs: impl IntoIterator<Item=ValidatedTransactionFor<B>>,
+		shard: ShardIdentifier,
 	) -> Vec<Result<ExtrinsicHash<B>, B::Error>> {
 		let results = txs.into_iter()
-			.map(|validated_tx| self.submit_one(validated_tx))
+			.map(|validated_tx| self.submit_one(validated_tx, shard))
 			.collect::<Vec<_>>();
 
 		// only enforce limits if there is at least one imported transaction
 		let removed = if results.iter().any(|res| res.is_ok()) {
-			self.enforce_limits()
+			self.enforce_limits(shard)
 		} else {
 			Default::default()
 		};
@@ -185,10 +187,14 @@ where
 	}
 
 	/// Submit single pre-validated transaction to the pool.
-	fn submit_one(&self, tx: ValidatedTransactionFor<B>) -> Result<ExtrinsicHash<B>, B::Error> {
+	fn submit_one(
+		&self,
+		tx: ValidatedTransactionFor<B>,
+		shard: ShardIdentifier,
+	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
 			ValidatedTransaction::Valid(tx) => {
-				let imported = self.pool.write().unwrap().import(tx)?;
+				let imported = self.pool.write().unwrap().import(tx, shard)?;
 
 				if let base::Imported::Ready { ref hash, .. } = imported {
 					self.import_notification_sinks.lock().unwrap()
@@ -222,8 +228,8 @@ where
 		}
 	}
 
-	fn enforce_limits(&self) -> HashSet<ExtrinsicHash<B>> {
-		let status = self.pool.read().unwrap().status();
+	fn enforce_limits(&self, shard: ShardIdentifier) -> HashSet<ExtrinsicHash<B>> {
+		let status = self.pool.read().unwrap().status(shard);
 		let ready_limit = &self.options.ready;
 		let future_limit = &self.options.future;
 
@@ -241,7 +247,7 @@ where
 			// clean up the pool
 			let removed = {
 				let mut pool = self.pool.write().unwrap();
-				let removed = pool.enforce_limits(ready_limit, future_limit)
+				let removed = pool.enforce_limits(ready_limit, future_limit, shard)
 					.into_iter().map(|x| x.hash.clone()).collect::<HashSet<_>>();
 				// ban all removed transactions
 				self.rotator.ban(&Instant::now(), removed.iter().map(|x| x.clone()));
@@ -267,12 +273,13 @@ where
 	pub fn submit_and_watch(
 		&self,
 		tx: ValidatedTransactionFor<B>,
+		shard: ShardIdentifier,
 	) -> Result<Watcher<ExtrinsicHash<B>, ExtrinsicHash<B>>, B::Error> {
 		match tx {
 			ValidatedTransaction::Valid(tx) => {
 				let hash = self.api.hash_and_length(&tx.data).0;
 				let watcher = self.listener.write().unwrap().create_watcher(hash);
-				self.submit(core::iter::once(ValidatedTransaction::Valid(tx)))
+				self.submit(core::iter::once(ValidatedTransaction::Valid(tx)), shard)
 					.pop()
 					.expect("One extrinsic passed; one result returned; qed")
 					.map(|_| watcher)
@@ -289,7 +296,11 @@ where
 	///
 	/// Removes and then submits passed transactions and all dependent transactions.
 	/// Transactions that are missing from the pool are not submitted.
-	pub fn resubmit(&self, mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>) {
+	pub fn resubmit(
+		&self,
+		mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>,
+		shard: ShardIdentifier
+	) {
 		#[derive(Debug, Clone, Copy, PartialEq)]
 		enum Status { Future, Ready, Failed, Dropped };
 
@@ -311,7 +322,7 @@ where
 				// note we are not considering tx with hash invalid here - we just want
 				// to remove it along with dependent transactions and `remove_subtree()`
 				// does exactly what we need
-				let removed = pool.remove_subtree(&[hash.clone()]);
+				let removed = pool.remove_subtree(&[hash.clone()], shard);
 				for removed_tx in removed {
 					let removed_hash = removed_tx.hash.clone();
 					let updated_transaction = updated_transactions.remove(&removed_hash);
@@ -343,7 +354,7 @@ where
 				let mut final_statuses = HashMap::new();
 				for (hash, tx_to_resubmit) in txs_to_resubmit {
 					match tx_to_resubmit {
-						ValidatedTransaction::Valid(tx) => match pool.import(tx) {
+						ValidatedTransaction::Valid(tx) => match pool.import(tx, shard) {
 							Ok(imported) => match imported {
 								base::Imported::Ready { promoted, failed, removed, .. } => {
 									final_statuses.insert(hash, Status::Ready);
@@ -383,7 +394,7 @@ where
 				// if the pool is configured to reject future transactions, let's clear the future
 				// queue, updating final statuses as required
 				if reject_future_transactions {
-					for future_tx in pool.clear_future() {
+					for future_tx in pool.clear_future(shard) {
 						final_statuses.insert(future_tx.hash.clone(), Status::Dropped);
 					}
 				}
@@ -408,8 +419,12 @@ where
 	}
 
 	/// For each extrinsic, returns tags that it provides (if known), or None (if it is unknown).
-	pub fn extrinsics_tags(&self, hashes: &[ExtrinsicHash<B>]) -> Vec<Option<Vec<Tag>>> {
-		self.pool.read().unwrap().by_hashes(&hashes)
+	pub fn extrinsics_tags(
+		&self,
+		hashes: &[ExtrinsicHash<B>],
+		shard: ShardIdentifier,
+	) -> Vec<Option<Vec<Tag>>> {
+		self.pool.read().unwrap().by_hashes(&hashes, shard)
 			.into_iter()
 			.map(|existing_in_pool| existing_in_pool
 				.map(|transaction| transaction.provides.iter().cloned().collect()))
@@ -417,17 +432,18 @@ where
 	}
 
 	/// Get ready transaction by hash
-	pub fn ready_by_hash(&self, hash: &ExtrinsicHash<B>) -> Option<TransactionFor<B>> {
-		self.pool.read().unwrap().ready_by_hash(hash)
+	pub fn ready_by_hash(&self, hash: &ExtrinsicHash<B>, shard: ShardIdentifier) -> Option<TransactionFor<B>> {
+		self.pool.read().unwrap().ready_by_hash(hash, shard)
 	}
 
 	/// Prunes ready transactions that provide given list of tags.
 	pub fn prune_tags(
 		&self,
 		tags: impl IntoIterator<Item=Tag>,
+		shard: ShardIdentifier,
 	) -> Result<PruneStatus<ExtrinsicHash<B>, TrustedCallSigned>, B::Error> {
 		// Perform tag-based pruning in the base pool
-		let status = self.pool.write().unwrap().prune_tags(tags);		
+		let status = self.pool.write().unwrap().prune_tags(tags, shard);		
 		// Notify event listeners of all transactions
 		// that were promoted to `Ready` or were dropped.
 		{
@@ -450,11 +466,12 @@ where
 		known_imported_hashes: impl IntoIterator<Item=ExtrinsicHash<B>> + Clone,
 		pruned_hashes: Vec<ExtrinsicHash<B>>,
 		pruned_xts: Vec<ValidatedTransactionFor<B>>,
+		shard: ShardIdentifier,
 	) -> Result<(), B::Error> where <B as ChainApi>::Error: error::IntoPoolError {
 		debug_assert_eq!(pruned_hashes.len(), pruned_xts.len());
 
 		// Resubmit pruned transactions
-		let results = self.submit(pruned_xts);
+		let results = self.submit(pruned_xts, shard);
 
 		// Collect the hashes of transactions that now became invalid (meaning that they are successfully pruned).
 		let hashes = results
@@ -471,7 +488,7 @@ where
 
 		// perform regular cleanup of old transactions in the pool
 		// and update temporary bans.
-		self.clear_stale(at)?;
+		self.clear_stale(at, shard)?;
 		Ok(())
 	}
 
@@ -501,13 +518,13 @@ where
 	/// Stale transactions are transaction beyond their longevity period.
 	/// Note this function does not remove transactions that are already included in the chain.
 	/// See `prune_tags` if you want this.
-	pub fn clear_stale(&self, at: &BlockId<B::Block>) -> Result<(), B::Error> {
+	pub fn clear_stale(&self, at: &BlockId<B::Block>, shard: ShardIdentifier) -> Result<(), B::Error> {
 		let block_number = self.api.block_id_to_number(at)?
 			.ok_or_else(|| error::Error::InvalidBlockId(format!("{:?}", at)).into())?
 			.saturated_into::<u64>();
 		let now = Instant::now();
 		let to_remove = {
-			self.ready()
+			self.ready(shard)
 				.filter(|tx| self.rotator.ban_if_stale(&now, block_number, &tx))
 				.map(|tx| tx.hash.clone())
 				.collect::<Vec<_>>()
@@ -515,7 +532,7 @@ where
 		let futures_to_remove: Vec<ExtrinsicHash<B>> = {
 			let p = self.pool.read().unwrap();
 			let mut hashes = Vec::new();
-			for tx in p.futures() {
+			for tx in p.futures(shard) {
 				if self.rotator.ban_if_stale(&now, block_number, &tx) {
 					hashes.push(tx.hash.clone());
 				}
@@ -523,8 +540,8 @@ where
 			hashes
 		};
 		// removing old transactions
-		self.remove_invalid(&to_remove);
-		self.remove_invalid(&futures_to_remove);
+		self.remove_invalid(&to_remove, shard);
+		self.remove_invalid(&futures_to_remove, shard);
 		// clear banned transactions timeouts
 		self.rotator.clear_timeouts(&now);
 
@@ -568,7 +585,11 @@ where
 	/// to prevent them from entering the pool right away.
 	/// Note this is not the case for the dependent transactions - those may
 	/// still be valid so we want to be able to re-import them.
-	pub fn remove_invalid(&self, hashes: &[ExtrinsicHash<B>]) -> Vec<TransactionFor<B>> {
+	pub fn remove_invalid(
+		&self,
+		hashes: &[ExtrinsicHash<B>],
+		shard: ShardIdentifier,
+	) -> Vec<TransactionFor<B>> {
 		// early exit in case there is no invalid transactions.
 		if hashes.is_empty() {
 			return vec![];
@@ -579,7 +600,7 @@ where
 		// temporarily ban invalid transactions
 		self.rotator.ban(&Instant::now(), hashes.iter().cloned());
 
-		let invalid = self.pool.write().unwrap().remove_subtree(hashes);
+		let invalid = self.pool.write().unwrap().remove_subtree(hashes, shard);
 
 		log::debug!(target: "txpool", "Removed invalid transactions: {:?}", invalid);
 
@@ -592,13 +613,13 @@ where
 	}
 
 	/// Get an iterator for ready transactions ordered by priority
-	pub fn ready(&self) -> impl Iterator<Item=TransactionFor<B>> + Send {
-		self.pool.read().unwrap().ready()
+	pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item=TransactionFor<B>> + Send {
+		self.pool.read().unwrap().ready(shard)
 	}
 
 	/// Returns pool status.
-	pub fn status(&self) -> PoolStatus {
-		self.pool.read().unwrap().status()
+	pub fn status(&self, shard: ShardIdentifier) -> PoolStatus {
+		self.pool.read().unwrap().status(shard)
 	}
 
 	/// Notify all watchers that transactions in the block with hash have been finalized

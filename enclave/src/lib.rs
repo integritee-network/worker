@@ -391,8 +391,23 @@ pub unsafe extern "C" fn sync_chain_relay(
             Err(_) => error!("Error executing relevant extrinsics"),
         };
     }
-    //TODO
-  //  let pending_calls: Vec<Vec<u8>> = get_pending_calls_from_tx_pool();
+
+   /* // execute pending calls from transaction pool
+    let pending_calls: Vec<Vec<u8>> = get_pending_calls_from_tx_pool();
+    for encoded_call in pending_calls.into_iter() {
+        let decoded_trusted_call = match TrustedCallSigned::decode(&mut encoded_call) {
+            Ok(call) => call,
+            Err(e) => {
+                error!("Decoding trusted call signed from transaction pool failed. Error: {:?}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        let mut opaque_calls = Vec::<OpaqueCall>::new();
+        match handle_trusted_worker_call(&mut opaque_calls, decoded_trusted_call, block.header.clone()) {
+            Ok(c) => calls.extend(c.into_iter()),
+            Err(e) => error!("Error performing worker call: Error: {:?}", e);            
+        }   
+    }*/
+
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -401,15 +416,12 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn get_pending_calls_from_tx_pool() -> Vec<Vec<u8>> {   
-    // load pointer to tx pool mutex
+fn get_pending_calls_from_tx_pool() -> Vec<Vec<u8>> {
     let tx_pool = rpc::worker_api_direct::load_tx_pool().unwrap();
-    // acquire tx pool lock (only one thread may access txpool at a time)
-  /*  let tx_pool_guard = tx_pool_mutex.lock().unwrap();
-    let tx_pool = unsafe {Arc::from_raw(tx_pool_guard.deref())};*/
     let author = Arc::new(Author::new(tx_pool)); 
    // retrieve calls from tx pool
-    author.pending_calls().unwrap() // always ok
+    //author.pending_calls().unwrap() // always ok
+    vec![]
 }
 
 pub fn update_states(header: Header) -> SgxResult<()> {
@@ -485,7 +497,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Ok(decrypted_trusted_call) = decrypt_unchecked_extrinsic(xt) {
-                    if let Err(e) = handle_trusted_call(&mut calls, decrypted_trusted_call, block.header.clone()) {
+                    if let Err(e) = handle_trusted_worker_call(&mut calls, decrypted_trusted_call, block.header.clone()) {
                         error!("Error performing worker call: Error: {:?}", e);
                     }
                 }                
@@ -564,7 +576,7 @@ fn decrypt_unchecked_extrinsic(
 }
 
 
-fn handle_trusted_call(
+fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
     stf_call_signed: TrustedCallSigned,
     header: Header,

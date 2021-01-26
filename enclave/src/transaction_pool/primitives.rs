@@ -22,7 +22,7 @@ use sp_runtime::{
 	},
 };
 
-use substratee_stf::TrustedCallSigned;
+use substratee_stf::{TrustedCallSigned, ShardIdentifier};
 
 use crate::transaction_pool::error;
 
@@ -186,6 +186,7 @@ pub trait TransactionPool: Send + Sync {
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
 		xts: Vec<TrustedCallSigned>,
+		shard: ShardIdentifier,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
 
 	/// Returns a future that imports one unverified transaction to the pool.
@@ -194,6 +195,7 @@ pub trait TransactionPool: Send + Sync {
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
 		xt: TrustedCallSigned,
+		shard: ShardIdentifier
 	) -> PoolFuture<TxHash<Self>, Self::Error>;
 
 	/// Returns a future that import a single transaction and starts to watch their progress in the pool.
@@ -202,6 +204,7 @@ pub trait TransactionPool: Send + Sync {
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
 		xt: TrustedCallSigned,
+		shard: ShardIdentifier,
 	) -> PoolFuture<Box<TransactionStatusStreamFor<Self>>, Self::Error>;
 
 	// *** Block production / Networking
@@ -209,19 +212,19 @@ pub trait TransactionPool: Send + Sync {
 	///
 	/// Guarantees to return only when transaction pool got updated at `at` block.
 	/// Guarantees to return immediately when `None` is passed.
-	fn ready_at(&self, at: NumberFor<Self::Block>)
+	fn ready_at(&self, at: NumberFor<Self::Block>, shard: ShardIdentifier)
 		-> Pin<Box<dyn Future<Output=Box<dyn Iterator<Item=Arc<Self::InPoolTransaction>> + Send>> + Send>>;
 
 	/// Get an iterator for ready transactions ordered by priority.
-	fn ready(&self) -> Box<dyn Iterator<Item=Arc<Self::InPoolTransaction>> + Send>;
+	fn ready(&self, shard: ShardIdentifier) -> Box<dyn Iterator<Item=Arc<Self::InPoolTransaction>> + Send>;
 
 	// *** Block production
 	/// Remove transactions identified by given hashes (and dependent transactions) from the pool.
-	fn remove_invalid(&self, hashes: &[TxHash<Self>]) -> Vec<Arc<Self::InPoolTransaction>>;
+	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier) -> Vec<Arc<Self::InPoolTransaction>>;
 
 	// *** logging
 	/// Returns pool status.
-	fn status(&self) -> PoolStatus;
+	fn status(&self, shard: ShardIdentifier) -> PoolStatus;
 
 	// *** logging / RPC / networking
 	/// Return an event stream of transactions imported to the pool.
@@ -235,7 +238,7 @@ pub trait TransactionPool: Send + Sync {
 	fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self>;
 
 	/// Return specific ready transaction by hash, if there is one.
-	fn ready_transaction(&self, hash: &TxHash<Self>) -> Option<Arc<Self::InPoolTransaction>>;
+	fn ready_transaction(&self, hash: &TxHash<Self>, shard: ShardIdentifier) -> Option<Arc<Self::InPoolTransaction>>;
 }
 
 /*

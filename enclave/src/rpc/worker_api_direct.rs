@@ -32,6 +32,7 @@ use core::{
   pin::Pin,
   result::Result,
   ops::{Deref, DerefMut},
+  str::FromStr,
 };
 
 use sgx_types::*;
@@ -42,6 +43,7 @@ use sgx_tstd::{
 };
 
 use sp_core::H256 as Hash;
+
 use codec::{Encode, Decode};
 use log::*;
 
@@ -64,15 +66,12 @@ use jsonrpc_core::futures::{future::FutureExt, executor};
 use jsonrpc_core::Error as RpcError;
 use serde::Deserialize;
 
+use substratee_stf::{ShardIdentifier};
+
 use substrate_test_runtime::Block; // TestBlock
+use base58::FromBase58;
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
-
-
-#[derive(Deserialize)]
-struct SumbitExtrinsicParams {
-    extrinsic: Vec<u8>,
-}
 
 #[no_mangle]
 // initialise tx pool and store within static atomic pointer
@@ -87,19 +86,16 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-//pub fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
 pub fn load_tx_pool() -> Option<Arc<BasicPool<FillerChainApi<Block>, Block>>>
 {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
         return None
-    } /*else {
-        Some(unsafe { &* ptr })
-    }*/
+    } 
     let &ref tx_pool_mutex = unsafe { &*ptr };
     // acquire tx pool lock (only one thread may access txpool at a time)
     let tx_pool_guard = tx_pool_mutex.lock().unwrap();
-    // create new thread safe reference pointer (obsolete?) to tx pool
+    // create new thread safe reference pointer to tx pool
     Some(unsafe {Arc::from_raw(tx_pool_guard.deref())})
 }
 
@@ -116,22 +112,19 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
     format!("methods: [{}]", method_string)
 }
 
+#[derive(Deserialize)]
+struct SumbitExtrinsicParams {
+    call: Vec<u8>,
+    shard_id: String, // ShardIdentifier (H256) does not implement deserialize
+}
+
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();
     // Io Handler als Pointer aswell? 
 
-   /* // load pointer to tx pool mutex
-    let &ref tx_pool_mutex = load_tx_pool().unwrap();
-    // acquire tx pool lock (only one thread may access txpool at a time)
-    let tx_pool_guard = tx_pool_mutex.lock().unwrap();
-    // create new thread safe reference pointer (obsolete?) to tx pool
-    let tx_pool: Arc<BasicPool<FillerChainApi<Block>, Block>> = unsafe {Arc::from_raw(tx_pool_guard.deref())};*/
     let tx_pool = load_tx_pool().unwrap();
     let author = Arc::new(Author::new(tx_pool));    
-
-    
-    //let request_test = r#"{"jsonrpc": "2.0", "method": "say_hello", "params": [42, 23], "id": 1}"#;
 
     // Add rpc methods    
     // author_submitAndWatchExtrinsic
@@ -145,7 +138,7 @@ fn init_io_handler() -> IoHandler {
               /*  let result = async {              
                   author_clone.submit_extrinsic(tx.extrinsic.clone()).await
                 };      */          
-                Ok(Value::String(format!("hello extrinsic, {}", String::from_utf8(parsed.extrinsic).unwrap())))
+                Ok(Value::String(format!("hello extrinsic, {}", String::from_utf8(parsed.call).unwrap())))
             },
             Err(e) => Ok(Value::String(format!("author_submitAndWatchExtrinsic not called due to {}", e))),
          }
@@ -157,16 +150,25 @@ fn init_io_handler() -> IoHandler {
     rpc_methods_vec.push(author_submit_extrinsic_name);
     io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {      
 		  match params.parse() {
-        Ok(call) => {
-            let tx: SumbitExtrinsicParams = call;
+        Ok(extrinsic) => {
+            let to_submit: SumbitExtrinsicParams = extrinsic;
+            let shard_vec = match to_submit.shard_id.from_base58() {
+              Ok(vec) => vec,
+              Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id"))),
+            };
+            let shard = match ShardIdentifier::decode(&mut shard_vec.as_slice()) {
+                Ok(hash) => hash,
+                Err(_) => return Ok(Value::String(format!("Shard ID is not of type H256"))),
+            };
             let result = async {              
-              author_clone.submit_call(tx.extrinsic.clone()).await
+              author_clone.submit_call(to_submit.call.clone(), shard).await
             };
             let response: Result<Hash, RpcError> = executor::block_on(result);
             match response {
               Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
               Err(rpc_error) => Ok(Value::String(format!("Error within the enclave: {}", rpc_error.message))),
-            } 
+            }
+            //Ok(Value::String(format!("shardID: {:?}", shard)))
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
      }
@@ -176,13 +178,26 @@ fn init_io_handler() -> IoHandler {
     let author_clone = Arc::clone(&author);    
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);
-    io.add_sync_method(author_pending_extrinsic_name, move |_: Params| {
-      let result: Result<Vec<Vec<u8>>, _> = author_clone.pending_calls();
-      match result {
-        Ok(vec_of_calls) => {
-          Ok(Value::String(format!("Pending Extrinsics: {:?}", vec_of_calls)))},
-        Err(_) => Ok(Value::String(format!("something went wrong"))),
-      } 
+    io.add_sync_method(author_pending_extrinsic_name, move |params: Params| {
+      match params.parse::<String>() {
+        Ok(shard_base58) => {
+          let shard_vec = match shard_base58.from_base58() {
+            Ok(vec) => vec,
+            Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id"))),
+          };
+          let shard = match ShardIdentifier::decode(&mut shard_vec.as_slice()) {
+              Ok(hash) => hash,
+              Err(_) => return Ok(Value::String(format!("Shard ID is not of type H256"))),
+          };
+          let result: Result<Vec<Vec<u8>>, _> = author_clone.pending_calls(shard);
+          match result {
+            Ok(vec_of_calls) => {
+              Ok(Value::String(format!("Pending Extrinsics: {:?}", vec_of_calls)))},
+            Err(_) => Ok(Value::String(format!("something went wrong"))),
+          }
+        }
+        Err(e) => Ok(Value::String(format!("author_pendingExtrinsic not called due to {}", e))),
+      }
     });
 
     // chain_subscribeAllHeads

@@ -27,7 +27,7 @@ use crate::transaction_pool::{
   error::IntoPoolError,
 };
 
-use substratee_stf::TrustedCallSigned;
+use substratee_stf::{TrustedCallSigned, ShardIdentifier};
 
 use crate::rpc::api::FillerChainApi;
 
@@ -138,10 +138,11 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
 		xts: Vec<TrustedCallSigned>,
+		shard: ShardIdentifier,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
-		async move { pool.submit_at(&at, source, xts).await }.boxed()
+		async move { pool.submit_at(&at, source, xts, shard).await }.boxed()
 	}
 
 	fn submit_one(
@@ -149,10 +150,11 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
 		xt: TrustedCallSigned,
+		shard: ShardIdentifier
 	) -> PoolFuture<TxHash<Self>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
-		async move { pool.submit_one(&at, source, xt).await }.boxed()
+		async move { pool.submit_one(&at, source, xt, shard).await }.boxed()
 	}
 
 	fn submit_and_watch(
@@ -160,23 +162,24 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		at: &BlockId<Self::Block>,
 		source: TransactionSource,
 		xt: TrustedCallSigned,
+		shard: ShardIdentifier,
 	) -> PoolFuture<Box<TransactionStatusStreamFor<Self>>, Self::Error> {
 		let at = *at;
 		let pool = self.pool.clone();
 
 		async move {
-			pool.submit_and_watch(&at, source, xt)
+			pool.submit_and_watch(&at, source, xt, shard)
 				.map(|result| result.map(|watcher| Box::new(watcher.into_stream()) as _))
 				.await
 		}.boxed()
 	}
 
-	fn remove_invalid(&self, hashes: &[TxHash<Self>]) -> Vec<Arc<Self::InPoolTransaction>> {
-		self.pool.validated_pool().remove_invalid(hashes)
+	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier) -> Vec<Arc<Self::InPoolTransaction>> {
+		self.pool.validated_pool().remove_invalid(hashes, shard)
 	}
 
-	fn status(&self) -> PoolStatus {
-		self.pool.validated_pool().status()
+	fn status(&self, shard: ShardIdentifier) -> PoolStatus {
+		self.pool.validated_pool().status(shard)
 	}
 
 	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
@@ -191,13 +194,14 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		self.pool.validated_pool().on_broadcasted(propagations)
 	}
 
-	fn ready_transaction(&self, hash: &TxHash<Self>) -> Option<Arc<Self::InPoolTransaction>> {
-		self.pool.validated_pool().ready_by_hash(hash)
+	fn ready_transaction(&self, hash: &TxHash<Self>, shard: ShardIdentifier) 
+	-> Option<Arc<Self::InPoolTransaction>> {
+		self.pool.validated_pool().ready_by_hash(hash, shard)
 	}
 
-	fn ready_at(&self, at: NumberFor<Self::Block>) -> PolledIterator<PoolApi> {
+	fn ready_at(&self, at: NumberFor<Self::Block>, shard: ShardIdentifier) -> PolledIterator<PoolApi> {
 		if self.ready_poll.lock().unwrap().updated_at() >= at {
-			let iterator: ReadyIteratorFor<PoolApi> = Box::new(self.pool.validated_pool().ready());
+			let iterator: ReadyIteratorFor<PoolApi> = Box::new(self.pool.validated_pool().ready(shard));
 			return Box::pin(ready(iterator));
 		}
 
@@ -212,7 +216,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		)
 	}
 
-	fn ready(&self) -> ReadyIteratorFor<PoolApi> {
-		Box::new(self.pool.validated_pool().ready())
+	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi> {
+		Box::new(self.pool.validated_pool().ready(shard))
 	}
 }

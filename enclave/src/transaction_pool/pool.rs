@@ -43,8 +43,7 @@ use crate::transaction_pool::{
     validated_pool::{ValidatedPool, ValidatedTransaction},
 };
 
-use substratee_stf::TrustedCallSigned;
-
+use substratee_stf::{TrustedCallSigned, ShardIdentifier};
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -164,10 +163,11 @@ where
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
 		xts: impl IntoIterator<Item=TrustedCallSigned>,
+		shard: ShardIdentifier,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
-		let validated_transactions = self.verify(at, xts, CheckBannedBeforeVerify::Yes).await?;
-		Ok(self.validated_pool.submit(validated_transactions.into_iter().map(|(_, tx)| tx)))
+		let validated_transactions = self.verify(at, xts, CheckBannedBeforeVerify::Yes, shard).await?;
+		Ok(self.validated_pool.submit(validated_transactions.into_iter().map(|(_, tx)| tx), shard))
 	}
 
 	/// Resubmit the given extrinsics to the pool.
@@ -178,10 +178,11 @@ where
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
 		xts: impl IntoIterator<Item=TrustedCallSigned>,
+		shard: ShardIdentifier,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
-		let validated_transactions = self.verify(at, xts, CheckBannedBeforeVerify::No).await?;
-		Ok(self.validated_pool.submit(validated_transactions.into_iter().map(|(_, tx)| tx)))
+		let validated_transactions = self.verify(at, xts, CheckBannedBeforeVerify::No, shard).await?;
+		Ok(self.validated_pool.submit(validated_transactions.into_iter().map(|(_, tx)| tx), shard))
 	}
 
 	/// Imports one unverified extrinsic to the pool
@@ -190,8 +191,9 @@ where
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
 		xt: TrustedCallSigned,
+		shard: ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
-		let res = self.submit_at(at, source, std::iter::once(xt)).await?.pop();
+		let res = self.submit_at(at, source, std::iter::once(xt), shard).await?.pop();
 		res.expect("One extrinsic passed; one result returned; qed")
 	}
 
@@ -201,6 +203,7 @@ where
 		at: &BlockId<B::Block>,
 		source: TransactionSource,
 		xt:TrustedCallSigned,
+		shard: ShardIdentifier,
 	) -> Result<Watcher<ExtrinsicHash<B>, ExtrinsicHash<B>>, B::Error> {
 		//TODO
 		//let block_number = self.resolve_block_number(at)?;
@@ -212,22 +215,24 @@ where
 			source,
 			xt,
 			CheckBannedBeforeVerify::Yes,
+			shard
 		).await;
-		self.validated_pool.submit_and_watch(tx)
+		self.validated_pool.submit_and_watch(tx, shard)
 	}
 
 	/// Resubmit some transaction that were validated elsewhere.
 	pub fn resubmit(
 		&self,
 		revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>,
+		shard: ShardIdentifier,
 	) {
 
 		let now = Instant::now();
-		self.validated_pool.resubmit(revalidated_transactions);
+		self.validated_pool.resubmit(revalidated_transactions, shard);
 		log::debug!(target: "txpool",
 			"Resubmitted. Took {} ms. Status: {:?}",
 			now.elapsed().as_millis(),
-			self.validated_pool.status()
+			self.validated_pool.status(shard)
 		);
 	}
 
@@ -240,13 +245,14 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		hashes: &[ExtrinsicHash<B>],
+		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		// Get details of all extrinsics that are already in the pool
-		let in_pool_tags = self.validated_pool.extrinsics_tags(hashes)
+		let in_pool_tags = self.validated_pool.extrinsics_tags(hashes, shard)
 			.into_iter().filter_map(|x| x).flat_map(|x| x);
 
 		// Prune all transactions that provide given tags
-		let prune_status = self.validated_pool.prune_tags(in_pool_tags)?;
+		let prune_status = self.validated_pool.prune_tags(in_pool_tags, shard)?;
 		let pruned_transactions = hashes.into_iter().cloned()
 			.chain(prune_status.pruned.iter().map(|tx| tx.hash.clone()));
 		self.validated_pool.fire_pruned(at, pruned_transactions)
@@ -263,6 +269,7 @@ where
 		at: &BlockId<B::Block>,
 		parent: &BlockId<B::Block>,
 		extrinsics: &[TrustedCallSigned],
+		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		log::debug!(
 			target: "txpool",
@@ -272,7 +279,7 @@ where
 		);
 		// Get details of all extrinsics that are already in the pool
 		let in_pool_hashes = extrinsics.iter().map(|extrinsic| self.hash_of(extrinsic)).collect::<Vec<_>>();
-		let in_pool_tags = self.validated_pool.extrinsics_tags(&in_pool_hashes);
+		let in_pool_tags = self.validated_pool.extrinsics_tags(&in_pool_hashes, shard);
 
 		// Zip the ones from the pool with the full list (we get pairs `(Extrinsic, Option<Vec<Tag>>)`)
 		let all = extrinsics.iter().zip(in_pool_tags.into_iter());
@@ -296,7 +303,7 @@ where
 			}
 		}
 
-		self.prune_tags(at, future_tags, in_pool_hashes).await
+		self.prune_tags(at, future_tags, in_pool_hashes, shard).await
 	}
 
 	/// Prunes ready transactions that provide given list of tags.
@@ -325,10 +332,11 @@ where
 		at: &BlockId<B::Block>,
 		tags: impl IntoIterator<Item=Tag>,
 		known_imported_hashes: impl IntoIterator<Item=ExtrinsicHash<B>> + Clone,
+		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		log::debug!(target: "txpool", "Pruning at {:?}", at);
 		// Prune all transactions that provide given tags
-		let prune_status = match self.validated_pool.prune_tags(tags) {
+		let prune_status = match self.validated_pool.prune_tags(tags, shard) {
 			Ok(prune_status) => prune_status,
 			Err(e) => return Err(e),
 		};
@@ -351,6 +359,7 @@ where
 			at,
 			pruned_transactions,
 			CheckBannedBeforeVerify::Yes,
+			shard,
 		).await?;
 
 		log::trace!(target: "txpool", "Pruning at {:?}. Resubmitting transactions.", at);
@@ -361,6 +370,7 @@ where
 			known_imported_hashes,
 			pruned_hashes,
 			reverified_transactions.into_iter().map(|(_, xt)| xt).collect(),
+			shard,
 		)
 	}
 
@@ -382,6 +392,7 @@ where
 		at: &BlockId<B::Block>,
 		xts: impl IntoIterator<Item=(TransactionSource, TrustedCallSigned)>,
 		check: CheckBannedBeforeVerify,
+		shard: ShardIdentifier,
 	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>, B::Error> {
 		// we need a block number to compute tx validity
 		//let block_number = self.resolve_block_number(at)?;
@@ -391,7 +402,7 @@ where
 		
 		let res = future::join_all(
 			xts.into_iter()
-				.map(|(source, xt)| self.verify_one(at, block_number, source, xt, check))
+				.map(|(source, xt)| self.verify_one(at, block_number, source, xt, check, shard))
 		).await.into_iter().collect::<HashMap<_, _>>();
 
 		Ok(res)
@@ -406,11 +417,12 @@ where
 		source: TransactionSource,
 		xt: TrustedCallSigned,
 		check: CheckBannedBeforeVerify,
+		shard: ShardIdentifier,
 	) -> (ExtrinsicHash<B>, ValidatedTransactionFor<B>) {
 		let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);
 
 		let ignore_banned = matches!(check, CheckBannedBeforeVerify::No);
-		if let Err(err) = self.validated_pool.check_is_known(&hash, ignore_banned) {
+		if let Err(err) = self.validated_pool.check_is_known(&hash, ignore_banned, shard) {
 			return (hash.clone(), ValidatedTransaction::Invalid(hash, err.into()))
 		}
 

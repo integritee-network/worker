@@ -66,6 +66,9 @@ pub enum Error {
 	/// Invalid session keys encoding.
 	#[display(fmt="Session keys are not encoded correctly")]
 	InvalidSessionKeys,
+	/// Shard does not exist.
+	#[display(fmt="Shard does not exist")]
+	InvalidShard,
 }
 
 impl sgx_tstd::error::Error for Error {
@@ -121,6 +124,11 @@ impl From<Error> for rpc_core::Error {
 			Error::Verification => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(VERIFICATION_ERROR),
 				message: "Verification Error".into(),
+				data: Some(format!("{:?}", e).into()),
+			},
+			Error::InvalidShard => rpc_core::Error {
+				code: rpc_core::ErrorCode::ServerError(VERIFICATION_ERROR),
+				message: "Shard does not exisit".into(),
 				data: Some(format!("{:?}", e).into()),
 			},
 			Error::Pool(PoolError::InvalidTransaction) => rpc_core::Error {

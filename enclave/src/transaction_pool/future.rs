@@ -22,6 +22,7 @@ use alloc::{
 	fmt,
 	sync::Arc,
 	vec::Vec,
+	boxed::Box,
 };
 use core::hash;
 
@@ -33,6 +34,8 @@ use sp_runtime::transaction_validity::{
 };
 
 use sgx_tstd::{time::Instant, untrusted::time::InstantEx};
+
+use substratee_stf::ShardIdentifier;
 
 use crate::transaction_pool::base_pool::Transaction;
 
@@ -80,15 +83,21 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 	/// are provided by all transactions in the ready queue.
 	pub fn new(
 		transaction: Transaction<Hash, Ex>,
-		provided: &HashMap<Tag, Hash>,
+		provided: Option<&HashMap<Tag, Hash>>,
 		recently_pruned: &[HashSet<Tag>],
+		shard: ShardIdentifier,
 	) -> Self {
 		let missing_tags = transaction.requires
 			.iter()
 			.filter(|tag| {
 				// is true if the tag is already satisfied either via transaction in the pool
 				// or one that was recently included.
-				let is_provided = provided.contains_key(&**tag) || recently_pruned.iter().any(|x| x.contains(&**tag));
+				
+				let is_provided = recently_pruned.iter().any(|x| x.contains(&**tag)) || match provided {
+					Some(tags) => tags.contains_key(&**tag),
+					None => false
+				};
+					 
 				!is_provided
 			})
 			.cloned()
@@ -119,9 +128,9 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 #[derive(Debug)]
 pub struct FutureTransactions<Hash: hash::Hash + Eq, Ex> {
 	/// tags that are not yet provided by any transaction and we await for them
-	wanted_tags: HashMap<Tag, HashSet<Hash>>,
+	wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
 	/// Transactions waiting for a particular other transaction
-	waiting: HashMap<Hash, WaitingTransaction<Hash, Ex>>,
+	waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTransaction<Hash, Ex>>>,
 }
 
 impl<Hash: hash::Hash + Eq, Ex> Default for FutureTransactions<Hash, Ex> {
@@ -147,49 +156,67 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
 	/// the Future queue.
 	/// As soon as required tags are provided by some other transactions that are ready
 	/// we should remove the transactions from here and move them to the Ready queue.
-	pub fn import(&mut self, tx: WaitingTransaction<Hash, Ex>) {
+	pub fn import(&mut self, tx: WaitingTransaction<Hash, Ex>, shard: ShardIdentifier) {	
 		assert!(!tx.is_ready(), "Transaction is ready.");
-		assert!(!self.waiting.contains_key(&tx.transaction.hash), "Transaction is already imported.");
+		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
+			assert!(!tx_pool_waiting.contains_key(&tx.transaction.hash), "Transaction is already imported.");
+		}
 
+		let tx_pool_waiting_map = self.waiting.entry(shard.clone()).or_insert_with(HashMap::new);	
+		let tx_pool_wanted_map = self.wanted_tags.entry(shard.clone()).or_insert_with(HashMap::new);
 		// Add all tags that are missing
-		for tag in &tx.missing_tags {
-			let entry = self.wanted_tags.entry(tag.clone()).or_insert_with(HashSet::new);
+		for tag in &tx.missing_tags {			
+			let entry = tx_pool_wanted_map.entry(tag.clone()).or_insert_with(HashSet::new);
 			entry.insert(tx.transaction.hash.clone());
 		}
 
 		// Add the transaction to a by-hash waiting map
-		self.waiting.insert(tx.transaction.hash.clone(), tx);
+		tx_pool_waiting_map.insert(tx.transaction.hash.clone(), tx);
 	}
 
 	/// Returns true if given hash is part of the queue.
-	pub fn contains(&self, hash: &Hash) -> bool {
-		self.waiting.contains_key(hash)
+	pub fn contains(&self, hash: &Hash, shard: ShardIdentifier) -> bool {
+		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
+			return tx_pool_waiting.contains_key(hash)
+		}
+		return false		
 	}
 
 	/// Returns a list of known transactions
-	pub fn by_hashes(&self, hashes: &[Hash]) -> Vec<Option<Arc<Transaction<Hash, Ex>>>> {
-		hashes.iter().map(|h| self.waiting.get(h).map(|x| x.transaction.clone())).collect()
+	pub fn by_hashes(&self, hashes: &[Hash], shard: ShardIdentifier) -> Vec<Option<Arc<Transaction<Hash, Ex>>>> {
+		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
+			return hashes.iter().map(|h| tx_pool_waiting.get(h).map(|x| x.transaction.clone())).collect()
+		}
+		return vec![]
 	}
 
 	/// Satisfies provided tags in transactions that are waiting for them.
 	///
 	/// Returns (and removes) transactions that became ready after their last tag got
 	/// satisfied and now we can remove them from Future and move to Ready queue.
-	pub fn satisfy_tags<T: AsRef<Tag>>(&mut self, tags: impl IntoIterator<Item=T>) -> Vec<WaitingTransaction<Hash, Ex>> {
+	pub fn satisfy_tags<T: AsRef<Tag>>(
+		&mut self, 
+		tags: impl IntoIterator<Item=T>,
+		shard: ShardIdentifier,
+	) -> Vec<WaitingTransaction<Hash, Ex>> {
 		let mut became_ready = vec![];
 
 		for tag in tags {
-			if let Some(hashes) = self.wanted_tags.remove(tag.as_ref()) {
-				for hash in hashes {
-					let is_ready = {
-						let tx = self.waiting.get_mut(&hash).expect(WAITING_PROOF);
-						tx.satisfy_tag(tag.as_ref());
-						tx.is_ready()
-					};
+			if let Some(tx_pool_wanted) = self.wanted_tags.get_mut(&shard) {
+				if let Some(hashes) = tx_pool_wanted.remove(tag.as_ref()) {
+					if let Some(tx_pool_waiting) = self.waiting.get_mut(&shard) {
+						for hash in hashes {
+							let is_ready = {
+								let tx = tx_pool_waiting.get_mut(&hash).expect(WAITING_PROOF);
+								tx.satisfy_tag(tag.as_ref());
+								tx.is_ready()
+							};
 
-					if is_ready {
-						let tx = self.waiting.remove(&hash).expect(WAITING_PROOF);
-						became_ready.push(tx);
+							if is_ready {
+								let tx = tx_pool_waiting.remove(&hash).expect(WAITING_PROOF);
+								became_ready.push(tx);
+							}
+						}
 					}
 				}
 			}
@@ -201,53 +228,72 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
 	/// Removes transactions for given list of hashes.
 	///
 	/// Returns a list of actually removed transactions.
-	pub fn remove(&mut self, hashes: &[Hash]) -> Vec<Arc<Transaction<Hash, Ex>>> {
+	pub fn remove(&mut self, hashes: &[Hash], shard: ShardIdentifier) -> Vec<Arc<Transaction<Hash, Ex>>> {
 		let mut removed = vec![];
-		for hash in hashes {
-			if let Some(waiting_tx) = self.waiting.remove(hash) {
-				// remove from wanted_tags as well
-				for tag in waiting_tx.missing_tags {
-					let remove = if let Some(wanted) = self.wanted_tags.get_mut(&tag) {
-						wanted.remove(hash);
-						wanted.is_empty()
-					} else { false };
-					if remove {
-						self.wanted_tags.remove(&tag);
+		if let Some(tx_pool_waiting) = self.waiting.get_mut(&shard) {
+			if let Some(tx_pool_wanted) = self.wanted_tags.get_mut(&shard) {
+				for hash in hashes {
+					if let Some(waiting_tx) = tx_pool_waiting.remove(hash) {
+						// remove from wanted_tags as well
+						for tag in waiting_tx.missing_tags {
+							let remove = if let Some(wanted) = tx_pool_wanted.get_mut(&tag) {
+								wanted.remove(hash);
+								wanted.is_empty()
+							} else { false };
+							if remove {
+								tx_pool_wanted.remove(&tag);
+							}
+						}
+						// add to result
+						removed.push(waiting_tx.transaction)
 					}
 				}
-				// add to result
-				removed.push(waiting_tx.transaction)
 			}
 		}
 		removed
 	}
 
 	/// Fold a list of future transactions to compute a single value.
-	pub fn fold<R, F: FnMut(Option<R>, &WaitingTransaction<Hash, Ex>) -> Option<R>>(&mut self, f: F) -> Option<R> {
-		self.waiting
-			.values()
-			.fold(None, f)
+	pub fn fold<R, F: FnMut(Option<R>, &WaitingTransaction<Hash, Ex>) 
+	-> Option<R>>(&mut self, f: F, shard: ShardIdentifier) 
+	-> Option<R> {
+		if let Some(tx_pool) = self.waiting.get(&shard) {
+			return tx_pool.values().fold(None,f)
+		}
+		return None
 	}
 
 	/// Returns iterator over all future transactions
-	pub fn all(&self) -> impl Iterator<Item=&Transaction<Hash, Ex>> {
-		self.waiting.values().map(|waiting| &*waiting.transaction)
+	pub fn all(&self, shard: ShardIdentifier) -> Box<dyn Iterator<Item=&Transaction<Hash, Ex>> + '_> {
+		if let Some(tx_pool) = self.waiting.get(&shard) {
+			return Box::new(tx_pool.values().map(|waiting| &*waiting.transaction))
+		}
+		return Box::new(core::iter::empty())
 	}
 
 	/// Removes and returns all future transactions.
-	pub fn clear(&mut self) -> Vec<Arc<Transaction<Hash, Ex>>> {
-		self.wanted_tags.clear();
-		self.waiting.drain().map(|(_, tx)| tx.transaction).collect()
+	pub fn clear(&mut self, shard: ShardIdentifier) -> Vec<Arc<Transaction<Hash, Ex>>> {
+		if let Some(wanted_tx_pool) = self.wanted_tags.get_mut(&shard) {
+			wanted_tx_pool.clear();
+			return self.waiting.get_mut(&shard).unwrap().drain().map(|(_, tx)| tx.transaction).collect()
+		} 	
+		return vec![]
 	}
 
 	/// Returns number of transactions in the Future queue.
-	pub fn len(&self) -> usize {
-		self.waiting.len()
+	pub fn len(&self, shard: ShardIdentifier) -> usize {
+		if let Some(tx_pool) = self.waiting.get(&shard) {
+			return tx_pool.len()
+		}
+		return 0
 	}
 
 	/// Returns sum of encoding lengths of all transactions in this queue.
-	pub fn bytes(&self) -> usize {
-		self.waiting.values().fold(0, |acc, tx| acc + tx.transaction.bytes)
+	pub fn bytes(&self, shard: ShardIdentifier) -> usize {
+		if let Some(tx_pool) = self.waiting.get(&shard) {
+			return tx_pool.values().fold(0, |acc, tx| acc + tx.transaction.bytes)
+		}
+		return 0
 	}
 }
 
