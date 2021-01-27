@@ -218,6 +218,9 @@ pub trait TransactionPool: Send + Sync {
 	/// Get an iterator for ready transactions ordered by priority.
 	fn ready(&self, shard: ShardIdentifier) -> Box<dyn Iterator<Item=Arc<Self::InPoolTransaction>> + Send>;
 
+	/// Get an iterator over all shards.
+	fn shards(&self) -> Vec<ShardIdentifier>;
+
 	// *** Block production
 	/// Remove transactions identified by given hashes (and dependent transactions) from the pool.
 	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier) -> Vec<Arc<Self::InPoolTransaction>>;

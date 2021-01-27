@@ -219,4 +219,8 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi> {
 		Box::new(self.pool.validated_pool().ready(shard))
 	}
+
+	fn shards(&self) -> Vec<ShardIdentifier> {
+		self.pool.validated_pool().shards()
+	}
 }

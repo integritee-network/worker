@@ -21,6 +21,7 @@ use alloc::{
 	sync::Arc,
 	vec::Vec,
 	collections::BTreeSet,
+	boxed::Box,
 };
 
 use sgx_tstd::collections::{HashMap, HashSet};
@@ -182,8 +183,11 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyTransactions<Hash, Ex> {
 			best: Default::default(),
 			awaiting: Default::default(),
 		}	
-
-		//return core::iter::empty::<Arc<Transaction<Hash, Ex>>>();
+	}
+	/// Returns an iterator over all shards
+	pub fn get_shards(&self) -> Box<dyn Iterator<Item=&ShardIdentifier> + '_> {
+		// check if shard tx pool exists
+		Box::new(self.ready.keys())
 	}
 
 	/// Imports transactions to the pool of ready transactions.

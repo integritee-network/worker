@@ -93,6 +93,8 @@ pub trait AuthorApi<Hash, BlockHash> {
 	/// Returns all pending calls, potentially grouped by sender.
 	fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
+	fn get_shards(&self) -> Vec<ShardIdentifier>;
+
 	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
 	fn remove_call(&self,
 		bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>,
@@ -259,6 +261,10 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 
 	fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
 		Ok(self.pool.ready(shard).map(|tx| tx.data().encode().into()).collect())
+	}
+
+	fn get_shards(&self) -> Vec<ShardIdentifier> {
+		self.pool.shards()
 	}
 
 	fn remove_call(

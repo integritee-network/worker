@@ -395,6 +395,11 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		self.ready.get(shard)
 	}
 
+	/// Returns an iterator over all shards in the pool.
+	pub fn get_shards(&self) -> impl Iterator<Item=&ShardIdentifier> {
+		self.ready.get_shards()
+	}
+
 	/// Returns an iterator over future transactions in the pool.
 	pub fn futures(&self, shard: ShardIdentifier) -> impl Iterator<Item=&Transaction<Hash, Ex>> {
 		self.future.all(shard)

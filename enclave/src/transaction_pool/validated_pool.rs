@@ -617,6 +617,17 @@ where
 		self.pool.read().unwrap().ready(shard)
 	}
 
+	/// Get an iterator for all shards
+	pub fn shards(&self) -> Vec<ShardIdentifier> {
+		let mut shards = vec![];
+		let base_pool = self.pool.read().unwrap();
+		let shard_iterator = base_pool.get_shards();
+		for shard in shard_iterator {
+			shards.push(shard.clone());
+		}
+		shards
+	}
+
 	/// Returns pool status.
 	pub fn status(&self, shard: ShardIdentifier) -> PoolStatus {
 		self.pool.read().unwrap().status(shard)

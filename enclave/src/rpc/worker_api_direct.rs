@@ -179,23 +179,25 @@ fn init_io_handler() -> IoHandler {
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);
     io.add_sync_method(author_pending_extrinsic_name, move |params: Params| {
-      match params.parse::<String>() {
-        Ok(shard_base58) => {
-          let shard_vec = match shard_base58.from_base58() {
-            Ok(vec) => vec,
-            Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id"))),
-          };
-          let shard = match ShardIdentifier::decode(&mut shard_vec.as_slice()) {
-              Ok(hash) => hash,
-              Err(_) => return Ok(Value::String(format!("Shard ID is not of type H256"))),
-          };
-          let result: Result<Vec<Vec<u8>>, _> = author_clone.pending_calls(shard);
-          match result {
-            Ok(vec_of_calls) => {
-              Ok(Value::String(format!("Pending Extrinsics: {:?}", vec_of_calls)))},
-            Err(_) => Ok(Value::String(format!("something went wrong"))),
+      match params.parse::<Vec<String>>() {
+          Ok(shards) => {
+            let mut retrieved_calls = vec![];
+            for shard_base58 in shards.iter() {
+              let shard_encoded = match shard_base58.from_base58() {
+                Ok(vec) => vec,
+                Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id {:?}", shard_base58))),
+              };
+              let shard = match ShardIdentifier::decode(&mut shard_encoded.as_slice()) {
+                  Ok(hash) => hash,
+                  Err(_) => return Ok(Value::String(format!("Shard {:?} is not of type H256", shard_base58))),
+              };
+              let result: Result<Vec<Vec<u8>>, _> = author_clone.pending_calls(shard);
+              if let Ok(vec_of_calls) = result {
+                retrieved_calls.push(vec_of_calls);
+              }
+            }
+            Ok(Value::String(format!("Pending Extrinsics: {:?}", retrieved_calls)))
           }
-        }
         Err(e) => Ok(Value::String(format!("author_pendingExtrinsic not called due to {}", e))),
       }
     });
