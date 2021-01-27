@@ -392,8 +392,8 @@ pub unsafe extern "C" fn sync_chain_relay(
         };
     }
 
-   /* // execute pending calls from transaction pool
-    let pending_calls: Vec<Vec<u8>> = get_pending_calls_from_tx_pool();
+    // execute pending calls from transaction pool
+   /* let pending_calls: Vec<Vec<u8>> = get_pending_calls_from_tx_pool();
     for encoded_call in pending_calls.into_iter() {
         let decoded_trusted_call = match TrustedCallSigned::decode(&mut encoded_call) {
             Ok(call) => call,
@@ -416,13 +416,17 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn get_pending_calls_from_tx_pool() -> Vec<Vec<u8>> {
+/*fn get_pending_calls_from_tx_pool() -> Vec<Vec<u8>> {
     let tx_pool = rpc::worker_api_direct::load_tx_pool().unwrap();
     let author = Arc::new(Author::new(tx_pool)); 
-   // retrieve calls from tx pool
-    //author.pending_calls().unwrap() // always ok
-    vec![]
-}
+    // get all shards with tx pool of worker
+    let shards; Vec<ShardIdentifier> = author.get_shards();
+    
+    // retrieve calls from tx pool
+    author.pending_calls().unwrap() // always ok
+   
+
+}*/
 
 pub fn update_states(header: Header) -> SgxResult<()> {
     debug!("Update STF storage upon block import!");
@@ -496,8 +500,8 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
             UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
-                if let Ok(decrypted_trusted_call) = decrypt_unchecked_extrinsic(xt) {
-                    if let Err(e) = handle_trusted_worker_call(&mut calls, decrypted_trusted_call, block.header.clone()) {
+                if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
+                    if let Err(e) = handle_trusted_worker_call(&mut calls, decrypted_trusted_call, block.header.clone(), shard) {
                         error!("Error performing worker call: Error: {:?}", e);
                     }
                 }                
@@ -557,7 +561,7 @@ fn handle_shield_funds_xt(
 
 fn decrypt_unchecked_extrinsic(
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
-) -> SgxResult<TrustedCallSigned> {
+) -> SgxResult<(TrustedCallSigned, ShardIdentifier)> {
     let (call, request) = xt.function;
     let (shard, cyphertext) = (request.shard, request.cyphertext);
     debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
@@ -570,7 +574,7 @@ fn decrypt_unchecked_extrinsic(
     let rsa_keypair = rsa3072::unseal_pair()?;
     let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
     match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
-        Ok(call) => Ok(call),
+        Ok(call) => Ok((call, shard)),
         Err(_) => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     }
 }
@@ -580,11 +584,12 @@ fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
     stf_call_signed: TrustedCallSigned,
     header: Header,
+    shard: ShardIdentifier,
 ) -> SgxResult<()> {
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
 
-   /* debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
+    debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
     if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
         error!("TrustedCallSigned: bad signature");
         // do not panic here or users will be able to shoot workers dead by supplying a bad signature
@@ -611,7 +616,7 @@ fn handle_trusted_worker_call(
     Stf::update_storage(&mut state, &update_map);
 
     debug!("execute STF");
-    if let Err(e) = Stf::execute(&mut state, stf_call_signed, calls) {
+    if let Err(e) = Stf::execute(&mut state, stf_call_signed.clone(), calls) {
         error!("Error performing Stf::execute. Error: {:?}", e);
         return Ok(());
     }
@@ -619,13 +624,13 @@ fn handle_trusted_worker_call(
     let state_hash = state::write(state, &shard)?;
 
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
-    let call_hash = blake2_256(&request_vec);
+    let call_hash = blake2_256(&stf_call_signed.encode());
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
     calls.push(OpaqueCall(
         (xt_call, shard, call_hash, state_hash.encode()).encode(),
     ));
-*/
+
     Ok(())
 }
 /*
