@@ -123,7 +123,7 @@ impl<PoolApi, Block> BasicPool<PoolApi, Block>
 impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 	where
 		Block: BlockT,
-        PoolApi: 'static + ChainApi<Block=Block>,
+        PoolApi: ChainApi<Block=Block> + 'static,
         <PoolApi as ChainApi>::Error: IntoPoolError,
 {
 	type Block = PoolApi::Block;

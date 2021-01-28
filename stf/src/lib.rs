@@ -61,7 +61,9 @@ pub type State = sp_io::SgxExternalities;
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedOperation {
-    call(TrustedCallSigned),
+    call(TrustedCallSigned), // löschen
+    // indirect_call(TrustedcallSigned), dann kein flag merh sondern match
+    // direct_call(TrustedcallSigned)
     get(Getter),
 }
 

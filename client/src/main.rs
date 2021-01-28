@@ -59,7 +59,7 @@ use substrate_api_client::{
 };
 
 use substratee_stf::{
-    cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
+    cli::get_identifiers, Getter, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
 };
 use substratee_worker_api::Api as WorkerApi;
 
@@ -422,6 +422,57 @@ fn main() {
                     Ok(())
                 }),
         )
+        .add_cmd(
+            Command::new("get-encrypted-call")
+                .description("Get encrypted signed trusted call")
+                .options(|app| {
+                    app.arg(
+                        Arg::with_name("to")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("SS58")
+                            .help("Sender's incognito AccountId in ss58check format"),
+                    )
+                    .arg(
+                        Arg::with_name("amount")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("U128")
+                            .help("Amount to be transferred"),
+                    )
+                    .arg(
+                        Arg::with_name("nonce")
+                            .takes_value(true)
+                            .required(true)
+                            .value_name("U32")
+                            .help("Nonce"),
+                    )
+                })
+                .runner(move |_args: &str, matches: &ArgMatches<'_>| {
+                    let arg_to = matches.value_of("to").unwrap();
+                    let from = get_pair_from_str(arg_to);
+                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                        .expect("amount can be converted to u128");
+                    let nonce = u32::from_str_radix(matches.value_of("nonce").unwrap(), 10)
+                    .expect("nonce can be converted to u32");  
+                    let call = TrustedCallSigned::new(
+                            TrustedCall::balance_shield(from.public().into(), amount),
+                            nonce,
+                            Default::default(), //don't care about signature here
+                        );
+                    println!("Trusted Call decrypted: {:?}", call);
+                    let call_encoded = call.encode();
+                    println!("Trusted Call encoded: {:?}", call_encoded);
+                    let worker_api = get_worker_api(matches);
+                    let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+                    let mut call_encrypted: Vec<u8> = Vec::new();
+                    shielding_pubkey
+                        .encrypt_buffer(&call_encoded, &mut call_encrypted)
+                        .unwrap();
+                    println!("Trusted Call enrypted: {:?}", call_encrypted);
+                    Ok(())
+                }), 
+        )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         // direct invocation commands
         // TODO
@@ -519,6 +570,8 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
         cyphertext: call_encrypted,
     };
 
+    // hier fängt Untersschied an. Bei -direct flag aufruf von RPC!
+    // TODO: author_rpc
     let xt = compose_extrinsic!(_chain_api, "SubstrateeRegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized

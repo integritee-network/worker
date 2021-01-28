@@ -46,122 +46,17 @@ use crate::transaction_pool::{
 	error::IntoPoolError, error::Error as PoolError,
 	pool::Pool,
 };
-use jsonrpc_core::Error as RpcError;
-pub mod client_error;
-use client_error::Error as ClientError;
-pub mod hash;
-use hash::*;
+//use jsonrpc_core::Error as RpcError;
+//pub mod client_error;
+//use client_error::Error as ClientError;
+//pub mod hash;
+//use hash::*;
 use sp_core::H256 as H256;
 
 use crate::rsa3072;
 use crate::state;
 use base58::ToBase58;
 
-
-/// Substrate authoring RPC API
-pub trait AuthorApi<Hash, BlockHash> {
-	/// RPC metadata
-	//type Metadata;
-
-	/// Submit hex-encoded extrinsic for inclusion in block.
-	fn submit_call(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
-	//fn submit_extrinsic(&self, extrinsic: Vec<u8>) ->Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>;
-	
-	/*/// Insert a key into the keystore.
-	fn insert_key(
-		&self,
-		key_type: String,
-		suri: String,
-		public: <Vec<u8>,
-	) -> Result<()>;
-
-	/// Generate new session keys and returns the corresponding public keys.
-	fn rotate_keys(&self) -> Result<<Vec<u8>>;
-
-	/// Checks if the keystore has private keys for the given session public keys.
-	///
-	/// `session_keys` is the SCALE encoded session keys object from the runtime.
-	///
-	/// Returns `true` iff all private keys could be found.
-	fn has_session_keys(&self, session_keys: <Vec<u8>) -> Result<bool>;
-
-	/// Checks if the keystore has private keys for the given public key and key type.
-	///
-	/// Returns `true` if a private key could be found.
-	fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
-
-	/// Returns all pending calls, potentially grouped by sender.
-	fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
-
-	fn get_shards(&self) -> Vec<ShardIdentifier>;
-
-	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
-	fn remove_call(&self,
-		bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>,
-		shard: ShardIdentifier,
-	) -> Result<Vec<Hash>>;
-
-	/*/// Submit an extrinsic to watch.
-	///
-	/// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
-	/// life cycle.
-	#[pubsub(
-		subscription = "author_extrinsicUpdate",
-		subscribe,
-		name = "author_submitAndWatchExtrinsic"
-	)]
-	fn watch_extrinsic(&self,
-		metadata: Self::Metadata,
-		subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
-		bytes: <Vec<u8>
-	);
-
-	/// Unsubscribe from extrinsic watching.
-	#[pubsub(
-		subscription = "author_extrinsicUpdate",
-		unsubscribe,
-		name = "author_unwatchExtrinsic"
-	)]
-	fn unwatch_extrinsic(&self,
-		metadata: Option<Self::Metadata>,
-		id: SubscriptionId
-	) -> Result<bool>;*/
-}
-
-/// Authoring API
-//pub struct Author<P, Client> {
-pub struct Author<P> {
-	/// Substrate client
-	//client: Arc<Client>,
-	/// Transactions pool
-	pool: Arc<P>,
-	/*/// Subscriptions manager
-	subscriptions: SubscriptionManager,*/
-	/*/// The key store.
-	keystore: SyncCryptoStorePtr,*/
-	/*/// Whether to deny unsafe calls
-	deny_unsafe: DenyUnsafe,*/
-}
-
-//impl<P, Client> Author<P, Client> {
-impl<P> Author<P> {
-	/// Create new instance of Authoring API.
-	pub fn new(
-		//client: Arc<Client>,
-		pool: Arc<P>,
-		//subscriptions: SubscriptionManager,
-		//keystore: SyncCryptoStorePtr,
-		//deny_unsafe: DenyUnsafe,
-	) -> Self {
-		Author {
-			//client,
-			pool,
-			//subscriptions,
-			//keystore,
-			//deny_unsafe,
-		}
-	}
-}
 
 /// Currently we treat all RPC transactions as externals.
 ///
@@ -170,6 +65,39 @@ impl<P> Author<P> {
 /// some unique transactions via RPC and have them included in the pool.
 const TX_SOURCE: TransactionSource = TransactionSource::External;
 
+fn pending_calls(pool: TransactionPool, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
+	Ok(pool.ready(shard).map(|tx| tx.data().encode().into()).collect())
+}
+
+fn get_shards(pool: TransactionPool) -> Vec<ShardIdentifier> {
+	pool.shards()
+}
+/*
+fn remove_call(
+	pool: TransactionPool,
+	bytes_or_hash: Vec<hash::ExtrinsicOrHash<TxHash<P>>>,
+	shard: ShardIdentifier,
+) -> Result<Vec<TxHash<P>>> {
+	let hashes = bytes_or_hash.into_iter()
+		.map(|x| match x {
+			hash::ExtrinsicOrHash::Hash(h) => Ok(h),
+			hash::ExtrinsicOrHash::Extrinsic(bytes) => {
+				let xt = Decode::decode(&mut &bytes[..]).unwrap();
+				Ok(pool.hash_of(&xt))
+			},
+		})
+		.collect::<Result<Vec<_>>>()?;
+
+	Ok(
+		pool
+		.remove_invalid(&hashes, shard)
+		.into_iter()
+		.map(|tx| tx.hash().clone())
+		.collect()
+	)
+}*/
+
+/*
 //impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
 impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 	where
@@ -229,67 +157,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
 	}*/
 	
-	fn submit_call(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError>
-	{	
-		// check if shard exists
-		let shards = state::list_shards().unwrap();
-		if !shards.contains(&shard) {
-			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
-		}
-		// decrypt call
-		let rsa_keypair = rsa3072::unseal_pair().unwrap();
-		//let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
-		let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
-			Ok(req) => req,
-			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
-		};
-		// encode call
-		let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
-			Ok(call) => call,
-			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
-		};
-		//let best_block_hash = self.client.info().best_hash;
-		// dummy block hash
-		let best_block_hash = Default::default();
-		Box::pin(self.pool
-			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, stf_call_signed, shard)
-			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
-				.map(Into::into)
-				.unwrap_or_else(|_e| PoolError::Verification)).into()
-		))
-	}
-
-	fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
-		Ok(self.pool.ready(shard).map(|tx| tx.data().encode().into()).collect())
-	}
-
-	fn get_shards(&self) -> Vec<ShardIdentifier> {
-		self.pool.shards()
-	}
-
-	fn remove_call(
-		&self,
-		bytes_or_hash: Vec<hash::ExtrinsicOrHash<TxHash<P>>>,
-		shard: ShardIdentifier,
-	) -> Result<Vec<TxHash<P>>> {
-		let hashes = bytes_or_hash.into_iter()
-			.map(|x| match x {
-				hash::ExtrinsicOrHash::Hash(h) => Ok(h),
-				hash::ExtrinsicOrHash::Extrinsic(bytes) => {
-					let xt = Decode::decode(&mut &bytes[..]).unwrap();
-					Ok(self.pool.hash_of(&xt))
-				},
-			})
-			.collect::<Result<Vec<_>>>()?;
-
-		Ok(
-			self.pool
-				.remove_invalid(&hashes, shard)
-				.into_iter()
-				.map(|tx| tx.hash().clone())
-				.collect()
-		)
-	}
+	
 /*
 	fn watch_extrinsic(&self,
 	//	_metadata: Self::Metadata,
@@ -344,3 +212,35 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
 		Ok(self.subscriptions.cancel(id))
 	}*/
 }
+
+fn submit_call(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError>
+	{	
+		// check if shard exists
+		let shards = state::list_shards().unwrap();
+		if !shards.contains(&shard) {
+			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
+		}
+		// decrypt call
+		let rsa_keypair = rsa3072::unseal_pair().unwrap();
+		//let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
+		let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
+			Ok(req) => req,
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
+		};
+		// encode call
+		let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
+			Ok(call) => call,
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
+		};
+		//let best_block_hash = self.client.info().best_hash;
+		// dummy block hash
+		let best_block_hash = Default::default();
+		Box::pin(self.pool
+			.submit_one(&generic::BlockId::hash(best_block_hash), TX_SOURCE, stf_call_signed, shard)
+			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
+				.map(Into::into)
+				.unwrap_or_else(|_e| PoolError::Verification)).into()
+		))
+	}*/
+
+	

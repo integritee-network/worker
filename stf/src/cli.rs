@@ -153,6 +153,7 @@ pub fn cmd<'a>(
                     );
                     let (mrenclave, shard) = get_identifiers(matches);
                     let nonce = 0; // FIXME: hard coded for now
+                    // generate trusted call signed
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
                         to,
