@@ -412,7 +412,7 @@ fn execute_tx_pool_calls() ->  SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();     
     { 
         // SgxMutex<BasicPool<FillerChainApi<Block>, Block>>
-        let &ref tx_pool_mutex = rpc::worker_api_direct::load_tx_pool().unwrap();   
+        let tx_pool_mutex = rpc::worker_api_direct::load_tx_pool().unwrap();   
         debug!("Acquire tx pool lock");
 
         // SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>>
