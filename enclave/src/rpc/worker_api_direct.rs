@@ -23,55 +23,42 @@ use alloc::{
   slice::{from_raw_parts, from_raw_parts_mut},
   vec::Vec,
   borrow::ToOwned,
-  boxed::Box,
 };
 
 use core::{
-  iter::Iterator,
-  hash,
-  pin::Pin,
   result::Result,
-  ops::{Deref, DerefMut},
-  str::FromStr,
+  ops::Deref,
 };
 
 use sgx_types::*;
 use sgx_tstd::{
-  error, 
-  sync::{SgxMutex, SgxMutexGuard, Arc},
+  sync::{SgxMutex, Arc},
   sync::atomic::{AtomicPtr, Ordering},
 };
 
 use sp_core::H256 as Hash;
 
-use codec::{Encode, Decode};
+use codec::Decode;
 use log::*;
 
 use crate::rpc::{
-  error::{FutureResult},
   author::{Author, AuthorApi},
   api::FillerChainApi,
   basic_pool::BasicPool,
 };
 
 use crate::transaction_pool::{
-  pool::{ExtrinsicHash, NumberFor, ValidatedTransactionFor, 
-    ChainApi, BlockHash, Pool, Options as PoolOptions},
-  error as txError,
+  pool::Options as PoolOptions,
 };
 
 use jsonrpc_core::*;
-use jsonrpc_core::futures::future;
-use jsonrpc_core::futures::{future::FutureExt, executor};
+use jsonrpc_core::futures::executor;
 use jsonrpc_core::Error as RpcError;
 use serde::Deserialize;
 
 use substratee_stf::{ShardIdentifier};
 
-use chain_relay::{
-  storage_proof::{StorageProof, StorageProofChecker},
-  Block, Header, LightValidation,
-}; 
+use chain_relay::Block; 
 use base58::FromBase58;
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
@@ -89,10 +76,10 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_tx_pool() -> Option<&'static (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>)>
+pub fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
 //pub fn load_tx_pool() -> Option<SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
 {
-    let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>);
+    let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
         None
     } else {

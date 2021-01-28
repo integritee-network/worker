@@ -2,7 +2,7 @@ use sgx_tstd::collections::HashMap;
 use sgx_tstd::sync::SgxMutex as Mutex;
 use sp_runtime::{
     generic::BlockId,
-    traits::{Block as BlockT, Hash, NumberFor, Zero},
+    traits::{Block as BlockT, NumberFor, Zero},
     transaction_validity::{TransactionSource},
 };
 
@@ -28,8 +28,6 @@ use crate::transaction_pool::{
 };
 
 use substratee_stf::{TrustedCallSigned, ShardIdentifier};
-
-use crate::rpc::api::FillerChainApi;
 
 type BoxedReadyIterator<Hash, Data> = Box<
 	dyn Iterator<Item=Arc<Transaction<Hash, Data>>> + Send

@@ -297,7 +297,6 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			tx,
 			self.ready.provided_tags(shard),
 			&self.recently_pruned,
-			shard
 		);
 		trace!(target: "txpool", "[{:?}] {:?}", tx.transaction.hash, tx);
 		debug!(

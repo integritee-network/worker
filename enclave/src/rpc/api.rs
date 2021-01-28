@@ -36,8 +36,6 @@ use crate::transaction_pool::{
 
 use substratee_stf::TrustedCallSigned;
 
-use substrate_test_runtime::{Hashing};
-
 use crate::rpc::error;
 
 /// The transaction pool logic for full client.

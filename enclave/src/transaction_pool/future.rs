@@ -85,7 +85,6 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 		transaction: Transaction<Hash, Ex>,
 		provided: Option<&HashMap<Tag, Hash>>,
 		recently_pruned: &[HashSet<Tag>],
-		shard: ShardIdentifier,
 	) -> Self {
 		let missing_tags = transaction.requires
 			.iter()

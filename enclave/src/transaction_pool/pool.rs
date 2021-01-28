@@ -32,7 +32,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion, Block as BlockT},
 	transaction_validity::{
-		TransactionValidity, TransactionTag as Tag, TransactionValidityError, TransactionSource, ValidTransaction,
+		TransactionValidity, TransactionTag as Tag, TransactionValidityError, TransactionSource,
 	},
 };
 

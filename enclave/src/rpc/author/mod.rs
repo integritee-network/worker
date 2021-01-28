@@ -23,9 +23,7 @@ use alloc::{
   boxed::Box,
 };
 
-use log::*;
-
-use sgx_tstd::sync::{Arc, SgxMutex, SgxMutexGuard};
+use sgx_tstd::sync::Arc;
 
 use core::iter::Iterator;
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
@@ -36,7 +34,7 @@ use sp_runtime::transaction_validity::{
 };
 
 use substratee_stf::{
-    Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
+    ShardIdentifier, TrustedCallSigned,
 };
 
 use crate::rpc::error::{FutureResult, Result};
@@ -44,19 +42,14 @@ use crate::rpc::error::Error as StateRpcError;
 use crate::transaction_pool::{
   primitives::{TransactionPool, InPoolTransaction, TxHash, BlockHash},
 	error::IntoPoolError, error::Error as PoolError,
-	pool::Pool,
 };
 use jsonrpc_core::Error as RpcError;
 pub mod client_error;
 use client_error::Error as ClientError;
 pub mod hash;
-use hash::*;
-use sp_core::H256 as H256;
 
 use crate::rsa3072;
 use crate::state;
-use base58::ToBase58;
-
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {

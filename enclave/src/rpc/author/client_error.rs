@@ -136,13 +136,6 @@ impl From<Error> for rpc_core::Error {
 				message: "Invalid Transaction".into(),
 				data: None,
 			},
-			Error::Pool(PoolError::InvalidTransaction) => {
-				rpc_core::Error {
-					code: rpc_core::ErrorCode::ServerError(POOL_INVALID_TX),
-					message: "Invalid Transaction".into(),
-					data: None,
-				}
-			},
 			Error::Pool(PoolError::UnknownTransaction) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_UNKNOWN_VALIDITY),
 				message: "Unknown Transaction Validity".into(),

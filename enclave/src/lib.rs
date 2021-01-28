@@ -50,7 +50,7 @@ use std::string::String;
 use std::vec::Vec;
 
 use ipfs::IpfsContent;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
@@ -70,7 +70,6 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
-use transaction_pool::primitives::{TransactionPool, InPoolTransaction};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
 use rpc::author::{AuthorApi, Author};
 
@@ -413,18 +412,11 @@ fn execute_tx_pool_calls(header: Header) ->  SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending tx pool calls");
     let mut calls = Vec::<OpaqueCall>::new();     
     { 
-        // SgxMutex<BasicPool<FillerChainApi<Block>, Block>>
-        let &ref tx_pool_mutex: &SgxMutex<BasicPool<FillerChainApi<Block>, Block>> = rpc::worker_api_direct::load_tx_pool().unwrap();   
         debug!("Acquire tx pool lock");
-
-        // SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>>
+        let &ref tx_pool_mutex: &SgxMutex<BasicPool<FillerChainApi<Block>, Block>> = rpc::worker_api_direct::load_tx_pool().unwrap();   
         let tx_pool_guard: SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>> = tx_pool_mutex.lock().unwrap();
-
-        //let tx_pool = unsafe {Arc::from_raw(tx_pool_guard.deref())};
         let tx_pool: Arc<&BasicPool<FillerChainApi<Block>, Block>> = Arc::new(tx_pool_guard.deref());
-        //let mut tx_pool = unsafe{Arc::from_raw(tx_pool_guard.deref())};
-
-        let mut author: Arc<Author<&BasicPool<FillerChainApi<Block>, Block>>> = Arc::new(Author::new(tx_pool)); 
+        let author: Arc<Author<&BasicPool<FillerChainApi<Block>, Block>>> = Arc::new(Author::new(tx_pool)); 
 
         // get all shards with tx pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
