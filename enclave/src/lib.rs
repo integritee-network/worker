@@ -55,7 +55,7 @@ use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 use core::ops::Deref;
-use std::sync::SgxMutex;
+use std::sync::{SgxMutex, SgxMutexGuard};
 use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
@@ -71,8 +71,8 @@ use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, O
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
 use transaction_pool::primitives::{TransactionPool, InPoolTransaction};
+use rpc::{api::FillerChainApi, basic_pool::BasicPool};
 use rpc::author::{AuthorApi, Author};
-use rpc::author;
 
 mod aes;
 mod attestation;
@@ -412,23 +412,24 @@ fn execute_tx_pool_calls() ->  SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();     
     { 
         // SgxMutex<BasicPool<FillerChainApi<Block>, Block>>
-        let tx_pool_mutex = rpc::worker_api_direct::load_tx_pool().unwrap();   
+        let &ref tx_pool_mutex: &SgxMutex<BasicPool<FillerChainApi<Block>, Block>> = rpc::worker_api_direct::load_tx_pool().unwrap();   
         debug!("Acquire tx pool lock");
 
         // SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>>
-        let mut tx_pool_guard = tx_pool_mutex.lock().unwrap();
+        let mut tx_pool_guard: SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>> = tx_pool_mutex.lock().unwrap();
 
         //let tx_pool = unsafe {Arc::from_raw(tx_pool_guard.deref())};
-        let mut tx_pool = Arc::new(tx_pool_guard.deref());
+        let mut tx_pool: Arc<&BasicPool<FillerChainApi<Block>, Block>> = Arc::new(tx_pool_guard.deref());
+        //let mut tx_pool = unsafe{Arc::from_raw(tx_pool_guard.deref())};
 
-        let mut author = Arc::new(Author::new(tx_pool)); 
+        let mut author: Arc<Author<&BasicPool<FillerChainApi<Block>, Block>>> = Arc::new(Author::new(tx_pool)); 
 
         // get all shards with tx pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
-/*
+
         for shard in shards.into_iter() {
             // retrieve calls from tx pool
-            //let encoded_calls: Vec<Vec<u8>> = author.pending_calls(shard).unwrap(); // always ok
+            let encoded_calls: Vec<Vec<u8>> = author.pending_calls(shard).unwrap(); // always ok
             for encoded_call in encoded_calls.into_iter() {            
                 let trusted_call_signed = match TrustedCallSigned::decode(&mut encoded_call.as_slice()) {
                     Ok(call) => call,
@@ -438,7 +439,7 @@ fn execute_tx_pool_calls() ->  SgxResult<Vec<OpaqueCall>> {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
             }
-        }*/
+        }
         debug!{"Release Txpool Lock"}; 
     }
     

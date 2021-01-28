@@ -171,7 +171,7 @@ impl<P> Author<P> {
 const TX_SOURCE: TransactionSource = TransactionSource::External;
 
 //impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
-impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P>
+impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 	where
 		P: TransactionPool + Sync + Send + 'static,
 		//Client: Send + Sync + 'static,

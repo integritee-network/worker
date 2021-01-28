@@ -68,7 +68,10 @@ use serde::Deserialize;
 
 use substratee_stf::{ShardIdentifier};
 
-use substrate_test_runtime::Block; // TestBlock
+use chain_relay::{
+  storage_proof::{StorageProof, StorageProofChecker},
+  Block, Header, LightValidation,
+}; 
 use base58::FromBase58;
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
@@ -86,15 +89,15 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-//pub fn load_tx_pool() -> Option<&'static (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>)>
-pub fn load_tx_pool() -> Option<SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
+pub fn load_tx_pool() -> Option<&'static (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>)>
+//pub fn load_tx_pool() -> Option<SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
 {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut (SgxMutex<BasicPool<FillerChainApi<Block>, Block>>);
     if ptr.is_null() {
         None
     } else {
-        //Some(unsafe { &* ptr })
-        Some(*ptr)
+        Some(unsafe { &* ptr })
+        //Some(*ptr)
     }
 }
 
@@ -137,7 +140,7 @@ fn init_io_handler() -> IoHandler {
          }
     });
 
-  /*  // author_submitExtrinsic
+    // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
     io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {      
@@ -146,7 +149,7 @@ fn init_io_handler() -> IoHandler {
           // Aquire lock
           let &ref tx_pool_mutex = load_tx_pool().unwrap();
           let mut tx_pool_guard = tx_pool_mutex.lock().unwrap();
-          let tx_pool = unsafe {Arc::from_raw(tx_pool_guard.deref())};
+          let tx_pool = Arc::new(tx_pool_guard.deref());
 
           let author = Arc::new(Author::new(tx_pool)); 
           let to_submit: SumbitExtrinsicParams = extrinsic;
@@ -162,7 +165,7 @@ fn init_io_handler() -> IoHandler {
             author.submit_call(to_submit.call.clone(), shard).await
           };
           // release txpool lock
-          drop(tx_pool_guard);        
+         // drop(tx_pool_guard);        
           let response: Result<Hash, RpcError> = executor::block_on(result);
           match response {
             Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
@@ -181,9 +184,9 @@ fn init_io_handler() -> IoHandler {
       match params.parse::<Vec<String>>() {
           Ok(shards) => { 
             // Aquire tx_pool lock           
-            //let &ref tx_pool_mutex = load_tx_pool().unwrap();
-            let tx_pool_guard = load_tx_pool().unwrap().lock().unwrap();
-            let tx_pool = unsafe {Arc::from_raw(tx_pool_guard.deref())};
+            let &ref tx_pool_mutex = load_tx_pool().unwrap();
+            let tx_pool_guard = tx_pool_mutex.lock().unwrap();
+            let tx_pool = Arc::new(tx_pool_guard.deref());
 
             let author = Arc::new(Author::new(tx_pool)); 
 
@@ -199,7 +202,7 @@ fn init_io_handler() -> IoHandler {
               };
               let result: Result<Vec<Vec<u8>>, _> = author.pending_calls(shard);
               // Release tx_pool lock
-              drop(tx_pool_guard);
+             // drop(tx_pool_guard);
               if let Ok(vec_of_calls) = result {
                 retrieved_calls.push(vec_of_calls);
               }            
@@ -209,7 +212,7 @@ fn init_io_handler() -> IoHandler {
         Err(e) => Ok(Value::String(format!("author_pendingExtrinsic not called due to {}", e))),
       }
     });
-*/
+
     // chain_subscribeAllHeads
     let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
     rpc_methods_vec.push(chain_subscribe_all_heads_name);
