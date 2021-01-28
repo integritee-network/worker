@@ -137,8 +137,8 @@ fn init_io_handler() -> IoHandler {
           let &ref tx_pool_mutex = load_tx_pool().unwrap();
           let tx_pool_guard = tx_pool_mutex.lock().unwrap();
           let tx_pool = Arc::new(tx_pool_guard.deref());
-
-          let author = Arc::new(Author::new(tx_pool)); 
+          let author = Author::new(tx_pool); 
+          
           let to_submit: SumbitExtrinsicParams = extrinsic;
           let shard_vec = match to_submit.shard_id.from_base58() {
             Ok(vec) => vec,
@@ -174,8 +174,7 @@ fn init_io_handler() -> IoHandler {
             let &ref tx_pool_mutex = load_tx_pool().unwrap();
             let tx_pool_guard = tx_pool_mutex.lock().unwrap();
             let tx_pool = Arc::new(tx_pool_guard.deref());
-
-            let author = Arc::new(Author::new(tx_pool)); 
+            let author = Author::new(tx_pool); 
 
             let mut retrieved_calls = vec![];
             for shard_base58 in shards.iter() {

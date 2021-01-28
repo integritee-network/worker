@@ -92,6 +92,7 @@ pub mod transaction_pool;
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub type Hash = sp_core::H256;
+type BPool = BasicPool<FillerChainApi<Block>, Block>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -413,10 +414,10 @@ fn execute_tx_pool_calls(header: Header) ->  SgxResult<Vec<OpaqueCall>> {
     let mut calls = Vec::<OpaqueCall>::new();     
     { 
         debug!("Acquire tx pool lock");
-        let &ref tx_pool_mutex: &SgxMutex<BasicPool<FillerChainApi<Block>, Block>> = rpc::worker_api_direct::load_tx_pool().unwrap();   
-        let tx_pool_guard: SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>> = tx_pool_mutex.lock().unwrap();
-        let tx_pool: Arc<&BasicPool<FillerChainApi<Block>, Block>> = Arc::new(tx_pool_guard.deref());
-        let author: Arc<Author<&BasicPool<FillerChainApi<Block>, Block>>> = Arc::new(Author::new(tx_pool)); 
+        let &ref tx_pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_tx_pool().unwrap();   
+        let tx_pool_guard: SgxMutexGuard<BPool> = tx_pool_mutex.lock().unwrap();
+        let tx_pool: Arc<&BPool> = Arc::new(tx_pool_guard.deref());
+        let author: Author<&BPool> = Author::new(tx_pool); 
 
         // get all shards with tx pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
