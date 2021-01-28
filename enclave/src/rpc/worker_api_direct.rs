@@ -148,7 +148,7 @@ fn init_io_handler() -> IoHandler {
         Ok(extrinsic) => {
           // Aquire lock
           let &ref tx_pool_mutex = load_tx_pool().unwrap();
-          let mut tx_pool_guard = tx_pool_mutex.lock().unwrap();
+          let tx_pool_guard = tx_pool_mutex.lock().unwrap();
           let tx_pool = Arc::new(tx_pool_guard.deref());
 
           let author = Arc::new(Author::new(tx_pool)); 

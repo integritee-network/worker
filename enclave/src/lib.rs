@@ -369,6 +369,9 @@ pub unsafe extern "C" fn sync_chain_relay(
         Err(e) => return e,
     };
 
+    // get header of last block
+    let last_block_header: Header = blocks.last().unwrap().block.header.clone();
+
     let mut calls = Vec::new();
     for signed_block in blocks.into_iter() {
         validator
@@ -392,10 +395,9 @@ pub unsafe extern "C" fn sync_chain_relay(
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
-    }
-
+    }    
     // execute pending calls from transaction pool
-    match execute_tx_pool_calls() {
+    match execute_tx_pool_calls(last_block_header) {
         Ok(c) => calls.extend(c.into_iter()),
         Err(_) => error!("Error executing relevant tx pool calls"),
     };
@@ -407,7 +409,7 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn execute_tx_pool_calls() ->  SgxResult<Vec<OpaqueCall>> {
+fn execute_tx_pool_calls(header: Header) ->  SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending tx pool calls");
     let mut calls = Vec::<OpaqueCall>::new();     
     { 
@@ -416,10 +418,10 @@ fn execute_tx_pool_calls() ->  SgxResult<Vec<OpaqueCall>> {
         debug!("Acquire tx pool lock");
 
         // SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>>
-        let mut tx_pool_guard: SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>> = tx_pool_mutex.lock().unwrap();
+        let tx_pool_guard: SgxMutexGuard<BasicPool<FillerChainApi<Block>, Block>> = tx_pool_mutex.lock().unwrap();
 
         //let tx_pool = unsafe {Arc::from_raw(tx_pool_guard.deref())};
-        let mut tx_pool: Arc<&BasicPool<FillerChainApi<Block>, Block>> = Arc::new(tx_pool_guard.deref());
+        let tx_pool: Arc<&BasicPool<FillerChainApi<Block>, Block>> = Arc::new(tx_pool_guard.deref());
         //let mut tx_pool = unsafe{Arc::from_raw(tx_pool_guard.deref())};
 
         let mut author: Arc<Author<&BasicPool<FillerChainApi<Block>, Block>>> = Arc::new(Author::new(tx_pool)); 
@@ -435,7 +437,7 @@ fn execute_tx_pool_calls() ->  SgxResult<Vec<OpaqueCall>> {
                     Ok(call) => call,
                     Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
                 };
-                if let Err(e) = handle_trusted_worker_call(&mut calls, trusted_call_signed, None, shard) {
+                if let Err(e) = handle_trusted_worker_call(&mut calls, trusted_call_signed, header.clone(), shard) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
             }
@@ -519,7 +521,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
-                    if let Err(e) = handle_trusted_worker_call(&mut calls, decrypted_trusted_call, Some(block.header.clone()), shard) {
+                    if let Err(e) = handle_trusted_worker_call(&mut calls, decrypted_trusted_call, block.header.clone(), shard) {
                         error!("Error performing worker call: Error: {:?}", e);
                     }
                 }                
@@ -601,7 +603,7 @@ fn decrypt_unchecked_extrinsic(
 fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
     stf_call_signed: TrustedCallSigned,
-    header_opt: Option<Header>,
+    header: Header,
     shard: ShardIdentifier,
 ) -> SgxResult<()> {
     debug!("query mrenclave of self");
@@ -621,20 +623,18 @@ fn handle_trusted_worker_call(
         Stf::init_state()
     };
 
-    // TODO: storage update with txpool-calls?
-    if let Some(header) = header_opt {
-        debug!("Update STF storage!");
-        let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
-            .into_iter()
-            .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-            .collect();
+    debug!("Update STF storage!");
+    let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
+        .into_iter()
+        .map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+        .collect();
 
-        let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
+    let responses: Vec<WorkerResponse<Vec<u8>>> = worker_request(requests)?;
 
-        let update_map = verify_worker_responses(responses, header)?;
+    let update_map = verify_worker_responses(responses, header)?;
 
-        Stf::update_storage(&mut state, &update_map);
-    }
+    Stf::update_storage(&mut state, &update_map);
+ 
 
     debug!("execute STF");
     if let Err(e) = Stf::execute(&mut state, stf_call_signed.clone(), calls) {
