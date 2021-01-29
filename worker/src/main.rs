@@ -87,7 +87,7 @@ fn main() {
     let w_port = matches.value_of("w-port").unwrap_or("2000");
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
 
-    let worker_api_direct_port = matches.value_of("worker-api-direct-port").unwrap_or("4000");
+    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("4000");
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -113,7 +113,7 @@ fn main() {
             .unwrap_or("ws://127.0.0.1:2000");
         println!("Advertising worker api at {}", ext_api_url);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, worker_api_direct_port, skip_ra);
+        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, worker_rpc_port, skip_ra);
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard: ShardIdentifier = match smatches.value_of("shard") {
             Some(value) => {
@@ -249,7 +249,7 @@ fn worker(
     mu_ra_port: &str,
     shard: &ShardIdentifier,
     ext_api_url: &str,
-    worker_api_direct_port: &str,
+    worker_rpc_port: &str,
     skip_ra: bool,
 ) {
     println!("Encointer Worker v{}", VERSION);
@@ -289,8 +289,8 @@ fn worker(
     
     // ------------------------------------------------------------------------
     // start worker api direct invocation server
-    println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_api_direct_port);
-    let direct_url = format!("{}:{}", w_ip, worker_api_direct_port);
+    println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_rpc_port);
+    let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
     let (direct_sender, direct_receiver) = channel();
     start_worker_api_direct_server(direct_url, direct_sender, eid);
 

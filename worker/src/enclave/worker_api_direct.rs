@@ -18,8 +18,9 @@ use sgx_types::*;
 
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
-use ws::{listen, CloseCode, Handler, Message, Result, Sender};
+use ws::{listen, CloseCode, Handler, Message, Result, Sender,  Handshake};
 use std::thread;
+use std::sync::mpsc::channel;
 
 
 extern "C" {
@@ -104,7 +105,6 @@ pub fn start_worker_api_direct_server(
 	});
 }
 
-
 pub fn handle_direct_invocation_request(
 	req: DirectWsServerRequest,
     eid: sgx_enclave_id_t,
@@ -132,5 +132,4 @@ pub fn handle_direct_invocation_request(
 	}
 	let response_string: String = String::from_utf8(response).expect("Found invalid UTF-8");
 	req.client.send(response_string)
-
 }

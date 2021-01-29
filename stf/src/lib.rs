@@ -61,15 +61,15 @@ pub type State = sp_io::SgxExternalities;
 #[derive(Encode, Decode, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TrustedOperation {
-    call(TrustedCallSigned), // löschen
-    // indirect_call(TrustedcallSigned), dann kein flag merh sondern match
-    // direct_call(TrustedcallSigned)
+    //call(TrustedCallSigned), // löschen
+    indirect_call(TrustedCallSigned),
+    direct_call(TrustedCallSigned),
     get(Getter),
 }
 
 impl From<TrustedCallSigned> for TrustedOperation {
     fn from(item: TrustedCallSigned) -> Self {
-        TrustedOperation::call(item)
+        TrustedOperation::indirect_call(item)
     }
 }
 
@@ -219,6 +219,13 @@ impl TrustedCallSigned {
         payload.append(&mut shard.encode());
         self.signature
             .verify(payload.as_slice(), self.call.account())
+    }
+
+    pub fn into_trusted_operation(self, direct: bool) -> TrustedOperation {
+        match direct {
+            true => TrustedOperation::direct_call(self),
+            false => TrustedOperation::indirect_call(self),
+        }
     }
 }
 

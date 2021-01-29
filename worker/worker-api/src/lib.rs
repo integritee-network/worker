@@ -30,6 +30,7 @@ use substratee_stf::{Getter, ShardIdentifier};
 
 pub mod client;
 pub mod requests;
+pub mod direct_client;
 
 #[derive(Clone)]
 pub struct Api {

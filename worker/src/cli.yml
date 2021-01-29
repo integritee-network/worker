@@ -39,6 +39,12 @@ args:
         help: Set the websocket port to listen for mu-ra requests
         takes_value: true
         default_value: "3443"
+    - worker-rpc-port:
+        short: R
+        long: worker-rpc-port
+        help: Set the websocket port where the worker rpc direct invocations port listens
+        takes_value: true
+        default_value: "4000"
     
 subcommands:
     - run:

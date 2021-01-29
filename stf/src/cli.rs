@@ -66,6 +66,13 @@ pub fn cmd<'a>(
                         .default_value("//Alice")
                         .help("signer for publicly observable extrinsic"),
                 )
+                .arg(
+                    Arg::with_name("direct")
+                        .short("d")
+                        .long("direct")
+                        .global(true)
+                        .help("insert if direct invocation call is desired"),
+                )
                 .name("substratee-client")
                 .version(VERSION)
                 .author("Supercomputing Systems AG <info@scs.ch>")
@@ -142,6 +149,7 @@ pub fn cmd<'a>(
                         .expect("amount can be converted to u128");
                     let from = get_pair_from_str(matches, arg_from);
                     let to = get_accountid_from_str(arg_to);
+                    let direct: bool = matches.is_present("direct");
                     info!("from ss58 is {}", from.public().to_ss58check());
                     info!("to ss58 is {}", to.to_ss58check());
 
@@ -153,14 +161,14 @@ pub fn cmd<'a>(
                     );
                     let (mrenclave, shard) = get_identifiers(matches);
                     let nonce = 0; // FIXME: hard coded for now
-                    // generate trusted call signed
+                    // generate trusted call signed    
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
                         to,
                         amount,
                     )
                     .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
-                    .into();
+                    .into_trusted_operation(direct);
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
@@ -190,6 +198,7 @@ pub fn cmd<'a>(
                         .expect("amount can be converted to u128");
                     let who = get_pair_from_str(matches, arg_who);
                     let signer = get_pair_from_str(matches, "//Alice");
+                    let direct: bool = matches.is_present("direct");
                     info!("account ss58 is {}", who.public().to_ss58check());
 
                     println!(
@@ -209,7 +218,7 @@ pub fn cmd<'a>(
                         amount,
                     )
                     .sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard)
-                    .into();
+                    .into_trusted_operation(direct);
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
@@ -289,6 +298,7 @@ pub fn cmd<'a>(
                         .expect("amount can be converted to u128");
                     let from = get_pair_from_str(matches, arg_from);
                     let to = get_accountid_from_str(arg_to);
+                    let direct: bool = matches.is_present("direct");
                     println!("from ss58 is {}", from.public().to_ss58check());
                     println!("to   ss58 is {}", to.to_ss58check());
 
@@ -309,11 +319,11 @@ pub fn cmd<'a>(
                         shard,
                     )
                     .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
-                    .into();
+                    .into_trusted_operation(direct);
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
-        )
+        )  
         .into_cmd("trusted")
 }
 
@@ -337,7 +347,7 @@ pub fn get_identifiers(matches: &ArgMatches<'_>) -> ([u8; 32], ShardIdentifier) 
     let shard = match matches.value_of("shard") {
         Some(val) => ShardIdentifier::from_slice(
             &val.from_base58()
-                .expect("mrenclave has to be base58 encoded"),
+                .expect("shard has to be base58 encoded"),
         ),
         None => ShardIdentifier::from_slice(&mrenclave),
     };

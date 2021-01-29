@@ -30,7 +30,6 @@ tag = "v0.4.13"
 
 [dependencies.serde]
 features = ["derive"]
-optional = true
 version = "1.0"
 
 [dependencies.codec]

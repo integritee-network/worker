@@ -77,14 +77,12 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
 }
 
 pub fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
-//pub fn load_tx_pool() -> Option<SgxMutex<BasicPool<FillerChainApi<Block>, Block>>>
 {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst) as * mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
         None
     } else {
         Some(unsafe { &* ptr })
-        //Some(*ptr)
     }
 }
 
@@ -285,7 +283,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 	sgx_status_t::SGX_SUCCESS
 }
 
-// necessary to redefine due to no-std obligation
+// TODO: How to make compatible ? 
 pub fn write_slice_and_whitespace_padding(writable: &mut [u8], data: Vec<u8>) {
     if data.len() > writable.len() {
         panic!("not enough bytes in output buffer for return value");
