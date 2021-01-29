@@ -58,7 +58,6 @@ pub trait AuthorApi<Hash, BlockHash> {
 
 	/// Submit hex-encoded extrinsic for inclusion in block.
 	fn submit_call(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
-	//fn submit_extrinsic(&self, extrinsic: Vec<u8>) ->Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>;
 	
 	/*/// Insert a key into the keystore.
 	fn insert_key(
@@ -90,7 +89,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 
 	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
 	fn remove_call(&self,
-		bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>,
+		bytes_or_hash: Vec<hash::TrustedCallOrHash<Hash>>,
 		shard: ShardIdentifier,
 	) -> Result<Vec<Hash>>;
 
@@ -262,13 +261,13 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 
 	fn remove_call(
 		&self,
-		bytes_or_hash: Vec<hash::ExtrinsicOrHash<TxHash<P>>>,
+		bytes_or_hash: Vec<hash::TrustedCallOrHash<TxHash<P>>>,
 		shard: ShardIdentifier,
 	) -> Result<Vec<TxHash<P>>> {
 		let hashes = bytes_or_hash.into_iter()
 			.map(|x| match x {
-				hash::ExtrinsicOrHash::Hash(h) => Ok(h),
-				hash::ExtrinsicOrHash::Extrinsic(bytes) => {
+				hash::TrustedCallOrHash::Hash(h) => Ok(h),
+				hash::TrustedCallOrHash::Call(bytes) => {
 					let xt = Decode::decode(&mut &bytes[..]).unwrap();
 					Ok(self.pool.hash_of(&xt))
 				},

@@ -71,7 +71,7 @@ use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, O
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
-use rpc::author::{AuthorApi, Author};
+use rpc::author::{AuthorApi, Author, hash::TrustedCallOrHash};
 
 mod aes;
 mod attestation;
@@ -432,6 +432,9 @@ fn execute_tx_pool_calls(header: Header) ->  SgxResult<Vec<OpaqueCall>> {
                 };
                 if let Err(e) = handle_trusted_worker_call(&mut calls, trusted_call_signed, header.clone(), shard) {
                     error!("Error performing worker call: Error: {:?}", e);
+                } else {
+                    // remove call from txpool when handled
+                    author.remove_call(vec![TrustedCallOrHash::Call(encoded_call)], shard);
                 }
             }
         }

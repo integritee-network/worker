@@ -138,7 +138,7 @@ fn init_io_handler() -> IoHandler {
           let tx_pool_guard = tx_pool_mutex.lock().unwrap();
           let tx_pool = Arc::new(tx_pool_guard.deref());
           let author = Author::new(tx_pool); 
-          
+
           let to_submit: SumbitExtrinsicParams = extrinsic;
           let shard_vec = match to_submit.shard_id.from_base58() {
             Ok(vec) => vec,
@@ -150,15 +150,12 @@ fn init_io_handler() -> IoHandler {
           };
           let result = async {              
             author.submit_call(to_submit.call.clone(), shard).await
-          };
-          // release txpool lock
-         // drop(tx_pool_guard);        
+          };     
           let response: Result<Hash, RpcError> = executor::block_on(result);
           match response {
             Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
             Err(rpc_error) => Ok(Value::String(format!("Error within the enclave: {}", rpc_error.message))),
           }          
-          //Ok(Value::String(format!("shardID: {:?}", shard)))
         },
         Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
      }
@@ -187,8 +184,6 @@ fn init_io_handler() -> IoHandler {
                   Err(_) => return Ok(Value::String(format!("Shard {:?} is not of type H256", shard_base58))),
               };
               let result: Result<Vec<Vec<u8>>, _> = author.pending_calls(shard);
-              // Release tx_pool lock
-             // drop(tx_pool_guard);
               if let Ok(vec_of_calls) = result {
                 retrieved_calls.push(vec_of_calls);
               }            

@@ -20,14 +20,14 @@ extern crate alloc;
 use alloc::vec::Vec;
 use serde::{Serialize, Deserialize};
 
-/// RPC Extrinsic or hash
+/// RPC Trusted call or hash
 ///
-/// Allows to refer to extrinsic either by its raw representation or its hash.
+/// Allows to refer to trusted calls either by its raw representation or its hash.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ExtrinsicOrHash<Hash> {
-	/// The hash of the extrinsic.
+pub enum TrustedCallOrHash<Hash> {
+	/// The hash of the call.
 	Hash(Hash),
 	/// Raw extrinsic bytes.
-	Extrinsic(Vec<u8>),
+	Call(Vec<u8>),
 }
