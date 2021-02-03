@@ -51,7 +51,7 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
-use enclave::worker_api_direct::{start_worker_api_direct_server, handle_direct_invocation_request};
+use enclave::worker_api_direct_server::{start_worker_api_direct_server, handle_direct_invocation_request};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
 use ws_server::start_ws_server;

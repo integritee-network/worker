@@ -33,6 +33,8 @@ use core::pin::Pin;
 use crate::transaction_pool::error::Error as PoolError;
 use crate::transaction_pool::error::IntoPoolError;
 
+use crate::rpc::author::client_error::Error as ClientError;
+
 use derive_more::{Display, From};
 
 /// State RPC Result type.
@@ -68,6 +70,9 @@ pub enum Error {
 
 	/// Wrapping of PoolError to RPC Error
 	PoolError(PoolError),
+
+	/// Wrapping of ClientError to RPC Error
+	ClientError(ClientError),
 }
 
 impl error::Error for Error {

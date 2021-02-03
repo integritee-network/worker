@@ -706,6 +706,9 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     println!("Direct invocation call: {}", jsonrpc_call);
     
     let direct_api = get_worker_direct_api(matches);
+
+    //let (sender, receiver) = channel();
+
     let response_string = match direct_api.send(jsonrpc_call) {
         Ok(resp) => resp,
         Err(_) => panic!("Error when sending direct invocation call"),
@@ -714,6 +717,10 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     println!("{}", response["result"]);
     
     None
+}
+
+pub fn test_fn(string: String) {
+    println!("{}", string);
 }
 
 #[allow(dead_code)]

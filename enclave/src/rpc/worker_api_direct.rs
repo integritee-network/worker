@@ -61,6 +61,8 @@ use substratee_stf::{ShardIdentifier};
 use chain_relay::Block; 
 use base58::FromBase58;
 
+use crate::utils::{write_slice_and_whitespace_pad};
+
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
 #[no_mangle]
@@ -152,10 +154,10 @@ fn init_io_handler() -> IoHandler {
           let response: Result<Hash, RpcError> = executor::block_on(result);
           match response {
             Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
-            Err(rpc_error) => Ok(Value::String(format!("Error within the enclave: {}", rpc_error.message))),
+            Err(rpc_error) => Ok(Value::String(format!("Error: {}", rpc_error.message))),
           }          
         },
-        Err(e) => Ok(Value::String(format!("author_submitExtrinsic not called due to {}", e))),
+        Err(e) => Ok(Value::String(format!("Could not submit trust call due to: {}", e))),
      }
     });
     
@@ -186,9 +188,9 @@ fn init_io_handler() -> IoHandler {
                 retrieved_calls.push(vec_of_calls);
               }            
             }
-            Ok(Value::String(format!("Pending Extrinsics: {:?}", retrieved_calls)))            
+            Ok(Value::String(format!("Pending Extrinsics: {:?}", retrieved_calls)))
           }
-        Err(e) => Ok(Value::String(format!("author_pendingExtrinsic not called due to {}", e))),
+        Err(e) => Ok(Value::String(format!("Could not retrieve pending calls due to: {}", e))),
       }
     });
 
@@ -279,17 +281,6 @@ pub unsafe extern "C" fn call_rpc_methods(
     
     // update response outside of enclave
     let response_slice = from_raw_parts_mut(response, response_len as usize);
-    write_slice_and_whitespace_padding(response_slice, response_string.as_bytes().to_vec());
+    write_slice_and_whitespace_pad(response_slice, response_string.as_bytes().to_vec());
 	sgx_status_t::SGX_SUCCESS
-}
-
-// TODO: How to make compatible ? 
-pub fn write_slice_and_whitespace_padding(writable: &mut [u8], data: Vec<u8>) {
-    if data.len() > writable.len() {
-        panic!("not enough bytes in output buffer for return value");
-    }
-    let (left, right) = writable.split_at_mut(data.len());
-    left.clone_from_slice(&data);
-    // fill the right side with whitespace
-    right.iter_mut().for_each(|x| *x = 0x20);
 }

@@ -18,7 +18,7 @@ use sgx_types::*;
 
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
-use ws::{listen, CloseCode, Handler, Message, Result, Sender,  Handshake};
+use ws::{listen, CloseCode, Handler, Message, Result, Sender, Handshake};
 use std::thread;
 use std::sync::mpsc::channel;
 

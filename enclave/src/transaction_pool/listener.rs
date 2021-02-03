@@ -18,7 +18,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use sgx_tstd::{
-	collections::HashMap,
+	collections::{HashMap, HashSet},
 	hash, 
 	fmt::Debug,
 	vec::Vec,
@@ -38,6 +38,7 @@ use crate::transaction_pool::{
 pub struct Listener<H: hash::Hash + Eq, C: ChainApi> {
 	watchers: HashMap<H, watcher::Sender<H, ExtrinsicHash<C>>>,
 	finality_watchers: LinkedHashMap<ExtrinsicHash<C>, Vec<H>>,
+	hashes: HashSet<H>,
 }
 
 /// Maximum number of blocks awaiting finality at any time.
@@ -48,6 +49,7 @@ impl<H: hash::Hash + Eq + Debug, C: ChainApi> Default for Listener<H, C> {
 		Listener {
 			watchers: Default::default(),
 			finality_watchers: Default::default(),
+			hashes: Default::default(),
 		}
 	}
 }

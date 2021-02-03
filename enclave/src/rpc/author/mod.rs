@@ -24,9 +24,12 @@ use alloc::{
 };
 
 use sgx_tstd::sync::Arc;
+use log::*;
 
 use core::iter::Iterator;
-use jsonrpc_core::futures::future::{ready, TryFutureExt};
+use jsonrpc_core::futures::future::{ready, TryFutureExt, FutureExt};
+use jsonrpc_core::futures::StreamExt;
+use jsonrpc_core::futures::stream::Stream;
 use codec::{Encode, Decode};
 use sp_runtime::generic;
 use sp_runtime::transaction_validity::{
@@ -37,10 +40,11 @@ use substratee_stf::{
     ShardIdentifier, TrustedCallSigned,
 };
 
+
 use crate::rpc::error::{FutureResult, Result};
 use crate::rpc::error::Error as StateRpcError;
 use crate::transaction_pool::{
-  primitives::{TransactionPool, InPoolTransaction, TxHash, BlockHash},
+  primitives::{TransactionPool, InPoolTransaction, TxHash, BlockHash, TransactionStatusStreamFor},
 	error::IntoPoolError, error::Error as PoolError,
 };
 use jsonrpc_core::Error as RpcError;
@@ -92,6 +96,18 @@ pub trait AuthorApi<Hash, BlockHash> {
 		bytes_or_hash: Vec<hash::TrustedCallOrHash<Hash>>,
 		shard: ShardIdentifier,
 	) -> Result<Vec<Hash>>;
+	
+
+	/// Submit an extrinsic to watch.
+	///
+	/// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
+	/// life cycle.
+	fn watch_call(&self,
+		//metadata: Self::Metadata,
+		//subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
+		bytes: Vec<u8>,
+		shard: ShardIdentifier,
+	);
 
 	/*/// Submit an extrinsic to watch.
 	///
@@ -235,7 +251,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
-		// encode call
+		// decode call
 		let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
 			Ok(call) => call,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
@@ -282,25 +298,66 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 				.collect()
 		)
 	}
-/*
-	fn watch_extrinsic(&self,
+
+	fn watch_call(&self,
 	//	_metadata: Self::Metadata,
 	//	subscriber: Subscriber<TransactionStatus<TxHash<P>, BlockHash<P>>>,
-		xt: <Vec<u8>,
+		xt: Vec<u8>,
+		shard: ShardIdentifier,
 	) {
 		let submit = || -> Result<_> {
-			let best_block_hash = self.client.info().best_hash;
-			let dxt = TrustedCallSigned::decode(&mut &xt[..])
-				.map_err(error::Error::from)?;
+			//let best_block_hash = self.client.info().best_hash;
+			// dummy block hash
+			let best_block_hash = Default::default();
+			
+			// decode call
+			let dxt = match TrustedCallSigned::decode(&mut &xt[..]) {
+				Ok(call) => call,
+				Err(_) => return Err(StateRpcError::ClientError(ClientError::BadFormat)),
+			};
+				//.unwrap_or_else( |_e| Err(StateRpcError::ClientError(ClientError::BadFormat)));
 			Ok(
 				self.pool
-					.submit_and_watch(&generic::BlockId::hash(best_block_hash), TX_SOURCE, dxt)
-					.map_err(|e| e.into_pool_error()
-						.map(error::Error::from)
-						.unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into())
+					.submit_and_watch(&generic::BlockId::hash(best_block_hash), TX_SOURCE, dxt, shard)
+					.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
+						.map(Into::into)
+						.unwrap_or_else(|_e| PoolError::Verification)).into()
 					)
+					/*.map_err(|e| e.into_pool_error()
+						.map(ClientError::from)
+						.unwrap_or_else(|e| ClientError::Verification(Box::new(e)).into())
+					)*/
+				/*	.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
+				.map(Into::into)
+				.unwrap_or_else(|_e| PoolError::Verification)).into()*/
 			)
 		};
+
+		let future = ready(submit())
+			.and_then(|res| res)
+			// convert the watcher into a `Stream`
+			.map(|res| res.map(|stream| stream.map(|v| Ok::<_, StateRpcError>(Ok::<_, StateRpcError>(v)))))
+			// now handle the import result,
+			// start a new subscrition
+			.map(move |result: Result<_>| match result {
+				Ok(watcher) => {
+					// jsonrpc_core::futures::stream::Map<Box<dyn jsonrpc_core::futures::Stream<Item = 
+					// TransactionStatus<TxHash, BlockHash>>
+					//info!{"Received Msg from watcher: {}", watcher.into_str()};
+					/*subscriptions.add(subscriber, move |sink| {
+						sink
+							.sink_map_err(|e| log::debug!("Subscription sink failed: {:?}", e))
+							.send_all(Compat::new(watcher))
+							.map(|_| ())
+					});*/
+				},
+				Err(err) => {
+					warn!("Failed to submit extrinsic: {}", err);
+					let _ = StateRpcError::Client(Box::new(err));
+					// reject the subscriber (ignore errors - we don't care if subscriber is no longer there).
+					//let _ = subscriber.reject(err.into());
+				},
+			});
 
 		/*let subscriptions = self.subscriptions.clone();
 		let future = ready(submit())
@@ -330,7 +387,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 		if res.is_err() {
 			warn!("Error spawning subscription RPC task.");
 		}*/
-	}*/
+	}
 
 /*	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
 		Ok(self.subscriptions.cancel(id))
