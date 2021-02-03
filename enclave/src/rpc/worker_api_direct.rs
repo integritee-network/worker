@@ -65,6 +65,42 @@ use crate::utils::{write_slice_and_whitespace_pad};
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
+/*extern "C" {
+  pub fn ocall_worker_request(
+      ret_val: *mut sgx_status_t,
+      request: *const u8,
+      req_size: u32,
+      response: *mut u8,
+      resp_size: u32,
+  ) -> sgx_status_t;
+}
+
+fn worker_request<V: Encode + Decode>(
+  req: Vec<WorkerRequest>,
+) -> SgxResult<Vec<WorkerResponse<V>>> {
+  let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+  let mut resp: Vec<u8> = vec![0; 4196 * 4];
+
+  let res = unsafe {
+      ocall_worker_request(
+          &mut rt as *mut sgx_status_t,
+          req.encode().as_ptr(),
+          req.encode().len() as u32,
+          resp.as_mut_ptr(),
+          resp.len() as u32,
+      )
+  };
+
+  if rt != sgx_status_t::SGX_SUCCESS {
+      return Err(rt);
+  }
+
+  if res != sgx_status_t::SGX_SUCCESS {
+      return Err(res);
+  }
+  Ok(Decode::decode(&mut resp.as_slice()).unwrap())
+}*/
+
 #[no_mangle]
 // initialise tx pool and store within static atomic pointer
 pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
@@ -100,6 +136,19 @@ fn convert_vec_to_string(vec_methods: Vec<&str>) -> String {
     format!("methods: [{}]", method_string)
 }
 
+// converts the rpc methods vector to a string and adds commas and brackets for readability
+fn decode_shard_from_base58(shard_base58: String) -> Result<ShardIdentifier, String> {
+  let shard_vec = match shard_base58.from_base58() {
+    Ok(vec) => vec,
+    Err(_) => return Err("Invalid base58 format of shard id".to_owned()),
+  };
+  let shard = match ShardIdentifier::decode(&mut shard_vec.as_slice()) {
+      Ok(hash) => hash,
+      Err(_) => return Err("Shard ID is not of type H256".to_owned()),
+  };
+  Ok(shard)
+}
+
 #[derive(Deserialize)]
 struct SumbitExtrinsicParams {
     call: Vec<u8>,
@@ -115,16 +164,31 @@ fn init_io_handler() -> IoHandler {
     let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
     rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
     io.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {  
-       match params.parse() {
-            Ok(ok) => {   
-                let parsed: SumbitExtrinsicParams = ok;
-              /*  let result = async {              
-                  author_clone.submit_extrinsic(tx.extrinsic.clone()).await
-                };      */          
-                Ok(Value::String(format!("hello extrinsic, {}", String::from_utf8(parsed.call).unwrap())))
-            },
-            Err(e) => Ok(Value::String(format!("author_submitAndWatchExtrinsic not called due to {}", e))),
-         }
+      match params.parse() {
+        Ok(extrinsic) => {
+            // Aquire lock
+          let &ref tx_pool_mutex = load_tx_pool().unwrap();
+          let tx_pool_guard = tx_pool_mutex.lock().unwrap();
+          let tx_pool = Arc::new(tx_pool_guard.deref());
+          let author = Author::new(tx_pool); 
+
+          let to_submit: SumbitExtrinsicParams = extrinsic;
+          let shard = match decode_shard_from_base58(to_submit.shard_id.clone()) {
+              Ok(id) => id,
+              Err(msg) => return Ok(Value::String(format!("{}", msg))),
+          }; 
+          
+          let result = async {              
+            author.submit_call(to_submit.call.clone(), shard).await
+          };     
+          let response: Result<Hash, RpcError> = executor::block_on(result);
+          match response {
+            Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
+            Err(rpc_error) => Ok(Value::String(format!("Error: {}", rpc_error.message))),
+          }          
+        },
+        Err(e) => Ok(Value::String(format!("Could not submit trusted call due to: {}", e))),
+      }
     });
 
     // author_submitExtrinsic
@@ -140,14 +204,19 @@ fn init_io_handler() -> IoHandler {
           let author = Author::new(tx_pool); 
 
           let to_submit: SumbitExtrinsicParams = extrinsic;
-          let shard_vec = match to_submit.shard_id.from_base58() {
+          // TODO: test if still ok
+          let shard = match decode_shard_from_base58(to_submit.shard_id.clone()) {
+            Ok(id) => id,
+            Err(msg) => return Ok(Value::String(format!("{}", msg))),
+          }; 
+         /* let shard_vec = match to_submit.shard_id.from_base58() {
             Ok(vec) => vec,
             Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id"))),
           };
           let shard = match ShardIdentifier::decode(&mut shard_vec.as_slice()) {
               Ok(hash) => hash,
               Err(_) => return Ok(Value::String(format!("Shard ID is not of type H256"))),
-          };
+          };*/
           let result = async {              
             author.submit_call(to_submit.call.clone(), shard).await
           };     
@@ -157,7 +226,7 @@ fn init_io_handler() -> IoHandler {
             Err(rpc_error) => Ok(Value::String(format!("Error: {}", rpc_error.message))),
           }          
         },
-        Err(e) => Ok(Value::String(format!("Could not submit trust call due to: {}", e))),
+        Err(e) => Ok(Value::String(format!("Could not submit trusted call due to: {}", e))),
      }
     });
     
@@ -175,14 +244,19 @@ fn init_io_handler() -> IoHandler {
 
             let mut retrieved_calls = vec![];
             for shard_base58 in shards.iter() {
-              let shard_encoded = match shard_base58.from_base58() {
+              // TODO: test if still ok
+              let shard = match decode_shard_from_base58(shard_base58.clone()) {
+                Ok(id) => id,
+                Err(msg) => return Ok(Value::String(format!("{}", msg))),
+              }; 
+              /*let shard_encoded = match shard_base58.from_base58() {
                 Ok(vec) => vec,
                 Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id {:?}", shard_base58))),
               };
               let shard = match ShardIdentifier::decode(&mut shard_encoded.as_slice()) {
                   Ok(hash) => hash,
                   Err(_) => return Ok(Value::String(format!("Shard {:?} is not of type H256", shard_base58))),
-              };
+              };*/
               let result: Result<Vec<Vec<u8>>, _> = author.pending_calls(shard);
               if let Ok(vec_of_calls) = result {
                 retrieved_calls.push(vec_of_calls);
@@ -275,12 +349,12 @@ pub unsafe extern "C" fn call_rpc_methods(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }  
     };
-    // get rpc response
     response_string = io.handle_request_sync(request_string).unwrap().to_string();
     debug!{"Released Txpool Lock"};
     
     // update response outside of enclave
     let response_slice = from_raw_parts_mut(response, response_len as usize);
     write_slice_and_whitespace_pad(response_slice, response_string.as_bytes().to_vec());
-	sgx_status_t::SGX_SUCCESS
+	  sgx_status_t::SGX_SUCCESS
 }
+
