@@ -49,6 +49,7 @@ use sp_runtime::{
 use std::convert::TryFrom;
 use std::sync::mpsc::channel;
 use std::thread;
+use std::result::Result as StdResult;
 use substrate_api_client::{
     compose_extrinsic, compose_extrinsic_offline,
     events::EventsDecoder,
@@ -68,6 +69,7 @@ use substrate_client_keystore::LocalKeystore;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
+
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -672,11 +674,23 @@ struct DirectInvocationCall {
     params: RpcTrustedCall,
     id: i32,
 }
-
 #[derive(Serialize, Deserialize)]
 struct RpcTrustedCall {
     shard_id: String,
     call: Vec<u8>,
+}
+// TODO: Where to define for nice structure?
+#[derive(Serialize, Deserialize)]
+struct ReturnValue {
+    value: Vec<u8>,
+    do_watch: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct RpcResponse {
+    jsonrpc: String,
+    result: String,
+    id: u32,
 }
 
 fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
@@ -698,7 +712,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     };
     let direct_invocation_call = DirectInvocationCall {
         jsonrpc: "2.0".to_owned(),
-        method: "author_submitExtrinsic".to_owned(),
+        method: "author_submitAndWatchExtrinsic".to_owned(), // TODO: Watch flag?
         params: data,
         id: 1,
     };
@@ -715,6 +729,19 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     };
     let response: Value = serde_json::from_str(&response_string).unwrap();
     println!("{}", response["result"]);
+
+   /* let rpc_response: RpcResponse = serde_json::from_str(&response_string).unwrap();
+    println!("{}", rpc_response.result);
+    let return_value: ReturnValue = serde_json::from_str(&rpc_response.result).unwrap();
+    println!("{:?}", return_value.value);
+    let decoded_value: StdResult<Vec<u8>,Vec<u8>> = StdResult::decode(&mut return_value.value.as_slice()).unwrap();
+    println!("{:?}", decoded_value);
+    let decoded_result: String = match decoded_value {
+        Ok(ok) => String::decode(&mut ok.as_slice()).unwrap(),
+        Err(err) => String::decode(&mut err.as_slice()).unwrap(),
+
+    };
+    println!("{}", decoded_result);*/    
     
     None
 }

@@ -29,7 +29,6 @@ use log::*;
 use core::iter::Iterator;
 use jsonrpc_core::futures::future::{ready, TryFutureExt, FutureExt};
 use jsonrpc_core::futures::StreamExt;
-use jsonrpc_core::futures::stream::Stream;
 use codec::{Encode, Decode};
 use sp_runtime::generic;
 use sp_runtime::transaction_validity::{
@@ -44,7 +43,7 @@ use substratee_stf::{
 use crate::rpc::error::{FutureResult, Result};
 use crate::rpc::error::Error as StateRpcError;
 use crate::transaction_pool::{
-  primitives::{TransactionPool, InPoolTransaction, TxHash, BlockHash, TransactionStatusStreamFor},
+  primitives::{TransactionPool, InPoolTransaction, TxHash, BlockHash},
 	error::IntoPoolError, error::Error as PoolError,
 };
 use jsonrpc_core::Error as RpcError;

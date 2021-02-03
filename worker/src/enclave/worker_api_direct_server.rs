@@ -21,7 +21,10 @@ use std::sync::mpsc::Sender as MpscSender;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender, Handshake};
 use std::thread;
 use std::sync::mpsc::channel;
-
+use serde::{Serialize, Deserialize};
+use codec::Decode;
+use core::result::Result as StdResult;
+use serde_json::Value;
 
 extern "C" {
 	fn initialize_pool(
@@ -105,6 +108,27 @@ pub fn start_worker_api_direct_server(
 	});
 }
 
+// TODO: double specified in enclace & worker
+#[derive(Serialize, Deserialize)]
+struct EncodedReturnValue {
+    value: Vec<u8>,
+    do_watch: bool,
+}
+
+// TODO: double specified in enclace & worker
+#[derive(Serialize, Deserialize)]
+struct DecodedReturnValue {
+    value: String,
+    do_watch: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct RpcResponse {
+    jsonrpc: String,
+    result: String,
+    id: u32,
+}
+
 pub fn handle_direct_invocation_request(
 	req: DirectWsServerRequest,
     eid: sgx_enclave_id_t,
@@ -129,7 +153,39 @@ pub fn handle_direct_invocation_request(
         _ => {
 			error!("[RPC-call] ECALL Enclave Failed {}!", result.as_str());
         }
-	}
-	let response_string: String = String::from_utf8(response).expect("Found invalid UTF-8");
-	req.client.send(response_string)
+    }
+    // of type: {"jsonrpc":"2.0","result":"{\"value\":[..],\"do_watch\":true}","id":1} 
+    let decoded_response: String = String::from_utf8_lossy(&response).to_string();
+    let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
+    let result_of_rpc_response: EncodedReturnValue = serde_json::from_str(&full_rpc_response.result).unwrap();
+    let decoded_result: StdResult<Vec<u8>,Vec<u8>> = StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
+
+    let mut readable_response_result = DecodedReturnValue{
+        do_watch: result_of_rpc_response.do_watch,
+        value: "".to_owned(),
+    };
+    match decoded_result {
+        Ok(hash_vec) => {
+            let hash = String::decode(&mut hash_vec.as_slice()).unwrap();
+             // start watching the call with the specific hash
+            if result_of_rpc_response.do_watch{
+                // start watching the hash function above
+            }
+            // overwrite encoded non-readable return value to send to the client
+            readable_response_result.value = hash;
+        },
+        Err(err_msg_vec) => {
+            let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
+            readable_response_result.value = err_msg;
+            readable_response_result.do_watch = false;
+        },
+    }
+    // create new return value
+    let updated_rpc_response = RpcResponse {
+        result: serde_json::to_string(&readable_response_result).unwrap(),
+        jsonrpc: full_rpc_response.jsonrpc,
+        id: full_rpc_response.id,
+    };
+
+	req.client.send(serde_json::to_string(&updated_rpc_response).unwrap())
 }

@@ -38,7 +38,7 @@ use sgx_tstd::{
 
 use sp_core::H256 as Hash;
 
-use codec::Decode;
+use codec::{Encode, Decode};
 use log::*;
 
 use crate::rpc::{
@@ -54,7 +54,7 @@ use crate::transaction_pool::{
 use jsonrpc_core::*;
 use jsonrpc_core::futures::executor;
 use jsonrpc_core::Error as RpcError;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use substratee_stf::{ShardIdentifier};
 
@@ -155,6 +155,13 @@ struct SumbitExtrinsicParams {
     shard_id: String, // ShardIdentifier (H256) does not implement deserialize
 }
 
+// TODO: double specified in enclace & worker
+#[derive(Serialize, Deserialize)]
+struct ReturnValue {
+    value: Vec<u8>,
+    do_watch: bool,
+}
+
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();
@@ -176,18 +183,33 @@ fn init_io_handler() -> IoHandler {
           let shard = match decode_shard_from_base58(to_submit.shard_id.clone()) {
               Ok(id) => id,
               Err(msg) => return Ok(Value::String(format!("{}", msg))),
-          }; 
-          
+          };
+          //TODO: watch call       
           let result = async {              
             author.submit_call(to_submit.call.clone(), shard).await
           };     
           let response: Result<Hash, RpcError> = executor::block_on(result);
-          match response {
-            Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
-            Err(rpc_error) => Ok(Value::String(format!("Error: {}", rpc_error.message))),
-          }          
+          let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
+            Ok(hash_value) => Ok(hash_value.to_string().encode()),
+            Err(rpc_error) => Err(rpc_error.message.encode()),
+
+          };
+          let json_value = ReturnValue {
+            do_watch: true, 
+            value: encodable_response.encode(),
+          };          
+          let json_string = serde_json::to_string(&json_value).unwrap();
+          Ok(Value::String(json_string))   
         },
-        Err(e) => Ok(Value::String(format!("Could not submit trusted call due to: {}", e))),
+        Err(e) => {
+          let result: Result<Vec<u8>, Vec<u8>> = Err(format!("Could not submit trusted call due to: {}", e).encode());
+          let return_value = ReturnValue {
+            do_watch: false, 
+            value: result.encode(),
+          };
+          let json_string = serde_json::to_string(&return_value).unwrap();
+          Ok(Value::String(json_string))
+        },
       }
     });
 
@@ -204,19 +226,10 @@ fn init_io_handler() -> IoHandler {
           let author = Author::new(tx_pool); 
 
           let to_submit: SumbitExtrinsicParams = extrinsic;
-          // TODO: test if still ok
           let shard = match decode_shard_from_base58(to_submit.shard_id.clone()) {
             Ok(id) => id,
             Err(msg) => return Ok(Value::String(format!("{}", msg))),
-          }; 
-         /* let shard_vec = match to_submit.shard_id.from_base58() {
-            Ok(vec) => vec,
-            Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id"))),
           };
-          let shard = match ShardIdentifier::decode(&mut shard_vec.as_slice()) {
-              Ok(hash) => hash,
-              Err(_) => return Ok(Value::String(format!("Shard ID is not of type H256"))),
-          };*/
           let result = async {              
             author.submit_call(to_submit.call.clone(), shard).await
           };     
@@ -244,19 +257,10 @@ fn init_io_handler() -> IoHandler {
 
             let mut retrieved_calls = vec![];
             for shard_base58 in shards.iter() {
-              // TODO: test if still ok
               let shard = match decode_shard_from_base58(shard_base58.clone()) {
                 Ok(id) => id,
                 Err(msg) => return Ok(Value::String(format!("{}", msg))),
-              }; 
-              /*let shard_encoded = match shard_base58.from_base58() {
-                Ok(vec) => vec,
-                Err(_) => return Ok(Value::String(format!("Invalid base58 format of shard id {:?}", shard_base58))),
               };
-              let shard = match ShardIdentifier::decode(&mut shard_encoded.as_slice()) {
-                  Ok(hash) => hash,
-                  Err(_) => return Ok(Value::String(format!("Shard {:?} is not of type H256", shard_base58))),
-              };*/
               let result: Result<Vec<Vec<u8>>, _> = author.pending_calls(shard);
               if let Ok(vec_of_calls) = result {
                 retrieved_calls.push(vec_of_calls);
