@@ -9,6 +9,7 @@ pub struct DirectWsClient {
     pub out: Sender,
     pub request: String,
     pub result: MpscSender<String>,
+    pub watch: bool,
 }
 
 impl Handler for DirectWsClient {
@@ -22,10 +23,11 @@ impl Handler for DirectWsClient {
     fn on_message(&mut self, msg: Message) -> ClientResult<()> {
         info!("got message");
         debug!("{}", msg);
-        //let retstr = msg.as_text().unwrap();
-
         self.result.send(msg.to_string()).unwrap();
         self.out.close(CloseCode::Normal).unwrap();
+        if !self.watch {
+           self.out.close(CloseCode::Normal).unwrap();
+        }
         Ok(())
     }
 }
@@ -50,6 +52,7 @@ impl DirectApi {
                 out,
                 request: request.clone(),
                 result: port_in.clone(),
+                watch: false,
             }) {
                 Ok(c) => c,
                 Err(_) => {
@@ -67,4 +70,26 @@ impl DirectApi {
             }
         }
     }
+    pub fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
+        let url = self.url.clone();
+        //let (port_in, port_out) = channel();
+
+        info!("[WorkerApi Direct]: Sending request: {:?}", request);
+        let client = thread::spawn(move || {
+            match connect(url, |out| DirectWsClient {
+                out,
+                request: request.clone(),
+                result: sender.clone(),
+                watch: true,
+            }) {
+                Ok(c) => c,
+                Err(_) => {
+                    error!("Could not connect to direct invoation server");
+                }
+            }
+        });
+        client.join().unwrap();
+        Ok(()) 
+    }
+    
 }

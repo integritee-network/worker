@@ -162,6 +162,16 @@ struct ReturnValue {
     do_watch: bool,
 }
 
+fn compute_error_string (error_msg: String) -> String {
+  let error: Result<Vec<u8>, Vec<u8>> = Err(error_msg.encode());
+  let return_value = ReturnValue{
+      value: error.encode(), 
+      do_watch: false,
+  };
+  serde_json::to_string(&return_value).unwrap()  
+}
+
+
 fn init_io_handler() -> IoHandler {
     let mut io = IoHandler::new();
     let mut rpc_methods_vec: Vec<&str> = Vec::new();
@@ -180,37 +190,34 @@ fn init_io_handler() -> IoHandler {
           let author = Author::new(tx_pool); 
 
           let to_submit: SumbitExtrinsicParams = extrinsic;
-          let shard = match decode_shard_from_base58(to_submit.shard_id.clone()) {
-              Ok(id) => id,
-              Err(msg) => return Ok(Value::String(format!("{}", msg))),
-          };
-          //TODO: watch call       
-          let result = async {              
-            author.submit_call(to_submit.call.clone(), shard).await
-          };     
-          let response: Result<Hash, RpcError> = executor::block_on(result);
-          let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-            Ok(hash_value) => Ok(hash_value.to_string().encode()),
-            Err(rpc_error) => Err(rpc_error.message.encode()),
+          match decode_shard_from_base58(to_submit.shard_id.clone()) {
+            Ok(shard) => {
+              //TODO: watch call       
+              let result = async {              
+                author.submit_call(to_submit.call.clone(), shard).await
+              };     
+              let response: Result<Hash, RpcError> = executor::block_on(result);
+              let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
+                Ok(hash_value) => Ok(hash_value.to_string().encode()),
+                Err(rpc_error) => Err(rpc_error.message.encode()),
 
-          };
-          let json_value = ReturnValue {
-            do_watch: true, 
-            value: encodable_response.encode(),
-          };          
-          let json_string = serde_json::to_string(&json_value).unwrap();
-          Ok(Value::String(json_string))   
-        },
+              };
+              let json_value = ReturnValue {
+                do_watch: true, 
+                value: encodable_response.encode(),
+              };          
+              let json_string = serde_json::to_string(&json_value).unwrap();
+              Ok(Value::String(json_string)) 
+            },
+            Err(msg) => Ok(Value::String(compute_error_string(msg))),
+          }          
+        },     
         Err(e) => {
-          let result: Result<Vec<u8>, Vec<u8>> = Err(format!("Could not submit trusted call due to: {}", e).encode());
-          let return_value = ReturnValue {
-            do_watch: false, 
-            value: result.encode(),
-          };
-          let json_string = serde_json::to_string(&return_value).unwrap();
-          Ok(Value::String(json_string))
+          let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+          Ok(Value::String(compute_error_string(error_msg)))
+
         },
-      }
+      }   
     });
 
     // author_submitExtrinsic
@@ -226,23 +233,37 @@ fn init_io_handler() -> IoHandler {
           let author = Author::new(tx_pool); 
 
           let to_submit: SumbitExtrinsicParams = extrinsic;
-          let shard = match decode_shard_from_base58(to_submit.shard_id.clone()) {
-            Ok(id) => id,
-            Err(msg) => return Ok(Value::String(format!("{}", msg))),
-          };
-          let result = async {              
-            author.submit_call(to_submit.call.clone(), shard).await
-          };     
-          let response: Result<Hash, RpcError> = executor::block_on(result);
-          match response {
-            Ok(hash_value) => Ok(Value::String(format!("The following trusted call was submitted: {}", hash_value.to_string()))),
-            Err(rpc_error) => Ok(Value::String(format!("Error: {}", rpc_error.message))),
+          match decode_shard_from_base58(to_submit.shard_id.clone()) {
+            Ok(shard) => {
+              //TODO: watch call       
+              let result = async {              
+                author.submit_call(to_submit.call.clone(), shard).await
+              };     
+              let response: Result<Hash, RpcError> = executor::block_on(result);
+              let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
+                Ok(hash_value) => Ok(hash_value.to_string().encode()),
+                Err(rpc_error) => Err(rpc_error.message.encode()),
+
+              };
+              let json_value = ReturnValue {
+                do_watch: false, 
+                value: encodable_response.encode(),
+              };          
+              let json_string = serde_json::to_string(&json_value).unwrap();
+              Ok(Value::String(json_string)) 
+            },
+            Err(msg) => Ok(Value::String(compute_error_string(msg))),
           }          
+        },     
+        Err(e) => {
+          let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+          Ok(Value::String(compute_error_string(error_msg)))
+
         },
-        Err(e) => Ok(Value::String(format!("Could not submit trusted call due to: {}", e))),
-     }
+      }   
     });
     
+    // TODO: Match Interface to the one of submit and watch extrinsic .. Result<Vec[u8]..>
     // author_pendingExtrinsics  
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);

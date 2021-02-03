@@ -682,7 +682,7 @@ struct RpcTrustedCall {
 // TODO: Where to define for nice structure?
 #[derive(Serialize, Deserialize)]
 struct ReturnValue {
-    value: Vec<u8>,
+    value: String,
     do_watch: bool,
 }
 
@@ -721,14 +721,27 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     
     let direct_api = get_worker_direct_api(matches);
 
-    //let (sender, receiver) = channel();
+    let (sender, receiver) = channel();
 
-    let response_string = match direct_api.send(jsonrpc_call) {
-        Ok(resp) => resp,
+    match direct_api.watch(jsonrpc_call, sender.clone()) {
+        Ok(_) => println!("Started connection"),
         Err(_) => panic!("Error when sending direct invocation call"),
-    };
-    let response: Value = serde_json::from_str(&response_string).unwrap();
-    println!("{}", response["result"]);
+    }
+    //let response: Value = serde_json::from_str(&response_string).unwrap();
+    //println!("{}", response["result"]);
+    loop {
+        match receiver.recv() {
+            Ok(response) => {
+                let response: RpcResponse = serde_json::from_str(&response).unwrap();
+                println!("{}", response.result);
+                let return_value: ReturnValue = serde_json::from_str(&response.result).unwrap(); 
+                if !return_value.do_watch {
+                    return None
+                }
+            },
+            Err(_) => break,
+        };
+    }
 
    /* let rpc_response: RpcResponse = serde_json::from_str(&response_string).unwrap();
     println!("{}", rpc_response.result);

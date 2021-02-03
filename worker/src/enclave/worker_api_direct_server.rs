@@ -170,6 +170,11 @@ pub fn handle_direct_invocation_request(
              // start watching the call with the specific hash
             if result_of_rpc_response.do_watch{
                 // start watching the hash function above
+               // req.client.send(decoded_response);
+                readable_response_result.do_watch = false;
+               /* if TxStatus::In_block
+                    readable_response_result.do_watch = false
+                }*/
             }
             // overwrite encoded non-readable return value to send to the client
             readable_response_result.value = hash;
@@ -187,5 +192,5 @@ pub fn handle_direct_invocation_request(
         id: full_rpc_response.id,
     };
 
-	req.client.send(serde_json::to_string(&updated_rpc_response).unwrap())
+    req.client.send(serde_json::to_string(&updated_rpc_response).unwrap())
 }
