@@ -24,10 +24,9 @@ impl Handler for DirectWsClient {
         info!("got message");
         debug!("{}", msg);
         self.result.send(msg.to_string()).unwrap();
-        self.out.close(CloseCode::Normal).unwrap();
-        if !self.watch {
+        /* if !self.watch {
            self.out.close(CloseCode::Normal).unwrap();
-        }
+        } */
         Ok(())
     }
 }

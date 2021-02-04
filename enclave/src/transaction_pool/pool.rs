@@ -204,7 +204,7 @@ where
 		source: TransactionSource,
 		xt:TrustedCallSigned,
 		shard: ShardIdentifier,
-	) -> Result<Watcher<ExtrinsicHash<B>, ExtrinsicHash<B>>, B::Error> {
+	) -> Result<ExtrinsicHash<B>, B::Error> {
 		//TODO
 		//let block_number = self.resolve_block_number(at)?;
 		// dummy value:

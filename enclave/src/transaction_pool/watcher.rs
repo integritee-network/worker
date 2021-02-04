@@ -28,65 +28,38 @@ use jsonrpc_core::futures::{
 	channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
 };
 
-use crate::transaction_pool::primitives::TransactionStatus;
+use codec::Encode;
+use sp_runtime::traits;
 
-// just aliased, non performance implications
-// for more implications see / use substrate file
-// primitives/utils/src/mpsc.rs:
-//use sp_utils::mpsc::{tracing_unbounded, TracingUnboundedSender, TracingUnboundedReceiver};
-pub type TracingUnboundedSender<T> = UnboundedSender<T>;
-pub type TracingUnboundedReceiver<T> = UnboundedReceiver<T>;
-pub fn tracing_unbounded<T>(_key: &'static str) ->(TracingUnboundedSender<T>, TracingUnboundedReceiver<T>) {
-	mpsc::unbounded()
-}
+use sgx_tstd::hash;
+
+//use crate::transaction_pool::primitives::TransactionStatus
+use substratee_worker_primitives::TransactionStatus;
+use crate::rpc::worker_api_direct;
+
 
 /// Extrinsic watcher.
 ///
 /// Represents a stream of status updates for particular extrinsic.
 #[derive(Debug)]
-pub struct Watcher<H, BH> {
-	receiver: TracingUnboundedReceiver<TransactionStatus<H, BH>>,
+pub struct Watcher<H> {
+	//receiver: TracingUnboundedReceiver<TransactionStatus<H, BH>>,
 	hash: H,
+	is_in_block: bool,
 }
 
-impl<H, BH> Watcher<H, BH> {
+impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
 	/// Returns the transaction hash.
 	pub fn hash(&self) -> &H {
 		&self.hash
 	}
 
-	/// Pipe the notifications to given sink.
-	///
-	/// Make sure to drive the future to completion.
-	pub fn into_stream(self) -> impl Stream<Item=TransactionStatus<H, BH>> {
-		self.receiver
-	}
-}
-
-/// Sender part of the watcher. Exposed only for testing purposes.
-#[derive(Debug)]
-pub struct Sender<H, BH> {
-	receivers: Vec<TracingUnboundedSender<TransactionStatus<H, BH>>>,
-	is_finalized: bool,
-}
-
-impl<H, BH> Default for Sender<H, BH> {
-	fn default() -> Self {
-		Sender {
-			receivers: Default::default(),
-			is_finalized: false,
-		}
-	}
-}
-
-impl<H: Clone, BH: Clone> Sender<H, BH> {
-	/// Add a new watcher to this sender object.
-	pub fn new_watcher(&mut self, hash: H) -> Watcher<H, BH> {
-		let (sender, receiver) = tracing_unbounded("mpsc_txpool_watcher");
-		self.receivers.push(sender);
+	pub fn new_watcher(hash: H) -> Watcher<H> {
+		//let (sender, receiver) = tracing_unbounded("mpsc_txpool_watcher");
+		//self.receivers.push(sender);
 		Watcher {
-			receiver,
 			hash,
+			is_in_block: false,
 		}
 	}
 
@@ -101,57 +74,87 @@ impl<H: Clone, BH: Clone> Sender<H, BH> {
 	}
 
 	/// Some state change (perhaps another extrinsic was included) rendered this extrinsic invalid.
-	pub fn usurped(&mut self, hash: H) {
-		self.send(TransactionStatus::Usurped(hash));
-		self.is_finalized = true;
+	pub fn usurped(&mut self) {
+		//self.send(TransactionStatus::Usurped(hash));
+		self.send(TransactionStatus::Usurped);
+		self.is_in_block = true;
 	}
 
 	/// Extrinsic has been included in block with given hash.
-	pub fn in_block(&mut self, hash: BH) {
-		self.send(TransactionStatus::InBlock(hash));
+	pub fn in_block(&mut self) {
+		//self.send(TransactionStatus::InBlock(hash));
+		self.send(TransactionStatus::InBlock);
+		self.is_in_block = true;
 	}
 
 	/// Extrinsic has been finalized by a finality gadget.
-	pub fn finalized(&mut self, hash: BH) {
-		self.send(TransactionStatus::Finalized(hash));
-		self.is_finalized = true;
+	pub fn finalized(&mut self) {
+		//self.send(TransactionStatus::Finalized(hash));
+		self.send(TransactionStatus::Finalized);
+		self.is_in_block = true;
 	}
 
 	/// The block this extrinsic was included in has been retracted
-	pub fn finality_timeout(&mut self, hash: BH) {
-		self.send(TransactionStatus::FinalityTimeout(hash));
-		self.is_finalized = true;
+	pub fn finality_timeout(&mut self) {
+		//self.send(TransactionStatus::FinalityTimeout(hash));
+		self.send(TransactionStatus::FinalityTimeout);
+		self.is_in_block = true;
 	}
 
 	/// The block this extrinsic was included in has been retracted
-	pub fn retracted(&mut self, hash: BH) {
-		self.send(TransactionStatus::Retracted(hash));
+	pub fn retracted(&mut self) {
+		//self.send(TransactionStatus::Retracted(hash));
+		self.send(TransactionStatus::Retracted);
 	}
 
 	/// Extrinsic has been marked as invalid by the block builder.
 	pub fn invalid(&mut self) {
 		self.send(TransactionStatus::Invalid);
 		// we mark as finalized as there are no more notifications
-		self.is_finalized = true;
+		self.is_in_block = true;
 	}
 
 	/// Transaction has been dropped from the pool because of the limit.
 	pub fn dropped(&mut self) {
 		self.send(TransactionStatus::Dropped);
-		self.is_finalized = true;
+		self.is_in_block = true;
 	}
 
 	/// The extrinsic has been broadcast to the given peers.
 	pub fn broadcast(&mut self, peers: Vec<String>) {
-		self.send(TransactionStatus::Broadcast(peers))
+		//self.send(TransactionStatus::Broadcast(peers))
+		self.send(TransactionStatus::Broadcast)
 	}
 
 	/// Returns true if the are no more listeners for this extrinsic or it was finalized.
 	pub fn is_done(&self) -> bool {
-		self.is_finalized || self.receivers.is_empty()
+		self.is_in_block // || self.receivers.is_empty()
 	}
 
-	fn send(&mut self, status: TransactionStatus<H, BH>) {
-		//update_status_event(hash, status),
+	fn send(&mut self, status: TransactionStatus) {
+		worker_api_direct::update_status_event(self.hash(), status);
 	}
 }
+
+/*  /// Sender part of the watcher. Exposed only for testing purposes.
+#[derive(Debug)]
+pub struct Sender<H, BH> {
+	//receivers: Vec<TracingUnboundedSender<TransactionStatus<H, BH>>>,
+	//receivers: Vec<H>,
+	is_in_block: bool,
+}
+ */
+/* impl<H> Default for Watcher<H> {
+	fn default() -> Self {
+		Watcher {
+			//receivers: Default::default(),
+			hash: ,
+			is_in_block: false,
+		}
+	}
+}  */
+
+/* impl<H: Clone, BH: Clone> Sender<H, BH> {
+	/// Add a new watcher to this sender object.
+	
+} */

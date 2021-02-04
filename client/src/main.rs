@@ -65,6 +65,11 @@ use substratee_stf::{
 use substratee_worker_api::Api as WorkerApi;
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 
+use log::*;
+use std::sync::mpsc::Sender as MpscSender;
+use ws::{connect, CloseCode, Handler, Message, Result as ClientResult, Sender,  Handshake};
+use substratee_worker_api::direct_client::DirectWsClient;
+
 use substrate_client_keystore::LocalKeystore;
 
 use serde::{Deserialize, Serialize};
@@ -694,14 +699,35 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
     println!("Direct invocation call: {}", jsonrpc_call);
     
-    let direct_api = get_worker_direct_api(matches);
+   // let direct_api = get_worker_direct_api(matches);
+   let url = format!(
+        "{}:{}",
+        matches.value_of("worker-url").unwrap(),
+        matches.value_of("worker-rpc-port").unwrap()
+    );
 
     let (sender, receiver) = channel();
 
-    match direct_api.watch(jsonrpc_call, sender.clone()) {
+    let client = thread::spawn(move || {
+        match connect(url, |out| DirectWsClient {
+            out,
+            request: jsonrpc_call.clone(),
+            result: sender.clone(),
+            watch: true,
+        }) {
+            Ok(c) => c,
+            Err(_) => {
+                error!("Could not connect to direct invoation server");
+            }
+        }
+    });
+
+    /*match direct_api.watch(jsonrpc_call, sender.clone()) {
         Ok(_) => println!("Started connection"),
         Err(_) => panic!("Error when sending direct invocation call"),
-    }
+    }*/
+
+
     loop {
         match receiver.recv() {
             Ok(response) => {
@@ -710,12 +736,15 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
                 let return_value = RpcReturnValue::decode(&mut response.result.as_slice()).unwrap(); 
                 println!("{:?}", return_value.status);
                 let value = String::decode(&mut return_value.value.as_slice()).unwrap(); 
-                println!("{}", value);
+                println!("{:?}", return_value.value);
+                println!("{}", value);                
                 if !return_value.do_watch {
                     return None
                 }
             },
-            Err(_) => break,
+            
+            Err(_) => { println!{"Break due Error"}
+                break},
         };
     }    
     None

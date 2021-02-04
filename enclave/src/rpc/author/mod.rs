@@ -101,12 +101,14 @@ pub trait AuthorApi<Hash, BlockHash> {
 	///
 	/// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
 	/// life cycle.
-	fn watch_call(&self,
+/* 	fn watch_call(&self,
 		//metadata: Self::Metadata,
 		//subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
 		bytes: Vec<u8>,
 		shard: ShardIdentifier,
-	);
+	); */
+
+	fn watch_call(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
 
 	/*/// Submit an extrinsic to watch.
 	///
@@ -298,7 +300,37 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 		)
 	}
 
-	fn watch_call(&self,
+	fn watch_call(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError>
+	{	
+		// check if shard exists
+		let shards = state::list_shards().unwrap();
+		if !shards.contains(&shard) {
+			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
+		}
+		// decrypt call
+		let rsa_keypair = rsa3072::unseal_pair().unwrap();
+		//let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
+		let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
+			Ok(req) => req,
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
+		};
+		// decode call
+		let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
+			Ok(call) => call,
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
+		};
+		//let best_block_hash = self.client.info().best_hash;
+		// dummy block hash
+		let best_block_hash = Default::default();
+		Box::pin(self.pool
+			.submit_and_watch(&generic::BlockId::hash(best_block_hash), TX_SOURCE, stf_call_signed, shard)
+			.map_err(|e| StateRpcError::PoolError(e.into_pool_error()
+				.map(Into::into)
+				.unwrap_or_else(|_e| PoolError::Verification)).into()
+		))
+	}
+
+	/* fn watch_call(&self,
 	//	_metadata: Self::Metadata,
 	//	subscriber: Subscriber<TransactionStatus<TxHash<P>, BlockHash<P>>>,
 		xt: Vec<u8>,
@@ -386,7 +418,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 		if res.is_err() {
 			warn!("Error spawning subscription RPC task.");
 		}*/
-	}
+	} */
 
 /*	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
 		Ok(self.subscriptions.cancel(id))

@@ -29,6 +29,7 @@ use sgx_tstd::{
 use core::{
 	result::Result,
 	hash,
+	fmt::Display,
 };
 
 use crate::transaction_pool::{
@@ -55,6 +56,7 @@ use sp_runtime::{
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 
 use retain_mut::RetainMut;
+use codec::Encode;
 
 
 
@@ -274,15 +276,17 @@ where
 		&self,
 		tx: ValidatedTransactionFor<B>,
 		shard: ShardIdentifier,
-	) -> Result<Watcher<ExtrinsicHash<B>, ExtrinsicHash<B>>, B::Error> {
+	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
 			ValidatedTransaction::Valid(tx) => {
-				let hash = self.api.hash_and_length(&tx.data).0;
-				let watcher = self.listener.write().unwrap().create_watcher(hash);
-				self.submit(core::iter::once(ValidatedTransaction::Valid(tx)), shard)
+				//let hash = self.api.hash_and_length(&tx.data).0;				
+				let hash_result = self.submit(core::iter::once(ValidatedTransaction::Valid(tx)), shard)
 					.pop()
-					.expect("One extrinsic passed; one result returned; qed")
-					.map(|_| watcher)
+					.expect("One extrinsic passed; one result returned; qed");
+				if let Ok(hash) = hash_result {
+					self.listener.write().unwrap().create_watcher(hash);
+				}
+				hash_result				
 			},
 			ValidatedTransaction::Invalid(hash, err) => {
 				self.rotator.ban(&Instant::now(), core::iter::once(hash));
@@ -653,7 +657,7 @@ fn fire_events<H, B, Ex>(
 	listener: &mut Listener<H, B>,
 	imported: &base::Imported<H, Ex>,
 ) where
-	H: hash::Hash + Eq + traits::Member, // + Serialize,
+	H: hash::Hash + Eq + traits::Member + Encode, // + Serialize,
 	B: ChainApi,
 {
 	match *imported {

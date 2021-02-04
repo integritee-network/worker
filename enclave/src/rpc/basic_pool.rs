@@ -161,15 +161,10 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		source: TransactionSource,
 		xt: TrustedCallSigned,
 		shard: ShardIdentifier,
-	) -> PoolFuture<Box<TransactionStatusStreamFor<Self>>, Self::Error> {
+	) -> PoolFuture<TxHash<Self>, Self::Error> {
 		let at = *at;
 		let pool = self.pool.clone();
-
-		async move {
-			pool.submit_and_watch(&at, source, xt, shard)
-				.map(|result| result.map(|watcher| Box::new(watcher.into_stream()) as _))
-				.await
-		}.boxed()
+		async move { pool.submit_and_watch(&at, source, xt, shard).await }.boxed()
 	}
 
 	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier) -> Vec<Arc<Self::InPoolTransaction>> {

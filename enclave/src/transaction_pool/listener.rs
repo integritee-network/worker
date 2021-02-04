@@ -29,16 +29,16 @@ use log::{debug, trace, warn};
 use sp_runtime::traits;
 
 use crate::transaction_pool::{
-	watcher,
+	watcher::Watcher,
 	pool::{ExtrinsicHash, BlockHash, ChainApi},	
 };
+use codec::Encode;
 
 
 /// Extrinsic pool default listener.
 pub struct Listener<H: hash::Hash + Eq, C: ChainApi> {
-	watchers: HashMap<H, watcher::Sender<H, ExtrinsicHash<C>>>,
+	watchers: HashMap<H, Watcher<H>>,
 	finality_watchers: LinkedHashMap<ExtrinsicHash<C>, Vec<H>>,
-	hashes: HashSet<H>,
 }
 
 /// Maximum number of blocks awaiting finality at any time.
@@ -49,14 +49,13 @@ impl<H: hash::Hash + Eq + Debug, C: ChainApi> Default for Listener<H, C> {
 		Listener {
 			watchers: Default::default(),
 			finality_watchers: Default::default(),
-			hashes: Default::default(),
 		}
 	}
 }
 
 //impl<H: hash::Hash + traits::Member + Serialize, C: ChainApi> Listener<H, C> {
-impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
-	fn fire<F>(&mut self, hash: &H, fun: F) where F: FnOnce(&mut watcher::Sender<H, ExtrinsicHash<C>>) {
+impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
+	fn fire<F>(&mut self, hash: &H, fun: F) where F: FnOnce(&mut Watcher<H>) {
 		let clean = if let Some(h) = self.watchers.get_mut(hash) {
 			fun(h);
 			h.is_done()
@@ -72,9 +71,11 @@ impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 	/// Creates a new watcher for given verified extrinsic.
 	///
 	/// The watcher can be used to subscribe to life-cycle events of that extrinsic.
-	pub fn create_watcher(&mut self, hash: H) -> watcher::Watcher<H, ExtrinsicHash<C>> {
-		let sender = self.watchers.entry(hash.clone()).or_insert_with(watcher::Sender::default);
-		sender.new_watcher(hash)
+	pub fn create_watcher(&mut self, hash: H) {
+		let new_watcher = Watcher::new_watcher(hash.clone());
+		self.watchers.insert(hash, new_watcher);
+		//let sender = self.watchers.entry(hash.clone()).or_insert_with(Watcher::default);
+		//sender.new_watcher(hash)
 	}
 
 	/// Notify the listeners about extrinsic broadcast.
@@ -88,7 +89,7 @@ impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 		trace!(target: "txpool", "[{:?}] Ready (replaced with {:?})", tx, old);
 		self.fire(tx, |watcher| watcher.ready());
 		if let Some(old) = old {
-			self.fire(old, |watcher| watcher.usurped(tx.clone()));
+			self.fire(old, |watcher| watcher.usurped());
 		}
 	}
 
@@ -102,7 +103,7 @@ impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 	pub fn dropped(&mut self, tx: &H, by: Option<&H>) {
 		trace!(target: "txpool", "[{:?}] Dropped (replaced with {:?})", tx, by);
 		self.fire(tx, |watcher| match by {
-			Some(t) => watcher.usurped(t.clone()),
+			Some(t) => watcher.usurped(),
 			None => watcher.dropped(),
 		})
 	}
@@ -120,13 +121,13 @@ impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 	/// Transaction was pruned from the pool.
 	pub fn pruned(&mut self, block_hash: BlockHash<C>, tx: &H) {
 		debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
-		self.fire(tx, |s| s.in_block(block_hash));
+		self.fire(tx, |s| s.in_block());
 		self.finality_watchers.entry(block_hash).or_insert(vec![]).push(tx.clone());
 
 		while self.finality_watchers.len() > MAX_FINALITY_WATCHERS {
 			if let Some((hash, txs)) = self.finality_watchers.pop_front() {
 				for tx in txs {
-					self.fire(&tx, |s| s.finality_timeout(hash.clone()));
+					self.fire(&tx, |s| s.finality_timeout());
 				}
 			}
 		}
@@ -136,7 +137,7 @@ impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 	pub fn retracted(&mut self, block_hash: BlockHash<C>) {
 		if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
 			for hash in hashes {
-				self.fire(&hash, |s| s.retracted(block_hash))
+				self.fire(&hash, |s| s.retracted())
 			}
 		}
 	}
@@ -146,7 +147,7 @@ impl<H: hash::Hash + traits::Member, C: ChainApi> Listener<H, C> {
 		if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
 			for hash in hashes {
 				log::debug!(target: "txpool", "[{:?}] Sent finalization event (block {:?})", hash, block_hash);
-				self.fire(&hash, |s| s.finalized(block_hash))
+				self.fire(&hash, |s| s.finalized())
 			}
 		}
 	}

@@ -24,16 +24,17 @@ use alloc::{
   vec::Vec,
   borrow::ToOwned,
 };
-
 use core::{
   result::Result,
   ops::Deref,
+  fmt::Display,
 };
 
 use sgx_types::*;
 use sgx_tstd::{
   sync::{SgxMutex, Arc},
   sync::atomic::{AtomicPtr, Ordering},
+  hash
 };
 
 use sp_core::H256 as Hash;
@@ -62,7 +63,7 @@ use substratee_stf::{ShardIdentifier};
 use chain_relay::Block; 
 use base58::FromBase58;
 
-use substratee_worker_primitives::TransactionStatus as SimplifiedTransactionStatus;
+use substratee_worker_primitives::TransactionStatus;
 use substratee_worker_primitives::RpcReturnValue;
 use substratee_node_primitives::Request;
 
@@ -128,20 +129,13 @@ fn decode_shard_from_base58(shard_base58: String) -> Result<ShardIdentifier, Str
   Ok(shard)
 }
 
-/*#[derive(Deserialize)]
-struct RpcTrustedCall {
-    call: Vec<u8>,
-    shard_id: String, // ShardIdentifier (H256) does not implement deserialize
-}*/
-
 fn compute_encoded_return_error (error_msg: String) -> Vec<u8> {
   let error: Result<Vec<u8>, Vec<u8>> = Err(error_msg.encode());
   let return_value = RpcReturnValue{
       value: error.encode(), 
       do_watch: false,
-      status: SimplifiedTransactionStatus::Invalid,
-  };
-  //serde_json::to_string(&return_value).unwrap()  
+      status: TransactionStatus::Invalid,
+  };  
   return_value.encode()
 }
 
@@ -169,52 +163,23 @@ fn init_io_handler() -> IoHandler {
               let encrypted_trusted_call: Vec<u8> = request.cyphertext;
               //TODO: watch call       
               let result = async {              
-                author.submit_call(encrypted_trusted_call.clone(), shard).await
+                author.watch_call(encrypted_trusted_call.clone(), shard).await
               };     
               let response: Result<Hash, RpcError> = executor::block_on(result);
               let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                Ok(hash_value) => Ok(hash_value.to_string().encode()),
+                Ok(hash_value) => Ok(hash_value.encode()),
                 Err(rpc_error) => Err(rpc_error.message.encode()),
 
               };
               let json_value = RpcReturnValue {
                 do_watch: true, 
                 value: encodable_response.encode(),
-                status: SimplifiedTransactionStatus::Ready, // TODO: mit return value arbeiten
-              };          
-              //let json_string = serde_json::to_string(&json_value).unwrap();
-              //Ok(Value::String(json_string))               
+                status: TransactionStatus::Ready, // TODO: mit return value arbeiten
+              };                        
               Ok(json!(json_value.encode()))
             },
             Err(msg) => Ok(json!(compute_encoded_return_error("Could not decode request".to_owned()))),
-          }
-
-    
-
-          //let to_submit: Re = extrinsic;
-         /* match decode_shard_from_base58(to_submit.shard_id.clone()) {
-            Ok(shard) => {
-              //TODO: watch call       
-              let result = async {              
-                author.submit_call(to_submit.call.clone(), shard).await
-              };     
-              let response: Result<Hash, RpcError> = executor::block_on(result);
-              let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                Ok(hash_value) => Ok(hash_value.to_string().encode()),
-                Err(rpc_error) => Err(rpc_error.message.encode()),
-
-              };
-              let json_value = RpcReturnValue {
-                do_watch: true, 
-                value: encodable_response.encode(),
-                status: SimplifiedTransactionStatus::Ready, // TODO: mit return value arbeiten
-              };          
-              //let json_string = serde_json::to_string(&json_value).unwrap();
-              //Ok(Value::String(json_string))               
-              Ok(json!(json_value.encode()))
-            },
-            Err(msg) => Ok(json!(compute_encoded_return_error(msg))),
-          }   */       
+          }     
         },     
         Err(e) => {
           let error_msg: String = format!("Could not submit trusted call due to: {}", e);
@@ -390,12 +355,11 @@ pub unsafe extern "C" fn call_rpc_methods(
 	  sgx_status_t::SGX_SUCCESS
 }
 
-pub fn update_status_event(
-  hash: Hash,
-  status_update: SimplifiedTransactionStatus,
+pub fn update_status_event<H: Encode>(
+  hash: H,
+  status_update: TransactionStatus,
 ) -> Result<(),()> { 
   let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
- 
 
   let res = unsafe {
     ocall_update_status_event(
