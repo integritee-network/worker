@@ -274,7 +274,7 @@ pub fn handle_direct_invocation_request(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ocall_new_watcher_event(
+pub unsafe extern "C" fn ocall_update_status_event(
     hash_encoded: *const u8,
     hash_size: u32,
     status_update_encoded: *const u8,

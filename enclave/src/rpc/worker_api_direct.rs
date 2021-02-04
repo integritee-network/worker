@@ -68,7 +68,7 @@ use crate::utils::{write_slice_and_whitespace_pad};
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
 extern "C" {
-  pub fn ocall_new_watcher_event(
+  pub fn ocall_update_status_event(
       ret_val: *mut sgx_status_t,
       hash_encoded: *const u8,
       hash_size: u32,
@@ -363,7 +363,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 	  sgx_status_t::SGX_SUCCESS
 }
 
-fn new_watcher_event(
+fn update_status_event(
   hash: Hash,
   status_update: SimplifiedTransactionStatus,
 ) -> Result<(),()> { 
@@ -371,7 +371,7 @@ fn new_watcher_event(
  
 
   let res = unsafe {
-    ocall_new_watcher_event(
+    ocall_update_status_event(
           &mut rt as *mut sgx_status_t,
           hash.encode().as_ptr(),
           hash.encode().len() as u32,
