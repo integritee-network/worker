@@ -684,7 +684,36 @@ struct RpcTrustedCall {
 struct ReturnValue {
     value: String,
     do_watch: bool,
+    status: TransactionStatus,
 }
+
+// TODO: Nehmen aus enclave.. oder sonst iwi
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TransactionStatus {
+	/// Transaction is part of the future queue.
+	Future,
+	/// Transaction is part of the ready queue.
+	Ready,
+	/// The transaction has been broadcast to the given peers.
+	Broadcast,
+	/// Transaction has been included in block with given hash.
+	InBlock,
+	/// The block this transaction was included in has been retracted.
+	Retracted,
+	/// Maximum number of finality watchers has been reached,
+	/// old watchers are being removed.
+	FinalityTimeout,
+	/// Transaction has been finalized by a finality-gadget, e.g GRANDPA
+	Finalized,
+	/// Transaction has been replaced in the pool, by another transaction
+	/// that provides the same tags. (e.g. same (sender, nonce)).
+	Usurped,
+	/// Transaction has been dropped from the pool because of the limit.
+	Dropped,
+	/// Transaction is no longer valid in the current state.
+	Invalid,
+}
+
 
 #[derive(Serialize, Deserialize)]
 struct RpcResponse {
@@ -727,8 +756,6 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         Ok(_) => println!("Started connection"),
         Err(_) => panic!("Error when sending direct invocation call"),
     }
-    //let response: Value = serde_json::from_str(&response_string).unwrap();
-    //println!("{}", response["result"]);
     loop {
         match receiver.recv() {
             Ok(response) => {
@@ -741,21 +768,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
             },
             Err(_) => break,
         };
-    }
-
-   /* let rpc_response: RpcResponse = serde_json::from_str(&response_string).unwrap();
-    println!("{}", rpc_response.result);
-    let return_value: ReturnValue = serde_json::from_str(&rpc_response.result).unwrap();
-    println!("{:?}", return_value.value);
-    let decoded_value: StdResult<Vec<u8>,Vec<u8>> = StdResult::decode(&mut return_value.value.as_slice()).unwrap();
-    println!("{:?}", decoded_value);
-    let decoded_result: String = match decoded_value {
-        Ok(ok) => String::decode(&mut ok.as_slice()).unwrap(),
-        Err(err) => String::decode(&mut err.as_slice()).unwrap(),
-
-    };
-    println!("{}", decoded_result);*/    
-    
+    }    
     None
 }
 

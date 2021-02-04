@@ -61,45 +61,21 @@ use substratee_stf::{ShardIdentifier};
 use chain_relay::Block; 
 use base58::FromBase58;
 
+use crate::transaction_pool::primitives::SimplifiedTransactionStatus;
+
 use crate::utils::{write_slice_and_whitespace_pad};
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
-/*extern "C" {
-  pub fn ocall_worker_request(
+extern "C" {
+  pub fn ocall_new_watcher_event(
       ret_val: *mut sgx_status_t,
-      request: *const u8,
-      req_size: u32,
-      response: *mut u8,
-      resp_size: u32,
+      hash_encoded: *const u8,
+      hash_size: u32,
+      status_update_encoded: *const u8,
+      status_size: u32,
   ) -> sgx_status_t;
 }
-
-fn worker_request<V: Encode + Decode>(
-  req: Vec<WorkerRequest>,
-) -> SgxResult<Vec<WorkerResponse<V>>> {
-  let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-  let mut resp: Vec<u8> = vec![0; 4196 * 4];
-
-  let res = unsafe {
-      ocall_worker_request(
-          &mut rt as *mut sgx_status_t,
-          req.encode().as_ptr(),
-          req.encode().len() as u32,
-          resp.as_mut_ptr(),
-          resp.len() as u32,
-      )
-  };
-
-  if rt != sgx_status_t::SGX_SUCCESS {
-      return Err(rt);
-  }
-
-  if res != sgx_status_t::SGX_SUCCESS {
-      return Err(res);
-  }
-  Ok(Decode::decode(&mut resp.as_slice()).unwrap())
-}*/
 
 #[no_mangle]
 // initialise tx pool and store within static atomic pointer
@@ -160,6 +136,7 @@ struct SumbitExtrinsicParams {
 struct ReturnValue {
     value: Vec<u8>,
     do_watch: bool,
+    status: SimplifiedTransactionStatus,
 }
 
 fn compute_error_string (error_msg: String) -> String {
@@ -167,6 +144,7 @@ fn compute_error_string (error_msg: String) -> String {
   let return_value = ReturnValue{
       value: error.encode(), 
       do_watch: false,
+      status: SimplifiedTransactionStatus::Invalid,
   };
   serde_json::to_string(&return_value).unwrap()  
 }
@@ -183,7 +161,7 @@ fn init_io_handler() -> IoHandler {
     io.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {  
       match params.parse() {
         Ok(extrinsic) => {
-            // Aquire lock
+          // Aquire lock
           let &ref tx_pool_mutex = load_tx_pool().unwrap();
           let tx_pool_guard = tx_pool_mutex.lock().unwrap();
           let tx_pool = Arc::new(tx_pool_guard.deref());
@@ -205,6 +183,7 @@ fn init_io_handler() -> IoHandler {
               let json_value = ReturnValue {
                 do_watch: true, 
                 value: encodable_response.encode(),
+                status: SimplifiedTransactionStatus::Ready, // TODO: mit return value arbeiten
               };          
               let json_string = serde_json::to_string(&json_value).unwrap();
               Ok(Value::String(json_string)) 
@@ -248,6 +227,7 @@ fn init_io_handler() -> IoHandler {
               let json_value = ReturnValue {
                 do_watch: false, 
                 value: encodable_response.encode(),
+                status: SimplifiedTransactionStatus::Ready // TODO: mit returnValue arbeiten
               };          
               let json_string = serde_json::to_string(&json_value).unwrap();
               Ok(Value::String(json_string)) 
@@ -381,5 +361,33 @@ pub unsafe extern "C" fn call_rpc_methods(
     let response_slice = from_raw_parts_mut(response, response_len as usize);
     write_slice_and_whitespace_pad(response_slice, response_string.as_bytes().to_vec());
 	  sgx_status_t::SGX_SUCCESS
+}
+
+fn new_watcher_event(
+  hash: Hash,
+  status_update: SimplifiedTransactionStatus,
+) -> Result<(),()> { 
+  let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+ 
+
+  let res = unsafe {
+    ocall_new_watcher_event(
+          &mut rt as *mut sgx_status_t,
+          hash.encode().as_ptr(),
+          hash.encode().len() as u32,
+          status_update.encode().as_ptr(),
+          status_update.encode().len() as u32,
+      )
+  };
+
+  if rt != sgx_status_t::SGX_SUCCESS {
+      return Err(());
+  }
+
+  if res != sgx_status_t::SGX_SUCCESS {
+      return Err(());
+  }
+
+  Ok(())
 }
 

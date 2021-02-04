@@ -18,6 +18,9 @@ use sgx_types::*;
 
 use log::*;
 use std::sync::mpsc::Sender as MpscSender;
+use std::sync::{Arc, Mutex, MutexGuard, atomic::{Ordering, AtomicPtr}};
+use std::collections::HashMap;
+use std::slice;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender, Handshake};
 use std::thread;
 use std::sync::mpsc::channel;
@@ -25,6 +28,8 @@ use serde::{Serialize, Deserialize};
 use codec::Decode;
 use core::result::Result as StdResult;
 use serde_json::Value;
+
+static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
 extern "C" {
 	fn initialize_pool(
@@ -105,7 +110,20 @@ pub fn start_worker_api_direct_server(
                 error!("[TX-pool init] ECALL Enclave Failed {}!", result.as_str());
             }
         }
-	});
+    });
+    
+    // initialize static pointer to empty HashMap
+    let new_map: HashMap<String, WatchingClient> = HashMap::new();
+    let pool_ptr = Arc::new(Mutex::new(new_map));
+    let ptr = Arc::into_raw(pool_ptr);
+    WATCHED_LIST.store(ptr as *mut (), Ordering::SeqCst);
+
+
+}
+
+struct WatchingClient {
+    client: Sender,
+    response: RpcResponse,
 }
 
 // TODO: double specified in enclace & worker
@@ -113,6 +131,7 @@ pub fn start_worker_api_direct_server(
 struct EncodedReturnValue {
     value: Vec<u8>,
     do_watch: bool,
+    status: TransactionStatus,
 }
 
 // TODO: double specified in enclace & worker
@@ -120,6 +139,34 @@ struct EncodedReturnValue {
 struct DecodedReturnValue {
     value: String,
     do_watch: bool,
+    status: TransactionStatus
+}
+
+// TODO: Nehmen aus enclave.. oder sonst iwi
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Decode)]
+pub enum TransactionStatus {
+	/// Transaction is part of the future queue.
+	Future,
+	/// Transaction is part of the ready queue.
+	Ready,
+	/// The transaction has been broadcast to the given peers.
+	Broadcast,
+	/// Transaction has been included in block with given hash.
+	InBlock,
+	/// The block this transaction was included in has been retracted.
+	Retracted,
+	/// Maximum number of finality watchers has been reached,
+	/// old watchers are being removed.
+	FinalityTimeout,
+	/// Transaction has been finalized by a finality-gadget, e.g GRANDPA
+	Finalized,
+	/// Transaction has been replaced in the pool, by another transaction
+	/// that provides the same tags. (e.g. same (sender, nonce)).
+	Usurped,
+	/// Transaction has been dropped from the pool because of the limit.
+	Dropped,
+	/// Transaction is no longer valid in the current state.
+	Invalid,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -128,6 +175,18 @@ struct RpcResponse {
     result: String,
     id: u32,
 }
+
+
+fn load_watched_list() -> Option<&'static Mutex<HashMap<String, WatchingClient>>>
+{
+    let ptr = WATCHED_LIST.load(Ordering::SeqCst) as * mut Mutex<HashMap<String, WatchingClient>>;
+    if ptr.is_null() {
+        None
+    } else {
+        Some(unsafe { &* ptr })
+    }
+}
+
 
 pub fn handle_direct_invocation_request(
 	req: DirectWsServerRequest,
@@ -163,21 +222,40 @@ pub fn handle_direct_invocation_request(
     let mut readable_response_result = DecodedReturnValue{
         do_watch: result_of_rpc_response.do_watch,
         value: "".to_owned(),
+        status: TransactionStatus::Invalid,
     };
     match decoded_result {
         Ok(hash_vec) => {
             let hash = String::decode(&mut hash_vec.as_slice()).unwrap();
+            // overwrite encoded non-readable return value to send to the client
+            readable_response_result.value = hash.clone();
+
              // start watching the call with the specific hash
-            if result_of_rpc_response.do_watch{
+            if result_of_rpc_response.do_watch {
+                // Aquire lock on watched list
+                let &ref mutex = load_watched_list().unwrap();
+                let mut guard: MutexGuard<HashMap<String, WatchingClient>> = mutex.lock().unwrap();
+                //let tx_pool = Arc::new(tx_pool_guard.deref());
+
+                // create new key and value entries to store
+                let new_client = WatchingClient {
+                    client: req.client.clone(),
+                    response: RpcResponse {
+                        result: serde_json::to_string(&readable_response_result).unwrap(),
+                        jsonrpc: full_rpc_response.jsonrpc.clone(),
+                        id: full_rpc_response.id,
+                    }
+                };
+                guard.insert(hash.clone(), new_client);
+                
                 // start watching the hash function above
                // req.client.send(decoded_response);
-                readable_response_result.do_watch = false;
+                //readable_response_result.do_watch = false;
                /* if TxStatus::In_block
                     readable_response_result.do_watch = false
                 }*/
             }
-            // overwrite encoded non-readable return value to send to the client
-            readable_response_result.value = hash;
+            
         },
         Err(err_msg_vec) => {
             let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
@@ -193,4 +271,60 @@ pub fn handle_direct_invocation_request(
     };
 
     req.client.send(serde_json::to_string(&updated_rpc_response).unwrap())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_new_watcher_event(
+    hash_encoded: *const u8,
+    hash_size: u32,
+    status_update_encoded: *const u8,
+    status_size: u32,
+    //response: *mut u8,
+    //resp_size: u32,
+) -> sgx_status_t {
+    let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
+    let hash: String = Decode::decode(&mut hash_slice).unwrap();
+    let mut status_update_slice = slice::from_raw_parts(status_update_encoded, status_size as usize);
+    let status_update: TransactionStatus = Decode::decode(&mut status_update_slice).unwrap();
+
+    // Aquire watched list lock
+    let &ref mutex = load_watched_list().unwrap();
+    let mut guard: MutexGuard<HashMap<String, WatchingClient>> = mutex.lock().unwrap();  
+    if let Some(client_event) = guard.get_mut(&hash) { 
+        let mut event = &mut client_event.response;
+        // Aquire result of old RpcResponse
+        let old_result: &str = &event.result;
+        let mut result: DecodedReturnValue = serde_json::from_str(old_result).unwrap();
+        // update status
+        result.status = status_update;
+        let new_result: String = serde_json::to_string(&result).unwrap();
+        event.result = new_result;
+
+        client_event.client.send(serde_json::to_string(&event).unwrap());
+    }
+
+
+    /*
+    
+    let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
+
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
+
+    let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
+
+    let resp: Vec<WorkerResponse<Vec<u8>>> = requests
+        .into_iter()
+        .map(|req| match req {
+            //let res =
+            WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
+                key.clone(),
+                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash),
+                api.get_storage_proof_by_keys(vec![StorageKey(key)], hash)
+                    .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()),
+            ),
+        })
+        .collect();
+
+    write_slice_and_whitespace_pad(resp_slice, resp.encode());*/
+    sgx_status_t::SGX_SUCCESS
 }

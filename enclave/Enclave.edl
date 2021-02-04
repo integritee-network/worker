@@ -118,5 +118,10 @@ enclave {
 	        [in, size = req_size] uint8_t * request, uint32_t req_size,
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
 	    );
+
+		sgx_status_t ocall_new_watcher_event(
+	        [in, size = hash_size] uint8_t * hash_encoded, uint32_t hash_size,
+			[in, size = status_size] uint8_t * status_update_encoded, uint32_t status_size
+	    );
 	};
 };

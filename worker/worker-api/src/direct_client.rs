@@ -72,7 +72,6 @@ impl DirectApi {
     }
     pub fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
         let url = self.url.clone();
-        //let (port_in, port_out) = channel();
 
         info!("[WorkerApi Direct]: Sending request: {:?}", request);
         let client = thread::spawn(move || {
