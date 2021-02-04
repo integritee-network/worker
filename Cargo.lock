@@ -4908,6 +4908,7 @@ dependencies = [
  "substratee-node-runtime",
  "substratee-stf",
  "substratee-worker-api",
+ "substratee-worker-primitives",
  "tiny-bip39 0.6.2",
 ]
 
@@ -5026,6 +5027,7 @@ dependencies = [
  "substratee-node-runtime",
  "substratee-stf",
  "substratee-worker-api",
+ "substratee-worker-primitives",
  "tokio",
  "ws 0.7.9",
 ]
@@ -5043,6 +5045,17 @@ dependencies = [
  "sp-core",
  "substratee-stf",
  "ws 0.7.9",
+]
+
+[[package]]
+name = "substratee-worker-primitives"
+version = "0.7.0"
+dependencies = [
+ "parity-scale-codec",
+ "primitive-types 0.6.2",
+ "serde",
+ "serde_derive",
+ "sgx_tstd",
 ]
 
 [[package]]

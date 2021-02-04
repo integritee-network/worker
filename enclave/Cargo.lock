@@ -2766,9 +2766,19 @@ dependencies = [
  "substrate-test-runtime",
  "substratee-node-primitives",
  "substratee-stf",
+ "substratee-worker-primitives",
  "webpki",
  "webpki-roots",
  "yasna",
+]
+
+[[package]]
+name = "substratee-worker-primitives"
+version = "0.7.0"
+dependencies = [
+ "parity-scale-codec",
+ "primitive-types 0.6.2",
+ "sgx_tstd",
 ]
 
 [[package]]

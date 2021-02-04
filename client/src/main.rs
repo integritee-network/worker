@@ -70,6 +70,7 @@ use substrate_client_keystore::LocalKeystore;
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
 
+use substratee_worker_primitives::{TransactionStatus, RpcRequest, RpcReturnValue, RpcResponse};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -594,20 +595,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     let chain_api = get_chain_api(matches);
     let (call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
 
-    let shard_opt = match matches.value_of("shard") {
-        Some(s) => match s.from_base58() {
-            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-            _ => panic!("shard argument must be base58 encoded"),
-        },
-        None => match matches.value_of("mrenclave") {
-            Some(m) => match m.from_base58() {
-                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-                _ => panic!("mrenclave argument must be base58 encoded"),
-            },
-            None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
-        },
-    };
-    let shard = match shard_opt {
+    let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
     };
@@ -667,82 +655,40 @@ fn get_worker_direct_api(matches: &ArgMatches<'_>) -> DirectWorkerApi {
     DirectWorkerApi::new(url)
 }
 
-#[derive(Serialize, Deserialize)]
-struct DirectInvocationCall {
-    jsonrpc: String,
-    method: String,
-    params: RpcTrustedCall,
-    id: i32,
-}
-#[derive(Serialize, Deserialize)]
-struct RpcTrustedCall {
-    shard_id: String,
-    call: Vec<u8>,
-}
-// TODO: Where to define for nice structure?
-#[derive(Serialize, Deserialize)]
-struct ReturnValue {
-    value: String,
-    do_watch: bool,
-    status: TransactionStatus,
-}
-
-// TODO: Nehmen aus enclave.. oder sonst iwi
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TransactionStatus {
-	/// Transaction is part of the future queue.
-	Future,
-	/// Transaction is part of the ready queue.
-	Ready,
-	/// The transaction has been broadcast to the given peers.
-	Broadcast,
-	/// Transaction has been included in block with given hash.
-	InBlock,
-	/// The block this transaction was included in has been retracted.
-	Retracted,
-	/// Maximum number of finality watchers has been reached,
-	/// old watchers are being removed.
-	FinalityTimeout,
-	/// Transaction has been finalized by a finality-gadget, e.g GRANDPA
-	Finalized,
-	/// Transaction has been replaced in the pool, by another transaction
-	/// that provides the same tags. (e.g. same (sender, nonce)).
-	Usurped,
-	/// Transaction has been dropped from the pool because of the limit.
-	Dropped,
-	/// Transaction is no longer valid in the current state.
-	Invalid,
-}
-
-
-#[derive(Serialize, Deserialize)]
-struct RpcResponse {
-    jsonrpc: String,
-    result: String,
-    id: u32,
+fn read_shard (matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Error> {
+    match matches.value_of("shard") {
+        Some(s) => match s.from_base58() {
+            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+            _ => panic!("shard argument must be base58 encoded"),
+        },
+        None => match matches.value_of("mrenclave") {
+            Some(m) => match m.from_base58() {
+                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                _ => panic!("mrenclave argument must be base58 encoded"),
+            },
+            None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
+        },
+    }
 }
 
 fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     println!("sending direct invocation call confirmed"); 
     let (call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
 
-    let shard: &str = match matches.value_of("shard") {
-        Some(s) => s,
-        None => match matches.value_of("mrenclave") {
-            Some(m) => m,
-            None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
-        },
+    let shard = match read_shard(matches) {
+        Ok(shard) => shard,
+        Err(e) => panic!(e),
     };
 
     // compose jsonrpc call
-    let data = RpcTrustedCall {
-        shard_id: shard.to_string(), 
-        call: call_encrypted
+    let data = Request {
+        shard: shard, 
+        cyphertext: call_encrypted
     };
-    let direct_invocation_call = DirectInvocationCall {
+    let direct_invocation_call = RpcRequest {
         jsonrpc: "2.0".to_owned(),
         method: "author_submitAndWatchExtrinsic".to_owned(), // TODO: Watch flag?
-        params: data,
+        params: data.encode(),
         id: 1,
     };
     let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
@@ -760,8 +706,11 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                println!("{}", response.result);
-                let return_value: ReturnValue = serde_json::from_str(&response.result).unwrap(); 
+                println!("{:?}", response.result);
+                let return_value = RpcReturnValue::decode(&mut response.result.as_slice()).unwrap(); 
+                println!("{:?}", return_value.status);
+                let value = String::decode(&mut return_value.value.as_slice()).unwrap(); 
+                println!("{}", value);
                 if !return_value.do_watch {
                     return None
                 }

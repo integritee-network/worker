@@ -154,6 +154,11 @@ path = "../substratee-node-primitives"
 default-features = false
 features = ["sgx"]
 
+[dependencies.substratee-worker-primitives]
+path = "../substratee-worker-primitives"
+default-features = false
+features = ["sgx"]
+
 [dependencies.ipfs-unixfs]
 git = "https://github.com/whalelephant/rust-ipfs"
 branch = "w-nstd"

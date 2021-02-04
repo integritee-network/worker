@@ -61,6 +61,9 @@ git = "https://github.com/scs/substraTEE-node"
 tag = "v0.7.0"
 package = "substratee-node-runtime"
 
+[dependencies.substratee-worker-primitives]
+path = "../substratee-worker-primitives"
+
 [dependencies.substratee-stf]
 path = "../stf"
 

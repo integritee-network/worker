@@ -152,7 +152,6 @@ impl<H: Clone, BH: Clone> Sender<H, BH> {
 	}
 
 	fn send(&mut self, status: TransactionStatus<H, BH>) {
-		// send status and remove all failing receivers
-		self.receivers.retain(|sender| sender.unbounded_send(status.clone()).is_ok())
+		//update_status_event(hash, status),
 	}
 }

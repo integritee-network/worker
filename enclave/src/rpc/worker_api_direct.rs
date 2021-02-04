@@ -55,13 +55,16 @@ use jsonrpc_core::*;
 use jsonrpc_core::futures::executor;
 use jsonrpc_core::Error as RpcError;
 use serde::{Serialize, Deserialize};
+use serde_json::*;
 
 use substratee_stf::{ShardIdentifier};
 
 use chain_relay::Block; 
 use base58::FromBase58;
 
-use crate::transaction_pool::primitives::SimplifiedTransactionStatus;
+use substratee_worker_primitives::TransactionStatus as SimplifiedTransactionStatus;
+use substratee_worker_primitives::RpcReturnValue;
+use substratee_node_primitives::Request;
 
 use crate::utils::{write_slice_and_whitespace_pad};
 
@@ -125,28 +128,21 @@ fn decode_shard_from_base58(shard_base58: String) -> Result<ShardIdentifier, Str
   Ok(shard)
 }
 
-#[derive(Deserialize)]
-struct SumbitExtrinsicParams {
+/*#[derive(Deserialize)]
+struct RpcTrustedCall {
     call: Vec<u8>,
     shard_id: String, // ShardIdentifier (H256) does not implement deserialize
-}
+}*/
 
-// TODO: double specified in enclace & worker
-#[derive(Serialize, Deserialize)]
-struct ReturnValue {
-    value: Vec<u8>,
-    do_watch: bool,
-    status: SimplifiedTransactionStatus,
-}
-
-fn compute_error_string (error_msg: String) -> String {
+fn compute_encoded_return_error (error_msg: String) -> Vec<u8> {
   let error: Result<Vec<u8>, Vec<u8>> = Err(error_msg.encode());
-  let return_value = ReturnValue{
+  let return_value = RpcReturnValue{
       value: error.encode(), 
       do_watch: false,
       status: SimplifiedTransactionStatus::Invalid,
   };
-  serde_json::to_string(&return_value).unwrap()  
+  //serde_json::to_string(&return_value).unwrap()  
+  return_value.encode()
 }
 
 
@@ -159,16 +155,44 @@ fn init_io_handler() -> IoHandler {
     let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
     rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
     io.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {  
-      match params.parse() {
-        Ok(extrinsic) => {
+      match params.parse::<Vec<u8>>() {
+        Ok(encoded_params) => {
           // Aquire lock
           let &ref tx_pool_mutex = load_tx_pool().unwrap();
           let tx_pool_guard = tx_pool_mutex.lock().unwrap();
           let tx_pool = Arc::new(tx_pool_guard.deref());
           let author = Author::new(tx_pool); 
 
-          let to_submit: SumbitExtrinsicParams = extrinsic;
-          match decode_shard_from_base58(to_submit.shard_id.clone()) {
+          match Request::decode(&mut encoded_params.as_slice()) {
+            Ok(request) => {
+              let shard: ShardIdentifier = request.shard;
+              let encrypted_trusted_call: Vec<u8> = request.cyphertext;
+              //TODO: watch call       
+              let result = async {              
+                author.submit_call(encrypted_trusted_call.clone(), shard).await
+              };     
+              let response: Result<Hash, RpcError> = executor::block_on(result);
+              let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
+                Ok(hash_value) => Ok(hash_value.to_string().encode()),
+                Err(rpc_error) => Err(rpc_error.message.encode()),
+
+              };
+              let json_value = RpcReturnValue {
+                do_watch: true, 
+                value: encodable_response.encode(),
+                status: SimplifiedTransactionStatus::Ready, // TODO: mit return value arbeiten
+              };          
+              //let json_string = serde_json::to_string(&json_value).unwrap();
+              //Ok(Value::String(json_string))               
+              Ok(json!(json_value.encode()))
+            },
+            Err(msg) => Ok(json!(compute_encoded_return_error("Could not decode request".to_owned()))),
+          }
+
+    
+
+          //let to_submit: Re = extrinsic;
+         /* match decode_shard_from_base58(to_submit.shard_id.clone()) {
             Ok(shard) => {
               //TODO: watch call       
               let result = async {              
@@ -180,26 +204,27 @@ fn init_io_handler() -> IoHandler {
                 Err(rpc_error) => Err(rpc_error.message.encode()),
 
               };
-              let json_value = ReturnValue {
+              let json_value = RpcReturnValue {
                 do_watch: true, 
                 value: encodable_response.encode(),
                 status: SimplifiedTransactionStatus::Ready, // TODO: mit return value arbeiten
               };          
-              let json_string = serde_json::to_string(&json_value).unwrap();
-              Ok(Value::String(json_string)) 
+              //let json_string = serde_json::to_string(&json_value).unwrap();
+              //Ok(Value::String(json_string))               
+              Ok(json!(json_value.encode()))
             },
-            Err(msg) => Ok(Value::String(compute_error_string(msg))),
-          }          
+            Err(msg) => Ok(json!(compute_encoded_return_error(msg))),
+          }   */       
         },     
         Err(e) => {
           let error_msg: String = format!("Could not submit trusted call due to: {}", e);
-          Ok(Value::String(compute_error_string(error_msg)))
+          Ok(json!(compute_encoded_return_error(error_msg)))
 
         },
       }   
     });
 
-    // author_submitExtrinsic
+   /* // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
     io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {      
@@ -227,7 +252,7 @@ fn init_io_handler() -> IoHandler {
               let json_value = ReturnValue {
                 do_watch: false, 
                 value: encodable_response.encode(),
-                status: SimplifiedTransactionStatus::Ready // TODO: mit returnValue arbeiten
+                status: SimplifiedTransactionStatus::Ready.encode() // TODO: mit returnValue arbeiten
               };          
               let json_string = serde_json::to_string(&json_value).unwrap();
               Ok(Value::String(json_string)) 
@@ -241,7 +266,7 @@ fn init_io_handler() -> IoHandler {
 
         },
       }   
-    });
+    });*/
     
     // TODO: Match Interface to the one of submit and watch extrinsic .. Result<Vec[u8]..>
     // author_pendingExtrinsics  
@@ -354,8 +379,10 @@ pub unsafe extern "C" fn call_rpc_methods(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }  
     };
+    // Rpc Response String
     response_string = io.handle_request_sync(request_string).unwrap().to_string();
     debug!{"Released Txpool Lock"};
+    
     
     // update response outside of enclave
     let response_slice = from_raw_parts_mut(response, response_len as usize);
@@ -363,7 +390,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 	  sgx_status_t::SGX_SUCCESS
 }
 
-fn update_status_event(
+pub fn update_status_event(
   hash: Hash,
   status_update: SimplifiedTransactionStatus,
 ) -> Result<(),()> { 

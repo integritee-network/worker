@@ -25,9 +25,13 @@ use ws::{listen, CloseCode, Handler, Message, Result, Sender, Handshake};
 use std::thread;
 use std::sync::mpsc::channel;
 use serde::{Serialize, Deserialize};
-use codec::Decode;
+use codec::{Encode, Decode};
 use core::result::Result as StdResult;
 use serde_json::Value;
+
+use substratee_worker_primitives::{TransactionStatus, RpcResponse, RpcReturnValue};
+use substratee_node_primitives::Request;
+
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as * mut ());
 
@@ -126,57 +130,6 @@ struct WatchingClient {
     response: RpcResponse,
 }
 
-// TODO: double specified in enclace & worker
-#[derive(Serialize, Deserialize)]
-struct EncodedReturnValue {
-    value: Vec<u8>,
-    do_watch: bool,
-    status: TransactionStatus,
-}
-
-// TODO: double specified in enclace & worker
-#[derive(Serialize, Deserialize)]
-struct DecodedReturnValue {
-    value: String,
-    do_watch: bool,
-    status: TransactionStatus
-}
-
-// TODO: Nehmen aus enclave.. oder sonst iwi
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Decode)]
-pub enum TransactionStatus {
-	/// Transaction is part of the future queue.
-	Future,
-	/// Transaction is part of the ready queue.
-	Ready,
-	/// The transaction has been broadcast to the given peers.
-	Broadcast,
-	/// Transaction has been included in block with given hash.
-	InBlock,
-	/// The block this transaction was included in has been retracted.
-	Retracted,
-	/// Maximum number of finality watchers has been reached,
-	/// old watchers are being removed.
-	FinalityTimeout,
-	/// Transaction has been finalized by a finality-gadget, e.g GRANDPA
-	Finalized,
-	/// Transaction has been replaced in the pool, by another transaction
-	/// that provides the same tags. (e.g. same (sender, nonce)).
-	Usurped,
-	/// Transaction has been dropped from the pool because of the limit.
-	Dropped,
-	/// Transaction is no longer valid in the current state.
-	Invalid,
-}
-
-#[derive(Serialize, Deserialize)]
-struct RpcResponse {
-    jsonrpc: String,
-    result: String,
-    id: u32,
-}
-
-
 fn load_watched_list() -> Option<&'static Mutex<HashMap<String, WatchingClient>>>
 {
     let ptr = WATCHED_LIST.load(Ordering::SeqCst) as * mut Mutex<HashMap<String, WatchingClient>>;
@@ -216,20 +169,14 @@ pub fn handle_direct_invocation_request(
     // of type: {"jsonrpc":"2.0","result":"{\"value\":[..],\"do_watch\":true}","id":1} 
     let decoded_response: String = String::from_utf8_lossy(&response).to_string();
     let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
-    let result_of_rpc_response: EncodedReturnValue = serde_json::from_str(&full_rpc_response.result).unwrap();
+    let mut result_of_rpc_response = RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
+   // let result_of_rpc_response: EncodedReturnValue = serde_json::from_str(&full_rpc_response.result).unwrap();
     let decoded_result: StdResult<Vec<u8>,Vec<u8>> = StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
 
-    let mut readable_response_result = DecodedReturnValue{
-        do_watch: result_of_rpc_response.do_watch,
-        value: "".to_owned(),
-        status: TransactionStatus::Invalid,
-    };
     match decoded_result {
         Ok(hash_vec) => {
             let hash = String::decode(&mut hash_vec.as_slice()).unwrap();
-            // overwrite encoded non-readable return value to send to the client
-            readable_response_result.value = hash.clone();
-
+            result_of_rpc_response.value = hash.encode();
              // start watching the call with the specific hash
             if result_of_rpc_response.do_watch {
                 // Aquire lock on watched list
@@ -241,7 +188,7 @@ pub fn handle_direct_invocation_request(
                 let new_client = WatchingClient {
                     client: req.client.clone(),
                     response: RpcResponse {
-                        result: serde_json::to_string(&readable_response_result).unwrap(),
+                        result: result_of_rpc_response.encode(),
                         jsonrpc: full_rpc_response.jsonrpc.clone(),
                         id: full_rpc_response.id,
                     }
@@ -259,13 +206,13 @@ pub fn handle_direct_invocation_request(
         },
         Err(err_msg_vec) => {
             let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
-            readable_response_result.value = err_msg;
-            readable_response_result.do_watch = false;
+            result_of_rpc_response.value = err_msg.encode();
+            result_of_rpc_response.do_watch = false;
         },
     }
     // create new return value
     let updated_rpc_response = RpcResponse {
-        result: serde_json::to_string(&readable_response_result).unwrap(),
+        result: result_of_rpc_response.encode(),
         jsonrpc: full_rpc_response.jsonrpc,
         id: full_rpc_response.id,
     };
@@ -291,16 +238,16 @@ pub unsafe extern "C" fn ocall_update_status_event(
     let &ref mutex = load_watched_list().unwrap();
     let mut guard: MutexGuard<HashMap<String, WatchingClient>> = mutex.lock().unwrap();  
     if let Some(client_event) = guard.get_mut(&hash) { 
-        let mut event = &mut client_event.response;
+      /*  let mut event = &mut client_event.response;
         // Aquire result of old RpcResponse
         let old_result: &str = &event.result;
-        let mut result: DecodedReturnValue = serde_json::from_str(old_result).unwrap();
+        let mut result = RpcReturnValue::decode(old_result).unwrap();
         // update status
-        result.status = status_update;
-        let new_result: String = serde_json::to_string(&result).unwrap();
+        result.status = status_update.to_string();
+        let new_result: Vec<u8> = result.encode();
         event.result = new_result;
 
-        client_event.client.send(serde_json::to_string(&event).unwrap());
+        client_event.client.send(serde_json::to_string(&event).unwrap());*/
     }
 
 
