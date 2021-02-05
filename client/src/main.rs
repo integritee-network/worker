@@ -620,12 +620,17 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                let return_value = RpcReturnValue::decode(&mut response.result.as_slice()).unwrap(); 
-                let value = String::decode(&mut return_value.value.as_slice()).unwrap(); 
-                println!("Trusted call {} is {:?}", value, return_value.status);              
-                if !return_value.do_watch {
-                    return None
-                }
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()){                 
+                    let value = String::decode(&mut return_value.value.as_slice()).unwrap(); 
+                    if (return_value.status == TransactionStatus::Error) {
+                        println!("[Error] {}", value);
+                    } else {
+                        println!("Trusted call {} is {:?}", value, return_value.status);  
+                    }                                
+                    if !return_value.do_watch {
+                        return None
+                    }                   
+                }; 
             },            
             Err(_) => return None,
         };
