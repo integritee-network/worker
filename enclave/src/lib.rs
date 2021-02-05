@@ -637,7 +637,13 @@ fn handle_trusted_worker_call(
 
     debug!("execute STF");
     if let Err(e) = Stf::execute(&mut state, stf_call_signed.clone(), calls) {
+        if let Some(author) = author_pointer {
+            // remove call as invalid from pool
+            let inblock = false;
+            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock);
+        }
         error!("Error performing Stf::execute. Error: {:?}", e);
+        
         return Ok(());
     }
 

@@ -25,76 +25,30 @@ echo "Using worker-port ${WPORT}"
 echo "Using direct-rpc-port ${RPORT}"
 echo ""
 
-CLIENT="./substratee-client -p ${NPORT} -P ${WPORT} -R${RPORT}"
-
+CLIENT="bin/substratee-client -p ${NPORT} -P ${WPORT} -R${RPORT}"
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
 
-# TODO: This does not work when multiple workers are in the registry
-echo "* Reading MRENCLAVE of first worker"
-read MRENCLAVE <<< $(${CLIENT} list-workers | awk '/  MRENCLAVE: / { print $2 }')
-echo "  MRENCLAVE = ${MRENCLAVE}"
-echo ""
+# does this work when multiple workers are in the registry?
+read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
 
-echo "* Get balance of Alice's on-chain account"
-${CLIENT} balance "//Alice"
-echo ""
+# only for initial setup (actually should be done in genesis)
+# pre-fund //AliceIncognito, our ROOT key
+echo "issue funds on first (sender) account:"
+$CLIENT trusted set-balance //AliceIncognito 123456789 --mrenclave $MRENCLAVE --direct
+echo -n "get balance: "
+$CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
 
-echo "* Get balance of Bob's on-chain account"
-${CLIENT} balance "//Bob"
-echo ""
+# create incognito account for default shard (= MRENCLAVE)
+account1p=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
+echo "created new incognito account: $account1p"
 
-echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
-echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
-echo ""
+#send 10M funds from AliceIncognito to new account
+$CLIENT trusted transfer //AliceIncognito $account1p 23456789 --mrenclave $MRENCLAVE --direct
 
-echo "* Create a new incognito account for Bob"
-ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
-echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
-echo ""
+echo -n "receiver balance: "
+$CLIENT trusted balance $account1p --mrenclave $MRENCLAVE
 
-echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
-echo ""
-
-echo "* Waiting 10 seconds"
-sleep 10
-echo ""
-
-echo -n "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Get balance of Alice's on-chain account"
-${CLIENT} balance "//Alice"
-echo ""
-
-echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Bob's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
-${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
-echo ""
-
-echo "* Waiting 10 seconds"
-sleep 10
-echo ""
-
-echo -n "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Get balance of Alice's on-chain account"
-${CLIENT} balance "//Alice"
-echo ""
+echo -n "sender balance:  "
+$CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
