@@ -25,7 +25,7 @@ echo "Using worker-port ${WPORT}"
 echo "Using direct-rpc-port ${RPORT}"
 echo ""
 
-CLIENT="./bin/substratee-client -p ${NPORT} -P ${WPORT} -R${RPORT}"
+CLIENT="./../bin/substratee-client -p ${NPORT} -P ${WPORT} -R${RPORT}"
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
