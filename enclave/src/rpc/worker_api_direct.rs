@@ -160,8 +160,7 @@ fn init_io_handler() -> IoHandler {
           match Request::decode(&mut encoded_params.as_slice()) {
             Ok(request) => {
               let shard: ShardIdentifier = request.shard;
-              let encrypted_trusted_call: Vec<u8> = request.cyphertext;
-              //TODO: watch call       
+              let encrypted_trusted_call: Vec<u8> = request.cyphertext;     
               let result = async {              
                 author.watch_call(encrypted_trusted_call.clone(), shard).await
               };     
@@ -189,49 +188,48 @@ fn init_io_handler() -> IoHandler {
       }   
     });
 
-   /* // author_submitExtrinsic
+    // author_submitExtrinsic
     let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
     rpc_methods_vec.push(author_submit_extrinsic_name);
     io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {      
-		  match params.parse() {
-        Ok(extrinsic) => {
+		  match params.parse::<Vec<u8>>() {
+        Ok(encoded_params) => {
           // Aquire lock
           let &ref tx_pool_mutex = load_tx_pool().unwrap();
           let tx_pool_guard = tx_pool_mutex.lock().unwrap();
           let tx_pool = Arc::new(tx_pool_guard.deref());
           let author = Author::new(tx_pool); 
 
-          let to_submit: SumbitExtrinsicParams = extrinsic;
-          match decode_shard_from_base58(to_submit.shard_id.clone()) {
-            Ok(shard) => {
-              //TODO: watch call       
+          match Request::decode(&mut encoded_params.as_slice()) {
+            Ok(request) => {
+              let shard: ShardIdentifier = request.shard;
+              let encrypted_trusted_call: Vec<u8> = request.cyphertext;     
               let result = async {              
-                author.submit_call(to_submit.call.clone(), shard).await
+                author.submit_call(encrypted_trusted_call.clone(), shard).await
               };     
               let response: Result<Hash, RpcError> = executor::block_on(result);
               let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                Ok(hash_value) => Ok(hash_value.to_string().encode()),
+                Ok(hash_value) => Ok(hash_value.encode()),
                 Err(rpc_error) => Err(rpc_error.message.encode()),
 
               };
-              let json_value = ReturnValue {
-                do_watch: false, 
+              let json_value = RpcReturnValue {
+                do_watch: true, 
                 value: encodable_response.encode(),
-                status: SimplifiedTransactionStatus::Ready.encode() // TODO: mit returnValue arbeiten
-              };          
-              let json_string = serde_json::to_string(&json_value).unwrap();
-              Ok(Value::String(json_string)) 
+                status: TransactionStatus::Ready, // TODO: mit return value arbeiten
+              };                        
+              Ok(json!(json_value.encode()))
             },
-            Err(msg) => Ok(Value::String(compute_error_string(msg))),
-          }          
+            Err(msg) => Ok(json!(compute_encoded_return_error("Could not decode request".to_owned()))),
+          }     
         },     
         Err(e) => {
           let error_msg: String = format!("Could not submit trusted call due to: {}", e);
-          Ok(Value::String(compute_error_string(error_msg)))
+          Ok(json!(compute_encoded_return_error(error_msg)))
 
         },
       }   
-    });*/
+    });
     
     // TODO: Match Interface to the one of submit and watch extrinsic .. Result<Vec[u8]..>
     // author_pendingExtrinsics  

@@ -440,91 +440,7 @@ fn main() {
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
                     Ok(())
                 }),
-        )   
-        .add_cmd(
-            Command::new("get-encrypted-call-valid")
-                .description("get-encrypted-call-valid")
-                .options(|app| {
-                    app.arg(
-                        Arg::with_name("from")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("SS58"),
-                    )
-                    .arg(
-                        Arg::with_name("amount")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("U128"),
-                    )
-                    .arg(
-                        Arg::with_name("nonce")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("U32"),
-                    )
-                    .arg(
-                        Arg::with_name("shard")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("STRING"),
-                    )
-                    .arg(
-                        Arg::with_name("mrenclave")
-                            .takes_value(true)
-                            .required(true)
-                            .value_name("STRING"),
-                    )
-            })
-            .runner(move |_args: &str, matches: &ArgMatches<'_>| {
-                let arg_from = matches.value_of("from").unwrap();
-                let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
-                    .expect("amount can be converted to u128");
-                let from = get_pair_from_str(arg_from);
-                let nonce = u32::from_str_radix(matches.value_of("nonce").unwrap(), 10).expect("amount can be converted to u128");
-                
-                let mut mrenclave = [0u8; 32];
-                mrenclave.copy_from_slice(
-                    &matches
-                        .value_of("mrenclave")
-                        .unwrap()
-                        .from_base58()
-                        .expect("mrenclave has to be base58 encoded"),
-                );
-
-                let shard_opt = match matches.value_of("shard") {
-                    Some(s) => match s.from_base58() {
-                        Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-                        _ => panic!("shard argument must be base58 encoded"),
-                    },
-                    _ => panic!("at least one of `mrenclave` or `shard` arguments must be supplied")
-                };
-                let shard = match shard_opt {
-                    Ok(shard) => shard,
-                    Err(e) => panic!(e),
-                };
-                //let shard = ShardIdentifier::from_slice(&enclave);
-            
-                // generate trusted call signed
-                let call: TrustedCallSigned = TrustedCall::balance_shield(
-                    sr25519_core::Public::from(from.public()),
-                    amount,
-                )
-                .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard);
-
-                println!("Trusted Call decrypted: {:?}", call);
-                let call_encoded = call.encode();
-                println!("Trusted Call encoded: {:?}", call_encoded);    
-                let worker_api = get_worker_api(matches);
-                let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
-                let mut call_encrypted: Vec<u8> = Vec::new();
-                shielding_pubkey
-                    .encrypt_buffer(&call_encoded, &mut call_encrypted)
-                    .unwrap();
-                println!("Trusted Call enrypted: {:?}", call_encrypted);
-                Ok(())
-            }),
-        )
+        ) 
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
@@ -674,9 +590,7 @@ fn read_shard (matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Er
 }
 
 fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
-    println!("sending direct invocation call confirmed"); 
     let (call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
-
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
@@ -694,12 +608,11 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         id: 1,
     };
     let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
-    println!("Direct invocation call: {}", jsonrpc_call);
     
    let direct_api = get_worker_direct_api(matches);
    let (sender, receiver) = channel();
     match direct_api.watch(jsonrpc_call, sender.clone()) {
-        Ok(_) => println!("Started connection"),
+        Ok(_) => { },
         Err(_) => panic!("Error when sending direct invocation call"),
     }
 
@@ -707,19 +620,14 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                println!("{:?}", response.result);
                 let return_value = RpcReturnValue::decode(&mut response.result.as_slice()).unwrap(); 
-                println!("{:?}", return_value.status);
                 let value = String::decode(&mut return_value.value.as_slice()).unwrap(); 
-                println!("{:?}", return_value.value);
-                println!("{}", value);                
+                println!("Trusted call {} is {:?}", value, return_value.status);              
                 if !return_value.do_watch {
                     return None
                 }
-            },
-            
-            Err(_) => { println!{"Break due Error"}
-                break},
+            },            
+            Err(_) => return None,
         };
     }    
     None
