@@ -171,7 +171,6 @@ pub fn handle_direct_invocation_request(
     let decoded_response: String = String::from_utf8_lossy(&response).to_string();
     let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
     let mut result_of_rpc_response = RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
-   // let result_of_rpc_response: EncodedReturnValue = serde_json::from_str(&full_rpc_response.result).unwrap();
     let decoded_result: StdResult<Vec<u8>,Vec<u8>> = StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
 
 
@@ -184,7 +183,6 @@ pub fn handle_direct_invocation_request(
                  // Aquire lock on watched list
                 let &ref mutex = load_watched_list().unwrap();
                 let mut guard: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
-                //let tx_pool = Arc::new(tx_pool_guard.deref());
 
                 // create new key and value entries to store
                 let new_client = WatchingClient {
@@ -196,13 +194,6 @@ pub fn handle_direct_invocation_request(
                     }
                 };
                 guard.insert(hash.clone(), new_client); 
-                
-                // start watching the hash function above
-               // req.client.send(decoded_response);
-                //readable_response_result.do_watch = false;
-               /* if TxStatus::In_block
-                    readable_response_result.do_watch = false
-                }*/
             }
             
         },
@@ -218,34 +209,7 @@ pub fn handle_direct_invocation_request(
         jsonrpc: full_rpc_response.jsonrpc,
         id: full_rpc_response.id,
     };
-
-    req.client.send(serde_json::to_string(&updated_rpc_response).unwrap());
-   /*  thread::sleep(ten_millis);
-    req.client.send(serde_json::to_string(&updated_rpc_response).unwrap());
-    req.client.send(serde_json::to_string(&updated_rpc_response).unwrap()); */
-
-     //thread::spawn(move || {
-       // let client = req.client.clone();
-        /*loop {
-            req.client.send(serde_json::to_string(&updated_rpc_response).unwrap());
-            let ten_millis = time::Duration::from_millis(10000);
-            thread::sleep(ten_millis);
-        }*/
-   // });
- 
-    // test
-    //drop(req.client);
-    /* if let Ok(hash_vec) = decoded_result {
-        let hash = Hash::decode(&mut hash_vec.as_slice()).unwrap();
-        let &ref mutex = load_watched_list().unwrap();
-        let mut guard = mutex.lock().unwrap(); 
-
-        if let Some(client_event) = guard.get_mut(&hash) {
-            println!("Returned hash: {:?}", hash);
-            client_event.client.send(serde_json::to_string(&updated_rpc_response).unwrap()).unwrap();
-        }
-    } */
-    Ok(())
+    req.client.send(serde_json::to_string(&updated_rpc_response).unwrap())
 }
 
 #[no_mangle]
@@ -261,27 +225,41 @@ pub unsafe extern "C" fn ocall_update_status_event(
     if let Ok(hash) = Hash::decode(&mut hash_slice) {       
         // Aquire watched list lock
         let &ref mutex = load_watched_list().unwrap();
-        let mut guard = mutex.lock().unwrap();  
-         if let Some(client_event) = guard.get_mut(&hash) {
+        let mut guard = mutex.lock().unwrap(); 
+        let mut continue_watching = true; 
+        if let Some(client_event) = guard.get_mut(&hash) {
             //println!("Returned hash: {:?}", hash);
             let mut event = &mut client_event.response;
             // Aquire result of old RpcResponse
             let old_result: Vec<u8> = event.result.clone();
-            let mut result = RpcReturnValue::decode(&mut old_result.as_slice()).unwrap();
-            
-            // update status
+            let mut result = RpcReturnValue::decode(&mut old_result.as_slice()).unwrap();            
+
+            match status_update {
+                TransactionStatus::Invalid | TransactionStatus::InBlock | 
+                TransactionStatus::Finalized | TransactionStatus::Usurped => {
+                        // Stop watching                        
+                        result.do_watch = false;
+                        continue_watching = false;                        
+                    },              
+                _ => {},
+            };      
+            // update response  
             result.status = status_update;
-            
-
-            match result.status {
-                TransactionStatus::Invalid => result.do_watch = false,
-                _ => result.do_watch = true,
-            };
             event.result = result.encode();
-            client_event.client.send(serde_json::to_string(&event).unwrap());             
+            client_event.client.send(serde_json::to_string(&event).unwrap()); 
 
+            if !continue_watching {
+                client_event.client.close(CloseCode::Normal);
+            }           
+        } else {
+            continue_watching = false;
         } 
+        if !continue_watching {
+            guard.remove(&hash);            
+        }
     } 
    
     sgx_status_t::SGX_SUCCESS
 }
+
+

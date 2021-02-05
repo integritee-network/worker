@@ -4910,6 +4910,7 @@ dependencies = [
  "substratee-worker-api",
  "substratee-worker-primitives",
  "tiny-bip39 0.6.2",
+ "ws 0.7.9",
 ]
 
 [[package]]

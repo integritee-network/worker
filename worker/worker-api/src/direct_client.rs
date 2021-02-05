@@ -86,7 +86,6 @@ impl DirectApi {
                 }
             }
         });
-        client.join().unwrap();
         Ok(()) 
     }
     
