@@ -33,6 +33,7 @@ CLIENT="./../bin/substratee-client -p ${NPORT} -P ${WPORT} -R ${RPORT}"
 
 # does this work when multiple workers are in the registry?
 #read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+read MRENCLAVE <<< $(cat ~/mrenclave.b58)
 
 # only for initial setup (actually should be done in genesis)
 # pre-fund //AliceIncognito, our ROOT key
