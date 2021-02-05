@@ -25,13 +25,14 @@ echo "Using worker-port ${WPORT}"
 echo "Using direct-rpc-port ${RPORT}"
 echo ""
 
-CLIENT="./../bin/substratee-client -p ${NPORT} -P ${WPORT} -R${RPORT}"
-echo "* Query on-chain enclave registry:"
-${CLIENT} list-workers
-echo ""
+CLIENT="./../bin/substratee-client -p ${NPORT} -P ${WPORT} -R ${RPORT}"
+# SW mode - hardcoded MRENCLAVE!
+#echo "* Query on-chain enclave registry:"
+#${CLIENT} list-workers
+#echo ""
 
 # does this work when multiple workers are in the registry?
-read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+#read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
 
 # only for initial setup (actually should be done in genesis)
 # pre-fund //AliceIncognito, our ROOT key
