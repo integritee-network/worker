@@ -14,6 +14,8 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum TransactionStatus {
+	/// Transaction is submitted to the transaction pool.
+	Submitted,
 	/// Transaction is part of the future queue.
 	Future,
 	/// Transaction is part of the ready queue.
@@ -36,6 +38,8 @@ pub enum TransactionStatus {
 	Dropped,
 	/// Transaction is no longer valid in the current state.
 	Invalid,
+	/// Error occured somewhere in the outside process
+	Error,
 }
 
 #[derive(Encode, Decode)]

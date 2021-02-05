@@ -173,7 +173,6 @@ pub fn handle_direct_invocation_request(
     let mut result_of_rpc_response = RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
     let decoded_result: StdResult<Vec<u8>,Vec<u8>> = StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
 
-
     match decoded_result.clone() {
         Ok(hash_vec) => {
             let hash = Hash::decode(&mut hash_vec.as_slice()).unwrap();
@@ -201,6 +200,7 @@ pub fn handle_direct_invocation_request(
             let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
             result_of_rpc_response.value = err_msg.encode();
             result_of_rpc_response.do_watch = false;
+            result_of_rpc_response.status = TransactionStatus::Error;
         },
     }
     // create new return value

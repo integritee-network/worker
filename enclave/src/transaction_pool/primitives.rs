@@ -225,7 +225,7 @@ pub trait TransactionPool: Send + Sync {
 
 	// *** Block production
 	/// Remove transactions identified by given hashes (and dependent transactions) from the pool.
-	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier) -> Vec<Arc<Self::InPoolTransaction>>;
+	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier, inblock: bool) -> Vec<Arc<Self::InPoolTransaction>>;
 
 	// *** logging
 	/// Returns pool status.

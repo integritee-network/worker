@@ -167,8 +167,8 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		async move { pool.submit_and_watch(&at, source, xt, shard).await }.boxed()
 	}
 
-	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier) -> Vec<Arc<Self::InPoolTransaction>> {
-		self.pool.validated_pool().remove_invalid(hashes, shard)
+	fn remove_invalid(&self, hashes: &[TxHash<Self>], shard: ShardIdentifier, inblock: bool) -> Vec<Arc<Self::InPoolTransaction>> {
+		self.pool.validated_pool().remove_invalid(hashes, shard, inblock)
 	}
 
 	fn status(&self, shard: ShardIdentifier) -> PoolStatus {

@@ -224,7 +224,7 @@ where
 				Err(err.into())
 			},
 			ValidatedTransaction::Unknown(hash, err) => {
-				self.listener.write().unwrap().invalid(&hash, false);
+				self.listener.write().unwrap().invalid(&hash);
 				Err(err.into())
 			},
 		}
@@ -278,15 +278,15 @@ where
 		shard: ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
-			ValidatedTransaction::Valid(tx) => {
-				//let hash = self.api.hash_and_length(&tx.data).0;				
+			ValidatedTransaction::Valid(tx) => {	
 				let hash_result = self.submit(core::iter::once(ValidatedTransaction::Valid(tx)), shard)
 					.pop()
 					.expect("One extrinsic passed; one result returned; qed");
+				// TODO: How to return / notice if Future or Ready queue?
 				if let Ok(hash) = hash_result {
 					self.listener.write().unwrap().create_watcher(hash);
 				}
-				hash_result				
+				hash_result		
 			},
 			ValidatedTransaction::Invalid(hash, err) => {
 				self.rotator.ban(&Instant::now(), core::iter::once(hash));
@@ -416,7 +416,7 @@ where
 					Status::Future => listener.future(&hash),
 					Status::Ready => listener.ready(&hash, None),
 					Status::Dropped => listener.dropped(&hash, None),
-					Status::Failed => listener.invalid(&hash, initial_status.is_some()),
+					Status::Failed => listener.invalid(&hash),
 				}
 			}
 		}
@@ -544,8 +544,8 @@ where
 			hashes
 		};
 		// removing old transactions
-		self.remove_invalid(&to_remove, shard);
-		self.remove_invalid(&futures_to_remove, shard);
+		self.remove_invalid(&to_remove, shard, false);
+		self.remove_invalid(&futures_to_remove, shard, false);
 		// clear banned transactions timeouts
 		self.rotator.clear_timeouts(&now);
 
@@ -593,6 +593,7 @@ where
 		&self,
 		hashes: &[ExtrinsicHash<B>],
 		shard: ShardIdentifier,
+		inblock: bool,
 	) -> Vec<TransactionFor<B>> {
 		// early exit in case there is no invalid transactions.
 		if hashes.is_empty() {
@@ -609,8 +610,14 @@ where
 		log::debug!(target: "txpool", "Removed invalid transactions: {:?}", invalid);
 
 		let mut listener = self.listener.write().unwrap();
-		for tx in &invalid {
-			listener.invalid(&tx.hash, true);
+		if inblock {
+			for tx in &invalid {			
+				listener.in_block(&tx.hash);
+			}
+	   	} else {
+			for tx in &invalid {			
+				listener.invalid(&tx.hash);
+			} 
 		}
 
 		invalid
@@ -664,7 +671,7 @@ fn fire_events<H, B, Ex>(
 		base::Imported::Ready { ref promoted, ref failed, ref removed, ref hash } => {
 			listener.ready(hash, None);
 			for f in failed {
-				listener.invalid(f, true);
+				listener.invalid(f);
 			}
 			for r in removed {
 				listener.dropped(&r.hash, Some(hash));

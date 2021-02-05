@@ -109,12 +109,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
 	}
 
 	/// Transaction was removed as invalid.
-	pub fn invalid(&mut self, tx: &H, warn: bool) {
-		if warn {
-			warn!(target: "txpool", "[{:?}] Extrinsic invalid", tx);
-		} else {
-			debug!(target: "txpool", "[{:?}] Extrinsic invalid", tx);
-		}
+	pub fn invalid(&mut self, tx: &H) {
 		self.fire(tx, |watcher| watcher.invalid());
 	}
 
@@ -131,6 +126,11 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
 				}
 			}
 		}
+	}
+
+	/// Transaction in block.
+	pub fn in_block(&mut self, tx: &H) {
+		self.fire(tx, |s| s.in_block());
 	}
 
 	/// The block this transaction was included in has been retracted.

@@ -94,6 +94,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn remove_call(&self,
 		bytes_or_hash: Vec<hash::TrustedCallOrHash<Hash>>,
 		shard: ShardIdentifier,
+		inblock: bool,
 	) -> Result<Vec<Hash>>;
 	
 
@@ -280,6 +281,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 		&self,
 		bytes_or_hash: Vec<hash::TrustedCallOrHash<TxHash<P>>>,
 		shard: ShardIdentifier,
+		inblock: bool
 	) -> Result<Vec<TxHash<P>>> {
 		let hashes = bytes_or_hash.into_iter()
 			.map(|x| match x {
@@ -293,7 +295,7 @@ impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 
 		Ok(
 			self.pool
-				.remove_invalid(&hashes, shard)
+				.remove_invalid(&hashes, shard, inblock)
 				.into_iter()
 				.map(|tx| tx.hash().clone())
 				.collect()

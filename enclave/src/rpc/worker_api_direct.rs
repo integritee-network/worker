@@ -173,7 +173,7 @@ fn init_io_handler() -> IoHandler {
               let json_value = RpcReturnValue {
                 do_watch: true, 
                 value: encodable_response.encode(),
-                status: TransactionStatus::Ready, // TODO: mit return value arbeiten
+                status: TransactionStatus::Submitted,
               };                        
               Ok(json!(json_value.encode()))
             },
@@ -216,7 +216,7 @@ fn init_io_handler() -> IoHandler {
               let json_value = RpcReturnValue {
                 do_watch: true, 
                 value: encodable_response.encode(),
-                status: TransactionStatus::Ready, // TODO: mit return value arbeiten
+                status: TransactionStatus::Submitted,
               };                        
               Ok(json!(json_value.encode()))
             },
