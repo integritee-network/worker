@@ -29,6 +29,7 @@ use requests::*;
 use substratee_stf::{Getter, ShardIdentifier};
 
 pub mod client;
+pub mod direct_client;
 pub mod requests;
 
 #[derive(Clone)]

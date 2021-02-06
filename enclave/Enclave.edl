@@ -25,6 +25,7 @@ enclave {
 	from "sgx_net.edl" import *;
 	from "sgx_time.edl" import *;
 	from "sgx_env.edl" import *;
+	from "sgx_thread.edl" import *;
 
 	include "sgx_quote.h"
 
@@ -69,8 +70,15 @@ enclave {
 
 		public sgx_status_t dump_ra_to_disk();
 
-		public sgx_status_t run_key_provisioning_server(int fd,sgx_quote_sign_type_t quote_type);
+		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type);
         public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type);
+
+		public sgx_status_t initialize_pool();
+
+		public sgx_status_t call_rpc_methods(
+			[in, size=request_len] uint8_t* request, uint32_t request_len,
+			[out, size=response_len] uint8_t* response, uint32_t response_len
+		);
 
 		public size_t test_main_entrance();
 	};
@@ -109,6 +117,11 @@ enclave {
 		sgx_status_t ocall_worker_request(
 	        [in, size = req_size] uint8_t * request, uint32_t req_size,
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
+	    );
+
+		sgx_status_t ocall_update_status_event(
+	        [in, size = hash_size] uint8_t * hash_encoded, uint32_t hash_size,
+			[in, size = status_size] uint8_t * status_update_encoded, uint32_t status_size
 	    );
 	};
 };

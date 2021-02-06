@@ -4853,7 +4853,7 @@ source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da160
 
 [[package]]
 name = "substratee-client"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -4882,12 +4882,14 @@ dependencies = [
  "substratee-node-runtime",
  "substratee-stf",
  "substratee-worker-api",
+ "substratee-worker-primitives",
  "tiny-bip39 0.6.2",
+ "ws 0.7.9",
 ]
 
 [[package]]
 name = "substratee-node-primitives"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "log 0.4.11",
@@ -4936,7 +4938,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-stf"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "clap",
@@ -4966,7 +4968,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "cid",
@@ -5000,13 +5002,14 @@ dependencies = [
  "substratee-node-runtime",
  "substratee-stf",
  "substratee-worker-api",
+ "substratee-worker-primitives",
  "tokio",
  "ws 0.7.9",
 ]
 
 [[package]]
 name = "substratee-worker-api"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "hex 0.4.2",
  "log 0.4.11",
@@ -5017,6 +5020,17 @@ dependencies = [
  "sp-core",
  "substratee-stf",
  "ws 0.7.9",
+]
+
+[[package]]
+name = "substratee-worker-primitives"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "primitive-types 0.6.2",
+ "serde",
+ "serde_derive",
+ "sgx_tstd",
 ]
 
 [[package]]

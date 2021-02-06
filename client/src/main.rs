@@ -47,6 +47,7 @@ use sp_runtime::{
     MultiSignature,
 };
 use std::convert::TryFrom;
+use std::result::Result as StdResult;
 use std::sync::mpsc::channel;
 use std::thread;
 use substrate_api_client::{
@@ -61,9 +62,10 @@ use substrate_api_client::{
 use substratee_stf::{
     cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
 };
+use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_api::Api as WorkerApi;
-
 use substrate_client_keystore::LocalKeystore;
+use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TransactionStatus};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -115,6 +117,16 @@ fn main() {
                     .value_name("STRING")
                     .default_value("2000")
                     .help("worker port"),
+            )
+            .arg(
+                Arg::with_name("worker-rpc-port")
+                    .short("R")
+                    .long("worker-rpc-port")
+                    .global(true)
+                    .takes_value(true)
+                    .value_name("STRING")
+                    .default_value("4000")
+                    .help("worker direct invocation port"),
             )
             .name("substratee-client")
             .version(VERSION)
@@ -423,7 +435,6 @@ fn main() {
                 }),
         )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
-        // To handle when no subcommands match
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
             Ok(())
@@ -456,7 +467,8 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
 
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
     match top {
-        TrustedOperation::call(call) => send_request(matches, call.clone()),
+        TrustedOperation::indirect_call(call) => send_request(matches, call.clone()),
+        TrustedOperation::direct_call(call) => send_direct_request(matches, call.clone()),
         TrustedOperation::get(getter) => get_state(matches, getter.clone()),
     }
 }
@@ -478,44 +490,34 @@ fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
     }
 }
 
-fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
-    let chain_api = get_chain_api(matches);
+fn encrypt_signed_call(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> (Vec<u8>, Vec<u8>) {
     let worker_api = get_worker_api(matches);
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
-
     let call_encoded = call.encode();
     let mut call_encrypted: Vec<u8> = Vec::new();
     shielding_pubkey
         .encrypt_buffer(&call_encoded, &mut call_encrypted)
         .unwrap();
+    (call_encoded, call_encrypted)
+}
+
+fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
+    let chain_api = get_chain_api(matches);
+    let (call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
+
+    let shard = match read_shard(matches) {
+        Ok(shard) => shard,
+        Err(e) => panic!(e),
+    };
 
     let arg_signer = matches.value_of("xt-signer").unwrap();
     let signer = get_pair_from_str(arg_signer);
     let _chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
 
-    let shard_opt = match matches.value_of("shard") {
-        Some(s) => match s.from_base58() {
-            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-            _ => panic!("shard argument must be base58 encoded"),
-        },
-        None => match matches.value_of("mrenclave") {
-            Some(m) => match m.from_base58() {
-                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-                _ => panic!("mrenclave argument must be base58 encoded"),
-            },
-            None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
-        },
-    };
-    let shard = match shard_opt {
-        Ok(shard) => shard,
-        Err(e) => panic!(e),
-    };
-
     let request = Request {
         shard,
         cyphertext: call_encrypted,
     };
-
     let xt = compose_extrinsic!(_chain_api, "SubstrateeRegistry", "call_worker", request);
 
     // send and watch extrinsic until finalized
@@ -551,6 +553,84 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
             return Some(ret.payload.encode());
         }
     }
+}
+
+fn get_worker_direct_api(matches: &ArgMatches<'_>) -> DirectWorkerApi {
+    let url = format!(
+        "{}:{}",
+        matches.value_of("worker-url").unwrap(),
+        matches.value_of("worker-rpc-port").unwrap()
+    );
+    info!("Connecting to substraTEE-worker-direct-port on '{}'", url);
+    DirectWorkerApi::new(url)
+}
+
+fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Error> {
+    match matches.value_of("shard") {
+        Some(s) => match s.from_base58() {
+            Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+            _ => panic!("shard argument must be base58 encoded"),
+        },
+        None => match matches.value_of("mrenclave") {
+            Some(m) => match m.from_base58() {
+                Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+                _ => panic!("mrenclave argument must be base58 encoded"),
+            },
+            None => panic!("at least one of `mrenclave` or `shard` arguments must be supplied"),
+        },
+    }
+}
+
+fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
+    let (_call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
+    let shard = match read_shard(matches) {
+        Ok(shard) => shard,
+        Err(e) => panic!(e),
+    };
+
+    // compose jsonrpc call
+    let data = Request {
+        shard,
+        cyphertext: call_encrypted,
+    };
+    let direct_invocation_call = RpcRequest {
+        jsonrpc: "2.0".to_owned(),
+        method: "author_submitAndWatchExtrinsic".to_owned(), // TODO: Watch flag?
+        params: data.encode(),
+        id: 1,
+    };
+    let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
+
+    let direct_api = get_worker_direct_api(matches);
+    let (sender, receiver) = channel();
+    match direct_api.watch(jsonrpc_call, sender) {
+        Ok(_) => {}
+        Err(_) => panic!("Error when sending direct invocation call"),
+    }
+
+    loop {
+        match receiver.recv() {
+            Ok(response) => {
+                let response: RpcResponse = serde_json::from_str(&response).unwrap();
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+                    let value = String::decode(&mut return_value.value.as_slice()).unwrap();
+                    if return_value.status == TransactionStatus::Error {
+                        println!("[Error] {}", value);
+                    } else {
+                        println!("Trusted call {} is {:?}", value, return_value.status);
+                    }
+                    if !return_value.do_watch {
+                        return None;
+                    }
+                };
+            }
+            Err(_) => return None,
+        };
+    }
+}
+
+pub fn test_fn(string: String) {
+    println!("{}", string);
 }
 
 #[allow(dead_code)]
