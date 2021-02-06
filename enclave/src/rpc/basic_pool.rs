@@ -1,0 +1,222 @@
+use sgx_tstd::collections::HashMap;
+use sgx_tstd::sync::SgxMutex as Mutex;
+use sp_runtime::{
+    generic::BlockId,
+    traits::{Block as BlockT, NumberFor, Zero},
+    transaction_validity::TransactionSource,
+};
+
+pub extern crate alloc;
+use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+
+use core::pin::Pin;
+
+use jsonrpc_core::futures::channel::oneshot;
+use jsonrpc_core::futures::future::{ready, Future, FutureExt};
+
+use crate::transaction_pool::{
+    base_pool::Transaction,
+    error::IntoPoolError,
+    pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
+    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TransactionPool, TxHash},
+};
+
+use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+
+type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<Transaction<Hash, Data>>> + Send>;
+
+type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, TrustedCallSigned>;
+
+type PolledIterator<PoolApi> = Pin<Box<dyn Future<Output = ReadyIteratorFor<PoolApi>> + Send>>;
+
+struct ReadyPoll<T, Block: BlockT> {
+    updated_at: NumberFor<Block>,
+    pollers: Vec<(NumberFor<Block>, oneshot::Sender<T>)>,
+}
+
+impl<T, Block: BlockT> Default for ReadyPoll<T, Block> {
+    fn default() -> Self {
+        Self {
+            updated_at: NumberFor::<Block>::zero(),
+            pollers: Default::default(),
+        }
+    }
+}
+
+impl<T, Block: BlockT> ReadyPoll<T, Block> {
+    fn trigger(&mut self, number: NumberFor<Block>, iterator_factory: impl Fn() -> T) {
+        self.updated_at = number;
+
+        let mut idx = 0;
+        while idx < self.pollers.len() {
+            if self.pollers[idx].0 <= number {
+                let poller_sender = self.pollers.swap_remove(idx);
+                let _ = poller_sender.1.send(iterator_factory());
+            } else {
+                idx += 1;
+            }
+        }
+    }
+
+    fn add(&mut self, number: NumberFor<Block>) -> oneshot::Receiver<T> {
+        let (sender, receiver) = oneshot::channel();
+        self.pollers.push((number, sender));
+        receiver
+    }
+
+    fn updated_at(&self) -> NumberFor<Block> {
+        self.updated_at
+    }
+}
+
+/// Basic implementation of transaction pool that can be customized by providing PoolApi.
+pub struct BasicPool<PoolApi, Block>
+where
+    Block: BlockT,
+    PoolApi: ChainApi<Block = Block>,
+{
+    pool: Arc<Pool<PoolApi>>,
+    api: Arc<PoolApi>,
+    ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
+}
+
+impl<PoolApi, Block> BasicPool<PoolApi, Block>
+where
+    Block: BlockT,
+    PoolApi: ChainApi<Block = Block> + 'static,
+{
+    /// Create new basic transaction pool with provided api and custom
+    /// revalidation type.
+    pub fn create(
+        options: PoolOptions,
+        pool_api: Arc<PoolApi>,
+        //prometheus: Option<&PrometheusRegistry>,
+        //revalidation_type: RevalidationType,
+        //spawner: impl SpawnNamed,
+    ) -> Self
+    where
+        <PoolApi as ChainApi>::Error: IntoPoolError,
+    {
+        let pool = Arc::new(Pool::new(options, pool_api.clone()));
+        BasicPool {
+            api: pool_api,
+            pool,
+            ready_poll: Default::default(),
+        }
+    }
+
+    /// Gets shared reference to the underlying pool.
+    pub fn pool(&self) -> &Arc<Pool<PoolApi>> {
+        &self.pool
+    }
+}
+
+impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
+where
+    Block: BlockT,
+    PoolApi: ChainApi<Block = Block> + 'static,
+    <PoolApi as ChainApi>::Error: IntoPoolError,
+{
+    type Block = PoolApi::Block;
+    type Hash = ExtrinsicHash<PoolApi>;
+    type InPoolTransaction = Transaction<TxHash<Self>, TrustedCallSigned>;
+    type Error = PoolApi::Error;
+
+    fn submit_at(
+        &self,
+        at: &BlockId<Self::Block>,
+        source: TransactionSource,
+        xts: Vec<TrustedCallSigned>,
+        shard: ShardIdentifier,
+    ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
+        let pool = self.pool.clone();
+        let at = *at;
+        async move { pool.submit_at(&at, source, xts, shard).await }.boxed()
+    }
+
+    fn submit_one(
+        &self,
+        at: &BlockId<Self::Block>,
+        source: TransactionSource,
+        xt: TrustedCallSigned,
+        shard: ShardIdentifier,
+    ) -> PoolFuture<TxHash<Self>, Self::Error> {
+        let pool = self.pool.clone();
+        let at = *at;
+        async move { pool.submit_one(&at, source, xt, shard).await }.boxed()
+    }
+
+    fn submit_and_watch(
+        &self,
+        at: &BlockId<Self::Block>,
+        source: TransactionSource,
+        xt: TrustedCallSigned,
+        shard: ShardIdentifier,
+    ) -> PoolFuture<TxHash<Self>, Self::Error> {
+        let at = *at;
+        let pool = self.pool.clone();
+        async move { pool.submit_and_watch(&at, source, xt, shard).await }.boxed()
+    }
+
+    fn remove_invalid(
+        &self,
+        hashes: &[TxHash<Self>],
+        shard: ShardIdentifier,
+        inblock: bool,
+    ) -> Vec<Arc<Self::InPoolTransaction>> {
+        self.pool
+            .validated_pool()
+            .remove_invalid(hashes, shard, inblock)
+    }
+
+    fn status(&self, shard: ShardIdentifier) -> PoolStatus {
+        self.pool.validated_pool().status(shard)
+    }
+
+    fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
+        self.pool.validated_pool().import_notification_stream()
+    }
+
+    fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self> {
+        self.pool.hash_of(xt)
+    }
+
+    fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>) {
+        self.pool.validated_pool().on_broadcasted(propagations)
+    }
+
+    fn ready_transaction(
+        &self,
+        hash: &TxHash<Self>,
+        shard: ShardIdentifier,
+    ) -> Option<Arc<Self::InPoolTransaction>> {
+        self.pool.validated_pool().ready_by_hash(hash, shard)
+    }
+
+    fn ready_at(
+        &self,
+        at: NumberFor<Self::Block>,
+        shard: ShardIdentifier,
+    ) -> PolledIterator<PoolApi> {
+        if self.ready_poll.lock().unwrap().updated_at() >= at {
+            let iterator: ReadyIteratorFor<PoolApi> =
+                Box::new(self.pool.validated_pool().ready(shard));
+            return Box::pin(ready(iterator));
+        }
+
+        Box::pin(self.ready_poll.lock().unwrap().add(at).map(|received| {
+            received.unwrap_or_else(|e| {
+                log::warn!("Error receiving pending set: {:?}", e);
+                Box::new(vec![].into_iter())
+            })
+        }))
+    }
+
+    fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi> {
+        Box::new(self.pool.validated_pool().ready(shard))
+    }
+
+    fn shards(&self) -> Vec<ShardIdentifier> {
+        self.pool.validated_pool().shards()
+    }
+}
