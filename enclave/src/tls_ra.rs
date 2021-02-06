@@ -28,7 +28,10 @@ impl ClientAuth {
 }
 
 impl rustls::ClientCertVerifier for ClientAuth {
-    fn client_auth_root_subjects(&self, _sni: Option<&DNSName>) -> Option<rustls::DistinguishedNames>{
+    fn client_auth_root_subjects(
+        &self,
+        _sni: Option<&DNSName>,
+    ) -> Option<rustls::DistinguishedNames> {
         Some(rustls::DistinguishedNames::new())
     }
 

@@ -15,9 +15,7 @@
 
 */
 
-use crate::{
-    AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation,
-};
+use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -161,7 +159,7 @@ pub fn cmd<'a>(
                     );
                     let (mrenclave, shard) = get_identifiers(matches);
                     let nonce = 0; // FIXME: hard coded for now
-                    // generate trusted call signed    
+                                   // generate trusted call signed
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()),
                         to,
@@ -323,7 +321,7 @@ pub fn cmd<'a>(
                     let _ = perform_operation(matches, &top);
                     Ok(())
                 }),
-        )  
+        )
         .into_cmd("trusted")
 }
 
@@ -345,10 +343,9 @@ pub fn get_identifiers(matches: &ArgMatches<'_>) -> ([u8; 32], ShardIdentifier) 
             .expect("mrenclave has to be base58 encoded"),
     );
     let shard = match matches.value_of("shard") {
-        Some(val) => ShardIdentifier::from_slice(
-            &val.from_base58()
-                .expect("shard has to be base58 encoded"),
-        ),
+        Some(val) => {
+            ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded"))
+        }
         None => ShardIdentifier::from_slice(&mrenclave),
     };
     (mrenclave, shard)

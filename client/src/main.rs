@@ -47,9 +47,9 @@ use sp_runtime::{
     MultiSignature,
 };
 use std::convert::TryFrom;
+use std::result::Result as StdResult;
 use std::sync::mpsc::channel;
 use std::thread;
-use std::result::Result as StdResult;
 use substrate_api_client::{
     compose_extrinsic, compose_extrinsic_offline,
     events::EventsDecoder,
@@ -62,8 +62,8 @@ use substrate_api_client::{
 use substratee_stf::{
     cli::get_identifiers, Getter, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
 };
-use substratee_worker_api::Api as WorkerApi;
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
+use substratee_worker_api::Api as WorkerApi;
 
 use log::*;
 
@@ -72,7 +72,7 @@ use substrate_client_keystore::LocalKeystore;
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
 
-use substratee_worker_primitives::{TransactionStatus, RpcRequest, RpcReturnValue, RpcResponse};
+use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TransactionStatus};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -440,7 +440,7 @@ fn main() {
                     println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
                     Ok(())
                 }),
-        ) 
+        )
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
@@ -506,7 +506,6 @@ fn encrypt_signed_call(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> (Ve
         .encrypt_buffer(&call_encoded, &mut call_encrypted)
         .unwrap();
     (call_encoded, call_encrypted)
-
 }
 
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
@@ -573,7 +572,7 @@ fn get_worker_direct_api(matches: &ArgMatches<'_>) -> DirectWorkerApi {
     DirectWorkerApi::new(url)
 }
 
-fn read_shard (matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Error> {
+fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Error> {
     match matches.value_of("shard") {
         Some(s) => match s.from_base58() {
             Ok(s) => ShardIdentifier::decode(&mut &s[..]),
@@ -598,8 +597,8 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
 
     // compose jsonrpc call
     let data = Request {
-        shard: shard, 
-        cyphertext: call_encrypted
+        shard: shard,
+        cyphertext: call_encrypted,
     };
     let direct_invocation_call = RpcRequest {
         jsonrpc: "2.0".to_owned(),
@@ -608,11 +607,11 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         id: 1,
     };
     let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
-    
-   let direct_api = get_worker_direct_api(matches);
-   let (sender, receiver) = channel();
+
+    let direct_api = get_worker_direct_api(matches);
+    let (sender, receiver) = channel();
     match direct_api.watch(jsonrpc_call, sender.clone()) {
-        Ok(_) => { },
+        Ok(_) => {}
         Err(_) => panic!("Error when sending direct invocation call"),
     }
 
@@ -620,21 +619,21 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()){                 
-                    let value = String::decode(&mut return_value.value.as_slice()).unwrap(); 
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+                    let value = String::decode(&mut return_value.value.as_slice()).unwrap();
                     if (return_value.status == TransactionStatus::Error) {
                         println!("[Error] {}", value);
                     } else {
-                        println!("Trusted call {} is {:?}", value, return_value.status);  
-                    }                                
+                        println!("Trusted call {} is {:?}", value, return_value.status);
+                    }
                     if !return_value.do_watch {
-                        return None
-                    }                   
-                }; 
-            },            
+                        return None;
+                    }
+                };
+            }
             Err(_) => return None,
         };
-    }    
+    }
     None
 }
 
@@ -812,7 +811,6 @@ fn get_accountid_from_str(account: &str) -> AccountId {
         _ => AccountPublic::from(sr25519::Public::from_ss58check(account).unwrap()).into_account(),
     }
 }
-
 
 // get a pair either form keyring (well known keys) or from the store
 fn get_pair_from_str(account: &str) -> sr25519::AppPair {

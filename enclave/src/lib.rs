@@ -49,12 +49,12 @@ use std::slice;
 use std::string::String;
 use std::vec::Vec;
 
+use core::ops::Deref;
 use ipfs::IpfsContent;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
-use core::ops::Deref;
 use std::sync::{SgxMutex, SgxMutexGuard};
 use utils::write_slice_and_whitespace_pad;
 
@@ -70,8 +70,8 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
+use rpc::author::{hash::TrustedCallOrHash, Author, AuthorApi};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
-use rpc::author::{AuthorApi, Author, hash::TrustedCallOrHash};
 
 mod aes;
 mod attestation;
@@ -85,8 +85,8 @@ mod utils;
 
 pub mod cert;
 pub mod hex;
-pub mod tls_ra;
 pub mod rpc;
+pub mod tls_ra;
 pub mod transaction_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn sync_chain_relay(
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
         };
-    }    
+    }
     // execute pending calls from transaction pool
     match execute_tx_pool_calls(last_block_header) {
         Ok(c) => calls.extend(c.into_iter()),
@@ -409,15 +409,15 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn execute_tx_pool_calls(header: Header) ->  SgxResult<Vec<OpaqueCall>> {
+fn execute_tx_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending tx pool calls");
-    let mut calls = Vec::<OpaqueCall>::new();     
-    { 
+    let mut calls = Vec::<OpaqueCall>::new();
+    {
         debug!("Acquire tx pool lock");
-        let &ref tx_pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_tx_pool().unwrap();   
+        let &ref tx_pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_tx_pool().unwrap();
         let tx_pool_guard: SgxMutexGuard<BPool> = tx_pool_mutex.lock().unwrap();
         let tx_pool: Arc<&BPool> = Arc::new(tx_pool_guard.deref());
-        let author: Arc<Author<&BPool>> = Arc::new(Author::new(tx_pool)); 
+        let author: Arc<Author<&BPool>> = Arc::new(Author::new(tx_pool));
 
         // get all shards with tx pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
@@ -425,19 +425,26 @@ fn execute_tx_pool_calls(header: Header) ->  SgxResult<Vec<OpaqueCall>> {
         for shard in shards.into_iter() {
             // retrieve calls from tx pool
             let encoded_calls: Vec<Vec<u8>> = author.pending_calls(shard).unwrap(); // always ok
-            for encoded_call in encoded_calls.into_iter() {            
-                let trusted_call_signed = match TrustedCallSigned::decode(&mut encoded_call.as_slice()) {
-                    Ok(call) => call,
-                    Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-                };
-                if let Err(e) = handle_trusted_worker_call(&mut calls, trusted_call_signed, header.clone(), shard, Some(author.clone())) {
+            for encoded_call in encoded_calls.into_iter() {
+                let trusted_call_signed =
+                    match TrustedCallSigned::decode(&mut encoded_call.as_slice()) {
+                        Ok(call) => call,
+                        Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+                    };
+                if let Err(e) = handle_trusted_worker_call(
+                    &mut calls,
+                    trusted_call_signed,
+                    header.clone(),
+                    shard,
+                    Some(author.clone()),
+                ) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
             }
         }
-        debug!{"Release Txpool Lock"}; 
+        debug! {"Release Txpool Lock"};
     }
-    
+
     Ok(calls)
 }
 
@@ -514,10 +521,16 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
-                    if let Err(e) = handle_trusted_worker_call(&mut calls, decrypted_trusted_call, block.header.clone(), shard, None) {
+                    if let Err(e) = handle_trusted_worker_call(
+                        &mut calls,
+                        decrypted_trusted_call,
+                        block.header.clone(),
+                        shard,
+                        None,
+                    ) {
                         error!("Error performing worker call: Error: {:?}", e);
                     }
-                }                
+                }
             }
         }
     }
@@ -592,13 +605,12 @@ fn decrypt_unchecked_extrinsic(
     }
 }
 
-
 fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
     stf_call_signed: TrustedCallSigned,
     header: Header,
     shard: ShardIdentifier,
-    author_pointer: Option<Arc<Author<&BPool>>>
+    author_pointer: Option<Arc<Author<&BPool>>>,
 ) -> SgxResult<()> {
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
@@ -610,7 +622,13 @@ fn handle_trusted_worker_call(
         if let Some(author) = author_pointer {
             // remove call as invalid from pool
             let inblock = false;
-            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock).unwrap();
+            author
+                .remove_call(
+                    vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                    shard,
+                    inblock,
+                )
+                .unwrap();
         }
         return Ok(());
     }
@@ -633,24 +651,35 @@ fn handle_trusted_worker_call(
     let update_map = verify_worker_responses(responses, header)?;
 
     Stf::update_storage(&mut state, &update_map);
- 
 
     debug!("execute STF");
     if let Err(e) = Stf::execute(&mut state, stf_call_signed.clone(), calls) {
         if let Some(author) = author_pointer {
             // remove call as invalid from pool
             let inblock = false;
-            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock).unwrap();
+            author
+                .remove_call(
+                    vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                    shard,
+                    inblock,
+                )
+                .unwrap();
         }
         error!("Error performing Stf::execute. Error: {:?}", e);
-        
+
         return Ok(());
     }
 
     if let Some(author) = author_pointer {
         // remove call from pool as valid
         let inblock = true;
-        author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock).unwrap();
+        author
+            .remove_call(
+                vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                shard,
+                inblock,
+            )
+            .unwrap();
     }
 
     let state_hash = state::write(state, &shard)?;
