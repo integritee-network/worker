@@ -51,6 +51,7 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use enclave::worker_api_direct_server::{start_worker_api_direct_server, handle_direct_invocation_request};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
 use ws_server::start_ws_server;
@@ -86,6 +87,8 @@ fn main() {
     let w_port = matches.value_of("w-port").unwrap_or("2000");
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
 
+    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("4000");
+
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
         let shard: ShardIdentifier = match smatches.value_of("shard") {
@@ -110,7 +113,7 @@ fn main() {
             .unwrap_or("ws://127.0.0.1:2000");
         println!("Advertising worker api at {}", ext_api_url);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, skip_ra);
+        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, worker_rpc_port, skip_ra);
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard: ShardIdentifier = match smatches.value_of("shard") {
             Some(value) => {
@@ -246,6 +249,7 @@ fn worker(
     mu_ra_port: &str,
     shard: &ShardIdentifier,
     ext_api_url: &str,
+    worker_rpc_port: &str,
     skip_ra: bool,
 ) {
     println!("Encointer Worker v{}", VERSION);
@@ -282,6 +286,14 @@ fn worker(
             &ra_url,
         )
     });
+    
+    // ------------------------------------------------------------------------
+    // start worker api direct invocation server
+    println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_rpc_port);
+    let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
+    let (direct_sender, direct_receiver) = channel();
+    start_worker_api_direct_server(direct_url, direct_sender, eid);
+
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
@@ -354,6 +366,9 @@ fn worker(
         }
         if let Ok(req) = ws_receiver.recv_timeout(timeout) {
             ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
+        }
+        if let Ok(rpc_req) = direct_receiver.recv_timeout(timeout) {
+            handle_direct_invocation_request(rpc_req, eid).unwrap()
         }
     }
 }

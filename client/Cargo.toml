@@ -19,6 +19,7 @@ base58 			        = "0.1"
 chrono = "*"
 blake2-rfc      = { version = "0.2.18", default-features = false}
 geojson = "0.17"
+ws = { version = "0.7", features = ["ssl"] } 
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
@@ -30,7 +31,6 @@ tag = "v0.4.13"
 
 [dependencies.serde]
 features = ["derive"]
-optional = true
 version = "1.0"
 
 [dependencies.codec]
@@ -61,6 +61,9 @@ default-features=false
 git = "https://github.com/scs/substraTEE-node"
 tag = "v0.7.0"
 package = "substratee-node-runtime"
+
+[dependencies.substratee-worker-primitives]
+path = "../substratee-worker-primitives"
 
 [dependencies.substratee-stf]
 path = "../stf"
