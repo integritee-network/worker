@@ -1,6 +1,6 @@
 [package]
 name = "substratee-worker-primitives"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["bhaerdi <Bigna.Haerdi@scs.ch>"]
 edition = "2018"
 

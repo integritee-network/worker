@@ -4879,7 +4879,7 @@ source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da160
 
 [[package]]
 name = "substratee-client"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -4915,7 +4915,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-primitives"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4964,7 +4964,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-stf"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "clap",
@@ -4974,7 +4974,7 @@ dependencies = [
  "frame-metadata",
  "frame-support",
  "frame-system",
- "hex 0.4.2",
+ "hex 0.3.2",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.11 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",
@@ -4994,7 +4994,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base58",
  "cid",
@@ -5035,7 +5035,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-api"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "hex 0.4.2",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5050,7 +5050,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-worker-primitives"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
  "primitive-types 0.6.2",

@@ -2,7 +2,7 @@ cargo-features = ["resolver"]
 
 [package]
 name = "substratee-worker-enclave"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
 resolver = "2"
