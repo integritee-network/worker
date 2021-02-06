@@ -60,18 +60,11 @@ use substrate_api_client::{
 };
 
 use substratee_stf::{
-    cli::get_identifiers, Getter, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
+    cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
 };
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_api::Api as WorkerApi;
-
-use log::*;
-
 use substrate_client_keystore::LocalKeystore;
-
-use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value};
-
 use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TransactionStatus};
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -589,7 +582,7 @@ fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Err
 }
 
 fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
-    let (call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
+    let (_call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
@@ -597,7 +590,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
 
     // compose jsonrpc call
     let data = Request {
-        shard: shard,
+        shard,
         cyphertext: call_encrypted,
     };
     let direct_invocation_call = RpcRequest {
@@ -610,7 +603,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
 
     let direct_api = get_worker_direct_api(matches);
     let (sender, receiver) = channel();
-    match direct_api.watch(jsonrpc_call, sender.clone()) {
+    match direct_api.watch(jsonrpc_call, sender) {
         Ok(_) => {}
         Err(_) => panic!("Error when sending direct invocation call"),
     }
@@ -621,7 +614,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
                 if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
                     let value = String::decode(&mut return_value.value.as_slice()).unwrap();
-                    if (return_value.status == TransactionStatus::Error) {
+                    if return_value.status == TransactionStatus::Error {
                         println!("[Error] {}", value);
                     } else {
                         println!("Trusted call {} is {:?}", value, return_value.status);
@@ -634,7 +627,6 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
             Err(_) => return None,
         };
     }
-    None
 }
 
 pub fn test_fn(string: String) {
