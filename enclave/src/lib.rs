@@ -610,7 +610,7 @@ fn handle_trusted_worker_call(
         if let Some(author) = author_pointer {
             // remove call as invalid from pool
             let inblock = false;
-            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock);
+            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock).unwrap();
         }
         return Ok(());
     }
@@ -640,7 +640,7 @@ fn handle_trusted_worker_call(
         if let Some(author) = author_pointer {
             // remove call as invalid from pool
             let inblock = false;
-            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock);
+            author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock).unwrap();
         }
         error!("Error performing Stf::execute. Error: {:?}", e);
         
@@ -650,7 +650,7 @@ fn handle_trusted_worker_call(
     if let Some(author) = author_pointer {
         // remove call from pool as valid
         let inblock = true;
-        author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock);
+        author.remove_call(vec![TrustedCallOrHash::Call(stf_call_signed.encode())], shard, inblock).unwrap();
     }
 
     let state_hash = state::write(state, &shard)?;

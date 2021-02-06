@@ -28,14 +28,14 @@ impl ClientAuth {
 }
 
 impl rustls::ClientCertVerifier for ClientAuth {
-    fn client_auth_root_subjects(&self, sni: Option<&DNSName>) -> Option<rustls::DistinguishedNames>{
+    fn client_auth_root_subjects(&self, _sni: Option<&DNSName>) -> Option<rustls::DistinguishedNames>{
         Some(rustls::DistinguishedNames::new())
     }
 
     fn verify_client_cert(
         &self,
         _certs: &[rustls::Certificate],
-        sni: Option<&DNSName>,
+        _sni: Option<&DNSName>,
     ) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
         debug!("client cert: {:?}", _certs);
         // This call will automatically verify cert is properly signed
@@ -265,7 +265,7 @@ fn tls_client_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ClientConfig
     certs.push(rustls::Certificate(cert_der));
     let privkey = rustls::PrivateKey(key_der);
 
-    cfg.set_single_client_cert(certs, privkey);
+    cfg.set_single_client_cert(certs, privkey).unwrap();
     cfg.dangerous()
         .set_certificate_verifier(Arc::new(ServerAuth::new(true)));
     cfg.versions.clear();
