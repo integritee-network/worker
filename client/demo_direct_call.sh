@@ -3,22 +3,22 @@
 # setup:
 # run all on localhost:
 #   substratee-node purge-chain --dev
-#   substratee-node --dev --ws-port 9994 -lruntime=debug
+#   substratee-node --tmp --dev -lruntime=debug
 #   rm chain_relay_db.bin
 #   substratee-worker init_shard
 #   substratee-worker shielding-key
 #   substratee-worker signing-key
-#   substratee-worker -P 2094 -r 3448 -p 9994 run
+#   substratee-worker run
 #
 # then run this script
 
 # usage:
-#  demo_direct_call.sh <NODEPORT> <WORKERPORT>
+#  demo_direct_call.sh <NODEPORT> <WORKERPORT> <WORKERRPCPORT>
 
-# using default port if none given as first argument
-NPORT=${1:-9994}
-WPORT=${2:-2094}
-RPORT=${2:-4000}
+# using default port if none given as arguments
+NPORT=${1:-9944}
+WPORT=${2:-2000}
+RPORT=${3:-4000}
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-port ${WPORT}"
