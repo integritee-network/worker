@@ -38,7 +38,7 @@ use sp_runtime::transaction_validity::{
 
 use substratee_stf::ShardIdentifier;
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     error,
     future::{FutureTransactions, WaitingTransaction},
     primitives::{InPoolTransaction, PoolStatus},

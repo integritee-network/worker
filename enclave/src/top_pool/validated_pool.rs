@@ -28,7 +28,7 @@ use sgx_tstd::{
 
 use core::{hash, result::Result};
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     base_pool as base,
     base_pool::PruneStatus,
     error,

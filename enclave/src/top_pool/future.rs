@@ -30,7 +30,7 @@ use sgx_tstd::{time::Instant, untrusted::time::InstantEx};
 
 use substratee_stf::ShardIdentifier;
 
-use crate::transaction_pool::base_pool::Transaction;
+use crate::top_pool::base_pool::Transaction;
 
 /// Transaction with partially satisfied dependencies.
 pub struct WaitingTransaction<Hash, Ex> {

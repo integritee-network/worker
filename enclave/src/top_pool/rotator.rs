@@ -27,7 +27,7 @@ use sgx_tstd::{
     time::{Duration, Instant},
 };
 
-use crate::transaction_pool::base_pool::Transaction;
+use crate::top_pool::base_pool::Transaction;
 
 /// Expected size of the banned extrinsics cache.
 const EXPECTED_SIZE: usize = 2048;

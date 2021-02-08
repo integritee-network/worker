@@ -43,7 +43,7 @@ use crate::rpc::{
     basic_pool::BasicPool,
 };
 
-use crate::transaction_pool::pool::Options as PoolOptions;
+use crate::top_pool::pool::Options as PoolOptions;
 
 use jsonrpc_core::futures::executor;
 use jsonrpc_core::Error as RpcError;
@@ -211,6 +211,7 @@ fn init_io_handler() -> IoHandler {
                             Ok(hash_value) => Ok(hash_value.encode()),
                             Err(rpc_error) => Err(rpc_error.message.encode()),
                         };
+                        // TODO:
                         let json_value = RpcReturnValue {
                             do_watch: true,
                             value: encodable_response.encode(),
@@ -327,7 +328,7 @@ fn init_io_handler() -> IoHandler {
     io.add_sync_method("rpc_methods", move |_: Params| {
         Ok(Value::String(rpc_methods_string.to_owned()))
     });
-    
+
     io
 }
 

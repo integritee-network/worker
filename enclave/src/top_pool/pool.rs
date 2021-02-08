@@ -28,7 +28,7 @@ use sp_runtime::{
     },
 };
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     base_pool as base, error,
     validated_pool::{ValidatedPool, ValidatedTransaction},
 };

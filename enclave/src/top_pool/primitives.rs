@@ -16,7 +16,7 @@ use sp_runtime::{
 
 use substratee_stf::{ShardIdentifier, TrustedCallSigned};
 
-use crate::transaction_pool::error;
+use crate::top_pool::error;
 
 /// Transaction pool status.
 #[derive(Debug)]

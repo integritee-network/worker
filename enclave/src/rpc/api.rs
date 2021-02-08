@@ -30,7 +30,7 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity, ValidTransaction},
 };
 
-use crate::transaction_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
+use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
 
 use substratee_stf::TrustedCallSigned;
 

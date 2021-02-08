@@ -24,7 +24,7 @@ pub extern crate alloc;
 use alloc::boxed::Box;
 use derive_more::{Display, From};
 
-use crate::transaction_pool as sp_transaction_pool;
+use crate::top_pool as sp_transaction_pool;
 
 /// Author RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;

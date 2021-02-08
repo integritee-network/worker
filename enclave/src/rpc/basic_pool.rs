@@ -14,7 +14,7 @@ use core::pin::Pin;
 use jsonrpc_core::futures::channel::oneshot;
 use jsonrpc_core::futures::future::{ready, Future, FutureExt};
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     base_pool::Transaction,
     error::IntoPoolError,
     pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},

@@ -27,7 +27,7 @@ use log::trace;
 use sp_runtime::traits::Member;
 use sp_runtime::transaction_validity::TransactionTag as Tag;
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     base_pool::Transaction,
     error,
     future::WaitingTransaction,

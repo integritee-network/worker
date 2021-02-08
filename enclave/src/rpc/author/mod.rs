@@ -32,7 +32,7 @@ use substratee_stf::{ShardIdentifier, TrustedCallSigned};
 
 use crate::rpc::error::Error as StateRpcError;
 use crate::rpc::error::{FutureResult, Result};
-use crate::transaction_pool::{
+use crate::top_pool::{
     error::Error as PoolError,
     error::IntoPoolError,
     primitives::{BlockHash, InPoolTransaction, TransactionPool, TxHash},
