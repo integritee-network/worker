@@ -327,6 +327,7 @@ fn init_io_handler() -> IoHandler {
     io.add_sync_method("rpc_methods", move |_: Params| {
         Ok(Value::String(rpc_methods_string.to_owned()))
     });
+    
     io
 }
 

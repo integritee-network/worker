@@ -671,6 +671,7 @@ fn handle_trusted_worker_call(
     }
 
     if let Some(author) = author_pointer {
+        // TODO: prune instead of remove_call ? Block needs to be known
         // remove call from pool as valid
         let inblock = true;
         author

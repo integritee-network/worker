@@ -187,9 +187,9 @@ pub fn handle_direct_invocation_request(
     match decoded_result {
         Ok(hash_vec) => {
             let hash = Hash::decode(&mut hash_vec.as_slice()).unwrap();
-            result_of_rpc_response.value = hash.to_string().encode();
-            // start watching the call with the specific hash
+            result_of_rpc_response.value = hash.to_string().encode();            
             if result_of_rpc_response.do_watch {
+                // start watching the call with the specific hash
                 // Aquire lock on watched list
                 let mutex = load_watched_list().unwrap();
                 let mut guard: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
