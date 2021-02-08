@@ -33,7 +33,7 @@ use substratee_stf::ShardIdentifier;
 use crate::top_pool::base_pool::TrustedOperation;
 
 /// TrustedOperation with partially satisfied dependencies.
-pub struct WaitingTransaction<Hash, Ex> {
+pub struct WaitingTrustedOperations<Hash, Ex> {
     /// TrustedOperation details.
     pub transaction: Arc<TrustedOperation<Hash, Ex>>,
     /// Tags that are required and have not been satisfied yet by other transactions in the pool.
@@ -42,9 +42,9 @@ pub struct WaitingTransaction<Hash, Ex> {
     pub imported_at: Instant,
 }
 
-impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTransaction<Hash, Ex> {
+impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<Hash, Ex> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "WaitingTransaction {{ ")?;
+        write!(fmt, "WaitingTrustedOperations {{ ")?;
         //write!(fmt, "imported_at: {:?}, ", self.imported_at)?;
         write!(fmt, "transaction: {:?}, ", self.transaction)?;
         write!(fmt, "missing_tags: {{")?;
@@ -59,9 +59,9 @@ impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTransaction<Hash, E
     }
 }
 
-impl<Hash, Ex> Clone for WaitingTransaction<Hash, Ex> {
+impl<Hash, Ex> Clone for WaitingTrustedOperations<Hash, Ex> {
     fn clone(&self) -> Self {
-        WaitingTransaction {
+        WaitingTrustedOperations {
             transaction: self.transaction.clone(),
             missing_tags: self.missing_tags.clone(),
             imported_at: self.imported_at.clone(),
@@ -69,8 +69,8 @@ impl<Hash, Ex> Clone for WaitingTransaction<Hash, Ex> {
     }
 }
 
-impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
-    /// Creates a new `WaitingTransaction`.
+impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
+    /// Creates a new `WaitingTrustedOperations`.
     ///
     /// Computes the set of missing tags based on the requirements and tags that
     /// are provided by all transactions in the ready queue.
@@ -97,7 +97,7 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
             .cloned()
             .collect();
 
-        WaitingTransaction {
+        WaitingTrustedOperations {
             transaction: Arc::new(transaction),
             missing_tags,
             imported_at: Instant::now(),
@@ -124,7 +124,7 @@ pub struct FutureTrustedOperations<Hash: hash::Hash + Eq, Ex> {
     /// tags that are not yet provided by any transaction and we await for them
     wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
     /// Transactions waiting for a particular other transaction
-    waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTransaction<Hash, Ex>>>,
+    waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTrustedOperations<Hash, Ex>>>,
 }
 
 impl<Hash: hash::Hash + Eq, Ex> Default for FutureTrustedOperations<Hash, Ex> {
@@ -150,7 +150,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
     /// the Future queue.
     /// As soon as required tags are provided by some other transactions that are ready
     /// we should remove the transactions from here and move them to the Ready queue.
-    pub fn import(&mut self, tx: WaitingTransaction<Hash, Ex>, shard: ShardIdentifier) {
+    pub fn import(&mut self, tx: WaitingTrustedOperations<Hash, Ex>, shard: ShardIdentifier) {
         assert!(!tx.is_ready(), "TrustedOperation is ready.");
         if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
             assert!(
@@ -210,7 +210,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         &mut self,
         tags: impl IntoIterator<Item = T>,
         shard: ShardIdentifier,
-    ) -> Vec<WaitingTransaction<Hash, Ex>> {
+    ) -> Vec<WaitingTrustedOperations<Hash, Ex>> {
         let mut became_ready = vec![];
 
         for tag in tags {
@@ -272,7 +272,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
     }
 
     /// Fold a list of future transactions to compute a single value.
-    pub fn fold<R, F: FnMut(Option<R>, &WaitingTransaction<Hash, Ex>) -> Option<R>>(
+    pub fn fold<R, F: FnMut(Option<R>, &WaitingTrustedOperations<Hash, Ex>) -> Option<R>>(
         &mut self,
         f: F,
         shard: ShardIdentifier,
@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn can_track_heap_size() {
         let mut future = FutureTrustedOperations::default();
-        future.import(WaitingTransaction {
+        future.import(WaitingTrustedOperations {
             transaction: TrustedOperation {
                 data: vec![0u8; 1024],
                 bytes: 1,

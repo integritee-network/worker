@@ -40,7 +40,7 @@ use substratee_stf::ShardIdentifier;
 
 use crate::top_pool::{
     error,
-    future::{FutureTrustedOperations, WaitingTransaction},
+    future::{FutureTrustedOperations, WaitingTrustedOperations},
     primitives::{InPoolTransaction, PoolStatus},
     ready::ReadyOperations,
 };
@@ -222,7 +222,7 @@ const RECENTLY_PRUNED_TAGS: usize = 2;
 /// required tags.
 #[derive(Debug)]
 pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
-    reject_future_transactions: bool,
+    reject_future_operations: bool,
     future: FutureTrustedOperations<Hash, Ex>,
     ready: ReadyOperations<Hash, Ex>,
     /// Store recently pruned tags (for last two invocations).
@@ -240,10 +240,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> Default for BasePool<Hash,
 }
 
 impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
-    /// Create new pool given reject_future_transactions flag.
-    pub fn new(reject_future_transactions: bool) -> Self {
+    /// Create new pool given reject_future_operations flag.
+    pub fn new(reject_future_operations: bool) -> Self {
         BasePool {
-            reject_future_transactions,
+            reject_future_operations,
             future: Default::default(),
             ready: Default::default(),
             recently_pruned: Default::default(),
@@ -251,33 +251,33 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         }
     }
 
-    /// Temporary enables future transactions, runs closure and then restores
-    /// `reject_future_transactions` flag back to previous value.
+    /// Temporary enables future operations, runs closure and then restores
+    /// `reject_future_operations` flag back to previous value.
     ///
     /// The closure accepts the mutable reference to the pool and original value
-    /// of the `reject_future_transactions` flag.
+    /// of the `reject_future_operations` flag.
     pub(crate) fn with_futures_enabled<T>(
         &mut self,
         closure: impl FnOnce(&mut Self, bool) -> T,
     ) -> T {
-        let previous = self.reject_future_transactions;
-        self.reject_future_transactions = false;
+        let previous = self.reject_future_operations;
+        self.reject_future_operations = false;
         let return_value = closure(self, previous);
-        self.reject_future_transactions = previous;
+        self.reject_future_operations = previous;
         return_value
     }
 
-    /// Returns if the transaction for the given hash is already imported.
+    /// Returns if the operation for the given hash is already imported.
     pub fn is_imported(&self, tx_hash: &Hash, shard: ShardIdentifier) -> bool {
         self.future.contains(tx_hash, shard) || self.ready.contains(tx_hash, shard)
     }
 
-    /// Imports transaction to the pool.
+    /// Imports operations to the pool.
     ///
     /// The pool consists of two parts: Future and Ready.
-    /// The former contains transactions that require some tags that are not yet provided by
-    /// other transactions in the pool.
-    /// The latter contains transactions that have all the requirements satisfied and are
+    /// The former contains operations that require some tags that are not yet provided by
+    /// other operations in the pool.
+    /// The latter contains operations that have all the requirements satisfied and are
     /// ready to be included in the block.
     pub fn import(
         &mut self,
@@ -289,7 +289,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         }
 
         let tx =
-            WaitingTransaction::new(tx, self.ready.provided_tags(shard), &self.recently_pruned);
+            WaitingTrustedOperations::new(tx, self.ready.provided_tags(shard), &self.recently_pruned);
         trace!(target: "txpool", "[{:?}] {:?}", tx.transaction.hash, tx);
         debug!(
             target: "txpool",
@@ -300,7 +300,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 
         // If all tags are not satisfied import to future.
         if !tx.is_ready() {
-            if self.reject_future_transactions {
+            if self.reject_future_operations {
                 return Err(error::Error::RejectedFutureTrustedOperation);
             }
 
@@ -317,7 +317,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
     /// NOTE the transaction has to have all requirements satisfied.
     fn import_to_ready(
         &mut self,
-        tx: WaitingTransaction<Hash, Ex>,
+        tx: WaitingTrustedOperations<Hash, Ex>,
         shard: ShardIdentifier,
     ) -> error::Result<Imported<Hash, Ex>> {
         let hash = tx.transaction.hash.clone();
@@ -1221,7 +1221,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
         let mut pool = pool();
 
         // when
-        pool.reject_future_transactions = true;
+        pool.reject_future_operations = true;
 
         // then
         let err = pool.import(TrustedOperation {
@@ -1275,7 +1275,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
     fn should_accept_future_transactions_when_explicitly_asked_to() {
         // given
         let mut pool = pool();
-        pool.reject_future_transactions = true;
+        pool.reject_future_operations = true;
 
         // when
         let flag_value = pool.with_futures_enabled(|pool, flag| {
@@ -1297,7 +1297,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
 
         // then
         assert_eq!(flag_value, true);
-        assert_eq!(pool.reject_future_transactions, true);
+        assert_eq!(pool.reject_future_operations, true);
         assert_eq!(pool.future.len(), 1);
     }
 }

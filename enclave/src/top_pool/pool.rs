@@ -101,7 +101,7 @@ pub struct Options {
     /// Future queue limits.
     pub future: base::Limit,
     /// Reject future transactions.
-    pub reject_future_transactions: bool,
+    pub reject_future_operations: bool,
 }
 
 impl Default for Options {
@@ -115,7 +115,7 @@ impl Default for Options {
                 count: 512,
                 total_bytes: 1 * 1024 * 1024,
             },
-            reject_future_transactions: false,
+            reject_future_operations: false,
         }
     }
 }

@@ -109,7 +109,7 @@ where
 {
     /// Create a new transaction pool.
     pub fn new(options: Options, api: Arc<B>) -> Self {
-        let base_pool = base::BasePool::new(options.reject_future_transactions);
+        let base_pool = base::BasePool::new(options.reject_future_operations);
         ValidatedPool {
             options,
             listener: Default::default(),
@@ -358,7 +358,7 @@ where
             // if tx1 depends on tx2, then if tx1 is inserted before tx2, then it goes
             // to the future queue and gets rejected immediately
             // => let's temporary stop rejection and clear future queue before return
-            pool.with_futures_enabled(|pool, reject_future_transactions| {
+            pool.with_futures_enabled(|pool, reject_future_operations| {
                 // now resubmit all removed transactions back to the pool
                 let mut final_statuses = HashMap::new();
                 for (hash, tx_to_resubmit) in txs_to_resubmit {
@@ -408,7 +408,7 @@ where
 
                 // if the pool is configured to reject future transactions, let's clear the future
                 // queue, updating final statuses as required
-                if reject_future_transactions {
+                if reject_future_operations {
                     for future_tx in pool.clear_future(shard) {
                         final_statuses.insert(future_tx.hash.clone(), Status::Dropped);
                     }

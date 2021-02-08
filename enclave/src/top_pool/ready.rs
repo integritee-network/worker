@@ -30,7 +30,7 @@ use sp_runtime::transaction_validity::TransactionTag as Tag;
 use crate::top_pool::{
     base_pool::TrustedOperation,
     error,
-    future::WaitingTransaction,
+    future::WaitingTrustedOperations,
     tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
 };
 
@@ -192,7 +192,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
     /// Returns transactions that were replaced by the one imported.
     pub fn import(
         &mut self,
-        tx: WaitingTransaction<Hash, Ex>,
+        tx: WaitingTrustedOperations<Hash, Ex>,
         shard: ShardIdentifier,
     ) -> error::Result<Vec<Arc<TrustedOperation<Hash, Ex>>>> {
         assert!(
@@ -682,7 +682,7 @@ mod tests {
         ready: &mut ReadyOperations<H, Ex>,
         tx: TrustedOperation<H, Ex>,
     ) -> error::Result<Vec<Arc<TrustedOperation<H, Ex>>>> {
-        let x = WaitingTransaction::new(tx, ready.provided_tags(), &[]);
+        let x = WaitingTrustedOperations::new(tx, ready.provided_tags(), &[]);
         ready.import(x)
     }
 
