@@ -100,7 +100,7 @@ pub struct Options {
     pub ready: base::Limit,
     /// Future queue limits.
     pub future: base::Limit,
-    /// Reject future transactions.
+    /// Reject future operations.
     pub reject_future_operations: bool,
 }
 
@@ -237,10 +237,10 @@ where
         );
     }
 
-    /// Prunes known ready transactions.
+    /// Prunes known ready operations.
     ///
-    /// Used to clear the pool from transactions that were part of recently imported block.
-    /// The main difference from the `prune` is that we do not revalidate any transactions
+    /// Used to clear the pool from operations that were part of recently imported block.
+    /// The main difference from the `prune` is that we do not revalidate any operations
     /// and ignore unknown passed hashes.
     pub fn prune_known(
         &self,
@@ -256,7 +256,7 @@ where
             .filter_map(|x| x)
             .flat_map(|x| x);
 
-        // Prune all transactions that provide given tags
+        // Prune all operations that provide given tags
         let prune_status = self.validated_pool.prune_tags(in_pool_tags, shard)?;
         let pruned_transactions = hashes
             .into_iter()
@@ -265,9 +265,9 @@ where
         self.validated_pool.fire_pruned(at, pruned_transactions)
     }
 
-    /// Prunes ready transactions.
+    /// Prunes ready operations.
     ///
-    /// Used to clear the pool from transactions that were part of recently imported block.
+    /// Used to clear the pool from operations that were part of recently imported block.
     /// To perform pruning we need the tags that each extrinsic provides and to avoid calling
     /// into runtime too often we first lookup all extrinsics that are in the pool and get
     /// their provided tags from there. Otherwise we query the runtime at the `parent` block.
@@ -319,25 +319,25 @@ where
             .await
     }
 
-    /// Prunes ready transactions that provide given list of tags.
+    /// Prunes ready operations that provide given list of tags.
     ///
-    /// Given tags are assumed to be always provided now, so all transactions
+    /// Given tags are assumed to be always provided now, so all operations
     /// in the Future Queue that require that particular tag (and have other
     /// requirements satisfied) are promoted to Ready Queue.
     ///
-    /// Moreover for each provided tag we remove transactions in the pool that:
+    /// Moreover for each provided tag we remove operations in the pool that:
     /// 1. Provide that tag directly
     /// 2. Are a dependency of pruned operation.
     ///
-    /// Returns transactions that have been removed from the pool and must be reverified
+    /// Returns operations that have been removed from the pool and must be reverified
     /// before reinserting to the pool.
     ///
-    /// By removing predecessor transactions as well we might actually end up
-    /// pruning too much, so all removed transactions are reverified against
+    /// By removing predecessor operations as well we might actually end up
+    /// pruning too much, so all removed operations are reverified against
     /// the runtime (`validate_transaction`) to make sure they are invalid.
     ///
-    /// However we avoid revalidating transactions that are contained within
-    /// the second parameter of `known_imported_hashes`. These transactions
+    /// However we avoid revalidating operations that are contained within
+    /// the second parameter of `known_imported_hashes`. These operations
     /// (if pruned) are not revalidated and become temporarily banned to
     /// prevent importing them in the (near) future.
     pub async fn prune_tags(
@@ -348,7 +348,7 @@ where
         shard: ShardIdentifier,
     ) -> Result<(), B::Error> {
         log::debug!(target: "txpool", "Pruning at {:?}", at);
-        // Prune all transactions that provide given tags
+        // Prune all operations that provide given tags
         let prune_status = match self.validated_pool.prune_tags(tags, shard) {
             Ok(prune_status) => prune_status,
             Err(e) => return Err(e),
@@ -360,7 +360,7 @@ where
         self.validated_pool
             .ban(&Instant::now(), known_imported_hashes.clone().into_iter());
 
-        // Try to re-validate pruned transactions since some of them might be still valid.
+        // Try to re-validate pruned operations since some of them might be still valid.
         // note that `known_imported_hashes` will be rejected here due to temporary ban.
         let pruned_hashes = prune_status
             .pruned
@@ -376,8 +376,8 @@ where
             .verify(at, pruned_transactions, CheckBannedBeforeVerify::Yes, shard)
             .await?;
 
-        log::trace!(target: "txpool", "Pruning at {:?}. Resubmitting transactions.", at);
-        // And finally - submit reverified transactions back to the pool
+        log::trace!(target: "txpool", "Pruning at {:?}. Resubmitting operations.", at);
+        // And finally - submit reverified operations back to the pool
 
         self.validated_pool.resubmit_pruned(
             &at,
@@ -406,7 +406,7 @@ where
             })
     }
 
-    /// Returns future that validates a bunch of transactions at given block.
+    /// Returns future that validates a bunch of operations at given block.
     async fn verify(
         &self,
         at: &BlockId<B::Block>,

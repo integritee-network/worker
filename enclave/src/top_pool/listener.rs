@@ -140,7 +140,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         }
     }
 
-    /// Notify all watchers that transactions have been finalized
+    /// Notify all watchers that operations have been finalized
     pub fn finalized(&mut self, block_hash: BlockHash<C>) {
         if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
             for hash in hashes {

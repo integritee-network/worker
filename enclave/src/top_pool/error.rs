@@ -40,8 +40,8 @@ pub enum Error {
 
     /// The operation validity returned no "provides" tag.
     ///
-    /// Such transactions are not accepted to the pool, since we use those tags
-    /// to define identity of transactions (occupance of the same "slot").
+    /// Such operations are not accepted to the pool, since we use those tags
+    /// to define identity of operations (occupance of the same "slot").
     #[display("Trusted Operation does not provide any tags, so the pool can't identify it")]
     NoTagsProvided,
 

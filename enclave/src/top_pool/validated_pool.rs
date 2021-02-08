@@ -51,7 +51,7 @@ use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use codec::Encode;
 use retain_mut::RetainMut;
 
-/// Pre-validated operation. Validated pool only accepts transactions wrapped in this enum.
+/// Pre-validated operation. Validated pool only accepts operations wrapped in this enum.
 #[derive(Debug)]
 pub enum ValidatedTransaction<Hash, Ex, Error> {
     /// TrustedOperation that has been validated successfully.
@@ -93,7 +93,7 @@ impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
 /// A type of validated operation stored in the pool.
 pub type ValidatedTransactionFor<B> =
     ValidatedTransaction<ExtrinsicHash<B>, TrustedCallSigned, <B as ChainApi>::Error>;
-/// Pool that deals with validated transactions.
+/// Pool that deals with validated operations.
 pub struct ValidatedPool<B: ChainApi> {
     api: Arc<B>,
     options: Options,
@@ -150,7 +150,7 @@ where
         }
     }
 
-    /// Imports a bunch of pre-validated transactions to the pool.
+    /// Imports a bunch of pre-validated operations to the pool.
     pub fn submit(
         &self,
         txs: impl IntoIterator<Item = ValidatedTransactionFor<B>>,
@@ -245,7 +245,7 @@ where
                     .into_iter()
                     .map(|x| x.hash.clone())
                     .collect::<HashSet<_>>();
-                // ban all removed transactions
+                // ban all removed operations
                 self.rotator
                     .ban(&Instant::now(), removed.iter().map(|x| x.clone()));
                 removed
@@ -292,9 +292,9 @@ where
         }
     }
 
-    /// Resubmits revalidated transactions back to the pool.
+    /// Resubmits revalidated operations back to the pool.
     ///
-    /// Removes and then submits passed transactions and all dependent transactions.
+    /// Removes and then submits passed operations and all dependent operations.
     /// Transactions that are missing from the pool are not submitted.
     pub fn resubmit(
         &self,
@@ -312,8 +312,8 @@ where
         let (mut initial_statuses, final_statuses) = {
             let mut pool = self.pool.write().unwrap();
 
-            // remove all passed transactions from the ready/future queues
-            // (this may remove additional transactions as well)
+            // remove all passed operations from the ready/future queues
+            // (this may remove additional operations as well)
             //
             // for every operation that has an entry in the `updated_transactions`,
             // we store updated validation result in txs_to_resubmit
@@ -326,10 +326,10 @@ where
                     .keys()
                     .next()
                     .cloned()
-                    .expect("transactions is not empty; qed");
+                    .expect("operations is not empty; qed");
 
                 // note we are not considering tx with hash invalid here - we just want
-                // to remove it along with dependent transactions and `remove_subtree()`
+                // to remove it along with dependent operations and `remove_subtree()`
                 // does exactly what we need
                 let removed = pool.remove_subtree(&[hash.clone()], shard);
                 for removed_tx in removed {
@@ -354,12 +354,12 @@ where
                 updated_transactions.remove(&hash);
             }
 
-            // if we're rejecting future transactions, then insertion order matters here:
+            // if we're rejecting future operations, then insertion order matters here:
             // if tx1 depends on tx2, then if tx1 is inserted before tx2, then it goes
             // to the future queue and gets rejected immediately
             // => let's temporary stop rejection and clear future queue before return
             pool.with_futures_enabled(|pool, reject_future_operations| {
-                // now resubmit all removed transactions back to the pool
+                // now resubmit all removed operations back to the pool
                 let mut final_statuses = HashMap::new();
                 for (hash, tx_to_resubmit) in txs_to_resubmit {
                     match tx_to_resubmit {
@@ -406,7 +406,7 @@ where
                     }
                 }
 
-                // if the pool is configured to reject future transactions, let's clear the future
+                // if the pool is configured to reject future operations, let's clear the future
                 // queue, updating final statuses as required
                 if reject_future_operations {
                     for future_tx in pool.clear_future(shard) {
@@ -459,7 +459,7 @@ where
         self.pool.read().unwrap().ready_by_hash(hash, shard)
     }
 
-    /// Prunes ready transactions that provide given list of tags.
+    /// Prunes ready operations that provide given list of tags.
     pub fn prune_tags(
         &self,
         tags: impl IntoIterator<Item = Tag>,
@@ -467,7 +467,7 @@ where
     ) -> Result<PruneStatus<ExtrinsicHash<B>, TrustedCallSigned>, B::Error> {
         // Perform tag-based pruning in the base pool
         let status = self.pool.write().unwrap().prune_tags(tags, shard);
-        // Notify event listeners of all transactions
+        // Notify event listeners of all operations
         // that were promoted to `Ready` or were dropped.
         {
             let mut listener = self.listener.write().unwrap();
@@ -482,7 +482,7 @@ where
         Ok(status)
     }
 
-    /// Resubmit transactions that have been revalidated after prune_tags call.
+    /// Resubmit operations that have been revalidated after prune_tags call.
     pub fn resubmit_pruned(
         &self,
         at: &BlockId<B::Block>,
@@ -496,10 +496,10 @@ where
     {
         debug_assert_eq!(pruned_hashes.len(), pruned_xts.len());
 
-        // Resubmit pruned transactions
+        // Resubmit pruned operations
         let results = self.submit(pruned_xts, shard);
 
-        // Collect the hashes of transactions that now became invalid (meaning that they are successfully pruned).
+        // Collect the hashes of operations that now became invalid (meaning that they are successfully pruned).
         let hashes = results.into_iter().enumerate().filter_map(|(idx, r)| {
             match r.map_err(error::IntoPoolError::into_pool_error) {
                 Err(Ok(error::Error::InvalidTrustedOperation)) => Some(pruned_hashes[idx].clone()),
@@ -511,13 +511,13 @@ where
         let hashes = hashes.chain(known_imported_hashes.into_iter());
         self.fire_pruned(at, hashes)?;
 
-        // perform regular cleanup of old transactions in the pool
+        // perform regular cleanup of old operations in the pool
         // and update temporary bans.
         self.clear_stale(at, shard)?;
         Ok(())
     }
 
-    /// Fire notifications for pruned transactions.
+    /// Fire notifications for pruned operations.
     pub fn fire_pruned(
         &self,
         at: &BlockId<B::Block>,
@@ -540,10 +540,10 @@ where
         Ok(())
     }
 
-    /// Removes stale transactions from the pool.
+    /// Removes stale operations from the pool.
     ///
-    /// Stale transactions are operation beyond their longevity period.
-    /// Note this function does not remove transactions that are already included in the chain.
+    /// Stale operations are operation beyond their longevity period.
+    /// Note this function does not remove operations that are already included in the chain.
     /// See `prune_tags` if you want this.
     pub fn clear_stale(
         &self,
@@ -572,10 +572,10 @@ where
             }
             hashes
         };
-        // removing old transactions
+        // removing old operations
         self.remove_invalid(&to_remove, shard, false);
         self.remove_invalid(&futures_to_remove, shard, false);
-        // clear banned transactions timeouts
+        // clear banned operations timeouts
         self.rotator.clear_timeouts(&now);
 
         Ok(())
@@ -592,10 +592,10 @@ where
         &self.api
     }
 
-    /// Return an event stream of notifications for when transactions are imported to the pool.
+    /// Return an event stream of notifications for when operations are imported to the pool.
     ///
     /// Consumers of this stream should use the `ready` method to actually get the
-    /// pending transactions in the right order.
+    /// pending operations in the right order.
     pub fn import_notification_stream(&self) -> EventStream<ExtrinsicHash<B>> {
         const CHANNEL_BUFFER_SIZE: usize = 1024;
 
@@ -612,11 +612,11 @@ where
         }
     }
 
-    /// Remove a subtree of transactions from the pool and mark them invalid.
+    /// Remove a subtree of operations from the pool and mark them invalid.
     ///
-    /// The transactions passed as an argument will be additionally banned
+    /// The operations passed as an argument will be additionally banned
     /// to prevent them from entering the pool right away.
-    /// Note this is not the case for the dependent transactions - those may
+    /// Note this is not the case for the dependent operations - those may
     /// still be valid so we want to be able to re-import them.
     pub fn remove_invalid(
         &self,
@@ -624,19 +624,19 @@ where
         shard: ShardIdentifier,
         inblock: bool,
     ) -> Vec<TransactionFor<B>> {
-        // early exit in case there is no invalid transactions.
+        // early exit in case there is no invalid operations.
         if hashes.is_empty() {
             return vec![];
         }
 
-        log::debug!(target: "txpool", "Removing invalid transactions: {:?}", hashes);
+        log::debug!(target: "txpool", "Removing invalid operations: {:?}", hashes);
 
-        // temporarily ban invalid transactions
+        // temporarily ban invalid operations
         self.rotator.ban(&Instant::now(), hashes.iter().cloned());
 
         let invalid = self.pool.write().unwrap().remove_subtree(hashes, shard);
 
-        log::debug!(target: "txpool", "Removed invalid transactions: {:?}", invalid);
+        log::debug!(target: "txpool", "Removed invalid operations: {:?}", invalid);
 
         let mut listener = self.listener.write().unwrap();
         if inblock {
@@ -652,7 +652,7 @@ where
         invalid
     }
 
-    /// Get an iterator for ready transactions ordered by priority
+    /// Get an iterator for ready operations ordered by priority
     pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item = TransactionFor<B>> + Send {
         self.pool.read().unwrap().ready(shard)
     }
@@ -673,7 +673,7 @@ where
         self.pool.read().unwrap().status(shard)
     }
 
-    /// Notify all watchers that transactions in the block with hash have been finalized
+    /// Notify all watchers that operations in the block with hash have been finalized
     pub async fn on_block_finalized(&self, block_hash: BlockHash<B>) -> Result<(), B::Error>
     where
         <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: core::fmt::Display,

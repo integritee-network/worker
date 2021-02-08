@@ -835,7 +835,7 @@ mod tests {
             let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
             assert_eq!(it.next(), None);
         }
-        // all transactions occupy the Future queue - it's fine
+        // all operations occupy the Future queue - it's fine
         assert_eq!(pool.future.len(), 3);
 
         // let's close the cycle with one additional operation
@@ -919,7 +919,7 @@ mod tests {
             let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
             assert_eq!(it.next(), None);
         }
-        // all transactions occupy the Future queue - it's fine
+        // all operations occupy the Future queue - it's fine
         assert_eq!(pool.future.len(), 3);
 
         // let's close the cycle with one additional operation

@@ -168,11 +168,11 @@ impl<P> Author<P> {
     }
 }
 
-/// Currently we treat all RPC transactions as externals.
+/// Currently we treat all RPC operations as externals.
 ///
 /// Possibly in the future we could allow opt-in for special treatment
-/// of such transactions, so that the block authors can inject
-/// some unique transactions via RPC and have them included in the pool.
+/// of such operations, so that the block authors can inject
+/// some unique operations via RPC and have them included in the pool.
 const TX_SOURCE: TransactionSource = TransactionSource::External;
 
 //impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>

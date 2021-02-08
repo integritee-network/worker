@@ -21,18 +21,18 @@ use crate::top_pool::error;
 /// TrustedOperation pool status.
 #[derive(Debug)]
 pub struct PoolStatus {
-    /// Number of transactions in the ready queue.
+    /// Number of operations in the ready queue.
     pub ready: usize,
     /// Sum of bytes of ready operation encodings.
     pub ready_bytes: usize,
-    /// Number of transactions in the future queue.
+    /// Number of operations in the future queue.
     pub future: usize,
     /// Sum of bytes of ready operation encodings.
     pub future_bytes: usize,
 }
 
 impl PoolStatus {
-    /// Returns true if the are no transactions in the pool.
+    /// Returns true if the are no operations in the pool.
     pub fn is_empty(&self) -> bool {
         self.ready == 0 && self.future == 0
     }
@@ -61,21 +61,21 @@ impl PoolStatus {
 ///		- `FinalityTimeout`
 ///
 /// The events will always be received in the order described above, however
-/// there might be cases where transactions alternate between `Future` and `Ready`
+/// there might be cases where operations alternate between `Future` and `Ready`
 /// pool, and are `Broadcast` in the meantime.
 ///
 /// There is also only single event causing the operation to leave the pool.
 /// I.e. only one of the listed ones should be triggered.
 ///
-/// Note that there are conditions that may cause transactions to reappear in the pool.
+/// Note that there are conditions that may cause operations to reappear in the pool.
 /// 1. Due to possible forks, the operation that ends up being in included
 /// in one block, may later re-enter the pool or be marked as invalid.
 /// 2. TrustedOperation `Dropped` at one point, may later re-enter the pool if some other
-/// transactions are removed.
+/// operations are removed.
 /// 3. `Invalid` operation may become valid at some point in the future.
 /// (Note that runtimes are encouraged to use `UnknownValidity` to inform the pool about
 /// such case).
-/// 4. `Retracted` transactions might be included in some next block.
+/// 4. `Retracted` operations might be included in some next block.
 ///
 /// The stream is considered finished only when either `Finalized` or `FinalityTimeout`
 /// event is triggered. You are however free to unsubscribe from notifications at any point.
@@ -123,7 +123,7 @@ pub type TxHash<P> = <P as TransactionPool>::Hash;
 pub type BlockHash<P> = <<P as TransactionPool>::Block as BlockT>::Hash;
 /// TrustedOperation type for a pool.
 //pub type TransactionFor<P> = <<P as TransactionPool>::Block as BlockT>::TrustedCallSigned;
-/// Type of transactions event stream for a pool.
+/// Type of operations event stream for a pool.
 pub type TransactionStatusStreamFor<P> = TransactionStatusStream<TxHash<P>, BlockHash<P>>;
 /// TrustedOperation type for a local pool.
 //pub type LocalTransactionFor<P> = <<P as LocalTransactionPool>::Block as BlockT>::TrustedCallSigned;
@@ -133,7 +133,7 @@ pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
 
 /// In-pool operation interface.
 ///
-/// The pool is container of transactions that are implementing this trait.
+/// The pool is container of operations that are implementing this trait.
 /// See `sp_runtime::ValidTransaction` for details about every field.
 pub trait InPoolOperation {
     /// TrustedOperation type.
@@ -170,7 +170,7 @@ pub trait TransactionPool: Send + Sync {
 
     // *** RPC
 
-    /// Returns a future that imports a bunch of unverified transactions to the pool.
+    /// Returns a future that imports a bunch of unverified operations to the pool.
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
@@ -198,7 +198,7 @@ pub trait TransactionPool: Send + Sync {
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
 
     // *** Block production / Networking
-    /// Get an iterator for ready transactions ordered by priority.
+    /// Get an iterator for ready operations ordered by priority.
     ///
     /// Guarantees to return only when operation pool got updated at `at` block.
     /// Guarantees to return immediately when `None` is passed.
@@ -213,7 +213,7 @@ pub trait TransactionPool: Send + Sync {
         >,
     >;
 
-    /// Get an iterator for ready transactions ordered by priority.
+    /// Get an iterator for ready operations ordered by priority.
     fn ready(
         &self,
         shard: ShardIdentifier,
@@ -223,7 +223,7 @@ pub trait TransactionPool: Send + Sync {
     fn shards(&self) -> Vec<ShardIdentifier>;
 
     // *** Block production
-    /// Remove transactions identified by given hashes (and dependent transactions) from the pool.
+    /// Remove operations identified by given hashes (and dependent operations) from the pool.
     fn remove_invalid(
         &self,
         hashes: &[TxHash<Self>],
@@ -236,11 +236,11 @@ pub trait TransactionPool: Send + Sync {
     fn status(&self, shard: ShardIdentifier) -> PoolStatus;
 
     // *** logging / RPC / networking
-    /// Return an event stream of transactions imported to the pool.
+    /// Return an event stream of operations imported to the pool.
     fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>>;
 
     // *** networking
-    /// Notify the pool about transactions broadcast.
+    /// Notify the pool about operations broadcast.
     fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
 
     /// Returns operation hash
@@ -279,7 +279,7 @@ pub trait MaintainedTransactionPool: TransactionPool {
     fn maintain(&self, event: ChainEvent<Self::Block>) -> Pin<Box<dyn Future<Output=()> + Send>>;
 }*/
 
-/// TrustedOperation pool interface for submitting local transactions that exposes a
+/// TrustedOperation pool interface for submitting local operations that exposes a
 /// blocking interface for submission.
 pub trait LocalTransactionPool: Send + Sync {
     /// Block type.
@@ -291,7 +291,7 @@ pub trait LocalTransactionPool: Send + Sync {
 
     /// Submits the given local unverified operation to the pool blocking the
     /// current thread for any necessary pre-verification.
-    /// NOTE: It MUST NOT be used for transactions that originate from the
+    /// NOTE: It MUST NOT be used for operations that originate from the
     /// network or RPC, since the validation is performed with
     /// `TransactionSource::Local`.
     fn submit_local(
@@ -303,7 +303,7 @@ pub trait LocalTransactionPool: Send + Sync {
 /*
 /// An abstraction for operation pool.
 ///
-/// This trait is used by offchain calls to be able to submit transactions.
+/// This trait is used by offchain calls to be able to submit operations.
 /// The main use case is for offchain workers, to feed back the results of computations,
 /// but since the operation pool access is a separate `ExternalitiesExtension` it can
 /// be also used in context of other offchain calls. For one may generate and submit
