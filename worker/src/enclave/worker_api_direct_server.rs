@@ -30,7 +30,7 @@ use std::sync::{
 use std::thread;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
-use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TransactionStatus};
+use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TrustedOperationStatus};
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
 
@@ -210,7 +210,7 @@ pub fn handle_direct_invocation_request(
             let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
             result_of_rpc_response.value = err_msg.encode();
             result_of_rpc_response.do_watch = false;
-            result_of_rpc_response.status = TransactionStatus::Error;
+            result_of_rpc_response.status = TrustedOperationStatus::Error;
         }
     }
     // create new return value
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
 ) -> sgx_status_t {
     let mut status_update_slice =
         slice::from_raw_parts(status_update_encoded, status_size as usize);
-    let status_update: TransactionStatus = Decode::decode(&mut status_update_slice).unwrap();
+    let status_update: TrustedOperationStatus = Decode::decode(&mut status_update_slice).unwrap();
     let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
     if let Ok(hash) = Hash::decode(&mut hash_slice) {
         // Aquire watched list lock
@@ -247,10 +247,10 @@ pub unsafe extern "C" fn ocall_update_status_event(
             let mut result = RpcReturnValue::decode(&mut old_result.as_slice()).unwrap();
 
             match status_update {
-                TransactionStatus::Invalid
-                | TransactionStatus::InBlock
-                | TransactionStatus::Finalized
-                | TransactionStatus::Usurped => {
+                TrustedOperationStatus::Invalid
+                | TrustedOperationStatus::InBlock
+                | TrustedOperationStatus::Finalized
+                | TrustedOperationStatus::Usurped => {
                     // Stop watching
                     result.do_watch = false;
                     continue_watching = false;

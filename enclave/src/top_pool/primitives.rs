@@ -85,7 +85,7 @@ impl PoolStatus {
 /// or that finality gadget is lagging behind. If you choose to wait for finality longer, you can
 /// re-subscribe for a particular operation hash manually again.
 #[derive(Debug, Clone, PartialEq)]
-pub enum TransactionStatus<Hash, BlockHash> {
+pub enum TrustedOperationStatus<Hash, BlockHash> {
     /// TrustedOperation is part of the future queue.
     Future,
     /// TrustedOperation is part of the ready queue.
@@ -111,8 +111,8 @@ pub enum TransactionStatus<Hash, BlockHash> {
 }
 
 /// The stream of operation events.
-pub type TransactionStatusStream<Hash, BlockHash> =
-    dyn Stream<Item = TransactionStatus<Hash, BlockHash>> + Send + Unpin;
+pub type TrustedOperationStatusStream<Hash, BlockHash> =
+    dyn Stream<Item = TrustedOperationStatus<Hash, BlockHash>> + Send + Unpin;
 
 /// The import notification event stream.
 pub type ImportNotificationStream<H> = channel::mpsc::Receiver<H>;
@@ -124,7 +124,7 @@ pub type BlockHash<P> = <<P as TransactionPool>::Block as BlockT>::Hash;
 /// TrustedOperation type for a pool.
 //pub type TransactionFor<P> = <<P as TransactionPool>::Block as BlockT>::TrustedCallSigned;
 /// Type of operations event stream for a pool.
-pub type TransactionStatusStreamFor<P> = TransactionStatusStream<TxHash<P>, BlockHash<P>>;
+pub type TrustedOperationStatusStreamFor<P> = TrustedOperationStatusStream<TxHash<P>, BlockHash<P>>;
 /// TrustedOperation type for a local pool.
 //pub type LocalTransactionFor<P> = <<P as LocalTransactionPool>::Block as BlockT>::TrustedCallSigned;
 

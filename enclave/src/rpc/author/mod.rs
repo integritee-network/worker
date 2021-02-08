@@ -95,11 +95,11 @@ pub trait AuthorApi<Hash, BlockHash> {
 
     /// Submit an extrinsic to watch.
     ///
-    /// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
+    /// See [`TrustedOperationStatus`](sp_transaction_pool::TrustedOperationStatus) for details on transaction
     /// life cycle.
     /* 	fn watch_top(&self,
         //metadata: Self::Metadata,
-        //subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
+        //subscriber: Subscriber<TrustedOperationStatus<Hash, BlockHash>>,
         bytes: Vec<u8>,
         shard: ShardIdentifier,
     ); */
@@ -108,7 +108,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 
     /*/// Submit an extrinsic to watch.
     ///
-    /// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
+    /// See [`TrustedOperationStatus`](sp_transaction_pool::TrustedOperationStatus) for details on transaction
     /// life cycle.
     #[pubsub(
         subscription = "author_extrinsicUpdate",
@@ -117,7 +117,7 @@ pub trait AuthorApi<Hash, BlockHash> {
     )]
     fn watch_extrinsic(&self,
         metadata: Self::Metadata,
-        subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
+        subscriber: Subscriber<TrustedOperationStatus<Hash, BlockHash>>,
         bytes: <Vec<u8>
     );
 

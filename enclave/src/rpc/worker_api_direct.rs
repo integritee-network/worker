@@ -57,7 +57,7 @@ use chain_relay::Block;
 
 use substratee_node_primitives::Request;
 use substratee_worker_primitives::RpcReturnValue;
-use substratee_worker_primitives::TransactionStatus;
+use substratee_worker_primitives::TrustedOperationStatus;
 
 use crate::utils::write_slice_and_whitespace_pad;
 
@@ -127,7 +127,7 @@ fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
     let return_value = RpcReturnValue {
         value: error.encode(),
         do_watch: false,
-        status: TransactionStatus::Invalid,
+        status: TrustedOperationStatus::Invalid,
     };
     return_value.encode()
 }
@@ -168,7 +168,7 @@ fn init_io_handler() -> IoHandler {
                             let json_value = RpcReturnValue {
                                 do_watch: true,
                                 value: encodable_response.encode(),
-                                status: TransactionStatus::Submitted,
+                                status: TrustedOperationStatus::Submitted,
                             };
                             Ok(json!(json_value.encode()))
                         }
@@ -215,7 +215,7 @@ fn init_io_handler() -> IoHandler {
                         let json_value = RpcReturnValue {
                             do_watch: true,
                             value: encodable_response.encode(),
-                            status: TransactionStatus::Submitted,
+                            status: TrustedOperationStatus::Submitted,
                         };
                         Ok(json!(json_value.encode()))
                     }
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn call_rpc_methods(
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn update_status_event<H: Encode>(hash: H, status_update: TransactionStatus) -> Result<(), ()> {
+pub fn update_status_event<H: Encode>(hash: H, status_update: TrustedOperationStatus) -> Result<(), ()> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
     let res = unsafe {

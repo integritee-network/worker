@@ -513,7 +513,7 @@ mod tests {
     use parking_lot::Mutex;
     use futures::executor::block_on;
     use super::*;
-    use sp_transaction_pool::TransactionStatus;
+    use sp_transaction_pool::TrustedOperationStatus;
     use sp_runtime::{
         traits::Hash,
         transaction_validity::{ValidTransaction, InvalidTrustedOperation, TransactionSource},
@@ -871,10 +871,10 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
             assert_eq!(
                 stream.next(),
-                Some(TransactionStatus::InBlock(H256::from_low_u64_be(2).into())),
+                Some(TrustedOperationStatus::InBlock(H256::from_low_u64_be(2).into())),
             );
         }
 
@@ -900,10 +900,10 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
             assert_eq!(
                 stream.next(),
-                Some(TransactionStatus::InBlock(H256::from_low_u64_be(2).into())),
+                Some(TrustedOperationStatus::InBlock(H256::from_low_u64_be(2).into())),
             );
         }
 
@@ -931,8 +931,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Future));
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Future));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
         }
 
         #[test]
@@ -954,8 +954,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
-            assert_eq!(stream.next(), Some(TransactionStatus::Invalid));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Invalid));
             assert_eq!(stream.next(), None);
         }
 
@@ -981,8 +981,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
-            assert_eq!(stream.next(), Some(TransactionStatus::Broadcast(peers)));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Broadcast(peers)));
         }
 
         #[test]
@@ -1019,8 +1019,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
-            assert_eq!(stream.next(), Some(TransactionStatus::Dropped));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Dropped));
         }
 
         #[test]

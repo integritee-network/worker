@@ -9,7 +9,7 @@ use sgx_tstd as std;
 use std::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
-pub enum TransactionStatus {
+pub enum TrustedOperationStatus {
     /// TrustedOperation is submitted to the top pool.
     Submitted,
     /// TrustedOperation is part of the future queue.
@@ -42,7 +42,7 @@ pub enum TransactionStatus {
 pub struct RpcReturnValue {
     pub value: Vec<u8>, // Hash or Error message
     pub do_watch: bool,
-    pub status: TransactionStatus,
+    pub status: TrustedOperationStatus,
 }
 
 #[cfg(feature = "std")]

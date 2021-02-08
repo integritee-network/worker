@@ -65,7 +65,7 @@ use substratee_stf::{
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_api::Api as WorkerApi;
 use substrate_client_keystore::LocalKeystore;
-use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TransactionStatus};
+use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -614,7 +614,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
                 if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
                     let value = String::decode(&mut return_value.value.as_slice()).unwrap();
-                    if return_value.status == TransactionStatus::Error {
+                    if return_value.status == TrustedOperationStatus::Error {
                         println!("[Error] {}", value);
                     } else {
                         println!("Trusted call {} is {:?}", value, return_value.status);
