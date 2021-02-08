@@ -69,7 +69,7 @@ impl<T, Block: BlockT> ReadyPoll<T, Block> {
     }
 }
 
-/// Basic implementation of transaction pool that can be customized by providing PoolApi.
+/// Basic implementation of operation pool that can be customized by providing PoolApi.
 pub struct BasicPool<PoolApi, Block>
 where
     Block: BlockT,
@@ -85,7 +85,7 @@ where
     Block: BlockT,
     PoolApi: ChainApi<Block = Block> + 'static,
 {
-    /// Create new basic transaction pool with provided api and custom
+    /// Create new basic operation pool with provided api and custom
     /// revalidation type.
     pub fn create(
         options: PoolOptions,

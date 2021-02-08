@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Chain api required for the transaction pool.
+//! Chain api required for the operation pool.
 extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 
@@ -36,13 +36,13 @@ use substratee_stf::TrustedCallSigned;
 
 use crate::rpc::error;
 
-/// The transaction pool logic for full client.
+/// The operation pool logic for full client.
 pub struct FillerChainApi<Block> {
     _marker: PhantomData<Block>,
 }
 
 impl<Block> FillerChainApi<Block> {
-    /// Create new transaction pool logic.
+    /// Create new operation pool logic.
     pub fn new() -> Self {
         FillerChainApi {
             _marker: Default::default(),
@@ -70,14 +70,14 @@ where
         _source: TransactionSource,
         uxt: TrustedCallSigned,
     ) -> Self::ValidationFuture {
-        let transaction = ValidTransaction {
+        let operation = ValidTransaction {
             priority: uxt.nonce.into(),
             requires: vec![],
             provides: vec![vec![uxt.nonce as u8]],
             longevity: 3,
             propagate: true,
         };
-        Box::pin(ready(Ok(Ok(transaction))))
+        Box::pin(ready(Ok(Ok(operation))))
     }
 
     fn block_id_to_number(

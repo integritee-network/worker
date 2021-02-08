@@ -51,7 +51,7 @@ use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use codec::Encode;
 use retain_mut::RetainMut;
 
-/// Pre-validated transaction. Validated pool only accepts transactions wrapped in this enum.
+/// Pre-validated operation. Validated pool only accepts transactions wrapped in this enum.
 #[derive(Debug)]
 pub enum ValidatedTransaction<Hash, Ex, Error> {
     /// TrustedOperation that has been validated successfully.
@@ -60,12 +60,12 @@ pub enum ValidatedTransaction<Hash, Ex, Error> {
     Invalid(Hash, Error),
     /// TrustedOperation which validity can't be determined.
     ///
-    /// We're notifying watchers about failure, if 'unknown' transaction is submitted.
+    /// We're notifying watchers about failure, if 'unknown' operation is submitted.
     Unknown(Hash, Error),
 }
 
 impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
-    /// Consume validity result, transaction data and produce ValidTransaction.
+    /// Consume validity result, operation data and produce ValidTransaction.
     pub fn valid_at(
         at: u64,
         hash: Hash,
@@ -90,7 +90,7 @@ impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
     }
 }
 
-/// A type of validated transaction stored in the pool.
+/// A type of validated operation stored in the pool.
 pub type ValidatedTransactionFor<B> =
     ValidatedTransaction<ExtrinsicHash<B>, TrustedCallSigned, <B as ChainApi>::Error>;
 /// Pool that deals with validated transactions.
@@ -107,7 +107,7 @@ impl<B: ChainApi> ValidatedPool<B>
 where
 //<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
 {
-    /// Create a new transaction pool.
+    /// Create a new operation pool.
     pub fn new(options: Options, api: Arc<B>) -> Self {
         let base_pool = base::BasePool::new(options.reject_future_operations);
         ValidatedPool {
@@ -125,16 +125,16 @@ where
         self.rotator.ban(now, hashes)
     }
 
-    /// Returns true if transaction with given hash is currently banned from the pool.
+    /// Returns true if operation with given hash is currently banned from the pool.
     pub fn is_banned(&self, hash: &ExtrinsicHash<B>) -> bool {
         self.rotator.is_banned(hash)
     }
 
-    /// A fast check before doing any further processing of a transaction, like validation.
+    /// A fast check before doing any further processing of a operation, like validation.
     ///
-    /// If `ingore_banned` is `true`, it will not check if the transaction is banned.
+    /// If `ingore_banned` is `true`, it will not check if the operation is banned.
     ///
-    /// It checks if the transaction is already imported or banned. If so, it returns an error.
+    /// It checks if the operation is already imported or banned. If so, it returns an error.
     pub fn check_is_known(
         &self,
         tx_hash: &ExtrinsicHash<B>,
@@ -161,7 +161,7 @@ where
             .map(|validated_tx| self.submit_one(validated_tx, shard))
             .collect::<Vec<_>>();
 
-        // only enforce limits if there is at least one imported transaction
+        // only enforce limits if there is at least one imported operation
         let removed = if results.iter().any(|res| res.is_ok()) {
             self.enforce_limits(shard)
         } else {
@@ -179,7 +179,7 @@ where
             .collect()
     }
 
-    /// Submit single pre-validated transaction to the pool.
+    /// Submit single pre-validated operation to the pool.
     fn submit_one(
         &self,
         tx: ValidatedTransactionFor<B>,
@@ -315,9 +315,9 @@ where
             // remove all passed transactions from the ready/future queues
             // (this may remove additional transactions as well)
             //
-            // for every transaction that has an entry in the `updated_transactions`,
+            // for every operation that has an entry in the `updated_transactions`,
             // we store updated validation result in txs_to_resubmit
-            // for every transaction that has no entry in the `updated_transactions`,
+            // for every operation that has no entry in the `updated_transactions`,
             // we store last validation result (i.e. the pool entry) in txs_to_resubmit
             let mut initial_statuses = HashMap::new();
             let mut txs_to_resubmit = Vec::with_capacity(updated_transactions.len());
@@ -339,12 +339,12 @@ where
                         updated_tx
                     } else {
                         // in most cases we'll end up in successful `try_unwrap`, but if not
-                        // we still need to reinsert transaction back to the pool => duplicate call
-                        let transaction = match Arc::try_unwrap(removed_tx) {
-                            Ok(transaction) => transaction,
-                            Err(transaction) => transaction.duplicate(),
+                        // we still need to reinsert operation back to the pool => duplicate call
+                        let operation = match Arc::try_unwrap(removed_tx) {
+                            Ok(operation) => operation,
+                            Err(operation) => operation.duplicate(),
                         };
-                        ValidatedTransaction::Valid(transaction)
+                        ValidatedTransaction::Valid(operation)
                     };
 
                     initial_statuses.insert(removed_hash.clone(), Status::Ready);
@@ -387,12 +387,12 @@ where
                                 }
                             },
                             Err(err) => {
-                                // we do not want to fail if single transaction import has failed
+                                // we do not want to fail if single operation import has failed
                                 // nor we do want to propagate this error, because it could tx unknown to caller
                                 // => let's just notify listeners (and issue debug message)
                                 log::warn!(
                                     target: "txpool",
-                                    "[{:?}] Removing invalid transaction from update: {:?}",
+                                    "[{:?}] Removing invalid operation from update: {:?}",
                                     hash,
                                     err,
                                 );
@@ -445,12 +445,12 @@ where
             .by_hashes(&hashes, shard)
             .into_iter()
             .map(|existing_in_pool| {
-                existing_in_pool.map(|transaction| transaction.provides.iter().cloned().collect())
+                existing_in_pool.map(|operation| operation.provides.iter().cloned().collect())
             })
             .collect()
     }
 
-    /// Get ready transaction by hash
+    /// Get ready operation by hash
     pub fn ready_by_hash(
         &self,
         hash: &ExtrinsicHash<B>,
@@ -542,7 +542,7 @@ where
 
     /// Removes stale transactions from the pool.
     ///
-    /// Stale transactions are transaction beyond their longevity period.
+    /// Stale transactions are operation beyond their longevity period.
     /// Note this function does not remove transactions that are already included in the chain.
     /// See `prune_tags` if you want this.
     pub fn clear_stale(

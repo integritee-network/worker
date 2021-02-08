@@ -41,7 +41,7 @@ pub struct Watcher<H> {
 }
 
 impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
-    /// Returns the transaction hash.
+    /// Returns the operation hash.
     pub fn hash(&self) -> &H {
         &self.hash
     }

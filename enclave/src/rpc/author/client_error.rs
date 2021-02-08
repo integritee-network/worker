@@ -84,22 +84,22 @@ impl sgx_tstd::error::Error for Error {
 const BASE_ERROR: i64 = 1000;
 /// Extrinsic has an invalid format.
 const BAD_FORMAT: i64 = BASE_ERROR + 1;
-/// Error during transaction verification in runtime.
+/// Error during operation verification in runtime.
 const VERIFICATION_ERROR: i64 = BASE_ERROR + 2;
 
-/// Pool rejected the transaction as invalid
+/// Pool rejected the operation as invalid
 const POOL_INVALID_TX: i64 = BASE_ERROR + 10;
-/// Cannot determine transaction validity.
+/// Cannot determine operation validity.
 const POOL_UNKNOWN_VALIDITY: i64 = POOL_INVALID_TX + 1;
-/// The transaction is temporarily banned.
+/// The operation is temporarily banned.
 const POOL_TEMPORARILY_BANNED: i64 = POOL_INVALID_TX + 2;
-/// The transaction is already in the pool
+/// The operation is already in the pool
 const POOL_ALREADY_IMPORTED: i64 = POOL_INVALID_TX + 3;
 /// TrustedOperation has too low priority to replace existing one in the pool.
 const POOL_TOO_LOW_PRIORITY: i64 = POOL_INVALID_TX + 4;
-/// Including this transaction would cause a dependency cycle.
+/// Including this operation would cause a dependency cycle.
 const POOL_CYCLE_DETECTED: i64 = POOL_INVALID_TX + 5;
-/// The transaction was not included to the pool because of the limits.
+/// The operation was not included to the pool because of the limits.
 const POOL_IMMEDIATELY_DROPPED: i64 = POOL_INVALID_TX + 6;
 /// The key type crypto is not known.
 const UNSUPPORTED_KEY_TYPE: i64 = POOL_INVALID_TX + 7;

@@ -38,7 +38,7 @@ pub enum Error {
 
     /// Incorrect extrinsic format.
 
-    /// The transaction validity returned no "provides" tag.
+    /// The operation validity returned no "provides" tag.
     ///
     /// Such transactions are not accepted to the pool, since we use those tags
     /// to define identity of transactions (occupance of the same "slot").

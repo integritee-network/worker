@@ -35,7 +35,7 @@ use crate::top_pool::base_pool::TrustedOperation;
 /// TrustedOperation with partially satisfied dependencies.
 pub struct WaitingTrustedOperations<Hash, Ex> {
     /// TrustedOperation details.
-    pub transaction: Arc<TrustedOperation<Hash, Ex>>,
+    pub operation: Arc<TrustedOperation<Hash, Ex>>,
     /// Tags that are required and have not been satisfied yet by other transactions in the pool.
     pub missing_tags: HashSet<Tag>,
     /// Time of import to the Future Queue.
@@ -46,7 +46,7 @@ impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<H
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "WaitingTrustedOperations {{ ")?;
         //write!(fmt, "imported_at: {:?}, ", self.imported_at)?;
-        write!(fmt, "transaction: {:?}, ", self.transaction)?;
+        write!(fmt, "operation: {:?}, ", self.operation)?;
         write!(fmt, "missing_tags: {{")?;
         let mut it = self.missing_tags.iter().map(|tag| HexDisplay::from(tag));
         if let Some(tag) = it.next() {
@@ -62,7 +62,7 @@ impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<H
 impl<Hash, Ex> Clone for WaitingTrustedOperations<Hash, Ex> {
     fn clone(&self) -> Self {
         WaitingTrustedOperations {
-            transaction: self.transaction.clone(),
+            operation: self.operation.clone(),
             missing_tags: self.missing_tags.clone(),
             imported_at: self.imported_at.clone(),
         }
@@ -75,15 +75,15 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
     /// Computes the set of missing tags based on the requirements and tags that
     /// are provided by all transactions in the ready queue.
     pub fn new(
-        transaction: TrustedOperation<Hash, Ex>,
+        operation: TrustedOperation<Hash, Ex>,
         provided: Option<&HashMap<Tag, Hash>>,
         recently_pruned: &[HashSet<Tag>],
     ) -> Self {
-        let missing_tags = transaction
+        let missing_tags = operation
             .requires
             .iter()
             .filter(|tag| {
-                // is true if the tag is already satisfied either via transaction in the pool
+                // is true if the tag is already satisfied either via operation in the pool
                 // or one that was recently included.
 
                 let is_provided = recently_pruned.iter().any(|x| x.contains(&**tag))
@@ -98,7 +98,7 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
             .collect();
 
         WaitingTrustedOperations {
-            transaction: Arc::new(transaction),
+            operation: Arc::new(operation),
             missing_tags,
             imported_at: Instant::now(),
         }
@@ -109,7 +109,7 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
         self.missing_tags.remove(tag);
     }
 
-    /// Returns true if transaction has all requirements satisfied.
+    /// Returns true if operation has all requirements satisfied.
     pub fn is_ready(&self) -> bool {
         self.missing_tags.is_empty()
     }
@@ -121,9 +121,9 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
 /// could provide a tag that they require.
 #[derive(Debug)]
 pub struct FutureTrustedOperations<Hash: hash::Hash + Eq, Ex> {
-    /// tags that are not yet provided by any transaction and we await for them
+    /// tags that are not yet provided by any operation and we await for them
     wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
-    /// Transactions waiting for a particular other transaction
+    /// Transactions waiting for a particular other operation
     waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTrustedOperations<Hash, Ex>>>,
 }
 
@@ -144,7 +144,7 @@ qed
 #";
 
 impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
-    /// Import transaction to Future queue.
+    /// Import operation to Future queue.
     ///
     /// Only transactions that don't have all their tags satisfied should occupy
     /// the Future queue.
@@ -154,7 +154,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         assert!(!tx.is_ready(), "TrustedOperation is ready.");
         if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
             assert!(
-                !tx_pool_waiting.contains_key(&tx.transaction.hash),
+                !tx_pool_waiting.contains_key(&tx.operation.hash),
                 "TrustedOperation is already imported."
             );
         }
@@ -172,11 +172,11 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
             let entry = tx_pool_wanted_map
                 .entry(tag.clone())
                 .or_insert_with(HashSet::new);
-            entry.insert(tx.transaction.hash.clone());
+            entry.insert(tx.operation.hash.clone());
         }
 
-        // Add the transaction to a by-hash waiting map
-        tx_pool_waiting_map.insert(tx.transaction.hash.clone(), tx);
+        // Add the operation to a by-hash waiting map
+        tx_pool_waiting_map.insert(tx.operation.hash.clone(), tx);
     }
 
     /// Returns true if given hash is part of the queue.
@@ -196,7 +196,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
             return hashes
                 .iter()
-                .map(|h| tx_pool_waiting.get(h).map(|x| x.transaction.clone()))
+                .map(|h| tx_pool_waiting.get(h).map(|x| x.operation.clone()))
                 .collect();
         }
         return vec![];
@@ -263,7 +263,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
                             }
                         }
                         // add to result
-                        removed.push(waiting_tx.transaction)
+                        removed.push(waiting_tx.operation)
                     }
                 }
             }
@@ -289,7 +289,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         shard: ShardIdentifier,
     ) -> Box<dyn Iterator<Item = &TrustedOperation<Hash, Ex>> + '_> {
         if let Some(tx_pool) = self.waiting.get(&shard) {
-            return Box::new(tx_pool.values().map(|waiting| &*waiting.transaction));
+            return Box::new(tx_pool.values().map(|waiting| &*waiting.operation));
         }
         return Box::new(core::iter::empty());
     }
@@ -303,7 +303,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
                 .get_mut(&shard)
                 .unwrap()
                 .drain()
-                .map(|(_, tx)| tx.transaction)
+                .map(|(_, tx)| tx.operation)
                 .collect();
         }
         return vec![];
@@ -322,7 +322,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         if let Some(tx_pool) = self.waiting.get(&shard) {
             return tx_pool
                 .values()
-                .fold(0, |acc, tx| acc + tx.transaction.bytes);
+                .fold(0, |acc, tx| acc + tx.operation.bytes);
         }
         return 0;
     }
@@ -337,7 +337,7 @@ mod tests {
     fn can_track_heap_size() {
         let mut future = FutureTrustedOperations::default();
         future.import(WaitingTrustedOperations {
-            transaction: TrustedOperation {
+            operation: TrustedOperation {
                 data: vec![0u8; 1024],
                 bytes: 1,
                 hash: 1,

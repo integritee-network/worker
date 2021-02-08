@@ -46,9 +46,9 @@ pub type ExtrinsicHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 //pub type ExtrinsicFor<A> = <<A as ChainApi>::Block as traits::Block>::Extrinsic;
 /// Block number type for the ChainApi
 pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
-/// A type of transaction stored in the pool
+/// A type of operation stored in the pool
 pub type TransactionFor<A> = Arc<base::TrustedOperation<ExtrinsicHash<A>, TrustedCallSigned>>;
-/// A type of validated transaction stored in the pool.
+/// A type of validated operation stored in the pool.
 pub type ValidatedTransactionFor<A> =
     ValidatedTransaction<ExtrinsicHash<A>, TrustedCallSigned, <A as ChainApi>::Error>;
 
@@ -58,7 +58,7 @@ pub trait ChainApi: Send + Sync {
     type Block: BlockT;
     /// Error type.
     type Error: From<error::Error>;
-    /// Validate transaction future.
+    /// Validate operation future.
     type ValidationFuture: Future<Output = Result<TransactionValidity, Self::Error>> + Send + Unpin;
     /// Body future (since block body might be remote)
     type BodyFuture: Future<Output = Result<Option<Vec<TrustedCallSigned>>, Self::Error>>
@@ -120,7 +120,7 @@ impl Default for Options {
     }
 }
 
-/// Should we check that the transaction is banned
+/// Should we check that the operation is banned
 /// in the pool, before we verify it?
 #[derive(Copy, Clone)]
 enum CheckBannedBeforeVerify {
@@ -138,7 +138,7 @@ where
     //<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
     <B as ChainApi>::Error: error::IntoPoolError,
 {
-    /// Create a new transaction pool.
+    /// Create a new operation pool.
     pub fn new(options: Options, api: Arc<B>) -> Self {
         Pool {
             validated_pool: Arc::new(ValidatedPool::new(options, api)),
@@ -164,7 +164,7 @@ where
 
     /// Resubmit the given extrinsics to the pool.
     ///
-    /// This does not check if a transaction is banned, before we verify it again.
+    /// This does not check if a operation is banned, before we verify it again.
     pub async fn resubmit_at(
         &self,
         at: &BlockId<B::Block>,
@@ -221,7 +221,7 @@ where
         self.validated_pool.submit_and_watch(tx, shard)
     }
 
-    /// Resubmit some transaction that were validated elsewhere.
+    /// Resubmit some operation that were validated elsewhere.
     pub fn resubmit(
         &self,
         revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>,
@@ -327,7 +327,7 @@ where
     ///
     /// Moreover for each provided tag we remove transactions in the pool that:
     /// 1. Provide that tag directly
-    /// 2. Are a dependency of pruned transaction.
+    /// 2. Are a dependency of pruned operation.
     ///
     /// Returns transactions that have been removed from the pool and must be reverified
     /// before reinserting to the pool.
@@ -356,7 +356,7 @@ where
 
         // Make sure that we don't revalidate extrinsics that were part of the recently
         // imported block. This is especially important for UTXO-like chains cause the
-        // inputs are pruned so such transaction would go to future again.
+        // inputs are pruned so such operation would go to future again.
         self.validated_pool
             .ban(&Instant::now(), known_imported_hashes.clone().into_iter());
 
@@ -391,7 +391,7 @@ where
         )
     }
 
-    /// Returns transaction hash
+    /// Returns operation hash
     pub fn hash_of(&self, xt: &TrustedCallSigned) -> ExtrinsicHash<B> {
         self.validated_pool.api().hash_and_length(xt).0
     }
@@ -431,7 +431,7 @@ where
         Ok(res)
     }
 
-    /// Returns future that validates single transaction at given block.
+    /// Returns future that validates single operation at given block.
     async fn verify_one(
         &self,
         block_id: &BlockId<B::Block>,
@@ -569,7 +569,7 @@ mod tests {
             futures::future::ready(if nonce < block_number {
                 Ok(InvalidTrustedOperation::Stale.into())
             } else {
-                let mut transaction = ValidTransaction {
+                let mut operation = ValidTransaction {
                     priority: 4,
                     requires: if nonce > block_number { vec![vec![nonce as u8 - 1]] } else { vec![] },
                     provides: if nonce == INVALID_NONCE { vec![] } else { vec![vec![nonce as u8]] },
@@ -578,14 +578,14 @@ mod tests {
                 };
 
                 if self.clear_requirements.lock().contains(&hash) {
-                    transaction.requires.clear();
+                    operation.requires.clear();
                 }
 
                 if self.add_requirements.lock().contains(&hash) {
-                    transaction.requires.push(vec![128]);
+                    operation.requires.push(vec![128]);
                 }
 
-                Ok(Ok(transaction))
+                Ok(Ok(operation))
             })
         }
 
@@ -1040,7 +1040,7 @@ mod tests {
                 nonce: 1,
             });
 
-            // This transaction should go to future, since we use `nonce: 1`
+            // This operation should go to future, since we use `nonce: 1`
             let pool2 = pool.clone();
             std::thread::spawn(move || {
                 block_on(pool2.submit_one(&BlockId::Number(0), SOURCE, xt)).unwrap();
@@ -1055,18 +1055,18 @@ mod tests {
                 amount: 4,
                 nonce: 0,
             });
-            // The tag the above transaction provides (TestApi is using just nonce as u8)
+            // The tag the above operation provides (TestApi is using just nonce as u8)
             let provides = vec![0_u8];
             block_on(pool.submit_one(&BlockId::Number(0), SOURCE, xt)).unwrap();
             assert_eq!(pool.validated_pool().status().ready, 1);
 
-            // Now block import happens before the second transaction is able to finish verification.
+            // Now block import happens before the second operation is able to finish verification.
             block_on(pool.prune_tags(&BlockId::Number(1), vec![provides], vec![])).unwrap();
             assert_eq!(pool.validated_pool().status().ready, 0);
 
 
             // so when we release the verification of the previous one it will have
-            // something in `requires`, but should go to ready directly, since the previous transaction was imported
+            // something in `requires`, but should go to ready directly, since the previous operation was imported
             // correctly.
             tx.send(()).unwrap();
 

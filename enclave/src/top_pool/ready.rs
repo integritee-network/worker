@@ -36,21 +36,21 @@ use crate::top_pool::{
 
 use substratee_stf::ShardIdentifier;
 
-/// An in-pool transaction reference.
+/// An in-pool operation reference.
 ///
 /// Should be cheap to clone.
 #[derive(Debug)]
 pub struct OperationRef<Hash, Ex> {
-    /// The actual transaction data.
-    pub transaction: Arc<TrustedOperation<Hash, Ex>>,
-    /// Unique id when transaction was inserted into the pool.
+    /// The actual operation data.
+    pub operation: Arc<TrustedOperation<Hash, Ex>>,
+    /// Unique id when operation was inserted into the pool.
     pub insertion_id: u64,
 }
 
 impl<Hash, Ex> Clone for OperationRef<Hash, Ex> {
     fn clone(&self) -> Self {
         OperationRef {
-            transaction: self.transaction.clone(),
+            operation: self.operation.clone(),
             insertion_id: self.insertion_id,
         }
     }
@@ -58,14 +58,14 @@ impl<Hash, Ex> Clone for OperationRef<Hash, Ex> {
 
 impl<Hash, Ex> Ord for OperationRef<Hash, Ex> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.transaction
+        self.operation
             .priority
-            .cmp(&other.transaction.priority)
+            .cmp(&other.operation.priority)
             .then_with(|| {
                 other
-                    .transaction
+                    .operation
                     .valid_till
-                    .cmp(&self.transaction.valid_till)
+                    .cmp(&self.operation.valid_till)
             })
             .then_with(|| other.insertion_id.cmp(&self.insertion_id))
     }
@@ -86,8 +86,8 @@ impl<Hash, Ex> Eq for OperationRef<Hash, Ex> {}
 
 #[derive(Debug)]
 pub struct ReadyTx<Hash, Ex> {
-    /// A reference to a transaction
-    pub transaction: OperationRef<Hash, Ex>,
+    /// A reference to a operation
+    pub operation: OperationRef<Hash, Ex>,
     /// A list of transactions that get unlocked by this one
     pub unlocks: Vec<Hash>,
     /// How many required tags are provided inherently
@@ -100,7 +100,7 @@ pub struct ReadyTx<Hash, Ex> {
 impl<Hash: Clone, Ex> Clone for ReadyTx<Hash, Ex> {
     fn clone(&self) -> Self {
         ReadyTx {
-            transaction: self.transaction.clone(),
+            operation: self.operation.clone(),
             unlocks: self.unlocks.clone(),
             requires_offset: self.requires_offset,
         }
@@ -108,8 +108,8 @@ impl<Hash: Clone, Ex> Clone for ReadyTx<Hash, Ex> {
 }
 
 const HASH_READY: &str = r#"
-Every time transaction is imported its hash is placed in `ready` map and tags in `provided_tags`;
-Every time transaction is removed from the queue we remove the hash from `ready` map and from `provided_tags`;
+Every time operation is imported its hash is placed in `ready` map and tags in `provided_tags`;
+Every time operation is removed from the queue we remove the hash from `ready` map and from `provided_tags`;
 Hence every hash retrieved from `provided_tags` is always present in `ready`;
 qed
 "#;
@@ -122,13 +122,13 @@ pub struct ReadyOperations<Hash: hash::Hash + Eq + Ord, Ex> {
     provided_tags: HashMap<ShardIdentifier, HashMap<Tag, Hash>>,
     /// Transactions that are ready (i.e. don't have any requirements external to the pool)
     ready: HashMap<ShardIdentifier, TrackedMap<Hash, ReadyTx<Hash, Ex>>>,
-    /// Best transactions that are ready to be included to the block without any other previous transaction.
+    /// Best transactions that are ready to be included to the block without any other previous operation.
     best: HashMap<ShardIdentifier, BTreeSet<OperationRef<Hash, Ex>>>,
 }
 
 impl<Hash, Ex> tracked_map::Size for ReadyTx<Hash, Ex> {
     fn size(&self) -> usize {
-        self.transaction.transaction.bytes
+        self.operation.operation.bytes
     }
 }
 
@@ -156,7 +156,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
     ///
     /// Transactions are returned in order:
     /// 1. First by the dependencies:
-    ///	- never return transaction that requires a tag, which was not provided by one of the previously returned transactions
+    ///	- never return operation that requires a tag, which was not provided by one of the previously returned transactions
     /// 2. Then by priority:
     /// - If there are two transactions with all requirements satisfied the one with higher priority goes first.
     /// 3. Then by the ttl that's left
@@ -187,7 +187,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
     /// Imports transactions to the pool of ready transactions.
     ///
-    /// The transaction needs to have all tags satisfied (be ready) by transactions
+    /// The operation needs to have all tags satisfied (be ready) by transactions
     /// that are in this queue.
     /// Returns transactions that were replaced by the one imported.
     pub fn import(
@@ -202,7 +202,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
         );
         if let Some(ready_map) = &self.ready.get(&shard) {
             assert!(
-                !ready_map.read().contains_key(&tx.transaction.hash),
+                !ready_map.read().contains_key(&tx.operation.hash),
                 "TrustedOperation is already imported."
             );
         }
@@ -214,10 +214,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
         *current_insertion_id += 1;
         let insertion_id = *current_insertion_id;
-        let hash = tx.transaction.hash.clone();
-        let transaction = tx.transaction;
+        let hash = tx.operation.hash.clone();
+        let operation = tx.operation;
 
-        let (replaced, unlocks) = self.replace_previous(&transaction, shard)?;
+        let (replaced, unlocks) = self.replace_previous(&operation, shard)?;
 
         let mut goes_to_best = true;
         let tracked_ready = self.ready.entry(shard.clone()).or_insert_with(|| {
@@ -231,12 +231,12 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
             let x: HashMap<Tag, Hash> = Default::default();
             return x;
         });
-        for tag in &transaction.requires {
-            // Check if the transaction that satisfies the tag is still in the queue.
+        for tag in &operation.requires {
+            // Check if the operation that satisfies the tag is still in the queue.
             if let Some(other) = tag_map.get(tag) {
                 let tx = ready.get_mut(other).expect(HASH_READY);
                 tx.unlocks.push(hash.clone());
-                // this transaction depends on some other, so it doesn't go to best directly.
+                // this operation depends on some other, so it doesn't go to best directly.
                 goes_to_best = false;
             } else {
                 requires_offset += 1;
@@ -247,29 +247,29 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
         // call to replace_previous guarantees that we will be overwriting
         // only entries that have been removed.
 
-        for tag in &transaction.provides {
+        for tag in &operation.provides {
             tag_map.insert(tag.clone(), hash.clone());
         }
 
-        let transaction = OperationRef {
+        let operation = OperationRef {
             insertion_id,
-            transaction,
+            operation,
         };
 
-        // insert to best if it doesn't require any other transaction to be included before it
+        // insert to best if it doesn't require any other operation to be included before it
         let best_set = self.best.entry(shard.clone()).or_insert_with(|| {
             let x: BTreeSet<OperationRef<Hash, Ex>> = Default::default();
             return x;
         });
         if goes_to_best {
-            best_set.insert(transaction.clone());
+            best_set.insert(operation.clone());
         }
 
         // insert to Ready
         ready.insert(
             hash,
             ReadyTx {
-                transaction,
+                operation,
                 unlocks,
                 requires_offset,
             },
@@ -298,7 +298,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
         return false;
     }
 
-    /// Retrive transaction by hash
+    /// Retrive operation by hash
     pub fn by_hash(
         &self,
         hash: &Hash,
@@ -320,7 +320,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
             let ready = ready_map.read();
             return hashes
                 .iter()
-                .map(|hash| ready.get(hash).map(|x| x.transaction.transaction.clone()))
+                .map(|hash| ready.get(hash).map(|x| x.operation.operation.clone()))
                 .collect();
         }
         return vec![];
@@ -328,8 +328,8 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
     /// Removes a subtree of transactions from the ready pool.
     ///
-    /// NOTE removing a transaction will also cause a removal of all transactions that depend on that one
-    /// (i.e. the entire subgraph that this transaction is a start of will be removed).
+    /// NOTE removing a operation will also cause a removal of all transactions that depend on that one
+    /// (i.e. the entire subgraph that this operation is a start of will be removed).
     /// All removed transactions are returned.
     pub fn remove_subtree(
         &mut self,
@@ -356,7 +356,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
             let mut ready = ready_map.write();
             while let Some(hash) = to_remove.pop() {
                 if let Some(mut tx) = ready.remove(&hash) {
-                    let invalidated = tx.transaction.transaction.provides.iter().filter(|tag| {
+                    let invalidated = tx.operation.operation.provides.iter().filter(|tag| {
                         provides_tag_filter
                             .as_ref()
                             .map(|filter| !filter.contains(&**tag))
@@ -371,7 +371,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                     }
 
                     // remove from unlocks
-                    for tag in &tx.transaction.transaction.requires {
+                    for tag in &tx.operation.operation.requires {
                         if let Some(hash) = self.provided_tags.get(&shard).unwrap().get(tag) {
                             if let Some(tx) = ready.get_mut(hash) {
                                 remove_item(&mut tx.unlocks, &hash);
@@ -380,7 +380,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                     }
 
                     // remove from best
-                    self.best.get_mut(&shard).unwrap().remove(&tx.transaction);
+                    self.best.get_mut(&shard).unwrap().remove(&tx.operation);
 
                     if removed_some_tags {
                         // remove all transactions that the current one unlocks
@@ -389,7 +389,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
                     // add to removed
                     trace!(target: "txpool", "[{:?}] Removed as part of the subtree.", hash);
-                    removed.push(tx.transaction.transaction);
+                    removed.push(tx.operation.operation);
                 }
             }
         }
@@ -399,7 +399,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
     /// Removes transactions that provide given tag.
     ///
-    /// All transactions that lead to a transaction, which provides this tag
+    /// All transactions that lead to a operation, which provides this tag
     /// are going to be removed from the queue, but no other transactions are touched -
     /// i.e. all other subgraphs starting from given tag are still considered valid & ready.
     pub fn prune_tags(
@@ -423,9 +423,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                     let unlocks = tx.unlocks;
 
                     // Make sure we remove it from best txs
-                    self.best.get_mut(&shard).unwrap().remove(&tx.transaction);
+                    self.best.get_mut(&shard).unwrap().remove(&tx.operation);
 
-                    let tx = tx.transaction.transaction;
+                    let tx = tx.operation.operation;
 
                     // prune previous transactions as well
                     {
@@ -440,12 +440,12 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                             // Possible edge case:
                             // - tx provides two tags
                             // - the second tag enables some subgraph we don't know of yet
-                            // - we will prune the transaction
+                            // - we will prune the operation
                             // - when we learn about the subgraph it will go to future
-                            // - we will have to wait for re-propagation of that transaction
+                            // - we will have to wait for re-propagation of that operation
                             // Alternatively the caller may attempt to re-import these transactions.
                             if tx2.unlocks.is_empty() {
-                                Some(tx2.transaction.transaction.provides.clone())
+                                Some(tx2.operation.operation.provides.clone())
                             } else {
                                 None
                             }
@@ -464,17 +464,17 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                         if let Some(tx) = self.ready.get_mut(&shard).unwrap().write().get_mut(&hash)
                         {
                             tx.requires_offset += 1;
-                            // this transaction is ready
-                            if tx.requires_offset == tx.transaction.transaction.requires.len() {
+                            // this operation is ready
+                            if tx.requires_offset == tx.operation.operation.requires.len() {
                                 self.best
                                     .get_mut(&shard)
                                     .unwrap()
-                                    .insert(tx.transaction.clone());
+                                    .insert(tx.operation.clone());
                             }
                         }
                     }
 
-                    // we also need to remove all other tags that this transaction provides,
+                    // we also need to remove all other tags that this operation provides,
                     // but since all the hard work is done, we only clear the provided_tag -> hash
                     // mapping.
                     let current_tag = &tag;
@@ -483,7 +483,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                         assert_eq!(
 							removed.as_ref(),
 							if current_tag == tag { None } else { Some(&tx.hash) },
-							"The pool contains exactly one transaction providing given tag; the removed transaction
+							"The pool contains exactly one operation providing given tag; the removed operation
 							claims to provide that tag, so it has to be mapped to it's hash; qed"
 						);
                     }
@@ -496,14 +496,14 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
         removed
     }
 
-    /// Checks if the transaction is providing the same tags as other transactions.
+    /// Checks if the operation is providing the same tags as other transactions.
     ///
     /// In case that's true it determines if the priority of transactions that
-    /// we are about to replace is lower than the priority of the replacement transaction.
+    /// we are about to replace is lower than the priority of the replacement operation.
     /// We remove/replace old transactions in case they have lower priority.
     ///
     /// In case replacement is successful returns a list of removed transactions
-    /// and a list of hashes that are still in pool and gets unlocked by the new transaction.
+    /// and a list of hashes that are still in pool and gets unlocked by the new operation.
     fn replace_previous(
         &mut self,
         tx: &TrustedOperation<Hash, Ex>,
@@ -511,7 +511,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
     ) -> error::Result<(Vec<Arc<TrustedOperation<Hash, Ex>>>, Vec<Hash>)> {
         if let Some(provided_tag_map) = self.provided_tags.get(&shard) {
             let (to_remove, unlocks) = {
-                // check if we are replacing a transaction
+                // check if we are replacing a operation
                 let replace_hashes = tx
                     .provides
                     .iter()
@@ -523,18 +523,18 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
                     return Ok((vec![], vec![]));
                 }
 
-                // now check if collective priority is lower than the replacement transaction.
+                // now check if collective priority is lower than the replacement operation.
                 let old_priority = {
                     let ready = self.ready.get(&shard).unwrap().read();
                     replace_hashes
                         .iter()
                         .filter_map(|hash| ready.get(hash))
                         .fold(0u64, |total, tx| {
-                            total.saturating_add(tx.transaction.transaction.priority)
+                            total.saturating_add(tx.operation.operation.priority)
                         })
                 };
 
-                // bail - the transaction has too low priority to replace the old ones
+                // bail - the operation has too low priority to replace the old ones
                 if old_priority >= tx.priority {
                     return Err(error::Error::TooLowPriority(tx.priority));
                 }
@@ -591,10 +591,10 @@ pub struct BestIterator<Hash, Ex> {
 
 /*impl Default for BestIterator<Hash, Ex> {
     let insertion_id = 0;
-    let transaction = Arc::new(with_priority(3, 3))
+    let operation = Arc::new(with_priority(3, 3))
     let tx_default = OperationRef {
         insertion_id,
-        transaction
+        operation
     };
     fn default() ->  self.awaiting.insert("NA", (0, tx_default))
 }*/
@@ -603,13 +603,13 @@ impl<Hash: hash::Hash + Member + Ord, Ex> BestIterator<Hash, Ex> {
     /// Depending on number of satisfied requirements insert given ref
     /// either to awaiting set or to best set.
     fn best_or_awaiting(&mut self, satisfied: usize, tx_ref: OperationRef<Hash, Ex>) {
-        if satisfied >= tx_ref.transaction.requires.len() {
+        if satisfied >= tx_ref.operation.requires.len() {
             // If we have satisfied all deps insert to best
             self.best.insert(tx_ref);
         } else {
             // otherwise we're still awaiting for some deps
             self.awaiting
-                .insert(tx_ref.transaction.hash.clone(), (satisfied, tx_ref));
+                .insert(tx_ref.operation.hash.clone(), (satisfied, tx_ref));
         }
     }
 }
@@ -622,10 +622,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
             let best = self.best.iter().next_back()?.clone();
             let best = self.best.take(&best)?;
 
-            let next = self.all.read().get(&best.transaction.hash).cloned();
+            let next = self.all.read().get(&best.operation.hash).cloned();
             let ready = match next {
                 Some(ready) => ready,
-                // The transaction is not in all, maybe it was removed in the meantime?
+                // The operation is not in all, maybe it was removed in the meantime?
                 None => continue,
             };
 
@@ -637,7 +637,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
                     Some((satisfied, tx_ref))
                 // then get from the pool
                 } else if let Some(next) = self.all.read().get(hash) {
-                    Some((next.requires_offset + 1, next.transaction.clone()))
+                    Some((next.requires_offset + 1, next.operation.clone()))
                 } else {
                     None
                 };
@@ -647,7 +647,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
                 }
             }
 
-            return Some(best.transaction);
+            return Some(best.operation);
         }
     }
 }
@@ -827,30 +827,30 @@ mod tests {
         // higher priority = better
         assert!(
             OperationRef {
-                transaction: Arc::new(with_priority(3, 3)),
+                operation: Arc::new(with_priority(3, 3)),
                 insertion_id: 1,
             } > OperationRef {
-                transaction: Arc::new(with_priority(2, 3)),
+                operation: Arc::new(with_priority(2, 3)),
                 insertion_id: 2,
             }
         );
         // lower validity = better
         assert!(
             OperationRef {
-                transaction: Arc::new(with_priority(3, 2)),
+                operation: Arc::new(with_priority(3, 2)),
                 insertion_id: 1,
             } > OperationRef {
-                transaction: Arc::new(with_priority(3, 3)),
+                operation: Arc::new(with_priority(3, 3)),
                 insertion_id: 2,
             }
         );
         // lower insertion_id = better
         assert!(
             OperationRef {
-                transaction: Arc::new(with_priority(3, 3)),
+                operation: Arc::new(with_priority(3, 3)),
                 insertion_id: 1,
             } > OperationRef {
-                transaction: Arc::new(with_priority(3, 3)),
+                operation: Arc::new(with_priority(3, 3)),
                 insertion_id: 2,
             }
         );

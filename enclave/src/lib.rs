@@ -396,7 +396,7 @@ pub unsafe extern "C" fn sync_chain_relay(
             Err(_) => error!("Error executing relevant extrinsics"),
         };
     }
-    // execute pending calls from transaction pool
+    // execute pending calls from operation pool
     match execute_tx_pool_calls(last_block_header) {
         Ok(c) => calls.extend(c.into_iter()),
         Err(_) => error!("Error executing relevant tx pool calls"),

@@ -79,7 +79,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         self.fire(hash, |watcher| watcher.broadcast(peers));
     }
 
-    /// New transaction was added to the ready pool or promoted from the future pool.
+    /// New operation was added to the ready pool or promoted from the future pool.
     pub fn ready(&mut self, tx: &H, old: Option<&H>) {
         trace!(target: "txpool", "[{:?}] Ready (replaced with {:?})", tx, old);
         self.fire(tx, |watcher| watcher.ready());
@@ -88,7 +88,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         }
     }
 
-    /// New transaction was added to the future pool.
+    /// New operation was added to the future pool.
     pub fn future(&mut self, tx: &H) {
         trace!(target: "txpool", "[{:?}] Future", tx);
         self.fire(tx, |watcher| watcher.future());
@@ -131,7 +131,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         self.fire(tx, |s| s.in_block());
     }
 
-    /// The block this transaction was included in has been retracted.
+    /// The block this operation was included in has been retracted.
     pub fn retracted(&mut self, block_hash: BlockHash<C>) {
         if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
             for hash in hashes {

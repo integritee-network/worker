@@ -290,11 +290,11 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 
         let tx =
             WaitingTrustedOperations::new(tx, self.ready.provided_tags(shard), &self.recently_pruned);
-        trace!(target: "txpool", "[{:?}] {:?}", tx.transaction.hash, tx);
+        trace!(target: "txpool", "[{:?}] {:?}", tx.operation.hash, tx);
         debug!(
             target: "txpool",
             "[{:?}] Importing to {}",
-            tx.transaction.hash,
+            tx.operation.hash,
             if tx.is_ready() { "ready" } else { "future" }
         );
 
@@ -304,7 +304,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
                 return Err(error::Error::RejectedFutureTrustedOperation);
             }
 
-            let hash = tx.transaction.hash.clone();
+            let hash = tx.operation.hash.clone();
             self.future.import(tx, shard);
             return Ok(Imported::Future { hash });
         }
@@ -320,7 +320,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         tx: WaitingTrustedOperations<Hash, Ex>,
         shard: ShardIdentifier,
     ) -> error::Result<Imported<Hash, Ex>> {
-        let hash = tx.transaction.hash.clone();
+        let hash = tx.operation.hash.clone();
         let mut promoted = vec![];
         let mut failed = vec![];
         let mut removed = vec![];
@@ -336,10 +336,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
             };
 
             // find operation in Future that it unlocks
-            to_import.append(&mut self.future.satisfy_tags(&tx.transaction.provides, shard));
+            to_import.append(&mut self.future.satisfy_tags(&tx.operation.provides, shard));
 
             // import this operation
-            let current_hash = tx.transaction.hash.clone();
+            let current_hash = tx.operation.hash.clone();
             match self.ready.import(tx, shard) {
                 Ok(mut replaced) => {
                     if !first {
@@ -446,11 +446,11 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
             // find the worst operation
             let minimal = self.ready.fold(
                 |minimal, current| {
-                    let transaction = &current.transaction;
+                    let operation = &current.operation;
                     match minimal {
-                        None => Some(transaction.clone()),
-                        Some(ref tx) if tx.insertion_id > transaction.insertion_id => {
-                            Some(transaction.clone())
+                        None => Some(operation.clone()),
+                        Some(ref tx) if tx.insertion_id > operation.insertion_id => {
+                            Some(operation.clone())
                         }
                         other => other,
                     }
@@ -459,7 +459,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
             );
 
             if let Some(minimal) = minimal {
-                removed.append(&mut self.remove_subtree(&[minimal.transaction.hash.clone()], shard))
+                removed.append(&mut self.remove_subtree(&[minimal.operation.hash.clone()], shard))
             } else {
                 break;
             }
@@ -481,7 +481,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
             );
 
             if let Some(minimal) = minimal {
-                removed.append(&mut self.remove_subtree(&[minimal.transaction.hash.clone()], shard))
+                removed.append(&mut self.remove_subtree(&[minimal.operation.hash.clone()], shard))
             } else {
                 break;
             }
@@ -542,7 +542,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         let mut promoted = vec![];
         let mut failed = vec![];
         for tx in to_import {
-            let hash = tx.transaction.hash.clone();
+            let hash = tx.operation.hash.clone();
             match self.import_to_ready(tx, shard) {
                 Ok(res) => promoted.push(res),
                 Err(_e) => {
@@ -573,9 +573,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 /// Queue limits
 #[derive(Debug, Clone)]
 pub struct Limit {
-    /// Maximal number of transactions in the queue.
+    /// Maximal number of operations in the queue.
     pub count: usize,
-    /// Maximal size of encodings of all transactions in the queue.
+    /// Maximal size of encodings of all operations in the queue.
     pub total_bytes: usize,
 }
 
@@ -838,7 +838,7 @@ mod tests {
         // all transactions occupy the Future queue - it's fine
         assert_eq!(pool.future.len(), 3);
 
-        // let's close the cycle with one additional transaction
+        // let's close the cycle with one additional operation
         let res = pool
             .import(TrustedOperation {
                 data: vec![4u8],
@@ -922,7 +922,7 @@ mod tests {
         // all transactions occupy the Future queue - it's fine
         assert_eq!(pool.future.len(), 3);
 
-        // let's close the cycle with one additional transaction
+        // let's close the cycle with one additional operation
         let err = pool
             .import(TrustedOperation {
                 data: vec![4u8],

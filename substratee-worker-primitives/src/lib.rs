@@ -10,24 +10,24 @@ use std::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum TransactionStatus {
-    /// TrustedOperation is submitted to the transaction pool.
+    /// TrustedOperation is submitted to the top pool.
     Submitted,
     /// TrustedOperation is part of the future queue.
     Future,
     /// TrustedOperation is part of the ready queue.
     Ready,
-    /// The transaction has been broadcast to the given peers.
+    /// The operation has been broadcast to the given peers.
     Broadcast,
     /// TrustedOperation has been included in block with given hash.
     InBlock,
-    /// The block this transaction was included in has been retracted.
+    /// The block this operation was included in has been retracted.
     Retracted,
     /// Maximum number of finality watchers has been reached,
     /// old watchers are being removed.
     FinalityTimeout,
     /// TrustedOperation has been finalized by a finality-gadget, e.g GRANDPA
     Finalized,
-    /// TrustedOperation has been replaced in the pool, by another transaction
+    /// TrustedOperation has been replaced in the pool, by another operation
     /// that provides the same tags. (e.g. same (sender, nonce)).
     Usurped,
     /// TrustedOperation has been dropped from the pool because of the limit.
