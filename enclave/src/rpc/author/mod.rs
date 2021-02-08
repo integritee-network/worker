@@ -35,7 +35,7 @@ use crate::rpc::error::{FutureResult, Result};
 use crate::top_pool::{
     error::Error as PoolError,
     error::IntoPoolError,
-    primitives::{BlockHash, InPoolTransaction, TransactionPool, TxHash},
+    primitives::{BlockHash, InPoolOperation, TransactionPool, TxHash},
 };
 use jsonrpc_core::Error as RpcError;
 pub mod client_error;

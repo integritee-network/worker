@@ -135,7 +135,7 @@ pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
 ///
 /// The pool is container of transactions that are implementing this trait.
 /// See `sp_runtime::ValidTransaction` for details about every field.
-pub trait InPoolTransaction {
+pub trait InPoolOperation {
     /// TrustedOperation type.
     type TrustedOperation;
     /// TrustedOperation hash type.
@@ -164,7 +164,7 @@ pub trait TransactionPool: Send + Sync {
     /// TrustedOperation hash type.
     type Hash: Hash + Eq + Member;
     /// In-pool transaction type.
-    type InPoolTransaction: InPoolTransaction<TrustedOperation = TrustedCallSigned, Hash = TxHash<Self>>;
+    type InPoolOperation: InPoolOperation<TrustedOperation = TrustedCallSigned, Hash = TxHash<Self>>;
     /// Error type.
     type Error: From<error::Error> + error::IntoPoolError;
 
@@ -208,7 +208,7 @@ pub trait TransactionPool: Send + Sync {
         shard: ShardIdentifier,
     ) -> Pin<
         Box<
-            dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolTransaction>> + Send>>
+            dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>>
                 + Send,
         >,
     >;
@@ -217,7 +217,7 @@ pub trait TransactionPool: Send + Sync {
     fn ready(
         &self,
         shard: ShardIdentifier,
-    ) -> Box<dyn Iterator<Item = Arc<Self::InPoolTransaction>> + Send>;
+    ) -> Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>;
 
     /// Get an iterator over all shards.
     fn shards(&self) -> Vec<ShardIdentifier>;
@@ -229,7 +229,7 @@ pub trait TransactionPool: Send + Sync {
         hashes: &[TxHash<Self>],
         shard: ShardIdentifier,
         inblock: bool,
-    ) -> Vec<Arc<Self::InPoolTransaction>>;
+    ) -> Vec<Arc<Self::InPoolOperation>>;
 
     // *** logging
     /// Returns pool status.
@@ -251,7 +251,7 @@ pub trait TransactionPool: Send + Sync {
         &self,
         hash: &TxHash<Self>,
         shard: ShardIdentifier,
-    ) -> Option<Arc<Self::InPoolTransaction>>;
+    ) -> Option<Arc<Self::InPoolOperation>>;
 }
 
 /*

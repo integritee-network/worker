@@ -119,7 +119,7 @@ where
 {
     type Block = PoolApi::Block;
     type Hash = ExtrinsicHash<PoolApi>;
-    type InPoolTransaction = TrustedOperation<TxHash<Self>, TrustedCallSigned>;
+    type InPoolOperation = TrustedOperation<TxHash<Self>, TrustedCallSigned>;
     type Error = PoolApi::Error;
 
     fn submit_at(
@@ -163,7 +163,7 @@ where
         hashes: &[TxHash<Self>],
         shard: ShardIdentifier,
         inblock: bool,
-    ) -> Vec<Arc<Self::InPoolTransaction>> {
+    ) -> Vec<Arc<Self::InPoolOperation>> {
         self.pool
             .validated_pool()
             .remove_invalid(hashes, shard, inblock)
@@ -189,7 +189,7 @@ where
         &self,
         hash: &TxHash<Self>,
         shard: ShardIdentifier,
-    ) -> Option<Arc<Self::InPoolTransaction>> {
+    ) -> Option<Arc<Self::InPoolOperation>> {
         self.pool.validated_pool().ready_by_hash(hash, shard)
     }
 
