@@ -40,7 +40,7 @@ use substratee_stf::ShardIdentifier;
 
 use crate::top_pool::{
     error,
-    future::{FutureTransactions, WaitingTransaction},
+    future::{FutureTrustedOperations, WaitingTransaction},
     primitives::{InPoolTransaction, PoolStatus},
     ready::ReadyOperations,
 };
@@ -223,7 +223,7 @@ const RECENTLY_PRUNED_TAGS: usize = 2;
 #[derive(Debug)]
 pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
     reject_future_transactions: bool,
-    future: FutureTransactions<Hash, Ex>,
+    future: FutureTrustedOperations<Hash, Ex>,
     ready: ReadyOperations<Hash, Ex>,
     /// Store recently pruned tags (for last two invocations).
     ///

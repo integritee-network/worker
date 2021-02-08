@@ -120,16 +120,16 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
 /// Contains transactions that are still awaiting for some other transactions that
 /// could provide a tag that they require.
 #[derive(Debug)]
-pub struct FutureTransactions<Hash: hash::Hash + Eq, Ex> {
+pub struct FutureTrustedOperations<Hash: hash::Hash + Eq, Ex> {
     /// tags that are not yet provided by any transaction and we await for them
     wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
     /// Transactions waiting for a particular other transaction
     waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTransaction<Hash, Ex>>>,
 }
 
-impl<Hash: hash::Hash + Eq, Ex> Default for FutureTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq, Ex> Default for FutureTrustedOperations<Hash, Ex> {
     fn default() -> Self {
-        FutureTransactions {
+        FutureTrustedOperations {
             wanted_tags: Default::default(),
             waiting: Default::default(),
         }
@@ -143,7 +143,7 @@ every hash from `wanted_tags` is always present in `waiting`;
 qed
 #";
 
-impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
+impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
     /// Import transaction to Future queue.
     ///
     /// Only transactions that don't have all their tags satisfied should occupy
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn can_track_heap_size() {
-        let mut future = FutureTransactions::default();
+        let mut future = FutureTrustedOperations::default();
         future.import(WaitingTransaction {
             transaction: TrustedOperation {
                 data: vec![0u8; 1024],
