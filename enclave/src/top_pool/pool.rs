@@ -483,10 +483,10 @@ where
                 }
             }
             Err(TransactionValidityError::Invalid(_e)) => {
-                ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTransaction.into())
+                ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTrustedOperation.into())
             }
             Err(TransactionValidityError::Unknown(_e)) => {
-                ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTransaction.into())
+                ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTrustedOperation.into())
             }
         };
 
@@ -516,7 +516,7 @@ mod tests {
     use sp_transaction_pool::TransactionStatus;
     use sp_runtime::{
         traits::Hash,
-        transaction_validity::{ValidTransaction, InvalidTransaction, TransactionSource},
+        transaction_validity::{ValidTransaction, InvalidTrustedOperation, TransactionSource},
     };
     use codec::Encode;
     use substrate_test_runtime::{Block, Extrinsic, Transfer, H256, AccountId, Hashing};
@@ -563,11 +563,11 @@ mod tests {
             }
 
             if self.invalidate.lock().contains(&hash) {
-                return futures::future::ready(Ok(InvalidTransaction::Custom(0).into()));
+                return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
             }
 
             futures::future::ready(if nonce < block_number {
-                Ok(InvalidTransaction::Stale.into())
+                Ok(InvalidTrustedOperation::Stale.into())
             } else {
                 let mut transaction = ValidTransaction {
                     priority: 4,

@@ -157,7 +157,7 @@ fn init_io_handler() -> IoHandler {
                             let encrypted_trusted_call: Vec<u8> = request.cyphertext;
                             let result = async {
                                 author
-                                    .watch_call(encrypted_trusted_call.clone(), shard)
+                                    .watch_top(encrypted_trusted_call.clone(), shard)
                                     .await
                             };
                             let response: Result<Hash, RpcError> = executor::block_on(result);
@@ -203,7 +203,7 @@ fn init_io_handler() -> IoHandler {
                         let encrypted_trusted_call: Vec<u8> = request.cyphertext;
                         let result = async {
                             author
-                                .submit_call(encrypted_trusted_call.clone(), shard)
+                                .submit_top(encrypted_trusted_call.clone(), shard)
                                 .await
                         };
                         let response: Result<Hash, RpcError> = executor::block_on(result);
@@ -250,7 +250,7 @@ fn init_io_handler() -> IoHandler {
                         Ok(id) => id,
                         Err(msg) => return Ok(Value::String(format!("{}", msg))),
                     };
-                    let result: Result<Vec<Vec<u8>>, _> = author.pending_calls(shard);
+                    let result: Result<Vec<Vec<u8>>, _> = author.pending_tops(shard);
                     if let Ok(vec_of_calls) = result {
                         retrieved_calls.push(vec_of_calls);
                     }

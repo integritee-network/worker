@@ -301,7 +301,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         // If all tags are not satisfied import to future.
         if !tx.is_ready() {
             if self.reject_future_transactions {
-                return Err(error::Error::RejectedFutureTransaction);
+                return Err(error::Error::RejectedFutureTrustedOperation);
             }
 
             let hash = tx.transaction.hash.clone();
@@ -1236,7 +1236,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
             source: Source::External,
         });
 
-        if let Err(error::Error::RejectedFutureTransaction) = err {
+        if let Err(error::Error::RejectedFutureTrustedOperation) = err {
         } else {
             assert!(false, "Invalid error kind: {:?}", err);
         }

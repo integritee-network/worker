@@ -424,7 +424,7 @@ fn execute_tx_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
 
         for shard in shards.into_iter() {
             // retrieve calls from tx pool
-            let encoded_calls: Vec<Vec<u8>> = author.pending_calls(shard).unwrap(); // always ok
+            let encoded_calls: Vec<Vec<u8>> = author.pending_tops(shard).unwrap(); // always ok
             for encoded_call in encoded_calls.into_iter() {
                 let trusted_call_signed =
                     match TrustedCallSigned::decode(&mut encoded_call.as_slice()) {
@@ -623,7 +623,7 @@ fn handle_trusted_worker_call(
             // remove call as invalid from pool
             let inblock = false;
             author
-                .remove_call(
+                .remove_top(
                     vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
                     shard,
                     inblock,
@@ -658,7 +658,7 @@ fn handle_trusted_worker_call(
             // remove call as invalid from pool
             let inblock = false;
             author
-                .remove_call(
+                .remove_top(
                     vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
                     shard,
                     inblock,
@@ -671,11 +671,11 @@ fn handle_trusted_worker_call(
     }
 
     if let Some(author) = author_pointer {
-        // TODO: prune instead of remove_call ? Block needs to be known
+        // TODO: prune instead of remove_top ? Block needs to be known
         // remove call from pool as valid
         let inblock = true;
         author
-            .remove_call(
+            .remove_top(
                 vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
                 shard,
                 inblock,

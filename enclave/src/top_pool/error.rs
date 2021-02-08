@@ -30,11 +30,11 @@ pub type Result<T> = sgx_tstd::result::Result<T, Error>;
 #[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
-    #[display("Unknown transaction validity")]
-    UnknownTransaction,
+    #[display("Unknown trusted operation validity")]
+    UnknownTrustedOperation,
 
-    #[display("Invalid transaction validity")]
-    InvalidTransaction,
+    #[display("Invalid trusted operation validity")]
+    InvalidTrustedOperation,
 
     /// Incorrect extrinsic format.
 
@@ -42,10 +42,10 @@ pub enum Error {
     ///
     /// Such transactions are not accepted to the pool, since we use those tags
     /// to define identity of transactions (occupance of the same "slot").
-    #[display("Transaction does not provide any tags, so the pool can't identify it")]
+    #[display("Trusted Operation does not provide any tags, so the pool can't identify it")]
     NoTagsProvided,
 
-    #[display("Transaction temporarily Banned")]
+    #[display("Trusted Operation temporarily Banned")]
     TemporarilyBanned,
 
     #[display("Already imported")]
@@ -64,8 +64,8 @@ pub enum Error {
     #[display("{0}")]
     InvalidBlockId(String),
 
-    #[display("The pool is not accepting future transactions")]
-    RejectedFutureTransaction,
+    #[display("The pool is not accepting future trusted operations")]
+    RejectedFutureTrustedOperation,
 
     #[display(fmt = "Extrinsic verification error")]
     #[from(ignore)]

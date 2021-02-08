@@ -502,7 +502,7 @@ where
         // Collect the hashes of transactions that now became invalid (meaning that they are successfully pruned).
         let hashes = results.into_iter().enumerate().filter_map(|(idx, r)| {
             match r.map_err(error::IntoPoolError::into_pool_error) {
-                Err(Ok(error::Error::InvalidTransaction)) => Some(pruned_hashes[idx].clone()),
+                Err(Ok(error::Error::InvalidTrustedOperation)) => Some(pruned_hashes[idx].clone()),
                 _ => None,
             }
         });

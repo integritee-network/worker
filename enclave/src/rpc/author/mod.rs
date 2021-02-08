@@ -51,7 +51,7 @@ pub trait AuthorApi<Hash, BlockHash> {
     //type Metadata;
 
     /// Submit hex-encoded extrinsic for inclusion in block.
-    fn submit_call(
+    fn submit_top(
         &self,
         extrinsic: Vec<u8>,
         shard: ShardIdentifier,
@@ -81,12 +81,12 @@ pub trait AuthorApi<Hash, BlockHash> {
     fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
     /// Returns all pending calls, potentially grouped by sender.
-    fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
+    fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
     fn get_shards(&self) -> Vec<ShardIdentifier>;
 
     /// Remove given call from the pool and temporarily ban it to prevent reimporting.
-    fn remove_call(
+    fn remove_top(
         &self,
         bytes_or_hash: Vec<hash::TrustedCallOrHash<Hash>>,
         shard: ShardIdentifier,
@@ -97,14 +97,14 @@ pub trait AuthorApi<Hash, BlockHash> {
     ///
     /// See [`TransactionStatus`](sp_transaction_pool::TransactionStatus) for details on transaction
     /// life cycle.
-    /* 	fn watch_call(&self,
+    /* 	fn watch_top(&self,
         //metadata: Self::Metadata,
         //subscriber: Subscriber<TransactionStatus<Hash, BlockHash>>,
         bytes: Vec<u8>,
         shard: ShardIdentifier,
     ); */
 
-    fn watch_call(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
+    fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
 
     /*/// Submit an extrinsic to watch.
     ///
@@ -234,7 +234,7 @@ where
         return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
     }*/
 
-    fn submit_call(
+    fn submit_top(
         &self,
         ext: Vec<u8>,
         shard: ShardIdentifier,
@@ -272,7 +272,7 @@ where
         )
     }
 
-    fn pending_calls(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
+    fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
         Ok(self
             .pool
             .ready(shard)
@@ -284,7 +284,7 @@ where
         self.pool.shards()
     }
 
-    fn remove_call(
+    fn remove_top(
         &self,
         bytes_or_hash: Vec<hash::TrustedCallOrHash<TxHash<P>>>,
         shard: ShardIdentifier,
@@ -309,7 +309,7 @@ where
             .collect())
     }
 
-    fn watch_call(
+    fn watch_top(
         &self,
         ext: Vec<u8>,
         shard: ShardIdentifier,
