@@ -53,7 +53,7 @@ use retain_mut::RetainMut;
 
 /// Pre-validated operation. Validated pool only accepts operations wrapped in this enum.
 #[derive(Debug)]
-pub enum ValidatedTransaction<Hash, Ex, Error> {
+pub enum ValidatedOperation<Hash, Ex, Error> {
     /// TrustedOperation that has been validated successfully.
     Valid(base::TrustedOperation<Hash, Ex>),
     /// TrustedOperation that is invalid.
@@ -64,7 +64,7 @@ pub enum ValidatedTransaction<Hash, Ex, Error> {
     Unknown(Hash, Error),
 }
 
-impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
+impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
     /// Consume validity result, operation data and produce ValidTransaction.
     pub fn valid_at(
         at: u64,
@@ -91,8 +91,8 @@ impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
 }
 
 /// A type of validated operation stored in the pool.
-pub type ValidatedTransactionFor<B> =
-    ValidatedTransaction<ExtrinsicHash<B>, TrustedCallSigned, <B as ChainApi>::Error>;
+pub type ValidatedOperationFor<B> =
+    ValidatedOperation<ExtrinsicHash<B>, TrustedCallSigned, <B as ChainApi>::Error>;
 /// Pool that deals with validated operations.
 pub struct ValidatedPool<B: ChainApi> {
     api: Arc<B>,
@@ -153,7 +153,7 @@ where
     /// Imports a bunch of pre-validated operations to the pool.
     pub fn submit(
         &self,
-        txs: impl IntoIterator<Item = ValidatedTransactionFor<B>>,
+        txs: impl IntoIterator<Item = ValidatedOperationFor<B>>,
         shard: ShardIdentifier,
     ) -> Vec<Result<ExtrinsicHash<B>, B::Error>> {
         let results = txs
@@ -182,11 +182,11 @@ where
     /// Submit single pre-validated operation to the pool.
     fn submit_one(
         &self,
-        tx: ValidatedTransactionFor<B>,
+        tx: ValidatedOperationFor<B>,
         shard: ShardIdentifier,
     ) -> Result<ExtrinsicHash<B>, B::Error> {
         match tx {
-            ValidatedTransaction::Valid(tx) => {
+            ValidatedOperation::Valid(tx) => {
                 let imported = self.pool.write().unwrap().import(tx, shard)?;
 
                 if let base::Imported::Ready { ref hash, .. } = imported {
@@ -210,11 +210,11 @@ where
                 fire_events(&mut listener, &imported);
                 Ok(imported.hash().clone())
             }
-            ValidatedTransaction::Invalid(hash, err) => {
+            ValidatedOperation::Invalid(hash, err) => {
                 self.rotator.ban(&Instant::now(), core::iter::once(hash));
                 Err(err.into())
             }
-            ValidatedTransaction::Unknown(hash, err) => {
+            ValidatedOperation::Unknown(hash, err) => {
                 self.listener.write().unwrap().invalid(&hash);
                 Err(err.into())
             }
@@ -269,13 +269,13 @@ where
     /// Import a single extrinsic and starts to watch their progress in the pool.
     pub fn submit_and_watch(
         &self,
-        tx: ValidatedTransactionFor<B>,
+        tx: ValidatedOperationFor<B>,
         shard: ShardIdentifier,
     ) -> Result<ExtrinsicHash<B>, B::Error> {
         match tx {
-            ValidatedTransaction::Valid(tx) => {
+            ValidatedOperation::Valid(tx) => {
                 let hash_result = self
-                    .submit(core::iter::once(ValidatedTransaction::Valid(tx)), shard)
+                    .submit(core::iter::once(ValidatedOperation::Valid(tx)), shard)
                     .pop()
                     .expect("One extrinsic passed; one result returned; qed");
                 // TODO: How to return / notice if Future or Ready queue?
@@ -284,11 +284,11 @@ where
                 }
                 hash_result
             }
-            ValidatedTransaction::Invalid(hash, err) => {
+            ValidatedOperation::Invalid(hash, err) => {
                 self.rotator.ban(&Instant::now(), core::iter::once(hash));
                 Err(err.into())
             }
-            ValidatedTransaction::Unknown(_, err) => Err(err.into()),
+            ValidatedOperation::Unknown(_, err) => Err(err.into()),
         }
     }
 
@@ -298,7 +298,7 @@ where
     /// Transactions that are missing from the pool are not submitted.
     pub fn resubmit(
         &self,
-        mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>,
+        mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
         shard: ShardIdentifier,
     ) {
         #[derive(Debug, Clone, Copy, PartialEq)]
@@ -344,7 +344,7 @@ where
                             Ok(operation) => operation,
                             Err(operation) => operation.duplicate(),
                         };
-                        ValidatedTransaction::Valid(operation)
+                        ValidatedOperation::Valid(operation)
                     };
 
                     initial_statuses.insert(removed_hash.clone(), Status::Ready);
@@ -363,7 +363,7 @@ where
                 let mut final_statuses = HashMap::new();
                 for (hash, tx_to_resubmit) in txs_to_resubmit {
                     match tx_to_resubmit {
-                        ValidatedTransaction::Valid(tx) => match pool.import(tx, shard) {
+                        ValidatedOperation::Valid(tx) => match pool.import(tx, shard) {
                             Ok(imported) => match imported {
                                 base::Imported::Ready {
                                     promoted,
@@ -399,8 +399,8 @@ where
                                 final_statuses.insert(hash, Status::Failed);
                             }
                         },
-                        ValidatedTransaction::Invalid(_, _)
-                        | ValidatedTransaction::Unknown(_, _) => {
+                        ValidatedOperation::Invalid(_, _)
+                        | ValidatedOperation::Unknown(_, _) => {
                             final_statuses.insert(hash, Status::Failed);
                         }
                     }
@@ -488,7 +488,7 @@ where
         at: &BlockId<B::Block>,
         known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
         pruned_hashes: Vec<ExtrinsicHash<B>>,
-        pruned_xts: Vec<ValidatedTransactionFor<B>>,
+        pruned_xts: Vec<ValidatedOperationFor<B>>,
         shard: ShardIdentifier,
     ) -> Result<(), B::Error>
     where

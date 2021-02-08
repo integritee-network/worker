@@ -30,7 +30,7 @@ use sp_runtime::{
 
 use crate::top_pool::{
     base_pool as base, error,
-    validated_pool::{ValidatedPool, ValidatedTransaction},
+    validated_pool::{ValidatedPool, ValidatedOperation},
 };
 
 use substratee_stf::{ShardIdentifier, TrustedCallSigned};
@@ -49,8 +49,8 @@ pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
 /// A type of operation stored in the pool
 pub type TransactionFor<A> = Arc<base::TrustedOperation<ExtrinsicHash<A>, TrustedCallSigned>>;
 /// A type of validated operation stored in the pool.
-pub type ValidatedTransactionFor<A> =
-    ValidatedTransaction<ExtrinsicHash<A>, TrustedCallSigned, <A as ChainApi>::Error>;
+pub type ValidatedOperationFor<A> =
+    ValidatedOperation<ExtrinsicHash<A>, TrustedCallSigned, <A as ChainApi>::Error>;
 
 /// Concrete extrinsic validation and query logic.
 pub trait ChainApi: Send + Sync {
@@ -224,7 +224,7 @@ where
     /// Resubmit some operation that were validated elsewhere.
     pub fn resubmit(
         &self,
-        revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>,
+        revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
         shard: ShardIdentifier,
     ) {
         let now = Instant::now();
@@ -413,7 +413,7 @@ where
         xts: impl IntoIterator<Item = (TransactionSource, TrustedCallSigned)>,
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
-    ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>, B::Error> {
+    ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
         // we need a block number to compute tx validity
         //let block_number = self.resolve_block_number(at)?;
         // dummy blocknumber
@@ -441,7 +441,7 @@ where
         xt: TrustedCallSigned,
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
-    ) -> (ExtrinsicHash<B>, ValidatedTransactionFor<B>) {
+    ) -> (ExtrinsicHash<B>, ValidatedOperationFor<B>) {
         let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);
 
         let ignore_banned = matches!(check, CheckBannedBeforeVerify::No);
@@ -451,7 +451,7 @@ where
         {
             return (
                 hash.clone(),
-                ValidatedTransaction::Invalid(hash, err.into()),
+                ValidatedOperation::Invalid(hash, err.into()),
             );
         }
 
@@ -464,15 +464,15 @@ where
 
         let status = match validation_result {
             Ok(status) => status,
-            Err(e) => return (hash.clone(), ValidatedTransaction::Invalid(hash, e)),
+            Err(e) => return (hash.clone(), ValidatedOperation::Invalid(hash, e)),
         };
 
         let validity = match status {
             Ok(validity) => {
                 if validity.provides.is_empty() {
-                    ValidatedTransaction::Invalid(hash.clone(), error::Error::NoTagsProvided.into())
+                    ValidatedOperation::Invalid(hash.clone(), error::Error::NoTagsProvided.into())
                 } else {
-                    ValidatedTransaction::valid_at(
+                    ValidatedOperation::valid_at(
                         block_number.saturated_into::<u64>(),
                         hash.clone(),
                         source,
@@ -483,10 +483,10 @@ where
                 }
             }
             Err(TransactionValidityError::Invalid(_e)) => {
-                ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTrustedOperation.into())
+                ValidatedOperation::Invalid(hash.clone(), error::Error::InvalidTrustedOperation.into())
             }
             Err(TransactionValidityError::Unknown(_e)) => {
-                ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTrustedOperation.into())
+                ValidatedOperation::Unknown(hash.clone(), error::Error::UnknownTrustedOperation.into())
             }
         };
 

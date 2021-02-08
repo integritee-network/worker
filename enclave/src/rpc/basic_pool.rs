@@ -18,7 +18,7 @@ use crate::top_pool::{
     base_pool::TrustedOperation,
     error::IntoPoolError,
     pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
-    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TransactionPool, TxHash},
+    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool, TxHash},
 };
 
 use substratee_stf::{ShardIdentifier, TrustedCallSigned};
@@ -111,7 +111,7 @@ where
     }
 }
 
-impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
+impl<PoolApi, Block> TrustedOperationPool for BasicPool<PoolApi, Block>
 where
     Block: BlockT,
     PoolApi: ChainApi<Block = Block> + 'static,

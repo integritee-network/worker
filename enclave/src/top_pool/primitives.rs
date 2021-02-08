@@ -40,7 +40,7 @@ impl PoolStatus {
 
 /// Possible operation status events.
 ///
-/// This events are being emitted by `TransactionPool` watchers,
+/// This events are being emitted by `TrustedOperationPool` watchers,
 /// which are also exposed over RPC.
 ///
 /// The status events can be grouped based on their kinds as:
@@ -118,15 +118,15 @@ pub type TrustedOperationStatusStream<Hash, BlockHash> =
 pub type ImportNotificationStream<H> = channel::mpsc::Receiver<H>;
 
 /// TrustedOperation hash type for a pool.
-pub type TxHash<P> = <P as TransactionPool>::Hash;
+pub type TxHash<P> = <P as TrustedOperationPool>::Hash;
 /// Block hash type for a pool.
-pub type BlockHash<P> = <<P as TransactionPool>::Block as BlockT>::Hash;
+pub type BlockHash<P> = <<P as TrustedOperationPool>::Block as BlockT>::Hash;
 /// TrustedOperation type for a pool.
-//pub type TransactionFor<P> = <<P as TransactionPool>::Block as BlockT>::TrustedCallSigned;
+//pub type TransactionFor<P> = <<P as TrustedOperationPool>::Block as BlockT>::TrustedCallSigned;
 /// Type of operations event stream for a pool.
 pub type TrustedOperationStatusStreamFor<P> = TrustedOperationStatusStream<TxHash<P>, BlockHash<P>>;
 /// TrustedOperation type for a local pool.
-//pub type LocalTransactionFor<P> = <<P as LocalTransactionPool>::Block as BlockT>::TrustedCallSigned;
+//pub type LocalTransactionFor<P> = <<P as LocalTrustedOperationPool>::Block as BlockT>::TrustedCallSigned;
 
 /// Typical future type used in operation pool api.
 pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
@@ -158,7 +158,7 @@ pub trait InPoolOperation {
 }
 
 /// TrustedOperation pool interface.
-pub trait TransactionPool: Send + Sync {
+pub trait TrustedOperationPool: Send + Sync {
     /// Block type.
     type Block: BlockT;
     /// TrustedOperation hash type.
@@ -274,14 +274,14 @@ pub enum ChainEvent<B: BlockT> {
 }
 
 /// Trait for operation pool maintenance.
-pub trait MaintainedTransactionPool: TransactionPool {
+pub trait MaintainedTrustedOperationPool: TrustedOperationPool {
     /// Perform maintenance
     fn maintain(&self, event: ChainEvent<Self::Block>) -> Pin<Box<dyn Future<Output=()> + Send>>;
 }*/
 
 /// TrustedOperation pool interface for submitting local operations that exposes a
 /// blocking interface for submission.
-pub trait LocalTransactionPool: Send + Sync {
+pub trait LocalTrustedOperationPool: Send + Sync {
     /// Block type.
     type Block: BlockT;
     /// TrustedOperation hash type.
@@ -319,7 +319,7 @@ pub trait OffchainSubmitTransaction<Block: BlockT>: Send + Sync {
     ) -> Result<(), ()>;
 }
 
-impl<TPool: LocalTransactionPool> OffchainSubmitTransaction<TPool::Block> for TPool {
+impl<TPool: LocalTrustedOperationPool> OffchainSubmitTransaction<TPool::Block> for TPool {
     fn submit_at(
         &self,
         at: &BlockId<TPool::Block>,

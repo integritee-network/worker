@@ -35,7 +35,7 @@ use crate::rpc::error::{FutureResult, Result};
 use crate::top_pool::{
     error::Error as PoolError,
     error::IntoPoolError,
-    primitives::{BlockHash, InPoolOperation, TransactionPool, TxHash},
+    primitives::{BlockHash, InPoolOperation, TrustedOperationPool, TxHash},
 };
 use jsonrpc_core::Error as RpcError;
 pub mod client_error;
@@ -178,7 +178,7 @@ const TX_SOURCE: TransactionSource = TransactionSource::External;
 //impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
 impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 where
-    P: TransactionPool + Sync + Send + 'static,
+    P: TrustedOperationPool + Sync + Send + 'static,
     //Client: Send + Sync + 'static,
     //Client::Api: SessionKeys<P::Block, Error = ClientError>,
 {
