@@ -239,14 +239,8 @@ where
         ext: Vec<u8>,
         shard: ShardIdentifier,
     ) -> FutureResult<TxHash<P>, RpcError> {
-        // check if shard exists
-        let shards = state::list_shards().unwrap();
-        if !shards.contains(&shard) {
-            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
-        }
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
-        //let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
             Ok(req) => req,
             Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
@@ -320,14 +314,8 @@ where
         ext: Vec<u8>,
         shard: ShardIdentifier,
     ) -> FutureResult<TxHash<P>, RpcError> {
-        // check if shard exists
-        let shards = state::list_shards().unwrap();
-        if !shards.contains(&shard) {
-            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
-        }
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
-        //let request_vec: Vec<u8> = rsa3072::decrypt(&ext.as_slice(), &rsa_keypair).unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
             Ok(req) => req,
             Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
