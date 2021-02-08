@@ -15,7 +15,7 @@ use jsonrpc_core::futures::channel::oneshot;
 use jsonrpc_core::futures::future::{ready, Future, FutureExt};
 
 use crate::top_pool::{
-    base_pool::Transaction,
+    base_pool::TrustedOperation,
     error::IntoPoolError,
     pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
     primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TransactionPool, TxHash},
@@ -23,7 +23,7 @@ use crate::top_pool::{
 
 use substratee_stf::{ShardIdentifier, TrustedCallSigned};
 
-type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<Transaction<Hash, Data>>> + Send>;
+type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
 
 type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, TrustedCallSigned>;
 
@@ -119,7 +119,7 @@ where
 {
     type Block = PoolApi::Block;
     type Hash = ExtrinsicHash<PoolApi>;
-    type InPoolTransaction = Transaction<TxHash<Self>, TrustedCallSigned>;
+    type InPoolTransaction = TrustedOperation<TxHash<Self>, TrustedCallSigned>;
     type Error = PoolApi::Error;
 
     fn submit_at(

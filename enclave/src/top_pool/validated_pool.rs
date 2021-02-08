@@ -54,11 +54,11 @@ use retain_mut::RetainMut;
 /// Pre-validated transaction. Validated pool only accepts transactions wrapped in this enum.
 #[derive(Debug)]
 pub enum ValidatedTransaction<Hash, Ex, Error> {
-    /// Transaction that has been validated successfully.
-    Valid(base::Transaction<Hash, Ex>),
-    /// Transaction that is invalid.
+    /// TrustedOperation that has been validated successfully.
+    Valid(base::TrustedOperation<Hash, Ex>),
+    /// TrustedOperation that is invalid.
     Invalid(Hash, Error),
-    /// Transaction which validity can't be determined.
+    /// TrustedOperation which validity can't be determined.
     ///
     /// We're notifying watchers about failure, if 'unknown' transaction is submitted.
     Unknown(Hash, Error),
@@ -74,7 +74,7 @@ impl<Hash, Ex, Error> ValidatedTransaction<Hash, Ex, Error> {
         bytes: usize,
         validity: ValidTransaction,
     ) -> Self {
-        Self::Valid(base::Transaction {
+        Self::Valid(base::TrustedOperation {
             data,
             bytes,
             hash,

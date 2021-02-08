@@ -42,13 +42,13 @@ use crate::top_pool::{
     error,
     future::{FutureTransactions, WaitingTransaction},
     primitives::{InPoolTransaction, PoolStatus},
-    ready::ReadyTransactions,
+    ready::ReadyOperations,
 };
 
 /// Successful import result.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Imported<Hash, Ex> {
-    /// Transaction was successfully imported to Ready queue.
+    /// TrustedOperation was successfully imported to Ready queue.
     Ready {
         /// Hash of transaction that was successfully imported.
         hash: Hash,
@@ -57,9 +57,9 @@ pub enum Imported<Hash, Ex> {
         /// Transactions that failed to be promoted from the Future queue and are now discarded.
         failed: Vec<Hash>,
         /// Transactions removed from the Ready pool (replaced).
-        removed: Vec<Arc<Transaction<Hash, Ex>>>,
+        removed: Vec<Arc<TrustedOperation<Hash, Ex>>>,
     },
-    /// Transaction was successfully imported to Future queue.
+    /// TrustedOperation was successfully imported to Future queue.
     Future {
         /// Hash of transaction that was successfully imported.
         hash: Hash,
@@ -85,20 +85,20 @@ pub struct PruneStatus<Hash, Ex> {
     /// A list of transactions that failed to be promoted and now are discarded.
     pub failed: Vec<Hash>,
     /// A list of transactions that got pruned from the ready queue.
-    pub pruned: Vec<Arc<Transaction<Hash, Ex>>>,
+    pub pruned: Vec<Arc<TrustedOperation<Hash, Ex>>>,
 }
 
 /// Immutable transaction
 #[cfg_attr(test, derive(Clone))]
 #[derive(PartialEq, Eq)]
-pub struct Transaction<Hash, Extrinsic> {
+pub struct TrustedOperation<Hash, Extrinsic> {
     /// Raw extrinsic representing that transaction.
     pub data: Extrinsic,
     /// Number of bytes encoding of the transaction requires.
     pub bytes: usize,
-    /// Transaction hash (unique)
+    /// TrustedOperation hash (unique)
     pub hash: Hash,
-    /// Transaction priority (higher = better)
+    /// TrustedOperation priority (higher = better)
     pub priority: Priority,
     /// At which block the transaction becomes invalid?
     pub valid_till: Longevity,
@@ -112,14 +112,14 @@ pub struct Transaction<Hash, Extrinsic> {
     pub source: Source,
 }
 
-impl<Hash, Extrinsic> AsRef<Extrinsic> for Transaction<Hash, Extrinsic> {
+impl<Hash, Extrinsic> AsRef<Extrinsic> for TrustedOperation<Hash, Extrinsic> {
     fn as_ref(&self) -> &Extrinsic {
         &self.data
     }
 }
 
-impl<Hash, Extrinsic> InPoolTransaction for Transaction<Hash, Extrinsic> {
-    type Transaction = Extrinsic;
+impl<Hash, Extrinsic> InPoolTransaction for TrustedOperation<Hash, Extrinsic> {
+    type TrustedOperation = Extrinsic;
     type Hash = Hash;
 
     fn data(&self) -> &Extrinsic {
@@ -151,14 +151,14 @@ impl<Hash, Extrinsic> InPoolTransaction for Transaction<Hash, Extrinsic> {
     }
 }
 
-impl<Hash: Clone, Extrinsic: Clone> Transaction<Hash, Extrinsic> {
+impl<Hash: Clone, Extrinsic: Clone> TrustedOperation<Hash, Extrinsic> {
     /// Explicit transaction clone.
     ///
-    /// Transaction should be cloned only if absolutely necessary && we want
-    /// every reason to be commented. That's why we `Transaction` is not `Clone`,
+    /// TrustedOperation should be cloned only if absolutely necessary && we want
+    /// every reason to be commented. That's why we `TrustedOperation` is not `Clone`,
     /// but there's explicit `duplicate` method.
     pub fn duplicate(&self) -> Self {
-        Transaction {
+        TrustedOperation {
             data: self.data.clone(),
             bytes: self.bytes.clone(),
             hash: self.hash.clone(),
@@ -172,7 +172,7 @@ impl<Hash: Clone, Extrinsic: Clone> Transaction<Hash, Extrinsic> {
     }
 }
 
-impl<Hash, Extrinsic> fmt::Debug for Transaction<Hash, Extrinsic>
+impl<Hash, Extrinsic> fmt::Debug for TrustedOperation<Hash, Extrinsic>
 where
     Hash: fmt::Debug,
     Extrinsic: fmt::Debug,
@@ -189,7 +189,7 @@ where
             Ok(())
         }
 
-        write!(fmt, "Transaction {{ ")?;
+        write!(fmt, "TrustedOperation {{ ")?;
         write!(fmt, "hash: {:?}, ", &self.hash)?;
         write!(fmt, "priority: {:?}, ", &self.priority)?;
         write!(fmt, "valid_till: {:?}, ", &self.valid_till)?;
@@ -210,7 +210,7 @@ where
 /// Store last pruned tags for given number of invocations.
 const RECENTLY_PRUNED_TAGS: usize = 2;
 
-/// Transaction pool.
+/// TrustedOperation pool.
 ///
 /// Builds a dependency graph for all transactions in the pool and returns
 /// the ones that are currently ready to be executed.
@@ -224,7 +224,7 @@ const RECENTLY_PRUNED_TAGS: usize = 2;
 pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
     reject_future_transactions: bool,
     future: FutureTransactions<Hash, Ex>,
-    ready: ReadyTransactions<Hash, Ex>,
+    ready: ReadyOperations<Hash, Ex>,
     /// Store recently pruned tags (for last two invocations).
     ///
     /// This is used to make sure we don't accidentally put
@@ -281,7 +281,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
     /// ready to be included in the block.
     pub fn import(
         &mut self,
-        tx: Transaction<Hash, Ex>,
+        tx: TrustedOperation<Hash, Ex>,
         shard: ShardIdentifier,
     ) -> error::Result<Imported<Hash, Ex>> {
         if self.is_imported(&tx.hash, shard) {
@@ -387,7 +387,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
     pub fn ready(
         &self,
         shard: ShardIdentifier,
-    ) -> impl Iterator<Item = Arc<Transaction<Hash, Ex>>> {
+    ) -> impl Iterator<Item = Arc<TrustedOperation<Hash, Ex>>> {
         self.ready.get(shard)
     }
 
@@ -397,7 +397,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
     }
 
     /// Returns an iterator over future transactions in the pool.
-    pub fn futures(&self, shard: ShardIdentifier) -> impl Iterator<Item = &Transaction<Hash, Ex>> {
+    pub fn futures(&self, shard: ShardIdentifier) -> impl Iterator<Item = &TrustedOperation<Hash, Ex>> {
         self.future.all(shard)
     }
 
@@ -409,7 +409,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         &self,
         hashes: &[Hash],
         shard: ShardIdentifier,
-    ) -> Vec<Option<Arc<Transaction<Hash, Ex>>>> {
+    ) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
         let ready = self.ready.by_hashes(hashes, shard);
         let future = self.future.by_hashes(hashes, shard);
 
@@ -425,7 +425,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         &self,
         hash: &Hash,
         shard: ShardIdentifier,
-    ) -> Option<Arc<Transaction<Hash, Ex>>> {
+    ) -> Option<Arc<TrustedOperation<Hash, Ex>>> {
         self.ready.by_hash(hash, shard)
     }
 
@@ -439,7 +439,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         ready: &Limit,
         future: &Limit,
         shard: ShardIdentifier,
-    ) -> Vec<Arc<Transaction<Hash, Ex>>> {
+    ) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
         let mut removed = vec![];
 
         while ready.is_exceeded(self.ready.len(shard), self.ready.bytes(shard)) {
@@ -502,14 +502,14 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
         &mut self,
         hashes: &[Hash],
         shard: ShardIdentifier,
-    ) -> Vec<Arc<Transaction<Hash, Ex>>> {
+    ) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
         let mut removed = self.ready.remove_subtree(hashes, shard);
         removed.extend(self.future.remove(hashes, shard));
         removed
     }
 
     /// Removes and returns all transactions from the future queue.
-    pub fn clear_future(&mut self, shard: ShardIdentifier) -> Vec<Arc<Transaction<Hash, Ex>>> {
+    pub fn clear_future(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
         self.future.clear(shard)
     }
 
@@ -602,7 +602,7 @@ mod tests {
         let mut pool = pool();
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1u64,
@@ -626,7 +626,7 @@ mod tests {
         let mut pool = pool();
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -638,7 +638,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -662,7 +662,7 @@ mod tests {
         let mut pool = pool();
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -676,7 +676,7 @@ mod tests {
         .unwrap();
         assert_eq!(pool.ready().count(), 0);
         assert_eq!(pool.ready.len(), 0);
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![2u8],
             bytes: 1,
             hash: 2,
@@ -700,7 +700,7 @@ mod tests {
         let mut pool = pool();
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -712,7 +712,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![3u8],
             bytes: 1,
             hash: 3,
@@ -724,7 +724,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![2u8],
             bytes: 1,
             hash: 2,
@@ -736,7 +736,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![4u8],
             bytes: 1,
             hash: 4,
@@ -752,7 +752,7 @@ mod tests {
         assert_eq!(pool.ready.len(), 0);
 
         let res = pool
-            .import(Transaction {
+            .import(TrustedOperation {
                 data: vec![5u8],
                 bytes: 1,
                 hash: 5,
@@ -789,7 +789,7 @@ mod tests {
     fn should_handle_a_cycle() {
         // given
         let mut pool = pool();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -801,7 +801,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![3u8],
             bytes: 1,
             hash: 3,
@@ -817,7 +817,7 @@ mod tests {
         assert_eq!(pool.ready.len(), 0);
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![2u8],
             bytes: 1,
             hash: 2,
@@ -840,7 +840,7 @@ mod tests {
 
         // let's close the cycle with one additional transaction
         let res = pool
-            .import(Transaction {
+            .import(TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
                 hash: 4,
@@ -873,7 +873,7 @@ mod tests {
     fn should_handle_a_cycle_with_low_priority() {
         // given
         let mut pool = pool();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -885,7 +885,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![3u8],
             bytes: 1,
             hash: 3,
@@ -901,7 +901,7 @@ mod tests {
         assert_eq!(pool.ready.len(), 0);
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![2u8],
             bytes: 1,
             hash: 2,
@@ -924,7 +924,7 @@ mod tests {
 
         // let's close the cycle with one additional transaction
         let err = pool
-            .import(Transaction {
+            .import(TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
                 hash: 4,
@@ -949,7 +949,7 @@ mod tests {
     #[test]
     fn can_track_heap_size() {
         let mut pool = pool();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![5u8; 1024],
             bytes: 1,
             hash: 5,
@@ -961,7 +961,7 @@ mod tests {
             source: Source::External,
         })
         .expect("import 1 should be ok");
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![3u8; 1024],
             bytes: 1,
             hash: 7,
@@ -981,7 +981,7 @@ mod tests {
     fn should_remove_invalid_transactions() {
         // given
         let mut pool = pool();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![5u8],
             bytes: 1,
             hash: 5,
@@ -993,7 +993,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -1005,7 +1005,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![3u8],
             bytes: 1,
             hash: 3,
@@ -1017,7 +1017,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![2u8],
             bytes: 1,
             hash: 2,
@@ -1029,7 +1029,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![4u8],
             bytes: 1,
             hash: 4,
@@ -1042,7 +1042,7 @@ mod tests {
         })
         .unwrap();
         // future
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![6u8],
             bytes: 1,
             hash: 6,
@@ -1070,7 +1070,7 @@ mod tests {
         // given
         let mut pool = pool();
         // future (waiting for 0)
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![5u8],
             bytes: 1,
             hash: 5,
@@ -1083,7 +1083,7 @@ mod tests {
         })
         .unwrap();
         // ready
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![1u8],
             bytes: 1,
             hash: 1,
@@ -1095,7 +1095,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![2u8],
             bytes: 1,
             hash: 2,
@@ -1107,7 +1107,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![3u8],
             bytes: 1,
             hash: 3,
@@ -1119,7 +1119,7 @@ mod tests {
             source: Source::External,
         })
         .unwrap();
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![4u8],
             bytes: 1,
             hash: 4,
@@ -1161,7 +1161,7 @@ mod tests {
         assert_eq!(
             format!(
                 "{:?}",
-                Transaction {
+                TrustedOperation {
                     data: vec![4u8],
                     bytes: 1,
                     hash: 4,
@@ -1173,7 +1173,7 @@ mod tests {
                     source: Source::External,
                 }
             ),
-            "Transaction { \
+            "TrustedOperation { \
 hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
 source: TransactionSource::External, requires: [03,02], provides: [04], data: [4]}"
                 .to_owned()
@@ -1183,7 +1183,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
     #[test]
     fn transaction_propagation() {
         assert_eq!(
-            Transaction {
+            TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
                 hash: 4,
@@ -1199,7 +1199,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
         );
 
         assert_eq!(
-            Transaction {
+            TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
                 hash: 4,
@@ -1224,7 +1224,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
         pool.reject_future_transactions = true;
 
         // then
-        let err = pool.import(Transaction {
+        let err = pool.import(TrustedOperation {
             data: vec![5u8],
             bytes: 1,
             hash: 5,
@@ -1248,7 +1248,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
         let mut pool = pool();
 
         // when
-        pool.import(Transaction {
+        pool.import(TrustedOperation {
             data: vec![5u8],
             bytes: 1,
             hash: 5,
@@ -1279,7 +1279,7 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
 
         // when
         let flag_value = pool.with_futures_enabled(|pool, flag| {
-            pool.import(Transaction {
+            pool.import(TrustedOperation {
                 data: vec![5u8],
                 bytes: 1,
                 hash: 5,

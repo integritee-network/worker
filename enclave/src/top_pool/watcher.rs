@@ -55,12 +55,12 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
         }
     }
 
-    /// Transaction became ready.
+    /// TrustedOperation became ready.
     pub fn ready(&mut self) {
         self.send(TransactionStatus::Ready)
     }
 
-    /// Transaction was moved to future.
+    /// TrustedOperation was moved to future.
     pub fn future(&mut self) {
         self.send(TransactionStatus::Future)
     }
@@ -106,7 +106,7 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
         self.is_in_block = true;
     }
 
-    /// Transaction has been dropped from the pool because of the limit.
+    /// TrustedOperation has been dropped from the pool because of the limit.
     pub fn dropped(&mut self) {
         self.send(TransactionStatus::Dropped);
         self.is_in_block = true;

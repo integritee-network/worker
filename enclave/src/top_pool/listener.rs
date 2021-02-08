@@ -94,7 +94,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         self.fire(tx, |watcher| watcher.future());
     }
 
-    /// Transaction was dropped from the pool because of the limit.
+    /// TrustedOperation was dropped from the pool because of the limit.
     pub fn dropped(&mut self, tx: &H, by: Option<&H>) {
         trace!(target: "txpool", "[{:?}] Dropped (replaced with {:?})", tx, by);
         self.fire(tx, |watcher| match by {
@@ -103,12 +103,12 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         })
     }
 
-    /// Transaction was removed as invalid.
+    /// TrustedOperation was removed as invalid.
     pub fn invalid(&mut self, tx: &H) {
         self.fire(tx, |watcher| watcher.invalid());
     }
 
-    /// Transaction was pruned from the pool.
+    /// TrustedOperation was pruned from the pool.
     pub fn pruned(&mut self, block_hash: BlockHash<C>, tx: &H) {
         debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
         self.fire(tx, |s| s.in_block());
@@ -126,7 +126,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         }
     }
 
-    /// Transaction in block.
+    /// TrustedOperation in block.
     pub fn in_block(&mut self, tx: &H) {
         self.fire(tx, |s| s.in_block());
     }

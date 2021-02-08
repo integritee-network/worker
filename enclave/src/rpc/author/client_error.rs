@@ -36,8 +36,8 @@ pub enum Error {
     #[display(fmt = "Client error: {}", _0)]
     #[from(ignore)]
     Client(Box<dyn sgx_tstd::error::Error + Send>),
-    /// Transaction pool error,
-    #[display(fmt = "Transaction pool error: {}", _0)]
+    /// TrustedOperation pool error,
+    #[display(fmt = "TrustedOperation pool error: {}", _0)]
     Pool(top_pool::error::Error),
     /// Verification error
     #[display(fmt = "Extrinsic verification error")]
@@ -95,7 +95,7 @@ const POOL_UNKNOWN_VALIDITY: i64 = POOL_INVALID_TX + 1;
 const POOL_TEMPORARILY_BANNED: i64 = POOL_INVALID_TX + 2;
 /// The transaction is already in the pool
 const POOL_ALREADY_IMPORTED: i64 = POOL_INVALID_TX + 3;
-/// Transaction has too low priority to replace existing one in the pool.
+/// TrustedOperation has too low priority to replace existing one in the pool.
 const POOL_TOO_LOW_PRIORITY: i64 = POOL_INVALID_TX + 4;
 /// Including this transaction would cause a dependency cycle.
 const POOL_CYCLE_DETECTED: i64 = POOL_INVALID_TX + 5;

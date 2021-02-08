@@ -18,7 +18,7 @@ use substratee_stf::{ShardIdentifier, TrustedCallSigned};
 
 use crate::top_pool::error;
 
-/// Transaction pool status.
+/// TrustedOperation pool status.
 #[derive(Debug)]
 pub struct PoolStatus {
     /// Number of transactions in the ready queue.
@@ -70,7 +70,7 @@ impl PoolStatus {
 /// Note that there are conditions that may cause transactions to reappear in the pool.
 /// 1. Due to possible forks, the transaction that ends up being in included
 /// in one block, may later re-enter the pool or be marked as invalid.
-/// 2. Transaction `Dropped` at one point, may later re-enter the pool if some other
+/// 2. TrustedOperation `Dropped` at one point, may later re-enter the pool if some other
 /// transactions are removed.
 /// 3. `Invalid` transaction may become valid at some point in the future.
 /// (Note that runtimes are encouraged to use `UnknownValidity` to inform the pool about
@@ -86,27 +86,27 @@ impl PoolStatus {
 /// re-subscribe for a particular transaction hash manually again.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TransactionStatus<Hash, BlockHash> {
-    /// Transaction is part of the future queue.
+    /// TrustedOperation is part of the future queue.
     Future,
-    /// Transaction is part of the ready queue.
+    /// TrustedOperation is part of the ready queue.
     Ready,
     /// The transaction has been broadcast to the given peers.
     Broadcast(Vec<String>),
-    /// Transaction has been included in block with given hash.
+    /// TrustedOperation has been included in block with given hash.
     InBlock(BlockHash),
     /// The block this transaction was included in has been retracted.
     Retracted(BlockHash),
     /// Maximum number of finality watchers has been reached,
     /// old watchers are being removed.
     FinalityTimeout(BlockHash),
-    /// Transaction has been finalized by a finality-gadget, e.g GRANDPA
+    /// TrustedOperation has been finalized by a finality-gadget, e.g GRANDPA
     Finalized(BlockHash),
-    /// Transaction has been replaced in the pool, by another transaction
+    /// TrustedOperation has been replaced in the pool, by another transaction
     /// that provides the same tags. (e.g. same (sender, nonce)).
     Usurped(Hash),
-    /// Transaction has been dropped from the pool because of the limit.
+    /// TrustedOperation has been dropped from the pool because of the limit.
     Dropped,
-    /// Transaction is no longer valid in the current state.
+    /// TrustedOperation is no longer valid in the current state.
     Invalid,
 }
 
@@ -117,15 +117,15 @@ pub type TransactionStatusStream<Hash, BlockHash> =
 /// The import notification event stream.
 pub type ImportNotificationStream<H> = channel::mpsc::Receiver<H>;
 
-/// Transaction hash type for a pool.
+/// TrustedOperation hash type for a pool.
 pub type TxHash<P> = <P as TransactionPool>::Hash;
 /// Block hash type for a pool.
 pub type BlockHash<P> = <<P as TransactionPool>::Block as BlockT>::Hash;
-/// Transaction type for a pool.
+/// TrustedOperation type for a pool.
 //pub type TransactionFor<P> = <<P as TransactionPool>::Block as BlockT>::TrustedCallSigned;
 /// Type of transactions event stream for a pool.
 pub type TransactionStatusStreamFor<P> = TransactionStatusStream<TxHash<P>, BlockHash<P>>;
-/// Transaction type for a local pool.
+/// TrustedOperation type for a local pool.
 //pub type LocalTransactionFor<P> = <<P as LocalTransactionPool>::Block as BlockT>::TrustedCallSigned;
 
 /// Typical future type used in transaction pool api.
@@ -136,13 +136,13 @@ pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
 /// The pool is container of transactions that are implementing this trait.
 /// See `sp_runtime::ValidTransaction` for details about every field.
 pub trait InPoolTransaction {
-    /// Transaction type.
-    type Transaction;
-    /// Transaction hash type.
+    /// TrustedOperation type.
+    type TrustedOperation;
+    /// TrustedOperation hash type.
     type Hash;
 
     /// Get the reference to the transaction data.
-    fn data(&self) -> &Self::Transaction;
+    fn data(&self) -> &Self::TrustedOperation;
     /// Get hash of the transaction.
     fn hash(&self) -> &Self::Hash;
     /// Get priority of the transaction.
@@ -157,14 +157,14 @@ pub trait InPoolTransaction {
     fn is_propagable(&self) -> bool;
 }
 
-/// Transaction pool interface.
+/// TrustedOperation pool interface.
 pub trait TransactionPool: Send + Sync {
     /// Block type.
     type Block: BlockT;
-    /// Transaction hash type.
+    /// TrustedOperation hash type.
     type Hash: Hash + Eq + Member;
     /// In-pool transaction type.
-    type InPoolTransaction: InPoolTransaction<Transaction = TrustedCallSigned, Hash = TxHash<Self>>;
+    type InPoolTransaction: InPoolTransaction<TrustedOperation = TrustedCallSigned, Hash = TxHash<Self>>;
     /// Error type.
     type Error: From<error::Error> + error::IntoPoolError;
 
@@ -279,12 +279,12 @@ pub trait MaintainedTransactionPool: TransactionPool {
     fn maintain(&self, event: ChainEvent<Self::Block>) -> Pin<Box<dyn Future<Output=()> + Send>>;
 }*/
 
-/// Transaction pool interface for submitting local transactions that exposes a
+/// TrustedOperation pool interface for submitting local transactions that exposes a
 /// blocking interface for submission.
 pub trait LocalTransactionPool: Send + Sync {
     /// Block type.
     type Block: BlockT;
-    /// Transaction hash type.
+    /// TrustedOperation hash type.
     type Hash: Hash + Eq + Member;
     /// Error type.
     type Error: From<error::Error> + error::IntoPoolError;

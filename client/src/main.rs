@@ -293,7 +293,7 @@ fn main() {
                     let tx_hash = _api
                         .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
                         .unwrap();
-                    println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+                    println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
                     let result = _api.get_account_data(&to).unwrap();
                     println!("balance for {} is now {}", to, result.free);
                     Ok(())
@@ -430,7 +430,7 @@ fn main() {
                     let tx_hash = chain_api
                         .send_extrinsic(xt.hex_encode(), XtStatus::Finalized)
                         .unwrap();
-                    println!("[+] Transaction got finalized. Hash: {:?}\n", tx_hash);
+                    println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
                     Ok(())
                 }),
         )

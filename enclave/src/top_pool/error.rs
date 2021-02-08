@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Transaction pool errors.
+//! TrustedOperation pool errors.
 
 use sp_runtime::transaction_validity::TransactionPriority as Priority;
 
@@ -23,10 +23,10 @@ extern crate alloc;
 use alloc::string::String;
 
 use derive_more::{Display, From};
-/// Transaction pool result.
+/// TrustedOperation pool result.
 pub type Result<T> = sgx_tstd::result::Result<T, Error>;
 
-/// Transaction pool error type.
+/// TrustedOperation pool error type.
 #[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
@@ -54,10 +54,10 @@ pub enum Error {
     #[display("Too low priority")]
     TooLowPriority(Priority),
 
-    #[display("Transaction with cyclic dependency")]
+    #[display("TrustedOperation with cyclic dependency")]
     CycleDetected,
 
-    #[display("Transaction couldn't enter the pool because of the limit")]
+    #[display("TrustedOperation couldn't enter the pool because of the limit")]
     ImmediatelyDropped,
 
     #[from(ignore)]
@@ -72,7 +72,7 @@ pub enum Error {
     Verification,
 }
 
-/// Transaction pool error conversion.
+/// TrustedOperation pool error conversion.
 pub trait IntoPoolError: Send + Sized {
     /// Try to extract original `Error`
     ///

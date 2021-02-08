@@ -47,7 +47,7 @@ pub type ExtrinsicHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 /// Block number type for the ChainApi
 pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
 /// A type of transaction stored in the pool
-pub type TransactionFor<A> = Arc<base::Transaction<ExtrinsicHash<A>, TrustedCallSigned>>;
+pub type TransactionFor<A> = Arc<base::TrustedOperation<ExtrinsicHash<A>, TrustedCallSigned>>;
 /// A type of validated transaction stored in the pool.
 pub type ValidatedTransactionFor<A> =
     ValidatedTransaction<ExtrinsicHash<A>, TrustedCallSigned, <A as ChainApi>::Error>;

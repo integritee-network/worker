@@ -30,12 +30,12 @@ use sgx_tstd::{time::Instant, untrusted::time::InstantEx};
 
 use substratee_stf::ShardIdentifier;
 
-use crate::top_pool::base_pool::Transaction;
+use crate::top_pool::base_pool::TrustedOperation;
 
-/// Transaction with partially satisfied dependencies.
+/// TrustedOperation with partially satisfied dependencies.
 pub struct WaitingTransaction<Hash, Ex> {
-    /// Transaction details.
-    pub transaction: Arc<Transaction<Hash, Ex>>,
+    /// TrustedOperation details.
+    pub transaction: Arc<TrustedOperation<Hash, Ex>>,
     /// Tags that are required and have not been satisfied yet by other transactions in the pool.
     pub missing_tags: HashSet<Tag>,
     /// Time of import to the Future Queue.
@@ -75,7 +75,7 @@ impl<Hash, Ex> WaitingTransaction<Hash, Ex> {
     /// Computes the set of missing tags based on the requirements and tags that
     /// are provided by all transactions in the ready queue.
     pub fn new(
-        transaction: Transaction<Hash, Ex>,
+        transaction: TrustedOperation<Hash, Ex>,
         provided: Option<&HashMap<Tag, Hash>>,
         recently_pruned: &[HashSet<Tag>],
     ) -> Self {
@@ -151,11 +151,11 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
     /// As soon as required tags are provided by some other transactions that are ready
     /// we should remove the transactions from here and move them to the Ready queue.
     pub fn import(&mut self, tx: WaitingTransaction<Hash, Ex>, shard: ShardIdentifier) {
-        assert!(!tx.is_ready(), "Transaction is ready.");
+        assert!(!tx.is_ready(), "TrustedOperation is ready.");
         if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
             assert!(
                 !tx_pool_waiting.contains_key(&tx.transaction.hash),
-                "Transaction is already imported."
+                "TrustedOperation is already imported."
             );
         }
 
@@ -192,7 +192,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
         &self,
         hashes: &[Hash],
         shard: ShardIdentifier,
-    ) -> Vec<Option<Arc<Transaction<Hash, Ex>>>> {
+    ) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
         if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
             return hashes
                 .iter()
@@ -244,7 +244,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
         &mut self,
         hashes: &[Hash],
         shard: ShardIdentifier,
-    ) -> Vec<Arc<Transaction<Hash, Ex>>> {
+    ) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
         let mut removed = vec![];
         if let Some(tx_pool_waiting) = self.waiting.get_mut(&shard) {
             if let Some(tx_pool_wanted) = self.wanted_tags.get_mut(&shard) {
@@ -287,7 +287,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
     pub fn all(
         &self,
         shard: ShardIdentifier,
-    ) -> Box<dyn Iterator<Item = &Transaction<Hash, Ex>> + '_> {
+    ) -> Box<dyn Iterator<Item = &TrustedOperation<Hash, Ex>> + '_> {
         if let Some(tx_pool) = self.waiting.get(&shard) {
             return Box::new(tx_pool.values().map(|waiting| &*waiting.transaction));
         }
@@ -295,7 +295,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTransactions<Hash, Ex> {
     }
 
     /// Removes and returns all future transactions.
-    pub fn clear(&mut self, shard: ShardIdentifier) -> Vec<Arc<Transaction<Hash, Ex>>> {
+    pub fn clear(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
         if let Some(wanted_tx_pool) = self.wanted_tags.get_mut(&shard) {
             wanted_tx_pool.clear();
             return self
@@ -337,7 +337,7 @@ mod tests {
     fn can_track_heap_size() {
         let mut future = FutureTransactions::default();
         future.import(WaitingTransaction {
-            transaction: Transaction {
+            transaction: TrustedOperation {
                 data: vec![0u8; 1024],
                 bytes: 1,
                 hash: 1,
