@@ -14,7 +14,7 @@ use sp_runtime::{
     },
 };
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 use crate::top_pool::error;
 
@@ -121,12 +121,9 @@ pub type ImportNotificationStream<H> = channel::mpsc::Receiver<H>;
 pub type TxHash<P> = <P as TrustedOperationPool>::Hash;
 /// Block hash type for a pool.
 pub type BlockHash<P> = <<P as TrustedOperationPool>::Block as BlockT>::Hash;
-/// TrustedOperation type for a pool.
-//pub type TransactionFor<P> = <<P as TrustedOperationPool>::Block as BlockT>::TrustedCallSigned;
 /// Type of operations event stream for a pool.
 pub type TrustedOperationStatusStreamFor<P> = TrustedOperationStatusStream<TxHash<P>, BlockHash<P>>;
-/// TrustedOperation type for a local pool.
-//pub type LocalTransactionFor<P> = <<P as LocalTrustedOperationPool>::Block as BlockT>::TrustedCallSigned;
+
 
 /// Typical future type used in operation pool api.
 pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
@@ -164,7 +161,7 @@ pub trait TrustedOperationPool: Send + Sync {
     /// TrustedOperation hash type.
     type Hash: Hash + Eq + Member;
     /// In-pool operation type.
-    type InPoolOperation: InPoolOperation<TrustedOperation = TrustedCallSigned, Hash = TxHash<Self>>;
+    type InPoolOperation: InPoolOperation<TrustedOperation = StfTrustedOperation, Hash = TxHash<Self>>;
     /// Error type.
     type Error: From<error::Error> + error::IntoPoolError;
 
@@ -175,7 +172,7 @@ pub trait TrustedOperationPool: Send + Sync {
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xts: Vec<TrustedCallSigned>,
+        xts: Vec<StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
 
@@ -184,7 +181,7 @@ pub trait TrustedOperationPool: Send + Sync {
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
 
@@ -193,7 +190,7 @@ pub trait TrustedOperationPool: Send + Sync {
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
 
@@ -244,7 +241,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
 
     /// Returns operation hash
-    fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self>;
+    fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self>;
 
     /// Return specific ready operation by hash, if there is one.
     fn ready_transaction(
@@ -297,7 +294,7 @@ pub trait LocalTrustedOperationPool: Send + Sync {
     fn submit_local(
         &self,
         at: &BlockId<Self::Block>,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
     ) -> Result<Self::Hash, Self::Error>;
 }
 /*

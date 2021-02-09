@@ -18,16 +18,19 @@
 
 extern crate alloc;
 use alloc::vec::Vec;
-use serde::{Deserialize, Serialize};
+use codec::{Decode, Encode};
+
+use substratee_stf::TrustedOperation;
 
 /// RPC Trusted call or hash
 ///
 /// Allows to refer to trusted calls either by its raw representation or its hash.
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum TrustedCallOrHash<Hash> {
+#[derive(Debug, Encode, Decode)]
+pub enum TrustedOperationOrHash<Hash> {
     /// The hash of the call.
     Hash(Hash),
     /// Raw extrinsic bytes.
-    Call(Vec<u8>),
+    OperationEncoded(Vec<u8>),
+    /// Raw extrinsic
+    Operation(TrustedOperation),
 }

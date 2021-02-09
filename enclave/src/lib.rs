@@ -70,7 +70,7 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
 
-use rpc::author::{hash::TrustedCallOrHash, Author, AuthorApi};
+use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
 
 mod aes;
@@ -397,7 +397,7 @@ pub unsafe extern "C" fn sync_chain_relay(
         };
     }
     // execute pending calls from operation pool
-    match execute_tx_pool_calls(last_block_header) {
+    match execute_top_pool_calls(last_block_header) {
         Ok(c) => calls.extend(c.into_iter()),
         Err(_) => error!("Error executing relevant tx pool calls"),
     };
@@ -409,28 +409,26 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn execute_tx_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
-    debug!("Executing pending tx pool calls");
+fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
+    debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     {
-        debug!("Acquire tx pool lock");
-        let &ref tx_pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_tx_pool().unwrap();
-        let tx_pool_guard: SgxMutexGuard<BPool> = tx_pool_mutex.lock().unwrap();
-        let tx_pool: Arc<&BPool> = Arc::new(tx_pool_guard.deref());
-        let author: Arc<Author<&BPool>> = Arc::new(Author::new(tx_pool));
+        debug!("Acquire pool lock");
+        let &ref pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_top_pool().unwrap();
+        let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
+        let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
+        let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
 
         // get all shards with tx pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
         for shard in shards.into_iter() {
-            // retrieve calls from tx pool
-            let encoded_calls: Vec<Vec<u8>> = author.pending_tops(shard).unwrap(); // always ok
-            for encoded_call in encoded_calls.into_iter() {
-                let trusted_call_signed =
-                    match TrustedCallSigned::decode(&mut encoded_call.as_slice()) {
-                        Ok(call) => call,
-                        Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-                    };
+            // retrieve trusted operations from pool
+            let (trusted_calls, trusted_getters) = match author.pending_tops_separated(shard) {
+                Ok((calls,getters)) => (calls,getters),
+                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
+            };
+            for trusted_call_signed in trusted_calls.into_iter() {
                 if let Err(e) = handle_trusted_worker_call(
                     &mut calls,
                     trusted_call_signed,
@@ -441,8 +439,11 @@ fn execute_tx_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
             }
+            for trusted_getter_signed in trusted_getters.into_iter() {
+                //TODO
+            }
         }
-        debug! {"Release Txpool Lock"};
+        debug! {"Release Pool Lock"};
     }
 
     Ok(calls)
@@ -624,7 +625,7 @@ fn handle_trusted_worker_call(
             let inblock = false;
             author
                 .remove_top(
-                    vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                    vec![TrustedOperationOrHash::Operation(stf_call_signed.into_trusted_operation(true))],
                     shard,
                     inblock,
                 )
@@ -659,7 +660,7 @@ fn handle_trusted_worker_call(
             let inblock = false;
             author
                 .remove_top(
-                    vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                    vec![TrustedOperationOrHash::Operation(stf_call_signed.into_trusted_operation(true))],
                     shard,
                     inblock,
                 )
@@ -676,7 +677,10 @@ fn handle_trusted_worker_call(
         let inblock = true;
         author
             .remove_top(
-                vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                vec![TrustedOperationOrHash::Operation(stf_call_signed
+                    .clone()
+                    .into_trusted_operation(true)
+                )],
                 shard,
                 inblock,
             )

@@ -120,7 +120,7 @@ pub struct ReadyOperations<Hash: hash::Hash + Eq + Ord, Ex> {
     insertion_id: HashMap<ShardIdentifier, u64>,
     /// tags that are provided by Ready operations
     provided_tags: HashMap<ShardIdentifier, HashMap<Tag, Hash>>,
-    /// Transactions that are ready (i.e. don't have any requirements external to the pool)
+    /// Trusted Operations that are ready (i.e. don't have any requirements external to the pool)
     ready: HashMap<ShardIdentifier, TrackedMap<Hash, ReadyTx<Hash, Ex>>>,
     /// Best operations that are ready to be included to the block without any other previous operation.
     best: HashMap<ShardIdentifier, BTreeSet<OperationRef<Hash, Ex>>>,
@@ -154,7 +154,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
     /// Returns an iterator of ready operations.
     ///
-    /// Transactions are returned in order:
+    /// Trusted Operations are returned in order:
     /// 1. First by the dependencies:
     ///	- never return operation that requires a tag, which was not provided by one of the previously returned operations
     /// 2. Then by priority:

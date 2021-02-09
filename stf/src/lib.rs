@@ -58,10 +58,9 @@ pub static CALL_CONFIRMED: u8 = 3u8;
 #[cfg(feature = "sgx")]
 pub type State = sp_io::SgxExternalities;
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, core::fmt::Debug)]
 #[allow(non_camel_case_types)]
 pub enum TrustedOperation {
-    //call(TrustedCallSigned), // löschen
     indirect_call(TrustedCallSigned),
     direct_call(TrustedCallSigned),
     get(Getter),

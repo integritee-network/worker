@@ -21,11 +21,11 @@ use crate::top_pool::{
     primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool, TxHash},
 };
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
 
-type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, TrustedCallSigned>;
+type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, StfTrustedOperation>;
 
 type PolledIterator<PoolApi> = Pin<Box<dyn Future<Output = ReadyIteratorFor<PoolApi>> + Send>>;
 
@@ -119,38 +119,38 @@ where
 {
     type Block = PoolApi::Block;
     type Hash = ExtrinsicHash<PoolApi>;
-    type InPoolOperation = TrustedOperation<TxHash<Self>, TrustedCallSigned>;
+    type InPoolOperation = TrustedOperation<TxHash<Self>, StfTrustedOperation>;
     type Error = PoolApi::Error;
 
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xts: Vec<TrustedCallSigned>,
+        ops: Vec<StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
         let pool = self.pool.clone();
         let at = *at;
-        async move { pool.submit_at(&at, source, xts, shard).await }.boxed()
+        async move { pool.submit_at(&at, source, ops, shard).await }.boxed()
     }
 
     fn submit_one(
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        op: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error> {
         let pool = self.pool.clone();
         let at = *at;
-        async move { pool.submit_one(&at, source, xt, shard).await }.boxed()
+        async move { pool.submit_one(&at, source, op, shard).await }.boxed()
     }
 
     fn submit_and_watch(
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error> {
         let at = *at;
@@ -177,7 +177,7 @@ where
         self.pool.validated_pool().import_notification_stream()
     }
 
-    fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self> {
+    fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self> {
         self.pool.hash_of(xt)
     }
 

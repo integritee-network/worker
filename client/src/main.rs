@@ -468,7 +468,7 @@ fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
     match top {
         TrustedOperation::indirect_call(call) => send_request(matches, call.clone()),
-        TrustedOperation::direct_call(call) => send_direct_request(matches, call.clone()),
+        TrustedOperation::direct_call(call) => send_direct_request(matches, TrustedOperation::direct_call(call.clone())),
         TrustedOperation::get(getter) => get_state(matches, getter.clone()),
     }
 }
@@ -490,20 +490,20 @@ fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
     }
 }
 
-fn encrypt_signed_call(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> (Vec<u8>, Vec<u8>) {
+fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> (Vec<u8>, Vec<u8>) {
     let worker_api = get_worker_api(matches);
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
-    let call_encoded = call.encode();
-    let mut call_encrypted: Vec<u8> = Vec::new();
+    let encoded = to_encrypt.encode();
+    let mut encrypted: Vec<u8> = Vec::new();
     shielding_pubkey
-        .encrypt_buffer(&call_encoded, &mut call_encrypted)
+        .encrypt_buffer(&encoded, &mut encrypted)
         .unwrap();
-    (call_encoded, call_encrypted)
+    (encoded, encrypted)
 }
 
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     let chain_api = get_chain_api(matches);
-    let (call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
+    let (call_encoded, call_encrypted) = encode_encrypt(matches, call);
 
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
@@ -581,8 +581,8 @@ fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Err
     }
 }
 
-fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
-    let (_call_encoded, call_encrypted) = encrypt_signed_call(matches, call);
+fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperation) -> Option<Vec<u8>> {
+    let (_operation_call_encoded, operation_call_encrypted) = encode_encrypt(matches, operation_call);
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
@@ -591,7 +591,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Opt
     // compose jsonrpc call
     let data = Request {
         shard,
-        cyphertext: call_encrypted,
+        cyphertext: operation_call_encrypted,
     };
     let direct_invocation_call = RpcRequest {
         jsonrpc: "2.0".to_owned(),

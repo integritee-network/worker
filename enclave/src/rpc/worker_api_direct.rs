@@ -87,7 +87,7 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>> {
+pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>> {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst)
         as *mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
@@ -146,7 +146,7 @@ fn init_io_handler() -> IoHandler {
             match params.parse::<Vec<u8>>() {
                 Ok(encoded_params) => {
                     // Aquire lock
-                    let &ref tx_pool_mutex = load_tx_pool().unwrap();
+                    let &ref tx_pool_mutex = load_top_pool().unwrap();
                     let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                     let tx_pool = Arc::new(tx_pool_guard.deref());
                     let author = Author::new(tx_pool);
@@ -192,7 +192,7 @@ fn init_io_handler() -> IoHandler {
         match params.parse::<Vec<u8>>() {
             Ok(encoded_params) => {
                 // Aquire lock
-                let &ref tx_pool_mutex = load_tx_pool().unwrap();
+                let &ref tx_pool_mutex = load_top_pool().unwrap();
                 let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                 let tx_pool = Arc::new(tx_pool_guard.deref());
                 let author = Author::new(tx_pool);
@@ -200,10 +200,10 @@ fn init_io_handler() -> IoHandler {
                 match Request::decode(&mut encoded_params.as_slice()) {
                     Ok(request) => {
                         let shard: ShardIdentifier = request.shard;
-                        let encrypted_trusted_call: Vec<u8> = request.cyphertext;
+                        let encrypted_trusted_op: Vec<u8> = request.cyphertext;
                         let result = async {
                             author
-                                .submit_top(encrypted_trusted_call.clone(), shard)
+                                .submit_top(encrypted_trusted_op.clone(), shard)
                                 .await
                         };
                         let response: Result<Hash, RpcError> = executor::block_on(result);
@@ -239,7 +239,7 @@ fn init_io_handler() -> IoHandler {
         match params.parse::<Vec<String>>() {
             Ok(shards) => {
                 // Aquire tx_pool lock
-                let &ref tx_pool_mutex = load_tx_pool().unwrap();
+                let &ref tx_pool_mutex = load_top_pool().unwrap();
                 let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                 let tx_pool = Arc::new(tx_pool_guard.deref());
                 let author = Author::new(tx_pool);

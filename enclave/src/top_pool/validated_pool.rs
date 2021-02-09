@@ -38,7 +38,7 @@ use crate::top_pool::{
     rotator::PoolRotator,
 };
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 use sp_runtime::{
     generic::BlockId,
@@ -92,13 +92,13 @@ impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
 
 /// A type of validated operation stored in the pool.
 pub type ValidatedOperationFor<B> =
-    ValidatedOperation<ExtrinsicHash<B>, TrustedCallSigned, <B as ChainApi>::Error>;
+    ValidatedOperation<ExtrinsicHash<B>, StfTrustedOperation, <B as ChainApi>::Error>;
 /// Pool that deals with validated operations.
 pub struct ValidatedPool<B: ChainApi> {
     api: Arc<B>,
     options: Options,
     listener: SgxRwLock<Listener<ExtrinsicHash<B>, B>>,
-    pool: SgxRwLock<base::BasePool<ExtrinsicHash<B>, TrustedCallSigned>>,
+    pool: SgxRwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
     import_notification_sinks: SgxMutex<Vec<Sender<ExtrinsicHash<B>>>>,
     rotator: PoolRotator<ExtrinsicHash<B>>,
 }
@@ -464,7 +464,7 @@ where
         &self,
         tags: impl IntoIterator<Item = Tag>,
         shard: ShardIdentifier,
-    ) -> Result<PruneStatus<ExtrinsicHash<B>, TrustedCallSigned>, B::Error> {
+    ) -> Result<PruneStatus<ExtrinsicHash<B>, StfTrustedOperation>, B::Error> {
         // Perform tag-based pruning in the base pool
         let status = self.pool.write().unwrap().prune_tags(tags, shard);
         // Notify event listeners of all operations

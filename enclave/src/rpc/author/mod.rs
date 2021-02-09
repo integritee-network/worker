@@ -20,6 +20,8 @@
 pub extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 
+use log::*;
+
 use sgx_tstd::sync::Arc;
 
 use codec::{Decode, Encode};
@@ -28,7 +30,7 @@ use jsonrpc_core::futures::future::{ready, TryFutureExt};
 use sp_runtime::generic;
 use sp_runtime::transaction_validity::TransactionSource;
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+use substratee_stf::{ShardIdentifier, TrustedCallSigned, Getter, TrustedOperation};
 
 use crate::rpc::error::Error as StateRpcError;
 use crate::rpc::error::{FutureResult, Result};
@@ -80,15 +82,18 @@ pub trait AuthorApi<Hash, BlockHash> {
     /// Returns `true` if a private key could be found.
     fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
-    /// Returns all pending calls, potentially grouped by sender.
+    /// Returns all pending operations, potentially grouped by sender.
     fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
+
+    /// Returns all pending operations diveded in calls and getters, potentially grouped by sender.
+    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<Getter>)>;
 
     fn get_shards(&self) -> Vec<ShardIdentifier>;
 
     /// Remove given call from the pool and temporarily ban it to prevent reimporting.
     fn remove_top(
         &self,
-        bytes_or_hash: Vec<hash::TrustedCallOrHash<Hash>>,
+        bytes_or_hash: Vec<hash::TrustedOperationOrHash<Hash>>,
         shard: ShardIdentifier,
         inblock: bool,
     ) -> Result<Vec<Hash>>;
@@ -138,7 +143,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 pub struct Author<P> {
     /// Substrate client
     //client: Arc<Client>,
-    /// Transactions pool
+    /// Trusted Operation pool
     pool: Arc<P>,
     /*/// Subscriptions manager
     subscriptions: SubscriptionManager,*/
@@ -246,8 +251,8 @@ where
             Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
         };
         // decode call
-        let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
-            Ok(call) => call,
+        let stf_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
+            Ok(op) => op,
             Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
         };
         //let best_block_hash = self.client.info().best_hash;
@@ -258,7 +263,7 @@ where
                 .submit_one(
                     &generic::BlockId::hash(best_block_hash),
                     TX_SOURCE,
-                    stf_call_signed,
+                    stf_operation,
                     shard,
                 )
                 .map_err(|e| {
@@ -276,8 +281,23 @@ where
         Ok(self
             .pool
             .ready(shard)
-            .map(|tx| tx.data().encode().into())
+            .map(|top| top.data().encode().into())
             .collect())
+    }
+
+    
+    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<Getter>)> {
+        let mut calls: Vec<TrustedCallSigned> = vec![];
+        let mut getters: Vec<Getter> = vec![];
+        for operation in self.pool.ready(shard) {
+            match operation.data() {
+                TrustedOperation::direct_call(call) => calls.push(call.clone()),
+                TrustedOperation::get(getter) => getters.push(getter.clone()),
+                _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+            }
+        }
+
+        Ok((calls, getters))        
     }
 
     fn get_shards(&self) -> Vec<ShardIdentifier> {
@@ -286,26 +306,29 @@ where
 
     fn remove_top(
         &self,
-        bytes_or_hash: Vec<hash::TrustedCallOrHash<TxHash<P>>>,
+        bytes_or_hash: Vec<hash::TrustedOperationOrHash<TxHash<P>>>,
         shard: ShardIdentifier,
         inblock: bool,
     ) -> Result<Vec<TxHash<P>>> {
         let hashes = bytes_or_hash
             .into_iter()
             .map(|x| match x {
-                hash::TrustedCallOrHash::Hash(h) => Ok(h),
-                hash::TrustedCallOrHash::Call(bytes) => {
-                    let xt = Decode::decode(&mut &bytes[..]).unwrap();
-                    Ok(self.pool.hash_of(&xt))
+                hash::TrustedOperationOrHash::Hash(h) => Ok(h),
+                hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
+                    let op = Decode::decode(&mut &bytes[..]).unwrap();
+                    Ok(self.pool.hash_of(&op))
+                }
+                hash::TrustedOperationOrHash::Operation(op) => {
+                    Ok(self.pool.hash_of(&op))
                 }
             })
             .collect::<Result<Vec<_>>>()?;
-
+        debug!("removing {:?} from top pool", hashes);
         Ok(self
             .pool
             .remove_invalid(&hashes, shard, inblock)
             .into_iter()
-            .map(|tx| tx.hash().clone())
+            .map(|op| op.hash().clone())
             .collect())
     }
 
@@ -321,8 +344,8 @@ where
             Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
         };
         // decode call
-        let stf_call_signed = match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
-            Ok(call) => call,
+        let stf_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
+            Ok(op) => op,
             Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
         };
         //let best_block_hash = self.client.info().best_hash;
@@ -333,7 +356,7 @@ where
                 .submit_and_watch(
                     &generic::BlockId::hash(best_block_hash),
                     TX_SOURCE,
-                    stf_call_signed,
+                    stf_operation,
                     shard,
                 )
                 .map_err(|e| {

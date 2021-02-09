@@ -19,6 +19,7 @@
 //! Chain api required for the operation pool.
 extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
+use log::*;
 
 use codec::Encode;
 use jsonrpc_core::futures::future::{ready, Future, Ready};
@@ -27,12 +28,13 @@ use sgx_tstd::{marker::PhantomData, pin::Pin};
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
-    transaction_validity::{TransactionSource, TransactionValidity, ValidTransaction},
+    transaction_validity::{TransactionSource, TransactionValidity, ValidTransaction,
+         TransactionValidityError, UnknownTransaction},
 };
 
 use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
 
-use substratee_stf::TrustedCallSigned;
+use substratee_stf::{TrustedOperation as StfTrustedOperation, Getter};
 
 use crate::rpc::error;
 
@@ -58,7 +60,7 @@ where
     type Error = error::Error;
     type ValidationFuture =
         Pin<Box<dyn Future<Output = error::Result<TransactionValidity>> + Send>>;
-    type BodyFuture = Ready<error::Result<Option<Vec<TrustedCallSigned>>>>;
+    type BodyFuture = Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
 
     fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
         ready(Ok(None))
@@ -68,14 +70,35 @@ where
         &self,
         _at: &BlockId<Self::Block>,
         _source: TransactionSource,
-        uxt: TrustedCallSigned,
+        uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
-        let operation = ValidTransaction {
-            priority: uxt.nonce.into(),
-            requires: vec![],
-            provides: vec![vec![uxt.nonce as u8]],
-            longevity: 3,
-            propagate: true,
+        let operation = match uxt {
+            StfTrustedOperation::direct_call(call) => {
+                ValidTransaction {
+                    priority: 1 << 20,
+                    requires: vec![],
+                    provides: vec![vec![call.nonce as u8], call.signature.encode()],
+                    longevity: 3,
+                    propagate: true,
+                }
+            },
+            StfTrustedOperation::get(getter) => {
+                match getter {
+                    Getter::public(_) => return Box::pin(ready(
+                        Ok(Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)))
+                    )),
+                    Getter::trusted(trusted_getter) => {
+                        ValidTransaction {
+                            priority: 1 << 20,
+                            requires: vec![],
+                            provides: vec![trusted_getter.signature.encode()],
+                            longevity: 3,
+                            propagate: true,
+                        }
+                    },
+                }                
+            },
+            _ => return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)))))
         };
         Box::pin(ready(Ok(Ok(operation))))
     }
@@ -97,10 +120,11 @@ where
         Ok(None)
     }
 
-    fn hash_and_length(&self, ex: &TrustedCallSigned) -> (ExtrinsicHash<Self>, usize) {
+    fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
         /*let encoded = ex.encode();
         let len = encoded.len();
         (Hashing::hash(&encoded) as Hash, len)*/
+        debug!("[Pool] creating hash of {:?}", ex);
         ex.using_encoded(|x| {
             (
                 <<Block::Header as HeaderT>::Hashing as HashT>::hash(x),
