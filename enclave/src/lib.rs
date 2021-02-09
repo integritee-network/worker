@@ -68,10 +68,12 @@ use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
-use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
+use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall,
+     TrustedCallSigned, TrustedGetterSigned};
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
+use rpc::worker_api_direct;
 
 mod aes;
 mod attestation;
@@ -409,11 +411,41 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
+fn get_stf_state(
+    trusted_getter_signed: TrustedGetterSigned,
+    shard: ShardIdentifier,
+) -> Option<Vec<u8>> {
+     debug!("verifying signature of TrustedGetterSigned");
+    if let false = trusted_getter_signed.verify_signature() {
+        error!("bad signature");
+        return None;
+    }
+
+    if !state::exists(&shard) {
+        info!("Initialized new shard that was queried chain: {:?}", shard);
+        if let Err(e) = state::init_shard(&shard) {
+            error!("Error initialising shard {:?} state: Error: {:?}", shard, e);
+            return None;
+        }
+    }
+
+    let mut state = match state::load(&shard) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Error loading shard {:?}: Error: {:?}", shard, e);
+            return None
+        },
+    };
+
+    debug!("calling into STF to get state");
+    Stf::get_state(&mut state, trusted_getter_signed.into())
+
+}
+
 fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     {
-        debug!("Acquire pool lock");
         let &ref pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_top_pool().unwrap();
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
@@ -428,6 +460,16 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                 Ok((calls,getters)) => (calls,getters),
                 Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
             };
+            for trusted_getter_signed in trusted_getters.into_iter() {
+                // get state
+                let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
+                // get hash
+                let hash_of_getter = author.hash_of(&trusted_getter_signed.into());              
+                // let client know of current state
+                worker_api_direct::send_state(hash_of_getter, value_opt);
+                 // remove getter from pool
+                 author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false);
+            }
             for trusted_call_signed in trusted_calls.into_iter() {
                 if let Err(e) = handle_trusted_worker_call(
                     &mut calls,
@@ -438,12 +480,8 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                 ) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
-            }
-            for trusted_getter_signed in trusted_getters.into_iter() {
-                //TODO
-            }
+            }            
         }
-        debug! {"Release Pool Lock"};
     }
 
     Ok(calls)

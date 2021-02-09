@@ -240,7 +240,6 @@ pub unsafe extern "C" fn ocall_update_status_event(
         let mut guard = mutex.lock().unwrap();
         let mut continue_watching = true;
         if let Some(client_event) = guard.get_mut(&hash) {
-            //println!("Returned hash: {:?}", hash);
             let mut event = &mut client_event.response;
             // Aquire result of old RpcResponse
             let old_result: Vec<u8> = event.result.clone();
@@ -274,6 +273,46 @@ pub unsafe extern "C" fn ocall_update_status_event(
         if !continue_watching {
             guard.remove(&hash);
         }
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_send_status(
+    hash_encoded: *const u8,
+    hash_size: u32,
+    status_encoded: *const u8,
+    status_size: u32,
+) -> sgx_status_t {
+    let status_slice =
+        slice::from_raw_parts(status_encoded, status_size as usize);  
+    let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
+    if let Ok(hash) = Hash::decode(&mut hash_slice) {
+        // Aquire watched list lock
+        let mutex = load_watched_list().unwrap();
+        let mut guard = mutex.lock().unwrap();
+        if let Some(client_response) = guard.get_mut(&hash) {
+            let mut response = &mut client_response.response;
+        
+            // create return value
+            let result = RpcReturnValue {
+                value: status_slice.to_vec(),
+                do_watch: false,
+                status: TrustedOperationStatus::Submitted,
+            };
+
+            // update response
+            response.result = result.encode();
+            client_response
+                .client
+                .send(serde_json::to_string(&response).unwrap())
+                .unwrap();
+        
+            client_response.client.close(CloseCode::Normal).unwrap();
+
+        } 
+        guard.remove(&hash);
     }
 
     sgx_status_t::SGX_SUCCESS

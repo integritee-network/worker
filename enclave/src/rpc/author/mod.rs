@@ -30,7 +30,7 @@ use jsonrpc_core::futures::future::{ready, TryFutureExt};
 use sp_runtime::generic;
 use sp_runtime::transaction_validity::TransactionSource;
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned, Getter, TrustedOperation};
+use substratee_stf::{ShardIdentifier, TrustedCallSigned, Getter, TrustedOperation, TrustedGetterSigned};
 
 use crate::rpc::error::Error as StateRpcError;
 use crate::rpc::error::{FutureResult, Result};
@@ -82,11 +82,14 @@ pub trait AuthorApi<Hash, BlockHash> {
     /// Returns `true` if a private key could be found.
     fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
+    /// Return hash of Trusted Operation
+    fn hash_of(&self, xt: &TrustedOperation) -> Hash;
+
     /// Returns all pending operations, potentially grouped by sender.
     fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
     /// Returns all pending operations diveded in calls and getters, potentially grouped by sender.
-    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<Getter>)>;
+    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
 
     fn get_shards(&self) -> Vec<ShardIdentifier>;
 
@@ -239,6 +242,11 @@ where
         return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
     }*/
 
+    /// Get hash of TrustedOperation
+    fn hash_of(&self, xt: &TrustedOperation) -> TxHash<P> {
+        self.pool.hash_of(xt)
+    }
+
     fn submit_top(
         &self,
         ext: Vec<u8>,
@@ -286,13 +294,18 @@ where
     }
 
     
-    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<Getter>)> {
+    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
         let mut calls: Vec<TrustedCallSigned> = vec![];
-        let mut getters: Vec<Getter> = vec![];
+        let mut getters: Vec<TrustedGetterSigned> = vec![];
         for operation in self.pool.ready(shard) {
             match operation.data() {
                 TrustedOperation::direct_call(call) => calls.push(call.clone()),
-                TrustedOperation::get(getter) => getters.push(getter.clone()),
+                TrustedOperation::get(getter) => {
+                    match getter {
+                        Getter::trusted(trusted_getter_signed) => getters.push(trusted_getter_signed.clone()),
+                        _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                    }
+                },
                 _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
             }
         }

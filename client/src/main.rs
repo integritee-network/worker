@@ -474,7 +474,53 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
 }
 
 fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
-    let worker_api = get_worker_api(matches);
+    // TODO: ensure getter is signed
+    let (_operation_call_encoded, operation_call_encrypted) = encode_encrypt(matches, getter);
+    let shard = match read_shard(matches) {
+        Ok(shard) => shard,
+        Err(e) => panic!(e),
+    };
+
+    // compose jsonrpc call
+    let data = Request {
+        shard,
+        cyphertext: operation_call_encrypted,
+    };
+    let direct_invocation_call = RpcRequest {
+        jsonrpc: "2.0".to_owned(),
+        method: "author_submitAndWatchExtrinsic".to_owned(), // TODO: Watch flag?
+        params: data.encode(),
+        id: 1,
+    };
+    let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
+
+    let direct_api = get_worker_direct_api(matches);
+    let (sender, receiver) = channel();
+    match direct_api.watch(jsonrpc_call, sender) {
+        Ok(_) => {}
+        Err(_) => panic!("Error when sending direct invocation call"),
+    }
+
+    loop {
+        match receiver.recv() {
+            Ok(response) => {
+                let response: RpcResponse = serde_json::from_str(&response).unwrap();
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+                    let value = String::decode(&mut return_value.value.as_slice()).unwrap();
+                    if return_value.status == TrustedOperationStatus::Error {
+                        println!("[Error] {}", value);
+                    } else {
+                        println!("Trusted call {} is {:?}", value, return_value.status);
+                    }
+                    if !return_value.do_watch {
+                        return None;
+                    }
+                };
+            }
+            Err(_) => return None,
+        };
+    }
+   /*  let worker_api = get_worker_api(matches);
     let (_mrenclave, shard) = get_identifiers(matches);
     debug!("calling workerapi to get state value, {:?}", getter);
     let ret = worker_api
@@ -487,7 +533,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
     } else {
         debug!("decoding failed");
         None
-    }
+    } */
 }
 
 fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> (Vec<u8>, Vec<u8>) {

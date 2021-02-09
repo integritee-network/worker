@@ -34,7 +34,7 @@ pub enum TrustedOperationStatus {
     Dropped,
     /// TrustedOperation is no longer valid in the current state.
     Invalid,
-    /// Error occured somewhere in the outside process
+    /// Error occured somewhere outside of the pool
     Error,
 }
 

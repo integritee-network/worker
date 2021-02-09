@@ -71,6 +71,13 @@ extern "C" {
         status_update_encoded: *const u8,
         status_size: u32,
     ) -> sgx_status_t;
+    pub fn ocall_send_status(
+        ret_val: *mut sgx_status_t,
+        hash_encoded: *const u8,
+        hash_size: u32,
+        status_update_encoded: *const u8,
+        status_size: u32,
+    ) -> sgx_status_t;
 }
 
 #[no_mangle]
@@ -363,13 +370,44 @@ pub unsafe extern "C" fn call_rpc_methods(
 pub fn update_status_event<H: Encode>(hash: H, status_update: TrustedOperationStatus) -> Result<(), ()> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
+    let hash_encoded = hash.encode();
+    let status_update_encoded = status_update.encode();
+
     let res = unsafe {
         ocall_update_status_event(
             &mut rt as *mut sgx_status_t,
-            hash.encode().as_ptr(),
-            hash.encode().len() as u32,
-            status_update.encode().as_ptr(),
-            status_update.encode().len() as u32,
+            hash_encoded.as_ptr(),
+            hash_encoded.len() as u32,
+            status_update_encoded.as_ptr(),
+            status_update_encoded.len() as u32,
+        )
+    };
+
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(());
+    }
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(());
+    }
+
+    Ok(())
+}
+
+
+pub fn send_state<H: Encode>(hash: H, value_opt: Option<Vec<u8>>) -> Result<(), ()> {
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+    let hash_encoded = hash.encode();
+    let value_encoded = value_opt.encode();
+
+    let res = unsafe {
+        ocall_send_status(
+            &mut rt as *mut sgx_status_t,
+            hash_encoded.as_ptr(),
+            hash_encoded.len() as u32,
+            value_encoded.as_ptr(),
+            value_encoded.len() as u32,
         )
     };
 
