@@ -21,7 +21,6 @@ use log::*;
 use sp_core::H256 as Hash;
 use std::collections::HashMap;
 use std::slice;
-use std::sync::mpsc::Sender as MpscSender;
 use std::sync::{
     atomic::{AtomicPtr, Ordering},
     Arc, Mutex, MutexGuard,
@@ -61,13 +60,11 @@ impl DirectWsServerRequest {
 
 pub fn start_worker_api_direct_server(
     addr: String,
-    worker: MpscSender<DirectWsServerRequest>,
     eid: sgx_enclave_id_t,
 ) {
     // Server WebSocket handler
     struct Server {
         client: Sender,
-        worker: MpscSender<DirectWsServerRequest>,
     }  
 
     // initialize static pointer to eid
@@ -98,7 +95,6 @@ pub fn start_worker_api_direct_server(
     thread::spawn(move || {
         match listen(addr.clone(), |out| Server {
             client: out,
-            worker: worker.clone(),
         }) {
             Ok(_) => (),
             Err(e) => {

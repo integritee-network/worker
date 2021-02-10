@@ -51,9 +51,7 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
-use enclave::worker_api_direct_server::{
-    handle_direct_invocation_request, start_worker_api_direct_server,
-};
+use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
 use ws_server::start_ws_server;
@@ -304,8 +302,7 @@ fn worker(
         w_ip, worker_rpc_port
     );
     let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
-    let (direct_sender, direct_receiver) = channel();
-    start_worker_api_direct_server(direct_url, direct_sender, eid);
+    start_worker_api_direct_server(direct_url, eid);
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
