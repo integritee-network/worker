@@ -57,7 +57,7 @@ use chain_relay::Block;
 
 use substratee_node_primitives::Request;
 use substratee_worker_primitives::RpcReturnValue;
-use substratee_worker_primitives::TrustedOperationStatus;
+use substratee_worker_primitives::{TrustedOperationStatus, DirectCallStatus};
 
 use crate::utils::write_slice_and_whitespace_pad;
 
@@ -130,11 +130,10 @@ fn decode_shard_from_base58(shard_base58: String) -> Result<ShardIdentifier, Str
 }
 
 fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
-    let error: Result<Vec<u8>, Vec<u8>> = Err(error_msg.encode());
     let return_value = RpcReturnValue {
-        value: error.encode(),
+        value: error_msg.encode(),
         do_watch: false,
-        status: TrustedOperationStatus::Invalid,
+        status: DirectCallStatus::Error,
     };
     return_value.encode()
 }
@@ -168,16 +167,17 @@ fn init_io_handler() -> IoHandler {
                                     .await
                             };
                             let response: Result<Hash, RpcError> = executor::block_on(result);
-                            let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                                Ok(hash_value) => Ok(hash_value.encode()),
-                                Err(rpc_error) => Err(rpc_error.message.encode()),
+                            let json_value = match response {
+                                Ok(hash_value) => {
+                                    RpcReturnValue {
+                                        do_watch: true,
+                                        value: hash_value.encode(),
+                                        status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                    }.encode()
+                                },
+                                Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
                             };
-                            let json_value = RpcReturnValue {
-                                do_watch: true,
-                                value: encodable_response.encode(),
-                                status: TrustedOperationStatus::Submitted,
-                            };
-                            Ok(json!(json_value.encode()))
+                            Ok(json!(json_value))
                         }
                         Err(_) => Ok(json!(compute_encoded_return_error(
                             "Could not decode request".to_owned()
@@ -214,17 +214,17 @@ fn init_io_handler() -> IoHandler {
                                 .await
                         };
                         let response: Result<Hash, RpcError> = executor::block_on(result);
-                        let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                            Ok(hash_value) => Ok(hash_value.encode()),
-                            Err(rpc_error) => Err(rpc_error.message.encode()),
+                        let json_value = match response {
+                            Ok(hash_value) => {
+                                RpcReturnValue {
+                                    do_watch: false,
+                                    value: hash_value.encode(),
+                                    status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                }.encode()
+                            },
+                            Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
                         };
-                        // TODO:
-                        let json_value = RpcReturnValue {
-                            do_watch: true,
-                            value: encodable_response.encode(),
-                            status: TrustedOperationStatus::Submitted,
-                        };
-                        Ok(json!(json_value.encode()))
+                        Ok(json!(json_value))
                     }
                     Err(_) => Ok(json!(compute_encoded_return_error(
                         "Could not decode request".to_owned()
@@ -238,7 +238,6 @@ fn init_io_handler() -> IoHandler {
         }
     });
 
-    // TODO: Match Interface to the one of submit and watch extrinsic .. Result<Vec[u8]..>
     // author_pendingExtrinsics
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);

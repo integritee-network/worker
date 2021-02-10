@@ -30,7 +30,7 @@ use std::sync::{
 use std::thread;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
-use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TrustedOperationStatus};
+use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TrustedOperationStatus, DirectCallStatus};
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
 
@@ -176,51 +176,41 @@ pub fn handle_direct_invocation_request(
             error!("[RPC-call] ECALL Enclave Failed {}!", result.as_str());
         }
     }
-    // of type: {"jsonrpc":"2.0","result":"{\"value\":[..],\"do_watch\":true}","id":1}
     let decoded_response: String = String::from_utf8_lossy(&response).to_string();
     let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
     let mut result_of_rpc_response =
         RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
-    let decoded_result: StdResult<Vec<u8>, Vec<u8>> =
-        StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
+    //let decoded_result: StdResult<Vec<u8>, Vec<u8>> =
+     //   StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
 
-    match decoded_result {
-        Ok(hash_vec) => {
-            let hash = Hash::decode(&mut hash_vec.as_slice()).unwrap();
-            result_of_rpc_response.value = hash.to_string().encode();            
+    match result_of_rpc_response.status {
+        DirectCallStatus::TrustedOperationStatus(_) => {             
             if result_of_rpc_response.do_watch {
                 // start watching the call with the specific hash
-                // Aquire lock on watched list
-                let mutex = load_watched_list().unwrap();
-                let mut guard: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
-
-                // create new key and value entries to store
-                let new_client = WatchingClient {
-                    client: req.client.clone(),
-                    response: RpcResponse {
-                        result: result_of_rpc_response.encode(),
-                        jsonrpc: full_rpc_response.jsonrpc.clone(),
-                        id: full_rpc_response.id,
-                    },
-                };
-                guard.insert(hash, new_client);
+                if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice()) {
+                    // Aquire lock on watched list
+                    let mutex = load_watched_list().unwrap();
+                    let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
+                    
+                    // create new key and value entries to store
+                    let new_client = WatchingClient {
+                        client: req.client.clone(),
+                        response: RpcResponse {
+                            result: result_of_rpc_response.encode(),
+                            jsonrpc: full_rpc_response.jsonrpc.clone(),
+                            id: full_rpc_response.id,
+                        },
+                    };
+                    // save in watch list
+                    watch_list.insert(hash, new_client);
+                }
             }
-        }
-        Err(err_msg_vec) => {
-            let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
-            result_of_rpc_response.value = err_msg.encode();
-            result_of_rpc_response.do_watch = false;
-            result_of_rpc_response.status = TrustedOperationStatus::Error;
-        }
+        },
+        // Simple return value, no need of further server actions
+        _ => { },
     }
-    // create new return value
-    let updated_rpc_response = RpcResponse {
-        result: result_of_rpc_response.encode(),
-        jsonrpc: full_rpc_response.jsonrpc,
-        id: full_rpc_response.id,
-    };
     req.client
-        .send(serde_json::to_string(&updated_rpc_response).unwrap())
+        .send(serde_json::to_string(&full_rpc_response).unwrap())    
 }
 
 #[no_mangle]
@@ -232,14 +222,14 @@ pub unsafe extern "C" fn ocall_update_status_event(
 ) -> sgx_status_t {
     let mut status_update_slice =
         slice::from_raw_parts(status_update_encoded, status_size as usize);
-    let status_update: TrustedOperationStatus = Decode::decode(&mut status_update_slice).unwrap();
+    let status_update = TrustedOperationStatus::decode(&mut status_update_slice).unwrap();
     let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
     if let Ok(hash) = Hash::decode(&mut hash_slice) {
         // Aquire watched list lock
         let mutex = load_watched_list().unwrap();
-        let mut guard = mutex.lock().unwrap();
+        let mut watch_list = mutex.lock().unwrap();
         let mut continue_watching = true;
-        if let Some(client_event) = guard.get_mut(&hash) {
+        if let Some(client_event) = watch_list.get_mut(&hash) {
             let mut event = &mut client_event.response;
             // Aquire result of old RpcResponse
             let old_result: Vec<u8> = event.result.clone();
@@ -257,7 +247,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
                 _ => {}
             };
             // update response
-            result.status = status_update;
+            result.status = DirectCallStatus::TrustedOperationStatus(status_update);
             event.result = result.encode();
             client_event
                 .client
@@ -271,7 +261,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
             continue_watching = false;
         }
         if !continue_watching {
-            guard.remove(&hash);
+            watch_list.remove(&hash);
         }
     }
 
@@ -299,7 +289,7 @@ pub unsafe extern "C" fn ocall_send_status(
             let result = RpcReturnValue {
                 value: status_slice.to_vec(),
                 do_watch: false,
-                status: TrustedOperationStatus::Submitted,
+                status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
             };
 
             // update response

@@ -9,6 +9,16 @@ use sgx_tstd as std;
 use std::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
+pub enum DirectCallStatus {
+    /// DirectCall was successfully executed 
+    Ok,
+    /// Trusted Call Status
+    TrustedOperationStatus(TrustedOperationStatus),
+    /// DirectCall could not be executed
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum TrustedOperationStatus {
     /// TrustedOperation is submitted to the top pool.
     Submitted,
@@ -34,15 +44,13 @@ pub enum TrustedOperationStatus {
     Dropped,
     /// TrustedOperation is no longer valid in the current state.
     Invalid,
-    /// Error occured somewhere outside of the pool
-    Error,
 }
 
 #[derive(Encode, Decode)]
 pub struct RpcReturnValue {
-    pub value: Vec<u8>, // Hash or Error message
+    pub value: Vec<u8>,
     pub do_watch: bool,
-    pub status: TrustedOperationStatus,
+    pub status: DirectCallStatus,
 }
 
 #[cfg(feature = "std")]
@@ -58,6 +66,6 @@ pub struct RpcRequest {
 #[derive(Encode, Decode, Serialize, Deserialize)]
 pub struct RpcResponse {
     pub jsonrpc: String,
-    pub result: Vec<u8>,
+    pub result: Vec<u8>, // encoded RpcReturnValue
     pub id: u32,
 }

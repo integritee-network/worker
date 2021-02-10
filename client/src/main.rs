@@ -65,7 +65,7 @@ use substratee_stf::{
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_api::Api as WorkerApi;
 use substrate_client_keystore::LocalKeystore;
-use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus};
+use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus, DirectCallStatus};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -506,7 +506,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
                 if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {                    
-                    if return_value.status == TrustedOperationStatus::Error {
+                    if return_value.status == DirectCallStatus::Error {
                         println!("[Error] {}", String::decode(&mut return_value.value.as_slice()).unwrap());
                         return None
                     }
@@ -642,12 +642,20 @@ fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperatio
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
-                    let value = String::decode(&mut return_value.value.as_slice()).unwrap();
-                    if return_value.status == TrustedOperationStatus::Error {
-                        println!("[Error] {}", value);
-                    } else {
-                        println!("Trusted call {} is {:?}", value, return_value.status);
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {                   
+                    match return_value.status {
+                        DirectCallStatus::Error => {
+                            if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
+                                println!("[Error] {}", value);
+                            }
+                            return None
+                        },
+                        DirectCallStatus::TrustedOperationStatus(status) => {
+                            if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
+                            println!("Trusted call {:?} is {:?}", value, status);
+                            } 
+                        },
+                        _ => return None
                     }
                     if !return_value.do_watch {
                         return None;
