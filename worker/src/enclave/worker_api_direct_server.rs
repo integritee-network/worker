@@ -32,6 +32,7 @@ use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TrustedOperationStatus, DirectCallStatus};
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
+static EID: AtomicPtr<u64> = AtomicPtr::new(0 as *mut sgx_enclave_id_t);
 
 extern "C" {
     fn initialize_pool(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -67,20 +68,21 @@ pub fn start_worker_api_direct_server(
     struct Server {
         client: Sender,
         worker: MpscSender<DirectWsServerRequest>,
-    }
+    }  
+
+    // initialize static pointer to eid
+    let eid_ptr = Arc::into_raw(Arc::new(eid));
+    EID.store(eid_ptr as *mut sgx_enclave_id_t, Ordering::SeqCst);
 
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
-            debug!(
-                "Forwarding message to worker api direct event loop: {:?}",
-                msg
+            let request = DirectWsServerRequest::new(
+                self.client.clone(),
+                msg.to_string(),
             );
-            self.worker
-                .send(DirectWsServerRequest::new(
-                    self.client.clone(),
-                    msg.to_string(),
-                ))
-                .unwrap();
+            if let Err(_) = handle_direct_invocation_request(request) {
+                error!("direct invocation call was not successful");
+            }
             Ok(())
         }
 
@@ -108,7 +110,7 @@ pub fn start_worker_api_direct_server(
         };
     });
 
-    // initialise tx pool in enclave
+    // initialise top pool in enclave
     thread::spawn(move || {
         let mut retval = sgx_status_t::SGX_SUCCESS;
         let result = unsafe { initialize_pool(eid, &mut retval) };
@@ -146,9 +148,9 @@ fn load_watched_list() -> Option<&'static Mutex<HashMap<Hash, WatchingClient>>> 
 
 pub fn handle_direct_invocation_request(
     req: DirectWsServerRequest,
-    eid: sgx_enclave_id_t,
 ) -> Result<()> {
     info!("Got message '{:?}'. ", req.request);
+    let eid = unsafe{ *EID.load(Ordering::SeqCst)};
     // forwarding rpc string directly to enclave
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let response_len = 8192;

@@ -379,9 +379,6 @@ fn worker(
         if let Ok(req) = ws_receiver.recv_timeout(timeout) {
             ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
         }
-        if let Ok(rpc_req) = direct_receiver.recv_timeout(timeout) {
-            handle_direct_invocation_request(rpc_req, eid).unwrap()
-        }
     }
 }
 
