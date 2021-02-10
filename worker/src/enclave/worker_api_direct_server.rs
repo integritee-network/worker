@@ -176,13 +176,10 @@ pub fn handle_direct_invocation_request(
             error!("[RPC-call] ECALL Enclave Failed {}!", result.as_str());
         }
     }
-    let decoded_response: String = String::from_utf8_lossy(&response).to_string();
+    let decoded_response = String::from_utf8_lossy(&response).to_string();
     let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
     let mut result_of_rpc_response =
         RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
-    //let decoded_result: StdResult<Vec<u8>, Vec<u8>> =
-     //   StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
-
     match result_of_rpc_response.status {
         DirectCallStatus::TrustedOperationStatus(_) => {             
             if result_of_rpc_response.do_watch {

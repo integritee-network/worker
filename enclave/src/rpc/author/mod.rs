@@ -49,38 +49,12 @@ use crate::state;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
-    /// RPC metadata
-    //type Metadata;
-
-    /// Submit hex-encoded extrinsic for inclusion in block.
+    /// Submit encoded extrinsic for inclusion in block.
     fn submit_top(
         &self,
         extrinsic: Vec<u8>,
         shard: ShardIdentifier,
     ) -> FutureResult<Hash, RpcError>;
-
-    /*/// Insert a key into the keystore.
-    fn insert_key(
-        &self,
-        key_type: String,
-        suri: String,
-        public: <Vec<u8>,
-    ) -> Result<()>;
-
-    /// Generate new session keys and returns the corresponding public keys.
-    fn rotate_keys(&self) -> Result<<Vec<u8>>;
-
-    /// Checks if the keystore has private keys for the given session public keys.
-    ///
-    /// `session_keys` is the SCALE encoded session keys object from the runtime.
-    ///
-    /// Returns `true` iff all private keys could be found.
-    fn has_session_keys(&self, session_keys: <Vec<u8>) -> Result<bool>;
-
-    /// Checks if the keystore has private keys for the given public key and key type.
-    ///
-    /// Returns `true` if a private key could be found.
-    fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool>;*/
 
     /// Return hash of Trusted Operation
     fn hash_of(&self, xt: &TrustedOperation) -> Hash;
@@ -105,40 +79,7 @@ pub trait AuthorApi<Hash, BlockHash> {
     ///
     /// See [`TrustedOperationStatus`](sp_transaction_pool::TrustedOperationStatus) for details on transaction
     /// life cycle.
-    /* 	fn watch_top(&self,
-        //metadata: Self::Metadata,
-        //subscriber: Subscriber<TrustedOperationStatus<Hash, BlockHash>>,
-        bytes: Vec<u8>,
-        shard: ShardIdentifier,
-    ); */
-
     fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
-
-    /*/// Submit an extrinsic to watch.
-    ///
-    /// See [`TrustedOperationStatus`](sp_transaction_pool::TrustedOperationStatus) for details on transaction
-    /// life cycle.
-    #[pubsub(
-        subscription = "author_extrinsicUpdate",
-        subscribe,
-        name = "author_submitAndWatchExtrinsic"
-    )]
-    fn watch_extrinsic(&self,
-        metadata: Self::Metadata,
-        subscriber: Subscriber<TrustedOperationStatus<Hash, BlockHash>>,
-        bytes: <Vec<u8>
-    );
-
-    /// Unsubscribe from extrinsic watching.
-    #[pubsub(
-        subscription = "author_extrinsicUpdate",
-        unsubscribe,
-        name = "author_unwatchExtrinsic"
-    )]
-    fn unwatch_extrinsic(&self,
-        metadata: Option<Self::Metadata>,
-        id: SubscriptionId
-    ) -> Result<bool>;*/
 }
 
 /// Authoring API
@@ -160,18 +101,10 @@ pub struct Author<P> {
 impl<P> Author<P> {
     /// Create new instance of Authoring API.
     pub fn new(
-        //client: Arc<Client>,
         pool: Arc<P>,
-        //subscriptions: SubscriptionManager,
-        //keystore: SyncCryptoStorePtr,
-        //deny_unsafe: DenyUnsafe,
     ) -> Self {
         Author {
-            //client,
             pool,
-            //subscriptions,
-            //keystore,
-            //deny_unsafe,
         }
     }
 }
@@ -187,61 +120,7 @@ const TX_SOURCE: TransactionSource = TransactionSource::External;
 impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
 where
     P: TrustedOperationPool + Sync + Send + 'static,
-    //Client: Send + Sync + 'static,
-    //Client::Api: SessionKeys<P::Block, Error = ClientError>,
 {
-    //type Metadata = crate::Metadata;
-
-    /*fn insert_key(
-        &self,
-        key_type: String,
-        suri: String,
-        public: <Vec<u8>,
-    ) -> Result<()> {
-        self.deny_unsafe.check_if_safe()?;
-
-        let key_type = key_type.as_str().try_into().map_err(|_| ClientError::BadKeyType)?;
-        SyncCryptoStore::insert_unknown(&*self.keystore, key_type, &suri, &public[..])
-            .map_err(|_| ClientError::KeyStoreUnavailable)?;
-        Ok(())
-    }
-
-    fn rotate_keys(&self) -> Result<<Vec<u8>> {
-        self.deny_unsafe.check_if_safe()?;
-
-        let best_block_hash = self.client.info().best_hash;
-        self.client.runtime_api().generate_session_keys(
-            &generic::BlockId::Hash(best_block_hash),
-            None,
-        ).map(Into::into).map_err(|e| ClientError::Client(Box::new(e)))
-    }
-
-    fn has_session_keys(&self, session_keys: <Vec<u8>) -> Result<bool> {
-        self.deny_unsafe.check_if_safe()?;
-
-        let best_block_hash = self.client.info().best_hash;
-        let keys = self.client.runtime_api().decode_session_keys(
-            &generic::BlockId::Hash(best_block_hash),
-            session_keys.to_vec(),
-        ).map_err(|e| ClientError::Client(Box::new(e)))?
-            .ok_or_else(|| ClientError::InvalidSessionKeys)?;
-
-        Ok(SyncCryptoStore::has_keys(&*self.keystore, &keys))
-    }
-
-    fn has_key(&self, public_key: <Vec<u8>, key_type: String) -> Result<bool> {
-        self.deny_unsafe.check_if_safe()?;
-
-        let key_type = key_type.as_str().try_into().map_err(|_| ClientError::BadKeyType)?;
-        Ok(SyncCryptoStore::has_keys(&*self.keystore, &[(public_key.to_vec(), key_type)]))
-    }*/
-
-    /// Submit hex-encoded extrinsic for inclusion in block.
-    /*fn submit_extrinsic(&self, ext: Vec<u8>) ->  Pin<Box<dyn jsonrpc_core::futures::Future<Output=core::result::Result<H256, RpcError>> + Send>>
-    {
-        return Box::pin(ready(Ok(H256::from_slice(&ext[..]))));
-    }*/
-
     /// Get hash of TrustedOperation
     fn hash_of(&self, xt: &TrustedOperation) -> TxHash<P> {
         self.pool.hash_of(xt)
