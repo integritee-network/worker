@@ -17,7 +17,6 @@
 use sgx_types::*;
 
 use codec::{Decode, Encode};
-use core::result::Result as StdResult;
 use log::*;
 use sp_core::H256 as Hash;
 use std::collections::HashMap;
@@ -178,7 +177,7 @@ pub fn handle_direct_invocation_request(
     }
     let decoded_response = String::from_utf8_lossy(&response).to_string();
     let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
-    let mut result_of_rpc_response =
+    let result_of_rpc_response =
         RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
     match result_of_rpc_response.status {
         DirectCallStatus::TrustedOperationStatus(_) => {             

@@ -466,9 +466,13 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                 // get hash
                 let hash_of_getter = author.hash_of(&trusted_getter_signed.into());              
                 // let client know of current state
-                worker_api_direct::send_state(hash_of_getter, value_opt);
+                if let Err(_) = worker_api_direct::send_state(hash_of_getter, value_opt) {
+                    error!("Could not get state from stf");
+                }
                  // remove getter from pool
-                 author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false);
+                if let Err(e) = author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false) {
+                    error!("Error removing trusted operation from top pool: Error: {:?}", e);
+                }
             }
             for trusted_call_signed in trusted_calls.into_iter() {
                 if let Err(e) = handle_trusted_worker_call(

@@ -45,7 +45,6 @@ use client_error::Error as ClientError;
 pub mod hash;
 
 use crate::rsa3072;
-use crate::state;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {

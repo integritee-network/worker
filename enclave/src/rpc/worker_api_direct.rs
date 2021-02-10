@@ -250,26 +250,27 @@ fn init_io_handler() -> IoHandler {
                 let tx_pool = Arc::new(tx_pool_guard.deref());
                 let author = Author::new(tx_pool);
 
-                let mut retrieved_calls = vec![];
+                let mut retrieved_operations = vec![];
                 for shard_base58 in shards.iter() {
                     let shard = match decode_shard_from_base58(shard_base58.clone()) {
                         Ok(id) => id,
                         Err(msg) => return Ok(Value::String(format!("{}", msg))),
                     };
-                    let result: Result<Vec<Vec<u8>>, _> = author.pending_tops(shard);
-                    if let Ok(vec_of_calls) = result {
-                        retrieved_calls.push(vec_of_calls);
-                    }
+                    if let Ok(vec_of_operations) = author.pending_tops(shard) {
+                        retrieved_operations.push(vec_of_operations);
+                    }           
                 }
-                Ok(Value::String(format!(
-                    "Pending Extrinsics: {:?}",
-                    retrieved_calls
-                )))
+                let json_value = RpcReturnValue {
+                            do_watch: false,
+                            value: retrieved_operations.encode(),
+                            status: DirectCallStatus::Ok,
+                };
+                Ok(json!(json_value.encode()))
             }
-            Err(e) => Ok(Value::String(format!(
-                "Could not retrieve pending calls due to: {}",
-                e
-            ))),
+            Err(e) => {
+                let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
+                Ok(json!(compute_encoded_return_error(error_msg)))
+            }            
         }
     });
 
