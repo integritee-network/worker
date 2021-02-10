@@ -469,11 +469,11 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
     match top {
         TrustedOperation::indirect_call(call) => send_request(matches, call.clone()),
         TrustedOperation::direct_call(call) => send_direct_request(matches, TrustedOperation::direct_call(call.clone())),
-        TrustedOperation::get(getter) => get_state(matches, getter.clone()),
+        TrustedOperation::get(getter) => get_state(matches,TrustedOperation::get(getter.clone())),
     }
 }
 
-fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
+fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u8>> {
     // TODO: ensure getter is signed
     let (_operation_call_encoded, operation_call_encrypted) = encode_encrypt(matches, getter);
     let shard = match read_shard(matches) {
@@ -488,7 +488,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
     };
     let direct_invocation_call = RpcRequest {
         jsonrpc: "2.0".to_owned(),
-        method: "author_submitAndWatchExtrinsic".to_owned(), // TODO: Watch flag?
+        method: "author_submitAndWatchExtrinsic".to_owned(),
         params: data.encode(),
         id: 1,
     };
@@ -505,35 +505,19 @@ fn get_state(matches: &ArgMatches<'_>, getter: Getter) -> Option<Vec<u8>> {
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
-                    let value = String::decode(&mut return_value.value.as_slice()).unwrap();
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {                    
                     if return_value.status == TrustedOperationStatus::Error {
-                        println!("[Error] {}", value);
-                    } else {
-                        println!("Trusted call {} is {:?}", value, return_value.status);
+                        println!("[Error] {}", String::decode(&mut return_value.value.as_slice()).unwrap());
+                        return None
                     }
                     if !return_value.do_watch {
-                        return None;
+                        return Some(return_value.value)
                     }
                 };
             }
             Err(_) => return None,
         };
     }
-   /*  let worker_api = get_worker_api(matches);
-    let (_mrenclave, shard) = get_identifiers(matches);
-    debug!("calling workerapi to get state value, {:?}", getter);
-    let ret = worker_api
-        .get_stf_state(getter, &shard)
-        .expect("getting value from worker API failed");
-    // strip whitespace padding through decoding
-    if let Ok(vd) = Decode::decode(&mut ret.as_slice()) {
-        debug!("decoded return value: {:?} ", vd);
-        vd
-    } else {
-        debug!("decoding failed");
-        None
-    } */
 }
 
 fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> (Vec<u8>, Vec<u8>) {
