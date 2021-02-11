@@ -20,4 +20,5 @@ rev = "a208da16"
 [dependencies.substratee-stf]
 path = "../../stf"
 
-
+[dependencies.substratee-worker-primitives]
+path = "../../substratee-worker-primitives"

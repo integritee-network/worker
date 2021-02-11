@@ -208,7 +208,7 @@ pub fn handle_direct_invocation_request(
         return req.client
                 .send(serde_json::to_string(&full_rpc_response).unwrap())
     } 
-    // could not decode rpcrepsonse - maybe a String as return value?
+    // could not decode rpcresponse - maybe a String as return value?
     req.client.send(decoded_response)
     
 }

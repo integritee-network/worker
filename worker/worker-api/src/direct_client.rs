@@ -3,10 +3,9 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender as MpscSender;
 use std::thread;
 
-use ws::{connect, Handler, Handshake, Message, Result as ClientResult, Sender};
+use ws::{connect, Handler, Handshake, Message, Result as ClientResult, Sender, CloseCode};
 
-use crate::requests::ClientRequest;
-use crate::client::WsClient;
+use substratee_worker_primitives::{RpcRequest};
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
@@ -14,7 +13,7 @@ pub struct DirectWsClient {
     pub out: Sender,
     pub request: String,
     pub result: MpscSender<String>,
-    pub watch: bool,
+    pub do_watch: bool,
 }
 
 impl Handler for DirectWsClient {
@@ -23,12 +22,15 @@ impl Handler for DirectWsClient {
         match self.out.send(self.request.clone()) {
             Ok(_) => Ok(()),
             Err(e) => Err(e),
-        }
+        }        
     }
     fn on_message(&mut self, msg: Message) -> ClientResult<()> {
         info!("got message");
         debug!("{}", msg);
         self.result.send(msg.to_string()).unwrap();
+        if !self.do_watch {
+            self.out.close(CloseCode::Normal).unwrap();
+        }
         Ok(())
     }
 }
@@ -43,16 +45,18 @@ impl DirectApi {
         Self { url }
     }
 
-    pub fn get(&self, request: ClientRequest) -> Result<String, ()> {
+    /// server connection with only one response
+    pub fn get(&self, request: String) -> Result<String, ()> {
         let url = self.url.clone();
         let (port_in, port_out) = channel();
 
         info!("[WorkerApi Direct]: Sending request: {:?}", request);
         let client = thread::spawn(move || {
-            match connect(url, |out| WsClient {
+            match connect(url, |out| DirectWsClient {
                 out,
                 request: request.clone(),
                 result: port_in.clone(),
+                do_watch: false,
             }) {
                 Ok(c) => c,
                 Err(_) => {
@@ -70,6 +74,7 @@ impl DirectApi {
             }
         }
     }
+    /// server connection with more than one response
     pub fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
         let url = self.url.clone();
 
@@ -79,7 +84,7 @@ impl DirectApi {
                 out,
                 request: request.clone(),
                 result: sender.clone(),
-                watch: true,
+                do_watch: true,
             }) {
                 Ok(c) => c,
                 Err(_) => {
@@ -90,12 +95,14 @@ impl DirectApi {
         Ok(())
     }
 
-    pub fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, ()> {
-        let keystr = Self::get(&self, ClientRequest::PubKeyWorker)?;
+    pub fn get_rsa_pubkey(&self) -> Result<String, ()> {
+        // compose jsonrpc call
+        let method =  "author_getShieldingKey".to_owned();
+        let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(method, vec![]);
 
-        let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&keystr).unwrap();
+        let response_str = Self::get(&self, jsonrpc_call)?;       
+        
         info!("[+] Got RSA public key of enclave");
-        debug!("  enclave RSA pubkey = {:?}", rsa_pubkey);
-        Ok(rsa_pubkey)
+        Ok(response_str)
     }
 }

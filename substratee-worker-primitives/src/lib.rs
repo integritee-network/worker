@@ -54,14 +54,14 @@ pub struct RpcReturnValue {
     pub do_watch: bool,
     pub status: DirectCallStatus,
 }
-
-#[cfg(feature = "std")]
-#[derive(Encode, Decode, Serialize)]
-pub struct RpcRequest {
-    pub jsonrpc: String,
-    pub method: String,
-    pub params: Vec<u8>,
-    pub id: i32,
+impl RpcReturnValue {
+    pub fn new(value: Vec<u8>, watch: bool, status: DirectCallStatus) -> Self {
+        Self {
+            value: value,
+            do_watch: watch,
+            status: status,
+        }
+    }
 }
 
 #[cfg(feature = "std")]
@@ -73,12 +73,23 @@ pub struct RpcResponse {
 }
 
 #[cfg(feature = "std")]
-pub fn compose_jsonrpc_call(method: String, data: Vec<u8>) -> String {
-    let direct_invocation_call = RpcRequest {
-        jsonrpc: "2.0".to_owned(),
-        method: method,
-        params: data,
-        id: 1,
-    };
-    serde_json::to_string(&direct_invocation_call).unwrap()
+#[derive(Encode, Decode, Serialize)]
+pub struct RpcRequest {
+    pub jsonrpc: String,
+    pub method: String,
+    pub params: Vec<u8>,
+    pub id: i32,
+}
+
+#[cfg(feature = "std")]
+impl RpcRequest {
+    pub fn compose_jsonrpc_call(method: String, data: Vec<u8>) -> String {
+        let direct_invocation_call = RpcRequest {
+            jsonrpc: "2.0".to_owned(),
+            method: method,
+            params: data,
+            id: 1,
+        };
+        serde_json::to_string(&direct_invocation_call).unwrap()
+    }
 }

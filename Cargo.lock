@@ -4898,6 +4898,7 @@ dependencies = [
  "sc-keystore",
  "serde",
  "serde_json",
+ "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",

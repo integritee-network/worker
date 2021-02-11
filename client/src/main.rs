@@ -27,6 +27,8 @@ extern crate chrono;
 use chrono::{DateTime, Utc};
 use std::time::{Duration, UNIX_EPOCH};
 
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+
 use sp_application_crypto::{ed25519, sr25519};
 use sp_keyring::AccountKeyring;
 use std::path::PathBuf;
@@ -59,9 +61,7 @@ use substrate_api_client::{
     Api, XtStatus,
 };
 
-use substratee_stf::{
-    cli::get_identifiers, Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation,
-};
+use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_api::Api as WorkerApi;
 use substrate_client_keystore::LocalKeystore;
@@ -476,7 +476,13 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
 
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u8>> {
     // TODO: ensure getter is signed
-    let (_operation_call_encoded, operation_call_encrypted) = encode_encrypt(matches, getter);
+    let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, getter) {
+        Ok((encoded, encrypted)) => (encoded, encrypted),
+        Err(msg) => {
+            println!("[Error] {}", msg);
+            return None
+        },
+    };
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
@@ -487,15 +493,10 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
         shard,
         cyphertext: operation_call_encrypted,
     };
-    let direct_invocation_call = RpcRequest {
-        jsonrpc: "2.0".to_owned(),
-        method: "author_submitAndWatchExtrinsic".to_owned(),
-        params: data.encode(),
-        id: 1,
-    };
-    let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
+    let rpc_method = "author_submitAndWatchExtrinsic".to_owned();
+    let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, data.encode());
 
-    let direct_api = get_worker_direct_api(matches);
+    let direct_api = get_worker_api_direct(matches);
     let (sender, receiver) = channel();
     match direct_api.watch(jsonrpc_call, sender) {
         Ok(_) => {}
@@ -521,21 +522,54 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
     }
 }
 
-fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> (Vec<u8>, Vec<u8>) {
-    let worker_api = get_worker_api(matches);
-    // TODO: get shielding key via direct
-    let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
+fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let worker_api_direct = get_worker_api_direct(matches);    
+    let shielding_pubkey_rpc_response = worker_api_direct.get_rsa_pubkey().unwrap();
+    
+    let response: RpcResponse = match serde_json::from_str(&shielding_pubkey_rpc_response) {
+        Ok(resp) => resp,
+        Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
+    };
+    let return_value = match RpcReturnValue::decode(&mut response.result.as_slice()) {
+        Ok(val) => val,
+        Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
+    };
+    let shielding_pubkey_string: String = match return_value.status {
+        DirectCallStatus::Ok => {
+            match String::decode(&mut return_value.value.as_slice()) {
+                Ok(key) => key,
+                Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+            }
+        },        
+        _ => {
+            match String::decode(&mut return_value.value.as_slice()) {
+                Ok(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {}", err_msg}),
+                Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+            }
+        }, 
+    };
+    let shielding_pubkey: Rsa3072PubKey = match serde_json::from_str(&shielding_pubkey_string) { 
+        Ok(key) => key,
+        Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+    };
+        
     let encoded = to_encrypt.encode();
     let mut encrypted: Vec<u8> = Vec::new();
     shielding_pubkey
         .encrypt_buffer(&encoded, &mut encrypted)
         .unwrap();
-    (encoded, encrypted)
+    Ok((encoded, encrypted))
 }
 
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     let chain_api = get_chain_api(matches);
-    let (call_encoded, call_encrypted) = encode_encrypt(matches, call);
+    let (call_encoded, call_encrypted) = match encode_encrypt(matches, call) {
+        Ok((encoded, encrypted)) => (encoded, encrypted),
+        Err(msg) => {
+            println!("[Error]: {}", msg);
+            return None
+        },
+    };
 
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
@@ -587,7 +621,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     }
 }
 
-fn get_worker_direct_api(matches: &ArgMatches<'_>) -> DirectWorkerApi {
+fn get_worker_api_direct(matches: &ArgMatches<'_>) -> DirectWorkerApi {
     let url = format!(
         "{}:{}",
         matches.value_of("worker-url").unwrap(),
@@ -614,7 +648,13 @@ fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Err
 }
 
 fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperation) -> Option<Vec<u8>> {
-    let (_operation_call_encoded, operation_call_encrypted) = encode_encrypt(matches, operation_call);
+    let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, operation_call) {
+        Ok((encoded, encrypted)) => (encoded, encrypted),
+        Err(msg) => {
+            println!("[Error] {}", msg);
+            return None
+        }, 
+    };
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
@@ -633,7 +673,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperatio
     };
     let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
 
-    let direct_api = get_worker_direct_api(matches);
+    let direct_api = get_worker_api_direct(matches);
     let (sender, receiver) = channel();
     match direct_api.watch(jsonrpc_call, sender) {
         Ok(_) => {}

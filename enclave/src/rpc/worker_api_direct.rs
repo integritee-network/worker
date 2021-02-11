@@ -60,6 +60,7 @@ use substratee_worker_primitives::RpcReturnValue;
 use substratee_worker_primitives::{TrustedOperationStatus, DirectCallStatus};
 
 use crate::utils::write_slice_and_whitespace_pad;
+use crate::rsa3072;
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
 
@@ -274,6 +275,33 @@ fn init_io_handler() -> IoHandler {
         }
     });
 
+    // author_getShieldingKey
+    let rsa_pubkey_name: &str = "author_getShieldingKey";
+    rpc_methods_vec.push(rsa_pubkey_name);
+    io.add_sync_method(rsa_pubkey_name, move |_: Params| {       
+        let rsa_pubkey = match rsa3072::unseal_pubkey() {
+            Ok(key) => key,
+            Err(status) => {
+                let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);
+                return Ok(json!(compute_encoded_return_error(error_msg)))
+            },
+        };
+    
+        let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
+            Ok(k) => k,
+            Err(x) => {
+                let error_msg: String = format!(
+                    "[Enclave] can't serialize rsa_pubkey {:?} {}",
+                    rsa_pubkey, x);
+                return Ok(json!(compute_encoded_return_error(error_msg)))
+            },
+        };
+        let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectCallStatus::Ok);
+        Ok(json!(json_value.encode()))
+            
+    });
+
+    
     // chain_subscribeAllHeads
     let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
     rpc_methods_vec.push(chain_subscribe_all_heads_name);
@@ -359,7 +387,6 @@ pub unsafe extern "C" fn call_rpc_methods(
     };
     // Rpc Response String
     let response_string = io.handle_request_sync(request_string).unwrap().to_string();
-    debug! {"Released Txpool Lock"};
 
     // update response outside of enclave
     let response_slice = from_raw_parts_mut(response, response_len as usize);

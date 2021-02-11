@@ -135,7 +135,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
+ #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(
     pubkey: *mut u8,
     pubkey_size: u32,
@@ -160,7 +160,8 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
     write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec());
 
     sgx_status_t::SGX_SUCCESS
-}
+} 
+
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
