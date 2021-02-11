@@ -63,7 +63,6 @@ use substrate_api_client::{
 
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
-use substratee_worker_api::Api as WorkerApi;
 use substrate_client_keystore::LocalKeystore;
 use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, DirectCallStatus};
 
@@ -385,9 +384,6 @@ fn main() {
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
                     let chain_api = get_chain_api(matches);
-                    let worker_api = get_worker_api(matches);
-                    let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
-
                     let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
                         .expect("amount can't be converted to u128");
 
@@ -411,12 +407,10 @@ fn main() {
                     // get the recipient
                     let arg_to = matches.value_of("to").unwrap();
                     let to = get_accountid_from_str(arg_to);
-                    let to_encoded = to.encode();
-                    let mut to_encrypted: Vec<u8> = Vec::new();
-                    shielding_pubkey
-                        .encrypt_buffer(&to_encoded, &mut to_encrypted)
-                        .unwrap();
-
+                    let (_to_encoded, to_encrypted) = match encode_encrypt(matches, to){
+                        Ok((encoded, encrypted)) => (encoded, encrypted),
+                        Err(e) => panic!(e),
+                    };
                     // compose the extrinsic
                     let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
                         chain_api,
@@ -453,17 +447,6 @@ fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
     );
     info!("connecting to {}", url);
     Api::<sr25519::Pair>::new(url)
-}
-
-// TODO: Remove
-fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
-    let url = format!(
-        "{}:{}",
-        matches.value_of("worker-url").unwrap(),
-        matches.value_of("worker-port").unwrap()
-    );
-    info!("Connecting to substraTEE-worker on '{}'", url);
-    WorkerApi::new(url)
 }
 
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
@@ -524,33 +507,9 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
 
 fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> Result<(Vec<u8>, Vec<u8>), String> {
     let worker_api_direct = get_worker_api_direct(matches);    
-    let shielding_pubkey_rpc_response = worker_api_direct.get_rsa_pubkey().unwrap();
-    
-    let response: RpcResponse = match serde_json::from_str(&shielding_pubkey_rpc_response) {
-        Ok(resp) => resp,
-        Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
-    };
-    let return_value = match RpcReturnValue::decode(&mut response.result.as_slice()) {
-        Ok(val) => val,
-        Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
-    };
-    let shielding_pubkey_string: String = match return_value.status {
-        DirectCallStatus::Ok => {
-            match String::decode(&mut return_value.value.as_slice()) {
-                Ok(key) => key,
-                Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
-            }
-        },        
-        _ => {
-            match String::decode(&mut return_value.value.as_slice()) {
-                Ok(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {}", err_msg}),
-                Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
-            }
-        }, 
-    };
-    let shielding_pubkey: Rsa3072PubKey = match serde_json::from_str(&shielding_pubkey_string) { 
+    let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
         Ok(key) => key,
-        Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+        Err(err_msg) => return Err(err_msg),
     };
         
     let encoded = to_encrypt.encode();

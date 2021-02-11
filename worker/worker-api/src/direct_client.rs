@@ -3,9 +3,11 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender as MpscSender;
 use std::thread;
 
+use codec::Decode;
+
 use ws::{connect, Handler, Handshake, Message, Result as ClientResult, Sender, CloseCode};
 
-use substratee_worker_primitives::{RpcRequest};
+use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, DirectCallStatus};
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
@@ -95,14 +97,45 @@ impl DirectApi {
         Ok(())
     }
 
-    pub fn get_rsa_pubkey(&self) -> Result<String, ()> {
+    pub fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String> {
         // compose jsonrpc call
         let method =  "author_getShieldingKey".to_owned();
         let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(method, vec![]);
 
-        let response_str = Self::get(&self, jsonrpc_call)?;       
+        let response_str = match Self::get(&self, jsonrpc_call) {
+            Ok(resp) => resp,
+            Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
+        };   
+        
+        // decode result
+        let response: RpcResponse = match serde_json::from_str(&response_str) {
+            Ok(resp) => resp,
+            Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
+        };
+        let return_value = match RpcReturnValue::decode(&mut response.result.as_slice()) {
+            Ok(val) => val,
+            Err(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err_msg}),
+        };
+        let shielding_pubkey_string: String = match return_value.status {
+            DirectCallStatus::Ok => {
+                match String::decode(&mut return_value.value.as_slice()) {
+                    Ok(key) => key,
+                    Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+                }
+            },        
+            _ => {
+                match String::decode(&mut return_value.value.as_slice()) {
+                    Ok(err_msg) => return Err(format!{"Could not retrieve shielding pubkey: {}", err_msg}),
+                    Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+                }
+            }, 
+        };
+        let shielding_pubkey: Rsa3072PubKey = match serde_json::from_str(&shielding_pubkey_string) { 
+            Ok(key) => key,
+            Err(err) => return Err(format!{"Could not retrieve shielding pubkey: {:?}", err}),
+        };      
         
         info!("[+] Got RSA public key of enclave");
-        Ok(response_str)
+        Ok(shielding_pubkey)
     }
 }

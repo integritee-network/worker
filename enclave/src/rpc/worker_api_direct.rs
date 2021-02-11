@@ -297,8 +297,7 @@ fn init_io_handler() -> IoHandler {
             },
         };
         let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectCallStatus::Ok);
-        Ok(json!(json_value.encode()))
-            
+        Ok(json!(json_value.encode()))            
     });
 
     
