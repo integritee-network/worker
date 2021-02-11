@@ -41,11 +41,7 @@ impl Api {
     pub fn new(url: String) -> Self {
         Self { url }
     }
-
-    pub fn get_mu_ra_port(&self) -> Result<String, ()> {
-        Self::get(&self, ClientRequest::MuRaPortWorker)
-    }
-
+    
     pub fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, ()> {
         let keystr = Self::get(&self, ClientRequest::PubKeyWorker)?;
 

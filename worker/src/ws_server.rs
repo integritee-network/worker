@@ -88,12 +88,10 @@ pub fn start_ws_server(addr: String, worker: MpscSender<WsServerRequest>) {
 pub fn handle_request(
     req: WsServerRequest,
     eid: sgx_enclave_id_t,
-    mu_ra_port: String,
 ) -> Result<()> {
     info!("Got message '{:?}'. ", req.request);
     let answer = match req.request {
         ClientRequest::PubKeyWorker => get_pubkey(eid),
-        ClientRequest::MuRaPortWorker => Message::text(mu_ra_port),
         ClientRequest::StfState(getter, shard) => get_stf_state(eid, getter, shard),
     };
 

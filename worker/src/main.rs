@@ -374,7 +374,7 @@ fn worker(
             }
         }
         if let Ok(req) = ws_receiver.recv_timeout(timeout) {
-            ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
+            ws_server::handle_request(req, eid).unwrap()
         }
     }
 }

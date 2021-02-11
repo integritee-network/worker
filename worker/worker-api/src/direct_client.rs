@@ -2,7 +2,13 @@ use log::*;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender as MpscSender;
 use std::thread;
+
 use ws::{connect, Handler, Handshake, Message, Result as ClientResult, Sender};
+
+use crate::requests::ClientRequest;
+use crate::client::WsClient;
+
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
 pub struct DirectWsClient {
     pub out: Sender,
@@ -23,9 +29,6 @@ impl Handler for DirectWsClient {
         info!("got message");
         debug!("{}", msg);
         self.result.send(msg.to_string()).unwrap();
-        /* if !self.watch {
-           self.out.close(CloseCode::Normal).unwrap();
-        } */
         Ok(())
     }
 }
@@ -40,17 +43,16 @@ impl DirectApi {
         Self { url }
     }
 
-    pub fn send(&self, request: String) -> Result<String, ()> {
+    pub fn get(&self, request: ClientRequest) -> Result<String, ()> {
         let url = self.url.clone();
         let (port_in, port_out) = channel();
 
         info!("[WorkerApi Direct]: Sending request: {:?}", request);
         let client = thread::spawn(move || {
-            match connect(url, |out| DirectWsClient {
+            match connect(url, |out| WsClient {
                 out,
                 request: request.clone(),
                 result: port_in.clone(),
-                watch: false,
             }) {
                 Ok(c) => c,
                 Err(_) => {
@@ -86,5 +88,14 @@ impl DirectApi {
             }
         });
         Ok(())
+    }
+
+    pub fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, ()> {
+        let keystr = Self::get(&self, ClientRequest::PubKeyWorker)?;
+
+        let rsa_pubkey: Rsa3072PubKey = serde_json::from_str(&keystr).unwrap();
+        info!("[+] Got RSA public key of enclave");
+        debug!("  enclave RSA pubkey = {:?}", rsa_pubkey);
+        Ok(rsa_pubkey)
     }
 }

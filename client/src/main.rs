@@ -65,7 +65,7 @@ use substratee_stf::{
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_api::Api as WorkerApi;
 use substrate_client_keystore::LocalKeystore;
-use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus, DirectCallStatus};
+use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, DirectCallStatus};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -455,6 +455,7 @@ fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
     Api::<sr25519::Pair>::new(url)
 }
 
+// TODO: Remove
 fn get_worker_api(matches: &ArgMatches<'_>) -> WorkerApi {
     let url = format!(
         "{}:{}",
@@ -522,6 +523,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
 
 fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> (Vec<u8>, Vec<u8>) {
     let worker_api = get_worker_api(matches);
+    // TODO: get shielding key via direct
     let shielding_pubkey = worker_api.get_rsa_pubkey().unwrap();
     let encoded = to_encrypt.encode();
     let mut encrypted: Vec<u8> = Vec::new();
@@ -665,10 +667,6 @@ fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperatio
             Err(_) => return None,
         };
     }
-}
-
-pub fn test_fn(string: String) {
-    println!("{}", string);
 }
 
 #[allow(dead_code)]

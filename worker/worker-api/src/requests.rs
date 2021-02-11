@@ -21,6 +21,5 @@ use substratee_stf::{Getter, ShardIdentifier};
 #[derive(Encode, Decode, Clone, Debug)]
 pub enum ClientRequest {
     PubKeyWorker,
-    MuRaPortWorker,
     StfState(Getter, ShardIdentifier), // (trusted_getter_encrypted, shard)
 }
