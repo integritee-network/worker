@@ -174,37 +174,43 @@ pub fn handle_direct_invocation_request(
         }
     }
     let decoded_response = String::from_utf8_lossy(&response).to_string();
-    let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
-    let result_of_rpc_response =
-        RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
-    match result_of_rpc_response.status {
-        DirectCallStatus::TrustedOperationStatus(_) => {             
-            if result_of_rpc_response.do_watch {
-                // start watching the call with the specific hash
-                if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice()) {
-                    // Aquire lock on watched list
-                    let mutex = load_watched_list().unwrap();
-                    let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
-                    
-                    // create new key and value entries to store
-                    let new_client = WatchingClient {
-                        client: req.client.clone(),
-                        response: RpcResponse {
-                            result: result_of_rpc_response.encode(),
-                            jsonrpc: full_rpc_response.jsonrpc.clone(),
-                            id: full_rpc_response.id,
-                        },
-                    };
-                    // save in watch list
-                    watch_list.insert(hash, new_client);
-                }
+    if let Ok(full_rpc_response) = 
+        serde_json::from_str(&decoded_response) as serde_json::Result<RpcResponse> {
+        if let Ok(result_of_rpc_response) =
+            RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()) {
+            match result_of_rpc_response.status {
+                DirectCallStatus::TrustedOperationStatus(_) => {             
+                    if result_of_rpc_response.do_watch {
+                        // start watching the call with the specific hash
+                        if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice()) {
+                            // Aquire lock on watched list
+                            let mutex = load_watched_list().unwrap();
+                            let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
+                            
+                            // create new key and value entries to store
+                            let new_client = WatchingClient {
+                                client: req.client.clone(),
+                                response: RpcResponse {
+                                    result: result_of_rpc_response.encode(),
+                                    jsonrpc: full_rpc_response.jsonrpc.clone(),
+                                    id: full_rpc_response.id,
+                                },
+                            };
+                            // save in watch list
+                            watch_list.insert(hash, new_client);
+                        }
+                    }
+                },
+                // Simple return value, no need of further server actions
+                _ => { },
             }
-        },
-        // Simple return value, no need of further server actions
-        _ => { },
-    }
-    req.client
-        .send(serde_json::to_string(&full_rpc_response).unwrap())    
+        }      
+        return req.client
+                .send(serde_json::to_string(&full_rpc_response).unwrap())
+    } 
+    // could not decode rpcrepsonse - maybe a String as return value?
+    req.client.send(decoded_response)
+    
 }
 
 #[no_mangle]

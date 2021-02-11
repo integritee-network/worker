@@ -4,6 +4,8 @@
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "std")]
+use serde_json;
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use std::vec::Vec;
@@ -68,4 +70,15 @@ pub struct RpcResponse {
     pub jsonrpc: String,
     pub result: Vec<u8>, // encoded RpcReturnValue
     pub id: u32,
+}
+
+#[cfg(feature = "std")]
+pub fn compose_jsonrpc_call(method: String, data: Vec<u8>) -> String {
+    let direct_invocation_call = RpcRequest {
+        jsonrpc: "2.0".to_owned(),
+        method: method,
+        params: data,
+        id: 1,
+    };
+    serde_json::to_string(&direct_invocation_call).unwrap()
 }

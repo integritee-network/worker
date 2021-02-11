@@ -5045,6 +5045,7 @@ dependencies = [
  "sgx_crypto_helper",
  "sp-core",
  "substratee-stf",
+ "substratee-worker-primitives",
  "ws 0.7.9",
 ]
 
@@ -5056,6 +5057,7 @@ dependencies = [
  "primitive-types 0.6.2",
  "serde",
  "serde_derive",
+ "serde_json",
  "sgx_tstd",
 ]
 
