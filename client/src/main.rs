@@ -108,16 +108,6 @@ fn main() {
                     .help("worker url"),
             )
             .arg(
-                Arg::with_name("worker-port")
-                    .short("P")
-                    .long("worker-port")
-                    .global(true)
-                    .takes_value(true)
-                    .value_name("STRING")
-                    .default_value("2000")
-                    .help("worker port"),
-            )
-            .arg(
                 Arg::with_name("worker-rpc-port")
                     .short("R")
                     .long("worker-rpc-port")

@@ -251,6 +251,7 @@ name = "chain-relay"
 version = "0.6.12-sub2.0.0"
 dependencies = [
  "derive_more",
+ "env_logger",
  "finality-grandpa",
  "frame-system",
  "hash-db",

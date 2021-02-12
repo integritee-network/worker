@@ -24,12 +24,6 @@ args:
         help: Set the websocket port to listen for substrate events
         takes_value: true
         default_value: "9944"
-    - w-port:
-        short: P
-        long: worker-port
-        help: Set the websocket port where the worker api listens
-        takes_value: true
-        default_value: "2000"
     - ws-external:
         long: ws-external
         help: let worker api listen to external requests too      

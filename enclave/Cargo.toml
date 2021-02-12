@@ -138,6 +138,8 @@ features = ["full_crypto"]
 
 [dependencies.chain-relay]
 path = "chain_relay"
+default-features = false
+features = ["sgx"]
 
 [dependencies.substratee-stf]
 path = "../stf"
