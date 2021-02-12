@@ -23,7 +23,7 @@ use log::*;
 
 use codec::Encode;
 use jsonrpc_core::futures::future::{ready, Future, Ready};
-use sgx_tstd::{marker::PhantomData, pin::Pin};
+use std::{marker::PhantomData, pin::Pin};
 
 use sp_runtime::{
     generic::BlockId,

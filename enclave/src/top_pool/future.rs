@@ -21,12 +21,12 @@ pub extern crate alloc;
 use alloc::{boxed::Box, fmt, sync::Arc, vec::Vec};
 use core::hash;
 
-use sgx_tstd::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::TransactionTag as Tag;
 
-use sgx_tstd::{time::Instant, untrusted::time::InstantEx};
+use std::{time::Instant, untrusted::time::InstantEx};
 
 use substratee_stf::ShardIdentifier;
 
@@ -327,7 +327,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         return 0;
     }
 }
-
+/* 
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,4 +356,4 @@ mod tests {
         // data is at least 1024!
         assert!(parity_util_mem::malloc_size(&future) > 1024);
     }
-}
+} */

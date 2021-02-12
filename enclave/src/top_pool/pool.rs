@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
-use sgx_tstd::{
+use std::{
     collections::HashMap, sync::Arc, time::Instant, untrusted::time::InstantEx, vec::Vec,
 };
 use sp_runtime::{

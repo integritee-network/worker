@@ -1,5 +1,5 @@
-use sgx_tstd::collections::HashMap;
-use sgx_tstd::sync::SgxMutex as Mutex;
+use std::collections::HashMap;
+use std::sync::SgxMutex as Mutex;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, NumberFor, Zero},

@@ -19,7 +19,7 @@
 pub extern crate alloc;
 use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec::Vec};
 
-use sgx_tstd::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use core::{cmp, cmp::Ord, default::Default, hash};
 
@@ -658,7 +658,7 @@ fn remove_item<T: PartialEq>(vec: &mut Vec<T>, item: &T) {
         vec.swap_remove(idx);
     }
 }
-
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,17 +678,19 @@ mod tests {
         }
     }
 
-    fn import<H: hash::Hash + Eq + Member, Ex>(
+    fn import<H: hash::Hash + Eq + Member + Ord, Ex>(
         ready: &mut ReadyOperations<H, Ex>,
         tx: TrustedOperation<H, Ex>,
+        shard: ShardIdentifier,
     ) -> error::Result<Vec<Arc<TrustedOperation<H, Ex>>>> {
-        let x = WaitingTrustedOperations::new(tx, ready.provided_tags(), &[]);
-        ready.import(x)
+        let x = WaitingTrustedOperations::new(tx, ready.provided_tags(shard), &[]);
+        ready.import(x, shard)
     }
 
     #[test]
     fn should_replace_transaction_that_provides_the_same_tag() {
         // given
+        let shard = ShardIdentifier::default();
         let mut ready = ReadyOperations::default();
         let mut tx1 = tx(1);
         tx1.requires.clear();
@@ -700,23 +702,24 @@ mod tests {
         tx3.provides = vec![vec![4]];
 
         // when
-        import(&mut ready, tx2).unwrap();
-        import(&mut ready, tx3).unwrap();
-        assert_eq!(ready.get().count(), 2);
+        import(&mut ready, tx2, shard).unwrap();
+        import(&mut ready, tx3, shard).unwrap();
+        assert_eq!(ready.get(shard).count(), 2);
 
         // too low priority
-        import(&mut ready, tx1.clone()).unwrap_err();
+        import(&mut ready, tx1.clone(), shard).unwrap_err();
 
         tx1.priority = 10;
-        import(&mut ready, tx1).unwrap();
+        import(&mut ready, tx1, shard).unwrap();
 
         // then
-        assert_eq!(ready.get().count(), 1);
+        assert_eq!(ready.get(shard).count(), 1);
     }
 
     #[test]
     fn should_replace_multiple_transactions_correctly() {
         // given
+        let shard = ShardIdentifier::default();
         let mut ready = ReadyOperations::default();
         let mut tx0 = tx(0);
         tx0.requires = vec![];
@@ -740,20 +743,21 @@ mod tests {
         tx2_2.priority = 10;
 
         for tx in vec![tx0, tx1, tx2, tx3, tx4] {
-            import(&mut ready, tx).unwrap();
+            import(&mut ready, tx, shard).unwrap();
         }
-        assert_eq!(ready.get().count(), 5);
+        assert_eq!(ready.get(shard).count(), 5);
 
         // when
-        import(&mut ready, tx2_2).unwrap();
+        import(&mut ready, tx2_2, shard).unwrap();
 
         // then
-        assert_eq!(ready.get().count(), 3);
+        assert_eq!(ready.get(shard).count(), 3);
     }
 
     #[test]
     fn should_return_best_transactions_in_correct_order() {
         // given
+        let shard = ShardIdentifier::default();
         let mut ready = ReadyOperations::default();
         let mut tx1 = tx(1);
         tx1.requires.clear();
@@ -780,13 +784,13 @@ mod tests {
 
         // when
         for tx in vec![tx1, tx2, tx3, tx4, tx5] {
-            import(&mut ready, tx).unwrap();
+            import(&mut ready, tx, shard).unwrap();
         }
 
         // then
         assert_eq!(ready.best.len(), 1);
 
-        let mut it = ready.get().map(|tx| tx.data[0]);
+        let mut it = ready.get(shard).map(|tx| tx.data[0]);
 
         assert_eq!(it.next(), Some(1));
         assert_eq!(it.next(), Some(2));
@@ -856,3 +860,4 @@ mod tests {
         );
     }
 }
+*/

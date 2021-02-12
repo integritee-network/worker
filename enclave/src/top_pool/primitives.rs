@@ -3,7 +3,7 @@
 extern crate alloc;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::{hash::Hash, pin::Pin};
-use sgx_tstd::collections::HashMap;
+use std::collections::HashMap;
 
 use jsonrpc_core::futures::{channel, Future, Stream};
 use sp_runtime::{

@@ -26,7 +26,7 @@ use alloc::{
 };
 use core::{ops::Deref, result::Result};
 
-use sgx_tstd::{
+use std::{
     sync::atomic::{AtomicPtr, Ordering},
     sync::{Arc, SgxMutex},
 };

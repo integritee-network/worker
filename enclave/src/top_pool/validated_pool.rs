@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use sgx_tstd::{
+use std::{
     collections::{HashMap, HashSet},
     string::String,
     sync::Arc,
@@ -581,11 +581,11 @@ where
         Ok(())
     }
 
-    /// Get rotator reference.
+   /*  /// Get rotator reference.
     #[cfg(test)]
     pub fn rotator(&self) -> &PoolRotator<ExtrinsicHash<B>> {
         &self.rotator
-    }
+    } */
 
     /// Get api reference.
     pub fn api(&self) -> &B {

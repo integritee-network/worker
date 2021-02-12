@@ -22,7 +22,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 use log::*;
 
-use sgx_tstd::sync::Arc;
+use std::sync::Arc;
 
 use codec::{Decode, Encode};
 use core::iter::Iterator;
