@@ -109,12 +109,12 @@ fn main() {
             )
             .arg(
                 Arg::with_name("worker-rpc-port")
-                    .short("R")
+                    .short("P")
                     .long("worker-rpc-port")
                     .global(true)
                     .takes_value(true)
                     .value_name("STRING")
-                    .default_value("4000")
+                    .default_value("2000")
                     .help("worker direct invocation port"),
             )
             .name("substratee-client")

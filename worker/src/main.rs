@@ -84,7 +84,7 @@ fn main() {
     };
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
 
-    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("4000");
+    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("2000");
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
