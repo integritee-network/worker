@@ -5058,6 +5058,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "sgx_tstd",
+ "sp-core",
 ]
 
 [[package]]

@@ -458,7 +458,7 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
 }
 
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u8>> {
-    // TODO: ensure getter is signed
+    // TODO: ensure getter is signed?
     let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, getter) {
         Ok((encoded, encrypted)) => (encoded, encrypted),
         Err(msg) => {
@@ -626,7 +626,7 @@ fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperatio
     };
     let direct_invocation_call = RpcRequest {
         jsonrpc: "2.0".to_owned(),
-        method: "author_submitAndWatchExtrinsic".to_owned(), // TODO: Watch flag?
+        method: "author_submitAndWatchExtrinsic".to_owned(),
         params: data.encode(),
         id: 1,
     };

@@ -286,12 +286,10 @@ pub unsafe extern "C" fn ocall_send_status(
             let mut response = &mut client_response.response;
         
             // create return value
-            let result = RpcReturnValue {
-                value: status_slice.to_vec(),
-                do_watch: false,
-                status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
-            };
-
+            // TODO: Signature?
+            let submitted = DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted);
+            let result = RpcReturnValue::new(status_slice.to_vec(), false, submitted); 
+ 
             // update response
             response.result = result.encode();
             client_response

@@ -10,6 +10,8 @@ use serde_json;
 use sgx_tstd as std;
 use std::vec::Vec;
 
+use sp_core::ed25519::Signature;
+
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum DirectCallStatus {
     /// DirectCall was successfully executed 
@@ -53,13 +55,15 @@ pub struct RpcReturnValue {
     pub value: Vec<u8>,
     pub do_watch: bool,
     pub status: DirectCallStatus,
+    //pub signature: Signature,
 }
 impl RpcReturnValue {
-    pub fn new(value: Vec<u8>, watch: bool, status: DirectCallStatus) -> Self {
+    pub fn new(val: Vec<u8>, watch: bool, status: DirectCallStatus) -> Self {
         Self {
-            value: value,
+            value: val,
             do_watch: watch,
             status: status,
+            //signature: sign,
         }
     }
 }

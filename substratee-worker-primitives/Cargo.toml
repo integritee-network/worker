@@ -17,6 +17,11 @@ features = ["untrusted_fs","net","backtrace"]
 rev = "v1.1.3"
 optional = true
 
+[dependencies.sp-core]
+git = "https://github.com/paritytech/substrate.git"
+rev = "a208da16"
+default-features = false
+
 [features]
 default = ["std"]
 std = [ 'serde',
