@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Transaction pool errors.
+//! TrustedOperation pool errors.
 
 use sp_runtime::transaction_validity::TransactionPriority as Priority;
 
@@ -23,29 +23,29 @@ extern crate alloc;
 use alloc::string::String;
 
 use derive_more::{Display, From};
-/// Transaction pool result.
+/// TrustedOperation pool result.
 pub type Result<T> = sgx_tstd::result::Result<T, Error>;
 
-/// Transaction pool error type.
+/// TrustedOperation pool error type.
 #[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
-    #[display("Unknown transaction validity")]
-    UnknownTransaction,
+    #[display("Unknown trusted operation validity")]
+    UnknownTrustedOperation,
 
-    #[display("Invalid transaction validity")]
-    InvalidTransaction,
+    #[display("Invalid trusted operation validity")]
+    InvalidTrustedOperation,
 
     /// Incorrect extrinsic format.
 
-    /// The transaction validity returned no "provides" tag.
+    /// The operation validity returned no "provides" tag.
     ///
-    /// Such transactions are not accepted to the pool, since we use those tags
-    /// to define identity of transactions (occupance of the same "slot").
-    #[display("Transaction does not provide any tags, so the pool can't identify it")]
+    /// Such operations are not accepted to the pool, since we use those tags
+    /// to define identity of operations (occupance of the same "slot").
+    #[display("Trusted Operation does not provide any tags, so the pool can't identify it")]
     NoTagsProvided,
 
-    #[display("Transaction temporarily Banned")]
+    #[display("Trusted Operation temporarily Banned")]
     TemporarilyBanned,
 
     #[display("Already imported")]
@@ -54,25 +54,25 @@ pub enum Error {
     #[display("Too low priority")]
     TooLowPriority(Priority),
 
-    #[display("Transaction with cyclic dependency")]
+    #[display("TrustedOperation with cyclic dependency")]
     CycleDetected,
 
-    #[display("Transaction couldn't enter the pool because of the limit")]
+    #[display("TrustedOperation couldn't enter the pool because of the limit")]
     ImmediatelyDropped,
 
     #[from(ignore)]
     #[display("{0}")]
     InvalidBlockId(String),
 
-    #[display("The pool is not accepting future transactions")]
-    RejectedFutureTransaction,
+    #[display("The pool is not accepting future trusted operations")]
+    RejectedFutureTrustedOperation,
 
     #[display(fmt = "Extrinsic verification error")]
     #[from(ignore)]
     Verification,
 }
 
-/// Transaction pool error conversion.
+/// TrustedOperation pool error conversion.
 pub trait IntoPoolError: Send + Sized {
     /// Try to extract original `Error`
     ///

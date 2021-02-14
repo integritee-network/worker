@@ -4898,6 +4898,7 @@ dependencies = [
  "sc-keystore",
  "serde",
  "serde_json",
+ "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -5037,14 +5038,13 @@ dependencies = [
 name = "substratee-worker-api"
 version = "0.8.0"
 dependencies = [
- "hex 0.4.2",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "serde_derive",
  "serde_json",
  "sgx_crypto_helper",
- "sp-core",
  "substratee-stf",
+ "substratee-worker-primitives",
  "ws 0.7.9",
 ]
 
@@ -5056,7 +5056,9 @@ dependencies = [
  "primitive-types 0.6.2",
  "serde",
  "serde_derive",
+ "serde_json",
  "sgx_tstd",
+ "sp-core",
 ]
 
 [[package]]

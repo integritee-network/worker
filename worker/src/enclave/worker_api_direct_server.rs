@@ -17,12 +17,10 @@
 use sgx_types::*;
 
 use codec::{Decode, Encode};
-use core::result::Result as StdResult;
 use log::*;
 use sp_core::H256 as Hash;
 use std::collections::HashMap;
 use std::slice;
-use std::sync::mpsc::Sender as MpscSender;
 use std::sync::{
     atomic::{AtomicPtr, Ordering},
     Arc, Mutex, MutexGuard,
@@ -30,9 +28,10 @@ use std::sync::{
 use std::thread;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
-use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TransactionStatus};
+use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TrustedOperationStatus, DirectCallStatus};
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
+static EID: AtomicPtr<u64> = AtomicPtr::new(0 as *mut sgx_enclave_id_t);
 
 extern "C" {
     fn initialize_pool(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -61,27 +60,26 @@ impl DirectWsServerRequest {
 
 pub fn start_worker_api_direct_server(
     addr: String,
-    worker: MpscSender<DirectWsServerRequest>,
     eid: sgx_enclave_id_t,
 ) {
     // Server WebSocket handler
     struct Server {
         client: Sender,
-        worker: MpscSender<DirectWsServerRequest>,
-    }
+    }  
+
+    // initialize static pointer to eid
+    let eid_ptr = Arc::into_raw(Arc::new(eid));
+    EID.store(eid_ptr as *mut sgx_enclave_id_t, Ordering::SeqCst);
 
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
-            debug!(
-                "Forwarding message to worker api direct event loop: {:?}",
-                msg
+            let request = DirectWsServerRequest::new(
+                self.client.clone(),
+                msg.to_string(),
             );
-            self.worker
-                .send(DirectWsServerRequest::new(
-                    self.client.clone(),
-                    msg.to_string(),
-                ))
-                .unwrap();
+            if let Err(_) = handle_direct_invocation_request(request) {
+                error!("direct invocation call was not successful");
+            }
             Ok(())
         }
 
@@ -97,7 +95,6 @@ pub fn start_worker_api_direct_server(
     thread::spawn(move || {
         match listen(addr.clone(), |out| Server {
             client: out,
-            worker: worker.clone(),
         }) {
             Ok(_) => (),
             Err(e) => {
@@ -109,7 +106,7 @@ pub fn start_worker_api_direct_server(
         };
     });
 
-    // initialise tx pool in enclave
+    // initialise top pool in enclave
     thread::spawn(move || {
         let mut retval = sgx_status_t::SGX_SUCCESS;
         let result = unsafe { initialize_pool(eid, &mut retval) };
@@ -147,9 +144,9 @@ fn load_watched_list() -> Option<&'static Mutex<HashMap<Hash, WatchingClient>>> 
 
 pub fn handle_direct_invocation_request(
     req: DirectWsServerRequest,
-    eid: sgx_enclave_id_t,
 ) -> Result<()> {
     info!("Got message '{:?}'. ", req.request);
+    let eid = unsafe{ *EID.load(Ordering::SeqCst)};
     // forwarding rpc string directly to enclave
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let response_len = 8192;
@@ -176,51 +173,44 @@ pub fn handle_direct_invocation_request(
             error!("[RPC-call] ECALL Enclave Failed {}!", result.as_str());
         }
     }
-    // of type: {"jsonrpc":"2.0","result":"{\"value\":[..],\"do_watch\":true}","id":1}
-    let decoded_response: String = String::from_utf8_lossy(&response).to_string();
-    let full_rpc_response: RpcResponse = serde_json::from_str(&decoded_response).unwrap();
-    let mut result_of_rpc_response =
-        RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()).unwrap();
-    let decoded_result: StdResult<Vec<u8>, Vec<u8>> =
-        StdResult::decode(&mut result_of_rpc_response.value.as_slice()).unwrap();
-
-    match decoded_result {
-        Ok(hash_vec) => {
-            let hash = Hash::decode(&mut hash_vec.as_slice()).unwrap();
-            result_of_rpc_response.value = hash.to_string().encode();
-            // start watching the call with the specific hash
-            if result_of_rpc_response.do_watch {
-                // Aquire lock on watched list
-                let mutex = load_watched_list().unwrap();
-                let mut guard: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
-
-                // create new key and value entries to store
-                let new_client = WatchingClient {
-                    client: req.client.clone(),
-                    response: RpcResponse {
-                        result: result_of_rpc_response.encode(),
-                        jsonrpc: full_rpc_response.jsonrpc.clone(),
-                        id: full_rpc_response.id,
-                    },
-                };
-                guard.insert(hash, new_client);
+    let decoded_response = String::from_utf8_lossy(&response).to_string();
+    if let Ok(full_rpc_response) = 
+        serde_json::from_str(&decoded_response) as serde_json::Result<RpcResponse> {
+        if let Ok(result_of_rpc_response) =
+            RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()) {
+            match result_of_rpc_response.status {
+                DirectCallStatus::TrustedOperationStatus(_) => {             
+                    if result_of_rpc_response.do_watch {
+                        // start watching the call with the specific hash
+                        if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice()) {
+                            // Aquire lock on watched list
+                            let mutex = load_watched_list().unwrap();
+                            let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
+                            
+                            // create new key and value entries to store
+                            let new_client = WatchingClient {
+                                client: req.client.clone(),
+                                response: RpcResponse {
+                                    result: result_of_rpc_response.encode(),
+                                    jsonrpc: full_rpc_response.jsonrpc.clone(),
+                                    id: full_rpc_response.id,
+                                },
+                            };
+                            // save in watch list
+                            watch_list.insert(hash, new_client);
+                        }
+                    }
+                },
+                // Simple return value, no need of further server actions
+                _ => { },
             }
-        }
-        Err(err_msg_vec) => {
-            let err_msg = String::decode(&mut err_msg_vec.as_slice()).unwrap();
-            result_of_rpc_response.value = err_msg.encode();
-            result_of_rpc_response.do_watch = false;
-            result_of_rpc_response.status = TransactionStatus::Error;
-        }
-    }
-    // create new return value
-    let updated_rpc_response = RpcResponse {
-        result: result_of_rpc_response.encode(),
-        jsonrpc: full_rpc_response.jsonrpc,
-        id: full_rpc_response.id,
-    };
-    req.client
-        .send(serde_json::to_string(&updated_rpc_response).unwrap())
+        }      
+        return req.client
+                .send(serde_json::to_string(&full_rpc_response).unwrap())
+    } 
+    // could not decode rpcresponse - maybe a String as return value?
+    req.client.send(decoded_response)
+    
 }
 
 #[no_mangle]
@@ -232,25 +222,24 @@ pub unsafe extern "C" fn ocall_update_status_event(
 ) -> sgx_status_t {
     let mut status_update_slice =
         slice::from_raw_parts(status_update_encoded, status_size as usize);
-    let status_update: TransactionStatus = Decode::decode(&mut status_update_slice).unwrap();
+    let status_update = TrustedOperationStatus::decode(&mut status_update_slice).unwrap();
     let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
     if let Ok(hash) = Hash::decode(&mut hash_slice) {
         // Aquire watched list lock
         let mutex = load_watched_list().unwrap();
-        let mut guard = mutex.lock().unwrap();
+        let mut watch_list = mutex.lock().unwrap();
         let mut continue_watching = true;
-        if let Some(client_event) = guard.get_mut(&hash) {
-            //println!("Returned hash: {:?}", hash);
+        if let Some(client_event) = watch_list.get_mut(&hash) {
             let mut event = &mut client_event.response;
             // Aquire result of old RpcResponse
             let old_result: Vec<u8> = event.result.clone();
             let mut result = RpcReturnValue::decode(&mut old_result.as_slice()).unwrap();
 
             match status_update {
-                TransactionStatus::Invalid
-                | TransactionStatus::InBlock
-                | TransactionStatus::Finalized
-                | TransactionStatus::Usurped => {
+                TrustedOperationStatus::Invalid
+                | TrustedOperationStatus::InBlock
+                | TrustedOperationStatus::Finalized
+                | TrustedOperationStatus::Usurped => {
                     // Stop watching
                     result.do_watch = false;
                     continue_watching = false;
@@ -258,7 +247,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
                 _ => {}
             };
             // update response
-            result.status = status_update;
+            result.status = DirectCallStatus::TrustedOperationStatus(status_update);
             event.result = result.encode();
             client_event
                 .client
@@ -272,8 +261,46 @@ pub unsafe extern "C" fn ocall_update_status_event(
             continue_watching = false;
         }
         if !continue_watching {
-            guard.remove(&hash);
+            watch_list.remove(&hash);
         }
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_send_status(
+    hash_encoded: *const u8,
+    hash_size: u32,
+    status_encoded: *const u8,
+    status_size: u32,
+) -> sgx_status_t {
+    let status_slice =
+        slice::from_raw_parts(status_encoded, status_size as usize);  
+    let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
+    if let Ok(hash) = Hash::decode(&mut hash_slice) {
+        // Aquire watched list lock
+        let mutex = load_watched_list().unwrap();
+        let mut guard = mutex.lock().unwrap();
+        if let Some(client_response) = guard.get_mut(&hash) {
+            let mut response = &mut client_response.response;
+        
+            // create return value
+            // TODO: Signature?
+            let submitted = DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted);
+            let result = RpcReturnValue::new(status_slice.to_vec(), false, submitted); 
+ 
+            // update response
+            response.result = result.encode();
+            client_response
+                .client
+                .send(serde_json::to_string(&response).unwrap())
+                .unwrap();
+        
+            client_response.client.close(CloseCode::Normal).unwrap();
+
+        } 
+        guard.remove(&hash);
     }
 
     sgx_status_t::SGX_SUCCESS

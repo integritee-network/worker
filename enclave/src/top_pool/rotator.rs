@@ -27,7 +27,7 @@ use sgx_tstd::{
     time::{Duration, Instant},
 };
 
-use crate::transaction_pool::base_pool::Transaction;
+use crate::top_pool::base_pool::TrustedOperation;
 
 /// Expected size of the banned extrinsics cache.
 const EXPECTED_SIZE: usize = 2048;
@@ -82,7 +82,7 @@ impl<Hash: hash::Hash + Eq + Clone> PoolRotator<Hash> {
         &self,
         now: &Instant,
         current_block: u64,
-        xt: &Transaction<Hash, Ex>,
+        xt: &TrustedOperation<Hash, Ex>,
     ) -> bool {
         if xt.valid_till > current_block {
             return false;
@@ -115,9 +115,9 @@ mod tests {
         }
     }
 
-    fn tx() -> (Hash, Transaction<Hash, Ex>) {
+    fn tx() -> (Hash, TrustedOperation<Hash, Ex>) {
         let hash = 5u64;
-        let tx = Transaction {
+        let tx = TrustedOperation {
             data: (),
             bytes: 1,
             hash: hash.clone(),
@@ -181,9 +181,9 @@ mod tests {
     #[test]
     fn should_garbage_collect() {
         // given
-        fn tx_with(i: u64, valid_till: u64) -> Transaction<Hash, Ex> {
+        fn tx_with(i: u64, valid_till: u64) -> TrustedOperation<Hash, Ex> {
             let hash = i;
-            Transaction {
+            TrustedOperation {
                 data: (),
                 bytes: 2,
                 hash,

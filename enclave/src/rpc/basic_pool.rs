@@ -14,18 +14,18 @@ use core::pin::Pin;
 use jsonrpc_core::futures::channel::oneshot;
 use jsonrpc_core::futures::future::{ready, Future, FutureExt};
 
-use crate::transaction_pool::{
-    base_pool::Transaction,
+use crate::top_pool::{
+    base_pool::TrustedOperation,
     error::IntoPoolError,
     pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
-    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TransactionPool, TxHash},
+    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool, TxHash},
 };
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
-type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<Transaction<Hash, Data>>> + Send>;
+type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
 
-type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, TrustedCallSigned>;
+type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, StfTrustedOperation>;
 
 type PolledIterator<PoolApi> = Pin<Box<dyn Future<Output = ReadyIteratorFor<PoolApi>> + Send>>;
 
@@ -69,7 +69,7 @@ impl<T, Block: BlockT> ReadyPoll<T, Block> {
     }
 }
 
-/// Basic implementation of transaction pool that can be customized by providing PoolApi.
+/// Basic implementation of operation pool that can be customized by providing PoolApi.
 pub struct BasicPool<PoolApi, Block>
 where
     Block: BlockT,
@@ -85,7 +85,7 @@ where
     Block: BlockT,
     PoolApi: ChainApi<Block = Block> + 'static,
 {
-    /// Create new basic transaction pool with provided api and custom
+    /// Create new basic operation pool with provided api and custom
     /// revalidation type.
     pub fn create(
         options: PoolOptions,
@@ -111,7 +111,7 @@ where
     }
 }
 
-impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
+impl<PoolApi, Block> TrustedOperationPool for BasicPool<PoolApi, Block>
 where
     Block: BlockT,
     PoolApi: ChainApi<Block = Block> + 'static,
@@ -119,38 +119,38 @@ where
 {
     type Block = PoolApi::Block;
     type Hash = ExtrinsicHash<PoolApi>;
-    type InPoolTransaction = Transaction<TxHash<Self>, TrustedCallSigned>;
+    type InPoolOperation = TrustedOperation<TxHash<Self>, StfTrustedOperation>;
     type Error = PoolApi::Error;
 
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xts: Vec<TrustedCallSigned>,
+        ops: Vec<StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
         let pool = self.pool.clone();
         let at = *at;
-        async move { pool.submit_at(&at, source, xts, shard).await }.boxed()
+        async move { pool.submit_at(&at, source, ops, shard).await }.boxed()
     }
 
     fn submit_one(
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        op: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error> {
         let pool = self.pool.clone();
         let at = *at;
-        async move { pool.submit_one(&at, source, xt, shard).await }.boxed()
+        async move { pool.submit_one(&at, source, op, shard).await }.boxed()
     }
 
     fn submit_and_watch(
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error> {
         let at = *at;
@@ -163,7 +163,7 @@ where
         hashes: &[TxHash<Self>],
         shard: ShardIdentifier,
         inblock: bool,
-    ) -> Vec<Arc<Self::InPoolTransaction>> {
+    ) -> Vec<Arc<Self::InPoolOperation>> {
         self.pool
             .validated_pool()
             .remove_invalid(hashes, shard, inblock)
@@ -177,7 +177,7 @@ where
         self.pool.validated_pool().import_notification_stream()
     }
 
-    fn hash_of(&self, xt: &TrustedCallSigned) -> TxHash<Self> {
+    fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self> {
         self.pool.hash_of(xt)
     }
 
@@ -189,7 +189,7 @@ where
         &self,
         hash: &TxHash<Self>,
         shard: ShardIdentifier,
-    ) -> Option<Arc<Self::InPoolTransaction>> {
+    ) -> Option<Arc<Self::InPoolOperation>> {
         self.pool.validated_pool().ready_by_hash(hash, shard)
     }
 

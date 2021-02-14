@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'scssubstratee/substratee_dev:18.04-2.12-1.1.3-001'
+      image 'scssubstratee/substratee_dev:1804-2.12-1.1.3-001'
       args '''
         -u root
         --privileged
