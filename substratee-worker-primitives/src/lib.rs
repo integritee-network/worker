@@ -4,45 +4,76 @@
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "std")]
+use serde_json;
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use std::vec::Vec;
 
+use sp_core::ed25519::Signature;
+
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
-pub enum TransactionStatus {
-    /// Transaction is submitted to the transaction pool.
+pub enum DirectCallStatus {
+    /// DirectCall was successfully executed 
+    Ok,
+    /// Trusted Call Status
+    TrustedOperationStatus(TrustedOperationStatus),
+    /// DirectCall could not be executed
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Encode, Decode)]
+pub enum TrustedOperationStatus {
+    /// TrustedOperation is submitted to the top pool.
     Submitted,
-    /// Transaction is part of the future queue.
+    /// TrustedOperation is part of the future queue.
     Future,
-    /// Transaction is part of the ready queue.
+    /// TrustedOperation is part of the ready queue.
     Ready,
-    /// The transaction has been broadcast to the given peers.
+    /// The operation has been broadcast to the given peers.
     Broadcast,
-    /// Transaction has been included in block with given hash.
+    /// TrustedOperation has been included in block with given hash.
     InBlock,
-    /// The block this transaction was included in has been retracted.
+    /// The block this operation was included in has been retracted.
     Retracted,
     /// Maximum number of finality watchers has been reached,
     /// old watchers are being removed.
     FinalityTimeout,
-    /// Transaction has been finalized by a finality-gadget, e.g GRANDPA
+    /// TrustedOperation has been finalized by a finality-gadget, e.g GRANDPA
     Finalized,
-    /// Transaction has been replaced in the pool, by another transaction
+    /// TrustedOperation has been replaced in the pool, by another operation
     /// that provides the same tags. (e.g. same (sender, nonce)).
     Usurped,
-    /// Transaction has been dropped from the pool because of the limit.
+    /// TrustedOperation has been dropped from the pool because of the limit.
     Dropped,
-    /// Transaction is no longer valid in the current state.
+    /// TrustedOperation is no longer valid in the current state.
     Invalid,
-    /// Error occured somewhere in the outside process
-    Error,
 }
 
 #[derive(Encode, Decode)]
 pub struct RpcReturnValue {
-    pub value: Vec<u8>, // Hash or Error message
+    pub value: Vec<u8>,
     pub do_watch: bool,
-    pub status: TransactionStatus,
+    pub status: DirectCallStatus,
+    //pub signature: Signature,
+}
+impl RpcReturnValue {
+    pub fn new(val: Vec<u8>, watch: bool, status: DirectCallStatus) -> Self {
+        Self {
+            value: val,
+            do_watch: watch,
+            status: status,
+            //signature: sign,
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+#[derive(Encode, Decode, Serialize, Deserialize)]
+pub struct RpcResponse {
+    pub jsonrpc: String,
+    pub result: Vec<u8>, // encoded RpcReturnValue
+    pub id: u32,
 }
 
 #[cfg(feature = "std")]
@@ -55,9 +86,14 @@ pub struct RpcRequest {
 }
 
 #[cfg(feature = "std")]
-#[derive(Encode, Decode, Serialize, Deserialize)]
-pub struct RpcResponse {
-    pub jsonrpc: String,
-    pub result: Vec<u8>,
-    pub id: u32,
+impl RpcRequest {
+    pub fn compose_jsonrpc_call(method: String, data: Vec<u8>) -> String {
+        let direct_invocation_call = RpcRequest {
+            jsonrpc: "2.0".to_owned(),
+            method: method,
+            params: data,
+            id: 1,
+        };
+        serde_json::to_string(&direct_invocation_call).unwrap()
+    }
 }

@@ -43,7 +43,7 @@ use crate::rpc::{
     basic_pool::BasicPool,
 };
 
-use crate::transaction_pool::pool::Options as PoolOptions;
+use crate::top_pool::pool::Options as PoolOptions;
 
 use jsonrpc_core::futures::executor;
 use jsonrpc_core::Error as RpcError;
@@ -57,14 +57,22 @@ use chain_relay::Block;
 
 use substratee_node_primitives::Request;
 use substratee_worker_primitives::RpcReturnValue;
-use substratee_worker_primitives::TransactionStatus;
+use substratee_worker_primitives::{TrustedOperationStatus, DirectCallStatus};
 
 use crate::utils::write_slice_and_whitespace_pad;
+use crate::rsa3072;
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
 
 extern "C" {
     pub fn ocall_update_status_event(
+        ret_val: *mut sgx_status_t,
+        hash_encoded: *const u8,
+        hash_size: u32,
+        status_update_encoded: *const u8,
+        status_size: u32,
+    ) -> sgx_status_t;
+    pub fn ocall_send_status(
         ret_val: *mut sgx_status_t,
         hash_encoded: *const u8,
         hash_size: u32,
@@ -87,7 +95,7 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_tx_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>> {
+pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>> {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst)
         as *mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
     if ptr.is_null() {
@@ -123,11 +131,10 @@ fn decode_shard_from_base58(shard_base58: String) -> Result<ShardIdentifier, Str
 }
 
 fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
-    let error: Result<Vec<u8>, Vec<u8>> = Err(error_msg.encode());
     let return_value = RpcReturnValue {
-        value: error.encode(),
+        value: error_msg.encode(),
         do_watch: false,
-        status: TransactionStatus::Invalid,
+        status: DirectCallStatus::Error,
     };
     return_value.encode()
 }
@@ -146,7 +153,7 @@ fn init_io_handler() -> IoHandler {
             match params.parse::<Vec<u8>>() {
                 Ok(encoded_params) => {
                     // Aquire lock
-                    let &ref tx_pool_mutex = load_tx_pool().unwrap();
+                    let &ref tx_pool_mutex = load_top_pool().unwrap();
                     let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                     let tx_pool = Arc::new(tx_pool_guard.deref());
                     let author = Author::new(tx_pool);
@@ -157,20 +164,21 @@ fn init_io_handler() -> IoHandler {
                             let encrypted_trusted_call: Vec<u8> = request.cyphertext;
                             let result = async {
                                 author
-                                    .watch_call(encrypted_trusted_call.clone(), shard)
+                                    .watch_top(encrypted_trusted_call.clone(), shard)
                                     .await
                             };
                             let response: Result<Hash, RpcError> = executor::block_on(result);
-                            let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                                Ok(hash_value) => Ok(hash_value.encode()),
-                                Err(rpc_error) => Err(rpc_error.message.encode()),
+                            let json_value = match response {
+                                Ok(hash_value) => {
+                                    RpcReturnValue {
+                                        do_watch: true,
+                                        value: hash_value.encode(),
+                                        status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                    }.encode()
+                                },
+                                Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
                             };
-                            let json_value = RpcReturnValue {
-                                do_watch: true,
-                                value: encodable_response.encode(),
-                                status: TransactionStatus::Submitted,
-                            };
-                            Ok(json!(json_value.encode()))
+                            Ok(json!(json_value))
                         }
                         Err(_) => Ok(json!(compute_encoded_return_error(
                             "Could not decode request".to_owned()
@@ -192,7 +200,7 @@ fn init_io_handler() -> IoHandler {
         match params.parse::<Vec<u8>>() {
             Ok(encoded_params) => {
                 // Aquire lock
-                let &ref tx_pool_mutex = load_tx_pool().unwrap();
+                let &ref tx_pool_mutex = load_top_pool().unwrap();
                 let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                 let tx_pool = Arc::new(tx_pool_guard.deref());
                 let author = Author::new(tx_pool);
@@ -200,23 +208,24 @@ fn init_io_handler() -> IoHandler {
                 match Request::decode(&mut encoded_params.as_slice()) {
                     Ok(request) => {
                         let shard: ShardIdentifier = request.shard;
-                        let encrypted_trusted_call: Vec<u8> = request.cyphertext;
+                        let encrypted_trusted_op: Vec<u8> = request.cyphertext;
                         let result = async {
                             author
-                                .submit_call(encrypted_trusted_call.clone(), shard)
+                                .submit_top(encrypted_trusted_op.clone(), shard)
                                 .await
                         };
                         let response: Result<Hash, RpcError> = executor::block_on(result);
-                        let encodable_response: Result<Vec<u8>, Vec<u8>> = match response {
-                            Ok(hash_value) => Ok(hash_value.encode()),
-                            Err(rpc_error) => Err(rpc_error.message.encode()),
+                        let json_value = match response {
+                            Ok(hash_value) => {
+                                RpcReturnValue {
+                                    do_watch: false,
+                                    value: hash_value.encode(),
+                                    status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                }.encode()
+                            },
+                            Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
                         };
-                        let json_value = RpcReturnValue {
-                            do_watch: true,
-                            value: encodable_response.encode(),
-                            status: TransactionStatus::Submitted,
-                        };
-                        Ok(json!(json_value.encode()))
+                        Ok(json!(json_value))
                     }
                     Err(_) => Ok(json!(compute_encoded_return_error(
                         "Could not decode request".to_owned()
@@ -230,7 +239,6 @@ fn init_io_handler() -> IoHandler {
         }
     });
 
-    // TODO: Match Interface to the one of submit and watch extrinsic .. Result<Vec[u8]..>
     // author_pendingExtrinsics
     let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
     rpc_methods_vec.push(author_pending_extrinsic_name);
@@ -238,34 +246,61 @@ fn init_io_handler() -> IoHandler {
         match params.parse::<Vec<String>>() {
             Ok(shards) => {
                 // Aquire tx_pool lock
-                let &ref tx_pool_mutex = load_tx_pool().unwrap();
+                let &ref tx_pool_mutex = load_top_pool().unwrap();
                 let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                 let tx_pool = Arc::new(tx_pool_guard.deref());
                 let author = Author::new(tx_pool);
 
-                let mut retrieved_calls = vec![];
+                let mut retrieved_operations = vec![];
                 for shard_base58 in shards.iter() {
                     let shard = match decode_shard_from_base58(shard_base58.clone()) {
                         Ok(id) => id,
                         Err(msg) => return Ok(Value::String(format!("{}", msg))),
                     };
-                    let result: Result<Vec<Vec<u8>>, _> = author.pending_calls(shard);
-                    if let Ok(vec_of_calls) = result {
-                        retrieved_calls.push(vec_of_calls);
-                    }
+                    if let Ok(vec_of_operations) = author.pending_tops(shard) {
+                        retrieved_operations.push(vec_of_operations);
+                    }           
                 }
-                Ok(Value::String(format!(
-                    "Pending Extrinsics: {:?}",
-                    retrieved_calls
-                )))
+                let json_value = RpcReturnValue {
+                            do_watch: false,
+                            value: retrieved_operations.encode(),
+                            status: DirectCallStatus::Ok,
+                };
+                Ok(json!(json_value.encode()))
             }
-            Err(e) => Ok(Value::String(format!(
-                "Could not retrieve pending calls due to: {}",
-                e
-            ))),
+            Err(e) => {
+                let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
+                Ok(json!(compute_encoded_return_error(error_msg)))
+            }            
         }
     });
 
+    // author_getShieldingKey
+    let rsa_pubkey_name: &str = "author_getShieldingKey";
+    rpc_methods_vec.push(rsa_pubkey_name);
+    io.add_sync_method(rsa_pubkey_name, move |_: Params| {       
+        let rsa_pubkey = match rsa3072::unseal_pubkey() {
+            Ok(key) => key,
+            Err(status) => {
+                let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);
+                return Ok(json!(compute_encoded_return_error(error_msg)))
+            },
+        };
+    
+        let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
+            Ok(k) => k,
+            Err(x) => {
+                let error_msg: String = format!(
+                    "[Enclave] can't serialize rsa_pubkey {:?} {}",
+                    rsa_pubkey, x);
+                return Ok(json!(compute_encoded_return_error(error_msg)))
+            },
+        };
+        let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectCallStatus::Ok);
+        Ok(json!(json_value.encode()))            
+    });
+
+    
     // chain_subscribeAllHeads
     let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
     rpc_methods_vec.push(chain_subscribe_all_heads_name);
@@ -327,6 +362,7 @@ fn init_io_handler() -> IoHandler {
     io.add_sync_method("rpc_methods", move |_: Params| {
         Ok(Value::String(rpc_methods_string.to_owned()))
     });
+
     io
 }
 
@@ -350,7 +386,6 @@ pub unsafe extern "C" fn call_rpc_methods(
     };
     // Rpc Response String
     let response_string = io.handle_request_sync(request_string).unwrap().to_string();
-    debug! {"Released Txpool Lock"};
 
     // update response outside of enclave
     let response_slice = from_raw_parts_mut(response, response_len as usize);
@@ -358,16 +393,47 @@ pub unsafe extern "C" fn call_rpc_methods(
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn update_status_event<H: Encode>(hash: H, status_update: TransactionStatus) -> Result<(), ()> {
+pub fn update_status_event<H: Encode>(hash: H, status_update: TrustedOperationStatus) -> Result<(), ()> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+    let hash_encoded = hash.encode();
+    let status_update_encoded = status_update.encode();
 
     let res = unsafe {
         ocall_update_status_event(
             &mut rt as *mut sgx_status_t,
-            hash.encode().as_ptr(),
-            hash.encode().len() as u32,
-            status_update.encode().as_ptr(),
-            status_update.encode().len() as u32,
+            hash_encoded.as_ptr(),
+            hash_encoded.len() as u32,
+            status_update_encoded.as_ptr(),
+            status_update_encoded.len() as u32,
+        )
+    };
+
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(());
+    }
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(());
+    }
+
+    Ok(())
+}
+
+
+pub fn send_state<H: Encode>(hash: H, value_opt: Option<Vec<u8>>) -> Result<(), ()> {
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+    let hash_encoded = hash.encode();
+    let value_encoded = value_opt.encode();
+
+    let res = unsafe {
+        ocall_send_status(
+            &mut rt as *mut sgx_status_t,
+            hash_encoded.as_ptr(),
+            hash_encoded.len() as u32,
+            value_encoded.as_ptr(),
+            value_encoded.len() as u32,
         )
     };
 

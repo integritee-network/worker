@@ -24,7 +24,7 @@ pub extern crate alloc;
 use alloc::boxed::Box;
 use derive_more::{Display, From};
 
-use crate::transaction_pool as sp_transaction_pool;
+use crate::top_pool;
 
 /// Author RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;
@@ -36,9 +36,9 @@ pub enum Error {
     #[display(fmt = "Client error: {}", _0)]
     #[from(ignore)]
     Client(Box<dyn sgx_tstd::error::Error + Send>),
-    /// Transaction pool error,
-    #[display(fmt = "Transaction pool error: {}", _0)]
-    Pool(sp_transaction_pool::error::Error),
+    /// TrustedOperation pool error,
+    #[display(fmt = "TrustedOperation pool error: {}", _0)]
+    Pool(top_pool::error::Error),
     /// Verification error
     #[display(fmt = "Extrinsic verification error")]
     #[from(ignore)]
@@ -84,39 +84,39 @@ impl sgx_tstd::error::Error for Error {
 const BASE_ERROR: i64 = 1000;
 /// Extrinsic has an invalid format.
 const BAD_FORMAT: i64 = BASE_ERROR + 1;
-/// Error during transaction verification in runtime.
+/// Error during operation verification in runtime.
 const VERIFICATION_ERROR: i64 = BASE_ERROR + 2;
 
-/// Pool rejected the transaction as invalid
+/// Pool rejected the operation as invalid
 const POOL_INVALID_TX: i64 = BASE_ERROR + 10;
-/// Cannot determine transaction validity.
+/// Cannot determine operation validity.
 const POOL_UNKNOWN_VALIDITY: i64 = POOL_INVALID_TX + 1;
-/// The transaction is temporarily banned.
+/// The operation is temporarily banned.
 const POOL_TEMPORARILY_BANNED: i64 = POOL_INVALID_TX + 2;
-/// The transaction is already in the pool
+/// The operation is already in the pool
 const POOL_ALREADY_IMPORTED: i64 = POOL_INVALID_TX + 3;
-/// Transaction has too low priority to replace existing one in the pool.
+/// TrustedOperation has too low priority to replace existing one in the pool.
 const POOL_TOO_LOW_PRIORITY: i64 = POOL_INVALID_TX + 4;
-/// Including this transaction would cause a dependency cycle.
+/// Including this operation would cause a dependency cycle.
 const POOL_CYCLE_DETECTED: i64 = POOL_INVALID_TX + 5;
-/// The transaction was not included to the pool because of the limits.
+/// The operation was not included to the pool because of the limits.
 const POOL_IMMEDIATELY_DROPPED: i64 = POOL_INVALID_TX + 6;
 /// The key type crypto is not known.
 const UNSUPPORTED_KEY_TYPE: i64 = POOL_INVALID_TX + 7;
 
 impl From<Error> for rpc_core::Error {
     fn from(e: Error) -> Self {
-        use sp_transaction_pool::error::Error as PoolError;
+        use top_pool::error::Error as PoolError;
 
         match e {
 			Error::BadFormat => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
-				message: format!("Trusted Call has invalid format").into(),
+				message: format!("Trusted operation has invalid format").into(),
 				data: None,
 			},
 			Error::BadFormatDecipher => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
-				message: format!("Trusted call could not be deciphered").into(),
+				message: format!("Trusted oprations could not be deciphered").into(),
 				data: None,
 			},
 			Error::Verification => rpc_core::Error {
@@ -129,30 +129,30 @@ impl From<Error> for rpc_core::Error {
 				message: "Shard does not exisit".into(),
 				data: Some(format!("{:?}", e).into()),
 			},
-			Error::Pool(PoolError::InvalidTransaction) => rpc_core::Error {
+			Error::Pool(PoolError::InvalidTrustedOperation) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_INVALID_TX),
-				message: "Invalid Transaction".into(),
+				message: "Invalid Trusted Operation".into(),
 				data: None,
 			},
-			Error::Pool(PoolError::UnknownTransaction) => rpc_core::Error {
+			Error::Pool(PoolError::UnknownTrustedOperation) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_UNKNOWN_VALIDITY),
-				message: "Unknown Transaction Validity".into(),
+				message: "Unknown Trusted Operation Validity".into(),
 				data: None,
 			},
 			Error::Pool(PoolError::TemporarilyBanned) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_TEMPORARILY_BANNED),
-				message: "Transaction is temporarily banned".into(),
+				message: "Trusted Operation is temporarily banned".into(),
 				data: None,
 			},
 			Error::Pool(PoolError::AlreadyImported) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_ALREADY_IMPORTED),
-				message: "Transaction Already Imported".into(),
+				message: "Trusted Operation Already Imported".into(),
 				data: None,
 			},
 			Error::Pool(PoolError::TooLowPriority(new)) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_TOO_LOW_PRIORITY),
 				message: format!("Priority is too low: {}", new),
-				data: Some("The transaction has too low priority to replace another transaction already in the pool.".into()),
+				data: Some("The Trusted Operation has too low priority to replace another Trusted Operation already in the pool.".into()),
 			},
 			Error::Pool(PoolError::CycleDetected) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_CYCLE_DETECTED),
@@ -162,7 +162,7 @@ impl From<Error> for rpc_core::Error {
 			Error::Pool(PoolError::ImmediatelyDropped) => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(POOL_IMMEDIATELY_DROPPED),
 				message: "Immediately Dropped".into(),
-				data: Some("The transaction couldn't enter the pool because of the limit".into()),
+				data: Some("The Trusted Operation couldn't enter the pool because of the limit".into()),
 			},
 			Error::UnsupportedKeyType => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(UNSUPPORTED_KEY_TYPE),

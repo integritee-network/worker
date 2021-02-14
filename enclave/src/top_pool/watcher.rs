@@ -26,22 +26,22 @@ use sp_runtime::traits;
 
 use sgx_tstd::hash;
 
-//use crate::transaction_pool::primitives::TransactionStatus
+//use crate::top_pool::primitives::TrustedOperationStatus
 use crate::rpc::worker_api_direct;
-use substratee_worker_primitives::TransactionStatus;
+use substratee_worker_primitives::TrustedOperationStatus;
 
 /// Extrinsic watcher.
 ///
 /// Represents a stream of status updates for particular extrinsic.
 #[derive(Debug)]
 pub struct Watcher<H> {
-    //receiver: TracingUnboundedReceiver<TransactionStatus<H, BH>>,
+    //receiver: TracingUnboundedReceiver<TrustedOperationStatus<H, BH>>,
     hash: H,
     is_in_block: bool,
 }
 
 impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
-    /// Returns the transaction hash.
+    /// Returns the operation hash.
     pub fn hash(&self) -> &H {
         &self.hash
     }
@@ -55,67 +55,67 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
         }
     }
 
-    /// Transaction became ready.
+    /// TrustedOperation became ready.
     pub fn ready(&mut self) {
-        self.send(TransactionStatus::Ready)
+        self.send(TrustedOperationStatus::Ready)
     }
 
-    /// Transaction was moved to future.
+    /// TrustedOperation was moved to future.
     pub fn future(&mut self) {
-        self.send(TransactionStatus::Future)
+        self.send(TrustedOperationStatus::Future)
     }
 
     /// Some state change (perhaps another extrinsic was included) rendered this extrinsic invalid.
     pub fn usurped(&mut self) {
-        //self.send(TransactionStatus::Usurped(hash));
-        self.send(TransactionStatus::Usurped);
+        //self.send(TrustedOperationStatus::Usurped(hash));
+        self.send(TrustedOperationStatus::Usurped);
         self.is_in_block = true;
     }
 
     /// Extrinsic has been included in block with given hash.
     pub fn in_block(&mut self) {
-        //self.send(TransactionStatus::InBlock(hash));
-        self.send(TransactionStatus::InBlock);
+        //self.send(TrustedOperationStatus::InBlock(hash));
+        self.send(TrustedOperationStatus::InBlock);
         self.is_in_block = true;
     }
 
     /// Extrinsic has been finalized by a finality gadget.
     pub fn finalized(&mut self) {
-        //self.send(TransactionStatus::Finalized(hash));
-        self.send(TransactionStatus::Finalized);
+        //self.send(TrustedOperationStatus::Finalized(hash));
+        self.send(TrustedOperationStatus::Finalized);
         self.is_in_block = true;
     }
 
     /// The block this extrinsic was included in has been retracted
     pub fn finality_timeout(&mut self) {
-        //self.send(TransactionStatus::FinalityTimeout(hash));
-        self.send(TransactionStatus::FinalityTimeout);
+        //self.send(TrustedOperationStatus::FinalityTimeout(hash));
+        self.send(TrustedOperationStatus::FinalityTimeout);
         self.is_in_block = true;
     }
 
     /// The block this extrinsic was included in has been retracted
     pub fn retracted(&mut self) {
-        //self.send(TransactionStatus::Retracted(hash));
-        self.send(TransactionStatus::Retracted);
+        //self.send(TrustedOperationStatus::Retracted(hash));
+        self.send(TrustedOperationStatus::Retracted);
     }
 
     /// Extrinsic has been marked as invalid by the block builder.
     pub fn invalid(&mut self) {
-        self.send(TransactionStatus::Invalid);
+        self.send(TrustedOperationStatus::Invalid);
         // we mark as finalized as there are no more notifications
         self.is_in_block = true;
     }
 
-    /// Transaction has been dropped from the pool because of the limit.
+    /// TrustedOperation has been dropped from the pool because of the limit.
     pub fn dropped(&mut self) {
-        self.send(TransactionStatus::Dropped);
+        self.send(TrustedOperationStatus::Dropped);
         self.is_in_block = true;
     }
 
     /// The extrinsic has been broadcast to the given peers.
     pub fn broadcast(&mut self, _peers: Vec<String>) {
-        //self.send(TransactionStatus::Broadcast(peers))
-        self.send(TransactionStatus::Broadcast)
+        //self.send(TrustedOperationStatus::Broadcast(peers))
+        self.send(TrustedOperationStatus::Broadcast)
     }
 
     /// Returns true if the are no more listeners for this extrinsic or it was finalized.
@@ -123,7 +123,7 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
         self.is_in_block // || self.receivers.is_empty()
     }
 
-    fn send(&mut self, status: TransactionStatus) {
+    fn send(&mut self, status: TrustedOperationStatus) {
         worker_api_direct::update_status_event(self.hash(), status).unwrap();
     }
 }
@@ -131,7 +131,7 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
 /*  /// Sender part of the watcher. Exposed only for testing purposes.
 #[derive(Debug)]
 pub struct Sender<H, BH> {
-    //receivers: Vec<TracingUnboundedSender<TransactionStatus<H, BH>>>,
+    //receivers: Vec<TracingUnboundedSender<TrustedOperationStatus<H, BH>>>,
     //receivers: Vec<H>,
     is_in_block: bool,
 }
