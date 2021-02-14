@@ -68,10 +68,12 @@ use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
-use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned};
+use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall,
+     TrustedCallSigned, TrustedGetterSigned};
 
-use rpc::author::{hash::TrustedCallOrHash, Author, AuthorApi};
+use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
+use rpc::worker_api_direct;
 
 mod aes;
 mod attestation;
@@ -87,7 +89,7 @@ pub mod cert;
 pub mod hex;
 pub mod rpc;
 pub mod tls_ra;
-pub mod transaction_pool;
+pub mod top_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -133,7 +135,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
+ #[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(
     pubkey: *mut u8,
     pubkey_size: u32,
@@ -158,7 +160,8 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
     write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec());
 
     sgx_status_t::SGX_SUCCESS
-}
+} 
+
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
@@ -396,8 +399,8 @@ pub unsafe extern "C" fn sync_chain_relay(
             Err(_) => error!("Error executing relevant extrinsics"),
         };
     }
-    // execute pending calls from transaction pool
-    match execute_tx_pool_calls(last_block_header) {
+    // execute pending calls from operation pool
+    match execute_top_pool_calls(last_block_header) {
         Ok(c) => calls.extend(c.into_iter()),
         Err(_) => error!("Error executing relevant tx pool calls"),
     };
@@ -409,28 +412,70 @@ pub unsafe extern "C" fn sync_chain_relay(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn execute_tx_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
-    debug!("Executing pending tx pool calls");
+fn get_stf_state(
+    trusted_getter_signed: TrustedGetterSigned,
+    shard: ShardIdentifier,
+) -> Option<Vec<u8>> {
+     debug!("verifying signature of TrustedGetterSigned");
+    if let false = trusted_getter_signed.verify_signature() {
+        error!("bad signature");
+        return None;
+    }
+
+    if !state::exists(&shard) {
+        info!("Initialized new shard that was queried chain: {:?}", shard);
+        if let Err(e) = state::init_shard(&shard) {
+            error!("Error initialising shard {:?} state: Error: {:?}", shard, e);
+            return None;
+        }
+    }
+
+    let mut state = match state::load(&shard) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Error loading shard {:?}: Error: {:?}", shard, e);
+            return None
+        },
+    };
+
+    debug!("calling into STF to get state");
+    Stf::get_state(&mut state, trusted_getter_signed.into())
+
+}
+
+fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
+    debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     {
-        debug!("Acquire tx pool lock");
-        let &ref tx_pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_tx_pool().unwrap();
-        let tx_pool_guard: SgxMutexGuard<BPool> = tx_pool_mutex.lock().unwrap();
-        let tx_pool: Arc<&BPool> = Arc::new(tx_pool_guard.deref());
-        let author: Arc<Author<&BPool>> = Arc::new(Author::new(tx_pool));
+        let &ref pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_top_pool().unwrap();
+        let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
+        let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
+        let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
 
         // get all shards with tx pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
         for shard in shards.into_iter() {
-            // retrieve calls from tx pool
-            let encoded_calls: Vec<Vec<u8>> = author.pending_calls(shard).unwrap(); // always ok
-            for encoded_call in encoded_calls.into_iter() {
-                let trusted_call_signed =
-                    match TrustedCallSigned::decode(&mut encoded_call.as_slice()) {
-                        Ok(call) => call,
-                        Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-                    };
+            // retrieve trusted operations from pool
+            let (trusted_calls, trusted_getters) = match author.pending_tops_separated(shard) {
+                Ok((calls,getters)) => (calls,getters),
+                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
+            };
+            for trusted_getter_signed in trusted_getters.into_iter() {
+                // get state
+                let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
+                // get hash
+                let hash_of_getter = author.hash_of(&trusted_getter_signed.into());              
+                // let client know of current state
+                if let Err(_) = worker_api_direct::send_state(hash_of_getter, value_opt) {
+                    error!("Could not get state from stf");
+                }
+                 // remove getter from pool
+                if let Err(e) = author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false) {
+                    error!("Error removing trusted operation from top pool: Error: {:?}", e);
+                }
+            }
+            for trusted_call_signed in trusted_calls.into_iter() {
                 if let Err(e) = handle_trusted_worker_call(
                     &mut calls,
                     trusted_call_signed,
@@ -440,9 +485,8 @@ fn execute_tx_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                 ) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
-            }
+            }            
         }
-        debug! {"Release Txpool Lock"};
     }
 
     Ok(calls)
@@ -623,8 +667,8 @@ fn handle_trusted_worker_call(
             // remove call as invalid from pool
             let inblock = false;
             author
-                .remove_call(
-                    vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                .remove_top(
+                    vec![TrustedOperationOrHash::Operation(stf_call_signed.into_trusted_operation(true))],
                     shard,
                     inblock,
                 )
@@ -658,8 +702,8 @@ fn handle_trusted_worker_call(
             // remove call as invalid from pool
             let inblock = false;
             author
-                .remove_call(
-                    vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+                .remove_top(
+                    vec![TrustedOperationOrHash::Operation(stf_call_signed.into_trusted_operation(true))],
                     shard,
                     inblock,
                 )
@@ -671,11 +715,15 @@ fn handle_trusted_worker_call(
     }
 
     if let Some(author) = author_pointer {
+        // TODO: prune instead of remove_top ? Block needs to be known
         // remove call from pool as valid
         let inblock = true;
         author
-            .remove_call(
-                vec![TrustedCallOrHash::Call(stf_call_signed.encode())],
+            .remove_top(
+                vec![TrustedOperationOrHash::Operation(stf_call_signed
+                    .clone()
+                    .into_trusted_operation(true)
+                )],
                 shard,
                 inblock,
             )

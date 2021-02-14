@@ -28,12 +28,12 @@ use sp_runtime::{
     },
 };
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     base_pool as base, error,
-    validated_pool::{ValidatedPool, ValidatedTransaction},
+    validated_pool::{ValidatedPool, ValidatedOperation},
 };
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -46,11 +46,11 @@ pub type ExtrinsicHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 //pub type ExtrinsicFor<A> = <<A as ChainApi>::Block as traits::Block>::Extrinsic;
 /// Block number type for the ChainApi
 pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
-/// A type of transaction stored in the pool
-pub type TransactionFor<A> = Arc<base::Transaction<ExtrinsicHash<A>, TrustedCallSigned>>;
-/// A type of validated transaction stored in the pool.
-pub type ValidatedTransactionFor<A> =
-    ValidatedTransaction<ExtrinsicHash<A>, TrustedCallSigned, <A as ChainApi>::Error>;
+/// A type of operation stored in the pool
+pub type TransactionFor<A> = Arc<base::TrustedOperation<ExtrinsicHash<A>, StfTrustedOperation>>;
+/// A type of validated operation stored in the pool.
+pub type ValidatedOperationFor<A> =
+    ValidatedOperation<ExtrinsicHash<A>, StfTrustedOperation, <A as ChainApi>::Error>;
 
 /// Concrete extrinsic validation and query logic.
 pub trait ChainApi: Send + Sync {
@@ -58,10 +58,10 @@ pub trait ChainApi: Send + Sync {
     type Block: BlockT;
     /// Error type.
     type Error: From<error::Error>;
-    /// Validate transaction future.
+    /// Validate operation future.
     type ValidationFuture: Future<Output = Result<TransactionValidity, Self::Error>> + Send + Unpin;
     /// Body future (since block body might be remote)
-    type BodyFuture: Future<Output = Result<Option<Vec<TrustedCallSigned>>, Self::Error>>
+    type BodyFuture: Future<Output = Result<Option<Vec<StfTrustedOperation>>, Self::Error>>
         + Unpin
         + Send
         + 'static;
@@ -71,7 +71,7 @@ pub trait ChainApi: Send + Sync {
         &self,
         at: &BlockId<Self::Block>,
         source: TransactionSource,
-        uxt: TrustedCallSigned,
+        uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture;
 
     /// Returns a block number given the block id.
@@ -87,7 +87,7 @@ pub trait ChainApi: Send + Sync {
     ) -> Result<Option<<Self::Block as BlockT>::Hash>, Self::Error>;
 
     /// Returns hash and encoding length of the extrinsic.
-    fn hash_and_length(&self, uxt: &TrustedCallSigned) -> (ExtrinsicHash<Self>, usize);
+    fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize);
 
     /// Returns a block body given the block id.
     fn block_body(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;
@@ -100,8 +100,8 @@ pub struct Options {
     pub ready: base::Limit,
     /// Future queue limits.
     pub future: base::Limit,
-    /// Reject future transactions.
-    pub reject_future_transactions: bool,
+    /// Reject future operations.
+    pub reject_future_operations: bool,
 }
 
 impl Default for Options {
@@ -115,12 +115,12 @@ impl Default for Options {
                 count: 512,
                 total_bytes: 1 * 1024 * 1024,
             },
-            reject_future_transactions: false,
+            reject_future_operations: false,
         }
     }
 }
 
-/// Should we check that the transaction is banned
+/// Should we check that the operation is banned
 /// in the pool, before we verify it?
 #[derive(Copy, Clone)]
 enum CheckBannedBeforeVerify {
@@ -138,7 +138,7 @@ where
     //<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
     <B as ChainApi>::Error: error::IntoPoolError,
 {
-    /// Create a new transaction pool.
+    /// Create a new operation pool.
     pub fn new(options: Options, api: Arc<B>) -> Self {
         Pool {
             validated_pool: Arc::new(ValidatedPool::new(options, api)),
@@ -150,7 +150,7 @@ where
         &self,
         at: &BlockId<B::Block>,
         source: TransactionSource,
-        xts: impl IntoIterator<Item = TrustedCallSigned>,
+        xts: impl IntoIterator<Item = StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
         let xts = xts.into_iter().map(|xt| (source, xt));
@@ -164,12 +164,12 @@ where
 
     /// Resubmit the given extrinsics to the pool.
     ///
-    /// This does not check if a transaction is banned, before we verify it again.
+    /// This does not check if a operation is banned, before we verify it again.
     pub async fn resubmit_at(
         &self,
         at: &BlockId<B::Block>,
         source: TransactionSource,
-        xts: impl IntoIterator<Item = TrustedCallSigned>,
+        xts: impl IntoIterator<Item = StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
         let xts = xts.into_iter().map(|xt| (source, xt));
@@ -186,7 +186,7 @@ where
         &self,
         at: &BlockId<B::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> Result<ExtrinsicHash<B>, B::Error> {
         let res = self
@@ -201,7 +201,7 @@ where
         &self,
         at: &BlockId<B::Block>,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> Result<ExtrinsicHash<B>, B::Error> {
         //TODO
@@ -221,10 +221,10 @@ where
         self.validated_pool.submit_and_watch(tx, shard)
     }
 
-    /// Resubmit some transaction that were validated elsewhere.
+    /// Resubmit some operation that were validated elsewhere.
     pub fn resubmit(
         &self,
-        revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>,
+        revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
         shard: ShardIdentifier,
     ) {
         let now = Instant::now();
@@ -237,10 +237,10 @@ where
         );
     }
 
-    /// Prunes known ready transactions.
+    /// Prunes known ready operations.
     ///
-    /// Used to clear the pool from transactions that were part of recently imported block.
-    /// The main difference from the `prune` is that we do not revalidate any transactions
+    /// Used to clear the pool from operations that were part of recently imported block.
+    /// The main difference from the `prune` is that we do not revalidate any operations
     /// and ignore unknown passed hashes.
     pub fn prune_known(
         &self,
@@ -256,7 +256,7 @@ where
             .filter_map(|x| x)
             .flat_map(|x| x);
 
-        // Prune all transactions that provide given tags
+        // Prune all operations that provide given tags
         let prune_status = self.validated_pool.prune_tags(in_pool_tags, shard)?;
         let pruned_transactions = hashes
             .into_iter()
@@ -265,9 +265,9 @@ where
         self.validated_pool.fire_pruned(at, pruned_transactions)
     }
 
-    /// Prunes ready transactions.
+    /// Prunes ready operations.
     ///
-    /// Used to clear the pool from transactions that were part of recently imported block.
+    /// Used to clear the pool from operations that were part of recently imported block.
     /// To perform pruning we need the tags that each extrinsic provides and to avoid calling
     /// into runtime too often we first lookup all extrinsics that are in the pool and get
     /// their provided tags from there. Otherwise we query the runtime at the `parent` block.
@@ -275,7 +275,7 @@ where
         &self,
         at: &BlockId<B::Block>,
         parent: &BlockId<B::Block>,
-        extrinsics: &[TrustedCallSigned],
+        extrinsics: &[StfTrustedOperation],
         shard: ShardIdentifier,
     ) -> Result<(), B::Error> {
         log::debug!(
@@ -319,25 +319,25 @@ where
             .await
     }
 
-    /// Prunes ready transactions that provide given list of tags.
+    /// Prunes ready operations that provide given list of tags.
     ///
-    /// Given tags are assumed to be always provided now, so all transactions
+    /// Given tags are assumed to be always provided now, so all operations
     /// in the Future Queue that require that particular tag (and have other
     /// requirements satisfied) are promoted to Ready Queue.
     ///
-    /// Moreover for each provided tag we remove transactions in the pool that:
+    /// Moreover for each provided tag we remove operations in the pool that:
     /// 1. Provide that tag directly
-    /// 2. Are a dependency of pruned transaction.
+    /// 2. Are a dependency of pruned operation.
     ///
-    /// Returns transactions that have been removed from the pool and must be reverified
+    /// Returns operations that have been removed from the pool and must be reverified
     /// before reinserting to the pool.
     ///
-    /// By removing predecessor transactions as well we might actually end up
-    /// pruning too much, so all removed transactions are reverified against
+    /// By removing predecessor operations as well we might actually end up
+    /// pruning too much, so all removed operations are reverified against
     /// the runtime (`validate_transaction`) to make sure they are invalid.
     ///
-    /// However we avoid revalidating transactions that are contained within
-    /// the second parameter of `known_imported_hashes`. These transactions
+    /// However we avoid revalidating operations that are contained within
+    /// the second parameter of `known_imported_hashes`. These operations
     /// (if pruned) are not revalidated and become temporarily banned to
     /// prevent importing them in the (near) future.
     pub async fn prune_tags(
@@ -348,7 +348,7 @@ where
         shard: ShardIdentifier,
     ) -> Result<(), B::Error> {
         log::debug!(target: "txpool", "Pruning at {:?}", at);
-        // Prune all transactions that provide given tags
+        // Prune all operations that provide given tags
         let prune_status = match self.validated_pool.prune_tags(tags, shard) {
             Ok(prune_status) => prune_status,
             Err(e) => return Err(e),
@@ -356,11 +356,11 @@ where
 
         // Make sure that we don't revalidate extrinsics that were part of the recently
         // imported block. This is especially important for UTXO-like chains cause the
-        // inputs are pruned so such transaction would go to future again.
+        // inputs are pruned so such operation would go to future again.
         self.validated_pool
             .ban(&Instant::now(), known_imported_hashes.clone().into_iter());
 
-        // Try to re-validate pruned transactions since some of them might be still valid.
+        // Try to re-validate pruned operations since some of them might be still valid.
         // note that `known_imported_hashes` will be rejected here due to temporary ban.
         let pruned_hashes = prune_status
             .pruned
@@ -376,8 +376,8 @@ where
             .verify(at, pruned_transactions, CheckBannedBeforeVerify::Yes, shard)
             .await?;
 
-        log::trace!(target: "txpool", "Pruning at {:?}. Resubmitting transactions.", at);
-        // And finally - submit reverified transactions back to the pool
+        log::trace!(target: "txpool", "Pruning at {:?}. Resubmitting operations.", at);
+        // And finally - submit reverified operations back to the pool
 
         self.validated_pool.resubmit_pruned(
             &at,
@@ -391,8 +391,8 @@ where
         )
     }
 
-    /// Returns transaction hash
-    pub fn hash_of(&self, xt: &TrustedCallSigned) -> ExtrinsicHash<B> {
+    /// Returns operation hash
+    pub fn hash_of(&self, xt: &StfTrustedOperation) -> ExtrinsicHash<B> {
         self.validated_pool.api().hash_and_length(xt).0
     }
 
@@ -406,14 +406,14 @@ where
             })
     }
 
-    /// Returns future that validates a bunch of transactions at given block.
+    /// Returns future that validates a bunch of operations at given block.
     async fn verify(
         &self,
         at: &BlockId<B::Block>,
-        xts: impl IntoIterator<Item = (TransactionSource, TrustedCallSigned)>,
+        xts: impl IntoIterator<Item = (TransactionSource, StfTrustedOperation)>,
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
-    ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedTransactionFor<B>>, B::Error> {
+    ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
         // we need a block number to compute tx validity
         //let block_number = self.resolve_block_number(at)?;
         // dummy blocknumber
@@ -431,17 +431,17 @@ where
         Ok(res)
     }
 
-    /// Returns future that validates single transaction at given block.
+    /// Returns future that validates single operation at given block.
     async fn verify_one(
         &self,
         block_id: &BlockId<B::Block>,
         //block_number: NumberFor<B>,
         block_number: i8,
         source: TransactionSource,
-        xt: TrustedCallSigned,
+        xt: StfTrustedOperation,
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
-    ) -> (ExtrinsicHash<B>, ValidatedTransactionFor<B>) {
+    ) -> (ExtrinsicHash<B>, ValidatedOperationFor<B>) {
         let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);
 
         let ignore_banned = matches!(check, CheckBannedBeforeVerify::No);
@@ -451,7 +451,7 @@ where
         {
             return (
                 hash.clone(),
-                ValidatedTransaction::Invalid(hash, err.into()),
+                ValidatedOperation::Invalid(hash, err.into()),
             );
         }
 
@@ -464,15 +464,15 @@ where
 
         let status = match validation_result {
             Ok(status) => status,
-            Err(e) => return (hash.clone(), ValidatedTransaction::Invalid(hash, e)),
+            Err(e) => return (hash.clone(), ValidatedOperation::Invalid(hash, e)),
         };
 
         let validity = match status {
             Ok(validity) => {
                 if validity.provides.is_empty() {
-                    ValidatedTransaction::Invalid(hash.clone(), error::Error::NoTagsProvided.into())
+                    ValidatedOperation::Invalid(hash.clone(), error::Error::NoTagsProvided.into())
                 } else {
-                    ValidatedTransaction::valid_at(
+                    ValidatedOperation::valid_at(
                         block_number.saturated_into::<u64>(),
                         hash.clone(),
                         source,
@@ -483,10 +483,10 @@ where
                 }
             }
             Err(TransactionValidityError::Invalid(_e)) => {
-                ValidatedTransaction::Invalid(hash.clone(), error::Error::InvalidTransaction.into())
+                ValidatedOperation::Invalid(hash.clone(), error::Error::InvalidTrustedOperation.into())
             }
             Err(TransactionValidityError::Unknown(_e)) => {
-                ValidatedTransaction::Unknown(hash.clone(), error::Error::UnknownTransaction.into())
+                ValidatedOperation::Unknown(hash.clone(), error::Error::UnknownTrustedOperation.into())
             }
         };
 
@@ -513,10 +513,10 @@ mod tests {
     use parking_lot::Mutex;
     use futures::executor::block_on;
     use super::*;
-    use sp_transaction_pool::TransactionStatus;
+    use sp_transaction_pool::TrustedOperationStatus;
     use sp_runtime::{
         traits::Hash,
-        transaction_validity::{ValidTransaction, InvalidTransaction, TransactionSource},
+        transaction_validity::{ValidTransaction, InvalidTrustedOperation, TransactionSource},
     };
     use codec::Encode;
     use substrate_test_runtime::{Block, Extrinsic, Transfer, H256, AccountId, Hashing};
@@ -563,13 +563,13 @@ mod tests {
             }
 
             if self.invalidate.lock().contains(&hash) {
-                return futures::future::ready(Ok(InvalidTransaction::Custom(0).into()));
+                return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
             }
 
             futures::future::ready(if nonce < block_number {
-                Ok(InvalidTransaction::Stale.into())
+                Ok(InvalidTrustedOperation::Stale.into())
             } else {
-                let mut transaction = ValidTransaction {
+                let mut operation = ValidTransaction {
                     priority: 4,
                     requires: if nonce > block_number { vec![vec![nonce as u8 - 1]] } else { vec![] },
                     provides: if nonce == INVALID_NONCE { vec![] } else { vec![vec![nonce as u8]] },
@@ -578,14 +578,14 @@ mod tests {
                 };
 
                 if self.clear_requirements.lock().contains(&hash) {
-                    transaction.requires.clear();
+                    operation.requires.clear();
                 }
 
                 if self.add_requirements.lock().contains(&hash) {
-                    transaction.requires.push(vec![128]);
+                    operation.requires.push(vec![128]);
                 }
 
-                Ok(Ok(transaction))
+                Ok(Ok(operation))
             })
         }
 
@@ -871,10 +871,10 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
             assert_eq!(
                 stream.next(),
-                Some(TransactionStatus::InBlock(H256::from_low_u64_be(2).into())),
+                Some(TrustedOperationStatus::InBlock(H256::from_low_u64_be(2).into())),
             );
         }
 
@@ -900,10 +900,10 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
             assert_eq!(
                 stream.next(),
-                Some(TransactionStatus::InBlock(H256::from_low_u64_be(2).into())),
+                Some(TrustedOperationStatus::InBlock(H256::from_low_u64_be(2).into())),
             );
         }
 
@@ -931,8 +931,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Future));
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Future));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
         }
 
         #[test]
@@ -954,8 +954,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
-            assert_eq!(stream.next(), Some(TransactionStatus::Invalid));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Invalid));
             assert_eq!(stream.next(), None);
         }
 
@@ -981,8 +981,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
-            assert_eq!(stream.next(), Some(TransactionStatus::Broadcast(peers)));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Broadcast(peers)));
         }
 
         #[test]
@@ -1019,8 +1019,8 @@ mod tests {
 
             // then
             let mut stream = futures::executor::block_on_stream(watcher.into_stream());
-            assert_eq!(stream.next(), Some(TransactionStatus::Ready));
-            assert_eq!(stream.next(), Some(TransactionStatus::Dropped));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
+            assert_eq!(stream.next(), Some(TrustedOperationStatus::Dropped));
         }
 
         #[test]
@@ -1040,7 +1040,7 @@ mod tests {
                 nonce: 1,
             });
 
-            // This transaction should go to future, since we use `nonce: 1`
+            // This operation should go to future, since we use `nonce: 1`
             let pool2 = pool.clone();
             std::thread::spawn(move || {
                 block_on(pool2.submit_one(&BlockId::Number(0), SOURCE, xt)).unwrap();
@@ -1055,18 +1055,18 @@ mod tests {
                 amount: 4,
                 nonce: 0,
             });
-            // The tag the above transaction provides (TestApi is using just nonce as u8)
+            // The tag the above operation provides (TestApi is using just nonce as u8)
             let provides = vec![0_u8];
             block_on(pool.submit_one(&BlockId::Number(0), SOURCE, xt)).unwrap();
             assert_eq!(pool.validated_pool().status().ready, 1);
 
-            // Now block import happens before the second transaction is able to finish verification.
+            // Now block import happens before the second operation is able to finish verification.
             block_on(pool.prune_tags(&BlockId::Number(1), vec![provides], vec![])).unwrap();
             assert_eq!(pool.validated_pool().status().ready, 0);
 
 
             // so when we release the verification of the previous one it will have
-            // something in `requires`, but should go to ready directly, since the previous transaction was imported
+            // something in `requires`, but should go to ready directly, since the previous operation was imported
             // correctly.
             tx.send(()).unwrap();
 

@@ -51,16 +51,14 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
-use enclave::worker_api_direct_server::{start_worker_api_direct_server, handle_direct_invocation_request};
+use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::Duration;
-use ws_server::start_ws_server;
 
 mod constants;
 mod enclave;
 mod ipfs;
 mod tests;
-mod ws_server;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -84,10 +82,9 @@ fn main() {
     } else {
         "127.0.0.1"
     };
-    let w_port = matches.value_of("w-port").unwrap_or("2000");
     let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
 
-    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("4000");
+    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("2000");
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -116,7 +113,14 @@ fn main() {
         };
         println!("Advertising worker api at {}", ext_api_url);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(w_ip, w_port, mu_ra_port, &shard, ext_api_url, worker_rpc_port, skip_ra);
+        worker(
+            w_ip,
+            mu_ra_port,
+            &shard,
+            ext_api_url,
+            worker_rpc_port,
+            skip_ra,
+        );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard: ShardIdentifier = match smatches.value_of("shard") {
             Some(value) => {
@@ -248,7 +252,6 @@ fn main() {
 
 fn worker(
     w_ip: &str,
-    w_port: &str,
     mu_ra_port: &str,
     shard: &ShardIdentifier,
     ext_api_url: &str,
@@ -272,13 +275,6 @@ fn worker(
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
     // ------------------------------------------------------------------------
-    // start the ws server to listen for worker requests
-    println!("worker api listening on ws://{}:{}", w_ip, w_port);
-    let (ws_sender, ws_receiver) = channel();
-    let w_url = format!("{}:{}", w_ip, w_port);
-    start_ws_server(w_url, ws_sender);
-
-    // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
     println!("MU-RA server listening on ws://{}:{}", w_ip, mu_ra_port);
     let ra_url = format!("{}:{}", w_ip, mu_ra_port);
@@ -294,8 +290,7 @@ fn worker(
     // start worker api direct invocation server
     println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_rpc_port);
     let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
-    let (direct_sender, direct_receiver) = channel();
-    start_worker_api_direct_server(direct_url, direct_sender, eid);
+    start_worker_api_direct_server(direct_url, eid);
 
 
     // ------------------------------------------------------------------------
@@ -366,12 +361,6 @@ fn worker(
             } else if let Ok(_header) = parse_header(msg.clone()) {
                 latest_head = sync_chain_relay(eid, &api, latest_head)
             }
-        }
-        if let Ok(req) = ws_receiver.recv_timeout(timeout) {
-            ws_server::handle_request(req, eid, mu_ra_port.to_string()).unwrap()
-        }
-        if let Ok(rpc_req) = direct_receiver.recv_timeout(timeout) {
-            handle_direct_invocation_request(rpc_req, eid).unwrap()
         }
     }
 }

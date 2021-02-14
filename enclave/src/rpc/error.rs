@@ -27,8 +27,8 @@ use alloc::{boxed::Box, string::String};
 
 use core::pin::Pin;
 
-use crate::transaction_pool::error::Error as PoolError;
-use crate::transaction_pool::error::IntoPoolError;
+use crate::top_pool::error::Error as PoolError;
+use crate::top_pool::error::IntoPoolError;
 
 use crate::rpc::author::client_error::Error as ClientError;
 

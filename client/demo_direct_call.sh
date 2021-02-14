@@ -17,15 +17,13 @@
 
 # using default port if none given as arguments
 NPORT=${1:-9944}
-WPORT=${2:-2000}
-RPORT=${3:-4000}
+RPORT=${3:-2000}
 
 echo "Using node-port ${NPORT}"
-echo "Using worker-port ${WPORT}"
-echo "Using direct-rpc-port ${RPORT}"
+echo "Using worker-rpc-port ${RPORT}"
 echo ""
 
-CLIENT="./../bin/substratee-client -p ${NPORT} -P ${WPORT} -R ${RPORT}"
+CLIENT="./../bin/substratee-client -p ${NPORT} -P ${RPORT}"
 # SW mode - hardcoded MRENCLAVE!
 #echo "* Query on-chain enclave registry:"
 #${CLIENT} list-workers

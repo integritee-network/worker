@@ -21,7 +21,7 @@ use log::{debug, trace};
 use sgx_tstd::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
 use sp_runtime::traits;
 
-use crate::transaction_pool::{
+use crate::top_pool::{
     pool::{BlockHash, ChainApi, ExtrinsicHash},
     watcher::Watcher,
 };
@@ -79,7 +79,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         self.fire(hash, |watcher| watcher.broadcast(peers));
     }
 
-    /// New transaction was added to the ready pool or promoted from the future pool.
+    /// New operation was added to the ready pool or promoted from the future pool.
     pub fn ready(&mut self, tx: &H, old: Option<&H>) {
         trace!(target: "txpool", "[{:?}] Ready (replaced with {:?})", tx, old);
         self.fire(tx, |watcher| watcher.ready());
@@ -88,13 +88,13 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         }
     }
 
-    /// New transaction was added to the future pool.
+    /// New operation was added to the future pool.
     pub fn future(&mut self, tx: &H) {
         trace!(target: "txpool", "[{:?}] Future", tx);
         self.fire(tx, |watcher| watcher.future());
     }
 
-    /// Transaction was dropped from the pool because of the limit.
+    /// TrustedOperation was dropped from the pool because of the limit.
     pub fn dropped(&mut self, tx: &H, by: Option<&H>) {
         trace!(target: "txpool", "[{:?}] Dropped (replaced with {:?})", tx, by);
         self.fire(tx, |watcher| match by {
@@ -103,12 +103,12 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         })
     }
 
-    /// Transaction was removed as invalid.
+    /// TrustedOperation was removed as invalid.
     pub fn invalid(&mut self, tx: &H) {
         self.fire(tx, |watcher| watcher.invalid());
     }
 
-    /// Transaction was pruned from the pool.
+    /// TrustedOperation was pruned from the pool.
     pub fn pruned(&mut self, block_hash: BlockHash<C>, tx: &H) {
         debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
         self.fire(tx, |s| s.in_block());
@@ -126,12 +126,12 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         }
     }
 
-    /// Transaction in block.
+    /// TrustedOperation in block.
     pub fn in_block(&mut self, tx: &H) {
         self.fire(tx, |s| s.in_block());
     }
 
-    /// The block this transaction was included in has been retracted.
+    /// The block this operation was included in has been retracted.
     pub fn retracted(&mut self, block_hash: BlockHash<C>) {
         if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
             for hash in hashes {
@@ -140,7 +140,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
         }
     }
 
-    /// Notify all watchers that transactions have been finalized
+    /// Notify all watchers that operations have been finalized
     pub fn finalized(&mut self, block_hash: BlockHash<C>) {
         if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
             for hash in hashes {
