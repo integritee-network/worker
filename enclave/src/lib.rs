@@ -807,6 +807,21 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
+        top_pool::base_pool::test_should_import_transaction_to_ready,
+        top_pool::base_pool::test_should_not_import_same_transaction_twice,
+        top_pool::base_pool::test_should_import_transaction_to_future_and_promote_it_later,
+        top_pool::base_pool::test_should_promote_a_subgraph,
+        top_pool::base_pool::test_should_handle_a_cycle,
+        top_pool::base_pool::test_can_track_heap_size,
+        top_pool::base_pool::test_should_handle_a_cycle_with_low_priority,        
+        top_pool::base_pool::test_should_remove_invalid_transactions,
+        top_pool::base_pool::test_should_prune_ready_transactions,
+        top_pool::base_pool::test_transaction_debug,
+        top_pool::base_pool::test_transaction_propagation,
+        top_pool::base_pool::test_should_reject_future_transactions,
+        top_pool::base_pool::test_should_clear_future_queue,
+        top_pool::base_pool::test_should_accept_future_transactions_when_explicitly_asked_to,
+        
         state::test_encrypted_state_io_works,
         ipfs::test_creates_ipfs_content_struct_works,
         ipfs::test_verification_ok_for_correct_content,
