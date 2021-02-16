@@ -23,7 +23,7 @@
 pub extern crate alloc;
 use alloc::{fmt, sync::Arc, vec::Vec};
 
-use sgx_tstd::collections::HashSet;
+use std::collections::HashSet;
 
 use core::{hash, iter};
 
@@ -33,7 +33,7 @@ use log::{debug, trace, warn};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::{
     TransactionLongevity as Longevity, TransactionPriority as Priority,
-    TransactionSource as Source, TransactionTag as Tag,
+    TransactionTag as Tag,
 };
 
 use substratee_stf::ShardIdentifier;
@@ -41,7 +41,7 @@ use substratee_stf::ShardIdentifier;
 use crate::top_pool::{
     error,
     future::{FutureTrustedOperations, WaitingTrustedOperations},
-    primitives::{InPoolOperation, PoolStatus},
+    primitives::{InPoolOperation, PoolStatus, TrustedOperationSource as Source},
     ready::ReadyOperations,
 };
 
@@ -586,540 +586,601 @@ impl Limit {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Tests
+use alloc::borrow::ToOwned;
 
-    type Hash = u64;
+type Hash = u64;
 
-    fn pool() -> BasePool<Hash, Vec<u8>> {
-        BasePool::default()
-    }
+fn test_pool() -> BasePool<Hash, Vec<u8>> {
+    BasePool::default()
+}
 
-    #[test]
-    fn should_import_transaction_to_ready() {
-        // given
-        let mut pool = pool();
+pub fn test_should_import_transaction_to_ready() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
 
-        // when
-        pool.import(TrustedOperation {
-            data: vec![1u8],
+    // when
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1u64,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+
+    // then
+    assert_eq!(pool.ready(shard).count(), 1);
+    assert_eq!(pool.ready.len(shard), 1);
+}
+
+pub fn test_should_not_import_same_transaction_twice() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+
+    // when
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    },shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap_err();
+
+    // then
+    assert_eq!(pool.ready(shard).count(), 1);
+    assert_eq!(pool.ready.len(shard), 1);
+}
+
+pub fn test_should_import_transaction_to_future_and_promote_it_later() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+
+    // when
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    assert_eq!(pool.ready(shard).count(), 0);
+    assert_eq!(pool.ready.len(shard), 0);
+    pool.import(TrustedOperation {
+        data: vec![2u8],
+        bytes: 1,
+        hash: 2,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![0]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+
+    // then
+    assert_eq!(pool.ready(shard).count(), 2);
+    assert_eq!(pool.ready.len(shard), 2);
+}
+
+pub fn test_should_promote_a_subgraph() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+
+    // when
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![3u8],
+        bytes: 1,
+        hash: 3,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![2]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![2u8],
+        bytes: 1,
+        hash: 2,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![1]],
+        provides: vec![vec![3], vec![2]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![4u8],
+        bytes: 1,
+        hash: 4,
+        priority: 1_000u64,
+        valid_till: 64u64,
+        requires: vec![vec![3], vec![4]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    assert_eq!(pool.ready(shard).count(), 0);
+    assert_eq!(pool.ready.len(shard), 0);
+
+    let res = pool
+        .import(TrustedOperation {
+            data: vec![5u8],
             bytes: 1,
-            hash: 1u64,
+            hash: 5,
             priority: 5u64,
             valid_till: 64u64,
             requires: vec![],
-            provides: vec![vec![1]],
+            provides: vec![vec![0], vec![4]],
             propagate: true,
             source: Source::External,
-        })
+        }, shard)
         .unwrap();
 
-        // then
-        assert_eq!(pool.ready().count(), 1);
-        assert_eq!(pool.ready.len(), 1);
+    // then
+    let mut it = pool.ready(shard).into_iter().map(|tx| tx.data[0]);
+
+    assert_eq!(it.next(), Some(5));
+    assert_eq!(it.next(), Some(1));
+    assert_eq!(it.next(), Some(2));
+    assert_eq!(it.next(), Some(4));
+    assert_eq!(it.next(), Some(3));
+    assert_eq!(it.next(), None);
+    assert_eq!(
+        res,
+        Imported::Ready {
+            hash: 5,
+            promoted: vec![1, 2, 3, 4],
+            failed: vec![],
+            removed: vec![],
+        }
+    );
+}
+
+pub fn test_should_handle_a_cycle() {        
+    // given
+    let shard = ShardIdentifier::default();
+    let mut pool = test_pool();
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![3u8],
+        bytes: 1,
+        hash: 3,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![1]],
+        provides: vec![vec![2]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    assert_eq!(pool.ready(shard).count(), 0);
+    assert_eq!(pool.ready.len(shard), 0);
+
+    // when
+    pool.import(TrustedOperation {
+        data: vec![2u8],
+        bytes: 1,
+        hash: 2,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![2]],
+        provides: vec![vec![0]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+
+    // then
+    {
+        let mut it = pool.ready(shard).into_iter().map(|tx| tx.data[0]);
+        assert_eq!(it.next(), None);
     }
+    // all operations occupy the Future queue - it's fine
+    assert_eq!(pool.future.len(shard), 3);
 
-    #[test]
-    fn should_not_import_same_transaction_twice() {
-        // given
-        let mut pool = pool();
-
-        // when
-        pool.import(TrustedOperation {
-            data: vec![1u8],
+    // let's close the cycle with one additional operation
+    let res = pool
+        .import(TrustedOperation {
+            data: vec![4u8],
             bytes: 1,
-            hash: 1,
-            priority: 5u64,
+            hash: 4,
+            priority: 50u64,
             valid_till: 64u64,
             requires: vec![],
-            provides: vec![vec![1]],
+            provides: vec![vec![0]],
             propagate: true,
             source: Source::External,
-        })
+        }, shard)
         .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![1u8],
+    let mut it = pool.ready(shard).into_iter().map(|tx| tx.data[0]);
+    assert_eq!(it.next(), Some(4));
+    assert_eq!(it.next(), Some(1));
+    assert_eq!(it.next(), Some(3));
+    assert_eq!(it.next(), None);
+    assert_eq!(
+        res,
+        Imported::Ready {
+            hash: 4,
+            promoted: vec![1, 3],
+            failed: vec![2],
+            removed: vec![],
+        }
+    );
+    assert_eq!(pool.future.len(shard), 0);
+}
+
+pub fn test_should_handle_a_cycle_with_low_priority() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![3u8],
+        bytes: 1,
+        hash: 3,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![1]],
+        provides: vec![vec![2]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    assert_eq!(pool.ready(shard).count(), 0);
+    assert_eq!(pool.ready.len(shard), 0);
+
+    // when
+    pool.import(TrustedOperation {
+        data: vec![2u8],
+        bytes: 1,
+        hash: 2,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![2]],
+        provides: vec![vec![0]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+
+    // then
+    {
+        let mut it = pool.ready(shard).into_iter().map(|tx| tx.data[0]);
+        assert_eq!(it.next(), None);
+    }
+    // all operations occupy the Future queue - it's fine
+    assert_eq!(pool.future.len(shard), 3);
+
+    // let's close the cycle with one additional operation
+    let err = pool
+        .import(TrustedOperation {
+            data: vec![4u8],
             bytes: 1,
-            hash: 1,
-            priority: 5u64,
+            hash: 4,
+            priority: 1u64, // lower priority than Tx(2)
             valid_till: 64u64,
             requires: vec![],
-            provides: vec![vec![1]],
+            provides: vec![vec![0]],
             propagate: true,
             source: Source::External,
-        })
+        }, shard)
         .unwrap_err();
-
-        // then
-        assert_eq!(pool.ready().count(), 1);
-        assert_eq!(pool.ready.len(), 1);
+    let mut it = pool.ready(shard).into_iter().map(|tx| tx.data[0]);
+    assert_eq!(it.next(), None);
+    assert_eq!(pool.ready.len(shard), 0);
+    assert_eq!(pool.future.len(shard), 0);
+    if let error::Error::CycleDetected = err {
+    } else {
+        assert!(false, "Invalid error kind: {:?}", err);
     }
+}
 
-    #[test]
-    fn should_import_transaction_to_future_and_promote_it_later() {
-        // given
-        let mut pool = pool();
+pub fn test_can_track_heap_size() {
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+    pool.import(TrustedOperation {
+        data: vec![5u8; 1024],
+        bytes: 1,
+        hash: 5,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![0], vec![4]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .expect("import 1 should be ok");
+    pool.import(TrustedOperation {
+        data: vec![3u8; 1024],
+        bytes: 1,
+        hash: 7,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![2], vec![7]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .expect("import 2 should be ok");
 
-        // when
-        pool.import(TrustedOperation {
-            data: vec![1u8],
-            bytes: 1,
-            hash: 1,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![vec![1]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        assert_eq!(pool.ready().count(), 0);
-        assert_eq!(pool.ready.len(), 0);
-        pool.import(TrustedOperation {
-            data: vec![2u8],
-            bytes: 1,
-            hash: 2,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![],
-            provides: vec![vec![0]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
+    //assert!(parity_util_mem::malloc_size(&pool) > 5000);
+}
 
-        // then
-        assert_eq!(pool.ready().count(), 2);
-        assert_eq!(pool.ready.len(), 2);
-    }
+pub fn test_should_remove_invalid_transactions() {
+    // given
+    let shard = ShardIdentifier::default();
+    let mut pool = test_pool();
+    pool.import(TrustedOperation {
+        data: vec![5u8],
+        bytes: 1,
+        hash: 5,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![0], vec![4]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![3u8],
+        bytes: 1,
+        hash: 3,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![2]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![2u8],
+        bytes: 1,
+        hash: 2,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![1]],
+        provides: vec![vec![3], vec![2]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![4u8],
+        bytes: 1,
+        hash: 4,
+        priority: 1_000u64,
+        valid_till: 64u64,
+        requires: vec![vec![3], vec![4]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    // future
+    pool.import(TrustedOperation {
+        data: vec![6u8],
+        bytes: 1,
+        hash: 6,
+        priority: 1_000u64,
+        valid_till: 64u64,
+        requires: vec![vec![11]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    assert_eq!(pool.ready(shard).count(), 5);
+    assert_eq!(pool.future.len(shard), 1);
 
-    #[test]
-    fn should_promote_a_subgraph() {
-        // given
-        let mut pool = pool();
+    // when
+    pool.remove_subtree(&[6, 1], shard);
 
-        // when
-        pool.import(TrustedOperation {
-            data: vec![1u8],
-            bytes: 1,
-            hash: 1,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![vec![1]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![3u8],
-            bytes: 1,
-            hash: 3,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![2]],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![2u8],
-            bytes: 1,
-            hash: 2,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![1]],
-            provides: vec![vec![3], vec![2]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![4u8],
-            bytes: 1,
-            hash: 4,
-            priority: 1_000u64,
-            valid_till: 64u64,
-            requires: vec![vec![3], vec![4]],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        assert_eq!(pool.ready().count(), 0);
-        assert_eq!(pool.ready.len(), 0);
+    // then
+    assert_eq!(pool.ready(shard).count(), 1);
+    assert_eq!(pool.future.len(shard), 0);
+}
 
-        let res = pool
-            .import(TrustedOperation {
-                data: vec![5u8],
-                bytes: 1,
-                hash: 5,
-                priority: 5u64,
-                valid_till: 64u64,
-                requires: vec![],
-                provides: vec![vec![0], vec![4]],
-                propagate: true,
-                source: Source::External,
-            })
-            .unwrap();
+pub fn test_should_prune_ready_transactions() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+    // future (waiting for 0)
+    pool.import(TrustedOperation {
+        data: vec![5u8],
+        bytes: 1,
+        hash: 5,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![vec![100]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    // ready
+    pool.import(TrustedOperation {
+        data: vec![1u8],
+        bytes: 1,
+        hash: 1,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![],
+        provides: vec![vec![1]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![2u8],
+        bytes: 1,
+        hash: 2,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![2]],
+        provides: vec![vec![3]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![3u8],
+        bytes: 1,
+        hash: 3,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![1]],
+        provides: vec![vec![2]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+    pool.import(TrustedOperation {
+        data: vec![4u8],
+        bytes: 1,
+        hash: 4,
+        priority: 1_000u64,
+        valid_till: 64u64,
+        requires: vec![vec![3], vec![2]],
+        provides: vec![vec![4]],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
 
-        // then
-        let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
+    assert_eq!(pool.ready(shard).count(), 4);
+    assert_eq!(pool.future.len(shard), 1);
 
-        assert_eq!(it.next(), Some(5));
-        assert_eq!(it.next(), Some(1));
-        assert_eq!(it.next(), Some(2));
-        assert_eq!(it.next(), Some(4));
-        assert_eq!(it.next(), Some(3));
-        assert_eq!(it.next(), None);
-        assert_eq!(
-            res,
-            Imported::Ready {
-                hash: 5,
-                promoted: vec![1, 2, 3, 4],
-                failed: vec![],
-                removed: vec![],
-            }
-        );
-    }
+    // when
+    let result = pool.prune_tags(vec![vec![0], vec![2]], shard);
 
-    #[test]
-    fn should_handle_a_cycle() {
-        // given
-        let mut pool = pool();
-        pool.import(TrustedOperation {
-            data: vec![1u8],
-            bytes: 1,
-            hash: 1,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![vec![1]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![3u8],
-            bytes: 1,
-            hash: 3,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![1]],
-            provides: vec![vec![2]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        assert_eq!(pool.ready().count(), 0);
-        assert_eq!(pool.ready.len(), 0);
-
-        // when
-        pool.import(TrustedOperation {
-            data: vec![2u8],
-            bytes: 1,
-            hash: 2,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![2]],
-            provides: vec![vec![0]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-
-        // then
-        {
-            let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
-            assert_eq!(it.next(), None);
+    // then
+    assert_eq!(result.pruned.len(), 2);
+    assert_eq!(result.failed.len(), 0);
+    assert_eq!(
+        result.promoted[0],
+        Imported::Ready {
+            hash: 5,
+            promoted: vec![],
+            failed: vec![],
+            removed: vec![],
         }
-        // all operations occupy the Future queue - it's fine
-        assert_eq!(pool.future.len(), 3);
+    );
+    assert_eq!(result.promoted.len(), 1);
+    assert_eq!(pool.future.len(shard), 0);
+    assert_eq!(pool.ready.len(shard), 3);
+    assert_eq!(pool.ready(shard).count(), 3);
+}
 
-        // let's close the cycle with one additional operation
-        let res = pool
-            .import(TrustedOperation {
+pub fn test_transaction_debug() {
+    assert_eq!(
+        format!(
+            "{:?}",
+            TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
                 hash: 4,
-                priority: 50u64,
+                priority: 1_000u64,
                 valid_till: 64u64,
-                requires: vec![],
-                provides: vec![vec![0]],
+                requires: vec![vec![3], vec![2]],
+                provides: vec![vec![4]],
                 propagate: true,
                 source: Source::External,
-            })
-            .unwrap();
-        let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
-        assert_eq!(it.next(), Some(4));
-        assert_eq!(it.next(), Some(1));
-        assert_eq!(it.next(), Some(3));
-        assert_eq!(it.next(), None);
-        assert_eq!(
-            res,
-            Imported::Ready {
-                hash: 4,
-                promoted: vec![1, 3],
-                failed: vec![2],
-                removed: vec![],
             }
-        );
-        assert_eq!(pool.future.len(), 0);
-    }
+        ),
+        "TrustedOperation { \
+hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
+source: External, requires: [03,02], provides: [04], data: [4]}"
+            .to_owned()
+    );
+}
 
-    #[test]
-    fn should_handle_a_cycle_with_low_priority() {
-        // given
-        let mut pool = pool();
-        pool.import(TrustedOperation {
-            data: vec![1u8],
-            bytes: 1,
-            hash: 1,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![vec![1]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![3u8],
-            bytes: 1,
-            hash: 3,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![1]],
-            provides: vec![vec![2]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        assert_eq!(pool.ready().count(), 0);
-        assert_eq!(pool.ready.len(), 0);
-
-        // when
-        pool.import(TrustedOperation {
-            data: vec![2u8],
-            bytes: 1,
-            hash: 2,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![2]],
-            provides: vec![vec![0]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-
-        // then
-        {
-            let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
-            assert_eq!(it.next(), None);
-        }
-        // all operations occupy the Future queue - it's fine
-        assert_eq!(pool.future.len(), 3);
-
-        // let's close the cycle with one additional operation
-        let err = pool
-            .import(TrustedOperation {
-                data: vec![4u8],
-                bytes: 1,
-                hash: 4,
-                priority: 1u64, // lower priority than Tx(2)
-                valid_till: 64u64,
-                requires: vec![],
-                provides: vec![vec![0]],
-                propagate: true,
-                source: Source::External,
-            })
-            .unwrap_err();
-        let mut it = pool.ready().into_iter().map(|tx| tx.data[0]);
-        assert_eq!(it.next(), None);
-        assert_eq!(pool.ready.len(), 0);
-        assert_eq!(pool.future.len(), 0);
-        if let error::Error::CycleDetected = err {
-        } else {
-            assert!(false, "Invalid error kind: {:?}", err);
-        }
-    }
-
-    #[test]
-    fn can_track_heap_size() {
-        let mut pool = pool();
-        pool.import(TrustedOperation {
-            data: vec![5u8; 1024],
-            bytes: 1,
-            hash: 5,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![],
-            provides: vec![vec![0], vec![4]],
-            propagate: true,
-            source: Source::External,
-        })
-        .expect("import 1 should be ok");
-        pool.import(TrustedOperation {
-            data: vec![3u8; 1024],
-            bytes: 1,
-            hash: 7,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![],
-            provides: vec![vec![2], vec![7]],
-            propagate: true,
-            source: Source::External,
-        })
-        .expect("import 2 should be ok");
-
-        //assert!(parity_util_mem::malloc_size(&pool) > 5000);
-    }
-
-    #[test]
-    fn should_remove_invalid_transactions() {
-        // given
-        let mut pool = pool();
-        pool.import(TrustedOperation {
-            data: vec![5u8],
-            bytes: 1,
-            hash: 5,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![],
-            provides: vec![vec![0], vec![4]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![1u8],
-            bytes: 1,
-            hash: 1,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![vec![1]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![3u8],
-            bytes: 1,
-            hash: 3,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![2]],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![2u8],
-            bytes: 1,
-            hash: 2,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![1]],
-            provides: vec![vec![3], vec![2]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![4u8],
-            bytes: 1,
-            hash: 4,
-            priority: 1_000u64,
-            valid_till: 64u64,
-            requires: vec![vec![3], vec![4]],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        // future
-        pool.import(TrustedOperation {
-            data: vec![6u8],
-            bytes: 1,
-            hash: 6,
-            priority: 1_000u64,
-            valid_till: 64u64,
-            requires: vec![vec![11]],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        assert_eq!(pool.ready().count(), 5);
-        assert_eq!(pool.future.len(), 1);
-
-        // when
-        pool.remove_subtree(&[6, 1]);
-
-        // then
-        assert_eq!(pool.ready().count(), 1);
-        assert_eq!(pool.future.len(), 0);
-    }
-
-    #[test]
-    fn should_prune_ready_transactions() {
-        // given
-        let mut pool = pool();
-        // future (waiting for 0)
-        pool.import(TrustedOperation {
-            data: vec![5u8],
-            bytes: 1,
-            hash: 5,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![vec![100]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        // ready
-        pool.import(TrustedOperation {
-            data: vec![1u8],
-            bytes: 1,
-            hash: 1,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![],
-            provides: vec![vec![1]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![2u8],
-            bytes: 1,
-            hash: 2,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![2]],
-            provides: vec![vec![3]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
-            data: vec![3u8],
-            bytes: 1,
-            hash: 3,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![1]],
-            provides: vec![vec![2]],
-            propagate: true,
-            source: Source::External,
-        })
-        .unwrap();
-        pool.import(TrustedOperation {
+pub fn test_transaction_propagation() {
+    assert_eq!(
+        TrustedOperation {
             data: vec![4u8],
             bytes: 1,
             hash: 4,
@@ -1129,125 +1190,93 @@ mod tests {
             provides: vec![vec![4]],
             propagate: true,
             source: Source::External,
-        })
-        .unwrap();
-
-        assert_eq!(pool.ready().count(), 4);
-        assert_eq!(pool.future.len(), 1);
-
-        // when
-        let result = pool.prune_tags(vec![vec![0], vec![2]]);
-
-        // then
-        assert_eq!(result.pruned.len(), 2);
-        assert_eq!(result.failed.len(), 0);
-        assert_eq!(
-            result.promoted[0],
-            Imported::Ready {
-                hash: 5,
-                promoted: vec![],
-                failed: vec![],
-                removed: vec![],
-            }
-        );
-        assert_eq!(result.promoted.len(), 1);
-        assert_eq!(pool.future.len(), 0);
-        assert_eq!(pool.ready.len(), 3);
-        assert_eq!(pool.ready().count(), 3);
-    }
-
-    #[test]
-    fn transaction_debug() {
-        assert_eq!(
-            format!(
-                "{:?}",
-                TrustedOperation {
-                    data: vec![4u8],
-                    bytes: 1,
-                    hash: 4,
-                    priority: 1_000u64,
-                    valid_till: 64u64,
-                    requires: vec![vec![3], vec![2]],
-                    provides: vec![vec![4]],
-                    propagate: true,
-                    source: Source::External,
-                }
-            ),
-            "TrustedOperation { \
-hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
-source: TransactionSource::External, requires: [03,02], provides: [04], data: [4]}"
-                .to_owned()
-        );
-    }
-
-    #[test]
-    fn transaction_propagation() {
-        assert_eq!(
-            TrustedOperation {
-                data: vec![4u8],
-                bytes: 1,
-                hash: 4,
-                priority: 1_000u64,
-                valid_till: 64u64,
-                requires: vec![vec![3], vec![2]],
-                provides: vec![vec![4]],
-                propagate: true,
-                source: Source::External,
-            }
-            .is_propagable(),
-            true
-        );
-
-        assert_eq!(
-            TrustedOperation {
-                data: vec![4u8],
-                bytes: 1,
-                hash: 4,
-                priority: 1_000u64,
-                valid_till: 64u64,
-                requires: vec![vec![3], vec![2]],
-                provides: vec![vec![4]],
-                propagate: false,
-                source: Source::External,
-            }
-            .is_propagable(),
-            false
-        );
-    }
-
-    #[test]
-    fn should_reject_future_transactions() {
-        // given
-        let mut pool = pool();
-
-        // when
-        pool.reject_future_operations = true;
-
-        // then
-        let err = pool.import(TrustedOperation {
-            data: vec![5u8],
-            bytes: 1,
-            hash: 5,
-            priority: 5u64,
-            valid_till: 64u64,
-            requires: vec![vec![0]],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        });
-
-        if let Err(error::Error::RejectedFutureTrustedOperation) = err {
-        } else {
-            assert!(false, "Invalid error kind: {:?}", err);
         }
+        .is_propagable(),
+        true
+    );
+
+    assert_eq!(
+        TrustedOperation {
+            data: vec![4u8],
+            bytes: 1,
+            hash: 4,
+            priority: 1_000u64,
+            valid_till: 64u64,
+            requires: vec![vec![3], vec![2]],
+            provides: vec![vec![4]],
+            propagate: false,
+            source: Source::External,
+        }
+        .is_propagable(),
+        false
+    );
+}
+
+
+pub fn test_should_reject_future_transactions() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
+
+    // when
+    pool.reject_future_operations = true;
+
+    // then
+    let err = pool.import(TrustedOperation {
+        data: vec![5u8],
+        bytes: 1,
+        hash: 5,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard);
+
+    if let Err(error::Error::RejectedFutureTrustedOperation) = err {
+    } else {
+        assert!(false, "Invalid error kind: {:?}", err);
     }
+}
 
-    #[test]
-    fn should_clear_future_queue() {
-        // given
-        let mut pool = pool();
+pub fn test_should_clear_future_queue() {
+    // given
+    let mut pool = test_pool();
+    let shard = ShardIdentifier::default();
 
-        // when
+    // when
+    pool.import(TrustedOperation {
+        data: vec![5u8],
+        bytes: 1,
+        hash: 5,
+        priority: 5u64,
+        valid_till: 64u64,
+        requires: vec![vec![0]],
+        provides: vec![],
+        propagate: true,
+        source: Source::External,
+    }, shard)
+    .unwrap();
+
+    // then
+    assert_eq!(pool.future.len(shard), 1);
+
+    // and then when
+    assert_eq!(pool.clear_future(shard).len(), 1);
+
+    // then
+    assert_eq!(pool.future.len(shard), 0);
+}
+
+pub fn test_should_accept_future_transactions_when_explicitly_asked_to() {        
+    // given
+    let mut pool = test_pool();
+    pool.reject_future_operations = true;
+    let shard = ShardIdentifier::default();
+
+    // when
+    let flag_value = pool.with_futures_enabled(|pool, flag| {
         pool.import(TrustedOperation {
             data: vec![5u8],
             bytes: 1,
@@ -1258,46 +1287,14 @@ source: TransactionSource::External, requires: [03,02], provides: [04], data: [4
             provides: vec![],
             propagate: true,
             source: Source::External,
-        })
+        }, shard)
         .unwrap();
 
-        // then
-        assert_eq!(pool.future.len(), 1);
+        flag
+    });
 
-        // and then when
-        assert_eq!(pool.clear_future().len(), 1);
-
-        // then
-        assert_eq!(pool.future.len(), 0);
-    }
-
-    #[test]
-    fn should_accept_future_transactions_when_explicitly_asked_to() {
-        // given
-        let mut pool = pool();
-        pool.reject_future_operations = true;
-
-        // when
-        let flag_value = pool.with_futures_enabled(|pool, flag| {
-            pool.import(TrustedOperation {
-                data: vec![5u8],
-                bytes: 1,
-                hash: 5,
-                priority: 5u64,
-                valid_till: 64u64,
-                requires: vec![vec![0]],
-                provides: vec![],
-                propagate: true,
-                source: Source::External,
-            })
-            .unwrap();
-
-            flag
-        });
-
-        // then
-        assert_eq!(flag_value, true);
-        assert_eq!(pool.reject_future_operations, true);
-        assert_eq!(pool.future.len(), 1);
-    }
+    // then
+    assert_eq!(flag_value, true);
+    assert_eq!(pool.reject_future_operations, true);
+    assert_eq!(pool.future.len(shard), 1);
 }

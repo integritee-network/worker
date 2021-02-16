@@ -24,7 +24,7 @@ use alloc::{string::String, vec::Vec};
 use codec::Encode;
 use sp_runtime::traits;
 
-use sgx_tstd::hash;
+use std::hash;
 
 //use crate::top_pool::primitives::TrustedOperationStatus
 use crate::rpc::worker_api_direct;

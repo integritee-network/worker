@@ -3,20 +3,24 @@
 extern crate alloc;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::{hash::Hash, pin::Pin};
-use sgx_tstd::collections::HashMap;
+use std::collections::HashMap;
 
 use jsonrpc_core::futures::{channel, Future, Stream};
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Member, NumberFor},
     transaction_validity::{
-        TransactionLongevity, TransactionPriority, TransactionSource, TransactionTag,
+        TransactionLongevity, TransactionPriority, TransactionTag,
     },
 };
+
+use codec::{Encode, Decode};
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 use crate::top_pool::error;
+use byteorder::{ByteOrder, BigEndian};
+use sp_core::H256;
 
 /// TrustedOperation pool status.
 #[derive(Debug)]
@@ -171,7 +175,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xts: Vec<StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
@@ -180,7 +184,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn submit_one(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
@@ -189,7 +193,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn submit_and_watch(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
@@ -251,92 +255,61 @@ pub trait TrustedOperationPool: Send + Sync {
     ) -> Option<Arc<Self::InPoolOperation>>;
 }
 
-/*
-/// Events that the operation pool listens for.
-pub enum ChainEvent<B: BlockT> {
-    /// New best block have been added to the chain
-    NewBestBlock {
-        /// Hash of the block.
-        hash: B::Hash,
-        /// Tree route from old best to new best parent that was calculated on import.
-        ///
-        /// If `None`, no re-org happened on import.
-        tree_route: Option<Arc<sp_blockchain::TreeRoute<B>>>,
-    },
-    /// An existing block has been finalized.
-    Finalized {
-        /// Hash of just finalized block
-        hash: B::Hash,
-    },
-}
-
-/// Trait for operation pool maintenance.
-pub trait MaintainedTrustedOperationPool: TrustedOperationPool {
-    /// Perform maintenance
-    fn maintain(&self, event: ChainEvent<Self::Block>) -> Pin<Box<dyn Future<Output=()> + Send>>;
-}*/
-
-/// TrustedOperation pool interface for submitting local operations that exposes a
-/// blocking interface for submission.
-pub trait LocalTrustedOperationPool: Send + Sync {
-    /// Block type.
-    type Block: BlockT;
-    /// TrustedOperation hash type.
-    type Hash: Hash + Eq + Member;
-    /// Error type.
-    type Error: From<error::Error> + error::IntoPoolError;
-
-    /// Submits the given local unverified operation to the pool blocking the
-    /// current thread for any necessary pre-verification.
-    /// NOTE: It MUST NOT be used for operations that originate from the
-    /// network or RPC, since the validation is performed with
-    /// `TransactionSource::Local`.
-    fn submit_local(
-        &self,
-        at: &BlockId<Self::Block>,
-        xt: StfTrustedOperation,
-    ) -> Result<Self::Hash, Self::Error>;
-}
-/*
-/// An abstraction for operation pool.
+/// The source of the transaction.
 ///
-/// This trait is used by offchain calls to be able to submit operations.
-/// The main use case is for offchain workers, to feed back the results of computations,
-/// but since the operation pool access is a separate `ExternalitiesExtension` it can
-/// be also used in context of other offchain calls. For one may generate and submit
-/// a operation for some misbehavior reports (say equivocation).
-pub trait OffchainSubmitTransaction<Block: BlockT>: Send + Sync {
-    /// Submit operation.
-    ///
-    /// The operation will end up in the pool and be propagated to others.
-    fn submit_at(
-        &self,
-        at: &BlockId<Block>,
-        extrinsic: Block::Extrinsic,
-    ) -> Result<(), ()>;
+/// Depending on the source we might apply different validation schemes.
+/// For instance we can disallow specific kinds of transactions if they were not produced
+/// by our local node (for instance off-chain workers).
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, Debug)]
+pub enum TrustedOperationSource {
+	/// Transaction is already included in block.
+	///
+	/// This means that we can't really tell where the transaction is coming from,
+	/// since it's already in the received block. Note that the custom validation logic
+	/// using either `Local` or `External` should most likely just allow `InBlock`
+	/// transactions as well.
+	InBlock,
+
+	/// Transaction is coming from a local source.
+	///
+	/// This means that the transaction was produced internally by the node
+	/// (for instance an Off-Chain Worker, or an Off-Chain Call), as opposed
+	/// to being received over the network.
+	Local,
+
+	/// Transaction has been received externally.
+	///
+	/// This means the transaction has been received from (usually) "untrusted" source,
+	/// for instance received over the network or RPC.
+	External,
 }
 
-impl<TPool: LocalTrustedOperationPool> OffchainSubmitTransaction<TPool::Block> for TPool {
-    fn submit_at(
-        &self,
-        at: &BlockId<TPool::Block>,
-        extrinsic: <TPool::Block as BlockT>::Extrinsic,
-    ) -> Result<(), ()> {
-        log::debug!(
-            target: "txpool",
-            "(offchain call) Submitting a operation to the pool: {:?}",
-            extrinsic
-        );
-
-        let result = self.submit_local(&at, extrinsic);
-
-        result.map(|_| ()).map_err(|e| {
-            log::warn!(
-                target: "txpool",
-                "(offchain call) Error submitting a operation to the pool: {:?}",
-                e
-            )
-        })
-    }
+// Replacement of primitive function from_low_u64_be
+pub fn from_low_u64_to_be_h256(val: u64) -> H256 {
+    let mut buf = [0x0; 8];
+    BigEndian::write_u64(&mut buf, val);
+    let capped = core::cmp::min(H256::len_bytes(), 8);
+    let mut bytes = [0x0; core::mem::size_of::<H256>()];
+    bytes[(H256::len_bytes() - capped)..].copy_from_slice(&buf[..capped]);
+    H256::from_slice(&bytes)
 }
-*/
+
+/// test
+pub fn test_h256() {
+	let tests = vec![
+		(from_low_u64_to_be_h256(0), "0x0000000000000000000000000000000000000000000000000000000000000000"),
+		(from_low_u64_to_be_h256(2), "0x0000000000000000000000000000000000000000000000000000000000000002"),
+		(from_low_u64_to_be_h256(15), "0x000000000000000000000000000000000000000000000000000000000000000f"),
+		(from_low_u64_to_be_h256(16), "0x0000000000000000000000000000000000000000000000000000000000000010"),
+		(from_low_u64_to_be_h256(1_000), "0x00000000000000000000000000000000000000000000000000000000000003e8"),
+		(from_low_u64_to_be_h256(100_000), "0x00000000000000000000000000000000000000000000000000000000000186a0"),
+		(from_low_u64_to_be_h256(u64::max_value()), "0x000000000000000000000000000000000000000000000000ffffffffffffffff"),
+	];
+
+	for (number, expected) in tests {
+        // workaround, as H256 in no_std does not implement (de)serialize
+        assert_eq!(format!("{}", expected), format!("{:?}", number));
+		//assert_eq!(format!("{:?}", expected), serde_json::to_string_pretty(&number).unwrap());
+		//assert_eq!(number, serde_json::from_str(&format!("{:?}", expected)).unwrap());
+	}
+}

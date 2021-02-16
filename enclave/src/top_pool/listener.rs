@@ -18,7 +18,7 @@
 
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
-use sgx_tstd::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
+use std::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
 use sp_runtime::traits;
 
 use crate::top_pool::{
