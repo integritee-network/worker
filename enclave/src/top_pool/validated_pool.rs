@@ -581,11 +581,11 @@ where
         Ok(())
     }
 
-   /*  /// Get rotator reference.
-    #[cfg(test)]
+    /// Get rotator reference.
+    /// only used for test
     pub fn rotator(&self) -> &PoolRotator<ExtrinsicHash<B>> {
         &self.rotator
-    } */
+    }
 
     /// Get api reference.
     pub fn api(&self) -> &B {

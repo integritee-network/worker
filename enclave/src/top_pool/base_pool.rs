@@ -33,7 +33,8 @@ use log::{debug, trace, warn};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::{
     TransactionLongevity as Longevity, TransactionPriority as Priority,
-    TransactionSource as Source, TransactionTag as Tag,
+    TransactionTag as Tag,
+    TransactionSource as Source,
 };
 
 use substratee_stf::ShardIdentifier;
@@ -1159,6 +1160,15 @@ pub fn test_transaction_debug() {
     assert_eq!(
         format!(
             "{:?}",
+             Source::External
+        ),
+        "TransactionSource::External"
+            .to_owned()
+        );
+
+    /* assert_eq!(
+        format!(
+            "{:?}",
             TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
@@ -1175,7 +1185,7 @@ pub fn test_transaction_debug() {
 hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
 source: TransactionSource::External, requires: [03,02], provides: [04], data: [4]}"
             .to_owned()
-    );
+    ); */
 }
 
 pub fn test_transaction_propagation() {

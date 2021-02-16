@@ -33,6 +33,7 @@ use sp_runtime::{
 };
 
 use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
+use crate::top_pool::primitives::from_low_u64_to_be_h256;
 
 use substratee_stf::{TrustedOperation as StfTrustedOperation, Getter};
 
@@ -115,15 +116,17 @@ where
 
     fn block_id_to_hash(
         &self,
-        _at: &BlockId<Self::Block>,
+        at: &BlockId<Self::Block>,
     ) -> error::Result<Option<BlockHash<Self>>> {
-        Ok(None)
+        Ok(match at {
+            BlockId::Hash(x) => Some(x.clone()),
+            // dummy
+            BlockId::Number(num) => None,
+        })
+
     }
 
     fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
-        /*let encoded = ex.encode();
-        let len = encoded.len();
-        (Hashing::hash(&encoded) as Hash, len)*/
         debug!("[Pool] creating hash of {:?}", ex);
         ex.using_encoded(|x| {
             (
