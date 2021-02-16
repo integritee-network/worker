@@ -23,16 +23,17 @@ use log::*;
 
 use codec::Encode;
 use jsonrpc_core::futures::future::{ready, Future, Ready};
-use sgx_tstd::{marker::PhantomData, pin::Pin};
+use std::{marker::PhantomData, pin::Pin};
 
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
-    transaction_validity::{TransactionSource, TransactionValidity, ValidTransaction,
+    transaction_validity::{TransactionValidity, ValidTransaction,
          TransactionValidityError, UnknownTransaction},
 };
 
 use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
+use crate::top_pool::primitives::{TrustedOperationSource};
 
 use substratee_stf::{TrustedOperation as StfTrustedOperation, Getter};
 
@@ -69,7 +70,7 @@ where
     fn validate_transaction(
         &self,
         _at: &BlockId<Self::Block>,
-        _source: TransactionSource,
+        _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
@@ -115,15 +116,17 @@ where
 
     fn block_id_to_hash(
         &self,
-        _at: &BlockId<Self::Block>,
+        at: &BlockId<Self::Block>,
     ) -> error::Result<Option<BlockHash<Self>>> {
-        Ok(None)
+        Ok(match at {
+            BlockId::Hash(x) => Some(x.clone()),
+            // dummy
+            BlockId::Number(_num) => None,
+        })
+
     }
 
     fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
-        /*let encoded = ex.encode();
-        let len = encoded.len();
-        (Hashing::hash(&encoded) as Hash, len)*/
         debug!("[Pool] creating hash of {:?}", ex);
         ex.using_encoded(|x| {
             (

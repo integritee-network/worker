@@ -21,12 +21,12 @@ pub extern crate alloc;
 use alloc::{boxed::Box, fmt, sync::Arc, vec::Vec};
 use core::hash;
 
-use sgx_tstd::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::TransactionTag as Tag;
 
-use sgx_tstd::{time::Instant, untrusted::time::InstantEx};
+use std::{time::Instant, untrusted::time::InstantEx};
 
 use substratee_stf::ShardIdentifier;
 
@@ -325,35 +325,5 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
                 .fold(0, |acc, tx| acc + tx.operation.bytes);
         }
         return 0;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use sp_runtime::transaction_validity::TransactionSource;
-
-    #[test]
-    fn can_track_heap_size() {
-        let mut future = FutureTrustedOperations::default();
-        future.import(WaitingTrustedOperations {
-            operation: TrustedOperation {
-                data: vec![0u8; 1024],
-                bytes: 1,
-                hash: 1,
-                priority: 1,
-                valid_till: 2,
-                requires: vec![vec![1], vec![2]],
-                provides: vec![vec![3], vec![4]],
-                propagate: true,
-                source: TransactionSource::External,
-            }
-            .into(),
-            missing_tags: vec![vec![1u8], vec![2u8]].into_iter().collect(),
-            //imported_at: std::time::Instant::now(),
-        });
-
-        // data is at least 1024!
-        assert!(parity_util_mem::malloc_size(&future) > 1024);
     }
 }

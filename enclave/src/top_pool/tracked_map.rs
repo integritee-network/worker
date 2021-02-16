@@ -19,7 +19,7 @@
 pub extern crate alloc;
 use alloc::sync::Arc;
 
-use sgx_tstd::collections::{hash_map::Values, HashMap};
+use std::collections::{hash_map::Values, HashMap};
 
 use core::sync::atomic::{AtomicIsize, Ordering as AtomicOrdering};
 use core::{clone::Clone, cmp, hash};

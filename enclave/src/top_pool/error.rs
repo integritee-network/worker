@@ -24,7 +24,7 @@ use alloc::string::String;
 
 use derive_more::{Display, From};
 /// TrustedOperation pool result.
-pub type Result<T> = sgx_tstd::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// TrustedOperation pool error type.
 #[derive(Debug, From, Display)]
@@ -79,13 +79,13 @@ pub trait IntoPoolError: Send + Sized {
     /// This implementation is optional and used only to
     /// provide more descriptive error messages for end users
     /// of RPC API.
-    fn into_pool_error(self) -> sgx_tstd::result::Result<Error, Self> {
+    fn into_pool_error(self) -> std::result::Result<Error, Self> {
         Err(self)
     }
 }
 
 impl IntoPoolError for Error {
-    fn into_pool_error(self) -> sgx_tstd::result::Result<Error, Self> {
+    fn into_pool_error(self) -> std::result::Result<Error, Self> {
         Ok(self)
     }
 }

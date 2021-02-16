@@ -35,7 +35,7 @@ pub enum Error {
     /// Client error.
     #[display(fmt = "Client error: {}", _0)]
     #[from(ignore)]
-    Client(Box<dyn sgx_tstd::error::Error + Send>),
+    Client(Box<dyn std::error::Error + Send>),
     /// TrustedOperation pool error,
     #[display(fmt = "TrustedOperation pool error: {}", _0)]
     Pool(top_pool::error::Error),
@@ -69,8 +69,8 @@ pub enum Error {
     InvalidShard,
 }
 
-impl sgx_tstd::error::Error for Error {
-    fn source(&self) -> Option<&(dyn sgx_tstd::error::Error + 'static)> {
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Client(ref err) => Some(&**err),
             //Error::Pool(ref err) => Some(err),
