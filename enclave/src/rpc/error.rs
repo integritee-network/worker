@@ -20,7 +20,7 @@
 
 use jsonrpc_core as rpc;
 
-use sgx_tstd::error;
+use std::error;
 
 pub extern crate alloc;
 use alloc::{boxed::Box, string::String};
@@ -88,7 +88,7 @@ impl error::Error for Error {
 }
 
 impl IntoPoolError for Error {
-    fn into_pool_error(self) -> sgx_tstd::result::Result<PoolError, Self> {
+    fn into_pool_error(self) -> std::result::Result<PoolError, Self> {
         match self {
             Error::PoolError(e) => Ok(e),
             e => Err(e),

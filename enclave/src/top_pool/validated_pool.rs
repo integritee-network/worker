@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use sgx_tstd::{
+use std::{
     collections::{HashMap, HashSet},
     string::String,
     sync::Arc,
@@ -34,7 +34,7 @@ use crate::top_pool::{
     error,
     listener::Listener,
     pool::{BlockHash, ChainApi, EventStream, ExtrinsicHash, Options, TransactionFor},
-    primitives::PoolStatus,
+    primitives::{PoolStatus, TrustedOperationSource},
     rotator::PoolRotator,
 };
 
@@ -43,7 +43,7 @@ use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use sp_runtime::{
     generic::BlockId,
     traits::{self, SaturatedConversion},
-    transaction_validity::{TransactionSource, TransactionTag as Tag, ValidTransaction},
+    transaction_validity::{TransactionTag as Tag, ValidTransaction},
 };
 
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
@@ -69,7 +69,7 @@ impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
     pub fn valid_at(
         at: u64,
         hash: Hash,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         data: Ex,
         bytes: usize,
         validity: ValidTransaction,
@@ -582,7 +582,7 @@ where
     }
 
     /// Get rotator reference.
-    #[cfg(test)]
+    /// only used for test
     pub fn rotator(&self) -> &PoolRotator<ExtrinsicHash<B>> {
         &self.rotator
     }

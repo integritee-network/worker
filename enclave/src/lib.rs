@@ -807,6 +807,41 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
+        top_pool::base_pool::test_should_import_transaction_to_ready,
+        top_pool::base_pool::test_should_not_import_same_transaction_twice,
+        top_pool::base_pool::test_should_import_transaction_to_future_and_promote_it_later,
+        top_pool::base_pool::test_should_promote_a_subgraph,
+        top_pool::base_pool::test_should_handle_a_cycle,
+        top_pool::base_pool::test_can_track_heap_size,
+        top_pool::base_pool::test_should_handle_a_cycle_with_low_priority,        
+        top_pool::base_pool::test_should_remove_invalid_transactions,
+        top_pool::base_pool::test_should_prune_ready_transactions,
+        top_pool::base_pool::test_transaction_debug,
+        top_pool::base_pool::test_transaction_propagation,
+        top_pool::base_pool::test_should_reject_future_transactions,
+        top_pool::base_pool::test_should_clear_future_queue,
+        top_pool::base_pool::test_should_accept_future_transactions_when_explicitly_asked_to,
+
+        top_pool::primitives::test_h256,
+
+        top_pool::pool::test_should_validate_and_import_transaction,
+        top_pool::pool::test_should_reject_if_temporarily_banned,
+        top_pool::pool::test_should_notify_about_pool_events,
+        top_pool::pool::test_should_clear_stale_transactions,
+        top_pool::pool::test_should_ban_mined_transactions,
+        top_pool::pool::test_should_limit_futures,
+        top_pool::pool::test_should_error_if_reject_immediately,
+        top_pool::pool::test_should_reject_transactions_with_no_provides,
+        /*top_pool::pool::listener::test_should_trigger_ready_and_finalized,
+        top_pool::pool::listener::test_should_trigger_ready_and_finalized_when_pruning_via_hash,
+        top_pool::pool::listener::test_should_trigger_future_and_ready_after_promoted,
+        top_pool::pool::listener::test_should_trigger_invalid_and_ban,
+        top_pool::pool::listener::test_should_trigger_broadcasted,
+        top_pool::pool::listener::test_should_trigger_dropped,
+        top_pool::pool::listener::test_should_handle_pruning_in_the_middle_of_import,*/
+        
+
+        
         state::test_encrypted_state_io_works,
         ipfs::test_creates_ipfs_content_struct_works,
         ipfs::test_verification_ok_for_correct_content,
