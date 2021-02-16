@@ -661,8 +661,7 @@ fn remove_item<T: PartialEq>(vec: &mut Vec<T>, item: &T) {
 /*
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use sp_runtime::transaction_validity::TransactionSource as Source;
+    use super::*;    
 
     fn tx(id: u8) -> TrustedOperation<u64, Vec<u8>> {
         TrustedOperation {

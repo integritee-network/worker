@@ -24,13 +24,14 @@ use sp_runtime::{
     generic::BlockId,
     traits::{self, Block as BlockT, SaturatedConversion},
     transaction_validity::{
-        TransactionSource, TransactionTag as Tag, TransactionValidity, TransactionValidityError,
+        TransactionTag as Tag, TransactionValidity, TransactionValidityError,
     },
 };
 
 use crate::top_pool::{
     base_pool as base, error,
     validated_pool::{ValidatedPool, ValidatedOperation},
+    primitives::TrustedOperationSource,
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
@@ -70,7 +71,7 @@ pub trait ChainApi: Send + Sync {
     fn validate_transaction(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture;
 
@@ -149,7 +150,7 @@ where
     pub async fn submit_at(
         &self,
         at: &BlockId<B::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xts: impl IntoIterator<Item = StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
@@ -168,7 +169,7 @@ where
     pub async fn resubmit_at(
         &self,
         at: &BlockId<B::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xts: impl IntoIterator<Item = StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
@@ -185,7 +186,7 @@ where
     pub async fn submit_one(
         &self,
         at: &BlockId<B::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> Result<ExtrinsicHash<B>, B::Error> {
@@ -200,7 +201,7 @@ where
     pub async fn submit_and_watch(
         &self,
         at: &BlockId<B::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> Result<ExtrinsicHash<B>, B::Error> {
@@ -305,7 +306,7 @@ where
                     let validity = self
                         .validated_pool
                         .api()
-                        .validate_transaction(parent, TransactionSource::InBlock, extrinsic.clone())
+                        .validate_transaction(parent, TrustedOperationSource::InBlock, extrinsic.clone())
                         .await;
 
                     if let Ok(Ok(validity)) = validity {
@@ -410,7 +411,7 @@ where
     async fn verify(
         &self,
         at: &BlockId<B::Block>,
-        xts: impl IntoIterator<Item = (TransactionSource, StfTrustedOperation)>,
+        xts: impl IntoIterator<Item = (TrustedOperationSource, StfTrustedOperation)>,
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
     ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
@@ -437,7 +438,7 @@ where
         block_id: &BlockId<B::Block>,
         //block_number: NumberFor<B>,
         block_number: i8,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
@@ -513,19 +514,18 @@ use jsonrpc_core::futures::executor::block_on;
 use jsonrpc_core::futures;
 use sp_runtime::{
     traits::Hash,
-    transaction_validity::{ValidTransaction, InvalidTransaction as InvalidTrustedOperation,
-    UnknownTransaction},
+    transaction_validity::{ValidTransaction, InvalidTransaction as InvalidTrustedOperation},
 };
 use codec::Encode;
-use substrate_test_runtime::{Block, Extrinsic, Transfer, H256, AccountId, Hashing};
+use substrate_test_runtime::{Block, H256, AccountId, Hashing};
 use crate::top_pool::base_pool::Limit;
 use std::sync::SgxMutex as Mutex;
-use substratee_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedOperation};
+use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use super::primitives::from_low_u64_to_be_h256;
 use core::matches;
 
 const INVALID_NONCE: u32 = 254;
-const SOURCE: TransactionSource = TransactionSource::External;
+const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
 
 #[derive(Clone, Debug, Default)]
@@ -546,7 +546,7 @@ impl ChainApi for TestApi {
     fn validate_transaction(
         &self,
         at: &BlockId<Self::Block>,
-        _source: TransactionSource,
+        _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let hash = self.hash_and_length(&uxt).0;

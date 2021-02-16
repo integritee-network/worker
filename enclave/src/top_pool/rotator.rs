@@ -104,7 +104,7 @@ impl<Hash: hash::Hash + Eq + Clone> PoolRotator<Hash> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sp_runtime::transaction_validity::TransactionSource;
+    use sp_runtime::transaction_validity::TrustedOperationSource;
     use substratee_stf::ShardIdentifier;
 
     type Hash = u64;
@@ -128,7 +128,7 @@ mod tests {
             requires: vec![],
             provides: vec![],
             propagate: true,
-            source: TransactionSource::External,
+            source: TrustedOperationSource::External,
         };
 
         (hash, tx)
@@ -195,7 +195,7 @@ mod tests {
                 requires: vec![],
                 provides: vec![],
                 propagate: true,
-                source: TransactionSource::External,
+                source: TrustedOperationSource::External,
             }
         }
 

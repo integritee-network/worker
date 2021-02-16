@@ -28,7 +28,6 @@ use codec::{Decode, Encode};
 use core::iter::Iterator;
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
 use sp_runtime::generic;
-use sp_runtime::transaction_validity::TransactionSource;
 
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, Getter, TrustedOperation, TrustedGetterSigned};
 
@@ -37,7 +36,8 @@ use crate::rpc::error::{FutureResult, Result};
 use crate::top_pool::{
     error::Error as PoolError,
     error::IntoPoolError,
-    primitives::{BlockHash, InPoolOperation, TrustedOperationPool, TxHash},
+    primitives::{BlockHash, InPoolOperation, TrustedOperationPool, 
+        TxHash, TrustedOperationSource},
 };
 use jsonrpc_core::Error as RpcError;
 pub mod client_error;
@@ -113,7 +113,7 @@ impl<P> Author<P> {
 /// Possibly in the future we could allow opt-in for special treatment
 /// of such operations, so that the block authors can inject
 /// some unique operations via RPC and have them included in the pool.
-const TX_SOURCE: TransactionSource = TransactionSource::External;
+const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
 //impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
 impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>

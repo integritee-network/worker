@@ -3,7 +3,6 @@ use std::sync::SgxMutex as Mutex;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, NumberFor, Zero},
-    transaction_validity::TransactionSource,
 };
 
 pub extern crate alloc;
@@ -18,7 +17,8 @@ use crate::top_pool::{
     base_pool::TrustedOperation,
     error::IntoPoolError,
     pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
-    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool, TxHash},
+    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, 
+        TrustedOperationPool, TxHash, TrustedOperationSource},
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
@@ -125,7 +125,7 @@ where
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         ops: Vec<StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
@@ -137,7 +137,7 @@ where
     fn submit_one(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         op: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error> {
@@ -149,7 +149,7 @@ where
     fn submit_and_watch(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error> {

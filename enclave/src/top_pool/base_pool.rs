@@ -34,7 +34,6 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::{
     TransactionLongevity as Longevity, TransactionPriority as Priority,
     TransactionTag as Tag,
-    TransactionSource as Source,
 };
 
 use substratee_stf::ShardIdentifier;
@@ -42,7 +41,7 @@ use substratee_stf::ShardIdentifier;
 use crate::top_pool::{
     error,
     future::{FutureTrustedOperations, WaitingTrustedOperations},
-    primitives::{InPoolOperation, PoolStatus},
+    primitives::{InPoolOperation, PoolStatus, TrustedOperationSource as Source},
     ready::ReadyOperations,
 };
 
@@ -1160,15 +1159,6 @@ pub fn test_transaction_debug() {
     assert_eq!(
         format!(
             "{:?}",
-             Source::External
-        ),
-        "TransactionSource::External"
-            .to_owned()
-        );
-
-    /* assert_eq!(
-        format!(
-            "{:?}",
             TrustedOperation {
                 data: vec![4u8],
                 bytes: 1,
@@ -1183,9 +1173,9 @@ pub fn test_transaction_debug() {
         ),
         "TrustedOperation { \
 hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
-source: TransactionSource::External, requires: [03,02], provides: [04], data: [4]}"
+source: External, requires: [03,02], provides: [04], data: [4]}"
             .to_owned()
-    ); */
+    );
 }
 
 pub fn test_transaction_propagation() {

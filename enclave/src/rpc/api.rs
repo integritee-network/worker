@@ -28,12 +28,12 @@ use std::{marker::PhantomData, pin::Pin};
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
-    transaction_validity::{TransactionSource, TransactionValidity, ValidTransaction,
+    transaction_validity::{TransactionValidity, ValidTransaction,
          TransactionValidityError, UnknownTransaction},
 };
 
 use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
-use crate::top_pool::primitives::from_low_u64_to_be_h256;
+use crate::top_pool::primitives::{TrustedOperationSource};
 
 use substratee_stf::{TrustedOperation as StfTrustedOperation, Getter};
 
@@ -70,7 +70,7 @@ where
     fn validate_transaction(
         &self,
         _at: &BlockId<Self::Block>,
-        _source: TransactionSource,
+        _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
@@ -121,7 +121,7 @@ where
         Ok(match at {
             BlockId::Hash(x) => Some(x.clone()),
             // dummy
-            BlockId::Number(num) => None,
+            BlockId::Number(_num) => None,
         })
 
     }

@@ -10,7 +10,7 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Member, NumberFor},
     transaction_validity::{
-        TransactionLongevity, TransactionPriority, TransactionSource, TransactionTag,
+        TransactionLongevity, TransactionPriority, TransactionTag,
     },
 };
 
@@ -175,7 +175,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xts: Vec<StfTrustedOperation>,
         shard: ShardIdentifier,
     ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
@@ -184,7 +184,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn submit_one(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
@@ -193,7 +193,7 @@ pub trait TrustedOperationPool: Send + Sync {
     fn submit_and_watch(
         &self,
         at: &BlockId<Self::Block>,
-        source: TransactionSource,
+        source: TrustedOperationSource,
         xt: StfTrustedOperation,
         shard: ShardIdentifier,
     ) -> PoolFuture<TxHash<Self>, Self::Error>;
@@ -260,7 +260,7 @@ pub trait TrustedOperationPool: Send + Sync {
 /// Depending on the source we might apply different validation schemes.
 /// For instance we can disallow specific kinds of transactions if they were not produced
 /// by our local node (for instance off-chain workers).
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode)]
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, Debug)]
 pub enum TrustedOperationSource {
 	/// Transaction is already included in block.
 	///
