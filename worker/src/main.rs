@@ -53,7 +53,7 @@ use enclave::api::{
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 mod constants;
 mod enclave;
@@ -63,6 +63,8 @@ mod tests;
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// start block production every ... ms
+const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
 
 fn main() {
     // Setup logging
@@ -330,6 +332,15 @@ fn worker(
     let mut latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
 
+     
+    // ------------------------------------------------------------------------
+    // start interval block production
+    thread::Builder::new()
+        .name("interval_block_production_timer".to_owned())
+        .spawn(move || start_interval_block_production(latest_head))
+        .unwrap();
+
+
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
     println!("*** Subscribing to events");
@@ -348,20 +359,47 @@ fn worker(
     let _block_subscriber = thread::Builder::new()
         .name("block_subscriber".to_owned())
         .spawn(move || api3.subscribe_finalized_heads(sender3))
-        .unwrap();
+        .unwrap();    
+   
 
     println!("[+] Subscribed to events. waiting...");
-
     let timeout = Duration::from_millis(10);
     loop {
         if let Ok(msg) = receiver.recv_timeout(timeout) {
             if let Ok(events) = parse_events(msg.clone()) {
                 print_events(events, sender.clone())
-            } else if let Ok(_header) = parse_header(msg.clone()) {
+            } /* else if let Ok(_header) = parse_header(msg.clone()) {
                 latest_head = sync_chain_relay(eid, &api, latest_head)
+            } */            
+        }
+
+    }
+}
+
+/// Triggers the enclave to produce a block based on a fixed time schedule
+fn start_interval_block_production(latest_head: Header) {
+    let enclave = enclave_init().unwrap();
+    let eid = enclave.geteid();
+
+    let block_production_interval = Duration::from_millis(BLOCK_PRODUCTION_INTERVAL);
+    let mut interval_start = SystemTime::now();
+    loop {
+        if let Ok(elapsed) = interval_start.elapsed() {
+            if (elapsed >= block_production_interval) {
+                // update interval time
+                interval_start = SystemTime::now();
+                
+                //enclave_produce_new_block();
+            } else {
+                // sleep for the rest of the interval
+                let sleep_time = block_production_interval - elapsed;
+                thread::sleep(sleep_time);
             }
         }
     }
+
+    
+    
 }
 
 fn request_keys(provider_url: &str, _shard: &ShardIdentifier) {
