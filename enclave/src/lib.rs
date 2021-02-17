@@ -447,7 +447,11 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     {
-        let &ref pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_top_pool().unwrap();
+        //let &ref pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_top_pool().unwrap();
+        let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
+            Some(mutex) => mutex,
+            None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        };
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
         let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));

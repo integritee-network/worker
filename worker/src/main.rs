@@ -288,7 +288,7 @@ fn worker(
     // ------------------------------------------------------------------------
     // start worker api direct invocation server
     println!(
-        "direct-invocation-server listening on ws://{}:{}",
+        "rpc worker server listening on ws://{}:{}",
         w_ip, worker_rpc_port
     );
     let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
@@ -332,12 +332,12 @@ fn worker(
     let mut latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
 
-     
-    // ------------------------------------------------------------------------
+     // ------------------------------------------------------------------------
     // start interval block production
+    let api4 = api.clone();
     thread::Builder::new()
         .name("interval_block_production_timer".to_owned())
-        .spawn(move || start_interval_block_production(latest_head))
+        .spawn(move || start_interval_block_production(eid, &api4, latest_head))
         .unwrap();
 
 
@@ -361,6 +361,7 @@ fn worker(
         .spawn(move || api3.subscribe_finalized_heads(sender3))
         .unwrap();    
    
+       
 
     println!("[+] Subscribed to events. waiting...");
     let timeout = Duration::from_millis(10);
@@ -368,27 +369,27 @@ fn worker(
         if let Ok(msg) = receiver.recv_timeout(timeout) {
             if let Ok(events) = parse_events(msg.clone()) {
                 print_events(events, sender.clone())
-            } /* else if let Ok(_header) = parse_header(msg.clone()) {
+            } /*  else if let Ok(_header) = parse_header(msg.clone()) {
                 latest_head = sync_chain_relay(eid, &api, latest_head)
-            } */            
+            }       */       
         }
 
     }
 }
 
 /// Triggers the enclave to produce a block based on a fixed time schedule
-fn start_interval_block_production(latest_head: Header) {
-    let enclave = enclave_init().unwrap();
-    let eid = enclave.geteid();
-
+fn start_interval_block_production(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>, mut latest_head: Header) {
     let block_production_interval = Duration::from_millis(BLOCK_PRODUCTION_INTERVAL);
     let mut interval_start = SystemTime::now();
     loop {
         if let Ok(elapsed) = interval_start.elapsed() {
-            if (elapsed >= block_production_interval) {
+            if elapsed >= block_production_interval {
                 // update interval time
                 interval_start = SystemTime::now();
-                
+
+                // sync chain relay
+                latest_head = sync_chain_relay(eid, api, latest_head)
+
                 //enclave_produce_new_block();
             } else {
                 // sleep for the rest of the interval
@@ -439,6 +440,7 @@ fn parse_events(event: String) -> Result<Events, String> {
 fn parse_header(header: String) -> Result<Header, String> {
     serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
 }
+ 
 
 fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
@@ -600,8 +602,9 @@ pub fn sync_chain_relay(
     let mut i = blocks_to_sync[0].block.header.number as usize;
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
-        let xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
-        let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
+        let _xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
+        
+        /* let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
 
         if !extrinsics.is_empty() {
             println!(
@@ -617,7 +620,7 @@ pub fn sync_chain_relay(
             let _ = events_out.recv().unwrap();
             let _ = events_out.recv().unwrap();
             // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        }
+        } */
 
         i += chunk.len();
         println!(

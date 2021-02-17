@@ -62,6 +62,21 @@ pub fn start_worker_api_direct_server(
     addr: String,
     eid: sgx_enclave_id_t,
 ) {
+    // initialise top pool in enclave
+    let init = thread::spawn(move || {
+        let mut retval = sgx_status_t::SGX_SUCCESS;
+        let result = unsafe { initialize_pool(eid, &mut retval) };
+
+        match result {
+            sgx_status_t::SGX_SUCCESS => {
+                debug!("[TX-pool init] ECALL success!");
+            }
+            _ => {
+                error!("[TX-pool init] ECALL Enclave Failed {}!", result.as_str());
+            }
+        }
+    });
+
     // Server WebSocket handler
     struct Server {
         client: Sender,
@@ -106,26 +121,15 @@ pub fn start_worker_api_direct_server(
         };
     });
 
-    // initialise top pool in enclave
-    thread::spawn(move || {
-        let mut retval = sgx_status_t::SGX_SUCCESS;
-        let result = unsafe { initialize_pool(eid, &mut retval) };
-
-        match result {
-            sgx_status_t::SGX_SUCCESS => {
-                debug!("[TX-pool init] ECALL success!");
-            }
-            _ => {
-                error!("[TX-pool init] ECALL Enclave Failed {}!", result.as_str());
-            }
-        }
-    });
-
     // initialize static pointer to empty HashMap
     let new_map: HashMap<Hash, WatchingClient> = HashMap::new();
     let pool_ptr = Arc::new(Mutex::new(new_map));
     let ptr = Arc::into_raw(pool_ptr);
     WATCHED_LIST.store(ptr as *mut (), Ordering::SeqCst);
+
+    // ensure top pool is initialised before returning
+    init.join().unwrap();
+    println!("Successfully initialised top pool");
 }
 
 struct WatchingClient {
