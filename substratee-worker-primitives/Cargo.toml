@@ -21,11 +21,18 @@ optional = true
 git = "https://github.com/paritytech/substrate.git"
 rev = "a208da16"
 default-features = false
+features = ["full_crypto"]
+
+[dependencies.substratee-stf]
+path = "../stf"
+default-features = false
 
 [features]
 default = ["std"]
 std = [ 'serde',
         'serde_derive',
-        'serde_json']
-sgx = [ 'sgx_tstd' ]
+        'serde_json',
+        'substratee-stf/std']
+sgx = [ 'sgx_tstd',
+        'substratee-stf/sgx' ]
 
