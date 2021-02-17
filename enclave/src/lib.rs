@@ -349,17 +349,16 @@ pub unsafe extern "C" fn init_chain_relay(
 
 #[no_mangle]
 pub unsafe extern "C" fn produce_block(
-    blocks: *const u8,
-    blocks_size: usize,
+    blocks_to_sync: *const u8,
+    blocks_to_sync_size: usize,
     nonce: *const u32,
-    unchecked_extrinsic: *mut u8,
-    unchecked_extrinsic_size: usize,
-) -> sgx_status_t {
-    debug!("Syncing chain relay!");
-    let mut blocks_slice = slice::from_raw_parts(blocks, blocks_size);
-    let xt_slice = slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size);
+    produced_blocks: *mut u8,
+    produced_blocks_size: usize,
+) -> sgx_status_t {    
+    let mut blocks_to_sync_slice = slice::from_raw_parts(blocks_to_sync, blocks_to_sync_size);
+    let xt_slice = slice::from_raw_parts_mut(produced_blocks, produced_blocks_size);
 
-    let blocks: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_slice) {
+    let blocks_to_sync: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_to_sync_slice) {
         Ok(b) => b,
         Err(e) => {
             error!("Decoding signed blocks failed. Error: {:?}", e);
@@ -371,40 +370,44 @@ pub unsafe extern "C" fn produce_block(
         Ok(v) => v,
         Err(e) => return e,
     };
-
-    // get header of last block
-    let last_block_header: Header = blocks.last().unwrap().block.header.clone();
-
+    
     let mut calls = Vec::new();
-    for signed_block in blocks.into_iter() {
-        validator
-            .check_xt_inclusion(validator.num_relays, &signed_block.block)
-            .unwrap(); // panic can only happen if relay_id does not exist
-        if let Err(e) = validator.submit_simple_header(
-            validator.num_relays,
-            signed_block.block.header.clone(),
-            signed_block.justification.clone(),
-        ) {
-            error!("Block verification failed. Error : {:?}", e);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
 
-        if update_states(signed_block.block.header.clone()).is_err() {
-            error!("Error performing state updates upon block import");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
+    debug!("Syncing chain relay!");
+    if !blocks_to_sync.is_empty() {        
+        for signed_block in blocks_to_sync.clone().into_iter() {
+            validator
+                .check_xt_inclusion(validator.num_relays, &signed_block.block)
+                .unwrap(); // panic can only happen if relay_id does not exist
+            if let Err(e) = validator.submit_simple_header(
+                validator.num_relays,
+                signed_block.block.header.clone(),
+                signed_block.justification.clone(),
+            ) {
+                error!("Block verification failed. Error : {:?}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
 
-        // not supported anymore since M8.2
-        /* match scan_block_for_relevant_xt(&signed_block.block) {
-            Ok(c) => calls.extend(c.into_iter()),
-            Err(_) => error!("Error executing relevant extrinsics"),
-        }; */
+            if update_states(signed_block.block.header.clone()).is_err() {
+                error!("Error performing state updates upon block import");
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+
+            // indirect worker calls supported anymore since M8.2
+            /* match scan_block_for_relevant_xt(&signed_block.block) {
+                Ok(c) => calls.extend(c.into_iter()),
+                Err(_) => error!("Error executing relevant extrinsics"),
+            }; */
+        }        
     }
+    // TODO: What todo in case no blocks to sync? (==blocks  to sync empty)
+    /* // get header of last block
+    let last_block_header: Header = blocks_to_sync.last().unwrap().block.header.clone();
     // execute pending calls from operation pool
     match execute_top_pool_calls(last_block_header) {
         Ok(c) => calls.extend(c.into_iter()),
         Err(_) => error!("Error executing relevant tx pool calls"),
-    };
+    }; */
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -412,6 +415,9 @@ pub unsafe extern "C" fn produce_block(
 
     sgx_status_t::SGX_SUCCESS
 }
+
+
+
 
 fn get_stf_state(
     trusted_getter_signed: TrustedGetterSigned,

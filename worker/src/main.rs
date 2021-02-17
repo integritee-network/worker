@@ -383,8 +383,6 @@ fn start_interval_block_production(eid: sgx_enclave_id_t, api: &Api<sr25519::Pai
             if elapsed >= block_production_interval {
                 // update interval time
                 interval_start = SystemTime::now();
-
-                // sync chain relay
                 latest_head = produce_block(eid, api, latest_head)
             } else {
                 // sleep for the rest of the interval
@@ -546,17 +544,30 @@ pub fn produce_block(
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
         .unwrap();
 
-    if curr_head.block.header.hash() == last_synced_head.hash() {
-        // we are already up to date, do nothing
-        return curr_head.block.header;
-    }
-
-    let mut blocks_to_sync = Vec::<SignedBlock>::new();
-    blocks_to_sync.push(curr_head.clone());
-
+    
     // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
     let mut head = curr_head.clone();
 
+    // Get all blocks from chain that are not yet synced
+    let mut blocks_to_sync = Vec::<SignedBlock>::new();
+    if curr_head.block.header.hash() != last_synced_head.hash() {
+        blocks_to_sync.push(curr_head.clone());
+        while head.block.header.parent_hash != last_synced_head.hash() {
+            head = api
+                .get_signed_block(Some(head.block.header.parent_hash))
+                .unwrap();
+            blocks_to_sync.push(head.clone());
+    
+            if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
+                println!(
+                    "Remaining blocks to fetch until last synced header: {:?}",
+                    head.block.header.number - last_synced_head.number
+                )
+            }
+        }
+        blocks_to_sync.reverse();
+    }
+    
     let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
     if no_blocks_to_sync > 1 {
         println!(
@@ -569,30 +580,33 @@ pub fn produce_block(
         );
     }
 
-    while head.block.header.parent_hash != last_synced_head.hash() {
-        head = api
-            .get_signed_block(Some(head.block.header.parent_hash))
-            .unwrap();
-        blocks_to_sync.push(head.clone());
-
-        if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
-            println!(
-                "Remaining blocks to fetch until last synced header: {:?}",
-                head.block.header.number - last_synced_head.number
-            )
-        }
-    }
-    blocks_to_sync.reverse();
-
     let tee_accountid = enclave_account(eid);
+    let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
+    let encoded_blocks = enclave_produce_block(eid, blocks_to_sync.clone(), tee_nonce).unwrap();
+
+    let blocks: Vec<Vec<u8>> = Decode::decode(&mut encoded_blocks.as_slice()).unwrap();
+
+    if !blocks.is_empty() {
+        println!(
+            "Sync chain relay: Enclave wants to send {} blocks",
+            blocks.len()
+        );
+        for block in blocks.into_iter() {
+            api.send_extrinsic(hex_encode(block), XtStatus::Ready).unwrap();
+        }
+
+        println!("Synced up to block {}",
+            blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len())
+    }
+
+    /* // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
     let mut i = blocks_to_sync[0].block.header.number as usize;
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
         let _xts = enclave_produce_block(eid, chunk.to_vec(), tee_nonce).unwrap();
         
-        /* let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
+        let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
 
         if !extrinsics.is_empty() {
             println!(
@@ -608,7 +622,7 @@ pub fn produce_block(
             let _ = events_out.recv().unwrap();
             let _ = events_out.recv().unwrap();
             // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        } */
+        }
 
         i += chunk.len();
         println!(
@@ -616,7 +630,7 @@ pub fn produce_block(
             i,
             blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
         )
-    }
+    } */
 
     curr_head.block.header
 }

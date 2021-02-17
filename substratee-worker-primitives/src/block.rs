@@ -20,9 +20,9 @@ pub struct Block {
     pub block_number: u64,
     pub parent_hash: H256,
     pub timestamp: i64,
-    /// Hash of the last layer one block header
-    ///  needed because extrinsics can depend on layer one state 
-    pub layer_one_head: H256,
+    /// Hash of the last header of block in layer one
+    /// Needed in case extrinsics depend on layer one state 
+    pub layer_one_head: H256,    
     pub shard_id: ShardIdentifier,
     pub block_author: AccountId,
     pub extrinsic_hashes: Vec<H256>,

@@ -266,22 +266,22 @@ pub fn enclave_produce_block(
 
 pub fn enclave_produce_new_block(
     eid: sgx_enclave_id_t,
-    blocks: Vec<SignedBlock>,
+    blocks_to_sync: Vec<SignedBlock>,
     tee_nonce: u32,
 ) -> SgxResult<Vec<u8>> {
     let mut status = sgx_status_t::SGX_SUCCESS;
 
-    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+    let mut produced_blocks: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
     let result = unsafe {
-        blocks.using_encoded(|b| {
+        blocks_to_sync.using_encoded(|b| {
             produce_block(
                 eid,
                 &mut status,
                 b.as_ptr(),
                 b.len(),
                 &tee_nonce,
-                unchecked_extrinsics.as_mut_ptr(),
+                produced_blocks.as_mut_ptr(),
                 EXTRINSIC_MAX_SIZE,
             )
         })
@@ -294,7 +294,7 @@ pub fn enclave_produce_new_block(
         return Err(result);
     }
 
-    Ok(unchecked_extrinsics)
+    Ok(produced_blocks)
 }
 
 
