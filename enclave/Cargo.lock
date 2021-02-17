@@ -2781,6 +2781,7 @@ dependencies = [
  "primitive-types 0.6.2",
  "sgx_tstd",
  "sp-core",
+ "substratee-stf",
 ]
 
 [[package]]

@@ -5059,6 +5059,7 @@ dependencies = [
  "serde_json",
  "sgx_tstd",
  "sp-core",
+ "substratee-stf",
 ]
 
 [[package]]

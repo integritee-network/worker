@@ -62,7 +62,7 @@ pub trait AuthorApi<Hash, BlockHash> {
     fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
     /// Returns all pending operations diveded in calls and getters, potentially grouped by sender.
-    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
+    fn get_pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
 
     fn get_shards(&self) -> Vec<ShardIdentifier>;
 
@@ -172,7 +172,7 @@ where
     }
 
     
-    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
+    fn get_pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
         let mut calls: Vec<TrustedCallSigned> = vec![];
         let mut getters: Vec<TrustedGetterSigned> = vec![];
         for operation in self.pool.ready(shard) {

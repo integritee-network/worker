@@ -72,7 +72,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     println!("Sleeping until block with shield funds is finalized...");
     sleep(Duration::new(10, 0));
     println!("Syncing Chain Relay to look for shield_funds extrinsic");
-    crate::sync_chain_relay(eid, &api, last_synced_head)
+    crate::produce_block(eid, &api, last_synced_head)
 }
  */
 /* pub fn forward_encrypted_unshield_works(
@@ -95,7 +95,7 @@ pub fn perform_ra_works(eid: sgx_enclave_id_t, port: &str) {
     println!("Sleeping until block with shield funds is finalized...");
     sleep(Duration::new(10, 0));
     println!("Syncing Chain Relay to look for CallWorker with TrustedCall::unshield extrinsic");
-    crate::sync_chain_relay(eid, &api, last_synced_head)
+    crate::produce_block(eid, &api, last_synced_head)
 } */
 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, port: &str) -> Header {
@@ -122,5 +122,5 @@ pub fn shield_funds_workds(eid: sgx_enclave_id_t, port: &str, last_synced_head: 
     println!("Sleeping until block with shield funds is finalized...");
     sleep(Duration::new(10, 0));
     println!("Syncing Chain Relay to look for shield_funds extrinsic");
-    crate::sync_chain_relay(eid, &api, last_synced_head)
+    crate::produce_block(eid, &api, last_synced_head)
 }

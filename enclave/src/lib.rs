@@ -348,7 +348,7 @@ pub unsafe extern "C" fn init_chain_relay(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn sync_chain_relay(
+pub unsafe extern "C" fn produce_block(
     blocks: *const u8,
     blocks_size: usize,
     nonce: *const u32,
@@ -394,10 +394,11 @@ pub unsafe extern "C" fn sync_chain_relay(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 
-        match scan_block_for_relevant_xt(&signed_block.block) {
+        // not supported anymore since M8.2
+        /* match scan_block_for_relevant_xt(&signed_block.block) {
             Ok(c) => calls.extend(c.into_iter()),
             Err(_) => error!("Error executing relevant extrinsics"),
-        };
+        }; */
     }
     // execute pending calls from operation pool
     match execute_top_pool_calls(last_block_header) {
@@ -447,7 +448,6 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     {
-        //let &ref pool_mutex: &SgxMutex<BPool> = rpc::worker_api_direct::load_top_pool().unwrap();
         let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
             Some(mutex) => mutex,
             None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
@@ -456,12 +456,12 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
         let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
 
-        // get all shards with tx pool of worker
+        // get all shards with top pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
         for shard in shards.into_iter() {
             // retrieve trusted operations from pool
-            let (trusted_calls, trusted_getters) = match author.pending_tops_separated(shard) {
+            let (trusted_calls, trusted_getters) = match author.get_pending_tops_separated(shard) {
                 Ok((calls,getters)) => (calls,getters),
                 Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
             };

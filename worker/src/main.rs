@@ -45,7 +45,7 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::hexstr_to_vec, Api, GenericAddress, XtStatus};
 
-use crate::enclave::api::{enclave_init_chain_relay, enclave_sync_chain_relay};
+use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_block};
 use enclave::api::{
     enclave_dump_ra, enclave_init, enclave_mrenclave, enclave_perform_ra, enclave_shielding_key,
     enclave_signing_key,
@@ -385,19 +385,14 @@ fn start_interval_block_production(eid: sgx_enclave_id_t, api: &Api<sr25519::Pai
                 interval_start = SystemTime::now();
 
                 // sync chain relay
-                latest_head = sync_chain_relay(eid, api, latest_head)
-
-                //enclave_produce_new_block();
+                latest_head = produce_block(eid, api, latest_head)
             } else {
                 // sleep for the rest of the interval
                 let sleep_time = block_production_interval - elapsed;
                 thread::sleep(sleep_time);
             }
         }
-    }
-
-    
-    
+    }    
 }
 
 fn request_keys(provider_url: &str, _shard: &ShardIdentifier) {
@@ -537,10 +532,10 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     info!("Finished initializing chain relay, syncing....");
 
-    sync_chain_relay(eid, api, latest)
+    produce_block(eid, api, latest)
 }
 
-pub fn sync_chain_relay(
+pub fn produce_block(
     eid: sgx_enclave_id_t,
     api: &Api<sr25519::Pair>,
     last_synced_head: Header,
@@ -595,7 +590,7 @@ pub fn sync_chain_relay(
     let mut i = blocks_to_sync[0].block.header.number as usize;
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
-        let _xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
+        let _xts = enclave_produce_block(eid, chunk.to_vec(), tee_nonce).unwrap();
         
         /* let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
 
