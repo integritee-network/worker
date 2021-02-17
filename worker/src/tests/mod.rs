@@ -52,10 +52,10 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
         perform_ra_works(eid, port);
         println!("  init chain_relay");
         let mut head = init_chain_relay(eid, port);
-        println!("  testing process_forwarded_payload()");
+/*         println!("  testing process_forwarded_payload()");
         head = call_worker_encrypted_set_balance_works(eid, port, head);
         println!("  testing execute_stf_unshield_balance()");
-        head = forward_encrypted_unshield_works(eid, port, head);
+        head = forward_encrypted_unshield_works(eid, port, head); */
         println!("  testing shield_funds");
         let _head = shield_funds_workds(eid, port, head);
     }

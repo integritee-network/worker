@@ -36,7 +36,7 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
-use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
+use substratee_node_primitives::{ShieldFundsFn};
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn sync_chain_relay(
     for signed_block in blocks.into_iter() {
         validator
             .check_xt_inclusion(validator.num_relays, &signed_block.block)
-            .unwrap(); // panic can only happen if relay_id is does not exist
+            .unwrap(); // panic can only happen if relay_id does not exist
         if let Err(e) = validator.submit_simple_header(
             validator.num_relays,
             signed_block.block.header.clone(),
@@ -564,7 +564,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
             }
         };
 
-        if let Ok(xt) =
+        /* if let Ok(xt) =
             UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
@@ -580,7 +580,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
                     }
                 }
             }
-        }
+        } */
     }
     Ok(calls)
 }
@@ -633,7 +633,7 @@ fn handle_shield_funds_xt(
     Ok(())
 }
 
-fn decrypt_unchecked_extrinsic(
+/* fn decrypt_unchecked_extrinsic(
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
 ) -> SgxResult<(TrustedCallSigned, ShardIdentifier)> {
     let (call, request) = xt.function;
@@ -652,7 +652,7 @@ fn decrypt_unchecked_extrinsic(
         Err(_) => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     }
 }
-
+ */
 fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
     stf_call_signed: TrustedCallSigned,

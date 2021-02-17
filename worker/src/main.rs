@@ -369,11 +369,8 @@ fn worker(
         if let Ok(msg) = receiver.recv_timeout(timeout) {
             if let Ok(events) = parse_events(msg.clone()) {
                 print_events(events, sender.clone())
-            } /*  else if let Ok(_header) = parse_header(msg.clone()) {
-                latest_head = sync_chain_relay(eid, &api, latest_head)
-            }       */       
+            }      
         }
-
     }
 }
 
@@ -437,10 +434,6 @@ fn parse_events(event: String) -> Result<Events, String> {
     Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
 }
 
-fn parse_header(header: String) -> Result<Header, String> {
-    serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
-}
- 
 
 fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
