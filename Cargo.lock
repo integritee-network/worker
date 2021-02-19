@@ -5052,6 +5052,7 @@ dependencies = [
 name = "substratee-worker-primitives"
 version = "0.8.0"
 dependencies = [
+ "chrono",
  "parity-scale-codec",
  "primitive-types 0.6.2",
  "serde",

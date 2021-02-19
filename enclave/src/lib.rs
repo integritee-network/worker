@@ -67,6 +67,7 @@ use chain_relay::{
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
+
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall,
      TrustedCallSigned, TrustedGetterSigned};
@@ -400,14 +401,13 @@ pub unsafe extern "C" fn produce_block(
             }; */
         }        
     }
-    // TODO: What todo in case no blocks to sync? (==blocks  to sync empty)
-    /* // get header of last block
-    let last_block_header: Header = blocks_to_sync.last().unwrap().block.header.clone();
+    // get header of last block
+    let last_header: Header = validator.latest_header(validator.num_relays).unwrap();
     // execute pending calls from operation pool
-    match execute_top_pool_calls(last_block_header) {
+    match execute_top_pool_calls(last_header) {
         Ok(c) => calls.extend(c.into_iter()),
         Err(_) => error!("Error executing relevant tx pool calls"),
-    }; */
+    };
 
     if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
