@@ -37,6 +37,7 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, Sg
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{ShieldFundsFn};
+use substratee_worker_primitives::block::Block as SidechainBlock;
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256};
@@ -371,8 +372,6 @@ pub unsafe extern "C" fn produce_blocks(
         Ok(v) => v,
         Err(e) => return e,
     };
-    
-    let mut calls = Vec::new();
 
     debug!("Syncing chain relay!");
     if !blocks_to_sync.is_empty() {        
@@ -394,7 +393,7 @@ pub unsafe extern "C" fn produce_blocks(
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
 
-            // indirect worker calls supported anymore since M8.2
+            // indirect worker calls not supported anymore since M8.2
             /* match scan_block_for_relevant_xt(&signed_block.block) {
                 Ok(c) => calls.extend(c.into_iter()),
                 Err(_) => error!("Error executing relevant extrinsics"),
@@ -404,19 +403,18 @@ pub unsafe extern "C" fn produce_blocks(
     // get header of last block
     let last_header: Header = validator.latest_header(validator.num_relays).unwrap();
     // execute pending calls from operation pool
-    match execute_top_pool_calls(last_header) {
-        Ok(c) => calls.extend(c.into_iter()),
-        Err(_) => error!("Error executing relevant tx pool calls"),
+    let executed_calls = match execute_top_pool_calls(last_header) {
+        Ok(calls) => calls,
+        Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
+    let call_dummy = Vec::<OpaqueCall>::new();
+    if let Err(_e) = stf_post_actions(validator, call_dummy, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     sgx_status_t::SGX_SUCCESS
 }
-
-
 
 
 fn get_stf_state(
@@ -450,13 +448,16 @@ fn get_stf_state(
 
 }
 
-fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
+fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<SidechainBlock>> {
     debug!("Executing pending pool operations");
-    let mut calls = Vec::<OpaqueCall>::new();
+    let mut blocks = Vec::<SidechainBlock>::new();
     {
         let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
             Some(mutex) => mutex,
-            None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+            None => {
+                error!("Could not get mutex to pool");
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+            },
         };
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
@@ -465,10 +466,11 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
         // get all shards with top pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
-        for shard in shards.into_iter() {
+        // Handling trusted getters
+        for shard in shards.clone().into_iter() {            
             // retrieve trusted operations from pool
-            let (trusted_calls, trusted_getters) = match author.get_pending_tops_separated(shard) {
-                Ok((calls,getters)) => (calls,getters),
+            let trusted_getters = match author.get_pending_tops_separated(shard) {
+                Ok((_,getters)) => getters,
                 Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
             };
             for trusted_getter_signed in trusted_getters.into_iter() {
@@ -484,7 +486,18 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                 if let Err(e) = author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false) {
                     error!("Error removing trusted operation from top pool: Error: {:?}", e);
                 }
-            }
+                // TODO: Check time
+            }          
+        }
+
+        // Handling trusted calls
+        for shard in shards.into_iter() {
+            let mut calls = Vec::<OpaqueCall>::new();
+            // retrieve trusted operations from pool
+            let trusted_calls = match author.get_pending_tops_separated(shard) {
+                Ok((calls,_)) => calls,
+                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
+            };            
             for trusted_call_signed in trusted_calls.into_iter() {
                 if let Err(e) = handle_trusted_worker_call(
                     &mut calls,
@@ -495,12 +508,20 @@ fn execute_top_pool_calls(header: Header) -> SgxResult<Vec<OpaqueCall>> {
                 ) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
-            }            
-        }
+                // TODO: Check time
+            }
+            //let block = compose_block(calls);
+       }
     }
 
-    Ok(calls)
+    Ok(blocks)
 }
+
+/* pub fn compose_block(calls: Vec<OpaqueCall>) -> SidechainBlock {
+
+    SidechainBlock::construct_block()
+
+} */
 
 pub fn update_states(header: Header) -> SgxResult<()> {
     debug!("Update STF storage upon block import!");
