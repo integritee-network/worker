@@ -200,6 +200,26 @@ mod tests {
         assert_eq!(state_update, *block.state_update());
     }
 
+    #[test]
+    fn get_signature_works() {
+        let signer_pair = &AccountKeyring::Alice.pair();
+        let author = signer_pair.public();
+        let block_number: u64 = 0;
+        let parent_hash = H256::random();
+        let layer_one_head = H256::random();
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let extrinsic_hashes = vec![];
+        let state_update: Vec<u8> = vec![];
+        let shard = ShardIdentifier::default();
+
+        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(), state_update.clone());
+
+        assert_eq!(&block.block_author_signature, block.signature());
+    }
+
      #[test]
     fn verify_signature_works() {
         let signer_pair = &AccountKeyring::Alice.pair();
