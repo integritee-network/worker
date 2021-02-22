@@ -232,7 +232,8 @@ pub fn enclave_init_chain_relay(
 }
 
 /// Starts block production within enclave
-/// OUTPUT: 
+/// 
+/// Returns the produced blocks 
 pub fn enclave_produce_blocks(
     eid: sgx_enclave_id_t,
     blocks_to_sync: Vec<SignedBlock>,

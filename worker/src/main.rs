@@ -533,12 +533,15 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     produce_blocks(eid, api, latest)
 }
 
+/// Starts block production
+/// 
+/// Returns the last synced header of layer one
 pub fn produce_blocks(
     eid: sgx_enclave_id_t,
     api: &Api<sr25519::Pair>,
     last_synced_head: Header,
 ) -> Header {
-    // obtain latest finalized block
+    // obtain latest finalized block from layer one
     let curr_head: SignedBlock = api
         .get_finalized_head()
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
@@ -583,13 +586,17 @@ pub fn produce_blocks(
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let encoded_blocks = enclave_produce_blocks(eid, blocks_to_sync.clone(), tee_nonce).unwrap();
+    // Produce blocks
+    let encoded_blocks = match enclave_produce_blocks(eid, blocks_to_sync.clone(), tee_nonce){
+        Ok(blocks) => blocks,
+        Err(_) => return last_synced_head, // enclave might not have synced
+    };
 
     let blocks: Vec<Vec<u8>> = Decode::decode(&mut encoded_blocks.as_slice()).unwrap();
 
     if !blocks.is_empty() {
         println!(
-            "Sync chain relay: Enclave wants to send {} blocks",
+            "Enclave wants to send {} blocks",
             blocks.len()
         );
         for block in blocks.into_iter() {
@@ -599,39 +606,7 @@ pub fn produce_blocks(
         println!("Synced up to block {}",
             blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len())
     }
-
-    /* // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
-    let mut i = blocks_to_sync[0].block.header.number as usize;
-    for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-        let tee_nonce = get_nonce(&api, &tee_accountid);
-        let _xts = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce).unwrap();
-        
-        let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
-
-        if !extrinsics.is_empty() {
-            println!(
-                "Sync chain relay: Enclave wants to send {} extrinsics",
-                extrinsics.len()
-            );
-            for xt in extrinsics.into_iter() {
-                api.send_extrinsic(hex_encode(xt), XtStatus::Ready).unwrap();
-            }
-            // await next block to avoid #37
-            let (events_in, events_out) = channel();
-            api.subscribe_events(events_in);
-            let _ = events_out.recv().unwrap();
-            let _ = events_out.recv().unwrap();
-            // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        }
-
-        i += chunk.len();
-        println!(
-            "Synced {} blocks out of {} finalized blocks",
-            i,
-            blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
-        )
-    } */
-
+    // TODO: Broadcast blocks (M8.3)
     curr_head.block.header
 }
 
