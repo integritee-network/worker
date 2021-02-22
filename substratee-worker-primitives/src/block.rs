@@ -7,6 +7,7 @@ use std::vec::Vec;
 use std::vec;
 
 use sp_core::{sr25519, Pair, H256};
+use sp_runtime::traits::Verify;
 use substratee_stf::{ShardIdentifier, AccountId, Signature};
 
 use std::time::{UNIX_EPOCH, SystemTime};
@@ -86,6 +87,27 @@ impl Block {
         }
     }
 
+    /// Verifes the signature of a Block
+    pub fn verify_signature(&self) -> bool {
+        // get block payload
+        let mut payload = vec![];
+        payload.append(&mut self.block_number.encode());
+        payload.append(&mut self.parent_hash.encode());
+        payload.append(&mut self.timestamp.encode());
+        payload.append(&mut self.layer_one_head.encode());
+        payload.append(&mut self.shard_id.encode());
+        payload.append(&mut self.block_author.encode());
+        payload.append(&mut self.extrinsic_hashes.encode());
+        payload.append(&mut self.state_hash_apriori.encode());
+        payload.append(&mut self.state_hash_aposteriori.encode());
+        payload.append(&mut self.state_update.encode());      
+        
+        // verify signature
+        self.block_author_signature
+            .verify(payload.as_slice(), &self.block_author)
+    }
+
+
     /// sets the timestamp of the block as seconds since unix epoch
     fn get_time() -> i64 {
         SystemTime::now()
@@ -94,6 +116,8 @@ impl Block {
             .as_secs() as i64
         // = TzUtc.timestamp(now.as_secs() as i64, 0);
     }
+
+
 }
 
 /* 

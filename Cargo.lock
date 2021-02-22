@@ -5060,6 +5060,7 @@ dependencies = [
  "serde_json",
  "sgx_tstd",
  "sp-core",
+ "sp-runtime",
  "substratee-stf",
 ]
 
