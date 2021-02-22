@@ -17,28 +17,72 @@ use std::untrusted::time::SystemTimeEx;
 use chrono::TimeZone; */
 
 
-/// Simplified block structure for relay chain submission as an extrinsic
+/// simplified block structure for relay chain submission as an extrinsic
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Block {
     block_number: u64,
     parent_hash: H256,
     timestamp: i64,
-    /// Hash of the last header of block in layer one
-    /// Needed in case extrinsics depend on layer one state 
+    /// hash of the last header of block in layer one
+    /// needed in case extrinsics depend on layer one state 
     layer_one_head: H256,    
     shard_id: ShardIdentifier,
-    ///  Must be registered on layer one as an enclave for the respective shard 
+    ///  must be registered on layer one as an enclave for the respective shard 
     block_author: AccountId,
     extrinsic_hashes: Vec<H256>,
     state_hash_apriori: H256,
     state_hash_aposteriori: H256,
-    /// Encrypted vec of key-value pairs to update
+    /// encrypted vec of key-value pairs to update
     state_update: Vec<u8>,
     block_author_signature: Signature,
 }
 
-impl Block {   
+impl Block {
+    // get block number.
+    pub fn block_number(&self) -> u64 {
+        self.block_number
+    }
+    // get parent hash of block
+    pub fn parent_hash(&self) -> H256 {
+        self.parent_hash
+    }
+    // get timestamp of block
+    pub fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+    // get layer one head of block
+    pub fn layer_one_head(&self) -> H256 {
+        self.layer_one_head
+    }
+    // get shard id of block
+    pub fn shard_id(&self) -> ShardIdentifier {
+        self.shard_id
+    }
+    // get author of block
+    pub fn block_author(&self) -> AccountId {
+        self.block_author
+    }
+    // get reference of extrinisics of block
+    pub fn extrinsic_hashes(&self) -> &Vec<H256> {
+        &self.extrinsic_hashes
+    }
+    // get state hash piror to block execution
+    pub fn state_hash_apriori(&self) -> H256 {
+        self.state_hash_apriori
+    }
+    // get state hash after block execution
+    pub fn state_hash_aposteriori(&self) -> H256 {
+        self.state_hash_aposteriori
+    }
+    // get reference of state diff block brings with
+    pub fn state_update(&self) -> &Vec<u8> {
+        &self.state_update
+    }
+    // get reference of block author signature
+    pub fn signature(&self) -> &Signature {
+        &self.block_author_signature
+    }
     /// Constructs a signed block
     pub fn construct_block(
         pair: &sr25519::Pair,
