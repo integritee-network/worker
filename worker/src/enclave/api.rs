@@ -57,7 +57,7 @@ extern "C" {
         latest_header_size: usize,
     ) -> sgx_status_t;
 
-    fn produce_block(
+    fn produce_blocks(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         blocks: *const u8,
@@ -231,40 +231,9 @@ pub fn enclave_init_chain_relay(
     Ok(latest)
 }
 
-pub fn enclave_produce_block(
-    eid: sgx_enclave_id_t,
-    blocks: Vec<SignedBlock>,
-    tee_nonce: u32,
-) -> SgxResult<Vec<u8>> {
-    let mut status = sgx_status_t::SGX_SUCCESS;
-
-    let mut unchecked_extrinsics: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
-
-    let result = unsafe {
-        blocks.using_encoded(|b| {
-            produce_block(
-                eid,
-                &mut status,
-                b.as_ptr(),
-                b.len(),
-                &tee_nonce,
-                unchecked_extrinsics.as_mut_ptr(),
-                EXTRINSIC_MAX_SIZE,
-            )
-        })
-    };
-
-    if status != sgx_status_t::SGX_SUCCESS {
-        return Err(status);
-    }
-    if result != sgx_status_t::SGX_SUCCESS {
-        return Err(result);
-    }
-
-    Ok(unchecked_extrinsics)
-}
-
-pub fn enclave_produce_new_block(
+/// Starts block production within enclave
+/// OUTPUT: 
+pub fn enclave_produce_blocks(
     eid: sgx_enclave_id_t,
     blocks_to_sync: Vec<SignedBlock>,
     tee_nonce: u32,
@@ -275,7 +244,7 @@ pub fn enclave_produce_new_block(
 
     let result = unsafe {
         blocks_to_sync.using_encoded(|b| {
-            produce_block(
+            produce_blocks(
                 eid,
                 &mut status,
                 b.as_ptr(),
@@ -296,7 +265,6 @@ pub fn enclave_produce_new_block(
 
     Ok(produced_blocks)
 }
-
 
 pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<ed25519::Public> {
     let pubkey_size = 32;

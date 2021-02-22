@@ -45,7 +45,7 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::hexstr_to_vec, Api, GenericAddress, XtStatus};
 
-use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_block};
+use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
 use enclave::api::{
     enclave_dump_ra, enclave_init, enclave_mrenclave, enclave_perform_ra, enclave_shielding_key,
     enclave_signing_key,
@@ -383,7 +383,7 @@ fn start_interval_block_production(eid: sgx_enclave_id_t, api: &Api<sr25519::Pai
             if elapsed >= block_production_interval {
                 // update interval time
                 interval_start = SystemTime::now();
-                latest_head = produce_block(eid, api, latest_head)
+                latest_head = produce_blocks(eid, api, latest_head)
             } else {
                 // sleep for the rest of the interval
                 let sleep_time = block_production_interval - elapsed;
@@ -530,10 +530,10 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     info!("Finished initializing chain relay, syncing....");
 
-    produce_block(eid, api, latest)
+    produce_blocks(eid, api, latest)
 }
 
-pub fn produce_block(
+pub fn produce_blocks(
     eid: sgx_enclave_id_t,
     api: &Api<sr25519::Pair>,
     last_synced_head: Header,
@@ -583,7 +583,7 @@ pub fn produce_block(
     let tee_accountid = enclave_account(eid);
     let tee_nonce = get_nonce(&api, &tee_accountid);
 
-    let encoded_blocks = enclave_produce_block(eid, blocks_to_sync.clone(), tee_nonce).unwrap();
+    let encoded_blocks = enclave_produce_blocks(eid, blocks_to_sync.clone(), tee_nonce).unwrap();
 
     let blocks: Vec<Vec<u8>> = Decode::decode(&mut encoded_blocks.as_slice()).unwrap();
 
@@ -604,7 +604,7 @@ pub fn produce_block(
     let mut i = blocks_to_sync[0].block.header.number as usize;
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
-        let _xts = enclave_produce_block(eid, chunk.to_vec(), tee_nonce).unwrap();
+        let _xts = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce).unwrap();
         
         let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
 

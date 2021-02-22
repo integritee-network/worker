@@ -349,7 +349,7 @@ pub unsafe extern "C" fn init_chain_relay(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn produce_block(
+pub unsafe extern "C" fn produce_blocks(
     blocks_to_sync: *const u8,
     blocks_to_sync_size: usize,
     nonce: *const u32,
