@@ -189,15 +189,15 @@ mod tests {
             layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
 
-        assert_eq!(block_number, block.block_number);
-        assert_eq!(parent_hash, block.parent_hash);
-        assert_eq!(layer_one_head, block.layer_one_head);
-        assert_eq!(shard, block.shard_id);
-        assert_eq!(author, block.block_author);
-        assert_eq!(extrinsic_hashes, block.extrinsic_hashes);
-        assert_eq!(state_hash_apriori, block.state_hash_apriori);
-        assert_eq!(state_hash_aposteriori, block.state_hash_aposteriori);
-        assert_eq!(state_update, block.state_update);
+        assert_eq!(block_number, block.block_number());
+        assert_eq!(parent_hash, block.parent_hash());
+        assert_eq!(layer_one_head, block.layer_one_head());
+        assert_eq!(shard, block.shard_id());
+        assert_eq!(author, block.block_author());
+        assert_eq!(extrinsic_hashes, *block.extrinsic_hashes());
+        assert_eq!(state_hash_apriori, block.state_hash_apriori());
+        assert_eq!(state_hash_aposteriori, block.state_hash_aposteriori());
+        assert_eq!(state_update, *block.state_update());
     }
 
      #[test]
@@ -268,7 +268,7 @@ mod tests {
             state_hash_aposteriori.clone(), state_update.clone());
         
         let one_second = Duration::new(1,0);
-        let now = block.timestamp;        
+        let now = block.timestamp();        
         thread::sleep(one_second);
         assert_eq!(now + one_second.as_secs() as i64, Block::get_time());
     } 
