@@ -93,6 +93,22 @@ impl Stf {
         });
     }
 
+    
+    pub fn get_block_number(ext: &mut State) -> Option<BlockNumber> {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "Number");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(number) = BlockNumber::decode(&mut infovec.as_slice()) {
+                    Some(number)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }      
+        })
+    }
+
     pub fn execute(
         ext: &mut State,
         call: TrustedCallSigned,
@@ -306,6 +322,7 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
         None
     }
 }
+
 
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
     let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
