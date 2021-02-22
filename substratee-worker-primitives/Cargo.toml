@@ -33,6 +33,7 @@ features = ["full_crypto"]
 path = "../stf"
 default-features = false
 
+
 [features]
 default = ["std"]
 std = [ 'serde',
@@ -42,3 +43,8 @@ std = [ 'serde',
 sgx = [ 'sgx_tstd',
         'substratee-stf/sgx' ]
 
+
+
+[dev-dependencies.sp-keyring]
+git = "https://github.com/paritytech/substrate.git"
+rev = "a208da16"

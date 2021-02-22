@@ -120,25 +120,113 @@ impl Block {
 
 }
 
-/* 
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sp_keyring::AccountKeyring;
+    use std::thread;
+    use std::time::Duration;
+
     #[test]
-    fn () {
-        let nonce = 21;
-        let mrenclave = [0u8; 32];
+    fn construct_block_works() {
+        let signer_pair = &AccountKeyring::Alice.pair();
+        let author = signer_pair.public();
+        let block_number: u64 = 0;
+        let parent_hash = H256::random();
+        let layer_one_head = H256::random();
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let extrinsic_hashes = vec![];
+        let state_update: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
-        let call = TrustedCall::balance_set_balance(
-            AccountKeyring::Alice.public(),
-            AccountKeyring::Alice.public(),
-            42,
-            42,
-        );
-        let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
+        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(), state_update.clone());
 
-        assert!(signed_call.verify_signature(&mrenclave, &shard));
+        assert_eq!(block_number, block.block_number);
+        assert_eq!(parent_hash, block.parent_hash);
+        assert_eq!(layer_one_head, block.layer_one_head);
+        assert_eq!(shard, block.shard_id);
+        assert_eq!(author, block.block_author);
+        assert_eq!(extrinsic_hashes, block.extrinsic_hashes);
+        assert_eq!(state_hash_apriori, block.state_hash_apriori);
+        assert_eq!(state_hash_aposteriori, block.state_hash_aposteriori);
+        assert_eq!(state_update, block.state_update);
+    }
+
+     #[test]
+    fn verify_signature_works() {
+        let signer_pair = &AccountKeyring::Alice.pair();
+        let author = signer_pair.public();
+        let block_number: u64 = 0;
+        let parent_hash = H256::random();
+        let layer_one_head = H256::random();
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let extrinsic_hashes = vec![];
+        let state_update: Vec<u8> = vec![];
+        let shard = ShardIdentifier::default();
+
+        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(), state_update.clone());
+
+        assert!(block.verify_signature());
+    }
+
+    #[test]
+    fn tampered_block_verify_signature_fails() {
+        let signer_pair = &AccountKeyring::Alice.pair();
+        let author = signer_pair.public();
+        let block_number: u64 = 0;
+        let parent_hash = H256::random();
+        let layer_one_head = H256::random();
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let extrinsic_hashes = vec![];
+        let state_update: Vec<u8> = vec![];
+        let shard = ShardIdentifier::default();
+
+        let mut block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(), state_update.clone());
+
+        block.block_number = 1; 
+
+        assert_eq!(block.verify_signature(), false);
     } 
-} */
+
+    #[test]
+    fn get_time_works() {        
+        let two_seconds = Duration::new(2,0);
+        let now = Block::get_time();        
+        thread::sleep(two_seconds);
+        assert_eq!(now + two_seconds.as_secs() as i64, Block::get_time());
+    } 
+
+    #[test]
+    fn setting_timestamp_works() {
+        let signer_pair = &AccountKeyring::Alice.pair();
+        let author = signer_pair.public();
+        let block_number: u64 = 0;
+        let parent_hash = H256::random();
+        let layer_one_head = H256::random();
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let extrinsic_hashes = vec![];
+        let state_update: Vec<u8> = vec![];
+        let shard = ShardIdentifier::default();
+
+        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(), state_update.clone());
+        
+        let one_second = Duration::new(1,0);
+        let now = block.timestamp;        
+        thread::sleep(one_second);
+        assert_eq!(now + one_second.as_secs() as i64, Block::get_time());
+    } 
+} 
 
