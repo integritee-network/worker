@@ -90,7 +90,6 @@ impl Block {
         parent_hash: H256,
         layer_one_head: H256,
         shard: ShardIdentifier,
-        author: AccountId,
         extrinsic_hashes: Vec<H256>,
         state_hash_apriori: H256,
         state_hash_aposteriori: H256,
@@ -98,6 +97,7 @@ impl Block {
     ) -> Block {
          // get timestamp for new block
          let now: i64 = Block::get_time();
+         let author = pair.public();
 
         // get block payload
         let mut payload = vec![];
@@ -186,7 +186,7 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
 
         assert_eq!(block_number, block.block_number());
@@ -214,7 +214,7 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
 
         assert_eq!(&block.block_author_signature, block.signature());
@@ -234,7 +234,7 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
 
         assert!(block.verify_signature());
@@ -254,7 +254,7 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let mut block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
 
         block.block_number = 1; 
@@ -284,7 +284,7 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), author.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
+            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
         
         let one_second = Duration::new(1,0);
