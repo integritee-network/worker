@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use std::vec::Vec;
+use std::vec;
 
-use sp_core::H256;
+use sp_core::{sr25519, Pair, H256};
 use substratee_stf::{ShardIdentifier, AccountId, Signature};
 
 use std::time::{UNIX_EPOCH, SystemTime};
@@ -30,35 +31,77 @@ pub struct Block {
     block_author: AccountId,
     extrinsic_hashes: Vec<H256>,
     state_hash_apriori: H256,
-    state_hash_aposterior: H256,
+    state_hash_aposteriori: H256,
     /// Encrypted vec of key-value pairs to update
     state_update: Vec<u8>,
     block_author_signature: Signature,
 }
 
-impl Block {
-    /// Sign the block with the authors signature
-    pub fn sign() {
-        // 
+impl Block {   
+    /// Constructs a signed block
+    pub fn construct_block(
+        pair: &sr25519::Pair,
+        block_number: u64,
+        parent_hash: H256,
+        layer_one_head: H256,
+        shard: ShardIdentifier,
+        author: AccountId,
+        extrinsic_hashes: Vec<H256>,
+        state_hash_apriori: H256,
+        state_hash_aposteriori: H256,
+        state_update: Vec<u8>,
+    ) -> Block {
+         // get timestamp for new block
+         let now: i64 = Block::get_time();
+
+        // get block payload
+        let mut payload = vec![];
+        payload.append(&mut block_number.encode());
+        payload.append(&mut parent_hash.encode());
+        payload.append(&mut now.encode());
+        payload.append(&mut layer_one_head.encode());
+        payload.append(&mut shard.encode());
+        payload.append(&mut author.encode());
+        payload.append(&mut extrinsic_hashes.encode());
+        payload.append(&mut state_hash_apriori.encode());
+        payload.append(&mut state_hash_aposteriori.encode());
+        payload.append(&mut state_update.encode());       
+
+        // get block signature
+        let signature: Signature = pair.sign(payload.as_slice()).into();
+        
+        // create block
+        Block {
+            block_number: block_number,
+            parent_hash: parent_hash,
+            timestamp: now,
+            layer_one_head: layer_one_head,
+            shard_id: shard,
+            block_author: author,
+            extrinsic_hashes: extrinsic_hashes,
+            state_hash_apriori: state_hash_apriori,
+            state_hash_aposteriori: state_hash_aposteriori,
+            state_update: state_update,
+            block_author_signature: signature,
+        }
     }
 
-    /// sets the timestamp of current time
-    fn set_timestamp(&mut self) {
-        self.timestamp = SystemTime::now()
+    /// sets the timestamp of the block as seconds since unix epoch
+    fn get_time() -> i64 {
+        SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_secs() as i64;
+            .as_secs() as i64
         // = TzUtc.timestamp(now.as_secs() as i64, 0);
     }
 }
 
+/* 
 #[cfg(test)]
 mod tests {
     use super::*;
-    /* use sp_keyring::AccountKeyring;
-
     #[test]
-    fn verify_signature_works() {
+    fn () {
         let nonce = 21;
         let mrenclave = [0u8; 32];
         let shard = ShardIdentifier::default();
@@ -72,6 +115,6 @@ mod tests {
         let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
 
         assert!(signed_call.verify_signature(&mrenclave, &shard));
-    } */
-}
+    } 
+} */
 
