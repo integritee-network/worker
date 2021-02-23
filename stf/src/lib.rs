@@ -34,7 +34,7 @@ use my_node_runtime::Balance;
 #[cfg(feature = "sgx")]
 use sgx_runtime::Balance;
 use sp_core::{sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, AnySignature};
+use sp_runtime::{traits::Verify, AnySignature, MultiSignature, MultiAddress};
 
 pub type ShardIdentifier = H256;
 
@@ -45,6 +45,8 @@ pub mod sgx;
 pub mod cli;
 
 pub type Signature = AnySignature;
+// TODO: Maybe change to multisignature?
+//pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = <Signature as Verify>::Signer;
 pub type Hash = sp_core::H256;

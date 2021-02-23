@@ -6,15 +6,43 @@ use sgx_tstd as std;
 use std::vec::Vec;
 use std::vec;
 
-use sp_core::{sr25519, Pair, H256};
+use sp_core::{sr25519, Pair, H256, ed25519};
 use sp_runtime::traits::Verify;
-use substratee_stf::{ShardIdentifier, AccountId, Signature};
+use substratee_stf::{ShardIdentifier, Signature, AccountId};
 
 use std::time::{UNIX_EPOCH, SystemTime};
 #[cfg(feature = "sgx")]
 use std::untrusted::time::SystemTimeEx;
 /* use chrono::Utc as TzUtc;
 use chrono::TimeZone; */
+
+/// simplified block structure for relay chain submission as an extrinsic
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct PrivatePayload {    
+    state_hash_apriori: H256,
+    state_hash_aposteriori: H256,
+    /// encrypted vec of key-value pairs to update
+    state_update: Vec<u8>,
+}
+
+/// simplified block structure for relay chain submission as an extrinsic
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct PublicBlock {
+    block_number: u64,
+    parent_hash: H256,
+    timestamp: i64,
+    encrypted_payload: Vec<u8>,
+    extrinsic_hashes: Vec<H256>,
+    /// hash of the last header of block in layer one
+    /// needed in case extrinsics depend on layer one state 
+    layer_one_head: H256,    
+    shard_id: ShardIdentifier,
+    ///  must be registered on layer one as an enclave for the respective shard 
+    block_author: AccountId,
+    block_author_signature: Signature,
+}
 
 
 /// simplified block structure for relay chain submission as an extrinsic
@@ -85,6 +113,7 @@ impl Block {
     }
     /// Constructs a signed block
     pub fn construct_block(
+        // TODO: Change to ed -> change AccountId to accept ed. Multisignature?
         pair: &sr25519::Pair,
         block_number: u64,
         parent_hash: H256,
