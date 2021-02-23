@@ -101,6 +101,18 @@ pub fn exists(shard: &ShardIdentifier) -> bool {
     .exists()
 }
 
+pub fn hash_of(state: StfState) -> SgxResult<H256> {
+    let cyphertext = encrypt(state.encode())?;
+
+    let state_hash = match rsgx_sha256_slice(&cyphertext) {
+        Ok(h) => h,
+        Err(status) => return Err(status),
+    };
+
+    Ok(state_hash.into())
+}
+
+
 pub fn init_shard(shard: &ShardIdentifier) -> SgxResult<()> {
     let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
     fs::create_dir_all(path.clone()).sgx_error()?;
