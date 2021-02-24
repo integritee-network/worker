@@ -31,10 +31,10 @@ use crate::io;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use sgx_externalities::SgxExternalitiesTrait;
+use sgx_externalities::{SgxExternalitiesTrait, SgxExternalities, SgxExternalitiesTypeTrait};
 use sp_core::H256;
 use std::path::Path;
-use substratee_stf::{ShardIdentifier, State as StfState, Stf};
+use substratee_stf::{ShardIdentifier, State as StfState, Stf, StateType as StfStateType};
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     // load last state
@@ -48,21 +48,27 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     let state_vec = read(&state_path)?;
 
     // state is now decrypted!
-    let state: StfState = match state_vec.len() {
+    let state: StfStateType = match state_vec.len() {
         0 => {
             debug!("state at {} is empty. will initialize it.", state_path);
-            Stf::init_state()
+            Stf::init_state().state
+
         }
         n => {
             debug!(
                 "State loaded from {} with size {}B, deserializing...",
                 state_path, n
             );
-            StfState::decode(state_vec)
+            StfStateType::decode(state_vec)
         }
     };
     trace!("state decoded successfully");
-    Ok(state)
+    // add empty state-diff
+    let state_with_diff = StfState {
+        state: state,
+        state_diff: StfStateType::new(),
+    };    
+    Ok(state_with_diff)
 }
 
 pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
@@ -74,7 +80,8 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
     );
     trace!("writing state to: {}", state_path);
 
-    let cyphertext = encrypt(state.encode())?;
+    // only save the state, the state diff is pruned
+    let cyphertext = encrypt(state.state.encode())?;
 
     let state_hash = match rsgx_sha256_slice(&cyphertext) {
         Ok(h) => h,
@@ -101,7 +108,7 @@ pub fn exists(shard: &ShardIdentifier) -> bool {
     .exists()
 }
 
-pub fn hash_of(state: StfState) -> SgxResult<H256> {
+pub fn hash_of(state: StfStateType) -> SgxResult<H256> {
     let cyphertext = encrypt(state.encode())?;
 
     let state_hash = match rsgx_sha256_slice(&cyphertext) {

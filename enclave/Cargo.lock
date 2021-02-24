@@ -1921,11 +1921,11 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.2.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.7.0#c40bc47233d516ed94ffd17422f092f0c0a16015"
 dependencies = [
  "environmental",
  "log",
  "sgx_serialize",
+ "sgx_serialize_derive",
  "sgx_tstd",
  "sgx_types",
 ]
@@ -2725,6 +2725,7 @@ dependencies = [
  "log",
  "pallet-balances",
  "parity-scale-codec",
+ "sgx-externalities",
  "sgx-runtime",
  "sgx_tstd",
  "sp-application-crypto",

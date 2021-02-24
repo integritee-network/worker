@@ -527,7 +527,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
             }
             // dummy: 
             let state_update: HashMap<Vec<u8>, Option<Vec<u8>>> = HashMap::new();
-            let prev_state_hash = state::hash_of(prev_state)?;
+            let prev_state_hash = state::hash_of(prev_state.state)?;
             let block = compose_block(latest_onchain_header.clone(), calls, shard, prev_state_hash, state_update);
        }
     }
@@ -558,7 +558,7 @@ pub fn compose_block(
         .collect();
 
     // hash previous and current state    
-    let state_hash_aposteriori = state::hash_of(state)?;
+    let state_hash_aposteriori = state::hash_of(state.state)?;
 
        
     /* Ok(SidechainBlock::construct_block(
