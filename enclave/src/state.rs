@@ -31,10 +31,11 @@ use crate::io;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use sgx_externalities::{SgxExternalitiesTrait, SgxExternalities, SgxExternalitiesTypeTrait};
+use sgx_externalities::{SgxExternalities, SgxExternalitiesTypeTrait};
 use sp_core::H256;
 use std::path::Path;
-use substratee_stf::{ShardIdentifier, State as StfState, Stf, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
+use substratee_stf::{ShardIdentifier, State as StfState, Stf, 
+    StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     // load last state

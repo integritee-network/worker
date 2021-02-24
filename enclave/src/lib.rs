@@ -75,6 +75,7 @@ use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, O
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall,
      TrustedCallSigned, TrustedGetterSigned};
 use substratee_stf::{State as StfState, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
+use sgx_externalities::SgxExternalitiesTypeTrait;
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
@@ -559,7 +560,11 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
             // save updated state after call executions
             let new_state_hash = state::write(state.clone(), &shard)?;
             // create new block
-            let block = compose_block(latest_onchain_header.clone(), calls, shard, prev_state_hash, new_state_hash, state.state_diff);
+            match compose_block(latest_onchain_header.clone(), calls, 
+                shard, prev_state_hash, &mut state) {
+                Ok(block) =>  blocks.push(block),
+                Err(e) => error!("Could not compose block: {:?}", e),
+            }            
             if is_done {
                 break;
             }
@@ -593,15 +598,12 @@ pub fn compose_block(
     calls: Vec<OpaqueCall>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
-    state_hash_aposteriori: H256,
-    state_update: StfStateTypeDiff,
+    state: &mut StfState,
 ) -> SgxResult<SidechainBlock> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
-    // load state
-    let mut state = state::load(&shard)?;
-    let prev_block_number = match Stf::get_block_number(&mut state){
+    let prev_block_number = match Stf::get_block_number(state){
         Some(number) => number,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
@@ -612,8 +614,8 @@ pub fn compose_block(
         .collect();
 
     // hash previous and current state    
-    let state_hash_aposteriori = state::hash_of(state.state)?;
-
+    let state_hash_aposteriori = state::hash_of(state.state.clone())?;
+    let state_update = state.state_diff.clone().encode();
        
     /* Ok(SidechainBlock::construct_block(
         &signer_pair, 
