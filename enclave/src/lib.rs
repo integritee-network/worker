@@ -74,10 +74,13 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall,
      TrustedCallSigned, TrustedGetterSigned};
+use substratee_stf::{State as StfState, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::{api::FillerChainApi, basic_pool::BasicPool};
 use rpc::worker_api_direct;
+
+
 
 mod aes;
 mod attestation;
@@ -476,7 +479,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
         // get all shards with top pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
-        // Handling trusted getters
+        // Handle trusted getters
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -512,7 +515,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
             }          
         }
 
-        // Handling trusted calls
+        // Handle trusted calls
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -520,22 +523,26 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
         let mut is_done = false;
         for shard in shards.into_iter() {
             let mut calls = Vec::<OpaqueCall>::new();
-            // save state before executing any calls
-            let prev_state = if state::exists(&shard) {
+            // load state before executing any calls
+            let mut state = if state::exists(&shard) {
                 state::load(&shard)?
             } else {
                 state::init_shard(&shard)?;
                 Stf::init_state()
-            };            
+            };   
+            // save the state hash (needed for block composition)
+            let prev_state_hash = state::hash_of(state.state.clone())?;        
 
             // retrieve trusted operations from pool
             let trusted_calls = match author.get_pending_tops_separated(shard) {
                 Ok((calls,_)) => calls,
                 Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
-            };            
+            };    
+            // call exectuion        
             for trusted_call_signed in trusted_calls.into_iter() {
                 if let Err(e) = handle_trusted_worker_call(
                     &mut calls,
+                    &mut state,
                     trusted_call_signed,
                     latest_onchain_header.clone(),
                     shard,
@@ -549,10 +556,10 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
                     break;
                 }
             }
-            // dummy: 
-            let state_update: HashMap<Vec<u8>, Option<Vec<u8>>> = HashMap::new();
-            let prev_state_hash = state::hash_of(prev_state.state)?;
-            let block = compose_block(latest_onchain_header.clone(), calls, shard, prev_state_hash, state_update);
+            // save updated state after call executions
+            let new_state_hash = state::write(state.clone(), &shard)?;
+            // create new block
+            let block = compose_block(latest_onchain_header.clone(), calls, shard, prev_state_hash, new_state_hash, state.state_diff);
             if is_done {
                 break;
             }
@@ -586,7 +593,8 @@ pub fn compose_block(
     calls: Vec<OpaqueCall>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
-    state_update: HashMap<Vec<u8>, Option<Vec<u8>>>
+    state_hash_aposteriori: H256,
+    state_update: StfStateTypeDiff,
 ) -> SgxResult<SidechainBlock> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
@@ -782,6 +790,7 @@ fn handle_shield_funds_xt(
  */
 fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
+    state: &mut StfState,
     stf_call_signed: TrustedCallSigned,
     header: Header,
     shard: ShardIdentifier,
@@ -808,17 +817,6 @@ fn handle_trusted_worker_call(
         return Ok(());
     }
 
-    // TODO: State exists is already checked in execute_top_pool_calls() 
-    // which is currently the only function calling this function. Hence this
-    // check is opaque. But maybe it will be necessary again when handling indirect
-    // calls?
-    let mut state = if state::exists(&shard) {
-        state::load(&shard)?
-    } else {
-        state::init_shard(&shard)?;
-        Stf::init_state()
-    };
-
     // Necessary because chain relay sync may not be up to date 
     // see issue #208
     debug!("Update STF storage!");
@@ -831,10 +829,10 @@ fn handle_trusted_worker_call(
 
     let update_map = verify_worker_responses(responses, header)?;
 
-    Stf::update_storage(&mut state, &update_map);
+    Stf::update_storage(state, &update_map);
 
     debug!("execute STF");
-    if let Err(e) = Stf::execute(&mut state, stf_call_signed.clone(), calls) {
+    if let Err(e) = Stf::execute(state, stf_call_signed.clone(), calls) {
         if let Some(author) = author_pointer {
             // remove call as invalid from pool
             let inblock = false;
@@ -867,11 +865,10 @@ fn handle_trusted_worker_call(
             .unwrap();
     }
 
-    let state_hash = state::write(state, &shard)?;
-
     let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     let call_hash = blake2_256(&stf_call_signed.encode());
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+    let state_hash = state::hash_of(state.state.clone())?;
 
     calls.push(OpaqueCall(
         (xt_call, shard, call_hash, state_hash.encode()).encode(),
