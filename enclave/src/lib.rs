@@ -501,13 +501,6 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
                 Stf::init_state()
             };            
 
-            // init new state to save state diffs of executed calls
-            let prev_state = if state::exists(&shard) {
-                state::load(&shard)?
-            } else {
-                state::init_shard(&shard)?;
-                Stf::init_state()
-            };
             // retrieve trusted operations from pool
             let trusted_calls = match author.get_pending_tops_separated(shard) {
                 Ok((calls,_)) => calls,

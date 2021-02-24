@@ -71,6 +71,8 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     Ok(state_with_diff)
 }
 
+/// Writes the state (without the state diff) encrypted into the enclave storage
+// Returns the hash of the saved state (independent of the diff!)
 pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
     let state_path = format!(
         "{}/{}/{}",

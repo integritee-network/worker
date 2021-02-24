@@ -92,7 +92,6 @@ impl Stf {
             sp_io::storage::set(&key, &number.encode());
         });
     }
-
     
     pub fn get_block_number(ext: &mut State) -> Option<BlockNumber> {
         ext.execute_with(|| {

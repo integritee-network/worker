@@ -136,4 +136,3 @@ optional = true
 [dev-dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
 rev = "a208da16"
-
