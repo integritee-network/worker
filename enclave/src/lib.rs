@@ -58,6 +58,8 @@ use std::io::Read;
 use std::sync::Arc;
 use std::sync::{SgxMutex, SgxMutexGuard};
 use utils::write_slice_and_whitespace_pad;
+use std::time::{UNIX_EPOCH, SystemTime};
+use std::untrusted::time::SystemTimeEx;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
 use crate::utils::UnwrapOrSgxErrorUnexpected;
@@ -94,6 +96,14 @@ pub mod tls_ra;
 pub mod top_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
+pub const CALLTIMEOUT: i64 = 90i64;
+pub const GETTERTIMEOUT: i64 = 90i64;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Timeout {
+    Call,
+    Getter,
+}
 
 pub type Hash = sp_core::H256;
 type BPool = BasicPool<FillerChainApi<Block>, Block>;
@@ -528,6 +538,24 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
     Ok(blocks)
 }
 
+/// Checks if the time of call execution or getter is overdue
+/// Returns true if specified time is exceeded
+pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool { 
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    let max_time: i64 = match timeout {
+        Timeout::Call => CALLTIMEOUT,
+        Timeout::Getter => GETTERTIMEOUT,
+    };
+    if now - start_time >= max_time {
+        true
+    } else { false}
+
+}
+
+/// Composes a sidechain block of a shard
 pub fn compose_block(
     latest_onchain_header: Header,
     calls: Vec<OpaqueCall>,

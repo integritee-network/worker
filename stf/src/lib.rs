@@ -62,6 +62,8 @@ pub static CALL_CONFIRMED: u8 = 3u8;
 pub type StateType = sgx_externalities::SgxExternalitiesType;
 #[cfg(feature = "sgx")]
 pub type State = sgx_externalities::SgxExternalities;
+#[cfg(feature = "sgx")]
+pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
 
 #[derive(Encode, Decode, Clone, core::fmt::Debug)]
 #[allow(non_camel_case_types)]

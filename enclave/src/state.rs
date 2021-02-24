@@ -34,7 +34,7 @@ use codec::{Decode, Encode};
 use sgx_externalities::{SgxExternalitiesTrait, SgxExternalities, SgxExternalitiesTypeTrait};
 use sp_core::H256;
 use std::path::Path;
-use substratee_stf::{ShardIdentifier, State as StfState, Stf, StateType as StfStateType};
+use substratee_stf::{ShardIdentifier, State as StfState, Stf, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     // load last state
@@ -66,7 +66,7 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     // add empty state-diff
     let state_with_diff = StfState {
         state: state,
-        state_diff: StfStateType::new(),
+        state_diff: StfStateTypeDiff::new(),
     };    
     Ok(state_with_diff)
 }
