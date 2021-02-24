@@ -46,3 +46,6 @@ pub static SHIELD_FUNDS: u8 = 4u8;
 // bump this to be consistent with SubstraTEE-node runtime
 pub static RUNTIME_SPEC_VERSION: u32 = 1;
 pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;
+
+pub static CALLTIMEOUT: i64 = 300;   // timeout in ms   
+pub static GETTERTIMEOUT: i64 = 300; // timeout in ms

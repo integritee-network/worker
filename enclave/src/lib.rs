@@ -44,8 +44,10 @@ use sp_core::{crypto::Pair, hashing::blake2_256, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{
-    CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
+    CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, 
+    SUBSRATEE_REGISTRY_MODULE, CALLTIMEOUT, GETTERTIMEOUT,
 };
+
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
@@ -100,8 +102,6 @@ pub mod tls_ra;
 pub mod top_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
-pub const CALLTIMEOUT: i64 = 300;   // timeout in ms   
-pub const GETTERTIMEOUT: i64 = 300; // timeout in ms
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Timeout {
@@ -626,7 +626,7 @@ pub fn compose_block(
         extrinsic_hashes,
         state_hash_apriori,
         state_hash_aposteriori,
-        state_update.encode(),
+        state_update,
     )) */
     // Dummy return
     Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
