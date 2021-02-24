@@ -569,11 +569,11 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64;
-    let max_time: i64 = match timeout {
+    let max_time_ms: i64 = match timeout {
         Timeout::Call => CALLTIMEOUT,
         Timeout::Getter => GETTERTIMEOUT,
     };
-    if now - start_time >= max_time {
+    if (now - start_time)*1000 >= max_time_ms {
         true
     } else { 
         false
@@ -977,17 +977,21 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::pool::listener::test_should_trigger_dropped,
         top_pool::pool::listener::test_should_handle_pruning_in_the_middle_of_import,*/
         
-
-        
         state::test_encrypted_state_io_works,
-        ipfs::test_creates_ipfs_content_struct_works,
-        ipfs::test_verification_ok_for_correct_content,
-        ipfs::test_verification_fails_for_incorrect_content,
-        test_ocall_read_write_ipfs,
-        test_ocall_worker_request
+
+        test_time_is_overdue,
+        test_time_is_not_overdue,
+        
+        //ipfs::test_creates_ipfs_content_struct_works,
+        //ipfs::test_verification_ok_for_correct_content,
+        //ipfs::test_verification_fails_for_incorrect_content,
+        //test_ocall_read_write_ipfs,
+        test_ocall_worker_request,
+        
     )
 }
 
+/// tests
 fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -1088,4 +1092,30 @@ fn test_ocall_worker_request() {
 
     info!("Total Issuance is: {:?}", total_issuance);
     info!("Proof: {:?}", proof)
+}
+
+
+fn test_time_is_overdue() {
+    // given
+    let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+    // when
+    let before_start_time = (start_time*1000 - GETTERTIMEOUT)/1000;
+    let time_has_run_out = time_is_overdue(Timeout::Getter, before_start_time);    
+    // then
+    assert!(time_has_run_out)
+}
+
+fn test_time_is_not_overdue() {
+    // given
+    let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+    // when
+    let time_has_run_out = time_is_overdue(Timeout::Call, start_time);    
+    // then
+    assert_eq!(time_has_run_out, false)
 }
