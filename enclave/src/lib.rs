@@ -96,8 +96,8 @@ pub mod tls_ra;
 pub mod top_pool;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
-pub const CALLTIMEOUT: i64 = 90i64;
-pub const GETTERTIMEOUT: i64 = 90i64;
+pub const CALLTIMEOUT: i64 = 300;   // timeout in ms   
+pub const GETTERTIMEOUT: i64 = 300; // timeout in ms
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Timeout {
@@ -477,6 +477,11 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
         // Handling trusted getters
+        let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let mut is_done = false;
         for shard in shards.clone().into_iter() {            
             // retrieve trusted operations from pool
             let trusted_getters = match author.get_pending_tops_separated(shard) {
@@ -496,11 +501,23 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
                 if let Err(e) = author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false) {
                     error!("Error removing trusted operation from top pool: Error: {:?}", e);
                 }
-                // TODO: Check time
+                // Check time
+                if time_is_overdue(Timeout::Getter, start_time) {
+                    is_done = true;
+                    break;
+                }
+            }
+            if is_done {
+                break;
             }          
         }
 
         // Handling trusted calls
+        let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let mut is_done = false;
         for shard in shards.into_iter() {
             let mut calls = Vec::<OpaqueCall>::new();
             // save state before executing any calls
@@ -526,13 +543,20 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
                 ) {
                     error!("Error performing worker call: Error: {:?}", e);
                 }
-                // TODO: Check time
+                // Check time
+                if time_is_overdue(Timeout::Call, start_time) {
+                    is_done = true;
+                    break;
+                }
             }
             // dummy: 
             let state_update: HashMap<Vec<u8>, Option<Vec<u8>>> = HashMap::new();
             let prev_state_hash = state::hash_of(prev_state.state)?;
             let block = compose_block(latest_onchain_header.clone(), calls, shard, prev_state_hash, state_update);
-       }
+            if is_done {
+                break;
+            }
+       }        
     }
 
     Ok(blocks)
@@ -551,8 +575,9 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
     };
     if now - start_time >= max_time {
         true
-    } else { false}
-
+    } else { 
+        false
+    }
 }
 
 /// Composes a sidechain block of a shard
