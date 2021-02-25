@@ -6,9 +6,12 @@ use sgx_tstd as std;
 use std::vec::Vec;
 use std::vec;
 
-use sp_core::{sr25519, Pair, H256, ed25519};
-use sp_runtime::traits::Verify;
-use substratee_stf::{ShardIdentifier, Signature, AccountId};
+use sp_core::{H256, ed25519};
+use sp_core::crypto::{AccountId32, Pair};
+use sp_runtime::{traits::Verify, MultiSignature};
+use substratee_stf::{ShardIdentifier};
+
+pub type Signature = MultiSignature;
 
 use std::time::{UNIX_EPOCH, SystemTime};
 #[cfg(feature = "sgx")]
@@ -16,37 +19,49 @@ use std::untrusted::time::SystemTimeEx;
 /* use chrono::Utc as TzUtc;
 use chrono::TimeZone; */
 
-/// simplified block structure for relay chain submission as an extrinsic
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+/// signed version of block to verify block origin
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct PrivatePayload {    
+pub struct SignedBlock {
+    block: Block,
+    /// block author signature
+    signature: Signature,    
+}
+
+/// payload of block that needs to be encrypted
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct StatePayload {    
     state_hash_apriori: H256,
     state_hash_aposteriori: H256,
-    /// encrypted vec of key-value pairs to update
+    /// encoded state update
     state_update: Vec<u8>,
 }
 
-/// simplified block structure for relay chain submission as an extrinsic
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct PublicBlock {
-    block_number: u64,
-    parent_hash: H256,
-    timestamp: i64,
-    encrypted_payload: Vec<u8>,
-    extrinsic_hashes: Vec<H256>,
-    /// hash of the last header of block in layer one
-    /// needed in case extrinsics depend on layer one state 
-    layer_one_head: H256,    
-    shard_id: ShardIdentifier,
-    ///  must be registered on layer one as an enclave for the respective shard 
-    block_author: AccountId,
-    block_author_signature: Signature,
+impl StatePayload {
+     /// get hash of state before block execution
+     pub fn state_hash_apriori(&self) -> H256 {
+        self.state_hash_apriori
+    }
+    /// get hash of state after block execution
+    pub fn state_hash_aposteriori(&self) -> H256 {
+        self.state_hash_aposteriori
+    }
+    /// get encoded state update reference
+    pub fn state_update(&self) -> &Vec<u8> {
+        &self.state_update
+    }
+    pub fn new(apriori: H256, aposteriori: H256, update: Vec<u8>) -> StatePayload {
+        StatePayload {
+            state_hash_apriori: apriori,
+            state_hash_aposteriori: aposteriori,
+            state_update: update,
+        }
+    }
 }
 
-
 /// simplified block structure for relay chain submission as an extrinsic
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Block {
     block_number: u64,
@@ -57,269 +72,259 @@ pub struct Block {
     layer_one_head: H256,    
     shard_id: ShardIdentifier,
     ///  must be registered on layer one as an enclave for the respective shard 
-    block_author: AccountId,
-    extrinsic_hashes: Vec<H256>,
-    state_hash_apriori: H256,
-    state_hash_aposteriori: H256,
-    /// encrypted vec of key-value pairs to update
-    state_update: Vec<u8>,
-    block_author_signature: Signature,
+    block_author: AccountId32,
+    signed_call_hashes: Vec<H256>,
+    // encrypted state payload
+    state_payload: Vec<u8>
 }
 
 impl Block {
-    // get block number.
+    ///get block number
     pub fn block_number(&self) -> u64 {
         self.block_number
     }
-    // get parent hash of block
+    /// get parent hash of block
     pub fn parent_hash(&self) -> H256 {
         self.parent_hash
     }
-    // get timestamp of block
+    /// get timestamp of block
     pub fn timestamp(&self) -> i64 {
         self.timestamp
     }
-    // get layer one head of block
+    /// get layer one head of block
     pub fn layer_one_head(&self) -> H256 {
         self.layer_one_head
     }
-    // get shard id of block
+    /// get shard id of block
     pub fn shard_id(&self) -> ShardIdentifier {
         self.shard_id
     }
-    // get author of block
-    pub fn block_author(&self) -> AccountId {
-        self.block_author
+    /// get author of block
+    pub fn block_author(&self) -> &AccountId32 {
+        &self.block_author
     }
-    // get reference of extrinisics of block
-    pub fn extrinsic_hashes(&self) -> &Vec<H256> {
-        &self.extrinsic_hashes
+    /// get reference of extrinisics of block
+    pub fn signed_call_hashes(&self) -> &Vec<H256> {
+        &self.signed_call_hashes
     }
-    // get state hash piror to block execution
-    pub fn state_hash_apriori(&self) -> H256 {
-        self.state_hash_apriori
-    }
-    // get state hash after block execution
-    pub fn state_hash_aposteriori(&self) -> H256 {
-        self.state_hash_aposteriori
-    }
-    // get reference of state diff block brings with
-    pub fn state_update(&self) -> &Vec<u8> {
-        &self.state_update
-    }
-    // get reference of block author signature
-    pub fn signature(&self) -> &Signature {
-        &self.block_author_signature
-    }
-    /// Constructs a signed block
-    pub fn construct_block(
-        // TODO: Change to ed -> change AccountId to accept ed. Multisignature?
-        pair: &sr25519::Pair,
+    /// get encrypted payload
+    pub fn state_payload(&self) -> &Vec<u8> {
+        &self.state_payload
+    }   
+     /// Constructs an unsigned block
+     pub fn construct_block(
+        author: AccountId32,
         block_number: u64,
         parent_hash: H256,
         layer_one_head: H256,
         shard: ShardIdentifier,
-        extrinsic_hashes: Vec<H256>,
-        state_hash_apriori: H256,
-        state_hash_aposteriori: H256,
-        state_update: Vec<u8>,
+        signed_call_hashes: Vec<H256>,
+        encrypted_payload: Vec<u8>,
     ) -> Block {
          // get timestamp for new block
-         let now: i64 = Block::get_time();
-         let author = pair.public();
+         let now: i64 = get_time();
 
-        // get block payload
-        let mut payload = vec![];
-        payload.append(&mut block_number.encode());
-        payload.append(&mut parent_hash.encode());
-        payload.append(&mut now.encode());
-        payload.append(&mut layer_one_head.encode());
-        payload.append(&mut shard.encode());
-        payload.append(&mut author.encode());
-        payload.append(&mut extrinsic_hashes.encode());
-        payload.append(&mut state_hash_apriori.encode());
-        payload.append(&mut state_hash_aposteriori.encode());
-        payload.append(&mut state_update.encode());       
-
-        // get block signature
-        let signature: Signature = pair.sign(payload.as_slice()).into();
-        
         // create block
         Block {
             block_number: block_number,
             parent_hash: parent_hash,
             timestamp: now,
             layer_one_head: layer_one_head,
+            signed_call_hashes: signed_call_hashes,
             shard_id: shard,
             block_author: author,
-            extrinsic_hashes: extrinsic_hashes,
-            state_hash_apriori: state_hash_apriori,
-            state_hash_aposteriori: state_hash_aposteriori,
-            state_update: state_update,
-            block_author_signature: signature,
+            state_payload: encrypted_payload,
         }
+    }
+
+    /// Composes a signed block
+     pub fn sign(
+        &self,
+        pair: &ed25519::Pair,
+    ) -> SignedBlock {
+        let payload = self.encode();
+        SignedBlock {
+            block: self.clone(),
+            signature: pair.sign(payload.as_slice()).into(),
+        }
+
+    }
+}
+impl SignedBlock {
+    /// get block reference
+    pub fn block(&self) -> &Block {
+        &self.block
+    }
+    /// get signature reference
+    pub fn signature(&self) -> &Signature {
+        &self.signature
     }
 
     /// Verifes the signature of a Block
     pub fn verify_signature(&self) -> bool {
         // get block payload
-        let mut payload = vec![];
-        payload.append(&mut self.block_number.encode());
-        payload.append(&mut self.parent_hash.encode());
-        payload.append(&mut self.timestamp.encode());
-        payload.append(&mut self.layer_one_head.encode());
-        payload.append(&mut self.shard_id.encode());
-        payload.append(&mut self.block_author.encode());
-        payload.append(&mut self.extrinsic_hashes.encode());
-        payload.append(&mut self.state_hash_apriori.encode());
-        payload.append(&mut self.state_hash_aposteriori.encode());
-        payload.append(&mut self.state_update.encode());      
+        let payload = self.block.encode();
         
         // verify signature
-        self.block_author_signature
-            .verify(payload.as_slice(), &self.block_author)
+        self.signature
+            .verify(payload.as_slice(), &self.block.block_author.clone())
     }
 
+}
 
-    /// sets the timestamp of the block as seconds since unix epoch
-    fn get_time() -> i64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64
-        // = TzUtc.timestamp(now.as_secs() as i64, 0);
-    }
-
-
+/// sets the timestamp of the block as seconds since unix epoch
+fn get_time() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64
+    // = TzUtc.timestamp(now.as_secs() as i64, 0);
 }
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sp_keyring::AccountKeyring;
     use std::thread;
     use std::time::Duration;
 
     #[test]
+    fn new_payload_works() {
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let state_update: Vec<u8> = vec![];
+        
+        let payload = StatePayload::new(state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(), state_update.clone());
+
+        assert_eq!(state_hash_apriori, payload.state_hash_apriori());
+        assert_eq!(state_hash_aposteriori, payload.state_hash_aposteriori());
+        assert_eq!(state_update, *payload.state_update());
+    }
+
+    #[test]
     fn construct_block_works() {
-        let signer_pair = &AccountKeyring::Alice.pair();
-        let author = signer_pair.public();
+        // given
+        let author: AccountId32 = ed25519::Pair::from_string("//Alice", None).unwrap().public().into();
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let state_hash_apriori = H256::random();
-        let state_hash_aposteriori = H256::random();
-        let extrinsic_hashes = vec![];
-        let state_update: Vec<u8> = vec![];
+        let signed_call_hashes = vec![];
+        let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
-        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(), state_update.clone());
-
+        // when
+        let block = Block::construct_block(author.clone(), block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+        
+        // then
         assert_eq!(block_number, block.block_number());
         assert_eq!(parent_hash, block.parent_hash());
         assert_eq!(layer_one_head, block.layer_one_head());
         assert_eq!(shard, block.shard_id());
-        assert_eq!(author, block.block_author());
-        assert_eq!(extrinsic_hashes, *block.extrinsic_hashes());
-        assert_eq!(state_hash_apriori, block.state_hash_apriori());
-        assert_eq!(state_hash_aposteriori, block.state_hash_aposteriori());
-        assert_eq!(state_update, *block.state_update());
+        assert_eq!(&author, block.block_author());
+        assert_eq!(signed_call_hashes, *block.signed_call_hashes());
+        assert_eq!(encrypted_payload, *block.state_payload());
     }
 
     #[test]
-    fn get_signature_works() {
-        let signer_pair = &AccountKeyring::Alice.pair();
-        let author = signer_pair.public();
+    fn signing_works() {
+        // given
+        let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
+        let author: AccountId32 = signer_pair.public().into();
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let state_hash_apriori = H256::random();
-        let state_hash_aposteriori = H256::random();
-        let extrinsic_hashes = vec![];
-        let state_update: Vec<u8> = vec![];
+        let signed_call_hashes = vec![];
+        let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
-        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(), state_update.clone());
+        // when
+        let block = Block::construct_block(author, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+        let signed_block = block.sign(&signer_pair);
+        let signature: Signature = Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
 
-        assert_eq!(&block.block_author_signature, block.signature());
+        // then
+        assert_eq!(signed_block.block(), &block);
+        assert_eq!(signed_block.signature(), &signature);
     }
 
      #[test]
     fn verify_signature_works() {
-        let signer_pair = &AccountKeyring::Alice.pair();
-        let author = signer_pair.public();
+        // given
+        let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
+        let author: AccountId32 = signer_pair.public().into();
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let state_hash_apriori = H256::random();
-        let state_hash_aposteriori = H256::random();
-        let extrinsic_hashes = vec![];
-        let state_update: Vec<u8> = vec![];
+        let signed_call_hashes = vec![];
+        let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
-        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(), state_update.clone());
+        // when
+        let block = Block::construct_block(author, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+        let signed_block = block.sign(&signer_pair);
 
-        assert!(block.verify_signature());
+        // then
+        assert!(signed_block.verify_signature());
     }
 
     #[test]
     fn tampered_block_verify_signature_fails() {
-        let signer_pair = &AccountKeyring::Alice.pair();
-        let author = signer_pair.public();
+        // given
+        let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
+        let author: AccountId32 = signer_pair.public().into();
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let state_hash_apriori = H256::random();
-        let state_hash_aposteriori = H256::random();
-        let extrinsic_hashes = vec![];
-        let state_update: Vec<u8> = vec![];
+        let signed_call_hashes = vec![];
+        let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
-        let mut block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(), state_update.clone());
+        // when
+        let block = Block::construct_block(author, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+        let mut signed_block = block.sign(&signer_pair);
+        signed_block.block.block_number = 1; 
 
-        block.block_number = 1; 
-
-        assert_eq!(block.verify_signature(), false);
+        // then
+        assert_eq!(signed_block.verify_signature(), false);
     } 
 
     #[test]
-    fn get_time_works() {        
+    fn get_time_works() {     
+        // given   
         let two_seconds = Duration::new(2,0);
-        let now = Block::get_time();        
+        let now = get_time();   
+        // when     
         thread::sleep(two_seconds);
-        assert_eq!(now + two_seconds.as_secs() as i64, Block::get_time());
+        // then
+        assert_eq!(now + two_seconds.as_secs() as i64, get_time());
     } 
 
     #[test]
     fn setting_timestamp_works() {
-        let signer_pair = &AccountKeyring::Alice.pair();
-        let author = signer_pair.public();
+        // given
+        let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
+        let author: AccountId32 = signer_pair.public().into();
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let state_hash_apriori = H256::random();
-        let state_hash_aposteriori = H256::random();
-        let extrinsic_hashes = vec![];
-        let state_update: Vec<u8> = vec![];
+        let signed_call_hashes = vec![];
+        let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
-        let block = Block::construct_block(&signer_pair, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), extrinsic_hashes.clone(), state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(), state_update.clone());
-        
+        // when
+        let block = Block::construct_block(author, block_number, parent_hash.clone(),
+            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
         let one_second = Duration::new(1,0);
         let now = block.timestamp();        
         thread::sleep(one_second);
-        assert_eq!(now + one_second.as_secs() as i64, Block::get_time());
+
+        // then
+        assert_eq!(now + one_second.as_secs() as i64, get_time());
     } 
 } 
 
