@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use std::vec::Vec;
-use std::vec;
 
 use sp_core::{H256, ed25519};
 use sp_core::crypto::{AccountId32, Pair};
@@ -178,7 +177,6 @@ fn get_time() -> i64 {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64
-    // = TzUtc.timestamp(now.as_secs() as i64, 0);
 }
 
 
@@ -190,13 +188,16 @@ mod tests {
 
     #[test]
     fn new_payload_works() {
+        // given
         let state_hash_apriori = H256::random();
         let state_hash_aposteriori = H256::random();
         let state_update: Vec<u8> = vec![];
         
+        // when
         let payload = StatePayload::new(state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
 
+        // then
         assert_eq!(state_hash_apriori, payload.state_hash_apriori());
         assert_eq!(state_hash_aposteriori, payload.state_hash_aposteriori());
         assert_eq!(state_update, *payload.state_update());
