@@ -525,6 +525,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
         let mut is_done = false;
         for shard in shards.into_iter() {
             let mut calls = Vec::<OpaqueCall>::new();
+            let mut call_hashes = Vec::<H256>::new();
             // load state before executing any calls
             let mut state = if state::exists(&shard) {
                 state::load(&shard)?
@@ -542,7 +543,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
             };    
             // call exectuion        
             for trusted_call_signed in trusted_calls.into_iter() {
-                if let Err(e) = handle_trusted_worker_call(
+                match handle_trusted_worker_call(
                     &mut calls,
                     &mut state,
                     trusted_call_signed,
@@ -550,8 +551,11 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
                     shard,
                     Some(author.clone()),
                 ) {
-                    error!("Error performing worker call: Error: {:?}", e);
-                }
+                    Ok(hash) => {if let Some(hash) = hash {
+                        call_hashes.push(hash)
+                    }},
+                    Err(e) => error!("Error performing worker call: Error: {:?}", e),
+                };
                 // Check time
                 if time_is_overdue(Timeout::Call, start_time) {
                     is_done = true;
@@ -561,7 +565,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
             // save updated state after call executions
             let new_state_hash = state::write(state.clone(), &shard)?;
             // create new block
-            match compose_signed_block(latest_onchain_header.clone(), calls, 
+            match compose_signed_block(latest_onchain_header.clone(), call_hashes, 
                 shard, prev_state_hash, &mut state) {
                 Ok(block) =>  blocks.push(block),
                 Err(e) => error!("Could not compose block: {:?}", e),
@@ -596,7 +600,7 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
 /// Composes a sidechain block of a shard
 pub fn compose_signed_block(
     latest_onchain_header: Header,
-    calls: Vec<OpaqueCall>,
+    signed_call_hashes: Vec<H256>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
     state: &mut StfState,
@@ -613,11 +617,6 @@ pub fn compose_signed_block(
         Some(hash) => hash,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };   
-    let call_hashes: Vec<H256> = calls
-        .into_iter()
-        .map(|c| H256::from(blake2_256(&c.encode())))
-        .collect();
-
     // hash previous of state    
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
     let state_update = state.state_diff.clone().encode();
@@ -635,7 +634,7 @@ pub fn compose_signed_block(
         parent_hash, 
         layer_one_head, 
         shard,
-        call_hashes,
+        signed_call_hashes,
         payload,
     );
 
@@ -807,7 +806,7 @@ fn handle_trusted_worker_call(
     header: Header,
     shard: ShardIdentifier,
     author_pointer: Option<Arc<Author<&BPool>>>,
-) -> SgxResult<()> {
+) -> SgxResult<Option<H256>> {
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
 
@@ -826,7 +825,7 @@ fn handle_trusted_worker_call(
                 )
                 .unwrap();
         }
-        return Ok(());
+        return Ok(None);
     }
 
     // Necessary because chain relay sync may not be up to date 
@@ -858,7 +857,7 @@ fn handle_trusted_worker_call(
         }
         error!("Error performing Stf::execute. Error: {:?}", e);
 
-        return Ok(());
+        return Ok(None);
     }
 
     if let Some(author) = author_pointer {
@@ -885,8 +884,7 @@ fn handle_trusted_worker_call(
     calls.push(OpaqueCall(
         (xt_call, shard, call_hash, state_hash.encode()).encode(),
     ));
-
-    Ok(())
+    Ok(Some(H256::from(call_hash)))
 }
 
 fn verify_worker_responses(
