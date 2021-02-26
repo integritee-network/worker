@@ -200,6 +200,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 
 fn stf_post_actions(
     mut validator: LightValidation,
+     // currently obsolete. Might be reused for indirect calls?
     calls_buffer: Vec<OpaqueCall>,
     extrinsics_slice: &mut [u8],
     mut nonce: u32,

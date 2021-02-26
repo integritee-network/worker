@@ -20,6 +20,9 @@ use crate::{
     TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 
+pub const GENESIS_HASH: [u8; 32] = [94u8; 32];
+pub const GENESIS_BLOCKNUMBER: BlockNumber = 0;
+
 /// Simple blob that holds a call in encoded format
 #[derive(Clone, Debug)]
 pub struct OpaqueCall(pub Vec<u8>);
@@ -73,6 +76,9 @@ impl Stf {
                 &1u128.encode(),
             );
         });
+        // set gensis block number and hash
+        Stf::update_block_number(&mut ext, GENESIS_BLOCKNUMBER);
+        Stf::update_last_block_hash(&mut ext, GENESIS_HASH.into());
         ext
     }
 
