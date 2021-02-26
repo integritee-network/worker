@@ -37,7 +37,8 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, Sg
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{ShieldFundsFn};
-use substratee_worker_primitives::block::Block as SidechainBlock;
+use substratee_worker_primitives::block::{Block as SidechainBlock, StatePayload, 
+    SignedBlock as SignedSidechainBlock};
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256, H256};
@@ -462,9 +463,9 @@ fn get_stf_state(
 
 }
 
-fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<SidechainBlock>> {
+fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<SignedSidechainBlock>> {
     debug!("Executing pending pool operations");
-    let mut blocks = Vec::<SidechainBlock>::new();
+    let mut blocks = Vec::<SignedSidechainBlock>::new();
     {
         let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
             Some(mutex) => mutex,
@@ -560,7 +561,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Sidech
             // save updated state after call executions
             let new_state_hash = state::write(state.clone(), &shard)?;
             // create new block
-            match compose_block(latest_onchain_header.clone(), calls, 
+            match compose_signed_block(latest_onchain_header.clone(), calls, 
                 shard, prev_state_hash, &mut state) {
                 Ok(block) =>  blocks.push(block),
                 Err(e) => error!("Could not compose block: {:?}", e),
@@ -593,13 +594,13 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
 }
 
 /// Composes a sidechain block of a shard
-pub fn compose_block(
+pub fn compose_signed_block(
     latest_onchain_header: Header,
     calls: Vec<OpaqueCall>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
     state: &mut StfState,
-) -> SgxResult<SidechainBlock> {
+) -> SgxResult<SignedSidechainBlock> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
@@ -608,28 +609,37 @@ pub fn compose_block(
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
     let block_number: u64 = (prev_block_number + 1).into();
-    let extrinsic_hashes: Vec<H256> = calls
+    let parent_hash = match Stf::get_last_block_hash(state){
+        Some(hash) => hash,
+        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+    };   
+    let call_hashes: Vec<H256> = calls
         .into_iter()
         .map(|c| H256::from(blake2_256(&c.encode())))
         .collect();
 
-    // hash previous and current state    
+    // hash previous of state    
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
     let state_update = state.state_diff.clone().encode();
+
+    // create encrypted payload
+    let mut payload: Vec<u8> = StatePayload::new(
+        state_hash_apriori, 
+        state_hash_aposteriori, 
+        state_update).encode();
+    aes::de_or_encrypt(&mut payload)?;
        
-    /* Ok(SidechainBlock::construct_block(
-        &signer_pair, 
+    let block = SidechainBlock::construct_block(
+        signer_pair.public().into(),
         block_number, 
         parent_hash, 
         layer_one_head, 
         shard,
-        extrinsic_hashes,
-        state_hash_apriori,
-        state_hash_aposteriori,
-        state_update,
-    )) */
-    // Dummy return
-    Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+        call_hashes,
+        payload,
+    );
+
+    Ok(block.sign(&signer_pair))
 
 }
 
