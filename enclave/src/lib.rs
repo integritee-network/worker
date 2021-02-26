@@ -410,6 +410,7 @@ pub unsafe extern "C" fn produce_blocks(
             }
 
             // indirect worker calls not supported anymore since M8.2
+            // might be used again in future versions
             /* match scan_block_for_relevant_xt(&signed_block.block) {
                 Ok(c) => calls.extend(c.into_iter()),
                 Err(_) => error!("Error executing relevant extrinsics"),
@@ -418,13 +419,18 @@ pub unsafe extern "C" fn produce_blocks(
     }
     // get header of last block
     let latest_onchain_header: Header = validator.latest_finalized_header(validator.num_relays).unwrap();
-    // execute pending calls from operation pool
-    let executed_calls = match execute_top_pool_calls(latest_onchain_header) {
+    // execute pending calls from operation pool and create block 
+    // (one per shard)
+    let sidechain_blocks = match execute_top_pool_calls(latest_onchain_header) {
         Ok(calls) => calls,
         Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
+    // Opaque calls currently obsolote with M8.2
+    // might be used again in future versions
     let call_dummy = Vec::<OpaqueCall>::new();
+
+    
     if let Err(_e) = stf_post_actions(validator, call_dummy, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
@@ -468,6 +474,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
     debug!("Executing pending pool operations");
     let mut blocks = Vec::<SignedSidechainBlock>::new();
     {
+        // load top pool
         let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
             Some(mutex) => mutex,
             None => {
@@ -479,7 +486,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
         let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
 
-        // get all shards with top pool of worker
+        // get all shards that exist within top pool of worker
         let shards: Vec<ShardIdentifier> = author.get_shards();
 
         // Handle trusted getters
@@ -525,8 +532,11 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
             .as_secs() as i64;
         let mut is_done = false;
         for shard in shards.into_iter() {
+            // opaque since M8.2. Might be reused?
             let mut calls = Vec::<OpaqueCall>::new();
+
             let mut call_hashes = Vec::<H256>::new();
+
             // load state before executing any calls
             let mut state = if state::exists(&shard) {
                 state::load(&shard)?
@@ -534,7 +544,8 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
                 state::init_shard(&shard)?;
                 Stf::init_state()
             };   
-            // save the state hash (needed for block composition)
+            // save the state hash before call executions
+            // (needed for block composition)
             let prev_state_hash = state::hash_of(state.state.clone())?;        
 
             // retrieve trusted operations from pool
@@ -542,7 +553,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
                 Ok((calls,_)) => calls,
                 Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
             };    
-            // call exectuion        
+            // call execution        
             for trusted_call_signed in trusted_calls.into_iter() {
                 match handle_trusted_worker_call(
                     &mut calls,
@@ -684,6 +695,8 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     Stf::update_storage(&mut state, &update_map);
 
                     // block number is purged from the substrate state so it can't be read like other storage values
+                    // TODO: does this stay like this? (=block number sidechain equals block number of main chain?)
+                    // TODO: Parent hash update here aswell?
                     Stf::update_block_number(&mut state, header.number);
 
                     state::write(state, &s)?;
