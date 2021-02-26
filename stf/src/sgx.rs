@@ -9,6 +9,7 @@ use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
+use sp_core::H256 as Hash;
 use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::MultiAddress;
@@ -99,6 +100,28 @@ impl Stf {
             if let Some(infovec) = sp_io::storage::get(&key) {
                 if let Ok(number) = BlockNumber::decode(&mut infovec.as_slice()) {
                     Some(number)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }      
+        })
+    }
+
+    pub fn update_last_block_hash(ext: &mut State, hash: Hash) {
+        ext.execute_with(|| {
+            let key = storage_value_key("Chain", "LastHash");
+            sp_io::storage::set(&key, &hash.encode());
+        });
+    }
+    
+    pub fn get_last_block_hash(ext: &mut State) -> Option<Hash> {
+        ext.execute_with(|| {
+            let key = storage_value_key("Chain", "LastHash");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(hash) = Hash::decode(&mut infovec.as_slice()) {
+                    Some(hash)
                 } else {
                     None
                 }
