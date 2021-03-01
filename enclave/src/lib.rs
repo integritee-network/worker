@@ -45,7 +45,7 @@ use sp_core::{crypto::Pair, hashing::blake2_256, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{
-    CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, 
+    CALL_CONFIRMED, BLOCK_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, 
     SUBSRATEE_REGISTRY_MODULE, CALLTIMEOUT, GETTERTIMEOUT,
 };
 
@@ -200,7 +200,6 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 
 fn stf_post_actions(
     mut validator: LightValidation,
-     // currently obsolete. Might be reused for indirect calls?
     calls_buffer: Vec<OpaqueCall>,
     extrinsics_slice: &mut [u8],
     mut nonce: u32,
@@ -389,6 +388,8 @@ pub unsafe extern "C" fn produce_blocks(
         Err(e) => return e,
     };
 
+    let mut calls = Vec::<OpaqueCall>::new();
+
     debug!("Syncing chain relay!");
     if !blocks_to_sync.is_empty() {        
         for signed_block in blocks_to_sync.clone().into_iter() {
@@ -420,18 +421,13 @@ pub unsafe extern "C" fn produce_blocks(
     // get header of last block
     let latest_onchain_header: Header = validator.latest_finalized_header(validator.num_relays).unwrap();
     // execute pending calls from operation pool and create block 
-    // (one per shard)
-    let sidechain_blocks = match execute_top_pool_calls(latest_onchain_header) {
-        Ok(calls) => calls,
+    // (one per shard) as opaque call
+    match execute_top_pool_calls(latest_onchain_header) {
+        Ok(sidechain_blocks) => calls.extend(sidechain_blocks.into_iter()),
         Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    // Opaque calls currently obsolote with M8.2
-    // might be used again in future versions
-    let call_dummy = Vec::<OpaqueCall>::new();
-
-    
-    if let Err(_e) = stf_post_actions(validator, call_dummy, xt_slice, *nonce) {
+    if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
@@ -470,9 +466,9 @@ fn get_stf_state(
 
 }
 
-fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<SignedSidechainBlock>> {
+fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Executing pending pool operations");
-    let mut blocks = Vec::<SignedSidechainBlock>::new();
+    let mut calls = Vec::<OpaqueCall>::new();
     {
         // load top pool
         let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
@@ -532,9 +528,6 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
             .as_secs() as i64;
         let mut is_done = false;
         for shard in shards.into_iter() {
-            // opaque since M8.2. Might be reused?
-            let mut calls = Vec::<OpaqueCall>::new();
-
             let mut call_hashes = Vec::<H256>::new();
 
             // load state before executing any calls
@@ -577,10 +570,10 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
             // save updated state after call executions
             let new_state_hash = state::write(state.clone(), &shard)?;
             // create new block
-            match compose_signed_block(latest_onchain_header.clone(), call_hashes, 
+            match compose_block_confirmation(latest_onchain_header.clone(), call_hashes, 
                 shard, prev_state_hash, &mut state) {
-                Ok(block) =>  blocks.push(block),
-                Err(e) => error!("Could not compose block: {:?}", e),
+                Ok(xt_block) => calls.push(xt_block),
+                Err(e) => error!("Could not compose block confirmation: {:?}", e),
             }            
             if is_done {
                 break;
@@ -588,7 +581,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Signed
        }        
     }
 
-    Ok(blocks)
+    Ok(calls)
 }
 
 /// Checks if the time of call execution or getter is overdue
@@ -610,13 +603,13 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
 }
 
 /// Composes a sidechain block of a shard
-pub fn compose_signed_block(
+pub fn compose_block_confirmation(
     latest_onchain_header: Header,
     signed_call_hashes: Vec<H256>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
     state: &mut StfState,
-) -> SgxResult<SignedSidechainBlock> {
+) -> SgxResult<OpaqueCall> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
@@ -650,7 +643,16 @@ pub fn compose_signed_block(
         payload,
     );
 
-    Ok(block.sign(&signer_pair))
+    let signed_block = block.sign(&signer_pair);
+
+    let block_hash = blake2_256(&block.encode());
+    debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
+
+    let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+
+    Ok(OpaqueCall(
+        (xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode(),
+    ))
 
 }
 
@@ -856,6 +858,7 @@ fn handle_trusted_worker_call(
 
     Stf::update_storage(state, &update_map);
 
+
     debug!("execute STF");
     if let Err(e) = Stf::execute(state, stf_call_signed.clone(), calls) {
         if let Some(author) = author_pointer {
@@ -890,14 +893,9 @@ fn handle_trusted_worker_call(
             .unwrap();
     }
 
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     let call_hash = blake2_256(&stf_call_signed.encode());
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
-    let state_hash = state::hash_of(state.state.clone())?;
 
-    calls.push(OpaqueCall(
-        (xt_call, shard, call_hash, state_hash.encode()).encode(),
-    ));
     Ok(Some(H256::from(call_hash)))
 }
 
@@ -983,11 +981,11 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::primitives::test_h256,
 
         top_pool::pool::test_should_validate_and_import_transaction,
-        top_pool::pool::test_should_reject_if_temporarily_banned,
+        //top_pool::pool::test_should_reject_if_temporarily_banned,
         top_pool::pool::test_should_notify_about_pool_events,
-        top_pool::pool::test_should_clear_stale_transactions,
-        top_pool::pool::test_should_ban_mined_transactions,
-        top_pool::pool::test_should_limit_futures,
+        //top_pool::pool::test_should_clear_stale_transactions,
+        //top_pool::pool::test_should_ban_mined_transactions,
+        //top_pool::pool::test_should_limit_futures,
         top_pool::pool::test_should_error_if_reject_immediately,
         top_pool::pool::test_should_reject_transactions_with_no_provides,
         /*top_pool::pool::listener::test_should_trigger_ready_and_finalized,
@@ -999,6 +997,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::pool::listener::test_should_handle_pruning_in_the_middle_of_import,*/
         
         state::test_encrypted_state_io_works,
+        state::test_write_and_load_state_works,
+        state::test_sgx_state_decode_encode_works,
+        state::test_encrypt_decrypt_state_type_works,
 
         test_time_is_overdue,
         test_time_is_not_overdue,
