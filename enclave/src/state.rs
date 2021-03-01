@@ -187,6 +187,9 @@ pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
     Ok(shards)
 }
 
+//  tests
+use sgx_externalities::SgxExternalitiesTrait;
+
 pub fn test_encrypted_state_io_works() {
     let path = "test_state_file.bin";
     let plaintext = b"The quick brown fox jumps over the lazy dog.";
@@ -198,4 +201,58 @@ pub fn test_encrypted_state_io_works() {
 
     assert_eq!(state, plaintext.to_vec());
     std::fs::remove_file(path).unwrap();
+}
+
+pub fn test_sgx_state_decode_encode_works() {
+    // given
+    let key: Vec<u8> = "hello".encode();
+    let value: Vec<u8> = "world".encode();
+    let mut state = StfState::new();
+    state.insert(key.clone(),value);
+
+    // when
+    let encoded_state = state.state.clone().encode();
+    let state2 = StfStateType::decode(encoded_state);
+    debug!("State:{:?}", state);
+
+    // then    
+    assert_eq!(state.state, state2);
+}
+
+pub fn test_encrypt_decrypt_state_type_works() {
+    // given
+    let key: Vec<u8> = "hello".encode();
+    let value: Vec<u8> = "world".encode();
+    let mut state = StfState::new();
+    state.insert(key.clone(),value);
+
+    // when
+    let mut encrypted = encrypt(state.state.clone().encode()).unwrap();
+    debug!("State encrypted:{:?}", encrypted);
+    let decrypted = encrypt(encrypted.clone()).unwrap();
+    let decoded = StfStateType::decode(decrypted);    
+
+    // then
+    assert_eq!(state.state, decoded);
+}
+
+pub fn test_write_and_load_state_works() {
+    // given
+    let key: Vec<u8> = "hello".encode();
+    let value: Vec<u8> = "world".encode();
+    let mut state = StfState::new();
+    let shard: ShardIdentifier = [94u8; 32].into();
+    state.insert(key.clone(),value); 
+
+    // when
+    if !exists(&shard) {
+        init_shard(&shard).unwrap();
+    }
+    let hash = write(state.clone(), &shard).unwrap();
+    let result = load(&shard).unwrap();
+
+    // then
+    assert_eq!(state.state, result.state);
+
+    state.remove(&key);
 }
