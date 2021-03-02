@@ -76,9 +76,6 @@ impl Stf {
                 &1u128.encode(),
             );
         });
-        // set gensis block number and hash
-        Stf::update_block_number(&mut ext, GENESIS_BLOCKNUMBER);
-        Stf::update_last_block_hash(&mut ext, GENESIS_HASH.into());
         ext
     }
 
