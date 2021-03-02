@@ -542,6 +542,7 @@ pub fn produce_blocks(
     last_synced_head: Header,
 ) -> Header {
     // obtain latest finalized block from layer one
+    debug!("Getting current head");
     let curr_head: SignedBlock = api
         .get_finalized_head()
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
@@ -554,8 +555,7 @@ pub fn produce_blocks(
         blocks_to_sync.push(curr_head.clone());
 
         // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-        let mut head = curr_head.clone();
-
+        let mut head = curr_head.clone();       
         let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
         if no_blocks_to_sync > 1 {
             println!(
@@ -566,9 +566,9 @@ pub fn produce_blocks(
                 "Last finalized block number: {:?}\n",
                 head.block.header.number
             );
-        }
-
+        }        
         while head.block.header.parent_hash != last_synced_head.hash() {
+            debug!("Getting head of hash: {:?}", head.block.header.parent_hash);
             head = api
                 .get_signed_block(Some(head.block.header.parent_hash))
                 .unwrap();
