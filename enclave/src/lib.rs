@@ -422,8 +422,11 @@ pub unsafe extern "C" fn produce_blocks(
     let latest_onchain_header: Header = validator.latest_finalized_header(validator.num_relays).unwrap();
     // execute pending calls from operation pool and create block 
     // (one per shard) as opaque call
-    match execute_top_pool_calls(latest_onchain_header) {
-        Ok(sidechain_blocks) => calls.extend(sidechain_blocks.into_iter()),
+    let signed_blocks: Vec<SignedSidechainBlock> = match execute_top_pool_calls(latest_onchain_header) {
+        Ok((confirm_calls, signed_blocks)) => {
+            calls.extend(confirm_calls.into_iter());
+            signed_blocks
+        },
         Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
@@ -466,9 +469,10 @@ fn get_stf_state(
 
 }
 
-fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<OpaqueCall>> {
+fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
+    let mut blocks = Vec::<SignedSidechainBlock>::new();
     {
         // load top pool
         let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
@@ -567,21 +571,28 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<Vec<Opaque
                     break;
                 }
             }
-            // save updated state after call executions
-            let new_state_hash = state::write(state.clone(), &shard)?;
-            // create new block
-            match compose_block_confirmation(latest_onchain_header.clone(), call_hashes, 
-                shard, prev_state_hash, &mut state) {
-                Ok(xt_block) => calls.push(xt_block),
-                Err(e) => error!("Could not compose block confirmation: {:?}", e),
-            }            
+            // do not compose an empty block..
+            if call_hashes.is_empty() {
+                // save updated state after call executions
+                let new_state_hash = state::write(state.clone(), &shard)?;
+                // create new block
+                match compose_block_and_confirmation(latest_onchain_header.clone(), call_hashes, 
+                    shard, prev_state_hash, &mut state) {
+                    Ok((block_confirm, signed_block)) => {
+                        calls.push(block_confirm);
+                        blocks.push(signed_block);
+
+                    },
+                    Err(e) => error!("Could not compose block confirmation: {:?}", e),
+                }
+            }           
             if is_done {
                 break;
             }
        }        
     }
 
-    Ok(calls)
+    Ok((calls, blocks))
 }
 
 /// Checks if the time of call execution or getter is overdue
@@ -603,13 +614,13 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
 }
 
 /// Composes a sidechain block of a shard
-pub fn compose_block_confirmation(
+pub fn compose_block_and_confirmation(
     latest_onchain_header: Header,
     signed_call_hashes: Vec<H256>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
     state: &mut StfState,
-) -> SgxResult<OpaqueCall> {
+) -> SgxResult<(OpaqueCall, SignedSidechainBlock)> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
@@ -620,7 +631,8 @@ pub fn compose_block_confirmation(
     let block_number: u64 = (prev_block_number + 1).into();
     let parent_hash = match Stf::get_last_block_hash(state){
         Some(hash) => hash,
-        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        // in case of no parent hash, set initial state hash as parent hash
+        None => state_hash_apriori,
     };   
     // hash previous of state    
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
@@ -649,11 +661,10 @@ pub fn compose_block_confirmation(
     debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
 
     let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
-
-    Ok(OpaqueCall(
+    let opaque_call = OpaqueCall(
         (xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode(),
-    ))
-
+    );
+    Ok((opaque_call, signed_block))
 }
 
 pub fn update_states(header: Header) -> SgxResult<()> {
@@ -1003,6 +1014,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
         test_time_is_overdue,
         test_time_is_not_overdue,
+        test_compose_block_and_confirmation,
         
         //ipfs::test_creates_ipfs_content_struct_works,
         //ipfs::test_verification_ok_for_correct_content,
@@ -1091,6 +1103,9 @@ fn worker_request<V: Encode + Decode>(
     Ok(Decode::decode(&mut resp.as_slice()).unwrap())
 }
 
+// tests
+use sgx_externalities::SgxExternalitiesTrait;
+
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut requests = Vec::new();
@@ -1139,5 +1154,37 @@ fn test_time_is_not_overdue() {
     // when
     let time_has_run_out = time_is_overdue(Timeout::Call, start_time);    
     // then
-    assert_eq!(time_has_run_out, false)
+    assert!(!time_has_run_out)
+}
+
+
+fn test_compose_block_and_confirmation() {
+    // given
+    let latest_onchain_header = 
+        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
+    let call_hash: H256 = [94; 32].into();
+    let call_hash_two: H256 = [1; 32].into();
+    let signed_call_hashes = [call_hash, call_hash_two].to_vec();
+    let shard = ShardIdentifier::default();
+    let state_hash_apriori: H256 = [199; 32].into();
+    let key: Vec<u8> = "hello".encode();
+    let value: Vec<u8> = "world".encode();
+    let mut state = StfState::new();
+    state.insert(key.clone(),value);
+    Stf::update_block_number(&mut state, 1);
+    
+  /*   // when
+    let (opaque_call, signed_block) = compose_block_and_confirmation(latest_onchain_header, signed_call_hashes, 
+        shard, state_hash_apriori, &mut state).unwrap();
+    let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
+    let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
+    let mut opaque_call_vec = opaque_call.0;
+    // then
+    assert!(signed_block.verify_signature());
+    assert!(opaque_call_vec.starts_with(&xt_block_encoded));
+    let stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
+    assert!(stripped_opaque_call.starts_with(&shard.encode()));
+    let stripped_opaque_call = opaque_call_vec.split_off(shard.encode().len());
+    assert!(stripped_opaque_call.starts_with(&block_hash_encoded)); */
+ 
 }
