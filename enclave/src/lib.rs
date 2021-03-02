@@ -628,6 +628,7 @@ pub fn compose_block_and_confirmation(
         Some(number) => number,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
+    debug!("Got blocknumber: {:?}", prev_block_number);
     let block_number: u64 = (prev_block_number + 1).into();
     let parent_hash = match Stf::get_last_block_hash(state){
         Some(hash) => hash,
@@ -974,7 +975,7 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
-        top_pool::base_pool::test_should_import_transaction_to_ready,
+       top_pool::base_pool::test_should_import_transaction_to_ready,
         top_pool::base_pool::test_should_not_import_same_transaction_twice,
         top_pool::base_pool::test_should_import_transaction_to_future_and_promote_it_later,
         top_pool::base_pool::test_should_promote_a_subgraph,
@@ -1173,7 +1174,7 @@ fn test_compose_block_and_confirmation() {
     state.insert(key.clone(),value);
     Stf::update_block_number(&mut state, 1);
     
-  /*   // when
+    // when
     let (opaque_call, signed_block) = compose_block_and_confirmation(latest_onchain_header, signed_call_hashes, 
         shard, state_hash_apriori, &mut state).unwrap();
     let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
@@ -1182,9 +1183,9 @@ fn test_compose_block_and_confirmation() {
     // then
     assert!(signed_block.verify_signature());
     assert!(opaque_call_vec.starts_with(&xt_block_encoded));
-    let stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
+    let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
-    let stripped_opaque_call = opaque_call_vec.split_off(shard.encode().len());
-    assert!(stripped_opaque_call.starts_with(&block_hash_encoded)); */
+    let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
+    assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
  
 }
