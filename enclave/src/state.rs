@@ -254,5 +254,10 @@ pub fn test_write_and_load_state_works() {
     // then
     assert_eq!(state.state, result.state);
 
-    state.remove(&key);
+    // clean up
+    std::fs::remove_dir_all(&format!(
+        "{}/{}",
+        SHARDS_PATH,
+        shard.encode().to_base58(),
+    )).unwrap();
 }
