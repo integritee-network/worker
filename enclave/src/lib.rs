@@ -626,7 +626,8 @@ pub fn compose_block_and_confirmation(
 
     let prev_block_number = match Stf::get_block_number(state){
         Some(number) => number,
-        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        // in case no previous block number, take number 0
+        None => 0,
     };
     debug!("Got blocknumber: {:?}", prev_block_number);
     let block_number: u64 = (prev_block_number + 1).into();
@@ -1182,6 +1183,7 @@ fn test_compose_block_and_confirmation() {
     let mut opaque_call_vec = opaque_call.0;
     // then
     assert!(signed_block.verify_signature());
+    assert_eq!(signed_block.block().block_number(), 2);
     assert!(opaque_call_vec.starts_with(&xt_block_encoded));
     let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
