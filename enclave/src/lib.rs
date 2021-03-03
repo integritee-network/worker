@@ -1024,6 +1024,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
         //test_ocall_read_write_ipfs,
         test_ocall_worker_request,
         test_submit_trusted_call_to_top_pool,
+        test_submit_trusted_getter_to_top_pool,
+        test_differentiate_getter_and_call_works,
         
     )
 }
@@ -1213,7 +1215,6 @@ fn test_submit_trusted_call_to_top_pool() {
     let mrenclave = [0u8; 32];
     let shard = ShardIdentifier::default();
     let signer_pair = ed25519::unseal_pair().unwrap();
-    //let public: [u8; 32] = signer_pair.public().0;
     let call = TrustedCall::balance_set_balance(
         signer_pair.public().into(),
         signer_pair.public().into(),
@@ -1237,7 +1238,7 @@ fn test_submit_trusted_call_to_top_pool() {
             .submit_top(encrypted_top.clone(), shard)
             .await
     };
-    let tx_hash = executor::block_on(result).unwrap();
+    executor::block_on(result).unwrap();
 
     // get pending extrinsics
     let (calls, _) = author.get_pending_tops_separated(shard).unwrap();
@@ -1248,7 +1249,6 @@ fn test_submit_trusted_call_to_top_pool() {
     assert_eq!(call_one, call_two); 
 }
 
-
 fn test_submit_trusted_getter_to_top_pool() {
     // given
 
@@ -1256,12 +1256,9 @@ fn test_submit_trusted_getter_to_top_pool() {
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
-    // create trusted call signed
-    let nonce = 1;
-    let mrenclave = [0u8; 32];
+    // create trusted getter signed
     let shard = ShardIdentifier::default();
     let signer_pair = ed25519::unseal_pair().unwrap();
-    //let public: [u8; 32] = signer_pair.public().0;
     let getter = TrustedGetter::free_balance(
         signer_pair.public().into(),
     ); 
@@ -1276,13 +1273,13 @@ fn test_submit_trusted_getter_to_top_pool() {
 
     // when
 
-   // submit trusted call to top pool
+   // submit top to pool
     let result = async {
         author
             .submit_top(encrypted_top.clone(), shard)
             .await
     };
-    let tx_hash = executor::block_on(result).unwrap();
+    executor::block_on(result).unwrap();
 
     // get pending extrinsics
     let (_, getters) = author.get_pending_tops_separated(shard).unwrap();
@@ -1292,4 +1289,74 @@ fn test_submit_trusted_getter_to_top_pool() {
     let getter_two = format!{"{:?}", signed_getter};
     assert_eq!(getter_one, getter_two); 
 }
+
+fn test_differentiate_getter_and_call_works() {
+    // given
+
+    // create top pool
+    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let tx_pool = BasicPool::create(Default::default(), api);
+    let author = Author::new(Arc::new(&tx_pool));
+    // create trusted getter signed
+    let shard = ShardIdentifier::default();
+    let signer_pair = ed25519::unseal_pair().unwrap();
+    let getter = TrustedGetter::free_balance(
+        signer_pair.public().into(),
+    ); 
+    let signed_getter = getter.sign(&signer_pair.clone().into());
+    let trusted_operation: TrustedOperation = signed_getter.clone().into();
+    // encrypt call
+    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+    let mut encrypted_top: Vec<u8> = Vec::new();
+    rsa_pubkey
+        .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
+        .unwrap();
+
+    // create trusted call signed
+    let nonce = 1;
+    let mrenclave = [0u8; 32];
+    let call = TrustedCall::balance_set_balance(
+        signer_pair.public().into(),
+        signer_pair.public().into(),
+        42,
+        42,
+    ); 
+    let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+    let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
+    // encrypt call
+    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+    let mut encrypted_top_call: Vec<u8> = Vec::new();
+    rsa_pubkey
+        .encrypt_buffer(&trusted_operation_call.encode(), &mut encrypted_top_call)
+        .unwrap();
+
+    // when
+
+   // submit top to pool
+    let result = async {
+        author
+            .submit_top(encrypted_top.clone(), shard)
+            .await
+    };
+    executor::block_on(result).unwrap();
+
+    let result = async {
+        author
+            .submit_top(encrypted_top_call.clone(), shard)
+            .await
+    };
+    executor::block_on(result).unwrap();
+
+    // get pending extrinsics
+    let (calls, getters) = author.get_pending_tops_separated(shard).unwrap();
+
+    // then
+    let getter_one = format!{"{:?}", getters[0]};
+    let getter_two = format!{"{:?}", signed_getter};
+    let call_one = format!{"{:?}", calls[0]};
+    let call_two = format!{"{:?}", signed_call};
+    assert_eq!(call_one, call_two); 
+    assert_eq!(getter_one, getter_two); 
+}
+
 
