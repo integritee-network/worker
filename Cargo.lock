@@ -1673,7 +1673,6 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.3"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.15#36a23262988123731f544d5f5c30b47ad272dcd2"
 dependencies = [
  "base64 0.11.0",
  "chrono",
@@ -2646,7 +2645,6 @@ dependencies = [
 [[package]]
 name = "pallet-substratee-registry"
 version = "0.6.15"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?tag=v0.6.15#36a23262988123731f544d5f5c30b47ad272dcd2"
 dependencies = [
  "frame-support",
  "frame-system",

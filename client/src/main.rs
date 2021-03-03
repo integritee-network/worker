@@ -756,6 +756,15 @@ fn listen(matches: &ArgMatches<'_>) {
                                         accountid, call_hash
                                     );
                                 }
+                                my_node_runtime::substratee_registry::RawEvent::BlockConfirmed(
+                                    accountid,
+                                    block_hash,
+                                ) => {
+                                    println!(
+                                        "BlockConfirmed from {} with hash {:?}",
+                                        accountid, block_hash
+                                    );
+                                }
                                 my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
                                     incognito_account,
                                 ) => {
