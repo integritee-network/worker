@@ -1366,6 +1366,10 @@ fn test_create_block_and_confirmation_works() {
 
     // create top pool
     unsafe {rpc::worker_api_direct::initialize_pool()};
+    let shard = ShardIdentifier::default();
+    // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
+    let latest_onchain_header = 
+        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
 
     // load top pool
     {
@@ -1376,13 +1380,12 @@ fn test_create_block_and_confirmation_works() {
 
         // create trusted call signed
         let nonce = 1;
-        let mrenclave = [0u8; 32];
-        let shard = ShardIdentifier::default();
+        //let mrenclave = [0u8; 32];  
+        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;      
         let signer_pair = ed25519::unseal_pair().unwrap();
-        let call = TrustedCall::balance_set_balance(
+        let call = TrustedCall::balance_transfer(
             signer_pair.public().into(),
             signer_pair.public().into(),
-            42,
             42,
         ); 
         let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
@@ -1405,10 +1408,24 @@ fn test_create_block_and_confirmation_works() {
         let call_hash = executor::block_on(result).unwrap();
     }
 
-    // call block production
-    let latest_onchain_header = 
-        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
+    // call block production    
     let (confirm_calls, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
+
+    let signed_block = signed_blocks[0].clone();  
+    let mut opaque_call_vec = confirm_calls[0].0.clone();
+    let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
+    let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();    
+
+    // then
+    assert_eq!(signed_blocks.len(), 1);
+    assert_eq!(confirm_calls.len(), 1);
+    assert!(signed_block.verify_signature());
+    assert_eq!(signed_block.block().block_number(), 1);
+    assert!(opaque_call_vec.starts_with(&xt_block_encoded));
+    let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
+    assert!(stripped_opaque_call.starts_with(&shard.encode()));
+    let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
+    assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
 
     
 }
