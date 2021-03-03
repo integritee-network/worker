@@ -1473,7 +1473,7 @@ fn test_create_block_and_confirmation_works() {
     
 }
 
-
+//FIXME: Finish state diff unittest. Current problem: Set balance of test account
 fn test_create_state_diff() {
     // given
 
@@ -1486,7 +1486,7 @@ fn test_create_state_diff() {
     let rsa_pair = rsa3072::unseal_pair().unwrap();
 
     // ensure that state exists
-    let mut state = if state::exists(&shard) {
+    let state = if state::exists(&shard) {
         state::load(&shard).unwrap()
     } else {
         state::init_shard(&shard).unwrap();
@@ -1506,14 +1506,14 @@ fn test_create_state_diff() {
         let pool_guard = pool_mutex.lock().unwrap();
         let pool = Arc::new(pool_guard.deref());
         let author = Arc::new(Author::new(pool));
-
+        
         // create trusted call signed
         let nonce = 1;
         let mrenclave = attestation::get_mrenclave_of_self().unwrap().m; 
         let call = TrustedCall::balance_transfer(
             account_with_money.into(),
             account_without_money.into(),
-            1,
+            0,
         ); 
         let signed_call = call.sign(&pair_with_money.into(), nonce, &mrenclave, &shard);
         let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);

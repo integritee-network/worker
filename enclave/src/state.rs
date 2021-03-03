@@ -227,7 +227,7 @@ pub fn test_encrypt_decrypt_state_type_works() {
     state.insert(key.clone(),value);
 
     // when
-    let mut encrypted = encrypt(state.state.clone().encode()).unwrap();
+    let encrypted = encrypt(state.state.clone().encode()).unwrap();
     debug!("State encrypted:{:?}", encrypted);
     let decrypted = encrypt(encrypted.clone()).unwrap();
     let decoded = StfStateType::decode(decrypted);    

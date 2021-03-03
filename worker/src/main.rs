@@ -612,6 +612,7 @@ pub fn produce_blocks(
         };
         let calls: Vec<Vec<u8>> = Decode::decode(&mut encoded_calls.as_slice()).unwrap();
 
+        //FIXME: Remove, should be done in ocall
         if !calls.is_empty() {
             println!(
                 "Sync chain relay: Enclave wants to send {} extrinsics",
