@@ -35,11 +35,13 @@ use my_node_runtime::Balance;
 use sgx_runtime::Balance;
 use sp_core::{sr25519, Pair, H256, ed25519};
 use sp_core::crypto::{AccountId32};
-use sp_runtime::{traits::Verify, MultiAddress, MultiSignature, MultiSigner};
+use sp_runtime::{traits::Verify, MultiSignature};
+// TODO: use MultiAddress instead of AccountId32?
 
 //pub type Signature = AnySignature;
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
+//pub type AccountId = MultiAddress<AccountId32,;
 pub type AccountId = AccountId32;
 pub type Hash = sp_core::H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
@@ -68,7 +70,17 @@ impl KeyPair {
 	}
 }
 
+impl From<ed25519::Pair> for KeyPair {
+	fn from(x: ed25519::Pair) -> Self {
+		KeyPair::Ed25519(x)
+	}
+}
 
+impl From<sr25519::Pair> for KeyPair {
+	fn from(x: sr25519::Pair) -> Self {
+		KeyPair::Sr25519(x)
+	}
+}
 
 #[cfg(feature = "sgx")]
 pub mod sgx;
@@ -280,12 +292,12 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let call = TrustedCall::balance_set_balance(
-            AccountKeyring::Alice.public(),
-            AccountKeyring::Alice.public(),
+            AccountKeyring::Alice.public().into(),
+            AccountKeyring::Alice.public().into(),
             42,
             42,
         );
-        let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
+        let signed_call = call.sign(&KeyPair::Sr25519(AccountKeyring::Alice.pair()), nonce, &mrenclave, &shard);
 
         assert!(signed_call.verify_signature(&mrenclave, &shard));
     }
