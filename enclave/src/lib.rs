@@ -572,7 +572,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                 }
             }
             // do not compose an empty block..
-            if call_hashes.is_empty() {
+            if !call_hashes.is_empty() {
                 // save updated state after call executions
                 let new_state_hash = state::write(state.clone(), &shard)?;
                 // create new block
@@ -1026,7 +1026,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_submit_trusted_call_to_top_pool,
         test_submit_trusted_getter_to_top_pool,
         test_differentiate_getter_and_call_works,
-        
+        test_create_block_and_confirmation_works,        
     )
 }
 
@@ -1210,6 +1210,7 @@ fn test_submit_trusted_call_to_top_pool() {
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
+    
     // create trusted call signed
     let nonce = 1;
     let mrenclave = [0u8; 32];
@@ -1256,6 +1257,7 @@ fn test_submit_trusted_getter_to_top_pool() {
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
+
     // create trusted getter signed
     let shard = ShardIdentifier::default();
     let signer_pair = ed25519::unseal_pair().unwrap();
@@ -1359,4 +1361,54 @@ fn test_differentiate_getter_and_call_works() {
     assert_eq!(getter_one, getter_two); 
 }
 
+fn test_create_block_and_confirmation_works() {
+    // given
 
+    // create top pool
+    unsafe {rpc::worker_api_direct::initialize_pool()};
+
+    // load top pool
+    {
+        let &ref pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+        let pool_guard = pool_mutex.lock().unwrap();
+        let pool = Arc::new(pool_guard.deref());
+        let author = Arc::new(Author::new(pool));
+
+        // create trusted call signed
+        let nonce = 1;
+        let mrenclave = [0u8; 32];
+        let shard = ShardIdentifier::default();
+        let signer_pair = ed25519::unseal_pair().unwrap();
+        let call = TrustedCall::balance_set_balance(
+            signer_pair.public().into(),
+            signer_pair.public().into(),
+            42,
+            42,
+        ); 
+        let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+        let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
+        // encrypt call
+        let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+        let mut encrypted_top: Vec<u8> = Vec::new();
+        rsa_pubkey
+            .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
+            .unwrap();
+
+        // when
+
+        // submit trusted call to top pool
+        let result = async {
+            author
+                .submit_top(encrypted_top.clone(), shard)
+                .await
+        };
+        let call_hash = executor::block_on(result).unwrap();
+    }
+
+    // call block production
+    let latest_onchain_header = 
+        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
+    let (confirm_calls, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
+
+    
+}
