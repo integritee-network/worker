@@ -430,11 +430,44 @@ pub unsafe extern "C" fn produce_blocks(
         Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    if let Err(_e) = stf_post_actions(validator, calls, xt_slice, *nonce) {
+    if let Err(_e) = stf_post_actions(validator, calls.clone(), xt_slice, *nonce) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    // ocall to worker to save signed block and send block confirmation
+    if let Err(_e) = send_block_and_confirmation(calls, signed_blocks) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     sgx_status_t::SGX_SUCCESS
+}
+
+fn send_block_and_confirmation(
+    confirmations: Vec<OpaqueCall>, 
+    signed_blocks: Vec<SignedSidechainBlock>,
+    ) -> SgxResult<()> {
+        let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+        let res = unsafe {
+            ocall_send_block_and_confirmation(
+                &mut rt as *mut sgx_status_t,
+                confirmations.encode().as_ptr(),
+                confirmations.encode().len() as u32,
+                signed_blocks.encode().as_ptr(),
+                signed_blocks.encode().len() as u32,
+            )
+        };
+
+        if rt != sgx_status_t::SGX_SUCCESS {
+            return Err(rt);
+        }
+    
+        if res != sgx_status_t::SGX_SUCCESS {
+            return Err(res);
+        }
+
+
+    Ok(())
 }
 
 
@@ -572,20 +605,19 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                 }
             }
             // do not compose an empty block..
-            if !call_hashes.is_empty() {
-                // save updated state after call executions
-                let new_state_hash = state::write(state.clone(), &shard)?;
-                // create new block
-                match compose_block_and_confirmation(latest_onchain_header.clone(), call_hashes, 
-                    shard, prev_state_hash, &mut state) {
-                    Ok((block_confirm, signed_block)) => {
-                        calls.push(block_confirm);
-                        blocks.push(signed_block);
+            
+            // save updated state after call executions
+            let new_state_hash = state::write(state.clone(), &shard)?;
+            // create new block
+            match compose_block_and_confirmation(latest_onchain_header.clone(), call_hashes, 
+                shard, prev_state_hash, &mut state) {
+                Ok((block_confirm, signed_block)) => {
+                    calls.push(block_confirm);
+                    blocks.push(signed_block);
 
-                    },
-                    Err(e) => error!("Could not compose block confirmation: {:?}", e),
-                }
-            }           
+                },
+                Err(e) => error!("Could not compose block confirmation: {:?}", e),
+            }          
             if is_done {
                 break;
             }
@@ -905,8 +937,11 @@ fn handle_trusted_worker_call(
             )
             .unwrap();
     }
-
-    let call_hash = blake2_256(&stf_call_signed.encode());
+    // convert trusted call signed to trusted operation before hashing
+    // ATTENTION: only valid for direct calls. In case of indirect
+    // one should think this over.
+    let operation = stf_call_signed.into_trusted_operation(true);
+    let call_hash = blake2_256(&operation.encode());
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
     Ok(Some(H256::from(call_hash)))
@@ -971,6 +1006,15 @@ extern "C" {
         ret_ti: *mut sgx_target_info_t,
         ret_gid: *mut sgx_epid_group_id_t,
     ) -> sgx_status_t;
+
+    pub fn ocall_send_block_and_confirmation(
+        ret_val: *mut sgx_status_t,
+        confirmations: *const u8,
+        confirmations_size: u32,
+        signed_blocks: *const u8,
+        signed_blocks_size: u32,        
+    ) -> sgx_status_t;
+
 }
 
 #[no_mangle]
@@ -1026,7 +1070,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_submit_trusted_call_to_top_pool,
         test_submit_trusted_getter_to_top_pool,
         test_differentiate_getter_and_call_works,
-        test_create_block_and_confirmation_works,        
+        test_create_block_and_confirmation_works,  
+        test_create_state_diff,      
     )
 }
 
@@ -1036,9 +1081,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 //use std::sync::SgxMutex as Mutex;
 //use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use top_pool::primitives::from_low_u64_to_be_h256;
-use sp_core::sr25519;
+use sp_core::{ed25519 as spEd25519};
 use jsonrpc_core::futures::executor;
-use sp_core::crypto::UncheckedFrom;
 use substratee_stf::{TrustedOperation, TrustedGetter};
 
 fn test_ocall_read_write_ipfs() {
@@ -1370,6 +1414,7 @@ fn test_create_block_and_confirmation_works() {
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
     let latest_onchain_header = 
         Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
+    let mut top_hash = H256::default();
 
     // load top pool
     {
@@ -1397,18 +1442,16 @@ fn test_create_block_and_confirmation_works() {
             .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
             .unwrap();
 
-        // when
-
-        // submit trusted call to top pool
+            // submit trusted call to top pool
         let result = async {
             author
                 .submit_top(encrypted_top.clone(), shard)
                 .await
         };
-        let call_hash = executor::block_on(result).unwrap();
+        top_hash = executor::block_on(result).unwrap();
     }
 
-    // call block production    
+    // when   
     let (confirm_calls, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
 
     let signed_block = signed_blocks[0].clone();  
@@ -1421,11 +1464,81 @@ fn test_create_block_and_confirmation_works() {
     assert_eq!(confirm_calls.len(), 1);
     assert!(signed_block.verify_signature());
     assert_eq!(signed_block.block().block_number(), 1);
+    assert_eq!(signed_block.block().signed_call_hashes()[0], top_hash);
     assert!(opaque_call_vec.starts_with(&xt_block_encoded));
     let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
     let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
     assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
-
     
+}
+
+
+fn test_create_state_diff() {
+    // given
+
+    // create top pool
+    unsafe {rpc::worker_api_direct::initialize_pool()};
+    let shard = ShardIdentifier::default();
+    // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
+    let latest_onchain_header = 
+        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());    
+    let rsa_pair = rsa3072::unseal_pair().unwrap();
+
+    // ensure that state exists
+    let mut state = if state::exists(&shard) {
+        state::load(&shard).unwrap()
+    } else {
+        state::init_shard(&shard).unwrap();
+        Stf::init_state()
+    };
+    
+    // create accountss
+    let signer_without_money = ed25519::unseal_pair().unwrap();    
+    let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+    let account_with_money = pair_with_money.public();
+    let account_without_money = signer_without_money.public();
+
+    let prev_state_hash = state::write(state.clone(), &shard).unwrap();
+    // load top pool
+    {
+        let &ref pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+        let pool_guard = pool_mutex.lock().unwrap();
+        let pool = Arc::new(pool_guard.deref());
+        let author = Arc::new(Author::new(pool));
+
+        // create trusted call signed
+        let nonce = 1;
+        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m; 
+        let call = TrustedCall::balance_transfer(
+            account_with_money.into(),
+            account_without_money.into(),
+            1,
+        ); 
+        let signed_call = call.sign(&pair_with_money.into(), nonce, &mrenclave, &shard);
+        let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
+        // encrypt call        
+        let mut encrypted_top: Vec<u8> = Vec::new();
+        let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+        rsa_pubkey
+            .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
+            .unwrap();
+
+        // submit trusted call to top pool
+        let result = async {
+            author
+                .submit_top(encrypted_top.clone(), shard)
+                .await
+        };
+        executor::block_on(result).unwrap();
+    }
+
+    // when  
+    let (_, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
+    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();    
+    aes::de_or_encrypt(&mut encrypted_payload).unwrap();
+    let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
+    let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
+
+  
 }

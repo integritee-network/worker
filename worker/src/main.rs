@@ -24,6 +24,10 @@ use std::sync::{
     mpsc::{channel, Sender},
     Mutex,
 };
+use std::sync::{
+    atomic::{AtomicPtr, Ordering},
+    Arc,
+};
 use std::thread;
 
 use sgx_types::*;
@@ -54,6 +58,9 @@ use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisio
 use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::{Duration, SystemTime};
+
+use substratee_worker_primitives::block::{Block as SidechainBlock, StatePayload, 
+    SignedBlock as SignedSidechainBlock};
 
 mod constants;
 mod enclave;
@@ -619,7 +626,7 @@ pub fn produce_blocks(
             let _ = events_out.recv().unwrap();
             let _ = events_out.recv().unwrap(); */
             // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        }
+        } 
 
         i += chunk.len();
         println!(
@@ -773,6 +780,70 @@ pub unsafe extern "C" fn ocall_worker_request(
 
     write_slice_and_whitespace_pad(resp_slice, resp.encode());
     sgx_status_t::SGX_SUCCESS
+}
+
+
+/// # Safety
+///
+/// FFI are always unsafe
+#[no_mangle]
+pub unsafe extern "C" fn ocall_send_block_and_confirmation(
+    confirmations: *const u8,
+    confirmations_size: u32,
+    signed_blocks_ptr: *const u8,
+    signed_blocks_size: u32,
+) -> sgx_status_t {
+    debug!("    Entering ocall_send_block_and_confirmation");
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let mut confirmations_slice = slice::from_raw_parts(confirmations, confirmations_size as usize);
+    let mut signed_blocks_slice = slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize);
+
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
+    println!("{:?}", NODE_URL.lock().unwrap().clone());
+    // load api
+    //let api = unsafe{ *GLOBAL_API.load(Ordering::SeqCst)};
+
+    // send confirmations to layer one    
+    let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations_slice){
+        Ok(calls) => calls,
+        Err(_) => {
+            error!("Could not decode confirmation calls");
+            status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+            vec![vec![]]
+        }
+    };
+
+    if !confirmation_calls.is_empty() {
+        println!(
+            "Enclave wants to send {} extrinsics",
+            confirmation_calls.len()
+        );
+        //FIXME: currently receiving tx error
+        /* for call in confirmation_calls.into_iter() {
+            api.send_extrinsic(hex_encode(call), XtStatus::Ready).unwrap();
+        } */
+        // FIXME: Still necessary now that we have interval production?
+        /* // await next block to avoid #37
+        let (events_in, events_out) = channel();
+        api.subscribe_events(events_in);
+        let _ = events_out.recv().unwrap();
+        let _ = events_out.recv().unwrap(); */
+        // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
+    }
+
+    // handle blocks
+    let signed_blocks: Vec<SignedSidechainBlock> = match Decode::decode(&mut signed_blocks_slice){
+        Ok(blocks) => blocks,
+        Err(_) => {
+            error!("Could not decode confirmation calls");
+            status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+            vec![]
+        },
+    };
+    println!{"Received blocks: {:?}", signed_blocks};
+    // TODO: M8.3: Store blocks
+    // TODO: M8.3: broadcast blocks
+    status
 }
 
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {

@@ -14,6 +14,7 @@ use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::MultiAddress;
 use support::traits::UnfilteredDispatchable;
+use sp_core::Pair;
 
 use crate::{
     AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
@@ -75,6 +76,23 @@ impl Stf {
                 &storage_value_key("Balances", "ExistentialDeposit"),
                 &1u128.encode(),
             );
+            //FIXME: for testing purpose only - maybe add feature?
+            // for example: feature = endowtestaccounts
+            let public = AccountId32::from(sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public());
+            sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                MultiAddress::Id(public.clone()),
+                10,
+                10,
+            )
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
+            .map_err(|_| StfError::Dispatch("balance_set_balance".to_string())).unwrap();
+
+            let print_public: [u8; 32] = public.clone().into();
+            if let Some(info) = get_account_info(&public) {
+                debug!("{:?} balance is {}", print_public, info.data.free);
+            } else {
+                debug!("{:?} balance is zero",print_public);
+            }
         });
         ext
     }
@@ -404,7 +422,7 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
         StorageHasher::Twox128 => sp_core::twox_128(&encoded_key).to_vec(),
         StorageHasher::Twox256 => sp_core::twox_256(&encoded_key).to_vec(),
         StorageHasher::Twox64Concat => sp_core::twox_64(&encoded_key).to_vec(),
-    }
+    }    
 }
 
 #[derive(Debug, Display)]
@@ -418,3 +436,4 @@ pub enum StfError {
     #[display(fmt = "Account does not exist {:?}", _0)]
     InexistentAccount(AccountId),
 }
+
