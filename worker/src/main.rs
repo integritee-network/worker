@@ -595,23 +595,23 @@ pub fn produce_blocks(
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
         // Produce blocks
-        let encoded_blocks = match enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce){
-            Ok(blocks) => blocks,
+        let encoded_calls = match enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce){
+            Ok(calls) => calls,
             Err(e) => {
                 error!("{}",e);
                 // enclave might not have synced
                 return last_synced_head
             }, 
         };
-        let blocks: Vec<Vec<u8>> = Decode::decode(&mut encoded_blocks.as_slice()).unwrap();
+        let calls: Vec<Vec<u8>> = Decode::decode(&mut encoded_calls.as_slice()).unwrap();
 
-        if !blocks.is_empty() {
+        if !calls.is_empty() {
             println!(
                 "Sync chain relay: Enclave wants to send {} extrinsics",
-                blocks.len()
+                calls.len()
             );
-            for block in blocks.into_iter() {
-                api.send_extrinsic(hex_encode(block ), XtStatus::Ready).unwrap();
+            for call in calls.into_iter() {
+                api.send_extrinsic(hex_encode(call), XtStatus::Ready).unwrap();
             }
             /* // await next block to avoid #37
             let (events_in, events_out) = channel();

@@ -139,6 +139,7 @@ impl Stf {
         call: TrustedCallSigned,
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
+        let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
@@ -158,7 +159,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_transfer(from, to, value) => {
-                let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
                 debug!(
                     "balance_transfer({:x?}, {:x?}, {})",
                     from.encode(),
@@ -179,6 +180,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+                //let call_hash = blake2_256(&call.encode());
                 debug!(
                     "balance_unshield({:x?}, {:x?}, {}, {})",
                     account_incognito.encode(),
@@ -186,6 +188,7 @@ impl Stf {
                     value,
                     shard
                 );
+                
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -193,7 +196,7 @@ impl Stf {
                         beneficiary,
                         value,
                         shard,
-                        blake2_256(&call.encode()),
+                        call_hash,
                     )
                         .encode(),
                 ));

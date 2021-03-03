@@ -1023,11 +1023,21 @@ pub extern "C" fn test_main_entrance() -> size_t {
         //ipfs::test_verification_fails_for_incorrect_content,
         //test_ocall_read_write_ipfs,
         test_ocall_worker_request,
+        test_submit_trusted_call_to_top_pool,
         
     )
 }
 
 /// tests
+//use substrate_test_runtime::{AccountId};
+//use crate::top_pool::base_pool::Limit;
+//use std::sync::SgxMutex as Mutex;
+//use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
+use top_pool::primitives::from_low_u64_to_be_h256;
+use sp_core::sr25519;
+use jsonrpc_core::futures::executor;
+use sp_core::crypto::UncheckedFrom;
+
 fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -1169,10 +1179,7 @@ fn test_compose_block_and_confirmation() {
     let signed_call_hashes = [call_hash, call_hash_two].to_vec();
     let shard = ShardIdentifier::default();
     let state_hash_apriori: H256 = [199; 32].into();
-    let key: Vec<u8> = "hello".encode();
-    let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
-    state.insert(key.clone(),value);
     Stf::update_block_number(&mut state, 1);
     
     // when
@@ -1181,6 +1188,7 @@ fn test_compose_block_and_confirmation() {
     let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
     let mut opaque_call_vec = opaque_call.0;
+
     // then
     assert!(signed_block.verify_signature());
     assert_eq!(signed_block.block().block_number(), 2);
@@ -1191,3 +1199,52 @@ fn test_compose_block_and_confirmation() {
     assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
  
 }
+
+fn test_submit_trusted_call_to_top_pool() {
+    // given
+
+    // create top pool
+    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let tx_pool = BasicPool::create(Default::default(), api);
+    let author = Author::new(Arc::new(&tx_pool));
+    // create trusted call signed
+    let nonce = 1;
+    let mrenclave = [0u8; 32];
+    let shard = ShardIdentifier::default();
+    let signer_pair = ed25519::unseal_pair().unwrap();
+    let signer_pair_raw: Vec<u8> = signer_pair.to_raw_vec();
+    let public: [u8; 32] = signer_pair.public().0;
+    let call = TrustedCall::balance_set_balance(
+        sr25519::Public::unchecked_from(public).into(),
+        sr25519::Public::unchecked_from(public).into(),
+        42,
+        42,
+    ); 
+   // let signed_call = call.sign(&signer_pair_raw.into(), nonce, &mrenclave, &shard);
+    // encrypt call
+    /*let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+    let mut encrypted_call: Vec<u8> = Vec::new();
+    rsa_pubkey
+        .encrypt_buffer(&signed_call.encode(), &mut encrypted_call)
+        .unwrap();
+
+    // when
+
+   // submit trusted call to top pool
+    let result = async {
+        author
+            .submit_top(encrypted_call.clone(), shard)
+            .await
+    };
+    let tx_hash = executor::block_on(result).unwrap();
+
+    // get pending extrinsics
+    let (calls, getters) = author.get_pending_tops_separated(shard).unwrap();
+
+    // then
+    let call_one = format!{"{:?}", calls[0]};
+    let call_two = format!{"{:?}", signed_call};
+    assert_eq!(call_one, call_two);  */
+}
+
+

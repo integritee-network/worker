@@ -669,8 +669,8 @@ pub fn test_should_validate_and_import_transaction() {
 
     // when
     let hash = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5
     ), 0), shard)).unwrap();
 
@@ -684,8 +684,8 @@ pub fn test_should_reject_if_temporarily_banned() {
     let pool = test_pool();
     let shard = ShardIdentifier::default();
     let top = to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ),0);
 
@@ -708,19 +708,19 @@ pub fn test_should_notify_about_pool_events() {
 
         // when
         let hash0 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-            AccountId::from_h256(from_low_u64_to_be_h256(1)),
-            AccountId::from_h256(from_low_u64_to_be_h256(2)),
+            AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+            AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
             5
         ), 0), shard)).unwrap();
         let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-            AccountId::from_h256(from_low_u64_to_be_h256(1)),
-            AccountId::from_h256(from_low_u64_to_be_h256(2)),
+            AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+            AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
             5
         ),1), shard)).unwrap();
         // future doesn't count
         let _hash = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-            AccountId::from_h256(from_low_u64_to_be_h256(1)),
-            AccountId::from_h256(from_low_u64_to_be_h256(2)),
+            AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+            AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
             5,
         ), 3), shard)).unwrap();
 
@@ -742,18 +742,18 @@ pub fn test_should_clear_stale_transactions() {
     let pool = test_pool();
     let shard = ShardIdentifier::default();
     let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ),0), shard)).unwrap();
     let hash2 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ) ,1), shard)).unwrap();
     let hash3 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 3), shard)).unwrap();
 
@@ -775,8 +775,8 @@ pub fn test_should_ban_mined_transactions() {
     let pool = test_pool();
     let shard = ShardIdentifier::default();
     let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 0), shard)).unwrap();
 
@@ -801,16 +801,16 @@ pub fn test_should_limit_futures() {
     }, TestApi::default().into());
 
     let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 1), shard)).unwrap();
     assert_eq!(pool.validated_pool().status(shard).future, 1);
 
     // when
     let hash2 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 10), shard)).unwrap();
 
@@ -835,8 +835,8 @@ pub fn test_should_error_if_reject_immediately() {
 
     // when
     block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 1), shard)).unwrap_err();
 
@@ -852,8 +852,8 @@ pub fn test_should_reject_transactions_with_no_provides() {
 
     // when
     let err = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)),
+        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), INVALID_NONCE), shard)).unwrap_err();
 
