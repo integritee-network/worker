@@ -1037,6 +1037,7 @@ use top_pool::primitives::from_low_u64_to_be_h256;
 use sp_core::sr25519;
 use jsonrpc_core::futures::executor;
 use sp_core::crypto::UncheckedFrom;
+use substratee_stf::{TrustedOperation, TrustedGetter};
 
 fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
@@ -1212,20 +1213,20 @@ fn test_submit_trusted_call_to_top_pool() {
     let mrenclave = [0u8; 32];
     let shard = ShardIdentifier::default();
     let signer_pair = ed25519::unseal_pair().unwrap();
-    let signer_pair_raw: Vec<u8> = signer_pair.to_raw_vec();
-    let public: [u8; 32] = signer_pair.public().0;
+    //let public: [u8; 32] = signer_pair.public().0;
     let call = TrustedCall::balance_set_balance(
-        sr25519::Public::unchecked_from(public).into(),
-        sr25519::Public::unchecked_from(public).into(),
+        signer_pair.public().into(),
+        signer_pair.public().into(),
         42,
         42,
     ); 
-   // let signed_call = call.sign(&signer_pair_raw.into(), nonce, &mrenclave, &shard);
+    let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+    let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
     // encrypt call
-    /*let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-    let mut encrypted_call: Vec<u8> = Vec::new();
+    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+    let mut encrypted_top: Vec<u8> = Vec::new();
     rsa_pubkey
-        .encrypt_buffer(&signed_call.encode(), &mut encrypted_call)
+        .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
         .unwrap();
 
     // when
@@ -1233,18 +1234,62 @@ fn test_submit_trusted_call_to_top_pool() {
    // submit trusted call to top pool
     let result = async {
         author
-            .submit_top(encrypted_call.clone(), shard)
+            .submit_top(encrypted_top.clone(), shard)
             .await
     };
     let tx_hash = executor::block_on(result).unwrap();
 
     // get pending extrinsics
-    let (calls, getters) = author.get_pending_tops_separated(shard).unwrap();
+    let (calls, _) = author.get_pending_tops_separated(shard).unwrap();
 
     // then
     let call_one = format!{"{:?}", calls[0]};
     let call_two = format!{"{:?}", signed_call};
-    assert_eq!(call_one, call_two);  */
+    assert_eq!(call_one, call_two); 
 }
 
+
+fn test_submit_trusted_getter_to_top_pool() {
+    // given
+
+    // create top pool
+    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let tx_pool = BasicPool::create(Default::default(), api);
+    let author = Author::new(Arc::new(&tx_pool));
+    // create trusted call signed
+    let nonce = 1;
+    let mrenclave = [0u8; 32];
+    let shard = ShardIdentifier::default();
+    let signer_pair = ed25519::unseal_pair().unwrap();
+    //let public: [u8; 32] = signer_pair.public().0;
+    let getter = TrustedGetter::free_balance(
+        signer_pair.public().into(),
+    ); 
+    let signed_getter = getter.sign(&signer_pair.into());
+    let trusted_operation: TrustedOperation = signed_getter.clone().into();
+    // encrypt call
+    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+    let mut encrypted_top: Vec<u8> = Vec::new();
+    rsa_pubkey
+        .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
+        .unwrap();
+
+    // when
+
+   // submit trusted call to top pool
+    let result = async {
+        author
+            .submit_top(encrypted_top.clone(), shard)
+            .await
+    };
+    let tx_hash = executor::block_on(result).unwrap();
+
+    // get pending extrinsics
+    let (_, getters) = author.get_pending_tops_separated(shard).unwrap();
+
+    // then
+    let getter_one = format!{"{:?}", getters[0]};
+    let getter_two = format!{"{:?}", signed_getter};
+    assert_eq!(getter_one, getter_two); 
+}
 
