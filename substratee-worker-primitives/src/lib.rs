@@ -12,6 +12,9 @@ use serde_json;
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use std::vec::Vec;
+use sp_core::H256;
+
+pub type BlockHash = H256;
 
 use sp_core::ed25519::Signature;
 
@@ -36,7 +39,7 @@ pub enum TrustedOperationStatus {
     /// The operation has been broadcast to the given peers.
     Broadcast,
     /// TrustedOperation has been included in block with given hash.
-    InBlock,
+    InBlock(BlockHash),
     /// The block this operation was included in has been retracted.
     Retracted,
     /// Maximum number of finality watchers has been reached,

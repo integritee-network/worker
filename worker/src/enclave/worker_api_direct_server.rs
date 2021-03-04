@@ -241,7 +241,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
 
             match status_update {
                 TrustedOperationStatus::Invalid
-                | TrustedOperationStatus::InBlock
+                | TrustedOperationStatus::InBlock(_)
                 | TrustedOperationStatus::Finalized
                 | TrustedOperationStatus::Usurped => {
                     // Stop watching
