@@ -519,8 +519,8 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
         let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
 
-        // get all shards that exist within top pool of worker
-        let shards: Vec<ShardIdentifier> = author.get_shards();
+        // get all shards 
+        let shards = state::list_shards()?;
 
         // Handle trusted getters
         let start_time = SystemTime::now()
