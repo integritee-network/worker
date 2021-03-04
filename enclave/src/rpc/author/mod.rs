@@ -190,10 +190,11 @@ where
                 TrustedOperation::get(getter) => {
                     match getter {
                         Getter::trusted(trusted_getter_signed) => getters.push(trusted_getter_signed.clone()),
-                        _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                        _ => error!("Found invalid trusted getter in top pool")
                     }
                 },
-                _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                _ => { // might be emtpy?
+                }
             }
         }
 
