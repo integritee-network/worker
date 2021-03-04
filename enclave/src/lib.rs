@@ -198,12 +198,11 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
     sgx_status_t::SGX_SUCCESS
 }
 
-fn stf_post_actions(
-    mut validator: LightValidation,
+fn create_extrinsics(
+    validator: LightValidation,
     calls_buffer: Vec<OpaqueCall>,
-    extrinsics_slice: &mut [u8],
     mut nonce: u32,
-) -> SgxResult<()> {
+) -> SgxResult<Vec<Vec<u8>>> {
     // get information for composing the extrinsic
     let signer = ed25519::unseal_pair()?;
     debug!("Restored ECC pubkey: {:?}", signer.public());
@@ -225,22 +224,9 @@ fn stf_post_actions(
             nonce += 1;
             xt
         })
-        .collect();
+        .collect();   
 
-    for xt in extrinsics_buffer.iter() {
-        validator
-            .submit_xt_to_be_included(
-                validator.num_relays,
-                OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap(),
-            )
-            .unwrap();
-    }
-
-    write_slice_and_whitespace_pad(extrinsics_slice, extrinsics_buffer.encode());
-
-    io::light_validation::seal(validator)?;
-
-    Ok(())
+    Ok(extrinsics_buffer)
 }
 
 #[no_mangle]
@@ -369,11 +355,8 @@ pub unsafe extern "C" fn produce_blocks(
     blocks_to_sync: *const u8,
     blocks_to_sync_size: usize,
     nonce: *const u32,
-    produced_blocks: *mut u8,
-    produced_blocks_size: usize,
 ) -> sgx_status_t {    
     let mut blocks_to_sync_slice = slice::from_raw_parts(blocks_to_sync, blocks_to_sync_size);
-    let xt_slice = slice::from_raw_parts_mut(produced_blocks, produced_blocks_size);
 
     let blocks_to_sync: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_to_sync_slice) {
         Ok(b) => b,
@@ -430,20 +413,35 @@ pub unsafe extern "C" fn produce_blocks(
         Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    if let Err(_e) = stf_post_actions(validator, calls.clone(), xt_slice, *nonce) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let extrinsics = match create_extrinsics(validator.clone(), calls, *nonce){
+        Ok(xt) => xt,
+        Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+    };
+
+    // store extrinsics in chain relay for finalization check
+    for xt in extrinsics.iter() {
+        validator
+            .submit_xt_to_be_included(
+                validator.num_relays,
+                OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap(),
+            )
+            .unwrap();
     }
 
-    // ocall to worker to save signed block and send block confirmation
-    if let Err(_e) = send_block_and_confirmation(calls, signed_blocks) {
+    if let Err(_) =  io::light_validation::seal(validator) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    };
+
+     // ocall to worker to store signed block and send block confirmation
+    if let Err(_e) = send_block_and_confirmation(extrinsics, signed_blocks) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }    
 
     sgx_status_t::SGX_SUCCESS
 }
 
 fn send_block_and_confirmation(
-    confirmations: Vec<OpaqueCall>, 
+    confirmations: Vec<Vec<u8>>, 
     signed_blocks: Vec<SignedSidechainBlock>,
     ) -> SgxResult<()> {
         let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;

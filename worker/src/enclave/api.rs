@@ -63,8 +63,6 @@ extern "C" {
         blocks: *const u8,
         blocks_size: usize,
         nonce: *const u32,
-        unchecked_extrinsic: *mut u8,
-        unchecked_extrinsic_size: usize,
     ) -> sgx_status_t;
 
     fn get_rsa_encryption_pubkey(
@@ -238,10 +236,8 @@ pub fn enclave_produce_blocks(
     eid: sgx_enclave_id_t,
     blocks_to_sync: Vec<SignedBlock>,
     tee_nonce: u32,
-) -> SgxResult<Vec<u8>> {
+) -> SgxResult<()> {
     let mut status = sgx_status_t::SGX_SUCCESS;
-
-    let mut produced_blocks: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
     let result = unsafe {
         blocks_to_sync.using_encoded(|b| {
@@ -251,8 +247,6 @@ pub fn enclave_produce_blocks(
                 b.as_ptr(),
                 b.len(),
                 &tee_nonce,
-                produced_blocks.as_mut_ptr(),
-                EXTRINSIC_MAX_SIZE,
             )
         })
     };
@@ -264,7 +258,7 @@ pub fn enclave_produce_blocks(
         return Err(result);
     }
 
-    Ok(produced_blocks)
+    Ok(())
 }
 
 pub fn enclave_signing_key(eid: sgx_enclave_id_t) -> SgxResult<ed25519::Public> {
