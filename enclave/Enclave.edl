@@ -48,8 +48,7 @@ enclave {
 
         public sgx_status_t produce_blocks(
             [in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
-            [in] uint32_t* nonce,
-            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, size_t unchecked_extrinsic_size
+            [in] uint32_t* nonce
         );
 
 		public sgx_status_t get_rsa_encryption_pubkey(
