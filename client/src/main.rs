@@ -486,7 +486,10 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
                         return None
                     }
                     if !return_value.do_watch {
-                        return Some(return_value.value)
+                        return match Option::decode(&mut return_value.value.as_slice()) {
+                            Ok(value_opt) => value_opt,
+                            Err(_) => None,
+                        };
                     }
                 };
             }
