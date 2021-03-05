@@ -488,10 +488,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
                     if !return_value.do_watch {
                         return match Option::decode(&mut return_value.value.as_slice()) {
                             Ok(value_opt) => value_opt,
-                            Err(e) => {
-                                println!("[Error] {:?}", e);
-                                None
-                            }
+                            Err(_) => panic!("Error when decoding response"),                            
                         };
                     }
                 };
