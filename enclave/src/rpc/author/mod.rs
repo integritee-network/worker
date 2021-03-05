@@ -45,6 +45,7 @@ use client_error::Error as ClientError;
 pub mod hash;
 
 use crate::rsa3072;
+use crate::state;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -130,6 +131,14 @@ where
         ext: Vec<u8>,
         shard: ShardIdentifier,
     ) -> FutureResult<TxHash<P>, RpcError> {
+        // check if shard already exists
+        let shards = match state::list_shards() {
+            Ok(shards) => shards,
+            Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
+        };
+        if !shards.contains(&shard) {
+            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
+        }
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
@@ -181,10 +190,11 @@ where
                 TrustedOperation::get(getter) => {
                     match getter {
                         Getter::trusted(trusted_getter_signed) => getters.push(trusted_getter_signed.clone()),
-                        _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                        _ => error!("Found invalid trusted getter in top pool")
                     }
                 },
-                _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                _ => { // might be emtpy?
+                }
             }
         }
 
@@ -200,7 +210,7 @@ where
         bytes_or_hash: Vec<hash::TrustedOperationOrHash<TxHash<P>>>,
         shard: ShardIdentifier,
         inblock: bool,
-    ) -> Result<Vec<TxHash<P>>> {
+    ) -> Result<Vec<TxHash<P>>> {        
         let hashes = bytes_or_hash
             .into_iter()
             .map(|x| match x {
@@ -228,6 +238,14 @@ where
         ext: Vec<u8>,
         shard: ShardIdentifier,
     ) -> FutureResult<TxHash<P>, RpcError> {
+        // check if shard already exists
+        let shards = match state::list_shards() {
+            Ok(shards) => shards,
+            Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
+        };
+        if !shards.contains(&shard) {
+            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
+        }
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
