@@ -71,7 +71,7 @@ mod tests;
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// start block production every ... ms
-const BLOCK_PRODUCTION_INTERVAL: u64 = 10000;
+const BLOCK_PRODUCTION_INTERVAL: u64 = 6000;
 
 fn main() {
     // Setup logging
