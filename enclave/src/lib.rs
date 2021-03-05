@@ -602,10 +602,6 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                     break;
                 }
             }
-            // do not compose an empty block..
-            
-            // save updated state after call executions
-            let new_state_hash = state::write(state.clone(), &shard)?;
             // create new block
             match compose_block_and_confirmation(latest_onchain_header.clone(), call_hashes, 
                 shard, prev_state_hash, &mut state) {
@@ -615,7 +611,10 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
 
                 },
                 Err(e) => error!("Could not compose block confirmation: {:?}", e),
-            }          
+            }
+            // save updated state after call executions
+            let new_state_hash = state::write(state.clone(), &shard)?;
+
             if is_done {
                 break;
             }
@@ -654,13 +653,13 @@ pub fn compose_block_and_confirmation(
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
-    let prev_block_number = match Stf::get_block_number(state){
-        Some(number) => number,
-        // in case no previous block number, take number 0
-        None => 0,
+    let block_number = match Stf::get_block_number(state){
+        Some(number) => number + 1,
+        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
-    debug!("Got blocknumber: {:?}", prev_block_number);
-    let block_number: u64 = (prev_block_number + 1).into();
+    Stf::update_block_number(state, block_number.into());
+
+    let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
     let parent_hash = match Stf::get_last_block_hash(state){
         Some(hash) => hash,
         // in case of no parent hash, set initial state hash as parent hash
@@ -742,7 +741,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     // block number is purged from the substrate state so it can't be read like other storage values
                     // TODO: does this stay like this? (=block number sidechain equals block number of main chain?)
                     // TODO: Parent hash update here aswell?
-                    Stf::update_block_number(&mut state, header.number);
+                   // Stf::update_block_number(&mut state, header.number);
 
                     state::write(state, &s)?;
                 }
@@ -1257,6 +1256,13 @@ fn test_submit_trusted_call_to_top_pool() {
     let nonce = 1;
     let mrenclave = [0u8; 32];
     let shard = ShardIdentifier::default();
+    // load state before executing any calls
+    let mut state = if state::exists(&shard) {
+        state::load(&shard).unwrap()
+    } else {
+        state::init_shard(&shard).unwrap();
+        Stf::init_state()
+    };  
     let signer_pair = ed25519::unseal_pair().unwrap();
     let call = TrustedCall::balance_set_balance(
         signer_pair.public().into(),
@@ -1302,6 +1308,13 @@ fn test_submit_trusted_getter_to_top_pool() {
 
     // create trusted getter signed
     let shard = ShardIdentifier::default();
+    // load state before executing any calls
+    let mut state = if state::exists(&shard) {
+        state::load(&shard).unwrap()
+    } else {
+        state::init_shard(&shard).unwrap();
+        Stf::init_state()
+    };  
     let signer_pair = ed25519::unseal_pair().unwrap();
     let getter = TrustedGetter::free_balance(
         signer_pair.public().into(),
@@ -1343,6 +1356,13 @@ fn test_differentiate_getter_and_call_works() {
     let author = Author::new(Arc::new(&tx_pool));
     // create trusted getter signed
     let shard = ShardIdentifier::default();
+    // load state before executing any calls
+    let mut state = if state::exists(&shard) {
+        state::load(&shard).unwrap()
+    } else {
+        state::init_shard(&shard).unwrap();
+        Stf::init_state()
+    }; 
     let signer_pair = ed25519::unseal_pair().unwrap();
     let getter = TrustedGetter::free_balance(
         signer_pair.public().into(),
@@ -1409,6 +1429,13 @@ fn test_create_block_and_confirmation_works() {
     // create top pool
     unsafe {rpc::worker_api_direct::initialize_pool()};
     let shard = ShardIdentifier::default();
+    // load state before executing any calls
+    let mut state = if state::exists(&shard) {
+        state::load(&shard).unwrap()
+    } else {
+        state::init_shard(&shard).unwrap();
+        Stf::init_state()
+    };  
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
     let latest_onchain_header = 
         Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());

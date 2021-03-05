@@ -76,6 +76,9 @@ impl Stf {
                 &storage_value_key("Balances", "ExistentialDeposit"),
                 &1u128.encode(),
             );
+            sp_io::storage::set(
+                &storage_value_key("System", "Number"),
+                &0.encode());
             //FIXME: for testing purpose only - maybe add feature?
             // for example: feature = endowtestaccounts
             let public = AccountId32::from(sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public());
@@ -122,9 +125,11 @@ impl Stf {
                 if let Ok(number) = BlockNumber::decode(&mut infovec.as_slice()) {
                     Some(number)
                 } else {
+                    error!("Blocknumber decode error");
                     None
                 }
             } else {
+                error!("No Blocknumber in state?");
                 None
             }      
         })
