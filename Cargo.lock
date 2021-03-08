@@ -1064,7 +1064,7 @@ dependencies = [
  "parity-scale-codec",
  "paste",
  "sp-api",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-runtime-interface",
  "sp-std",
@@ -1081,7 +1081,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-std",
  "sp-tracing",
@@ -1116,7 +1116,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-inherents",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-state-machine",
  "sp-std",
@@ -1166,7 +1166,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-std",
  "sp-version",
@@ -1680,7 +1680,7 @@ dependencies = [
  "parity-scale-codec",
  "serde_json",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-std",
  "webpki",
 ]
@@ -2634,7 +2634,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-session",
  "sp-staking",
@@ -2652,7 +2652,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-std",
 ]
@@ -2666,7 +2666,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-std",
 ]
@@ -2700,7 +2700,7 @@ dependencies = [
  "serde",
  "smallvec 1.6.0",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-std",
 ]
@@ -3863,7 +3863,7 @@ dependencies = [
 
 [[package]]
 name = "sgx-externalities"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "environmental",
  "log 0.4.11 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -4245,7 +4245,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-std",
 ]
 
@@ -4457,26 +4457,6 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "2.0.0"
-dependencies = [
- "environmental",
- "hash-db",
- "log 0.4.11 (git+https://github.com/mesalock-linux/log-sgx)",
- "parity-scale-codec",
- "sgx-externalities",
- "sgx_tstd",
- "sgx_types",
- "sp-core",
- "sp-runtime-interface",
- "sp-std",
- "sp-tracing",
- "sp-wasm-interface",
- "tracing",
- "tracing-core",
-]
-
-[[package]]
-name = "sp-io"
-version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da1608712c1bec40fb4a3878187b0a5ea404"
 dependencies = [
  "futures 0.3.8",
@@ -4493,6 +4473,26 @@ dependencies = [
  "sp-std",
  "sp-tracing",
  "sp-trie",
+ "sp-wasm-interface",
+ "tracing",
+ "tracing-core",
+]
+
+[[package]]
+name = "sp-io"
+version = "2.1.0"
+dependencies = [
+ "environmental",
+ "hash-db",
+ "log 0.4.11 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime-interface",
+ "sp-std",
+ "sp-tracing",
  "sp-wasm-interface",
  "tracing",
  "tracing-core",
@@ -4571,7 +4571,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-inherents",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-std",
 ]
 
@@ -4823,7 +4823,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-core",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a208da16)",
+ "sp-io 2.0.0",
  "sp-runtime",
  "sp-std",
  "sp-version",
@@ -5006,7 +5006,7 @@ dependencies = [
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io 2.0.0",
+ "sp-io 2.1.0",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
@@ -5499,7 +5499,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.5.6",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
