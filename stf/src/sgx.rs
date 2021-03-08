@@ -9,12 +9,12 @@ use log_sgx::*;
 use metadata::StorageHasher;
 use sgx_runtime::{Balance, BlockNumber, Runtime};
 use sp_core::crypto::AccountId32;
+use sp_core::Pair;
 use sp_core::H256 as Hash;
 use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::MultiAddress;
 use support::traits::UnfilteredDispatchable;
-use sp_core::Pair;
 
 use crate::{
     AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
@@ -48,7 +48,7 @@ impl Stf {
         debug!("initializing stf state");
         let mut ext = State::new();
         // set initial state hash
-        let state_hash: Hash = blake2_256(&ext.clone().encode()).into();        
+        let state_hash: Hash = blake2_256(&ext.clone().encode()).into();
         ext.execute_with(|| {
             // do not set genesis for pallets that are meant to be on-chain
             // use get_storage_hashes_to_update instead
@@ -79,31 +79,31 @@ impl Stf {
                 &1u128.encode(),
             );
             // Set first sidechainblock number to 0
-            sp_io::storage::set(
-                &storage_value_key("System", "Number"),
-                &0.encode(),
-            );
-            // Set first parent hash to initial state hash            
+            sp_io::storage::set(&storage_value_key("System", "Number"), &0.encode());
+            // Set first parent hash to initial state hash
             sp_io::storage::set(
                 &storage_value_key("Chain", "LastHash"),
                 &state_hash.encode(),
             );
             //FIXME: for testing purpose only - maybe add feature?
             // for example: feature = endowtestaccounts
-            let public = AccountId32::from(sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public());
+            let public = AccountId32::from(
+                sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public(),
+            );
             sgx_runtime::BalancesCall::<Runtime>::set_balance(
                 MultiAddress::Id(public.clone()),
                 10,
                 10,
             )
             .dispatch_bypass_filter(sgx_runtime::Origin::root())
-            .map_err(|_| StfError::Dispatch("balance_set_balance".to_string())).unwrap();
+            .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
+            .unwrap();
 
             let print_public: [u8; 32] = public.clone().into();
             if let Some(info) = get_account_info(&public) {
                 debug!("{:?} balance is {}", print_public, info.data.free);
             } else {
-                debug!("{:?} balance is zero",print_public);
+                debug!("{:?} balance is zero", print_public);
             }
         });
         ext
@@ -126,7 +126,7 @@ impl Stf {
             sp_io::storage::set(&key, &number.encode());
         });
     }
-    
+
     pub fn get_block_number(ext: &mut State) -> Option<BlockNumber> {
         ext.execute_with(|| {
             let key = storage_value_key("System", "Number");
@@ -140,7 +140,7 @@ impl Stf {
             } else {
                 error!("No Blocknumber in state?");
                 None
-            }      
+            }
         })
     }
 
@@ -150,7 +150,7 @@ impl Stf {
             sp_io::storage::set(&key, &hash.encode());
         });
     }
-    
+
     pub fn get_last_block_hash(ext: &mut State) -> Option<Hash> {
         ext.execute_with(|| {
             let key = storage_value_key("Chain", "LastHash");
@@ -164,7 +164,7 @@ impl Stf {
             } else {
                 error!("No Blockhash in state?");
                 None
-            }      
+            }
         })
     }
 
@@ -214,7 +214,6 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                //let call_hash = blake2_256(&call.encode());
                 debug!(
                     "balance_unshield({:x?}, {:x?}, {}, {})",
                     account_incognito.encode(),
@@ -222,7 +221,7 @@ impl Stf {
                     value,
                     shard
                 );
-                
+
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -385,7 +384,6 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
     }
 }
 
-
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
     let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
     bytes.extend(&sp_core::twox_128(storage_prefix.as_bytes())[..]);
@@ -438,7 +436,7 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
         StorageHasher::Twox128 => sp_core::twox_128(&encoded_key).to_vec(),
         StorageHasher::Twox256 => sp_core::twox_256(&encoded_key).to_vec(),
         StorageHasher::Twox64Concat => sp_core::twox_64(&encoded_key).to_vec(),
-    }    
+    }
 }
 
 #[derive(Debug, Display)]
@@ -452,4 +450,3 @@ pub enum StfError {
     #[display(fmt = "Account does not exist {:?}", _0)]
     InexistentAccount(AccountId),
 }
-

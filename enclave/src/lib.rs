@@ -36,9 +36,10 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
 
 use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
-use substratee_node_primitives::{ShieldFundsFn};
-use substratee_worker_primitives::block::{Block as SidechainBlock, StatePayload, 
-    SignedBlock as SignedSidechainBlock};
+use substratee_node_primitives::ShieldFundsFn;
+use substratee_worker_primitives::block::{
+    Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
+};
 use substratee_worker_primitives::BlockHash;
 
 use codec::{Decode, Encode};
@@ -46,8 +47,8 @@ use sp_core::{crypto::Pair, hashing::blake2_256, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{
-    CALL_CONFIRMED, BLOCK_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, 
-    SUBSRATEE_REGISTRY_MODULE, CALLTIMEOUT, GETTERTIMEOUT,
+    BLOCK_CONFIRMED, CALLTIMEOUT, CALL_CONFIRMED, GETTERTIMEOUT, RUNTIME_SPEC_VERSION,
+    RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
 };
 
 use std::slice;
@@ -61,9 +62,9 @@ use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::{SgxMutex, SgxMutexGuard};
-use utils::write_slice_and_whitespace_pad;
-use std::time::{UNIX_EPOCH, SystemTime};
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::untrusted::time::SystemTimeEx;
+use utils::write_slice_and_whitespace_pad;
 
 use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
 use crate::utils::UnwrapOrSgxErrorUnexpected;
@@ -75,17 +76,18 @@ use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
-use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
-use substratee_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCall,
-     TrustedCallSigned, TrustedGetterSigned};
-use substratee_stf::{State as StfState, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
 use sgx_externalities::SgxExternalitiesTypeTrait;
+use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
+use substratee_stf::{
+    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
+};
+use substratee_stf::{
+    State as StfState, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff,
+};
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
-use rpc::{api::FillerChainApi, basic_pool::BasicPool};
 use rpc::worker_api_direct;
-
-
+use rpc::{api::FillerChainApi, basic_pool::BasicPool};
 
 mod aes;
 mod attestation;
@@ -153,7 +155,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
- #[no_mangle]
+#[no_mangle]
 pub unsafe extern "C" fn get_rsa_encryption_pubkey(
     pubkey: *mut u8,
     pubkey_size: u32,
@@ -178,8 +180,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
     write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec());
 
     sgx_status_t::SGX_SUCCESS
-} 
-
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
@@ -225,7 +226,7 @@ fn create_extrinsics(
             nonce += 1;
             xt
         })
-        .collect();   
+        .collect();
 
     Ok(extrinsics_buffer)
 }
@@ -269,7 +270,9 @@ pub unsafe extern "C" fn get_state(
         Err(e) => return e,
     };
 
-    let latest_header = validator.latest_finalized_header(validator.num_relays).unwrap();
+    let latest_header = validator
+        .latest_finalized_header(validator.num_relays)
+        .unwrap();
 
     // FIXME: not sure we will ever need this as we are querying trusted state, not onchain state
     // i.e. demurrage could be correctly applied with this, but the client could do that too.
@@ -356,7 +359,7 @@ pub unsafe extern "C" fn produce_blocks(
     blocks_to_sync: *const u8,
     blocks_to_sync_size: usize,
     nonce: *const u32,
-) -> sgx_status_t {    
+) -> sgx_status_t {
     let mut blocks_to_sync_slice = slice::from_raw_parts(blocks_to_sync, blocks_to_sync_size);
 
     let blocks_to_sync: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_to_sync_slice) {
@@ -375,7 +378,7 @@ pub unsafe extern "C" fn produce_blocks(
     let mut calls = Vec::<OpaqueCall>::new();
 
     debug!("Syncing chain relay!");
-    if !blocks_to_sync.is_empty() {        
+    if !blocks_to_sync.is_empty() {
         for signed_block in blocks_to_sync.clone().into_iter() {
             validator
                 .check_xt_inclusion(validator.num_relays, &signed_block.block)
@@ -400,21 +403,24 @@ pub unsafe extern "C" fn produce_blocks(
                 Ok(c) => calls.extend(c.into_iter()),
                 Err(_) => error!("Error executing relevant extrinsics"),
             }; */
-        }        
+        }
     }
     // get header of last block
-    let latest_onchain_header: Header = validator.latest_finalized_header(validator.num_relays).unwrap();
-    // execute pending calls from operation pool and create block 
+    let latest_onchain_header: Header = validator
+        .latest_finalized_header(validator.num_relays)
+        .unwrap();
+    // execute pending calls from operation pool and create block
     // (one per shard) as opaque call
-    let signed_blocks: Vec<SignedSidechainBlock> = match execute_top_pool_calls(latest_onchain_header) {
-        Ok((confirm_calls, signed_blocks)) => {
-            calls.extend(confirm_calls.into_iter());
-            signed_blocks
-        },
-        Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    };
+    let signed_blocks: Vec<SignedSidechainBlock> =
+        match execute_top_pool_calls(latest_onchain_header) {
+            Ok((confirm_calls, signed_blocks)) => {
+                calls.extend(confirm_calls.into_iter());
+                signed_blocks
+            }
+            Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+        };
 
-    let extrinsics = match create_extrinsics(validator.clone(), calls, *nonce){
+    let extrinsics = match create_extrinsics(validator.clone(), calls, *nonce) {
         Ok(xt) => xt,
         Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
@@ -429,52 +435,50 @@ pub unsafe extern "C" fn produce_blocks(
             .unwrap();
     }
 
-    if let Err(_) =  io::light_validation::seal(validator) {
+    if let Err(_) = io::light_validation::seal(validator) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
-     // ocall to worker to store signed block and send block confirmation
+    // ocall to worker to store signed block and send block confirmation
     if let Err(_e) = send_block_and_confirmation(extrinsics, signed_blocks) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }    
+    }
 
     sgx_status_t::SGX_SUCCESS
 }
 
 fn send_block_and_confirmation(
-    confirmations: Vec<Vec<u8>>, 
+    confirmations: Vec<Vec<u8>>,
     signed_blocks: Vec<SignedSidechainBlock>,
-    ) -> SgxResult<()> {
-        let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+) -> SgxResult<()> {
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
-        let res = unsafe {
-            ocall_send_block_and_confirmation(
-                &mut rt as *mut sgx_status_t,
-                confirmations.encode().as_ptr(),
-                confirmations.encode().len() as u32,
-                signed_blocks.encode().as_ptr(),
-                signed_blocks.encode().len() as u32,
-            )
-        };
+    let res = unsafe {
+        ocall_send_block_and_confirmation(
+            &mut rt as *mut sgx_status_t,
+            confirmations.encode().as_ptr(),
+            confirmations.encode().len() as u32,
+            signed_blocks.encode().as_ptr(),
+            signed_blocks.encode().len() as u32,
+        )
+    };
 
-        if rt != sgx_status_t::SGX_SUCCESS {
-            return Err(rt);
-        }
-    
-        if res != sgx_status_t::SGX_SUCCESS {
-            return Err(res);
-        }
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(rt);
+    }
 
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(res);
+    }
 
     Ok(())
 }
-
 
 fn get_stf_state(
     trusted_getter_signed: TrustedGetterSigned,
     shard: ShardIdentifier,
 ) -> Option<Vec<u8>> {
-     debug!("verifying signature of TrustedGetterSigned");
+    debug!("verifying signature of TrustedGetterSigned");
     if let false = trusted_getter_signed.verify_signature() {
         error!("bad signature");
         return None;
@@ -492,16 +496,17 @@ fn get_stf_state(
         Ok(s) => s,
         Err(e) => {
             error!("Error loading shard {:?}: Error: {:?}", shard, e);
-            return None
-        },
+            return None;
+        }
     };
 
     debug!("calling into STF to get state");
     Stf::get_state(&mut state, trusted_getter_signed.into())
-
 }
 
-fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
+fn execute_top_pool_calls(
+    latest_onchain_header: Header,
+) -> SgxResult<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     let mut blocks = Vec::<SignedSidechainBlock>::new();
@@ -511,14 +516,14 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
             Some(mutex) => mutex,
             None => {
                 error!("Could not get mutex to pool");
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-            },
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
         };
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
         let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool.clone()));
 
-        // get all shards 
+        // get all shards
         let shards = state::list_shards()?;
 
         // Handle trusted getters
@@ -527,24 +532,31 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
             .unwrap()
             .as_secs() as i64;
         let mut is_done = false;
-        for shard in shards.clone().into_iter() {            
+        for shard in shards.clone().into_iter() {
             // retrieve trusted operations from pool
             let trusted_getters = match author.get_pending_tops_separated(shard) {
-                Ok((_,getters)) => getters,
-                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
+                Ok((_, getters)) => getters,
+                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
             };
             for trusted_getter_signed in trusted_getters.into_iter() {
                 // get state
                 let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
                 // get hash
-                let hash_of_getter = author.hash_of(&trusted_getter_signed.into());              
+                let hash_of_getter = author.hash_of(&trusted_getter_signed.into());
                 // let client know of current state
                 if let Err(_) = worker_api_direct::send_state(hash_of_getter, value_opt) {
                     error!("Could not get state from stf");
                 }
-                 // remove getter from pool
-                if let Err(e) = author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false) {
-                    error!("Error removing trusted operation from top pool: Error: {:?}", e);
+                // remove getter from pool
+                if let Err(e) = author.remove_top(
+                    vec![TrustedOperationOrHash::Hash(hash_of_getter)],
+                    shard,
+                    false,
+                ) {
+                    error!(
+                        "Error removing trusted operation from top pool: Error: {:?}",
+                        e
+                    );
                 }
                 // Check time
                 if time_is_overdue(Timeout::Getter, start_time) {
@@ -554,7 +566,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
             }
             if is_done {
                 break;
-            }          
+            }
         }
 
         // Handle trusted calls
@@ -572,17 +584,17 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
             } else {
                 state::init_shard(&shard)?;
                 Stf::init_state()
-            };   
+            };
             // save the state hash before call executions
             // (needed for block composition)
-            let prev_state_hash = state::hash_of(state.state.clone())?;        
+            let prev_state_hash = state::hash_of(state.state.clone())?;
 
             // retrieve trusted operations from pool
             let trusted_calls = match author.get_pending_tops_separated(shard) {
-                Ok((calls,_)) => calls,
-                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),            
-            };    
-            // call execution        
+                Ok((calls, _)) => calls,
+                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+            };
+            // call execution
             for trusted_call_signed in trusted_calls.into_iter() {
                 match handle_trusted_worker_call(
                     &mut calls,
@@ -592,9 +604,11 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                     shard,
                     Some(author.clone()),
                 ) {
-                    Ok(hash) => {if let Some(hash) = hash {
-                        call_hashes.push(hash)
-                    }},
+                    Ok(hash) => {
+                        if let Some(hash) = hash {
+                            call_hashes.push(hash)
+                        }
+                    }
                     Err(e) => error!("Error performing worker call: Error: {:?}", e),
                 };
                 // Check time
@@ -604,30 +618,33 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                 }
             }
             // create new block
-            match compose_block_and_confirmation(latest_onchain_header.clone(), call_hashes, 
-                shard, prev_state_hash, &mut state) {
+            match compose_block_and_confirmation(
+                latest_onchain_header.clone(),
+                call_hashes,
+                shard,
+                prev_state_hash,
+                &mut state,
+            ) {
                 Ok((block_confirm, signed_block)) => {
                     calls.push(block_confirm);
                     blocks.push(signed_block.clone());
-                    
+
                     // Notify watching clients of InSidechainBlock
-                    let composed_block = signed_block.block();                     
+                    let composed_block = signed_block.block();
                     let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
-                    pool
-                        .pool()
+                    pool.pool()
                         .validated_pool()
                         .on_block_created(composed_block.signed_top_hashes(), block_hash);
-
-                },
+                }
                 Err(e) => error!("Could not compose block confirmation: {:?}", e),
-            }            
+            }
             // save updated state after call executions
-            let new_state_hash = state::write(state.clone(), &shard)?;           
+            let new_state_hash = state::write(state.clone(), &shard)?;
 
             if is_done {
                 break;
             }
-       }        
+        }
     }
 
     Ok((calls, blocks))
@@ -635,7 +652,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
 
 /// Checks if the time of call execution or getter is overdue
 /// Returns true if specified time is exceeded
-pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool { 
+pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -644,9 +661,9 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
         Timeout::Call => CALLTIMEOUT,
         Timeout::Getter => GETTERTIMEOUT,
     };
-    if (now - start_time)*1000 >= max_time_ms {
+    if (now - start_time) * 1000 >= max_time_ms {
         true
-    } else { 
+    } else {
         false
     }
 }
@@ -655,40 +672,38 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
 pub fn compose_block_and_confirmation(
     latest_onchain_header: Header,
     top_call_hashes: Vec<H256>,
-    shard: ShardIdentifier, 
+    shard: ShardIdentifier,
     state_hash_apriori: H256,
     state: &mut StfState,
 ) -> SgxResult<(OpaqueCall, SignedSidechainBlock)> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
-    let block_number = match Stf::get_block_number(state){
+    let block_number = match Stf::get_block_number(state) {
         Some(number) => number + 1,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
     Stf::update_block_number(state, block_number.into());
 
     let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
-    let parent_hash = match Stf::get_last_block_hash(state){
+    let parent_hash = match Stf::get_last_block_hash(state) {
         Some(hash) => hash,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
-    // hash previous of state    
+    // hash previous of state
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
     let state_update = state.state_diff.clone().encode();
 
     // create encrypted payload
-    let mut payload: Vec<u8> = StatePayload::new(
-        state_hash_apriori, 
-        state_hash_aposteriori, 
-        state_update).encode();
+    let mut payload: Vec<u8> =
+        StatePayload::new(state_hash_apriori, state_hash_aposteriori, state_update).encode();
     aes::de_or_encrypt(&mut payload)?;
-       
+
     let block = SidechainBlock::construct_block(
         signer_pair.public().into(),
-        block_number, 
-        parent_hash, 
-        layer_one_head, 
+        block_number,
+        parent_hash,
+        layer_one_head,
         shard,
         top_call_hashes,
         payload,
@@ -701,9 +716,8 @@ pub fn compose_block_and_confirmation(
     Stf::update_last_block_hash(state, block_hash.into());
 
     let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
-    let opaque_call = OpaqueCall(
-        (xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode(),
-    );
+    let opaque_call =
+        OpaqueCall((xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode());
     Ok((opaque_call, signed_block))
 }
 
@@ -750,7 +764,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     // block number is purged from the substrate state so it can't be read like other storage values
                     // TODO: does this stay like this? (=block number sidechain equals block number of main chain?)
                     // TODO: Parent hash update here aswell?
-                   // Stf::update_block_number(&mut state, header.number);
+                    // Stf::update_block_number(&mut state, header.number);
 
                     state::write(state, &s)?;
                 }
@@ -886,7 +900,9 @@ fn handle_trusted_worker_call(
             let inblock = false;
             author
                 .remove_top(
-                    vec![TrustedOperationOrHash::Operation(stf_call_signed.into_trusted_operation(true))],
+                    vec![TrustedOperationOrHash::Operation(
+                        stf_call_signed.into_trusted_operation(true),
+                    )],
                     shard,
                     inblock,
                 )
@@ -895,7 +911,7 @@ fn handle_trusted_worker_call(
         return Ok(None);
     }
 
-    // Necessary because chain relay sync may not be up to date 
+    // Necessary because chain relay sync may not be up to date
     // see issue #208
     debug!("Update STF storage!");
     let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
@@ -909,7 +925,6 @@ fn handle_trusted_worker_call(
 
     Stf::update_storage(state, &update_map);
 
-
     debug!("execute STF");
     if let Err(e) = Stf::execute(state, stf_call_signed.clone(), calls) {
         if let Some(author) = author_pointer {
@@ -917,7 +932,9 @@ fn handle_trusted_worker_call(
             let inblock = false;
             author
                 .remove_top(
-                    vec![TrustedOperationOrHash::Operation(stf_call_signed.into_trusted_operation(true))],
+                    vec![TrustedOperationOrHash::Operation(
+                        stf_call_signed.into_trusted_operation(true),
+                    )],
                     shard,
                     inblock,
                 )
@@ -935,9 +952,8 @@ fn handle_trusted_worker_call(
         let inblock = true;
         author
             .remove_top(
-                vec![TrustedOperationOrHash::Operation(stf_call_signed
-                    .clone()
-                    .into_trusted_operation(true)
+                vec![TrustedOperationOrHash::Operation(
+                    stf_call_signed.clone().into_trusted_operation(true),
                 )],
                 shard,
                 inblock,
@@ -1019,7 +1035,7 @@ extern "C" {
         confirmations: *const u8,
         confirmations_size: u32,
         signed_blocks: *const u8,
-        signed_blocks_size: u32,        
+        signed_blocks_size: u32,
     ) -> sgx_status_t;
 
 }
@@ -1027,13 +1043,13 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
-       top_pool::base_pool::test_should_import_transaction_to_ready,
+        top_pool::base_pool::test_should_import_transaction_to_ready,
         top_pool::base_pool::test_should_not_import_same_transaction_twice,
         top_pool::base_pool::test_should_import_transaction_to_future_and_promote_it_later,
         top_pool::base_pool::test_should_promote_a_subgraph,
         top_pool::base_pool::test_should_handle_a_cycle,
         top_pool::base_pool::test_can_track_heap_size,
-        top_pool::base_pool::test_should_handle_a_cycle_with_low_priority,        
+        top_pool::base_pool::test_should_handle_a_cycle_with_low_priority,
         top_pool::base_pool::test_should_remove_invalid_transactions,
         top_pool::base_pool::test_should_prune_ready_transactions,
         top_pool::base_pool::test_transaction_debug,
@@ -1041,9 +1057,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::base_pool::test_should_reject_future_transactions,
         top_pool::base_pool::test_should_clear_future_queue,
         top_pool::base_pool::test_should_accept_future_transactions_when_explicitly_asked_to,
-
         top_pool::primitives::test_h256,
-
         top_pool::pool::test_should_validate_and_import_transaction,
         //top_pool::pool::test_should_reject_if_temporarily_banned,
         top_pool::pool::test_should_notify_about_pool_events,
@@ -1059,16 +1073,13 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::pool::listener::test_should_trigger_broadcasted,
         top_pool::pool::listener::test_should_trigger_dropped,
         top_pool::pool::listener::test_should_handle_pruning_in_the_middle_of_import,*/
-        
         state::test_encrypted_state_io_works,
         state::test_write_and_load_state_works,
         state::test_sgx_state_decode_encode_works,
         state::test_encrypt_decrypt_state_type_works,
-
         test_time_is_overdue,
         test_time_is_not_overdue,
         test_compose_block_and_confirmation,
-        
         //ipfs::test_creates_ipfs_content_struct_works,
         //ipfs::test_verification_ok_for_correct_content,
         //ipfs::test_verification_fails_for_incorrect_content,
@@ -1077,20 +1088,20 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_submit_trusted_call_to_top_pool,
         test_submit_trusted_getter_to_top_pool,
         test_differentiate_getter_and_call_works,
-        test_create_block_and_confirmation_works,  
-        test_create_state_diff,      
+        test_create_block_and_confirmation_works,
+        test_create_state_diff,
     )
 }
 
+use jsonrpc_core::futures::executor;
+use sp_core::ed25519 as spEd25519;
+use substratee_stf::{TrustedGetter, TrustedOperation};
 /// tests
 //use substrate_test_runtime::{AccountId};
 //use crate::top_pool::base_pool::Limit;
 //use std::sync::SgxMutex as Mutex;
 //use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use top_pool::primitives::from_low_u64_to_be_h256;
-use sp_core::{ed25519 as spEd25519};
-use jsonrpc_core::futures::executor;
-use substratee_stf::{TrustedOperation, TrustedGetter};
 
 fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
@@ -1197,16 +1208,15 @@ fn test_ocall_worker_request() {
     info!("Proof: {:?}", proof)
 }
 
-
 fn test_time_is_overdue() {
     // given
     let start_time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
     // when
-    let before_start_time = (start_time*1000 - GETTERTIMEOUT)/1000;
-    let time_has_run_out = time_is_overdue(Timeout::Getter, before_start_time);    
+    let before_start_time = (start_time * 1000 - GETTERTIMEOUT) / 1000;
+    let time_has_run_out = time_is_overdue(Timeout::Getter, before_start_time);
     // then
     assert!(time_has_run_out)
 }
@@ -1214,20 +1224,24 @@ fn test_time_is_overdue() {
 fn test_time_is_not_overdue() {
     // given
     let start_time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
     // when
-    let time_has_run_out = time_is_overdue(Timeout::Call, start_time);    
+    let time_has_run_out = time_is_overdue(Timeout::Call, start_time);
     // then
     assert!(!time_has_run_out)
 }
 
-
 fn test_compose_block_and_confirmation() {
     // given
-    let latest_onchain_header = 
-        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
+    let latest_onchain_header = Header::new(
+        1,
+        Default::default(),
+        Default::default(),
+        [69; 32].into(),
+        Default::default(),
+    );
     let call_hash: H256 = [94; 32].into();
     let call_hash_two: H256 = [1; 32].into();
     let signed_top_hashes = [call_hash, call_hash_two].to_vec();
@@ -1235,10 +1249,16 @@ fn test_compose_block_and_confirmation() {
     let state_hash_apriori: H256 = [199; 32].into();
     let mut state = StfState::new();
     Stf::update_block_number(&mut state, 1);
-    
+
     // when
-    let (opaque_call, signed_block) = compose_block_and_confirmation(latest_onchain_header, signed_top_hashes, 
-        shard, state_hash_apriori, &mut state).unwrap();
+    let (opaque_call, signed_block) = compose_block_and_confirmation(
+        latest_onchain_header,
+        signed_top_hashes,
+        shard,
+        state_hash_apriori,
+        &mut state,
+    )
+    .unwrap();
     let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
     let mut opaque_call_vec = opaque_call.0;
@@ -1251,7 +1271,6 @@ fn test_compose_block_and_confirmation() {
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
     let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
     assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
- 
 }
 
 fn test_submit_trusted_call_to_top_pool() {
@@ -1261,7 +1280,7 @@ fn test_submit_trusted_call_to_top_pool() {
     let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
-    
+
     // create trusted call signed
     let nonce = 1;
     let mrenclave = [0u8; 32];
@@ -1272,14 +1291,14 @@ fn test_submit_trusted_call_to_top_pool() {
     } else {
         state::init_shard(&shard).unwrap();
         Stf::init_state()
-    };  
+    };
     let signer_pair = ed25519::unseal_pair().unwrap();
     let call = TrustedCall::balance_set_balance(
         signer_pair.public().into(),
         signer_pair.public().into(),
         42,
         42,
-    ); 
+    );
     let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
     let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
     // encrypt call
@@ -1291,21 +1310,17 @@ fn test_submit_trusted_call_to_top_pool() {
 
     // when
 
-   // submit trusted call to top pool
-    let result = async {
-        author
-            .submit_top(encrypted_top.clone(), shard)
-            .await
-    };
+    // submit trusted call to top pool
+    let result = async { author.submit_top(encrypted_top.clone(), shard).await };
     executor::block_on(result).unwrap();
 
     // get pending extrinsics
     let (calls, _) = author.get_pending_tops_separated(shard).unwrap();
 
     // then
-    let call_one = format!{"{:?}", calls[0]};
-    let call_two = format!{"{:?}", signed_call};
-    assert_eq!(call_one, call_two); 
+    let call_one = format! {"{:?}", calls[0]};
+    let call_two = format! {"{:?}", signed_call};
+    assert_eq!(call_one, call_two);
 }
 
 fn test_submit_trusted_getter_to_top_pool() {
@@ -1324,11 +1339,9 @@ fn test_submit_trusted_getter_to_top_pool() {
     } else {
         state::init_shard(&shard).unwrap();
         Stf::init_state()
-    };  
+    };
     let signer_pair = ed25519::unseal_pair().unwrap();
-    let getter = TrustedGetter::free_balance(
-        signer_pair.public().into(),
-    ); 
+    let getter = TrustedGetter::free_balance(signer_pair.public().into());
     let signed_getter = getter.sign(&signer_pair.into());
     let trusted_operation: TrustedOperation = signed_getter.clone().into();
     // encrypt call
@@ -1340,21 +1353,17 @@ fn test_submit_trusted_getter_to_top_pool() {
 
     // when
 
-   // submit top to pool
-    let result = async {
-        author
-            .submit_top(encrypted_top.clone(), shard)
-            .await
-    };
+    // submit top to pool
+    let result = async { author.submit_top(encrypted_top.clone(), shard).await };
     executor::block_on(result).unwrap();
 
     // get pending extrinsics
     let (_, getters) = author.get_pending_tops_separated(shard).unwrap();
 
     // then
-    let getter_one = format!{"{:?}", getters[0]};
-    let getter_two = format!{"{:?}", signed_getter};
-    assert_eq!(getter_one, getter_two); 
+    let getter_one = format! {"{:?}", getters[0]};
+    let getter_two = format! {"{:?}", signed_getter};
+    assert_eq!(getter_one, getter_two);
 }
 
 fn test_differentiate_getter_and_call_works() {
@@ -1372,11 +1381,9 @@ fn test_differentiate_getter_and_call_works() {
     } else {
         state::init_shard(&shard).unwrap();
         Stf::init_state()
-    }; 
+    };
     let signer_pair = ed25519::unseal_pair().unwrap();
-    let getter = TrustedGetter::free_balance(
-        signer_pair.public().into(),
-    ); 
+    let getter = TrustedGetter::free_balance(signer_pair.public().into());
     let signed_getter = getter.sign(&signer_pair.clone().into());
     let trusted_operation: TrustedOperation = signed_getter.clone().into();
     // encrypt call
@@ -1394,7 +1401,7 @@ fn test_differentiate_getter_and_call_works() {
         signer_pair.public().into(),
         42,
         42,
-    ); 
+    );
     let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
     let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
     // encrypt call
@@ -1406,38 +1413,30 @@ fn test_differentiate_getter_and_call_works() {
 
     // when
 
-   // submit top to pool
-    let result = async {
-        author
-            .submit_top(encrypted_top.clone(), shard)
-            .await
-    };
+    // submit top to pool
+    let result = async { author.submit_top(encrypted_top.clone(), shard).await };
     executor::block_on(result).unwrap();
 
-    let result = async {
-        author
-            .submit_top(encrypted_top_call.clone(), shard)
-            .await
-    };
+    let result = async { author.submit_top(encrypted_top_call.clone(), shard).await };
     executor::block_on(result).unwrap();
 
     // get pending extrinsics
     let (calls, getters) = author.get_pending_tops_separated(shard).unwrap();
 
     // then
-    let getter_one = format!{"{:?}", getters[0]};
-    let getter_two = format!{"{:?}", signed_getter};
-    let call_one = format!{"{:?}", calls[0]};
-    let call_two = format!{"{:?}", signed_call};
-    assert_eq!(call_one, call_two); 
-    assert_eq!(getter_one, getter_two); 
+    let getter_one = format! {"{:?}", getters[0]};
+    let getter_two = format! {"{:?}", signed_getter};
+    let call_one = format! {"{:?}", calls[0]};
+    let call_two = format! {"{:?}", signed_call};
+    assert_eq!(call_one, call_two);
+    assert_eq!(getter_one, getter_two);
 }
 
 fn test_create_block_and_confirmation_works() {
     // given
 
     // create top pool
-    unsafe {rpc::worker_api_direct::initialize_pool()};
+    unsafe { rpc::worker_api_direct::initialize_pool() };
     let shard = ShardIdentifier::default();
     // load state before executing any calls
     let mut state = if state::exists(&shard) {
@@ -1445,10 +1444,15 @@ fn test_create_block_and_confirmation_works() {
     } else {
         state::init_shard(&shard).unwrap();
         Stf::init_state()
-    };  
+    };
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
-    let latest_onchain_header = 
-        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
+    let latest_onchain_header = Header::new(
+        1,
+        Default::default(),
+        Default::default(),
+        [69; 32].into(),
+        Default::default(),
+    );
     let mut top_hash = H256::default();
 
     // load top pool
@@ -1460,14 +1464,14 @@ fn test_create_block_and_confirmation_works() {
 
         // create trusted call signed
         let nonce = 1;
-        //let mrenclave = [0u8; 32];  
-        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;      
+        //let mrenclave = [0u8; 32];
+        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
         let signer_pair = ed25519::unseal_pair().unwrap();
         let call = TrustedCall::balance_transfer(
             signer_pair.public().into(),
             signer_pair.public().into(),
             42,
-        ); 
+        );
         let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
         let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
         // encrypt call
@@ -1477,22 +1481,18 @@ fn test_create_block_and_confirmation_works() {
             .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
             .unwrap();
 
-            // submit trusted call to top pool
-        let result = async {
-            author
-                .submit_top(encrypted_top.clone(), shard)
-                .await
-        };
+        // submit trusted call to top pool
+        let result = async { author.submit_top(encrypted_top.clone(), shard).await };
         top_hash = executor::block_on(result).unwrap();
     }
 
-    // when   
+    // when
     let (confirm_calls, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
 
-    let signed_block = signed_blocks[0].clone();  
+    let signed_block = signed_blocks[0].clone();
     let mut opaque_call_vec = confirm_calls[0].0.clone();
     let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
-    let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();    
+    let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 
     // then
     assert_eq!(signed_blocks.len(), 1);
@@ -1505,7 +1505,6 @@ fn test_create_block_and_confirmation_works() {
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
     let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
     assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
-    
 }
 
 //FIXME: Finish state diff unittest. Current problem: Set balance of test account
@@ -1513,11 +1512,16 @@ fn test_create_state_diff() {
     // given
 
     // create top pool
-    unsafe {rpc::worker_api_direct::initialize_pool()};
+    unsafe { rpc::worker_api_direct::initialize_pool() };
     let shard = ShardIdentifier::default();
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
-    let latest_onchain_header = 
-        Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());    
+    let latest_onchain_header = Header::new(
+        1,
+        Default::default(),
+        Default::default(),
+        [69; 32].into(),
+        Default::default(),
+    );
     let rsa_pair = rsa3072::unseal_pair().unwrap();
 
     // ensure that state exists
@@ -1527,9 +1531,9 @@ fn test_create_state_diff() {
         state::init_shard(&shard).unwrap();
         Stf::init_state()
     };
-    
+
     // create accountss
-    let signer_without_money = ed25519::unseal_pair().unwrap();    
+    let signer_without_money = ed25519::unseal_pair().unwrap();
     let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
     let account_with_money = pair_with_money.public();
     let account_without_money = signer_without_money.public();
@@ -1541,18 +1545,18 @@ fn test_create_state_diff() {
         let pool_guard = pool_mutex.lock().unwrap();
         let pool = Arc::new(pool_guard.deref());
         let author = Arc::new(Author::new(pool));
-        
+
         // create trusted call signed
         let nonce = 1;
-        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m; 
+        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
         let call = TrustedCall::balance_transfer(
             account_with_money.into(),
             account_without_money.into(),
             0,
-        ); 
+        );
         let signed_call = call.sign(&pair_with_money.into(), nonce, &mrenclave, &shard);
         let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
-        // encrypt call        
+        // encrypt call
         let mut encrypted_top: Vec<u8> = Vec::new();
         let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
         rsa_pubkey
@@ -1560,20 +1564,14 @@ fn test_create_state_diff() {
             .unwrap();
 
         // submit trusted call to top pool
-        let result = async {
-            author
-                .submit_top(encrypted_top.clone(), shard)
-                .await
-        };
+        let result = async { author.submit_top(encrypted_top.clone(), shard).await };
         executor::block_on(result).unwrap();
     }
 
-    // when  
+    // when
     let (_, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
-    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();    
+    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();
     aes::de_or_encrypt(&mut encrypted_payload).unwrap();
     let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
     let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
-
-  
 }

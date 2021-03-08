@@ -121,7 +121,9 @@ pub mod light_validation {
                 genesis
             );
             info!("Chain Relay state: {:?}", validator);
-            Ok(validator.latest_finalized_header(validator.num_relays).unwrap())
+            Ok(validator
+                .latest_finalized_header(validator.num_relays)
+                .unwrap())
         } else {
             init_validator(header, auth, proof)
         }
@@ -139,6 +141,8 @@ pub mod light_validation {
             .sgx_error()?;
         super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?;
 
-        Ok(validator.latest_finalized_header(validator.num_relays).unwrap())
+        Ok(validator
+            .latest_finalized_header(validator.num_relays)
+            .unwrap())
     }
 }
