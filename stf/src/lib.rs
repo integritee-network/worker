@@ -33,8 +33,8 @@ use codec::{Compact, Decode, Encode};
 use my_node_runtime::Balance;
 #[cfg(feature = "sgx")]
 use sgx_runtime::Balance;
-use sp_core::{sr25519, Pair, H256, ed25519};
-use sp_core::crypto::{AccountId32};
+use sp_core::crypto::AccountId32;
+use sp_core::{ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 // TODO: use MultiAddress instead of AccountId32?
 
@@ -51,35 +51,33 @@ pub static SUBSRATEE_REGISTRY_MODULE: u8 = 8u8;
 pub static UNSHIELD: u8 = 5u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 
-
 pub type ShardIdentifier = H256;
-
 
 #[derive(Clone)]
 pub enum KeyPair {
-	Sr25519(sr25519::Pair),
-	Ed25519(ed25519::Pair),
+    Sr25519(sr25519::Pair),
+    Ed25519(ed25519::Pair),
 }
 
 impl KeyPair {
-	fn sign(&self, payload: &[u8]) -> Signature {
-		match self {
-			Self::Sr25519(pair) => pair.sign(payload).into(),
-			Self::Ed25519(pair) => pair.sign(payload).into(),
-		}
-	}
+    fn sign(&self, payload: &[u8]) -> Signature {
+        match self {
+            Self::Sr25519(pair) => pair.sign(payload).into(),
+            Self::Ed25519(pair) => pair.sign(payload).into(),
+        }
+    }
 }
 
 impl From<ed25519::Pair> for KeyPair {
-	fn from(x: ed25519::Pair) -> Self {
-		KeyPair::Ed25519(x)
-	}
+    fn from(x: ed25519::Pair) -> Self {
+        KeyPair::Ed25519(x)
+    }
 }
 
 impl From<sr25519::Pair> for KeyPair {
-	fn from(x: sr25519::Pair) -> Self {
-		KeyPair::Sr25519(x)
-	}
+    fn from(x: sr25519::Pair) -> Self {
+        KeyPair::Sr25519(x)
+    }
 }
 
 #[cfg(feature = "sgx")]
@@ -87,7 +85,6 @@ pub mod sgx;
 
 #[cfg(feature = "std")]
 pub mod cli;
-
 
 #[cfg(feature = "sgx")]
 //pub type State = sp_io::SgxExternalitiesType;
@@ -188,7 +185,7 @@ impl TrustedCall {
         TrustedCallSigned {
             call: self.clone(),
             nonce,
-            signature: pair.sign(payload.as_slice()).into(),
+            signature: pair.sign(payload.as_slice()),
         }
     }
 }
@@ -297,7 +294,12 @@ mod tests {
             42,
             42,
         );
-        let signed_call = call.sign(&KeyPair::Sr25519(AccountKeyring::Alice.pair()), nonce, &mrenclave, &shard);
+        let signed_call = call.sign(
+            &KeyPair::Sr25519(AccountKeyring::Alice.pair()),
+            nonce,
+            &mrenclave,
+            &shard,
+        );
 
         assert!(signed_call.verify_signature(&mrenclave, &shard));
     }
