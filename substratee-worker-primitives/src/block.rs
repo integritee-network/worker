@@ -72,7 +72,7 @@ pub struct Block {
     shard_id: ShardIdentifier,
     ///  must be registered on layer one as an enclave for the respective shard 
     block_author: AccountId32,
-    signed_call_hashes: Vec<H256>,
+    signed_top_hashes: Vec<H256>,
     // encrypted state payload
     state_payload: Vec<u8>
 }
@@ -103,8 +103,8 @@ impl Block {
         &self.block_author
     }
     /// get reference of extrinisics of block
-    pub fn signed_call_hashes(&self) -> &Vec<H256> {
-        &self.signed_call_hashes
+    pub fn signed_top_hashes(&self) -> &Vec<H256> {
+        &self.signed_top_hashes
     }
     /// get encrypted payload
     pub fn state_payload(&self) -> &Vec<u8> {
@@ -117,7 +117,7 @@ impl Block {
         parent_hash: H256,
         layer_one_head: H256,
         shard: ShardIdentifier,
-        signed_call_hashes: Vec<H256>,
+        signed_top_hashes: Vec<H256>,
         encrypted_payload: Vec<u8>,
     ) -> Block {
          // get timestamp for new block
@@ -129,7 +129,7 @@ impl Block {
             parent_hash: parent_hash,
             timestamp: now,
             layer_one_head: layer_one_head,
-            signed_call_hashes: signed_call_hashes,
+            signed_top_hashes: signed_top_hashes,
             shard_id: shard,
             block_author: author,
             state_payload: encrypted_payload,
@@ -210,13 +210,13 @@ mod tests {
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let signed_call_hashes = vec![];
+        let signed_top_hashes = vec![];
         let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
         // when
         let block = Block::construct_block(author.clone(), block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         
         // then
         assert_eq!(block_number, block.block_number());
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(layer_one_head, block.layer_one_head());
         assert_eq!(shard, block.shard_id());
         assert_eq!(&author, block.block_author());
-        assert_eq!(signed_call_hashes, *block.signed_call_hashes());
+        assert_eq!(signed_top_hashes, *block.signed_top_hashes());
         assert_eq!(encrypted_payload, *block.state_payload());
     }
 
@@ -236,13 +236,13 @@ mod tests {
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let signed_call_hashes = vec![];
+        let signed_top_hashes = vec![];
         let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
         // when
         let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         let signed_block = block.sign(&signer_pair);
         let signature: Signature = Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
 
@@ -259,13 +259,13 @@ mod tests {
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let signed_call_hashes = vec![];
+        let signed_top_hashes = vec![];
         let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
         // when
         let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         let signed_block = block.sign(&signer_pair);
 
         // then
@@ -280,13 +280,13 @@ mod tests {
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let signed_call_hashes = vec![];
+        let signed_top_hashes = vec![];
         let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
         // when
         let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         let mut signed_block = block.sign(&signer_pair);
         signed_block.block.block_number = 1; 
 
@@ -313,13 +313,13 @@ mod tests {
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
-        let signed_call_hashes = vec![];
+        let signed_top_hashes = vec![];
         let encrypted_payload: Vec<u8> = vec![];
         let shard = ShardIdentifier::default();
 
         // when
         let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_call_hashes.clone(), encrypted_payload.clone());
+            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         let one_second = Duration::new(1,0);
         let now = block.timestamp();        
         thread::sleep(one_second);
