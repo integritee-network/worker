@@ -602,33 +602,11 @@ pub fn produce_blocks(
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
         // Produce blocks
-        let encoded_calls = match enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce){
-            Ok(calls) => calls,
-            Err(e) => {
-                error!("{}",e);
-                // enclave might not have synced
-                return last_synced_head
-            }, 
+        if let Err(e) = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce){
+            error!("{}",e);
+            // enclave might not have synced
+            return last_synced_head
         };
-        let calls: Vec<Vec<u8>> = Decode::decode(&mut encoded_calls.as_slice()).unwrap();
-
-        //FIXME: Remove, should be done in ocall
-        if !calls.is_empty() {
-            println!(
-                "Sync chain relay: Enclave wants to send {} extrinsics",
-                calls.len()
-            );
-            for call in calls.into_iter() {
-                api.send_extrinsic(hex_encode(call), XtStatus::Ready).unwrap();
-            }
-            /* // await next block to avoid #37
-            let (events_in, events_out) = channel();
-            api.subscribe_events(events_in);
-            let _ = events_out.recv().unwrap();
-            let _ = events_out.recv().unwrap(); */
-            // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        } 
-
         i += chunk.len();
         println!(
             "Synced {} blocks out of {} finalized blocks",
@@ -636,7 +614,6 @@ pub fn produce_blocks(
             blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
         )
     }
-    // TODO: Broadcast blocks (M8.3)
 
     curr_head.block.header
 }
@@ -800,9 +777,6 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
     let mut signed_blocks_slice = slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize);
 
     let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
-    println!("{:?}", NODE_URL.lock().unwrap().clone());
-    // load api
-    //let api = unsafe{ *GLOBAL_API.load(Ordering::SeqCst)};
 
     // send confirmations to layer one    
     let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations_slice){
@@ -819,16 +793,14 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
             "Enclave wants to send {} extrinsics",
             confirmation_calls.len()
         );
-        //FIXME: currently receiving tx error
-        /* for call in confirmation_calls.into_iter() {
+        for call in confirmation_calls.into_iter() {
             api.send_extrinsic(hex_encode(call), XtStatus::Ready).unwrap();
-        } */
-        // FIXME: Still necessary now that we have interval production?
-        /* // await next block to avoid #37
+        } 
+        // await next block to avoid #37
         let (events_in, events_out) = channel();
         api.subscribe_events(events_in);
         let _ = events_out.recv().unwrap();
-        let _ = events_out.recv().unwrap(); */
+        let _ = events_out.recv().unwrap();
         // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
     }
 
