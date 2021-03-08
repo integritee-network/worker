@@ -28,15 +28,16 @@ use std::{marker::PhantomData, pin::Pin};
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
-    transaction_validity::{TransactionValidity, ValidTransaction,
-         TransactionValidityError, UnknownTransaction},
+    transaction_validity::{
+        TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
+    },
 };
 
-use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
-use crate::top_pool::primitives::{TrustedOperationSource};
+use crate::top_pool::pool::{ChainApi, ExtrinsicHash, NumberFor};
+use crate::top_pool::primitives::TrustedOperationSource;
 
-use substratee_stf::{TrustedOperation as StfTrustedOperation, Getter};
-use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
+use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation};
+use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
 
@@ -75,32 +76,32 @@ where
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
-            StfTrustedOperation::direct_call(call) => {
-                ValidTransaction {
+            StfTrustedOperation::direct_call(call) => ValidTransaction {
+                priority: 1 << 20,
+                requires: vec![],
+                provides: vec![vec![call.nonce as u8], call.signature.encode()],
+                longevity: 3,
+                propagate: true,
+            },
+            StfTrustedOperation::get(getter) => match getter {
+                Getter::public(_) => {
+                    return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
+                        UnknownTransaction::CannotLookup,
+                    )))))
+                }
+                Getter::trusted(trusted_getter) => ValidTransaction {
                     priority: 1 << 20,
                     requires: vec![],
-                    provides: vec![vec![call.nonce as u8], call.signature.encode()],
+                    provides: vec![trusted_getter.signature.encode()],
                     longevity: 3,
                     propagate: true,
-                }
+                },
             },
-            StfTrustedOperation::get(getter) => {
-                match getter {
-                    Getter::public(_) => return Box::pin(ready(
-                        Ok(Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)))
-                    )),
-                    Getter::trusted(trusted_getter) => {
-                        ValidTransaction {
-                            priority: 1 << 20,
-                            requires: vec![],
-                            provides: vec![trusted_getter.signature.encode()],
-                            longevity: 3,
-                            propagate: true,
-                        }
-                    },
-                }                
-            },
-            _ => return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)))))
+            _ => {
+                return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
+                    UnknownTransaction::CannotLookup,
+                )))))
+            }
         };
         Box::pin(ready(Ok(Ok(operation))))
     }
@@ -121,11 +122,10 @@ where
     ) -> error::Result<Option<SidechainBlockHash>> {
         Ok(match at {
             //BlockId::Hash(x) => Some(x.clone()),
-            BlockId::Hash(x) => None,
+            BlockId::Hash(_x) => None,
             // dummy
             BlockId::Number(_num) => None,
         })
-
     }
 
     fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {

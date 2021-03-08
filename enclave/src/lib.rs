@@ -639,7 +639,7 @@ fn execute_top_pool_calls(
                 Err(e) => error!("Could not compose block confirmation: {:?}", e),
             }
             // save updated state after call executions
-            let new_state_hash = state::write(state.clone(), &shard)?;
+            let _new_state_hash = state::write(state.clone(), &shard)?;
 
             if is_done {
                 break;
@@ -1101,7 +1101,7 @@ use substratee_stf::{TrustedGetter, TrustedOperation};
 //use crate::top_pool::base_pool::Limit;
 //use std::sync::SgxMutex as Mutex;
 //use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
-use top_pool::primitives::from_low_u64_to_be_h256;
+//use top_pool::primitives::from_low_u64_to_be_h256;
 
 fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
@@ -1286,7 +1286,7 @@ fn test_submit_trusted_call_to_top_pool() {
     let mrenclave = [0u8; 32];
     let shard = ShardIdentifier::default();
     // load state before executing any calls
-    let mut state = if state::exists(&shard) {
+    let _state = if state::exists(&shard) {
         state::load(&shard).unwrap()
     } else {
         state::init_shard(&shard).unwrap();
@@ -1334,7 +1334,7 @@ fn test_submit_trusted_getter_to_top_pool() {
     // create trusted getter signed
     let shard = ShardIdentifier::default();
     // load state before executing any calls
-    let mut state = if state::exists(&shard) {
+    let _state = if state::exists(&shard) {
         state::load(&shard).unwrap()
     } else {
         state::init_shard(&shard).unwrap();
@@ -1376,7 +1376,7 @@ fn test_differentiate_getter_and_call_works() {
     // create trusted getter signed
     let shard = ShardIdentifier::default();
     // load state before executing any calls
-    let mut state = if state::exists(&shard) {
+    let _state = if state::exists(&shard) {
         state::load(&shard).unwrap()
     } else {
         state::init_shard(&shard).unwrap();
@@ -1432,6 +1432,7 @@ fn test_differentiate_getter_and_call_works() {
     assert_eq!(getter_one, getter_two);
 }
 
+#[allow(unused_assignments)]
 fn test_create_block_and_confirmation_works() {
     // given
 
@@ -1439,7 +1440,7 @@ fn test_create_block_and_confirmation_works() {
     unsafe { rpc::worker_api_direct::initialize_pool() };
     let shard = ShardIdentifier::default();
     // load state before executing any calls
-    let mut state = if state::exists(&shard) {
+    let _state = if state::exists(&shard) {
         state::load(&shard).unwrap()
     } else {
         state::init_shard(&shard).unwrap();

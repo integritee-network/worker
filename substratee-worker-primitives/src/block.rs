@@ -24,13 +24,13 @@ use chrono::TimeZone; */
 pub struct SignedBlock {
     block: Block,
     /// block author signature
-    signature: Signature,    
+    signature: Signature,
 }
 
 /// payload of block that needs to be encrypted
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct StatePayload {    
+pub struct StatePayload {
     state_hash_apriori: H256,
     state_hash_aposteriori: H256,
     /// encoded state update
@@ -67,10 +67,10 @@ pub struct Block {
     parent_hash: H256,
     timestamp: i64,
     /// hash of the last header of block in layer one
-    /// needed in case extrinsics depend on layer one state 
-    layer_one_head: H256,    
+    /// needed in case extrinsics depend on layer one state
+    layer_one_head: H256,
     shard_id: ShardIdentifier,
-    ///  must be registered on layer one as an enclave for the respective shard 
+    ///  must be registered on layer one as an enclave for the respective shard
     block_author: AccountId32,
     signed_top_hashes: Vec<H256>,
     // encrypted state payload
@@ -109,7 +109,7 @@ impl Block {
     /// get encrypted payload
     pub fn state_payload(&self) -> &Vec<u8> {
         &self.state_payload
-    }   
+    }
      /// Constructs an unsigned block
      pub fn construct_block(
         author: AccountId32,
@@ -163,7 +163,7 @@ impl SignedBlock {
     pub fn verify_signature(&self) -> bool {
         // get block payload
         let payload = self.block.encode();
-        
+
         // verify signature
         self.signature
             .verify(payload.as_slice(), &self.block.block_author.clone())
@@ -192,7 +192,7 @@ mod tests {
         let state_hash_apriori = H256::random();
         let state_hash_aposteriori = H256::random();
         let state_update: Vec<u8> = vec![];
-        
+
         // when
         let payload = StatePayload::new(state_hash_apriori.clone(),
             state_hash_aposteriori.clone(), state_update.clone());
@@ -217,7 +217,7 @@ mod tests {
         // when
         let block = Block::construct_block(author.clone(), block_number, parent_hash.clone(),
             layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
-        
+
         // then
         assert_eq!(block_number, block.block_number());
         assert_eq!(parent_hash, block.parent_hash());
@@ -288,22 +288,22 @@ mod tests {
         let block = Block::construct_block(author, block_number, parent_hash.clone(),
             layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         let mut signed_block = block.sign(&signer_pair);
-        signed_block.block.block_number = 1; 
+        signed_block.block.block_number = 1;
 
         // then
         assert_eq!(signed_block.verify_signature(), false);
-    } 
+    }
 
     #[test]
-    fn get_time_works() {     
-        // given   
+    fn get_time_works() {
+        // given
         let two_seconds = Duration::new(2,0);
-        let now = get_time();   
-        // when     
+        let now = get_time();
+        // when
         thread::sleep(two_seconds);
         // then
         assert_eq!(now + two_seconds.as_secs() as i64, get_time());
-    } 
+    }
 
     #[test]
     fn setting_timestamp_works() {
@@ -321,11 +321,10 @@ mod tests {
         let block = Block::construct_block(author, block_number, parent_hash.clone(),
             layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
         let one_second = Duration::new(1,0);
-        let now = block.timestamp();        
+        let now = block.timestamp();
         thread::sleep(one_second);
 
         // then
         assert_eq!(now + one_second.as_secs() as i64, get_time());
-    } 
-} 
-
+    }
+}

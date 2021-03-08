@@ -31,11 +31,13 @@ use crate::io;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTypeTrait};
+use sgx_externalities::{SgxExternalitiesTypeTrait};
 use sp_core::H256;
 use std::path::Path;
-use substratee_stf::{ShardIdentifier, State as StfState, Stf, 
-    StateType as StfStateType, StateTypeDiff as StfStateTypeDiff};
+use substratee_stf::{
+    ShardIdentifier, State as StfState, StateType as StfStateType,
+    StateTypeDiff as StfStateTypeDiff, Stf,
+};
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     // load last state
@@ -53,7 +55,6 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
         0 => {
             debug!("state at {} is empty. will initialize it.", state_path);
             Stf::init_state().state
-
         }
         n => {
             debug!(
@@ -68,7 +69,7 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     let state_with_diff = StfState {
         state: state,
         state_diff: StfStateTypeDiff::new(),
-    };    
+    };
     Ok(state_with_diff)
 }
 
@@ -121,7 +122,6 @@ pub fn hash_of(state: StfStateType) -> SgxResult<H256> {
 
     Ok(state_hash.into())
 }
-
 
 pub fn init_shard(shard: &ShardIdentifier) -> SgxResult<()> {
     let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
@@ -208,14 +208,14 @@ pub fn test_sgx_state_decode_encode_works() {
     let key: Vec<u8> = "hello".encode();
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
-    state.insert(key.clone(),value);
+    state.insert(key.clone(), value);
 
     // when
     let encoded_state = state.state.clone().encode();
     let state2 = StfStateType::decode(encoded_state);
     debug!("State:{:?}", state);
 
-    // then    
+    // then
     assert_eq!(state.state, state2);
 }
 
@@ -224,13 +224,13 @@ pub fn test_encrypt_decrypt_state_type_works() {
     let key: Vec<u8> = "hello".encode();
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
-    state.insert(key.clone(),value);
+    state.insert(key.clone(), value);
 
     // when
     let encrypted = encrypt(state.state.clone().encode()).unwrap();
     debug!("State encrypted:{:?}", encrypted);
     let decrypted = encrypt(encrypted.clone()).unwrap();
-    let decoded = StfStateType::decode(decrypted);    
+    let decoded = StfStateType::decode(decrypted);
 
     // then
     assert_eq!(state.state, decoded);
@@ -242,22 +242,18 @@ pub fn test_write_and_load_state_works() {
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
     let shard: ShardIdentifier = [94u8; 32].into();
-    state.insert(key.clone(),value); 
+    state.insert(key.clone(), value);
 
     // when
     if !exists(&shard) {
         init_shard(&shard).unwrap();
     }
-    let hash = write(state.clone(), &shard).unwrap();
+    let _hash = write(state.clone(), &shard).unwrap();
     let result = load(&shard).unwrap();
 
     // then
     assert_eq!(state.state, result.state);
 
     // clean up
-    std::fs::remove_dir_all(&format!(
-        "{}/{}",
-        SHARDS_PATH,
-        shard.encode().to_base58(),
-    )).unwrap();
+    std::fs::remove_dir_all(&format!("{}/{}", SHARDS_PATH, shard.encode().to_base58(),)).unwrap();
 }

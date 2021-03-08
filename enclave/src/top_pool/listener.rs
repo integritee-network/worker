@@ -22,7 +22,7 @@ use std::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
 use sp_runtime::traits;
 
 use crate::top_pool::{
-    pool::{BlockHash, ChainApi, ExtrinsicHash},
+    //pool::{BlockHash, ChainApi, ExtrinsicHash},
     watcher::Watcher,
 };
 use codec::Encode;

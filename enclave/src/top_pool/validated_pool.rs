@@ -33,13 +33,13 @@ use crate::top_pool::{
     base_pool::PruneStatus,
     error,
     listener::Listener,
-    pool::{BlockHash, ChainApi, EventStream, ExtrinsicHash, Options, TransactionFor},
+    pool::{ChainApi, EventStream, ExtrinsicHash, Options, TransactionFor},
     primitives::{PoolStatus, TrustedOperationSource},
     rotator::PoolRotator,
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
+use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use sp_runtime::{
     generic::BlockId,
@@ -400,8 +400,7 @@ where
                                 final_statuses.insert(hash, Status::Failed);
                             }
                         },
-                        ValidatedOperation::Invalid(_, _)
-                        | ValidatedOperation::Unknown(_, _) => {
+                        ValidatedOperation::Invalid(_, _) | ValidatedOperation::Unknown(_, _) => {
                             final_statuses.insert(hash, Status::Failed);
                         }
                     }
@@ -641,7 +640,7 @@ where
 
         let mut listener = self.listener.write().unwrap();
         if inblock {
-            for tx in &invalid {
+            for _tx in &invalid {
                 //listener.in_block(&tx.hash);
             }
         } else {
@@ -692,7 +691,10 @@ where
     /// Notify the listener of top inclusion in sidechain block
     pub fn on_block_created(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
         for top_hash in hashes.into_iter() {
-            self.listener.write().unwrap().in_block(top_hash, block_hash);
+            self.listener
+                .write()
+                .unwrap()
+                .in_block(top_hash, block_hash);
         }
     }
 }
