@@ -671,9 +671,8 @@ pub fn compose_block_and_confirmation(
     let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
     let parent_hash = match Stf::get_last_block_hash(state){
         Some(hash) => hash,
-        // in case of no parent hash, set initial state hash as parent hash
-        None => state_hash_apriori,
-    };   
+        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+    };
     // hash previous of state    
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
     let state_update = state.state_diff.clone().encode();
@@ -699,6 +698,7 @@ pub fn compose_block_and_confirmation(
 
     let block_hash = blake2_256(&block.encode());
     debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
+    Stf::update_last_block_hash(state, block_hash.into());
 
     let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
     let opaque_call = OpaqueCall(
