@@ -96,20 +96,20 @@ default-features = false
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.7.0"
+tag = "v0.8.0"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 optional = true
 
 [dependencies.sgx-runtime]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.7.0"
+tag = "v0.8.0"
 optional = true
 
 [dependencies.sgx-externalities]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.7.0"
+tag = "v0.8.0"
 optional = true
 
 [dependencies.my-node-runtime]
