@@ -1247,8 +1247,13 @@ fn test_compose_block_and_confirmation() {
     let signed_top_hashes = [call_hash, call_hash_two].to_vec();
     let shard = ShardIdentifier::default();
     let state_hash_apriori: H256 = [199; 32].into();
-    let mut state = StfState::new();
-    Stf::update_block_number(&mut state, 1);
+    let mut state = if state::exists(&shard) {
+        state::load(&shard).unwrap()
+    } else {
+        state::init_shard(&shard).unwrap();
+        Stf::init_state()
+    };
+    Stf::update_block_number(&mut state, 3);
 
     // when
     let (opaque_call, signed_block) = compose_block_and_confirmation(
@@ -1265,7 +1270,7 @@ fn test_compose_block_and_confirmation() {
 
     // then
     assert!(signed_block.verify_signature());
-    assert_eq!(signed_block.block().block_number(), 2);
+    assert_eq!(signed_block.block().block_number(), 4);
     assert!(opaque_call_vec.starts_with(&xt_block_encoded));
     let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
