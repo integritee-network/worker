@@ -688,6 +688,13 @@ where
     pub fn on_block_retracted(&self, block_hash: SidechainBlockHash) {
         self.listener.write().unwrap().retracted(block_hash)
     }
+
+    /// Notify the listener of top inclusion in sidechain block
+    pub fn on_block_created(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
+        for top_hash in hashes.into_iter() {
+            self.listener.write().unwrap().in_block(top_hash, block_hash);
+        }
+    }
 }
 
 fn fire_events<H, Ex>(listener: &mut Listener<H>, imported: &base::Imported<H, Ex>)

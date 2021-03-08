@@ -39,6 +39,7 @@ use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{ShieldFundsFn};
 use substratee_worker_primitives::block::{Block as SidechainBlock, StatePayload, 
     SignedBlock as SignedSidechainBlock};
+use substratee_worker_primitives::BlockHash;
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256, H256};
@@ -515,7 +516,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
         };
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
-        let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
+        let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool.clone()));
 
         // get all shards 
         let shards = state::list_shards()?;
@@ -607,13 +608,21 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                 shard, prev_state_hash, &mut state) {
                 Ok((block_confirm, signed_block)) => {
                     calls.push(block_confirm);
-                    blocks.push(signed_block);
+                    blocks.push(signed_block.clone());
+                    
+                    // Notify watching clients of InBlock
+                    let composed_block = signed_block.block();                     
+                    let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
+                    pool
+                        .pool()
+                        .validated_pool()
+                        .on_block_created(composed_block.signed_top_hashes(), block_hash);
 
                 },
                 Err(e) => error!("Could not compose block confirmation: {:?}", e),
-            }
+            }            
             // save updated state after call executions
-            let new_state_hash = state::write(state.clone(), &shard)?;
+            let new_state_hash = state::write(state.clone(), &shard)?;           
 
             if is_done {
                 break;
