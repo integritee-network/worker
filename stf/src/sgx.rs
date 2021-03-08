@@ -47,6 +47,8 @@ impl Stf {
     pub fn init_state() -> State {
         debug!("initializing stf state");
         let mut ext = State::new();
+        // set initial state hash
+        let state_hash: Hash = blake2_256(&ext.clone().encode()).into();        
         ext.execute_with(|| {
             // do not set genesis for pallets that are meant to be on-chain
             // use get_storage_hashes_to_update instead
@@ -76,9 +78,16 @@ impl Stf {
                 &storage_value_key("Balances", "ExistentialDeposit"),
                 &1u128.encode(),
             );
+            // Set first sidechainblock number to 0
             sp_io::storage::set(
                 &storage_value_key("System", "Number"),
-                &0.encode());
+                &0.encode(),
+            );
+            // Set first parent hash to initial state hash            
+            sp_io::storage::set(
+                &storage_value_key("Chain", "LastHash"),
+                &state_hash.encode(),
+            );
             //FIXME: for testing purpose only - maybe add feature?
             // for example: feature = endowtestaccounts
             let public = AccountId32::from(sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public());
@@ -149,9 +158,11 @@ impl Stf {
                 if let Ok(hash) = Hash::decode(&mut infovec.as_slice()) {
                     Some(hash)
                 } else {
+                    error!("Blockhash decode error");
                     None
                 }
             } else {
+                error!("No Blockhash in state?");
                 None
             }      
         })

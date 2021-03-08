@@ -35,6 +35,7 @@ use crate::top_pool::{
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -85,7 +86,7 @@ pub trait ChainApi: Send + Sync {
     fn block_id_to_hash(
         &self,
         at: &BlockId<Self::Block>,
-    ) -> Result<Option<<Self::Block as BlockT>::Hash>, Self::Error>;
+    ) -> Result<Option<SidechainBlockHash>, Self::Error>;
 
     /// Returns hash and encoding length of the extrinsic.
     fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize);
@@ -633,7 +634,7 @@ impl ChainApi for TestApi {
     fn block_id_to_hash(
         &self,
         at: &BlockId<Self::Block>,
-    ) -> Result<Option<<Self::Block as BlockT>::Hash>, Self::Error> {
+    ) -> Result<Option<SidechainBlockHash>, Self::Error> {
         Ok(match at {
             BlockId::Number(num) => Some(from_low_u64_to_be_h256(*num)).into(),
             //BlockId::Number(num) => None,            

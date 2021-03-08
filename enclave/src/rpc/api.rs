@@ -36,6 +36,7 @@ use crate::top_pool::pool::{BlockHash, ChainApi, ExtrinsicHash, NumberFor};
 use crate::top_pool::primitives::{TrustedOperationSource};
 
 use substratee_stf::{TrustedOperation as StfTrustedOperation, Getter};
+use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
 
 use crate::rpc::error;
 
@@ -117,9 +118,10 @@ where
     fn block_id_to_hash(
         &self,
         at: &BlockId<Self::Block>,
-    ) -> error::Result<Option<BlockHash<Self>>> {
+    ) -> error::Result<Option<SidechainBlockHash>> {
         Ok(match at {
-            BlockId::Hash(x) => Some(x.clone()),
+            //BlockId::Hash(x) => Some(x.clone()),
+            BlockId::Hash(x) => None,
             // dummy
             BlockId::Number(_num) => None,
         })

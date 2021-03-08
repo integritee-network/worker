@@ -39,6 +39,7 @@ use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
 use substratee_node_primitives::{ShieldFundsFn};
 use substratee_worker_primitives::block::{Block as SidechainBlock, StatePayload, 
     SignedBlock as SignedSidechainBlock};
+use substratee_worker_primitives::BlockHash;
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256, H256};
@@ -515,7 +516,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
         };
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
         let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
-        let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool));
+        let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool.clone()));
 
         // get all shards 
         let shards = state::list_shards()?;
@@ -607,13 +608,21 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                 shard, prev_state_hash, &mut state) {
                 Ok((block_confirm, signed_block)) => {
                     calls.push(block_confirm);
-                    blocks.push(signed_block);
+                    blocks.push(signed_block.clone());
+                    
+                    // Notify watching clients of InSidechainBlock
+                    let composed_block = signed_block.block();                     
+                    let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
+                    pool
+                        .pool()
+                        .validated_pool()
+                        .on_block_created(composed_block.signed_top_hashes(), block_hash);
 
                 },
                 Err(e) => error!("Could not compose block confirmation: {:?}", e),
-            }
+            }            
             // save updated state after call executions
-            let new_state_hash = state::write(state.clone(), &shard)?;
+            let new_state_hash = state::write(state.clone(), &shard)?;           
 
             if is_done {
                 break;
@@ -645,7 +654,7 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
 /// Composes a sidechain block of a shard
 pub fn compose_block_and_confirmation(
     latest_onchain_header: Header,
-    signed_call_hashes: Vec<H256>,
+    top_call_hashes: Vec<H256>,
     shard: ShardIdentifier, 
     state_hash_apriori: H256,
     state: &mut StfState,
@@ -662,9 +671,8 @@ pub fn compose_block_and_confirmation(
     let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
     let parent_hash = match Stf::get_last_block_hash(state){
         Some(hash) => hash,
-        // in case of no parent hash, set initial state hash as parent hash
-        None => state_hash_apriori,
-    };   
+        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+    };
     // hash previous of state    
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
     let state_update = state.state_diff.clone().encode();
@@ -682,7 +690,7 @@ pub fn compose_block_and_confirmation(
         parent_hash, 
         layer_one_head, 
         shard,
-        signed_call_hashes,
+        top_call_hashes,
         payload,
     );
 
@@ -690,6 +698,7 @@ pub fn compose_block_and_confirmation(
 
     let block_hash = blake2_256(&block.encode());
     debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
+    Stf::update_last_block_hash(state, block_hash.into());
 
     let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
     let opaque_call = OpaqueCall(
@@ -922,6 +931,7 @@ fn handle_trusted_worker_call(
     if let Some(author) = author_pointer {
         // TODO: prune instead of remove_top ? Block needs to be known
         // remove call from pool as valid
+        // TODO: move this pruning to after finalization confirmations, not here!
         let inblock = true;
         author
             .remove_top(
@@ -1220,14 +1230,14 @@ fn test_compose_block_and_confirmation() {
         Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
     let call_hash: H256 = [94; 32].into();
     let call_hash_two: H256 = [1; 32].into();
-    let signed_call_hashes = [call_hash, call_hash_two].to_vec();
+    let signed_top_hashes = [call_hash, call_hash_two].to_vec();
     let shard = ShardIdentifier::default();
     let state_hash_apriori: H256 = [199; 32].into();
     let mut state = StfState::new();
     Stf::update_block_number(&mut state, 1);
     
     // when
-    let (opaque_call, signed_block) = compose_block_and_confirmation(latest_onchain_header, signed_call_hashes, 
+    let (opaque_call, signed_block) = compose_block_and_confirmation(latest_onchain_header, signed_top_hashes, 
         shard, state_hash_apriori, &mut state).unwrap();
     let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
@@ -1489,7 +1499,7 @@ fn test_create_block_and_confirmation_works() {
     assert_eq!(confirm_calls.len(), 1);
     assert!(signed_block.verify_signature());
     assert_eq!(signed_block.block().block_number(), 1);
-    assert_eq!(signed_block.block().signed_call_hashes()[0], top_hash);
+    assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
     assert!(opaque_call_vec.starts_with(&xt_block_encoded));
     let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
     assert!(stripped_opaque_call.starts_with(&shard.encode()));

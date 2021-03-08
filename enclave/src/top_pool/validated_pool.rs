@@ -39,6 +39,7 @@ use crate::top_pool::{
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
 
 use sp_runtime::{
     generic::BlockId,
@@ -97,7 +98,7 @@ pub type ValidatedOperationFor<B> =
 pub struct ValidatedPool<B: ChainApi> {
     api: Arc<B>,
     options: Options,
-    listener: SgxRwLock<Listener<ExtrinsicHash<B>, B>>,
+    listener: SgxRwLock<Listener<ExtrinsicHash<B>>>,
     pool: SgxRwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
     import_notification_sinks: SgxMutex<Vec<Sender<ExtrinsicHash<B>>>>,
     rotator: PoolRotator<ExtrinsicHash<B>>,
@@ -641,7 +642,7 @@ where
         let mut listener = self.listener.write().unwrap();
         if inblock {
             for tx in &invalid {
-                listener.in_block(&tx.hash);
+                //listener.in_block(&tx.hash);
             }
         } else {
             for tx in &invalid {
@@ -674,7 +675,7 @@ where
     }
 
     /// Notify all watchers that operations in the block with hash have been finalized
-    pub async fn on_block_finalized(&self, block_hash: BlockHash<B>) -> Result<(), B::Error>
+    pub async fn on_block_finalized(&self, block_hash: SidechainBlockHash) -> Result<(), B::Error>
     where
         <<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: core::fmt::Display,
     {
@@ -684,15 +685,21 @@ where
     }
 
     /// Notify the listener of retracted blocks
-    pub fn on_block_retracted(&self, block_hash: BlockHash<B>) {
+    pub fn on_block_retracted(&self, block_hash: SidechainBlockHash) {
         self.listener.write().unwrap().retracted(block_hash)
+    }
+
+    /// Notify the listener of top inclusion in sidechain block
+    pub fn on_block_created(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
+        for top_hash in hashes.into_iter() {
+            self.listener.write().unwrap().in_block(top_hash, block_hash);
+        }
     }
 }
 
-fn fire_events<H, B, Ex>(listener: &mut Listener<H, B>, imported: &base::Imported<H, Ex>)
+fn fire_events<H, Ex>(listener: &mut Listener<H>, imported: &base::Imported<H, Ex>)
 where
     H: hash::Hash + Eq + traits::Member + Encode, // + Serialize,
-    B: ChainApi,
 {
     match *imported {
         base::Imported::Ready {

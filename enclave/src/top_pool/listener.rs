@@ -27,16 +27,18 @@ use crate::top_pool::{
 };
 use codec::Encode;
 
+use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
+
 /// Extrinsic pool default listener.
-pub struct Listener<H: hash::Hash + Eq, C: ChainApi> {
+pub struct Listener<H: hash::Hash + Eq> {
     watchers: HashMap<H, Watcher<H>>,
-    finality_watchers: LinkedHashMap<ExtrinsicHash<C>, Vec<H>>,
+    finality_watchers: LinkedHashMap<SidechainBlockHash, Vec<H>>,
 }
 
 /// Maximum number of blocks awaiting finality at any time.
 const MAX_FINALITY_WATCHERS: usize = 512;
 
-impl<H: hash::Hash + Eq + Debug, C: ChainApi> Default for Listener<H, C> {
+impl<H: hash::Hash + Eq + Debug> Default for Listener<H> {
     fn default() -> Self {
         Listener {
             watchers: Default::default(),
@@ -46,7 +48,7 @@ impl<H: hash::Hash + Eq + Debug, C: ChainApi> Default for Listener<H, C> {
 }
 
 //impl<H: hash::Hash + traits::Member + Serialize, C: ChainApi> Listener<H, C> {
-impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
+impl<H: hash::Hash + traits::Member + Encode> Listener<H> {
     fn fire<F>(&mut self, hash: &H, fun: F)
     where
         F: FnOnce(&mut Watcher<H>),
@@ -109,9 +111,9 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
     }
 
     /// TrustedOperation was pruned from the pool.
-    pub fn pruned(&mut self, block_hash: BlockHash<C>, tx: &H) {
+    pub fn pruned(&mut self, block_hash: SidechainBlockHash, tx: &H) {
         debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
-        self.fire(tx, |s| s.in_block());
+        self.fire(tx, |s| s.in_block(block_hash));
         self.finality_watchers
             .entry(block_hash)
             .or_insert(vec![])
@@ -127,12 +129,12 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
     }
 
     /// TrustedOperation in block.
-    pub fn in_block(&mut self, tx: &H) {
-        self.fire(tx, |s| s.in_block());
+    pub fn in_block(&mut self, tx: &H, block_hash: SidechainBlockHash) {
+        self.fire(tx, |s| s.in_block(block_hash));
     }
 
     /// The block this operation was included in has been retracted.
-    pub fn retracted(&mut self, block_hash: BlockHash<C>) {
+    pub fn retracted(&mut self, block_hash: SidechainBlockHash) {
         if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
             for hash in hashes {
                 self.fire(&hash, |s| s.retracted())
@@ -141,7 +143,7 @@ impl<H: hash::Hash + traits::Member + Encode, C: ChainApi> Listener<H, C> {
     }
 
     /// Notify all watchers that operations have been finalized
-    pub fn finalized(&mut self, block_hash: BlockHash<C>) {
+    pub fn finalized(&mut self, block_hash: SidechainBlockHash) {
         if let Some(hashes) = self.finality_watchers.remove(&block_hash) {
             for hash in hashes {
                 log::debug!(target: "txpool", "[{:?}] Sent finalization event (block {:?})", hash, block_hash);
