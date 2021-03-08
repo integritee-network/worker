@@ -81,9 +81,7 @@ use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, O
 use substratee_stf::{
     AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_stf::{
-    State as StfState, StateType as StfStateType, StateTypeDiff as StfStateTypeDiff,
-};
+use substratee_stf::{State as StfState, StateTypeDiff as StfStateTypeDiff};
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::worker_api_direct;
@@ -1180,9 +1178,6 @@ fn worker_request<V: Encode + Decode>(
     Ok(Decode::decode(&mut resp.as_slice()).unwrap())
 }
 
-// tests
-use sgx_externalities::SgxExternalitiesTrait;
-
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
     let mut requests = Vec::new();
@@ -1528,23 +1523,30 @@ fn test_create_state_diff() {
         [69; 32].into(),
         Default::default(),
     );
-    let rsa_pair = rsa3072::unseal_pair().unwrap();
+    let _rsa_pair = rsa3072::unseal_pair().unwrap();
 
     // ensure that state exists
-    let state = if state::exists(&shard) {
+    let mut state = if state::exists(&shard) {
         state::load(&shard).unwrap()
     } else {
         state::init_shard(&shard).unwrap();
         Stf::init_state()
     };
+    // ensure state starts at 0..
+    //Stf::update_last_block_hash(&mut state, H256::default());
+    Stf::update_block_number(&mut state, 0);
 
-    // create accountss
+    // create accounts
     let signer_without_money = ed25519::unseal_pair().unwrap();
     let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
     let account_with_money = pair_with_money.public();
     let account_without_money = signer_without_money.public();
+    let account_with_money_key_hash =
+        substratee_stf::sgx::nonce_key_hash(&account_with_money.into());
+    let account_without_money_key_hash =
+        substratee_stf::sgx::nonce_key_hash(&account_without_money.into());
 
-    let prev_state_hash = state::write(state.clone(), &shard).unwrap();
+    let _prev_state_hash = state::write(state.clone(), &shard).unwrap();
     // load top pool
     {
         let &ref pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
@@ -1558,7 +1560,7 @@ fn test_create_state_diff() {
         let call = TrustedCall::balance_transfer(
             account_with_money.into(),
             account_without_money.into(),
-            0,
+            1000,
         );
         let signed_call = call.sign(&pair_with_money.into(), nonce, &mrenclave, &shard);
         let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
@@ -1580,4 +1582,48 @@ fn test_create_state_diff() {
     aes::de_or_encrypt(&mut encrypted_payload).unwrap();
     let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
     let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
+
+    // then
+    let acc_info_vec = state_diff
+        .get(&account_with_money_key_hash)
+        .unwrap()
+        .as_ref()
+        .unwrap();
+    let new_balance_acc_with_money =
+        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
+            .unwrap()
+            .data
+            .free;
+    let acc_info_vec = state_diff
+        .get(&account_without_money_key_hash)
+        .unwrap()
+        .as_ref()
+        .unwrap();
+    let new_balance_acc_wo_money =
+        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
+            .unwrap()
+            .data
+            .free;
+    // get block number
+    let block_number_key = substratee_stf::sgx::storage_value_key("System", "Number");
+    let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
+    let new_block_number =
+        substratee_stf::sgx::StfBlockNumber::decode(&mut new_block_number_encoded.as_slice())
+            .unwrap();
+    /* // get block hash
+    let last_block_hash_key = substratee_stf::sgx::storage_value_key("Chain", "LastHash");
+    let new_last_block_hash_encoded = state_diff
+        .get(&last_block_hash_key)
+        .unwrap()
+        .as_ref()
+        .unwrap();
+    let new_last_block_hash =
+        substratee_stf::Hash::decode(&mut new_last_block_hash_encoded.as_slice()).unwrap();
+    let block_hash: H256 = blake2_256(&signed_blocks[0].block().encode()).into(); */
+
+    assert_eq!(state_diff.len(), 3);
+    assert_eq!(new_balance_acc_wo_money, 1000);
+    assert_eq!(new_balance_acc_with_money, 1000);
+    assert_eq!(new_block_number, 1);
+    //assert_eq!(new_last_block_hash, block_hash);
 }

@@ -33,7 +33,8 @@ impl Encode for OpaqueCall {
 
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
-type AccountInfo = system::AccountInfo<Index, AccountData>;
+pub type AccountInfo = system::AccountInfo<Index, AccountData>;
+pub type StfBlockNumber = BlockNumber;
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
@@ -89,8 +90,8 @@ impl Stf {
             );
             sgx_runtime::BalancesCall::<Runtime>::set_balance(
                 MultiAddress::Id(public.clone()),
-                10,
-                10,
+                2000,
+                2000,
             )
             .dispatch_bypass_filter(sgx_runtime::Origin::root())
             .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
