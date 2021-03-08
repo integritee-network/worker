@@ -39,7 +39,7 @@ pub enum TrustedOperationStatus {
     /// The operation has been broadcast to the given peers.
     Broadcast,
     /// TrustedOperation has been included in block with given hash.
-    InBlock(BlockHash),
+    InSidechainBlock(BlockHash),
     /// The block this operation was included in has been retracted.
     Retracted,
     /// Maximum number of finality watchers has been reached,

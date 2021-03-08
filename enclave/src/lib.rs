@@ -610,7 +610,7 @@ fn execute_top_pool_calls(latest_onchain_header: Header) -> SgxResult<(Vec<Opaqu
                     calls.push(block_confirm);
                     blocks.push(signed_block.clone());
                     
-                    // Notify watching clients of InBlock
+                    // Notify watching clients of InSidechainBlock
                     let composed_block = signed_block.block();                     
                     let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
                     pool

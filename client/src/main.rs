@@ -598,7 +598,7 @@ fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Err
         },
     }
 }
-
+/// sends a rpc watch request to the worker api server
 fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperation) -> Option<Vec<u8>> {
     let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, operation_call) {
         Ok((encoded, encrypted)) => (encoded, encrypted),

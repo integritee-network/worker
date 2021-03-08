@@ -74,7 +74,7 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
 
     /// Extrinsic has been included in block with given hash.
     pub fn in_block(&mut self, block_hash: SidechainBlockHash) {
-        self.send(TrustedOperationStatus::InBlock(block_hash));
+        self.send(TrustedOperationStatus::InSidechainBlock(block_hash));
         self.is_in_block = true;
     }
 
