@@ -15,7 +15,7 @@
 
 */
 
-use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation, KeyPair};
+use crate::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -240,10 +240,11 @@ pub fn cmd<'a>(
                     println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
                     let key_pair = sr25519_core::Pair::from(who.clone());
-                    let top: TrustedOperation =
-                        TrustedGetter::free_balance(sr25519_core::Public::from(who.public()).into())
-                            .sign(&KeyPair::Sr25519(key_pair))
-                            .into();
+                    let top: TrustedOperation = TrustedGetter::free_balance(
+                        sr25519_core::Public::from(who.public()).into(),
+                    )
+                    .sign(&KeyPair::Sr25519(key_pair))
+                    .into();
                     let res = perform_operation(matches, &top);
                     let bal = if let Some(v) = res {
                         if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {

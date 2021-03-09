@@ -3,7 +3,6 @@
 
 pub mod block;
 
-
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -11,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
-use std::vec::Vec;
 use sp_core::H256;
+use std::vec::Vec;
 
 pub type BlockHash = H256;
 
@@ -20,7 +19,7 @@ use sp_core::ed25519::Signature;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum DirectCallStatus {
-    /// DirectCall was successfully executed 
+    /// DirectCall was successfully executed
     Ok,
     /// Trusted Call Status
     TrustedOperationStatus(TrustedOperationStatus),

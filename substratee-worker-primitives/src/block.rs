@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 use sgx_tstd as std;
 use std::vec::Vec;
 
-use sp_core::{H256, ed25519};
 use sp_core::crypto::{AccountId32, Pair};
+use sp_core::{ed25519, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use substratee_stf::{ShardIdentifier};
+use substratee_stf::ShardIdentifier;
 
 pub type Signature = MultiSignature;
 
-use std::time::{UNIX_EPOCH, SystemTime};
+use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(feature = "sgx")]
 use std::untrusted::time::SystemTimeEx;
 /* use chrono::Utc as TzUtc;
@@ -38,8 +38,8 @@ pub struct StatePayload {
 }
 
 impl StatePayload {
-     /// get hash of state before block execution
-     pub fn state_hash_apriori(&self) -> H256 {
+    /// get hash of state before block execution
+    pub fn state_hash_apriori(&self) -> H256 {
         self.state_hash_apriori
     }
     /// get hash of state after block execution
@@ -74,7 +74,7 @@ pub struct Block {
     block_author: AccountId32,
     signed_top_hashes: Vec<H256>,
     // encrypted state payload
-    state_payload: Vec<u8>
+    state_payload: Vec<u8>,
 }
 
 impl Block {
@@ -110,8 +110,8 @@ impl Block {
     pub fn state_payload(&self) -> &Vec<u8> {
         &self.state_payload
     }
-     /// Constructs an unsigned block
-     pub fn construct_block(
+    /// Constructs an unsigned block
+    pub fn construct_block(
         author: AccountId32,
         block_number: u64,
         parent_hash: H256,
@@ -120,8 +120,8 @@ impl Block {
         signed_top_hashes: Vec<H256>,
         encrypted_payload: Vec<u8>,
     ) -> Block {
-         // get timestamp for new block
-         let now: i64 = get_time();
+        // get timestamp for new block
+        let now: i64 = get_time();
 
         // create block
         Block {
@@ -137,16 +137,12 @@ impl Block {
     }
 
     /// Composes a signed block
-     pub fn sign(
-        &self,
-        pair: &ed25519::Pair,
-    ) -> SignedBlock {
+    pub fn sign(&self, pair: &ed25519::Pair) -> SignedBlock {
         let payload = self.encode();
         SignedBlock {
             block: self.clone(),
             signature: pair.sign(payload.as_slice()).into(),
         }
-
     }
 }
 impl SignedBlock {
@@ -168,7 +164,6 @@ impl SignedBlock {
         self.signature
             .verify(payload.as_slice(), &self.block.block_author.clone())
     }
-
 }
 
 /// sets the timestamp of the block as seconds since unix epoch
@@ -178,7 +173,6 @@ fn get_time() -> i64 {
         .unwrap()
         .as_secs() as i64
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -194,8 +188,11 @@ mod tests {
         let state_update: Vec<u8> = vec![];
 
         // when
-        let payload = StatePayload::new(state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(), state_update.clone());
+        let payload = StatePayload::new(
+            state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(),
+            state_update.clone(),
+        );
 
         // then
         assert_eq!(state_hash_apriori, payload.state_hash_apriori());
@@ -206,7 +203,10 @@ mod tests {
     #[test]
     fn construct_block_works() {
         // given
-        let author: AccountId32 = ed25519::Pair::from_string("//Alice", None).unwrap().public().into();
+        let author: AccountId32 = ed25519::Pair::from_string("//Alice", None)
+            .unwrap()
+            .public()
+            .into();
         let block_number: u64 = 0;
         let parent_hash = H256::random();
         let layer_one_head = H256::random();
@@ -215,8 +215,15 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         // when
-        let block = Block::construct_block(author.clone(), block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
+        let block = Block::construct_block(
+            author.clone(),
+            block_number,
+            parent_hash.clone(),
+            layer_one_head.clone(),
+            shard.clone(),
+            signed_top_hashes.clone(),
+            encrypted_payload.clone(),
+        );
 
         // then
         assert_eq!(block_number, block.block_number());
@@ -241,17 +248,25 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         // when
-        let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
+        let block = Block::construct_block(
+            author,
+            block_number,
+            parent_hash.clone(),
+            layer_one_head.clone(),
+            shard.clone(),
+            signed_top_hashes.clone(),
+            encrypted_payload.clone(),
+        );
         let signed_block = block.sign(&signer_pair);
-        let signature: Signature = Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
+        let signature: Signature =
+            Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
 
         // then
         assert_eq!(signed_block.block(), &block);
         assert_eq!(signed_block.signature(), &signature);
     }
 
-     #[test]
+    #[test]
     fn verify_signature_works() {
         // given
         let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
@@ -264,8 +279,15 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         // when
-        let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
+        let block = Block::construct_block(
+            author,
+            block_number,
+            parent_hash.clone(),
+            layer_one_head.clone(),
+            shard.clone(),
+            signed_top_hashes.clone(),
+            encrypted_payload.clone(),
+        );
         let signed_block = block.sign(&signer_pair);
 
         // then
@@ -285,8 +307,15 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         // when
-        let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
+        let block = Block::construct_block(
+            author,
+            block_number,
+            parent_hash.clone(),
+            layer_one_head.clone(),
+            shard.clone(),
+            signed_top_hashes.clone(),
+            encrypted_payload.clone(),
+        );
         let mut signed_block = block.sign(&signer_pair);
         signed_block.block.block_number = 1;
 
@@ -297,7 +326,7 @@ mod tests {
     #[test]
     fn get_time_works() {
         // given
-        let two_seconds = Duration::new(2,0);
+        let two_seconds = Duration::new(2, 0);
         let now = get_time();
         // when
         thread::sleep(two_seconds);
@@ -318,9 +347,16 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         // when
-        let block = Block::construct_block(author, block_number, parent_hash.clone(),
-            layer_one_head.clone(), shard.clone(), signed_top_hashes.clone(), encrypted_payload.clone());
-        let one_second = Duration::new(1,0);
+        let block = Block::construct_block(
+            author,
+            block_number,
+            parent_hash.clone(),
+            layer_one_head.clone(),
+            shard.clone(),
+            signed_top_hashes.clone(),
+            encrypted_payload.clone(),
+        );
+        let one_second = Duration::new(1, 0);
         let now = block.timestamp();
         thread::sleep(one_second);
 

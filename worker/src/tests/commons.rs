@@ -30,7 +30,7 @@ use std::{fs, str};
 use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned, KeyPair};
+use substratee_stf::{KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -63,8 +63,12 @@ pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32
     let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
     info!("deserialized rsa key");
 
-    let call =
-        TrustedCall::balance_unshield(who.public().into(), who.public().into(), 40, ShardIdentifier::default());
+    let call = TrustedCall::balance_unshield(
+        who.public().into(),
+        who.public().into(),
+        40,
+        ShardIdentifier::default(),
+    );
     encrypt_payload(
         rsa_pubkey,
         call.sign(

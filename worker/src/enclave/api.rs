@@ -230,8 +230,8 @@ pub fn enclave_init_chain_relay(
 }
 
 /// Starts block production within enclave
-/// 
-/// Returns the produced blocks 
+///
+/// Returns the produced blocks
 pub fn enclave_produce_blocks(
     eid: sgx_enclave_id_t,
     blocks_to_sync: Vec<SignedBlock>,
@@ -240,15 +240,8 @@ pub fn enclave_produce_blocks(
     let mut status = sgx_status_t::SGX_SUCCESS;
 
     let result = unsafe {
-        blocks_to_sync.using_encoded(|b| {
-            produce_blocks(
-                eid,
-                &mut status,
-                b.as_ptr(),
-                b.len(),
-                &tee_nonce,
-            )
-        })
+        blocks_to_sync
+            .using_encoded(|b| produce_blocks(eid, &mut status, b.as_ptr(), b.len(), &tee_nonce))
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
