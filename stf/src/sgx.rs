@@ -80,7 +80,7 @@ impl Stf {
             sp_io::storage::set(&storage_value_key("System", "Number"), &0.encode());
             // Set first parent hash to initial state hash
             sp_io::storage::set(
-                &storage_value_key("Chain", "LastHash"),
+                &storage_value_key("System", "LastHash"),
                 &state_hash.encode(),
             );
             //FIXME: for testing purpose only - maybe add feature?
@@ -144,14 +144,14 @@ impl Stf {
 
     pub fn update_last_block_hash(ext: &mut State, hash: Hash) {
         ext.execute_with(|| {
-            let key = storage_value_key("Chain", "LastHash");
+            let key = storage_value_key("System", "LastHash");
             sp_io::storage::set(&key, &hash.encode());
         });
     }
 
     pub fn get_last_block_hash(ext: &mut State) -> Option<Hash> {
         ext.execute_with(|| {
-            let key = storage_value_key("Chain", "LastHash");
+            let key = storage_value_key("System", "LastHash");
             if let Some(infovec) = sp_io::storage::get(&key) {
                 if let Ok(hash) = Hash::decode(&mut infovec.as_slice()) {
                     Some(hash)

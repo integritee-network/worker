@@ -31,7 +31,7 @@ use crate::io;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use sgx_externalities::{SgxExternalitiesTypeTrait};
+use sgx_externalities::SgxExternalitiesTypeTrait;
 use sp_core::H256;
 use std::path::Path;
 use substratee_stf::{
@@ -190,19 +190,6 @@ pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
 //  tests
 use sgx_externalities::SgxExternalitiesTrait;
 
-pub fn test_encrypted_state_io_works() {
-    let path = "test_state_file.bin";
-    let plaintext = b"The quick brown fox jumps over the lazy dog.";
-    aes::create_sealed().unwrap();
-
-    aes::de_or_encrypt(&mut plaintext.to_vec()).unwrap();
-    write_encrypted(&mut plaintext.to_vec(), path).unwrap();
-    let state: Vec<u8> = read(path).unwrap();
-
-    assert_eq!(state, plaintext.to_vec());
-    std::fs::remove_file(path).unwrap();
-}
-
 pub fn test_sgx_state_decode_encode_works() {
     // given
     let key: Vec<u8> = "hello".encode();
@@ -236,8 +223,12 @@ pub fn test_encrypt_decrypt_state_type_works() {
     assert_eq!(state.state, decoded);
 }
 
+use crate::ensure_no_empty_shard_directory_exists;
+
 pub fn test_write_and_load_state_works() {
     // given
+    ensure_no_empty_shard_directory_exists();
+
     let key: Vec<u8> = "hello".encode();
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
@@ -255,5 +246,9 @@ pub fn test_write_and_load_state_works() {
     assert_eq!(state.state, result.state);
 
     // clean up
-    std::fs::remove_dir_all(&format!("{}/{}", SHARDS_PATH, shard.encode().to_base58(),)).unwrap();
+    remove_shard_dir(&shard);
+}
+
+pub fn remove_shard_dir(shard: &ShardIdentifier) {
+    std::fs::remove_dir_all(&format!("{}/{}", SHARDS_PATH, shard.encode().to_base58())).unwrap();
 }

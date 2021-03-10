@@ -1071,7 +1071,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::pool::listener::test_should_trigger_broadcasted,
         top_pool::pool::listener::test_should_trigger_dropped,
         top_pool::pool::listener::test_should_handle_pruning_in_the_middle_of_import,*/
-        state::test_encrypted_state_io_works,
         state::test_write_and_load_state_works,
         state::test_sgx_state_decode_encode_works,
         state::test_encrypt_decrypt_state_type_works,
@@ -1089,6 +1088,18 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_create_block_and_confirmation_works,
         test_create_state_diff,
     )
+}
+
+fn ensure_no_empty_shard_directory_exists() {
+    // ensure no empty states are within directory (created with init-shard)
+    // otherwise an 'index out of bounds: the len is x but the index is x'
+    // error will be thrown
+    let shards = state::list_shards().unwrap();
+    for shard in shards {
+        if !state::exists(&shard) {
+            state::init_shard(&shard).unwrap();
+        }
+    }
 }
 
 use jsonrpc_core::futures::executor;
@@ -1242,12 +1253,9 @@ fn test_compose_block_and_confirmation() {
     let signed_top_hashes = [call_hash, call_hash_two].to_vec();
     let shard = ShardIdentifier::default();
     let state_hash_apriori: H256 = [199; 32].into();
-    let mut state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
+    // ensure state starts empty
+    state::init_shard(&shard).unwrap();
+    let mut state = Stf::init_state();
     Stf::update_block_number(&mut state, 3);
 
     // when
@@ -1285,13 +1293,9 @@ fn test_submit_trusted_call_to_top_pool() {
     let nonce = 1;
     let mrenclave = [0u8; 32];
     let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
+    // ensure state starts empty
+    state::init_shard(&shard).unwrap();
+    Stf::init_state();
     let signer_pair = ed25519::unseal_pair().unwrap();
     let call = TrustedCall::balance_set_balance(
         signer_pair.public().into(),
@@ -1333,13 +1337,9 @@ fn test_submit_trusted_getter_to_top_pool() {
 
     // create trusted getter signed
     let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
+    // ensure state starts empty
+    state::init_shard(&shard).unwrap();
+    Stf::init_state();
     let signer_pair = ed25519::unseal_pair().unwrap();
     let getter = TrustedGetter::free_balance(signer_pair.public().into());
     let signed_getter = getter.sign(&signer_pair.into());
@@ -1375,13 +1375,10 @@ fn test_differentiate_getter_and_call_works() {
     let author = Author::new(Arc::new(&tx_pool));
     // create trusted getter signed
     let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
+    // ensure state starts empty
+    state::init_shard(&shard).unwrap();
+    Stf::init_state();
+
     let signer_pair = ed25519::unseal_pair().unwrap();
     let getter = TrustedGetter::free_balance(signer_pair.public().into());
     let signed_getter = getter.sign(&signer_pair.clone().into());
@@ -1436,16 +1433,15 @@ fn test_differentiate_getter_and_call_works() {
 fn test_create_block_and_confirmation_works() {
     // given
 
+    ensure_no_empty_shard_directory_exists();
+
     // create top pool
     unsafe { rpc::worker_api_direct::initialize_pool() };
     let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
+    // ensure state starts empty
+    state::init_shard(&shard).unwrap();
+    let mut state = Stf::init_state();
+    assert_eq!(Stf::get_block_number(&mut state).unwrap(), 0);
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
     let latest_onchain_header = Header::new(
         1,
@@ -1496,8 +1492,6 @@ fn test_create_block_and_confirmation_works() {
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 
     // then
-    assert_eq!(signed_blocks.len(), 1);
-    assert_eq!(confirm_calls.len(), 1);
     assert!(signed_block.verify_signature());
     assert_eq!(signed_block.block().block_number(), 1);
     assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
@@ -1506,11 +1500,16 @@ fn test_create_block_and_confirmation_works() {
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
     let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
     assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
+
+    // clean up
+    state::remove_shard_dir(&shard);
 }
 
 //FIXME: Finish state diff unittest. Current problem: Set balance of test account
 fn test_create_state_diff() {
     // given
+
+    ensure_no_empty_shard_directory_exists();
 
     // create top pool
     unsafe { rpc::worker_api_direct::initialize_pool() };
@@ -1525,16 +1524,9 @@ fn test_create_state_diff() {
     );
     let _rsa_pair = rsa3072::unseal_pair().unwrap();
 
-    // ensure that state exists
-    let mut state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    // ensure state starts at 0..
-    //Stf::update_last_block_hash(&mut state, H256::default());
-    Stf::update_block_number(&mut state, 0);
+    // ensure that state starts empty
+    state::init_shard(&shard).unwrap();
+    let state = Stf::init_state();
 
     // create accounts
     let signer_without_money = ed25519::unseal_pair().unwrap();
@@ -1610,20 +1602,11 @@ fn test_create_state_diff() {
     let new_block_number =
         substratee_stf::sgx::StfBlockNumber::decode(&mut new_block_number_encoded.as_slice())
             .unwrap();
-    /* // get block hash
-    let last_block_hash_key = substratee_stf::sgx::storage_value_key("Chain", "LastHash");
-    let new_last_block_hash_encoded = state_diff
-        .get(&last_block_hash_key)
-        .unwrap()
-        .as_ref()
-        .unwrap();
-    let new_last_block_hash =
-        substratee_stf::Hash::decode(&mut new_last_block_hash_encoded.as_slice()).unwrap();
-    let block_hash: H256 = blake2_256(&signed_blocks[0].block().encode()).into(); */
-
     assert_eq!(state_diff.len(), 3);
     assert_eq!(new_balance_acc_wo_money, 1000);
     assert_eq!(new_balance_acc_with_money, 1000);
     assert_eq!(new_block_number, 1);
-    //assert_eq!(new_last_block_hash, block_hash);
+
+    // clean up
+    state::remove_shard_dir(&shard);
 }
