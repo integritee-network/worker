@@ -154,6 +154,7 @@ fn read(path: &str) -> SgxResult<Vec<u8>> {
     Ok(bytes)
 }
 
+#[allow(unused)]
 fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
     debug!("plaintext data to be written: {:?}", bytes);
 

@@ -105,7 +105,6 @@ impl<Hash: hash::Hash + Eq + Clone + core::fmt::Debug> PoolRotator<Hash> {
 pub mod tests {
     use super::*;
     use crate::top_pool::primitives::TrustedOperationSource;
-    use substratee_stf::ShardIdentifier;
 
     type Hash = u64;
     type Ex = ();
@@ -179,7 +178,6 @@ pub mod tests {
 
     pub fn test_should_garbage_collect() {
         // given
-        let shard = ShardIdentifier::default();
         fn tx_with(i: u64, valid_till: u64) -> TrustedOperation<Hash, Ex> {
             let hash = i;
             TrustedOperation {

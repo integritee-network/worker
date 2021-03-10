@@ -32,10 +32,9 @@ extern crate sgx_tstd as std;
 
 use base58::ToBase58;
 
-use sgx_tunittest::*;
-use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
+use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, SgxResult};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
+use substrate_api_client::compose_extrinsic_offline;
 use substratee_node_primitives::ShieldFundsFn;
 use substratee_worker_primitives::block::{
     Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
@@ -52,14 +51,10 @@ use constants::{
 };
 
 use std::slice;
-use std::string::String;
 use std::vec::Vec;
 
 use core::ops::Deref;
-use ipfs::IpfsContent;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
 use std::sync::Arc;
 use std::sync::{SgxMutex, SgxMutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -78,10 +73,10 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
+use substratee_stf::State as StfState;
 use substratee_stf::{
     AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_stf::{State as StfState, StateTypeDiff as StfStateTypeDiff};
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::worker_api_direct;

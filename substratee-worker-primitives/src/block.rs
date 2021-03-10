@@ -129,11 +129,11 @@ impl Block {
 
         // create block
         Block {
-            block_number: block_number,
-            parent_hash: parent_hash,
+            block_number,
+            parent_hash,
             timestamp: now,
-            layer_one_head: layer_one_head,
-            signed_top_hashes: signed_top_hashes,
+            layer_one_head,
+            signed_top_hashes,
             shard_id: shard,
             block_author: author,
             state_payload: encrypted_payload,

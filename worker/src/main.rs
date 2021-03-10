@@ -21,10 +21,6 @@ use std::path::Path;
 use std::slice;
 use std::str;
 use std::sync::{
-    atomic::{AtomicPtr, Ordering},
-    Arc,
-};
-use std::sync::{
     mpsc::{channel, Sender},
     Mutex,
 };
@@ -337,7 +333,7 @@ fn worker(
         println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
     }
 
-    let mut latest_head = init_chain_relay(eid, &api);
+    let latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
@@ -361,7 +357,7 @@ fn worker(
         })
         .unwrap();
 
-    let api3 = api.clone();
+    let api3 = api;
     let sender3 = sender.clone();
     let _block_subscriber = thread::Builder::new()
         .name("block_subscriber".to_owned())
@@ -595,7 +591,7 @@ pub fn produce_blocks(
     let tee_accountid = enclave_account(eid);
 
     // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
-    let mut i = if (curr_head.block.header.hash() == last_synced_head.hash()) {
+    let mut i = if curr_head.block.header.hash() == last_synced_head.hash() {
         curr_head.block.header.number as usize
     } else {
         blocks_to_sync[0].block.header.number as usize

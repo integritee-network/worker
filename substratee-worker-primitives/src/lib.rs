@@ -6,8 +6,6 @@ pub mod block;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "std")]
-use serde_json;
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use sp_core::H256;
@@ -17,7 +15,7 @@ pub type BlockHash = H256;
 pub type BlockNumber = u64;
 pub type ShardIdentifier = H256;
 
-use sp_core::ed25519::Signature;
+//use sp_core::ed25519::Signature;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum DirectCallStatus {
@@ -69,7 +67,7 @@ impl RpcReturnValue {
         Self {
             value: val,
             do_watch: watch,
-            status: status,
+            status,
             //signature: sign,
         }
     }
@@ -97,7 +95,7 @@ impl RpcRequest {
     pub fn compose_jsonrpc_call(method: String, data: Vec<u8>) -> String {
         let direct_invocation_call = RpcRequest {
             jsonrpc: "2.0".to_owned(),
-            method: method,
+            method,
             params: data,
             id: 1,
         };

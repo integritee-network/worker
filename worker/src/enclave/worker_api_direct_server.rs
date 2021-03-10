@@ -88,7 +88,7 @@ pub fn start_worker_api_direct_server(addr: String, eid: sgx_enclave_id_t) {
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
             let request = DirectWsServerRequest::new(self.client.clone(), msg.to_string());
-            if let Err(_) = handle_direct_invocation_request(request) {
+            if handle_direct_invocation_request(request).is_err() {
                 error!("direct invocation call was not successful");
             }
             Ok(())
