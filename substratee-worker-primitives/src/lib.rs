@@ -14,6 +14,8 @@ use sp_core::H256;
 use std::vec::Vec;
 
 pub type BlockHash = H256;
+pub type BlockNumber = u64;
+pub type ShardIdentifier = H256;
 
 use sp_core::ed25519::Signature;
 

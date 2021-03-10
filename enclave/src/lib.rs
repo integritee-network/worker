@@ -677,11 +677,11 @@ pub fn compose_block_and_confirmation(
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
-    let block_number = match Stf::get_block_number(state) {
+    let block_number = match Stf::get_sidechain_block_number(state) {
         Some(number) => number + 1,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
-    Stf::update_block_number(state, block_number.into());
+    Stf::update_sidechain_block_number(state, block_number.into());
 
     let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
     let parent_hash = match Stf::get_last_block_hash(state) {
@@ -760,9 +760,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     Stf::update_storage(&mut state, &update_map);
 
                     // block number is purged from the substrate state so it can't be read like other storage values
-                    // TODO: does this stay like this? (=block number sidechain equals block number of main chain?)
-                    // TODO: Parent hash update here aswell?
-                    // Stf::update_block_number(&mut state, header.number);
+                    Stf::update_layer_one_block_number(&mut state, header.number);
 
                     state::write(state, &s)?;
                 }
@@ -1256,7 +1254,7 @@ fn test_compose_block_and_confirmation() {
     // ensure state starts empty
     state::init_shard(&shard).unwrap();
     let mut state = Stf::init_state();
-    Stf::update_block_number(&mut state, 3);
+    Stf::update_sidechain_block_number(&mut state, 3);
 
     // when
     let (opaque_call, signed_block) = compose_block_and_confirmation(
@@ -1441,7 +1439,7 @@ fn test_create_block_and_confirmation_works() {
     // ensure state starts empty
     state::init_shard(&shard).unwrap();
     let mut state = Stf::init_state();
-    assert_eq!(Stf::get_block_number(&mut state).unwrap(), 0);
+    assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
     let latest_onchain_header = Header::new(
         1,
@@ -1600,7 +1598,7 @@ fn test_create_state_diff() {
     let block_number_key = substratee_stf::sgx::storage_value_key("System", "Number");
     let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
     let new_block_number =
-        substratee_stf::sgx::StfBlockNumber::decode(&mut new_block_number_encoded.as_slice())
+        substratee_worker_primitives::BlockNumber::decode(&mut new_block_number_encoded.as_slice())
             .unwrap();
     assert_eq!(state_diff.len(), 3);
     assert_eq!(new_balance_acc_wo_money, 1000);

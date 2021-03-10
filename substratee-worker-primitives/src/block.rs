@@ -1,3 +1,4 @@
+use crate::{BlockNumber, ShardIdentifier};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -5,12 +6,13 @@ use serde::{Deserialize, Serialize};
 use sgx_tstd as std;
 use std::vec::Vec;
 
-//TODO
+//FIXME: Should use blocknumber from sgxruntime
+// Problem: sgxruntime only with sgx, no std enviornment
+// but block.rs should be available in std?
 //use sgx_runtime::BlockNumber;
 use sp_core::crypto::{AccountId32, Pair};
 use sp_core::{ed25519, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use substratee_stf::ShardIdentifier;
 
 pub type Signature = MultiSignature;
 
@@ -65,7 +67,7 @@ impl StatePayload {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Block {
-    block_number: u64,
+    block_number: BlockNumber,
     parent_hash: H256,
     timestamp: i64,
     /// hash of the last header of block in layer one

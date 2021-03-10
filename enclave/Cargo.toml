@@ -85,7 +85,6 @@ features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.8.0"
 default-features = false
 optional = true
 package = "sp-io"
@@ -147,7 +146,6 @@ features = ["sgx"]
 
 [dependencies.sgx-externalities]
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.8.0"
 default-features = false
 
 [dependencies.substratee-node-primitives]
@@ -180,7 +178,7 @@ env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"] }
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-sp-io = { tag = "v0.8.0", git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sp-io = { git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 
 
 #[patch."https://github.com/scs/jsonrpc"]

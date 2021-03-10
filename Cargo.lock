@@ -3864,7 +3864,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.8.0#3a939127d028f059b45caf4bb6b3c82655fab448"
+source = "git+https://github.com/scs/sgx-runtime#2c744c8c9c7669be95bfcb554a69975741122c5f"
 dependencies = [
  "environmental",
  "log 0.4.11 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -3877,7 +3877,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.8.0#3a939127d028f059b45caf4bb6b3c82655fab448"
+source = "git+https://github.com/scs/sgx-runtime#2c744c8c9c7669be95bfcb554a69975741122c5f"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4483,7 +4483,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "2.1.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.8.0#3a939127d028f059b45caf4bb6b3c82655fab448"
+source = "git+https://github.com/scs/sgx-runtime#2c744c8c9c7669be95bfcb554a69975741122c5f"
 dependencies = [
  "environmental",
  "hash-db",
@@ -5015,6 +5015,7 @@ dependencies = [
  "substrate-api-client",
  "substrate-client-keystore",
  "substratee-node-runtime",
+ "substratee-worker-primitives",
 ]
 
 [[package]]
@@ -5086,7 +5087,6 @@ dependencies = [
  "sp-core",
  "sp-keyring",
  "sp-runtime",
- "substratee-stf",
 ]
 
 [[package]]
@@ -5502,7 +5502,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
