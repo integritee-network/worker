@@ -1069,6 +1069,10 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::pool::listener::test_should_trigger_broadcasted,
         top_pool::pool::listener::test_should_trigger_dropped,
         top_pool::pool::listener::test_should_handle_pruning_in_the_middle_of_import,*/
+        top_pool::rotator::tests::test_should_not_ban_if_not_stale,
+        top_pool::rotator::tests::test_should_ban_stale_extrinsic,
+        top_pool::rotator::tests::test_should_clear_banned,
+        top_pool::rotator::tests::test_should_garbage_collect,
         state::test_write_and_load_state_works,
         state::test_sgx_state_decode_encode_works,
         state::test_encrypt_decrypt_state_type_works,
