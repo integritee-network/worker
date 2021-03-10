@@ -35,6 +35,7 @@ impl Encode for OpaqueCall {
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
 pub type AccountInfo = system::AccountInfo<Index, AccountData>;
+pub type Nonce = u32;
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
@@ -189,6 +190,30 @@ impl Stf {
                 }
             } else {
                 error!("No Blockhash in state?");
+                None
+            }
+        })
+    }
+
+    pub fn update_nonce(ext: &mut State, nonce: Nonce) {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "Nonce");
+            sp_io::storage::set(&key, &nonce.encode());
+        });
+    }
+
+    pub fn get_nonce(ext: &mut State) -> Option<Nonce> {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "Nonce");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(nonce) = Nonce::decode(&mut infovec.as_slice()) {
+                    Some(nonce)
+                } else {
+                    error!("Nonce decode error");
+                    None
+                }
+            } else {
+                error!("No nonce in state?");
                 None
             }
         })
