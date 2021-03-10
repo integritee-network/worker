@@ -223,7 +223,7 @@ pub fn test_encrypt_decrypt_state_type_works() {
     assert_eq!(state.state, decoded);
 }
 
-use crate::ensure_no_empty_shard_directory_exists;
+use crate::tests::ensure_no_empty_shard_directory_exists;
 
 pub fn test_write_and_load_state_works() {
     // given
