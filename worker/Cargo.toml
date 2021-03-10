@@ -50,32 +50,31 @@ path = "worker-api"
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "v0.7.0"
 package = "substratee-node-runtime"
 
 [dependencies.sp-finality-grandpa]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.pallet-balances]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.frame-system]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.substratee-stf]
 path = "../stf"

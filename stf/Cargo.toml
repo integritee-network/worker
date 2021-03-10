@@ -22,7 +22,6 @@ std = [
     "base58",
     "sc-keystore",
     "system/std",
-    "metadata/std",
     "sp-core/std",
     "hex",
     "substrate-api-client",
@@ -56,65 +55,55 @@ features = ["derive"]
 default-features = false
 package = 'pallet-balances'
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.system]
 default-features = false
 package = 'frame-system'
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 
 [dependencies.support]
 default-features = false
 package = 'frame-support'
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
-
-[dependencies.metadata]
-git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
-package = "frame-metadata"
-default-features=false
+version = "3.0.0"
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-application-crypto]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 default-features = false
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.8.0"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 optional = true
 
 [dependencies.sgx-runtime]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.8.0"
 optional = true
 
 [dependencies.sgx-externalities]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.8.0"
 optional = true
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "v0.7.0"
 package = "substratee-node-runtime"
 optional = true
 
@@ -130,9 +119,9 @@ optional = true
 
 [dependencies.sc-keystore]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 optional = true
 
 [dev-dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"

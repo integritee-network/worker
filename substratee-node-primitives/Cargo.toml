@@ -18,7 +18,6 @@ optional = true
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-tag = "v0.7.0"
 package = "substratee-node-runtime"
 optional = true
 default-features = false
@@ -30,12 +29,12 @@ optional = true
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 default-features = false
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
-rev = "a208da16"
+version = "3.0.0"
 default-features = false
 optional = true
 
