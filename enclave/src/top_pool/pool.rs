@@ -551,11 +551,11 @@ impl ChainApi for TestApi {
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let hash = self.hash_and_length(&uxt).0;
-        let block_number = self.block_id_to_number(at).unwrap().unwrap() as u32;   
+        let block_number = self.block_id_to_number(at).unwrap().unwrap() as u32;
         let nonce: u32 = match uxt {
             StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
             _ => 0,
-        };    
+        };
         //let nonce = uxt.transfer().nonce;
 
         // This is used to control the test flow.
@@ -606,7 +606,7 @@ impl ChainApi for TestApi {
                 longevity: 3,
                 propagate: true,
             };
-            
+
             if self.clear_requirements.lock().unwrap().contains(&hash) {
                 operation.requires.clear();
             }
@@ -637,7 +637,7 @@ impl ChainApi for TestApi {
     ) -> Result<Option<SidechainBlockHash>, Self::Error> {
         Ok(match at {
             BlockId::Number(num) => Some(from_low_u64_to_be_h256(*num)).into(),
-            //BlockId::Number(num) => None,            
+            //BlockId::Number(num) => None,
             BlockId::Hash(_) => None,
         })
     }
@@ -656,7 +656,7 @@ impl ChainApi for TestApi {
 
 fn to_top(call: TrustedCall, nonce: u32) -> TrustedOperation {
     TrustedCallSigned::new(call, nonce, Default::default())
-        .into_trusted_operation(true)   
+        .into_trusted_operation(true)
 }
 
 fn test_pool() -> Pool<TestApi> {
@@ -1034,14 +1034,14 @@ mod listener {
         assert_eq!(pool.validated_pool().status(shard).ready, 1);
 
         // then
-        
-        /*let mut stream = futures::executor::block_on_stream(watcher.into_stream());        
+
+        /*let mut stream = futures::executor::block_on_stream(watcher.into_stream());
         assert_eq!(stream.next(), Some(TrustedOperationStatus::Ready));
         assert_eq!(stream.next(), Some(TrustedOperationStatus::Dropped));*/
     }
 
-    // not testable as unit test - not possible to spawn a thread within enclave 
-    // TODO: test as integration?    
+    // not testable as unit test - not possible to spawn a thread within enclave
+    // TODO: test as integration?
      pub fn test_should_handle_pruning_in_the_middle_of_import() {
         // given
         let shard = ShardIdentifier::default();
@@ -1093,5 +1093,5 @@ mod listener {
         is_ready.recv().unwrap(); // wait for finish
         assert_eq!(pool.validated_pool().status(shard).ready, 1);
         assert_eq!(pool.validated_pool().status(shard).future, 0);
-    } 
+    }
 }*/

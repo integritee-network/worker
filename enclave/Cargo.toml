@@ -110,11 +110,6 @@ git = "https://github.com/paritytech/substrate.git"
 version = "3.0.0"
 default-features = false
 
-[dependencies.substrate-test-runtime]
-git = "https://github.com/paritytech/substrate.git"
-version = "3.0.0"
-default-features = false
-
 [dependencies.sp-std]
 git = "https://github.com/paritytech/substrate.git"
 version = "3.0.0"
@@ -167,6 +162,12 @@ default-features = false
 [dependencies.jsonrpc-core]
 git = "https://github.com/scs/jsonrpc"
 branch = "no_std"
+default-features = false
+
+# dev dependencies
+[dependencies.substrate-test-runtime]
+git = "https://github.com/paritytech/substrate.git"
+version = "2.0.0"
 default-features = false
 
 [patch.crates-io]
