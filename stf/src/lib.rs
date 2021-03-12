@@ -53,6 +53,7 @@ pub static UNSHIELD: u8 = 5u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 
 pub type ShardIdentifier = H256;
+pub type Index = u64;
 
 #[derive(Clone)]
 pub enum KeyPair {

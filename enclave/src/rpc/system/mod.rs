@@ -109,7 +109,7 @@ where
 	fn nonce(&self, account: AccountId, shard: ShardIdentifier) -> FutureResult<Index> {
 		let get_nonce = || {
             if !state::exists(&shard) {
-                //FIXME: Is this an error? -> Issue error handling
+                //FIXME: Should this be an error? -> Issue error handling
                 error!("Shard does not exists");
                 return Err(());
             }
@@ -117,30 +117,19 @@ where
             let mut state = match state::load(&shard) {
                 Ok(s) => s,
                 Err(status) => {
-                    //FIXME: Is this an error? -> Issue error handling
+                    //FIXME: Should this be an error? -> Issue error handling
                     error!("Shard could not be loaded");
                     return Err(());
                 }
             };
 
-			//let api = self.client.runtime_api();
-			//let best = self.client.info().best_hash;
-			//let at = BlockId::hash(best);
-
-
-            /* .map_err(|e| RpcError {
-				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to query nonce.".into(),
-				data: Some(format!("{:?}", e).into()),
-			})?  */
-            // get nonce from state
 			let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, account.clone()) {
                 Decode::decode(nonce_encoded)
             } else {
-                0.into();
+                0.into()
             };
 
-			Ok(adjust_nonce(&*self.pool, account, nonce))
+			Ok(adjust_nonce(&*self.pool, account, nonce, shard))
 		};
 
 		Box::new(result(get_nonce()))
@@ -154,6 +143,7 @@ fn adjust_nonce<P, AccountId, Index>(
 	pool: &P,
 	account: AccountId,
 	nonce: Index,
+    shard: ShardIdentifier,
 ) -> Index where
 	P: TransactionPool,
 	AccountId: Clone + std::fmt::Display + Encode,
@@ -168,7 +158,7 @@ fn adjust_nonce<P, AccountId, Index>(
 	// that matches the current one.
 	let mut current_nonce = nonce.clone();
 	let mut current_tag = (account.clone(), nonce).encode();
-	for tx in pool.ready() {
+	for tx in pool.ready(shard) {
 		log::debug!(
 			target: "rpc",
 			"Current nonce to {}, checking {} vs {:?}",

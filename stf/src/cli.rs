@@ -15,7 +15,7 @@
 
 */
 
-use crate::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
+use crate::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation, Index};
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -31,8 +31,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
-    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation), -> Option<Vec<u8>>,
-   // get_nonce_via_direct: &'a dyn Fn(&ArgMatches<'_>) -> DirectWorkerApi,
+    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation) -> Option<Vec<u8>>,
+    get_nonce: &'a dyn Fn(&ArgMatches<'_>) -> Index,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {

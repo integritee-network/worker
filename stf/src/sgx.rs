@@ -19,7 +19,7 @@ use support::traits::UnfilteredDispatchable;
 
 use crate::{
     AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
-    TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+    TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD, Index,
 };
 
 /// Simple blob that holds a call in encoded format
@@ -32,10 +32,8 @@ impl Encode for OpaqueCall {
     }
 }
 
-type Index = u32;
 type AccountData = balances::AccountData<Balance>;
 pub type AccountInfo = system::AccountInfo<Index, AccountData>;
-pub type Nonce = u32;
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
