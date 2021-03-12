@@ -455,7 +455,7 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
 /// currently in the pool and if no transactions are found in the pool
 /// it fallbacks to query the index from the runtime (aka. state nonce).
 /// Encryptss the AccountId and gets the nonce from the worker rpc server
-fn get_nonce_direct(matches: &ArgMatches<'_>, account: AccountId) -> Option<Vec<u8>> {
+fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Option<Vec<u8>> {
     let (_operation_call_encoded, account_encrypted) = match encode_encrypt(matches, account)
     {
         Ok((encoded, encrypted)) => (encoded, encrypted),
@@ -481,7 +481,7 @@ fn get_nonce_direct(matches: &ArgMatches<'_>, account: AccountId) -> Option<Vec<
     let response_string = match direct_api.get(jsonrpc_call) {
         Ok(string) => string,
         Err(_) => panic!("Error sending direct invocation call"),
-    }
+    };
     // TODO
     let response: RpcResponse = serde_json::from_str(&response_string).unwrap();
     if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
@@ -499,6 +499,7 @@ fn get_nonce_direct(matches: &ArgMatches<'_>, account: AccountId) -> Option<Vec<
             };
         }
     };
+    None
 }
 
 

@@ -175,7 +175,7 @@ impl TrustedCall {
     pub fn sign(
         &self,
         pair: &KeyPair,
-        nonce: u32,
+        nonce: Index,
         mrenclave: &[u8; 32],
         shard: &ShardIdentifier,
     ) -> TrustedCallSigned {
@@ -236,12 +236,12 @@ impl TrustedGetterSigned {
 #[derive(Encode, Decode, Clone, Debug)]
 pub struct TrustedCallSigned {
     pub call: TrustedCall,
-    pub nonce: u32,
+    pub nonce: Index,
     pub signature: Signature,
 }
 
 impl TrustedCallSigned {
-    pub fn new(call: TrustedCall, nonce: u32, signature: Signature) -> Self {
+    pub fn new(call: TrustedCall, nonce: Index, signature: Signature) -> Self {
         TrustedCallSigned {
             call,
             nonce,

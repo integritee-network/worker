@@ -32,7 +32,7 @@ const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
     perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation) -> Option<Vec<u8>>,
-    get_nonce: &'a dyn Fn(&ArgMatches<'_>) -> Index,
+    get_nonce: &'a dyn Fn(&ArgMatches<'_>, &AccountId) -> Option<Vec<u8>>,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {
@@ -159,8 +159,8 @@ pub fn cmd<'a>(
                         amount
                     );
                     let (mrenclave, shard) = get_identifiers(matches);
-                    let nonce = 0; // FIXME: hard coded for now
-                                   // generate trusted call signed
+                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into()).unwrap();
+                    let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
                     let key_pair = sr25519_core::Pair::from(from.clone());
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()).into(),

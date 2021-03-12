@@ -30,7 +30,7 @@ use std::{fs, str};
 use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned};
+use substratee_stf::{KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned, Index};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -40,7 +40,7 @@ pub struct Message {
 }
 
 /// Who must be root account
-pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
+pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: Index) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
     let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
     info!("deserialized rsa key");
@@ -58,7 +58,7 @@ pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: 
     )
 }
 
-pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32) -> Vec<u8> {
+pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: Index) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
     let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
     info!("deserialized rsa key");
