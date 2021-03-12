@@ -195,30 +195,6 @@ impl Stf {
         })
     }
 
-    pub fn update_nonce(ext: &mut State, nonce: Nonce) {
-        ext.execute_with(|| {
-            let key = storage_value_key("System", "Nonce");
-            sp_io::storage::set(&key, &nonce.encode());
-        });
-    }
-
-    pub fn get_nonce(ext: &mut State) -> Option<Nonce> {
-        ext.execute_with(|| {
-            let key = storage_value_key("System", "Nonce");
-            if let Some(infovec) = sp_io::storage::get(&key) {
-                if let Ok(nonce) = Nonce::decode(&mut infovec.as_slice()) {
-                    Some(nonce)
-                } else {
-                    error!("Nonce decode error");
-                    None
-                }
-            } else {
-                error!("No nonce in state?");
-                None
-            }
-        })
-    }
-
     pub fn execute(
         ext: &mut State,
         call: TrustedCallSigned,
@@ -293,6 +269,19 @@ impl Stf {
             }
         })
     }
+
+    pub fn account_nonce(ext: &mut State, account: AccountId) -> Option<Vec<u8>> {
+        ext.execute_with(|account| {
+                if let Some(info) = get_account_info(&account) {
+                debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+                debug!("Account nonce is {}", info.nonce);
+                Some(info.nonce.encode())
+            } else {
+                None
+            }
+        })
+    }
+
 
     pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
         ext.execute_with(|| match getter {

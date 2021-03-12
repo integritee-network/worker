@@ -259,7 +259,7 @@ fn init_io_handler() -> IoHandler {
                     };
                     if let Ok(vec_of_operations) = author.pending_tops(shard) {
                         retrieved_operations.push(vec_of_operations);
-                    }           
+                    }
                 }
                 let json_value = RpcReturnValue {
                             do_watch: false,
@@ -271,14 +271,14 @@ fn init_io_handler() -> IoHandler {
             Err(e) => {
                 let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
                 Ok(json!(compute_encoded_return_error(error_msg)))
-            }            
+            }
         }
     });
 
     // author_getShieldingKey
     let rsa_pubkey_name: &str = "author_getShieldingKey";
     rpc_methods_vec.push(rsa_pubkey_name);
-    io.add_sync_method(rsa_pubkey_name, move |_: Params| {       
+    io.add_sync_method(rsa_pubkey_name, move |_: Params| {
         let rsa_pubkey = match rsa3072::unseal_pubkey() {
             Ok(key) => key,
             Err(status) => {
@@ -286,7 +286,7 @@ fn init_io_handler() -> IoHandler {
                 return Ok(json!(compute_encoded_return_error(error_msg)))
             },
         };
-    
+
         let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
             Ok(k) => k,
             Err(x) => {
@@ -297,10 +297,56 @@ fn init_io_handler() -> IoHandler {
             },
         };
         let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectCallStatus::Ok);
-        Ok(json!(json_value.encode()))            
+        Ok(json!(json_value.encode()))
     });
 
-    
+     // system_accountNextIndex
+     let system_account_next_index_name: &str = "system_accountNextIndex";
+     rpc_methods_vec.push(system_account_next_index_name);
+     io.add_sync_method(system_account_next_index_name, move |params: Params| {
+         match params.parse::<Vec<u8>>() {
+             Ok(encoded_params) => {
+                 // Aquire lock
+                 let &ref tx_pool_mutex = load_top_pool().unwrap();
+                 let tx_pool_guard = tx_pool_mutex.lock().unwrap();
+                 let tx_pool = Arc::new(tx_pool_guard.deref());
+                 let author = Author::new(tx_pool);
+
+                 match Request::decode(&mut encoded_params.as_slice()) {
+                     Ok(request) => {
+                         let shard: ShardIdentifier = request.shard;
+                         let encrypted_account: Vec<u8> = request.cyphertext;
+                         let result = async {
+                             system
+                                 .nonce(encrypted_account.clone(), shard)
+                                 .await
+                         };
+                         let response: Result<Hash, RpcError> = executor::block_on(result);
+                         let json_value = match response {
+                             Ok(hash_value) => {
+                                 RpcReturnValue {
+                                     do_watch: false,
+                                     value: hash_value.encode(),
+                                     status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                 }.encode()
+                             },
+                             Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
+                         };
+                         Ok(json!(json_value))
+                     }
+                     Err(_) => Ok(json!(compute_encoded_return_error(
+                         "Could not decode request".to_owned()
+                     ))),
+                 }
+             }
+             Err(e) => {
+                 let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+                 Ok(json!(compute_encoded_return_error(error_msg)))
+             }
+         }
+     });
+
+
     // chain_subscribeAllHeads
     let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
     rpc_methods_vec.push(chain_subscribe_all_heads_name);

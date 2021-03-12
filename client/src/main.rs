@@ -418,7 +418,7 @@ fn main() {
                     Ok(())
                 }),
         )
-        .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
+        .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation, &get_nonce_direct))
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
             Ok(())
@@ -448,6 +448,59 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
         TrustedOperation::get(getter) => get_state(matches, TrustedOperation::get(getter.clone())),
     }
 }
+
+/// Returns the next valid index (aka nonce) for given account.
+///
+/// This method takes into consideration all pending transactions
+/// currently in the pool and if no transactions are found in the pool
+/// it fallbacks to query the index from the runtime (aka. state nonce).
+/// Encryptss the AccountId and gets the nonce from the worker rpc server
+fn get_nonce_direct(matches: &ArgMatches<'_>, account: AccountId) -> Option<Vec<u8>> {
+    let (_operation_call_encoded, account_encrypted) = match encode_encrypt(matches, account)
+    {
+        Ok((encoded, encrypted)) => (encoded, encrypted),
+        Err(msg) => {
+            println!("[Error] {}", msg);
+            return None;
+        }
+    };
+    let shard = match read_shard(matches) {
+        Ok(shard) => shard,
+        Err(e) => panic!(e),
+    };
+
+    // compose jsonrpc call
+    let data = Request {
+        shard,
+        cyphertext: account_encrypted,
+    };
+    let rpc_method = "system_accountNextIndex".to_owned();
+    let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, data.encode());
+
+    let direct_api = get_worker_api_direct(matches);
+    let response_string = match direct_api.get(jsonrpc_call) {
+        Ok(string) => string,
+        Err(_) => panic!("Error sending direct invocation call"),
+    }
+    // TODO
+    let response: RpcResponse = serde_json::from_str(&response_string).unwrap();
+    if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+        if return_value.status == DirectCallStatus::Error {
+            println!(
+                "[Error] {}",
+                String::decode(&mut return_value.value.as_slice()).unwrap()
+            );
+            return None;
+        }
+        if !return_value.do_watch {
+            return match Option::decode(&mut return_value.value.as_slice()) {
+                Ok(value_opt) => value_opt,
+                Err(_) => panic!("Error when decoding response"),
+            };
+        }
+    };
+}
+
 
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u8>> {
     // TODO: ensure getter is signed?

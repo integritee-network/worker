@@ -31,7 +31,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
-    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation) -> Option<Vec<u8>>,
+    perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation), -> Option<Vec<u8>>,
+   // get_nonce_via_direct: &'a dyn Fn(&ArgMatches<'_>) -> DirectWorkerApi,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {
