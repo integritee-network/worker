@@ -53,6 +53,47 @@ use substratee_stf::{
     AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned, Index,
 };
 
+
+use crate::aes;
+use crate::attestation;
+use crate::ed25519;
+use crate::rpc;
+use crate::top_pool;
+
+use crate::{Timeout, WorkerRequest, WorkerResponse};
+use log::*;
+
+use sgx_tunittest::*;
+use sgx_types::{sgx_status_t, size_t};
+
+use substrate_api_client::utils::storage_key;
+use substratee_worker_primitives::block::StatePayload;
+
+use sp_core::{crypto::Pair, hashing::blake2_256, H256};
+
+use crate::constants::{BLOCK_CONFIRMED, GETTERTIMEOUT, SUBSRATEE_REGISTRY_MODULE};
+
+use std::string::String;
+
+use crate::ipfs::IpfsContent;
+use core::ops::Deref;
+use std::fs::File;
+use std::io::Read;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::untrusted::time::SystemTimeEx;
+
+use chain_relay::{Block, Header};
+use sp_runtime::traits::Header as HeaderT;
+
+use sgx_externalities::SgxExternalitiesTypeTrait;
+use substratee_stf::StateTypeDiff as StfStateTypeDiff;
+use jsonrpc_core::futures::executor;
+use sp_core::ed25519 as spEd25519;
+use substratee_stf::{TrustedGetter, TrustedOperation};
+
+use rpc::author::{Author, AuthorApi};
+use rpc::{api::FillerChainApi, basic_pool::BasicPool};
+
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, RpcError>;
 
@@ -199,142 +240,58 @@ fn adjust_nonce<P>(
 	current_nonce
 }
 
-/* #[cfg(test)]
 mod tests {
 	use super::*;
 
-	use futures::executor::block_on;
-	use substrate_test_runtime_client::{runtime::Transfer, AccountKeyring};
-	use sc_transaction_pool::BasicPool;
 	use sp_runtime::{ApplyExtrinsicResult, transaction_validity::{TransactionValidityError, InvalidTransaction}};
 
-	#[test]
-	fn should_return_next_nonce_for_some_account() {
-		sp_tracing::try_init_simple();
-
+	fn test_should_return_next_nonce_for_some_account() {
 		// given
-		let client = Arc::new(substrate_test_runtime_client::new());
-		let spawner = sp_core::testing::TaskExecutor::new();
-		let pool = BasicPool::new_full(
-			Default::default(),
-			true.into(),
-			None,
-			spawner,
-			client.clone(),
-		);
+		// create top pool
+		let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+		let tx_pool = BasicPool::create(Default::default(), api);
+
+		let shard = ShardIdentifier::default();
+		// ensure state starts empty
+		state::init_shard(&shard).unwrap();
+		Stf::init_state();
 
 		let source = sp_runtime::transaction_validity::TransactionSource::External;
-		let new_transaction = |nonce: u64| {
-			let t = Transfer {
-				from: AccountKeyring::Alice.into(),
-				to: AccountKeyring::Bob.into(),
-				amount: 5,
-				nonce,
-			};
-			t.into_signed_tx()
+
+		// create trusted call signed
+		let signer_pair = ed25519::unseal_pair().unwrap();
+		// encrypt account
+		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+		let mut encrypted_account: Vec<u8> = Vec::new();
+		rsa_pubkey
+			.encrypt_buffer(&trusted_operation_call.encode(), &mut encrypted_top_call)
+			.unwrap();
+
+		let encrypted_signer = signer_pair.encode();
+		let new_top_call = |nonce: Index| {
+			let mrenclave = [0u8; 32];
+			let call = TrustedCall::balance_set_balance(
+				signer_pair.public().into(),
+				signer_pair.public().into(),
+				42,
+				42,
+			);
+			let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+			let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
 		};
 		// Populate the pool
-		let ext0 = new_transaction(0);
-		block_on(pool.submit_one(&BlockId::number(0), source, ext0)).unwrap();
-		let ext1 = new_transaction(1);
-		block_on(pool.submit_one(&BlockId::number(0), source, ext1)).unwrap();
+		let top0 = new_top_call(0);
+		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top0)).unwrap();
+		let top1 = new_top_call(1);
+		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top1)).unwrap();
 
-		let accounts = FullSystem::new(client, pool, DenyUnsafe::Yes);
+		let accounts = FullSystem::new(Arc::new(&tx_pool));
 
 		// when
+
 		let nonce = accounts.nonce(AccountKeyring::Alice.into());
 
 		// then
-		assert_eq!(nonce.wait().unwrap(), 2);
+		assert_eq!(nonce.unwrap(), 2);
 	}
-
-	#[test]
-	fn dry_run_should_deny_unsafe() {
-		sp_tracing::try_init_simple();
-
-		// given
-		let client = Arc::new(substrate_test_runtime_client::new());
-		let spawner = sp_core::testing::TaskExecutor::new();
-		let pool = BasicPool::new_full(
-			Default::default(),
-			true.into(),
-			None,
-			spawner,
-			client.clone(),
-		);
-
-		let accounts = FullSystem::new(client, pool, DenyUnsafe::Yes);
-
-		// when
-		let res = accounts.dry_run(vec![].into(), None);
-
-		// then
-		assert_eq!(res.wait(), Err(RpcError::method_not_found()));
-	}
-
-	#[test]
-	fn dry_run_should_work() {
-		sp_tracing::try_init_simple();
-
-		// given
-		let client = Arc::new(substrate_test_runtime_client::new());
-		let spawner = sp_core::testing::TaskExecutor::new();
-		let pool = BasicPool::new_full(
-			Default::default(),
-			true.into(),
-			None,
-			spawner,
-			client.clone(),
-		);
-
-		let accounts = FullSystem::new(client, pool, DenyUnsafe::No);
-
-		let tx = Transfer {
-			from: AccountKeyring::Alice.into(),
-			to: AccountKeyring::Bob.into(),
-			amount: 5,
-			nonce: 0,
-		}.into_signed_tx();
-
-		// when
-		let res = accounts.dry_run(tx.encode().into(), None);
-
-		// then
-		let bytes = res.wait().unwrap().0;
-		let apply_res: ApplyExtrinsicResult = Decode::decode(&mut bytes.as_slice()).unwrap();
-		assert_eq!(apply_res, Ok(Ok(())));
-	}
-
-	#[test]
-	fn dry_run_should_indicate_error() {
-		sp_tracing::try_init_simple();
-
-		// given
-		let client = Arc::new(substrate_test_runtime_client::new());
-		let spawner = sp_core::testing::TaskExecutor::new();
-		let pool = BasicPool::new_full(
-			Default::default(),
-			true.into(),
-			None,
-			spawner,
-			client.clone(),
-		);
-
-		let accounts = FullSystem::new(client, pool, DenyUnsafe::No);
-
-		let tx = Transfer {
-			from: AccountKeyring::Alice.into(),
-			to: AccountKeyring::Bob.into(),
-			amount: 5,
-			nonce: 100,
-		}.into_signed_tx();
-
-		// when
-		let res = accounts.dry_run(tx.encode().into(), None);
-
-		// then
-		let bytes = res.wait().unwrap().0;
-		let apply_res: ApplyExtrinsicResult = Decode::decode(&mut bytes.as_slice()).unwrap();
-		assert_eq!(apply_res, Err(TransactionValidityError::Invalid(InvalidTransaction::Stale)));
-	}
-} */
+}
