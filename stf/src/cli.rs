@@ -161,6 +161,7 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into());
                     let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+                    debug!("got nonce: {:?}", nonce);
                     let key_pair = sr25519_core::Pair::from(from.clone());
                     let top: TrustedOperation = TrustedCall::balance_transfer(
                         sr25519_core::Public::from(from.public()).into(),
@@ -210,8 +211,9 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     let key_pair = sr25519_core::Pair::from(signer.clone());
 
-                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into());
+                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(who.public()).into());
                     let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+                    debug!("got nonce: {:?}", nonce);
 
                     let top: TrustedOperation = TrustedCall::balance_set_balance(
                         sr25519_core::Public::from(signer.public()).into(),
@@ -316,6 +318,7 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into());
                     let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+                    debug!("got nonce: {:?}", nonce);
                     let key_pair = sr25519_core::Pair::from(from.clone());
 
                     let top: TrustedOperation = TrustedCall::balance_unshield(
