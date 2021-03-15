@@ -29,7 +29,7 @@ use std::thread;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
 use substratee_worker_primitives::{
-    DirectCallStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus,
+    DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus,
 };
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
@@ -177,7 +177,7 @@ pub fn handle_direct_invocation_request(req: DirectWsServerRequest) -> Result<()
             RpcReturnValue::decode(&mut full_rpc_response.result.as_slice())
         {
             match result_of_rpc_response.status {
-                DirectCallStatus::TrustedOperationStatus(_) => {
+                DirectRequestStatus::TrustedOperationStatus(_) => {
                     if result_of_rpc_response.do_watch {
                         // start watching the call with the specific hash
                         if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice())
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
                 _ => {}
             };
             // update response
-            result.status = DirectCallStatus::TrustedOperationStatus(status_update);
+            result.status = DirectRequestStatus::TrustedOperationStatus(status_update);
             event.result = result.encode();
             client_event
                 .client
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn ocall_send_status(
             // create return value
             // TODO: Signature?
             let submitted =
-                DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted);
+                DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted);
             let result = RpcReturnValue::new(status_slice.to_vec(), false, submitted);
 
             // update response

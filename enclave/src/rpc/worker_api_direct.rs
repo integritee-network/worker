@@ -58,7 +58,7 @@ use chain_relay::Block;
 
 use substratee_node_primitives::Request;
 use substratee_worker_primitives::RpcReturnValue;
-use substratee_worker_primitives::{TrustedOperationStatus, DirectCallStatus};
+use substratee_worker_primitives::{TrustedOperationStatus, DirectRequestStatus};
 
 use crate::utils::write_slice_and_whitespace_pad;
 use crate::rsa3072;
@@ -135,7 +135,7 @@ fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
     let return_value = RpcReturnValue {
         value: error_msg.encode(),
         do_watch: false,
-        status: DirectCallStatus::Error,
+        status: DirectRequestStatus::Error,
     };
     return_value.encode()
 }
@@ -174,7 +174,7 @@ fn init_io_handler() -> IoHandler {
                                     RpcReturnValue {
                                         do_watch: true,
                                         value: hash_value.encode(),
-                                        status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                        status: DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
                                     }.encode()
                                 },
                                 Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
@@ -221,7 +221,7 @@ fn init_io_handler() -> IoHandler {
                                 RpcReturnValue {
                                     do_watch: false,
                                     value: hash_value.encode(),
-                                    status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                    status: DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
                                 }.encode()
                             },
                             Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
@@ -265,7 +265,7 @@ fn init_io_handler() -> IoHandler {
                 let json_value = RpcReturnValue {
                             do_watch: false,
                             value: retrieved_operations.encode(),
-                            status: DirectCallStatus::Ok,
+                            status: DirectRequestStatus::Ok,
                 };
                 Ok(json!(json_value.encode()))
             }
@@ -297,7 +297,7 @@ fn init_io_handler() -> IoHandler {
                 return Ok(json!(compute_encoded_return_error(error_msg)))
             },
         };
-        let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectCallStatus::Ok);
+        let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
         Ok(json!(json_value.encode()))
     });
 
@@ -315,14 +315,12 @@ fn init_io_handler() -> IoHandler {
 
                  match Request::decode(&mut encoded_params.as_slice()) {
                      Ok(request) => {
-                         let shard: ShardIdentifier = request.shard;
-                         let encrypted_account: Vec<u8> = request.cyphertext;
-                         let json_value = match system.nonce(encrypted_account.clone(), shard) {
+                         let json_value = match system.nonce(request.cyphertext, request.shard) {
                              Ok(index) => {
                                  RpcReturnValue {
                                      do_watch: false,
                                      value: index.encode(),
-                                     status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                     status: DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
                                  }.encode()
                              },
                              Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
@@ -335,7 +333,7 @@ fn init_io_handler() -> IoHandler {
                  }
              }
              Err(e) => {
-                 let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+                 let error_msg: String = format!("Could not parse parameter: {}", e);
                  Ok(json!(compute_encoded_return_error(error_msg)))
              }
          }

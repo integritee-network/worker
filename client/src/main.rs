@@ -64,7 +64,7 @@ use substrate_api_client::{
 use substrate_client_keystore::LocalKeystore;
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
-use substratee_worker_primitives::{DirectCallStatus, RpcRequest, RpcResponse, RpcReturnValue};
+use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -485,7 +485,7 @@ fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Option<Vec
     // TODO
     let response: RpcResponse = serde_json::from_str(&response_string).unwrap();
     if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
-        if return_value.status == DirectCallStatus::Error {
+        if return_value.status == DirectRequestStatus::Error {
             println!(
                 "[Error] {}",
                 String::decode(&mut return_value.value.as_slice()).unwrap()
@@ -538,7 +538,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
                 if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
-                    if return_value.status == DirectCallStatus::Error {
+                    if return_value.status == DirectRequestStatus::Error {
                         println!(
                             "[Error] {}",
                             String::decode(&mut return_value.value.as_slice()).unwrap()
@@ -704,13 +704,13 @@ fn send_direct_request(
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
                 if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
                     match return_value.status {
-                        DirectCallStatus::Error => {
+                        DirectRequestStatus::Error => {
                             if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
                                 println!("[Error] {}", value);
                             }
                             return None;
                         }
-                        DirectCallStatus::TrustedOperationStatus(status) => {
+                        DirectRequestStatus::TrustedOperationStatus(status) => {
                             if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
                                 println!("Trusted call {:?} is {:?}", value, status);
                             }

@@ -18,12 +18,12 @@ pub type ShardIdentifier = H256;
 //use sp_core::ed25519::Signature;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
-pub enum DirectCallStatus {
-    /// DirectCall was successfully executed
+pub enum DirectRequestStatus {
+    /// Direct request was successfully executed
     Ok,
     /// Trusted Call Status
     TrustedOperationStatus(TrustedOperationStatus),
-    /// DirectCall could not be executed
+    /// Direct request could not be executed
     Error,
 }
 
@@ -59,11 +59,11 @@ pub enum TrustedOperationStatus {
 pub struct RpcReturnValue {
     pub value: Vec<u8>,
     pub do_watch: bool,
-    pub status: DirectCallStatus,
+    pub status: DirectRequestStatus,
     //pub signature: Signature,
 }
 impl RpcReturnValue {
-    pub fn new(val: Vec<u8>, watch: bool, status: DirectCallStatus) -> Self {
+    pub fn new(val: Vec<u8>, watch: bool, status: DirectRequestStatus) -> Self {
         Self {
             value: val,
             do_watch: watch,
