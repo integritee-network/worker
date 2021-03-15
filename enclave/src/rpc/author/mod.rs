@@ -134,13 +134,10 @@ where
         shard: ShardIdentifier,
     ) -> FutureResult<TxHash<P>, RpcError> {
         // check if shard already exists
-        let shards = match state::list_shards() {
-            Ok(shards) => shards,
-            Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
-        };
-        if !shards.contains(&shard) {
-            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
-        }
+        if !state::exists(&shard) {
+			//FIXME: Should this be an error? -> Issue error handling
+			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
+		}
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
@@ -237,13 +234,10 @@ where
 
     fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError> {
         // check if shard already exists
-        let shards = match state::list_shards() {
-            Ok(shards) => shards,
-            Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
-        };
-        if !shards.contains(&shard) {
-            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
-        }
+        if !state::exists(&shard) {
+			//FIXME: Should this be an error? -> Issue error handling
+			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
+		}
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
