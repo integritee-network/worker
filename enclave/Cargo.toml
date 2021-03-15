@@ -189,4 +189,4 @@ sp-io = { tag = "v0.8.0", git = "https://github.com/scs/sgx-runtime", default-fe
 [patch."https://github.com/scs/sgx-runtime"]
 sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
 sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
-sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
+sgx-runtime = { path = "../../sgx-runtime/runtime"}
