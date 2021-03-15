@@ -32,7 +32,7 @@ const KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub fn cmd<'a>(
     perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation) -> Option<Vec<u8>>,
-    get_nonce: &'a dyn Fn(&ArgMatches<'_>, &AccountId) -> Option<Vec<u8>>,
+    get_nonce: &'a dyn Fn(&ArgMatches<'_>, &AccountId) -> Vec<u8>,
 ) -> MultiCommand<'a, str, str> {
     Commander::new()
         .options(|app| {
@@ -159,7 +159,7 @@ pub fn cmd<'a>(
                         amount
                     );
                     let (mrenclave, shard) = get_identifiers(matches);
-                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into()).unwrap();
+                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into());
                     let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
                     let key_pair = sr25519_core::Pair::from(from.clone());
                     let top: TrustedOperation = TrustedCall::balance_transfer(
@@ -210,7 +210,8 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     let key_pair = sr25519_core::Pair::from(signer.clone());
 
-                    let nonce = 0; // FIXME: hard coded for now
+                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into());
+                    let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
 
                     let top: TrustedOperation = TrustedCall::balance_set_balance(
                         sr25519_core::Public::from(signer.public()).into(),
@@ -313,7 +314,8 @@ pub fn cmd<'a>(
                     );
 
                     let (mrenclave, shard) = get_identifiers(matches);
-                    let nonce = 0; // FIXME: hard coded for now
+                    let encoded_nonce = get_nonce(matches, &sr25519_core::Public::from(from.public()).into());
+                    let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
                     let key_pair = sr25519_core::Pair::from(from.clone());
 
                     let top: TrustedOperation = TrustedCall::balance_unshield(

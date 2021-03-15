@@ -450,18 +450,12 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
 }
 
 /// Returns the next valid index (aka nonce) for given account.
-///
-/// This method takes into consideration all pending transactions
-/// currently in the pool and if no transactions are found in the pool
-/// it fallbacks to query the index from the runtime (aka. state nonce).
-/// Encryptss the AccountId and gets the nonce from the worker rpc server
-fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Option<Vec<u8>> {
-    let (_operation_call_encoded, account_encrypted) = match encode_encrypt(matches, account)
+fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Vec<u8> {
+    let (_encoded, account_encrypted) = match encode_encrypt(matches, account)
     {
         Ok((encoded, encrypted)) => (encoded, encrypted),
         Err(msg) => {
-            println!("[Error] {}", msg);
-            return None;
+            panic!("[Error] {}", msg);
         }
     };
     let shard = match read_shard(matches) {
@@ -482,24 +476,17 @@ fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Option<Vec
         Ok(string) => string,
         Err(_) => panic!("Error sending direct invocation call"),
     };
-    // TODO
     let response: RpcResponse = serde_json::from_str(&response_string).unwrap();
     if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
         if return_value.status == DirectRequestStatus::Error {
-            println!(
+            panic!(
                 "[Error] {}",
                 String::decode(&mut return_value.value.as_slice()).unwrap()
             );
-            return None;
         }
-        if !return_value.do_watch {
-            return match Option::decode(&mut return_value.value.as_slice()) {
-                Ok(value_opt) => value_opt,
-                Err(_) => panic!("Error when decoding response"),
-            };
-        }
+        return return_value.value
     };
-    None
+    panic!("[Error] Could not decode server response");
 }
 
 

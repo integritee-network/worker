@@ -320,7 +320,7 @@ fn init_io_handler() -> IoHandler {
                                  RpcReturnValue {
                                      do_watch: false,
                                      value: index.encode(),
-                                     status: DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                     status: DirectRequestStatus::Ok,
                                  }.encode()
                              },
                              Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
