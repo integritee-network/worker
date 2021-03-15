@@ -30,7 +30,7 @@ use crate::top_pool::{
     validated_pool::{ValidatedOperation, ValidatedPool},
 };
 
-use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation, Index};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Modification notification event stream type;
@@ -579,7 +579,7 @@ pub mod test {
     pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
 }
 
-const INVALID_NONCE: u32 = 254;
+const INVALID_NONCE: Index = 254;
 const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
 #[derive(Clone, Debug, Default)]
@@ -604,8 +604,8 @@ impl ChainApi for TestApi {
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let hash = self.hash_and_length(&uxt).0;
-        let block_number = self.block_id_to_number(at).unwrap().unwrap() as u32;
-        let nonce: u32 = match uxt {
+        let block_number = self.block_id_to_number(at).unwrap().unwrap() as u64;
+        let nonce: Index = match uxt {
             StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
             _ => 0,
         };
@@ -689,9 +689,8 @@ impl ChainApi for TestApi {
     }
 }
 
-fn to_top(call: TrustedCall, nonce: u32) -> TrustedOperation {
-    TrustedCallSigned::new(call, nonce, Default::default())
-        .into_trusted_operation(true)
+fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
+    TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
 }
 
 fn test_pool() -> Pool<TestApi> {

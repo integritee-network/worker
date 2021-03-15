@@ -269,7 +269,7 @@ impl Stf {
     }
 
     pub fn account_nonce(ext: &mut State, account: AccountId) -> Option<Vec<u8>> {
-        ext.execute_with(|account| {
+        ext.execute_with(|| {
                 if let Some(info) = get_account_info(&account) {
                 debug!("AccountInfo for {:x?} is {:?}", account.encode(), info);
                 debug!("Account nonce is {}", info.nonce);

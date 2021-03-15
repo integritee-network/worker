@@ -19,6 +19,7 @@
 
 pub extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
+use core::pin::Pin;
 
 use codec::{self, Codec, Decode, Encode};
 use sp_runtime::{
@@ -32,15 +33,10 @@ use log::*;
 
 use std::sync::Arc;
 use core::iter::Iterator;
-use jsonrpc_core::futures::future::{ready, TryFutureExt, result};
+use jsonrpc_core::futures::future::{ready, TryFutureExt, Future};
 use sp_runtime::generic;
 
-use substratee_stf::{
-    Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
-};
-
 use crate::rpc::error::Error as StateRpcError;
-use crate::rpc::error::{FutureResult, Result};
 use crate::top_pool::{
     error::Error as PoolError,
     error::IntoPoolError,
@@ -48,115 +44,141 @@ use crate::top_pool::{
         BlockHash, InPoolOperation, TrustedOperationPool, TrustedOperationSource, TxHash,
     },
 };
-use jsonrpc_core::Error as RpcError;
+use jsonrpc_core::{Error as RpcError, ErrorCode};
 
 use crate::rsa3072;
 use crate::state;
 
+use substratee_stf::{
+    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned, Index,
+};
+
+/// Future that resolves to account nonce.
+pub type Result<T> = core::result::Result<T, RpcError>;
 
 /// System RPC methods.
-pub trait SystemApi<BlockHash, AccountId, Index> {
+pub trait SystemApi {
 	/// Returns the next valid index (aka nonce) for given account.
 	///
 	/// This method takes into consideration all pending transactions
 	/// currently in the pool and if no transactions are found in the pool
 	/// it fallbacks to query the index from the runtime (aka. state nonce).
-	fn nonce(&self, account: AccountId) -> FutureResult<Index>;
+	fn nonce(&self, encrypted_account: Vec<u8>, shard: ShardIdentifier) -> Result<Index>;
 }
 
 /// Error type of this RPC api.
 pub enum Error {
 	/// The transaction was not decodable.
 	DecodeError,
-	/// The call to runtime failed.
-	RuntimeError,
+	/// The call to state failed.
+	StateError,
 }
 
 impl From<Error> for i64 {
 	fn from(e: Error) -> i64 {
 		match e {
-			Error::RuntimeError => 1,
+			Error::StateError => 1,
 			Error::DecodeError => 2,
 		}
 	}
 }
 
-impl<P: TransactionPool, C, B> FullSystem<P, C, B> {
+/// An implementation of System-specific RPC methods on full client.
+pub struct FullSystem<P> {
+	pool: Arc<P>,
+}
+
+impl<P> FullSystem<P> {
 	/// Create new `FullSystem` given client and transaction pool.
-	pub fn new(client: Arc<C>, pool: Arc<P>, deny_unsafe: DenyUnsafe,) -> Self {
+	pub fn new(pool: Arc<P>) -> Self {
 		FullSystem {
-			client,
 			pool,
-			deny_unsafe,
-			_marker: Default::default(),
 		}
 	}
 }
 
-impl<P, C, Block, AccountId, Index> SystemApi<<Block as traits::Block>::Hash, AccountId, Index>
-	for FullSystem<P, C, Block>
+impl<P> SystemApi for FullSystem<&P>
 where
-	C: sp_api::ProvideRuntimeApi<Block>,
-	C: HeaderBackend<Block>,
-	C: Send + Sync + 'static,
-	C::Api: AccountNonceApi<Block, AccountId, Index>,
-	C::Api: BlockBuilder<Block>,
-	P: TransactionPool + 'static,
-	Block: traits::Block,
-	AccountId: Clone + std::fmt::Display + Codec,
-	Index: Clone + std::fmt::Display + Codec + Send + traits::AtLeast32Bit + 'static,
+	P: TrustedOperationPool + 'static,
 {
-	fn nonce(&self, account: AccountId, shard: ShardIdentifier) -> FutureResult<Index> {
-		let get_nonce = || {
-            if !state::exists(&shard) {
-                //FIXME: Should this be an error? -> Issue error handling
-                error!("Shard does not exists");
-                return Err(());
-            }
+	fn nonce(&self, encrypted_account: Vec<u8>, shard: ShardIdentifier) -> Result<Index> {
+		if !state::exists(&shard) {
+			//FIXME: Should this be an error? -> Issue error handling
+			error!("Shard does not exists");
+			return Ok(0 as Index)
+		}
+		// decrypt account
+        let rsa_keypair = rsa3072::unseal_pair().unwrap();
+        let account_vec: Vec<u8> = match rsa3072::decrypt(&encrypted_account.as_slice(), &rsa_keypair) {
+            Ok(acc) => acc,
+            Err(e) => return Err(RpcError {
+				code: ErrorCode::ServerError(Error::DecodeError.into()),
+				message: "Unable to query nonce.".into(),
+				data: Some(format!("{:?}", e).into())
+			})
+        };
+        // decode account
+        let account = match AccountId::decode(&mut account_vec.as_slice()) {
+            Ok(acc) => acc,
+            Err(e) => return Err(RpcError {
+				code: ErrorCode::ServerError(Error::DecodeError.into()),
+				message: "Unable to query nonce.".into(),
+				data: Some(format!("{:?}", e).into())
+			})
+        };
 
-            let mut state = match state::load(&shard) {
-                Ok(s) => s,
-                Err(status) => {
-                    //FIXME: Should this be an error? -> Issue error handling
-                    error!("Shard could not be loaded");
-                    return Err(());
-                }
-            };
-
-			let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, account.clone()) {
-                Decode::decode(nonce_encoded)
-            } else {
-                0.into()
-            };
-
-			Ok(adjust_nonce(&*self.pool, account, nonce, shard))
+		let mut state = match state::load(&shard) {
+			Ok(s) => s,
+			Err(e) => {
+				//FIXME: Should this be an error? -> Issue error handling
+				error!("Shard could not be loaded");
+				return Err(RpcError {
+					code: ErrorCode::ServerError(Error::StateError.into()),
+					message: "Unable to query nonce of current state.".into(),
+					data: Some(format!("{:?}", e).into())
+				})
+			}
 		};
 
-		Box::new(result(get_nonce()))
+		let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, account.clone()) {
+			match Decode::decode(&mut nonce_encoded.as_slice()) {
+				Ok(index) => index,
+				Err(e) => {
+					error!("Could not decode index");
+					return Err(RpcError {
+						code: ErrorCode::ServerError(Error::DecodeError.into()),
+						message: "Unable to query nonce.".into(),
+						data: Some(format!("{:?}", e).into())
+					})
+				},
+			}
+		} else {
+			0 as Index
+		};
+
+		Ok(adjust_nonce(*self.pool, account, nonce, shard))
 	}
 }
 
 
 /// Adjust account nonce from state, so that tx with the nonce will be
 /// placed after all ready txpool transactions.
-fn adjust_nonce<P, AccountId, Index>(
+fn adjust_nonce<P>(
 	pool: &P,
 	account: AccountId,
 	nonce: Index,
     shard: ShardIdentifier,
 ) -> Index where
-	P: TransactionPool,
-	AccountId: Clone + std::fmt::Display + Encode,
-	Index: Clone + std::fmt::Display + Encode + traits::AtLeast32Bit + 'static,
+	P: TrustedOperationPool,
 {
-	log::debug!(target: "rpc", "State nonce for {}: {}", account, nonce);
+	log::debug!(target: "rpc", "State nonce for {:?}: {}", account, nonce);
 	// Now we need to query the transaction pool
 	// and find transactions originating from the same sender.
 	//
 	// Since extrinsics are opaque to us, we look for them using
 	// `provides` tag. And increment the nonce if we find a transaction
 	// that matches the current one.
-	let mut current_nonce = nonce.clone();
+	let mut current_nonce: Index = nonce.clone();
 	let mut current_tag = (account.clone(), nonce).encode();
 	for tx in pool.ready(shard) {
 		log::debug!(
@@ -169,7 +191,7 @@ fn adjust_nonce<P, AccountId, Index>(
 		// since transactions in `ready()` need to be ordered by nonce
 		// it's fine to continue with current iterator.
 		if tx.provides().get(0) == Some(&current_tag) {
-			current_nonce += traits::One::one();
+			current_nonce += 1;
 			current_tag = (account.clone(), current_nonce.clone()).encode();
 		}
 	}

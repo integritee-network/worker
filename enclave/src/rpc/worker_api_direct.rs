@@ -41,6 +41,7 @@ use crate::rpc::{
     api::FillerChainApi,
     author::{Author, AuthorApi},
     basic_pool::BasicPool,
+    system::{FullSystem, SystemApi},
 };
 
 use crate::top_pool::pool::Options as PoolOptions;
@@ -310,23 +311,17 @@ fn init_io_handler() -> IoHandler {
                  let &ref tx_pool_mutex = load_top_pool().unwrap();
                  let tx_pool_guard = tx_pool_mutex.lock().unwrap();
                  let tx_pool = Arc::new(tx_pool_guard.deref());
-                 let author = Author::new(tx_pool);
+                 let system = FullSystem::new(tx_pool);
 
                  match Request::decode(&mut encoded_params.as_slice()) {
                      Ok(request) => {
                          let shard: ShardIdentifier = request.shard;
                          let encrypted_account: Vec<u8> = request.cyphertext;
-                         let result = async {
-                             system
-                                 .nonce(encrypted_account.clone(), shard)
-                                 .await
-                         };
-                         let response: Result<Hash, RpcError> = executor::block_on(result);
-                         let json_value = match response {
-                             Ok(hash_value) => {
+                         let json_value = match system.nonce(encrypted_account.clone(), shard) {
+                             Ok(index) => {
                                  RpcReturnValue {
                                      do_watch: false,
-                                     value: hash_value.encode(),
+                                     value: index.encode(),
                                      status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
                                  }.encode()
                              },
