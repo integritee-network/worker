@@ -24,11 +24,11 @@ sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.13"
+tag = "v0.5.0"
 
 [dependencies.substrate-client-keystore]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.4.13"
+tag = "v0.5.0"
 
 [dependencies.serde]
 features = ["derive"]
@@ -38,7 +38,7 @@ version = "1.0"
 default-features = false
 package = "parity-scale-codec"
 features = ["derive"]
-version = "1.3.1"
+version = "2.0.0"
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
