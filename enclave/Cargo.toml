@@ -129,7 +129,7 @@ default-features = false
 git = "https://github.com/scs/substrate-api-client"
 tag = "v0.5.0"
 default-features = false
-features = ["full_crypto"]
+#features = ["full_crypto"]
 
 [dependencies.chain-relay]
 path = "chain_relay"
@@ -165,9 +165,14 @@ branch = "no_std"
 default-features = false
 
 # dev dependencies
-[dependencies.substrate-test-runtime]
+#[dependencies.substrate-test-runtime]
+#git = "https://github.com/paritytech/substrate.git"
+#version = "2.0.0"
+#default-features = false
+
+[dependencies.sp-application-crypto]
 git = "https://github.com/paritytech/substrate.git"
-version = "2.0.0"
+version = "3.0.0"
 default-features = false
 
 [patch.crates-io]

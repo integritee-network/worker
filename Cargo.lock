@@ -2819,7 +2819,6 @@ dependencies = [
  "arrayvec 0.5.2",
  "bitvec 0.17.4",
  "byte-slice-cast 0.3.5",
- "parity-scale-codec-derive 1.2.3",
  "serde",
 ]
 
@@ -2832,20 +2831,8 @@ dependencies = [
  "arrayvec 0.5.2",
  "bitvec 0.20.2",
  "byte-slice-cast 1.0.0",
- "parity-scale-codec-derive 2.0.1",
+ "parity-scale-codec-derive",
  "serde",
-]
-
-[[package]]
-name = "parity-scale-codec-derive"
-version = "1.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c41512944b1faff334a5f1b9447611bf4ef40638ccb6328173dacefb338e878c"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote 1.0.9",
- "syn 1.0.64",
 ]
 
 [[package]]
@@ -4038,7 +4025,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "parity-scale-codec 1.3.7",
+ "parity-scale-codec 2.0.1",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -4050,7 +4037,6 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -4596,7 +4582,7 @@ dependencies = [
  "environmental",
  "hash-db",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
- "parity-scale-codec 1.3.7",
+ "parity-scale-codec 2.0.1",
  "sgx-externalities",
  "sgx_tstd",
  "sgx_types",
@@ -5652,7 +5638,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.6.5",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

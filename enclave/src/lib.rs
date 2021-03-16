@@ -1056,14 +1056,14 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::base_pool::test_should_clear_future_queue,
         top_pool::base_pool::test_should_accept_future_transactions_when_explicitly_asked_to,
         top_pool::primitives::test_h256,
-        top_pool::pool::test_should_validate_and_import_transaction,
+        /* top_pool::pool::test_should_validate_and_import_transaction,
         //top_pool::pool::test_should_reject_if_temporarily_banned,
         top_pool::pool::test_should_notify_about_pool_events,
         //top_pool::pool::test_should_clear_stale_transactions,
         //top_pool::pool::test_should_ban_mined_transactions,
         //top_pool::pool::test_should_limit_futures,
         top_pool::pool::test_should_error_if_reject_immediately,
-        top_pool::pool::test_should_reject_transactions_with_no_provides,
+        top_pool::pool::test_should_reject_transactions_with_no_provides, */
         /*top_pool::pool::listener::test_should_trigger_ready_and_finalized,
         top_pool::pool::listener::test_should_trigger_ready_and_finalized_when_pruning_via_hash,
         top_pool::pool::listener::test_should_trigger_future_and_ready_after_promoted,
@@ -1094,12 +1094,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 use jsonrpc_core::futures::executor;
 use sp_core::ed25519 as spEd25519;
 use substratee_stf::{TrustedGetter, TrustedOperation};
-/// tests
-//use substrate_test_runtime::{AccountId};
-//use crate::top_pool::base_pool::Limit;
-//use std::sync::SgxMutex as Mutex;
-//use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
-//use top_pool::primitives::from_low_u64_to_be_h256;
 
 fn test_ocall_read_write_ipfs() {
     info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
