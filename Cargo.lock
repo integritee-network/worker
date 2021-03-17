@@ -5066,7 +5066,7 @@ dependencies = [
  "base58",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 2.0.1",
- "primitive-types 0.6.2",
+ "primitive-types 0.9.0",
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
@@ -5156,7 +5156,7 @@ dependencies = [
  "multihash 0.8.0",
  "pallet-balances",
  "parity-scale-codec 2.0.1",
- "primitive-types 0.6.2",
+ "primitive-types 0.9.0",
  "rust-crypto",
  "serde",
  "serde_derive",
@@ -5199,7 +5199,7 @@ version = "0.8.0"
 dependencies = [
  "chrono",
  "parity-scale-codec 2.0.1",
- "primitive-types 0.6.2",
+ "primitive-types 0.9.0",
  "serde",
  "serde_derive",
  "serde_json",
@@ -5638,7 +5638,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.6.5",
  "static_assertions",
 ]
 

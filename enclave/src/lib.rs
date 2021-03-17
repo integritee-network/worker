@@ -43,7 +43,7 @@ use substratee_worker_primitives::block::{
 use substratee_worker_primitives::BlockHash;
 
 use codec::{Decode, Encode};
-use sp_core::{crypto::Pair, hashing::blake2_256, H256};
+use sp_core::{crypto::Pair, blake2_256, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{
