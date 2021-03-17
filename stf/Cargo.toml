@@ -125,9 +125,3 @@ optional = true
 [dev-dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
 version = "3.0.0"
-
-
-[patch."https://github.com/scs/sgx-runtime"]
-sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
-sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
-sgx-runtime = { path = "../../sgx-runtime/runtime"}

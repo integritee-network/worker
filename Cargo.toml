@@ -13,6 +13,6 @@ members = [
 #pallet-substratee-registry = { path = "../pallet-substratee-registry" }
 
 [patch."https://github.com/scs/sgx-runtime"]
-sgx-runtime = { path = "../sgx-runtime/runtime"}
+sgx-runtime = { path = "../sgx-runtime/runtime" }
 sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io"}
 sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities"}

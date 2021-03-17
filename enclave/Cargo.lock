@@ -2886,8 +2886,3 @@ dependencies = [
  "syn 1.0.64",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "sp-io"
-version = "2.1.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.8.0#3a939127d028f059b45caf4bb6b3c82655fab448"
