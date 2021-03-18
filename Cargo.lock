@@ -4000,6 +4000,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
+source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#f3dc5faf2a48c0f1d6487397c6c5ed6b545fc325"
 dependencies = [
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -4012,6 +4013,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
+source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#f3dc5faf2a48c0f1d6487397c6c5ed6b545fc325"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4578,6 +4580,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "2.1.0"
+source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#f3dc5faf2a48c0f1d6487397c6c5ed6b545fc325"
 dependencies = [
  "environmental",
  "hash-db",
@@ -5638,7 +5641,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.6.5",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
