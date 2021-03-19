@@ -11,3 +11,8 @@ members = [
 
 #[patch."https://github.com/scs/pallet-substratee-registry.git"]
 #pallet-substratee-registry = { path = "../pallet-substratee-registry" }
+
+
+[patch."https://github.com/scs/substrate-api-client"]
+substrate-api-client = { path = "../substrate-api-client" }
+substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }

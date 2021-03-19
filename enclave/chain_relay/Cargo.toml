@@ -31,7 +31,7 @@ default-features = false
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
 branch = "substrate-v3-update-v2"
-#package = "sp-io"
+package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sp-core]
