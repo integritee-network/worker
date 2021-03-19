@@ -2478,6 +2478,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.5.0"
+source = "git+https://github.com/scs/substrate-api-client?tag=v0.5.0#a08d8ae8017535051975f5a7ff20bd93d35e4eb3"
 dependencies = [
  "frame-metadata",
  "frame-support",
@@ -2872,7 +2873,3 @@ dependencies = [
  "syn 1.0.64",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "substrate-client-keystore"
-version = "0.1.0"
