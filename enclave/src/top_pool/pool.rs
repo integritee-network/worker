@@ -509,77 +509,75 @@ impl<B: ChainApi> Clone for Pool<B> {
     }
 }
 
-/*
 /// tests
 ///
 /// Extrinsic for test-runtime.
-#[derive(Clone, PartialEq, Eq, Encode, Decode, core::fmt::Debug)]
-pub enum Extrinsic {
-	IncludeData(Vec<u8>),
-	StorageChange(Vec<u8>, Option<Vec<u8>>),
-	OffchainIndexSet(Vec<u8>, Vec<u8>),
-	OffchainIndexClear(Vec<u8>),
-}
-
-impl ExtrinsicT for Extrinsic {
-	type Call = Extrinsic;
-	type SignaturePayload = ();
-
-	fn is_signed(&self) -> Option<bool> {
-		if let Extrinsic::IncludeData(_) = *self {
-			Some(false)
-		} else {
-			Some(true)
-		}
-	}
-
-	fn new(call: Self::Call, _signature_payload: Option<Self::SignaturePayload>) -> Option<Self> {
-		Some(call)
-	}
-}
 use std::collections::{HashSet};
 use jsonrpc_core::futures::executor::block_on;
 use jsonrpc_core::futures;
 use sp_runtime::{
-    traits::{Verify,  Extrinsic as ExtrinsicT},
+    traits::{Verify,  Extrinsic as ExtrinsicT, Hash},
     transaction_validity::{ValidTransaction, InvalidTransaction as InvalidTrustedOperation},
 };
 
-use sp_runtime::{
-    traits::{Hash as HashT, Header as HeaderT},
-};
 use codec::{Encode, Decode};
-//use substrate_test_runtime::{Block, H256, AccountId, Hashing};
 use crate::top_pool::base_pool::Limit;
 use std::sync::SgxMutex as Mutex;
 use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use super::primitives::from_low_u64_to_be_h256;
 use core::matches;
-use sgx_tcrypto::rsgx_sha256_slice;
-
+use sp_core::hash::H256;
 use sp_application_crypto::{ed25519};
 
-/// The signature type used by accounts/transactions.
-pub type AccountSignature = ed25519::Signature;
-/// An identifier for an account on this system.
-pub type AccountId = <AccountSignature as Verify>::Signer;
-/// A simple hash type for all our hashing.
-use sp_core::hash::H256;
-/// The hashing algorithm used.
-//pub type Hashing = BlakeTwo256;
-/// The block number type used in this runtime.
-pub type BlockNumber = u64;
-/// Index of a transaction.
-pub type Index = u64;
-/// The item of a block digest.
-pub type DigestItem = sp_runtime::generic::DigestItem<H256>;
-/// The digest of a block.
-pub type Digest = sp_runtime::generic::Digest<H256>;
-/// A test block.
-pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
-/// A test block's header.
-use chain_relay::{ Header};
-//pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
+
+pub mod test {
+    use super::*;
+
+    #[derive(Clone, PartialEq, Eq, Encode, Decode, core::fmt::Debug)]
+    pub enum Extrinsic {
+        IncludeData(Vec<u8>),
+        StorageChange(Vec<u8>, Option<Vec<u8>>),
+        OffchainIndexSet(Vec<u8>, Vec<u8>),
+        OffchainIndexClear(Vec<u8>),
+    }
+
+    impl ExtrinsicT for Extrinsic {
+        type Call = Extrinsic;
+        type SignaturePayload = ();
+
+        fn is_signed(&self) -> Option<bool> {
+            if let Extrinsic::IncludeData(_) = *self {
+                Some(false)
+            } else {
+                Some(true)
+            }
+        }
+
+        fn new(call: Self::Call, _signature_payload: Option<Self::SignaturePayload>) -> Option<Self> {
+            Some(call)
+        }
+    }
+
+    use sp_runtime::traits::BlakeTwo256;
+    /// The signature type used by accounts/transactions.
+    pub type AccountSignature = ed25519::Signature;
+    /// An identifier for an account on this system.
+    pub type AccountId = <AccountSignature as Verify>::Signer;
+     /// The hashing algorithm used.
+    pub type Hashing = BlakeTwo256;
+    /// The block number type used in this runtime.
+    pub type BlockNumber = u64;
+    /// Index of a transaction.
+    pub type Index = u64;
+    /// The item of a block digest.
+    pub type DigestItem = sp_runtime::generic::DigestItem<H256>;
+    /// The digest of a block.
+    pub type Digest = sp_runtime::generic::Digest<H256>;
+    /// A test block's header.
+    pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
+    /// A test block.
+    pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
+}
 
 const INVALID_NONCE: u32 = 254;
 const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
@@ -594,7 +592,7 @@ struct TestApi {
 }
 
 impl ChainApi for TestApi {
-    type Block = Block;
+    type Block = test::Block;
     type Error = error::Error;
     type ValidationFuture = futures::future::Ready<error::Result<TransactionValidity>>;
     type BodyFuture = futures::future::Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
@@ -612,7 +610,6 @@ impl ChainApi for TestApi {
             StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
             _ => 0,
         };
-        //let nonce = uxt.transfer().nonce;
 
         // This is used to control the test flow.
         if nonce > 0 {
@@ -627,30 +624,6 @@ impl ChainApi for TestApi {
         if self.invalidate.lock().unwrap().contains(&hash) {
             return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
         }
-
-        /* let mut operation = match uxt {
-            StfTrustedOperation::direct_call(call) => {
-                ValidTransaction {
-                    priority: 1 << 20,
-                    requires: vec![],
-                    provides: vec![vec![call.nonce as u8], call.signature.encode()],
-                    longevity: 3,
-                    propagate: true,
-                }
-            },
-            _ => return futures::future::ready(Ok(Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup))))
-        };
-
-
-        if self.clear_requirements.lock().unwrap().contains(&hash) {
-            operation.requires.clear();
-        }
-
-        if self.add_requirements.lock().unwrap().contains(&hash) {
-            operation.requires.push(vec![128]);
-        }
- *
-        futures::future::ready(Ok(Ok(operation)))*/
 
         futures::future::ready(if nonce < block_number {
             Ok(InvalidTrustedOperation::Stale.into())
@@ -702,10 +675,7 @@ impl ChainApi for TestApi {
     fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (BlockHash<Self>, usize) {
         let encoded = uxt.encode();
         let len = encoded.len();
-        //let hashed = <<Header as HeaderT>::Hashing>::hash_of(&encoded);
-       // (Hashing::hash_of(&encoded), len)
-       let hashed = rsgx_sha256_slice(&encoded).unwrap();
-       (hashed.into(), len)
+        (test::Hashing::hash_of(&encoded), len)
     }
 
     fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
@@ -729,8 +699,8 @@ pub fn test_should_validate_and_import_transaction() {
 
     // when
     let hash = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5
     ), 0), shard)).unwrap();
 
@@ -744,8 +714,8 @@ pub fn test_should_reject_if_temporarily_banned() {
     let pool = test_pool();
     let shard = ShardIdentifier::default();
     let top = to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ),0);
 
@@ -768,19 +738,19 @@ pub fn test_should_notify_about_pool_events() {
 
         // when
         let hash0 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-            AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-            AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+            test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+            test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
             5
         ), 0), shard)).unwrap();
         let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-            AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-            AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+            test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+            test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
             5
         ),1), shard)).unwrap();
         // future doesn't count
         let _hash = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-            AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-            AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+            test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+            test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
             5,
         ), 3), shard)).unwrap();
 
@@ -802,18 +772,18 @@ pub fn test_should_clear_stale_transactions() {
     let pool = test_pool();
     let shard = ShardIdentifier::default();
     let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ),0), shard)).unwrap();
     let hash2 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ) ,1), shard)).unwrap();
     let hash3 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 3), shard)).unwrap();
 
@@ -835,8 +805,8 @@ pub fn test_should_ban_mined_transactions() {
     let pool = test_pool();
     let shard = ShardIdentifier::default();
     let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 0), shard)).unwrap();
 
@@ -861,16 +831,16 @@ pub fn test_should_limit_futures() {
     }, TestApi::default().into());
 
     let hash1 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 1), shard)).unwrap();
     assert_eq!(pool.validated_pool().status(shard).future, 1);
 
     // when
     let hash2 = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 10), shard)).unwrap();
 
@@ -895,8 +865,8 @@ pub fn test_should_error_if_reject_immediately() {
 
     // when
     block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 1), shard)).unwrap_err();
 
@@ -912,8 +882,8 @@ pub fn test_should_reject_transactions_with_no_provides() {
 
     // when
     let err = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
-        AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-        AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+        test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), INVALID_NONCE), shard)).unwrap_err();
 
@@ -921,4 +891,4 @@ pub fn test_should_reject_transactions_with_no_provides() {
     assert_eq!(pool.validated_pool().status(shard).ready, 0);
     assert_eq!(pool.validated_pool().status(shard).future, 0);
     assert!(matches!(err, error::Error::NoTagsProvided));
-} */
+}

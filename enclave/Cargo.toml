@@ -164,12 +164,6 @@ git = "https://github.com/scs/jsonrpc"
 branch = "no_std_version_update"
 default-features = false
 
-# dev dependencies
-#[dependencies.substrate-test-runtime]
-#git = "https://github.com/paritytech/substrate.git"
-#version = "2.0.0"
-#default-features = false
-
 [dependencies.sp-application-crypto]
 git = "https://github.com/paritytech/substrate.git"
 version = "3.0.0"
