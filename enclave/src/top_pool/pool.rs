@@ -416,6 +416,7 @@ where
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
     ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
+        //FIXME: Nicer verify
         // we need a block number to compute tx validity
         //let block_number = self.resolve_block_number(at)?;
         // dummy blocknumber
@@ -454,7 +455,8 @@ where
             return (hash.clone(), ValidatedOperation::Invalid(hash, err.into()));
         }
 
-        // no runtime validation check for now. Issue is open.
+        //FIXME:
+        // no runtime validation check for now.
         let validation_result = self
             .validated_pool
             .api()

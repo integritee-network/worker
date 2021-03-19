@@ -163,7 +163,7 @@ pub enum TrustedCall {
 }
 
 impl TrustedCall {
-    fn account(&self) -> &AccountId {
+    pub fn account(&self) -> &AccountId {
         match self {
             TrustedCall::balance_set_balance(account, _, _, _) => account,
             TrustedCall::balance_transfer(account, _, _) => account,

@@ -240,12 +240,10 @@ fn adjust_nonce<P>(
 	current_nonce
 }
 
-mod tests {
+pub mod tests {
 	use super::*;
 
-	use sp_runtime::{ApplyExtrinsicResult, transaction_validity::{TransactionValidityError, InvalidTransaction}};
-
-	fn test_should_return_next_nonce_for_some_account() {
+	pub fn test_should_return_next_nonce_for_some_account() {
 		// given
 		// create top pool
 		let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
@@ -256,19 +254,21 @@ mod tests {
 		state::init_shard(&shard).unwrap();
 		Stf::init_state();
 
-		let source = sp_runtime::transaction_validity::TransactionSource::External;
+		// create account
+		let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
 
-		// create trusted call signed
-		let signer_pair = ed25519::unseal_pair().unwrap();
+		let source = TrustedOperationSource::External;
+
 		// encrypt account
 		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
 		let mut encrypted_account: Vec<u8> = Vec::new();
-		rsa_pubkey
-			.encrypt_buffer(&trusted_operation_call.encode(), &mut encrypted_top_call)
-			.unwrap();
+			rsa_pubkey
+				.encrypt_buffer(&pair_with_money.public().encode(), &mut encrypted_account)
+				.unwrap();
 
-		let encrypted_signer = signer_pair.encode();
+		// create top call function
 		let new_top_call = |nonce: Index| {
+			let signer_pair = ed25519::unseal_pair().unwrap();
 			let mrenclave = [0u8; 32];
 			let call = TrustedCall::balance_set_balance(
 				signer_pair.public().into(),
@@ -277,19 +277,18 @@ mod tests {
 				42,
 			);
 			let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
-			let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
+			signed_call.into_trusted_operation(true)
 		};
 		// Populate the pool
 		let top0 = new_top_call(0);
-		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top0)).unwrap();
+		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top0, shard)).unwrap();
 		let top1 = new_top_call(1);
-		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top1)).unwrap();
+		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top1, shard)).unwrap();
 
-		let accounts = FullSystem::new(Arc::new(&tx_pool));
+		let system = FullSystem::new(Arc::new(&tx_pool));
 
 		// when
-
-		let nonce = accounts.nonce(AccountKeyring::Alice.into());
+		let nonce = system.nonce(encrypted_account, shard);
 
 		// then
 		assert_eq!(nonce.unwrap(), 2);

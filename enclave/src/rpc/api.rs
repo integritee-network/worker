@@ -30,13 +30,14 @@ use sp_runtime::{
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
     transaction_validity::{
         TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
+        TransactionTag as Tag,
     },
 };
 
 use crate::top_pool::pool::{ChainApi, ExtrinsicHash, NumberFor};
 use crate::top_pool::primitives::TrustedOperationSource;
 
-use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation};
+use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation, AccountId};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
@@ -53,6 +54,13 @@ impl<Block> FillerChainApi<Block> {
             _marker: Default::default(),
         }
     }
+}
+
+fn to_tag(nonce: u64, from: AccountId) -> Tag {
+	let mut data = [0u8; 40];
+	data[..8].copy_from_slice(&nonce.to_le_bytes()[..]);
+	data[8..].copy_from_slice(&from.as_ref());
+	data.to_vec()
 }
 
 impl<Block> ChainApi for FillerChainApi<Block>
@@ -76,12 +84,22 @@ where
         uxt: StfTrustedOperation,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
-            StfTrustedOperation::direct_call(call) => ValidTransaction {
-                priority: 1 << 20,
-                requires: vec![],
-                provides: vec![vec![call.nonce as u8], call.signature.encode()],
-                longevity: 3,
-                propagate: true,
+            StfTrustedOperation::direct_call(signed_call) => {
+                let nonce = signed_call.nonce;
+                let from = signed_call.call.account();
+                let require_vec = if nonce > 1 {
+					vec![to_tag(nonce-1, from.clone())]
+				} else {
+                    vec![]
+                };
+
+                ValidTransaction {
+                    priority: 1 << 20,
+                    requires: require_vec,
+                    provides: vec![to_tag(nonce, from.clone())],
+                    longevity: 3,
+                    propagate: true,
+                }
             },
             StfTrustedOperation::get(getter) => match getter {
                 Getter::public(_) => {
