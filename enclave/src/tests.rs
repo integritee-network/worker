@@ -60,7 +60,7 @@ use sp_core::ed25519 as spEd25519;
 use substratee_stf::{TrustedGetter, TrustedOperation};
 
 use rpc::author::{Author, AuthorApi};
-use rpc::{api::FillerChainApi, basic_pool::BasicPool};
+use rpc::{api::SideChainApi, basic_pool::BasicPool};
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -96,10 +96,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::rotator::tests::test_should_ban_stale_extrinsic,
         top_pool::rotator::tests::test_should_clear_banned,
         top_pool::rotator::tests::test_should_garbage_collect,
+        top_pool::tracked_map::tests::test_basic,
         state::test_write_and_load_state_works,
         state::test_sgx_state_decode_encode_works,
         state::test_encrypt_decrypt_state_type_works,
         rpc::system::tests::test_should_return_next_nonce_for_some_account,
+        rpc::api::tests::test_validate_transaction_works,
         test_time_is_overdue,
         test_time_is_not_overdue,
         test_compose_block_and_confirmation,
@@ -273,7 +275,7 @@ fn test_submit_trusted_call_to_top_pool() {
     // given
 
     // create top pool
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
 
@@ -320,7 +322,7 @@ fn test_submit_trusted_getter_to_top_pool() {
     // given
 
     // create top pool
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
 
@@ -360,7 +362,7 @@ fn test_differentiate_getter_and_call_works() {
     // given
 
     // create top pool
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+    let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
     let tx_pool = BasicPool::create(Default::default(), api);
     let author = Author::new(Arc::new(&tx_pool));
     // create trusted getter signed

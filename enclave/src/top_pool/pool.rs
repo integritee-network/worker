@@ -67,9 +67,9 @@ pub trait ChainApi: Send + Sync {
     /// Verify extrinsic at given block.
     fn validate_transaction(
         &self,
-        at: &BlockId<Self::Block>,
         source: TrustedOperationSource,
         uxt: StfTrustedOperation,
+        shard: ShardIdentifier,
     ) -> Self::ValidationFuture;
 
     /// Returns a block number given the block id.
@@ -304,9 +304,9 @@ where
                         .validated_pool
                         .api()
                         .validate_transaction(
-                            parent,
                             TrustedOperationSource::InBlock,
                             extrinsic.clone(),
+                            shard,
                         )
                         .await;
 
@@ -460,7 +460,7 @@ where
         let validation_result = self
             .validated_pool
             .api()
-            .validate_transaction(block_id, source, xt.clone())
+            .validate_transaction(source, xt.clone(), shard)
             .await;
 
         let status = match validation_result {
@@ -601,12 +601,11 @@ impl ChainApi for TestApi {
     /// Verify extrinsic at given block.
     fn validate_transaction(
         &self,
-        at: &BlockId<Self::Block>,
         _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
+        shard: ShardIdentifier,
     ) -> Self::ValidationFuture {
         let hash = self.hash_and_length(&uxt).0;
-        let block_number = self.block_id_to_number(at).unwrap().unwrap() as u64;
         let nonce: Index = match uxt {
             StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
             _ => 0,
@@ -625,12 +624,13 @@ impl ChainApi for TestApi {
         if self.invalidate.lock().unwrap().contains(&hash) {
             return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
         }
-        futures::future::ready(if nonce < block_number {
+
+        futures::future::ready(if nonce < 3 {
             Ok(InvalidTrustedOperation::Stale.into())
         } else {
             let mut operation = ValidTransaction {
                 priority: 4,
-                requires: if nonce > block_number {
+                requires: if nonce > 3 {
                     vec![vec![nonce as u8 - 1]]
                 } else {
                     vec![]

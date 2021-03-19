@@ -80,7 +80,7 @@ use substratee_stf::{
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::worker_api_direct;
-use rpc::{api::FillerChainApi, basic_pool::BasicPool};
+use rpc::{api::SideChainApi, basic_pool::BasicPool};
 
 mod aes;
 mod attestation;
@@ -108,7 +108,7 @@ pub enum Timeout {
 }
 
 pub type Hash = sp_core::H256;
-type BPool = BasicPool<FillerChainApi<Block>, Block>;
+type BPool = BasicPool<SideChainApi<Block>, Block>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {

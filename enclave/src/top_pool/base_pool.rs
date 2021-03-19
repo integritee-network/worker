@@ -89,7 +89,6 @@ pub struct PruneStatus<Hash, Ex> {
 }
 
 /// Immutable operation
-#[cfg_attr(test, derive(Clone))]
 #[derive(PartialEq, Eq, Clone)]
 pub struct TrustedOperation<Hash, Extrinsic> {
     /// Raw extrinsic representing that operation.

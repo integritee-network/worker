@@ -38,7 +38,7 @@ use codec::{Decode, Encode};
 use log::*;
 
 use crate::rpc::{
-    api::FillerChainApi,
+    api::SideChainApi,
     author::{Author, AuthorApi},
     basic_pool::BasicPool,
     system::{FullSystem, SystemApi},
@@ -85,9 +85,9 @@ extern "C" {
 #[no_mangle]
 // initialise tx pool and store within static atomic pointer
 pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
-    let api = Arc::new(FillerChainApi::new());
+    let api = Arc::new(SideChainApi::new());
     let tx_pool = BasicPool::create(PoolOptions::default(), api);
-    let pool_ptr = Arc::new(SgxMutex::<BasicPool<FillerChainApi<Block>, Block>>::new(
+    let pool_ptr = Arc::new(SgxMutex::<BasicPool<SideChainApi<Block>, Block>>::new(
         tx_pool,
     ));
     let ptr = Arc::into_raw(pool_ptr);
@@ -96,9 +96,9 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>> {
+pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<SideChainApi<Block>, Block>>> {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst)
-        as *mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
+        as *mut SgxMutex<BasicPool<SideChainApi<Block>, Block>>;
     if ptr.is_null() {
         None
     } else {

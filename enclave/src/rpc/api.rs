@@ -21,7 +21,7 @@ extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 use log::*;
 
-use codec::Encode;
+use codec::{Encode, Decode};
 use jsonrpc_core::futures::future::{ready, Future, Ready};
 use std::{marker::PhantomData, pin::Pin};
 
@@ -29,41 +29,70 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
     transaction_validity::{
-        TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
-        TransactionTag as Tag,
+        TransactionValidity, TransactionValidityError, UnknownTransaction,
+        InvalidTransaction, ValidTransaction,
     },
 };
 
 use crate::top_pool::pool::{ChainApi, ExtrinsicHash, NumberFor};
 use crate::top_pool::primitives::TrustedOperationSource;
+use crate::state;
 
-use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation, AccountId};
+use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation, AccountId,
+     Index, ShardIdentifier, Stf};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
 
+/// Future that resolves to account nonce.
+pub type Result<T> = core::result::Result<T, ()>;
+
 /// The operation pool logic for full client.
-pub struct FillerChainApi<Block> {
+pub struct SideChainApi<Block> {
     _marker: PhantomData<Block>,
 }
 
-impl<Block> FillerChainApi<Block> {
+impl<Block> SideChainApi<Block> {
     /// Create new operation pool logic.
     pub fn new() -> Self {
-        FillerChainApi {
+        SideChainApi {
             _marker: Default::default(),
         }
     }
 }
 
-fn to_tag(nonce: u64, from: AccountId) -> Tag {
-	let mut data = [0u8; 40];
-	data[..8].copy_from_slice(&nonce.to_le_bytes()[..]);
-	data[8..].copy_from_slice(&from.as_ref());
-	data.to_vec()
+fn expected_nonce(shard: ShardIdentifier, account: &AccountId) -> Result<Index> {
+    if !state::exists(&shard) {
+        //FIXME: Should this be an error? -> Issue error handling
+        error!("Shard does not exists");
+        return Ok(0 as Index)
+    }
+
+    let mut state = match state::load(&shard) {
+        Ok(s) => s,
+        Err(e) => {
+            //FIXME: Should this be an error? -> Issue error handling
+            error!("State could not be loaded");
+            return Err(())
+        }
+    };
+
+    let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, account.clone()) {
+        match Decode::decode(&mut nonce_encoded.as_slice()) {
+            Ok(index) => index,
+            Err(e) => {
+                error!("Could not decode index");
+                return Err(())
+            },
+        }
+    } else {
+        0 as Index
+    };
+
+    Ok(nonce)
 }
 
-impl<Block> ChainApi for FillerChainApi<Block>
+impl<Block> ChainApi for SideChainApi<Block>
 where
     Block: BlockT,
 {
@@ -79,25 +108,45 @@ where
 
     fn validate_transaction(
         &self,
-        _at: &BlockId<Self::Block>,
         _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
+        shard: ShardIdentifier,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
             StfTrustedOperation::direct_call(signed_call) => {
                 let nonce = signed_call.nonce;
                 let from = signed_call.call.account();
-                let require_vec = if nonce > 1 {
-					vec![to_tag(nonce-1, from.clone())]
-				} else {
+
+                let expected_nonce = match expected_nonce(shard, &from) {
+                    Ok(nonce) => nonce,
+                    Err(_) => return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
+                        UnknownTransaction::CannotLookup,
+                    ))))),
+                };
+                if nonce < expected_nonce {
+                    return Box::pin(ready(Ok(Err(TransactionValidityError::Invalid(
+                        InvalidTransaction::Stale
+                    )))))
+                }
+                if nonce > expected_nonce + 64 {
+                    return Box::pin(ready(Ok(Err(TransactionValidityError::Invalid(
+                        InvalidTransaction::Future
+                    )))))
+                }
+                let encode = |from: &AccountId, nonce: Index| (from, nonce).encode();
+                let requires = if nonce != expected_nonce && nonce > 0 {
+                    vec![encode(&from, nonce - 1)]
+                } else {
                     vec![]
                 };
 
+                let provides = vec![encode(&from, nonce)];
+
                 ValidTransaction {
                     priority: 1 << 20,
-                    requires: require_vec,
-                    provides: vec![to_tag(nonce, from.clone())],
-                    longevity: 3,
+                    requires: requires,
+                    provides: provides,
+                    longevity: 64,
                     propagate: true,
                 }
             },
@@ -111,7 +160,7 @@ where
                     priority: 1 << 20,
                     requires: vec![],
                     provides: vec![trusted_getter.signature.encode()],
-                    longevity: 3,
+                    longevity: 64,
                     propagate: true,
                 },
             },
@@ -155,4 +204,56 @@ where
             )
         })
     }
+}
+
+
+pub mod tests {
+	use super::*;
+    use substratee_stf::TrustedCall;
+    use sp_core::{ed25519 as spEd25519, Pair};
+    use jsonrpc_core::futures::executor;
+    use chain_relay::Block;
+
+	pub fn test_validate_transaction_works() {
+		// given
+		let api = SideChainApi::<Block>::new();
+	    let shard = ShardIdentifier::default();
+		// ensure state starts empty
+		state::init_shard(&shard).unwrap();
+		Stf::init_state();
+
+		// create account
+		let account_pair = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+        let account = account_pair.public();
+
+		let source = TrustedOperationSource::External;
+
+		// create top call function
+		let new_top_call = |nonce: Index| {
+			let mrenclave = [0u8; 32];
+			let call = TrustedCall::balance_set_balance(
+				account.into(),
+				account.into(),
+				42,
+				42,
+			);
+			let signed_call = call.sign(&account_pair.clone().into(), nonce, &mrenclave, &shard);
+			signed_call.into_trusted_operation(true)
+		};
+		let top0 = new_top_call(0);
+        let top1 = new_top_call(1);
+
+		// when
+        let validation_result = async { api
+            .validate_transaction(source, top0.clone(), shard)
+            .await };
+        let valid_transaction: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
+
+		// then
+		assert_eq!(valid_transaction.priority, 1<<20);
+        //assert_eq!(valid_transaction.requires, vec![]);
+        assert_eq!(valid_transaction.provides, vec![(&account,0 as Index).encode()]);
+        assert_eq!(valid_transaction.longevity, 64);
+        assert!(valid_transaction.propagate);
+	}
 }

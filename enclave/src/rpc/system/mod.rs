@@ -18,31 +18,21 @@
 //! System FRAME specific RPC methods.
 
 pub extern crate alloc;
-use alloc::{boxed::Box, vec::Vec};
-use core::pin::Pin;
-
-use codec::{self, Codec, Decode, Encode};
+use alloc::{vec::Vec};
+use codec::{self, Decode, Encode};
 use sp_runtime::{
 	generic::BlockId,
-	traits,
 };
-use sp_core::{hexdisplay::HexDisplay, Bytes};
+use sp_core::{hexdisplay::HexDisplay};
 
 
 use log::*;
 
 use std::sync::Arc;
 use core::iter::Iterator;
-use jsonrpc_core::futures::future::{ready, TryFutureExt, Future};
-use sp_runtime::generic;
 
-use crate::rpc::error::Error as StateRpcError;
 use crate::top_pool::{
-    error::Error as PoolError,
-    error::IntoPoolError,
-    primitives::{
-        BlockHash, InPoolOperation, TrustedOperationPool, TrustedOperationSource, TxHash,
-    },
+    primitives::{InPoolOperation, TrustedOperationPool, TrustedOperationSource},
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode};
 
@@ -50,49 +40,23 @@ use crate::rsa3072;
 use crate::state;
 
 use substratee_stf::{
-    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned, Index,
+    AccountId, ShardIdentifier, Stf, TrustedCall, Index,
 };
 
 
-use crate::aes;
-use crate::attestation;
 use crate::ed25519;
 use crate::rpc;
-use crate::top_pool;
 
-use crate::{Timeout, WorkerRequest, WorkerResponse};
-use log::*;
 
-use sgx_tunittest::*;
-use sgx_types::{sgx_status_t, size_t};
+use sp_core::{crypto::Pair};
 
-use substrate_api_client::utils::storage_key;
-use substratee_worker_primitives::block::StatePayload;
 
-use sp_core::{crypto::Pair, hashing::blake2_256, H256};
+use chain_relay::{Block};
 
-use crate::constants::{BLOCK_CONFIRMED, GETTERTIMEOUT, SUBSRATEE_REGISTRY_MODULE};
-
-use std::string::String;
-
-use crate::ipfs::IpfsContent;
-use core::ops::Deref;
-use std::fs::File;
-use std::io::Read;
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
-
-use chain_relay::{Block, Header};
-use sp_runtime::traits::Header as HeaderT;
-
-use sgx_externalities::SgxExternalitiesTypeTrait;
-use substratee_stf::StateTypeDiff as StfStateTypeDiff;
 use jsonrpc_core::futures::executor;
 use sp_core::ed25519 as spEd25519;
-use substratee_stf::{TrustedGetter, TrustedOperation};
 
-use rpc::author::{Author, AuthorApi};
-use rpc::{api::FillerChainApi, basic_pool::BasicPool};
+use rpc::{api::SideChainApi, basic_pool::BasicPool};
 
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, RpcError>;
@@ -246,7 +210,7 @@ pub mod tests {
 	pub fn test_should_return_next_nonce_for_some_account() {
 		// given
 		// create top pool
-		let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
+		let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
 		let tx_pool = BasicPool::create(Default::default(), api);
 
 		let shard = ShardIdentifier::default();
