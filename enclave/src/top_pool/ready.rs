@@ -658,10 +658,15 @@ fn remove_item<T: PartialEq>(vec: &mut Vec<T>, item: &T) {
         vec.swap_remove(idx);
     }
 }
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;    
+
+pub mod tests {
+    use super::*;
+
+    use crate::top_pool::{
+        primitives::{TrustedOperationSource as Source},
+    };
+
+
 
     fn tx(id: u8) -> TrustedOperation<u64, Vec<u8>> {
         TrustedOperation {
@@ -686,8 +691,7 @@ mod tests {
         ready.import(x, shard)
     }
 
-    #[test]
-    fn should_replace_transaction_that_provides_the_same_tag() {
+    pub fn test_should_replace_transaction_that_provides_the_same_tag() {
         // given
         let shard = ShardIdentifier::default();
         let mut ready = ReadyOperations::default();
@@ -715,8 +719,7 @@ mod tests {
         assert_eq!(ready.get(shard).count(), 1);
     }
 
-    #[test]
-    fn should_replace_multiple_transactions_correctly() {
+    pub fn test_should_replace_multiple_transactions_correctly() {
         // given
         let shard = ShardIdentifier::default();
         let mut ready = ReadyOperations::default();
@@ -753,8 +756,7 @@ mod tests {
         assert_eq!(ready.get(shard).count(), 3);
     }
 
-    #[test]
-    fn should_return_best_transactions_in_correct_order() {
+    pub fn test_should_return_best_transactions_in_correct_order() {
         // given
         let shard = ShardIdentifier::default();
         let mut ready = ReadyOperations::default();
@@ -799,26 +801,7 @@ mod tests {
         assert_eq!(it.next(), None);
     }
 
-    #[test]
-    /*fn can_report_heap_size() {
-        let mut ready = ReadyOperations::default();
-        let tx = TrustedOperation {
-            data: vec![5],
-            bytes: 1,
-            hash: 5,
-            priority: 1,
-            valid_till: u64::max_value(),	// use the max_value() here for testing.
-            requires: vec![],
-            provides: vec![],
-            propagate: true,
-            source: Source::External,
-        };
-        import(&mut ready, tx).unwrap();
-
-        assert!(parity_util_mem::malloc_size(&ready) > 200);
-    }*/
-    #[test]
-    fn should_order_refs() {
+    pub fn test_should_order_refs() {
         let mut id = 1;
         let mut with_priority = |priority, longevity| {
             id += 1;
@@ -859,4 +842,3 @@ mod tests {
         );
     }
 }
-*/

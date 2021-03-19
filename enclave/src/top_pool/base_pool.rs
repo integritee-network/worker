@@ -90,7 +90,7 @@ pub struct PruneStatus<Hash, Ex> {
 
 /// Immutable operation
 #[cfg_attr(test, derive(Clone))]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct TrustedOperation<Hash, Extrinsic> {
     /// Raw extrinsic representing that operation.
     pub data: Extrinsic,
@@ -784,7 +784,7 @@ pub fn test_should_promote_a_subgraph() {
     );
 }
 
-pub fn test_should_handle_a_cycle() {        
+pub fn test_should_handle_a_cycle() {
     // given
     let shard = ShardIdentifier::default();
     let mut pool = test_pool();
@@ -1269,7 +1269,7 @@ pub fn test_should_clear_future_queue() {
     assert_eq!(pool.future.len(shard), 0);
 }
 
-pub fn test_should_accept_future_transactions_when_explicitly_asked_to() {        
+pub fn test_should_accept_future_transactions_when_explicitly_asked_to() {
     // given
     let mut pool = test_pool();
     pool.reject_future_operations = true;
