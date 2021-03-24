@@ -33,6 +33,11 @@ use codec::{Compact, Decode, Encode};
 use my_node_runtime::Balance;
 #[cfg(feature = "sgx")]
 use sgx_runtime::Balance;
+#[cfg(feature = "std")]
+pub use my_node_runtime::Index;
+#[cfg(feature = "sgx")]
+pub use sgx_runtime::Index;
+
 use sp_core::crypto::AccountId32;
 //use sp_core::{Encode, Decode};
 use sp_core::{ed25519, sr25519, Pair, H256};
@@ -53,7 +58,7 @@ pub static UNSHIELD: u8 = 5u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 
 pub type ShardIdentifier = H256;
-pub type Index = u64;
+//pub type Index = u32;
 
 #[derive(Clone)]
 pub enum KeyPair {
