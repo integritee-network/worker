@@ -266,6 +266,7 @@ pub mod tests {
         assert_eq!(valid_transaction_two.longevity, 64);
         assert!(valid_transaction_two.propagate);
 
-
+        // clean up
+        state::remove_shard_dir(&shard);
 	}
 }

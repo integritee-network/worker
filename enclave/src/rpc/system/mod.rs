@@ -175,7 +175,7 @@ fn adjust_nonce<P>(
 ) -> Index where
 	P: TrustedOperationPool,
 {
-	debug!("State nonce for {:?}: {}", account.encode(), nonce);
+	debug!("State nonce: {}", nonce);
 	// Now we need to query the transaction pool
 	// and find transactions originating from the same sender.
 	//
@@ -263,5 +263,8 @@ pub mod tests {
 
 		// then
 		assert_eq!(nonce.unwrap(), 2);
+
+		// clean up
+		state::remove_shard_dir(&shard);
 	}
 }
