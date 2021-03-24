@@ -85,7 +85,6 @@ features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
 git = "https://github.com/scs/sgx-runtime"
-branch = "substrate-v3-update-v2"
 default-features = false
 optional = true
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
@@ -127,7 +126,6 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.5.0"
 default-features = false
 #features = ["full_crypto"]
 
@@ -141,7 +139,6 @@ features = ["sgx"]
 
 [dependencies.sgx-externalities]
 git = "https://github.com/scs/sgx-runtime"
-branch = "substrate-v3-update-v2"
 default-features = false
 
 [dependencies.substratee-node-primitives]
@@ -161,7 +158,7 @@ default-features = false
 
 [dependencies.jsonrpc-core]
 git = "https://github.com/scs/jsonrpc"
-branch = "no_std_version_update"
+branch = "no_std"
 default-features = false
 
 [dependencies.sp-application-crypto]
@@ -179,4 +176,4 @@ env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"] }
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-sp-io = {git = "https://github.com/scs/sgx-runtime", branch = "substrate-v3-update-v2", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sp-io = {git = "https://github.com/scs/sgx-runtime", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}

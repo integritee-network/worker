@@ -24,7 +24,6 @@ default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
-tag = "v0.5.0"
 optional = true
 
 [dependencies.sp-core]

@@ -945,7 +945,7 @@ dependencies = [
 [[package]]
 name = "jsonrpc-core"
 version = "16.1.0"
-source = "git+https://github.com/scs/jsonrpc?branch=no_std_version_update#823913433daaf164e8cbc1447ec2df9603483fd3"
+source = "git+https://github.com/scs/jsonrpc?branch=no_std#e5ee60bc30dedf513743843be2523dc384bbcae1"
 dependencies = [
  "futures 0.3.8",
  "log",
@@ -1810,7 +1810,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#a2c15f81eedb355ea8b2616e0f123c4229bfeaad"
+source = "git+https://github.com/scs/sgx-runtime#3638c9d23f107d9dae7b9e6643af93e27da517bf"
 dependencies = [
  "environmental",
  "log",
@@ -1823,7 +1823,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#a2c15f81eedb355ea8b2616e0f123c4229bfeaad"
+source = "git+https://github.com/scs/sgx-runtime#3638c9d23f107d9dae7b9e6643af93e27da517bf"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2263,7 +2263,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "3.1.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#a2c15f81eedb355ea8b2616e0f123c4229bfeaad"
+source = "git+https://github.com/scs/sgx-runtime#3638c9d23f107d9dae7b9e6643af93e27da517bf"
 dependencies = [
  "environmental",
  "hash-db",
@@ -2478,7 +2478,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.5.0"
-source = "git+https://github.com/scs/substrate-api-client?tag=v0.5.0#a08d8ae8017535051975f5a7ff20bd93d35e4eb3"
+source = "git+https://github.com/scs/substrate-api-client#b4ccb09405bb49b2609f20d5ef19db05834a5a02"
 dependencies = [
  "frame-metadata",
  "frame-support",

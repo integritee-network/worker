@@ -4000,7 +4000,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#a2c15f81eedb355ea8b2616e0f123c4229bfeaad"
+source = "git+https://github.com/scs/sgx-runtime#3638c9d23f107d9dae7b9e6643af93e27da517bf"
 dependencies = [
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -4013,7 +4013,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#a2c15f81eedb355ea8b2616e0f123c4229bfeaad"
+source = "git+https://github.com/scs/sgx-runtime#3638c9d23f107d9dae7b9e6643af93e27da517bf"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4604,7 +4604,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "3.1.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=substrate-v3-update-v2#a2c15f81eedb355ea8b2616e0f123c4229bfeaad"
+source = "git+https://github.com/scs/sgx-runtime#3638c9d23f107d9dae7b9e6643af93e27da517bf"
 dependencies = [
  "environmental",
  "hash-db",
@@ -4933,6 +4933,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.5.0"
+source = "git+https://github.com/scs/substrate-api-client#b4ccb09405bb49b2609f20d5ef19db05834a5a02"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
@@ -4982,6 +4983,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.1.0"
+source = "git+https://github.com/scs/substrate-api-client#b4ccb09405bb49b2609f20d5ef19db05834a5a02"
 dependencies = [
  "async-trait",
  "hex 0.4.2",
@@ -5639,7 +5641,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.6.5",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
