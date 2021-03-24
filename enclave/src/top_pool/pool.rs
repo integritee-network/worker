@@ -603,7 +603,7 @@ impl ChainApi for TestApi {
         &self,
         _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
-        shard: ShardIdentifier,
+        _shard: ShardIdentifier,
     ) -> Self::ValidationFuture {
         let hash = self.hash_and_length(&uxt).0;
         let nonce: Index = match uxt {
@@ -625,12 +625,12 @@ impl ChainApi for TestApi {
             return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
         }
 
-        futures::future::ready(if nonce < 3 {
+        futures::future::ready(if nonce > 254 {
             Ok(InvalidTrustedOperation::Stale.into())
         } else {
             let mut operation = ValidTransaction {
                 priority: 4,
-                requires: if nonce > 3 {
+                requires: if nonce > 0 {
                     vec![vec![nonce as u8 - 1]]
                 } else {
                     vec![]
