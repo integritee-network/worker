@@ -249,11 +249,23 @@ pub mod tests {
             .await };
         let valid_transaction: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
 
+        let validation_result = async { api
+            .validate_transaction(source, top1.clone(), shard)
+            .await };
+        let valid_transaction_two: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
+
 		// then
 		assert_eq!(valid_transaction.priority, 1<<20);
-        //assert_eq!(valid_transaction.requires, vec![]);
         assert_eq!(valid_transaction.provides, vec![(&account,0 as Index).encode()]);
         assert_eq!(valid_transaction.longevity, 64);
         assert!(valid_transaction.propagate);
+
+        assert_eq!(valid_transaction_two.priority, 1<<20);
+        assert_eq!(valid_transaction_two.requires, vec![(&account, 0 as Index).encode()]);
+        assert_eq!(valid_transaction_two.provides, vec![(&account, 1 as Index).encode()]);
+        assert_eq!(valid_transaction_two.longevity, 64);
+        assert!(valid_transaction_two.propagate);
+
+
 	}
 }
