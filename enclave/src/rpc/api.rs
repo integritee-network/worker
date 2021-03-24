@@ -133,14 +133,14 @@ where
                         InvalidTransaction::Future
                     )))))
                 }
-                let encode = |from: &AccountId, nonce: Index| (from, nonce).encode();
+                let encode = |from: AccountId, nonce: Index| (from, nonce).encode();
                 let requires = if nonce != expected_nonce && nonce > 0 {
-                    vec![encode(&from, nonce - 1)]
+                    vec![encode(from.clone(), nonce - 1)]
                 } else {
                     vec![]
                 };
 
-                let provides = vec![encode(&from, nonce)];
+                let provides = vec![encode(from.clone(), nonce)];
 
                 ValidTransaction {
                     priority: 1 << 20,
@@ -245,12 +245,12 @@ pub mod tests {
 
 		// when
         let validation_result = async { api
-            .validate_transaction(source, top0.clone(), shard)
+            .validate_transaction(source, top0, shard)
             .await };
         let valid_transaction: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
 
         let validation_result = async { api
-            .validate_transaction(source, top1.clone(), shard)
+            .validate_transaction(source, top1, shard)
             .await };
         let valid_transaction_two: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
 

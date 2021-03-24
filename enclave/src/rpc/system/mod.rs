@@ -160,8 +160,7 @@ where
 		} else {
 			0 as Index
 		};
-
-		Ok(adjust_nonce(*self.pool, account, nonce, shard))
+		Ok(adjust_nonce(self.pool.clone(), account, nonce, shard))
 	}
 }
 
@@ -169,14 +168,14 @@ where
 /// Adjust account nonce from state, so that tx with the nonce will be
 /// placed after all ready txpool transactions.
 fn adjust_nonce<P>(
-	pool: &P,
+	pool: Arc<&P>,
 	account: AccountId,
 	nonce: Index,
     shard: ShardIdentifier,
 ) -> Index where
 	P: TrustedOperationPool,
 {
-	log::debug!(target: "rpc", "State nonce for {:?}: {}", account, nonce);
+	debug!("State nonce for {:?}: {}", account.encode(), nonce);
 	// Now we need to query the transaction pool
 	// and find transactions originating from the same sender.
 	//
@@ -186,8 +185,7 @@ fn adjust_nonce<P>(
 	let mut current_nonce: Index = nonce.clone();
 	let mut current_tag = (account.clone(), nonce).encode();
 	for tx in pool.ready(shard) {
-		log::debug!(
-			target: "rpc",
+		debug!(
 			"Current nonce to {}, checking {} vs {:?}",
 			current_nonce,
 			HexDisplay::from(&current_tag),
@@ -219,7 +217,8 @@ pub mod tests {
 		Stf::init_state();
 
 		// create account
-		let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let signer_account = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let account = signer_account.public();
 
 		let source = TrustedOperationSource::External;
 
@@ -227,27 +226,35 @@ pub mod tests {
 		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
 		let mut encrypted_account: Vec<u8> = Vec::new();
 			rsa_pubkey
-				.encrypt_buffer(&pair_with_money.public().encode(), &mut encrypted_account)
+				.encrypt_buffer(&account.encode(), &mut encrypted_account)
 				.unwrap();
 
 		// create top call function
 		let new_top_call = |nonce: Index| {
-			let signer_pair = ed25519::unseal_pair().unwrap();
 			let mrenclave = [0u8; 32];
 			let call = TrustedCall::balance_set_balance(
-				signer_pair.public().into(),
-				signer_pair.public().into(),
+				account.into(),
+				account.into(),
 				42,
 				42,
 			);
-			let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+			let signed_call = call.sign(&signer_account.clone().into(), nonce, &mrenclave, &shard);
 			signed_call.into_trusted_operation(true)
 		};
 		// Populate the pool
 		let top0 = new_top_call(0);
-		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top0, shard)).unwrap();
+		let hash1 = executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top0, shard)).unwrap();
 		let top1 = new_top_call(1);
-		executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top1, shard)).unwrap();
+		let hash2 = executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top1, shard)).unwrap();
+		// future doesnt count
+		let top3 = new_top_call(3);
+		let _hash3 = executor::block_on(tx_pool.submit_one(&BlockId::number(0), source, top3, shard)).unwrap();
+		assert_eq!(
+			tx_pool.ready(shard)
+				.map(|v| v.hash)
+				.collect::<Vec<_>>(),
+			vec![hash1, hash2]
+		);
 
 		let system = FullSystem::new(Arc::new(&tx_pool));
 
