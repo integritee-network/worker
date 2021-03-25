@@ -32,10 +32,9 @@ extern crate sgx_tstd as std;
 
 use base58::ToBase58;
 
-use sgx_tunittest::*;
-use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, size_t, SgxResult};
+use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, SgxResult};
 
-use substrate_api_client::{compose_extrinsic_offline, utils::storage_key};
+use substrate_api_client::compose_extrinsic_offline;
 use substratee_node_primitives::ShieldFundsFn;
 use substratee_worker_primitives::block::{
     Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
@@ -52,14 +51,10 @@ use constants::{
 };
 
 use std::slice;
-use std::string::String;
 use std::vec::Vec;
 
 use core::ops::Deref;
-use ipfs::IpfsContent;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
 use std::sync::Arc;
 use std::sync::{SgxMutex, SgxMutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -78,10 +73,10 @@ use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
+use substratee_stf::State as StfState;
 use substratee_stf::{
     AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_stf::{State as StfState, StateTypeDiff as StfStateTypeDiff};
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
 use rpc::worker_api_direct;
@@ -100,6 +95,7 @@ mod utils;
 pub mod cert;
 pub mod hex;
 pub mod rpc;
+pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
 
@@ -677,11 +673,11 @@ pub fn compose_block_and_confirmation(
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
-    let block_number = match Stf::get_block_number(state) {
+    let block_number = match Stf::get_sidechain_block_number(state) {
         Some(number) => number + 1,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
-    Stf::update_block_number(state, block_number.into());
+    Stf::update_sidechain_block_number(state, block_number.into());
 
     let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
     let parent_hash = match Stf::get_last_block_hash(state) {
@@ -760,9 +756,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
                     Stf::update_storage(&mut state, &update_map);
 
                     // block number is purged from the substrate state so it can't be read like other storage values
-                    // TODO: does this stay like this? (=block number sidechain equals block number of main chain?)
-                    // TODO: Parent hash update here aswell?
-                    // Stf::update_block_number(&mut state, header.number);
+                    Stf::update_layer_one_block_number(&mut state, header.number);
 
                     state::write(state, &s)?;
                 }
@@ -1037,7 +1031,6 @@ extern "C" {
     ) -> sgx_status_t;
 
 }
-
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
@@ -1134,7 +1127,6 @@ fn test_ocall_read_write_ipfs() {
         assert!(false);
     }
 }
-
 // TODO: this is redundantly defined in worker/src/main.rs
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerRequest {
@@ -1170,454 +1162,4 @@ fn worker_request<V: Encode + Decode>(
         return Err(res);
     }
     Ok(Decode::decode(&mut resp.as_slice()).unwrap())
-}
-
-fn test_ocall_worker_request() {
-    info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
-    let mut requests = Vec::new();
-
-    requests.push(WorkerRequest::ChainStorage(
-        storage_key("Balances", "TotalIssuance").0,
-        None,
-    ));
-
-    let mut resp: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
-        Ok(response) => response,
-        Err(e) => panic!("Worker response decode failed. Error: {:?}", e),
-    };
-
-    let first = resp.pop().unwrap();
-    info!("Worker response: {:?}", first);
-
-    let (total_issuance, proof) = match first {
-        WorkerResponse::ChainStorage(_storage_key, value, proof) => (value, proof),
-    };
-
-    info!("Total Issuance is: {:?}", total_issuance);
-    info!("Proof: {:?}", proof)
-}
-
-fn test_time_is_overdue() {
-    // given
-    let start_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
-    // when
-    let before_start_time = (start_time * 1000 - GETTERTIMEOUT) / 1000;
-    let time_has_run_out = time_is_overdue(Timeout::Getter, before_start_time);
-    // then
-    assert!(time_has_run_out)
-}
-
-fn test_time_is_not_overdue() {
-    // given
-    let start_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
-    // when
-    let time_has_run_out = time_is_overdue(Timeout::Call, start_time);
-    // then
-    assert!(!time_has_run_out)
-}
-
-fn test_compose_block_and_confirmation() {
-    // given
-    let latest_onchain_header = Header::new(
-        1,
-        Default::default(),
-        Default::default(),
-        [69; 32].into(),
-        Default::default(),
-    );
-    let call_hash: H256 = [94; 32].into();
-    let call_hash_two: H256 = [1; 32].into();
-    let signed_top_hashes = [call_hash, call_hash_two].to_vec();
-    let shard = ShardIdentifier::default();
-    let state_hash_apriori: H256 = [199; 32].into();
-    let mut state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    Stf::update_block_number(&mut state, 3);
-
-    // when
-    let (opaque_call, signed_block) = compose_block_and_confirmation(
-        latest_onchain_header,
-        signed_top_hashes,
-        shard,
-        state_hash_apriori,
-        &mut state,
-    )
-    .unwrap();
-    let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
-    let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
-    let mut opaque_call_vec = opaque_call.0;
-
-    // then
-    assert!(signed_block.verify_signature());
-    assert_eq!(signed_block.block().block_number(), 4);
-    assert!(opaque_call_vec.starts_with(&xt_block_encoded));
-    let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
-    assert!(stripped_opaque_call.starts_with(&shard.encode()));
-    let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
-    assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
-}
-
-fn test_submit_trusted_call_to_top_pool() {
-    // given
-
-    // create top pool
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    let tx_pool = BasicPool::create(Default::default(), api);
-    let author = Author::new(Arc::new(&tx_pool));
-
-    // create trusted call signed
-    let nonce = 1;
-    let mrenclave = [0u8; 32];
-    let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    let signer_pair = ed25519::unseal_pair().unwrap();
-    let call = TrustedCall::balance_set_balance(
-        signer_pair.public().into(),
-        signer_pair.public().into(),
-        42,
-        42,
-    );
-    let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
-    let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
-    // encrypt call
-    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-    let mut encrypted_top: Vec<u8> = Vec::new();
-    rsa_pubkey
-        .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
-        .unwrap();
-
-    // when
-
-    // submit trusted call to top pool
-    let result = async { author.submit_top(encrypted_top.clone(), shard).await };
-    executor::block_on(result).unwrap();
-
-    // get pending extrinsics
-    let (calls, _) = author.get_pending_tops_separated(shard).unwrap();
-
-    // then
-    let call_one = format! {"{:?}", calls[0]};
-    let call_two = format! {"{:?}", signed_call};
-    assert_eq!(call_one, call_two);
-}
-
-fn test_submit_trusted_getter_to_top_pool() {
-    // given
-
-    // create top pool
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    let tx_pool = BasicPool::create(Default::default(), api);
-    let author = Author::new(Arc::new(&tx_pool));
-
-    // create trusted getter signed
-    let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    let signer_pair = ed25519::unseal_pair().unwrap();
-    let getter = TrustedGetter::free_balance(signer_pair.public().into());
-    let signed_getter = getter.sign(&signer_pair.into());
-    let trusted_operation: TrustedOperation = signed_getter.clone().into();
-    // encrypt call
-    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-    let mut encrypted_top: Vec<u8> = Vec::new();
-    rsa_pubkey
-        .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
-        .unwrap();
-
-    // when
-
-    // submit top to pool
-    let result = async { author.submit_top(encrypted_top.clone(), shard).await };
-    executor::block_on(result).unwrap();
-
-    // get pending extrinsics
-    let (_, getters) = author.get_pending_tops_separated(shard).unwrap();
-
-    // then
-    let getter_one = format! {"{:?}", getters[0]};
-    let getter_two = format! {"{:?}", signed_getter};
-    assert_eq!(getter_one, getter_two);
-}
-
-fn test_differentiate_getter_and_call_works() {
-    // given
-
-    // create top pool
-    let api: Arc<FillerChainApi<Block>> = Arc::new(FillerChainApi::new());
-    let tx_pool = BasicPool::create(Default::default(), api);
-    let author = Author::new(Arc::new(&tx_pool));
-    // create trusted getter signed
-    let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    let signer_pair = ed25519::unseal_pair().unwrap();
-    let getter = TrustedGetter::free_balance(signer_pair.public().into());
-    let signed_getter = getter.sign(&signer_pair.clone().into());
-    let trusted_operation: TrustedOperation = signed_getter.clone().into();
-    // encrypt call
-    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-    let mut encrypted_top: Vec<u8> = Vec::new();
-    rsa_pubkey
-        .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
-        .unwrap();
-
-    // create trusted call signed
-    let nonce = 1;
-    let mrenclave = [0u8; 32];
-    let call = TrustedCall::balance_set_balance(
-        signer_pair.public().into(),
-        signer_pair.public().into(),
-        42,
-        42,
-    );
-    let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
-    let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
-    // encrypt call
-    let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-    let mut encrypted_top_call: Vec<u8> = Vec::new();
-    rsa_pubkey
-        .encrypt_buffer(&trusted_operation_call.encode(), &mut encrypted_top_call)
-        .unwrap();
-
-    // when
-
-    // submit top to pool
-    let result = async { author.submit_top(encrypted_top.clone(), shard).await };
-    executor::block_on(result).unwrap();
-
-    let result = async { author.submit_top(encrypted_top_call.clone(), shard).await };
-    executor::block_on(result).unwrap();
-
-    // get pending extrinsics
-    let (calls, getters) = author.get_pending_tops_separated(shard).unwrap();
-
-    // then
-    let getter_one = format! {"{:?}", getters[0]};
-    let getter_two = format! {"{:?}", signed_getter};
-    let call_one = format! {"{:?}", calls[0]};
-    let call_two = format! {"{:?}", signed_call};
-    assert_eq!(call_one, call_two);
-    assert_eq!(getter_one, getter_two);
-}
-
-#[allow(unused_assignments)]
-fn test_create_block_and_confirmation_works() {
-    // given
-
-    // create top pool
-    unsafe { rpc::worker_api_direct::initialize_pool() };
-    let shard = ShardIdentifier::default();
-    // load state before executing any calls
-    let _state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
-    let latest_onchain_header = Header::new(
-        1,
-        Default::default(),
-        Default::default(),
-        [69; 32].into(),
-        Default::default(),
-    );
-    let mut top_hash = H256::default();
-
-    // load top pool
-    {
-        let &ref pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
-        let pool_guard = pool_mutex.lock().unwrap();
-        let pool = Arc::new(pool_guard.deref());
-        let author = Arc::new(Author::new(pool));
-
-        // create trusted call signed
-        let nonce = 1;
-        //let mrenclave = [0u8; 32];
-        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
-        let signer_pair = ed25519::unseal_pair().unwrap();
-        let call = TrustedCall::balance_transfer(
-            signer_pair.public().into(),
-            signer_pair.public().into(),
-            42,
-        );
-        let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
-        let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
-        // encrypt call
-        let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-        let mut encrypted_top: Vec<u8> = Vec::new();
-        rsa_pubkey
-            .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
-            .unwrap();
-
-        // submit trusted call to top pool
-        let result = async { author.submit_top(encrypted_top.clone(), shard).await };
-        top_hash = executor::block_on(result).unwrap();
-    }
-
-    // when
-    let (confirm_calls, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
-
-    let signed_block = signed_blocks[0].clone();
-    let mut opaque_call_vec = confirm_calls[0].0.clone();
-    let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
-    let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
-
-    // then
-    assert_eq!(signed_blocks.len(), 1);
-    assert_eq!(confirm_calls.len(), 1);
-    assert!(signed_block.verify_signature());
-    assert_eq!(signed_block.block().block_number(), 1);
-    assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
-    assert!(opaque_call_vec.starts_with(&xt_block_encoded));
-    let mut stripped_opaque_call = opaque_call_vec.split_off(xt_block_encoded.len());
-    assert!(stripped_opaque_call.starts_with(&shard.encode()));
-    let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
-    assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
-}
-
-//FIXME: Finish state diff unittest. Current problem: Set balance of test account
-fn test_create_state_diff() {
-    // given
-
-    // create top pool
-    unsafe { rpc::worker_api_direct::initialize_pool() };
-    let shard = ShardIdentifier::default();
-    // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
-    let latest_onchain_header = Header::new(
-        1,
-        Default::default(),
-        Default::default(),
-        [69; 32].into(),
-        Default::default(),
-    );
-    let _rsa_pair = rsa3072::unseal_pair().unwrap();
-
-    // ensure that state exists
-    let mut state = if state::exists(&shard) {
-        state::load(&shard).unwrap()
-    } else {
-        state::init_shard(&shard).unwrap();
-        Stf::init_state()
-    };
-    // ensure state starts at 0..
-    //Stf::update_last_block_hash(&mut state, H256::default());
-    Stf::update_block_number(&mut state, 0);
-
-    // create accounts
-    let signer_without_money = ed25519::unseal_pair().unwrap();
-    let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-    let account_with_money = pair_with_money.public();
-    let account_without_money = signer_without_money.public();
-    let account_with_money_key_hash =
-        substratee_stf::sgx::nonce_key_hash(&account_with_money.into());
-    let account_without_money_key_hash =
-        substratee_stf::sgx::nonce_key_hash(&account_without_money.into());
-
-    let _prev_state_hash = state::write(state.clone(), &shard).unwrap();
-    // load top pool
-    {
-        let &ref pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
-        let pool_guard = pool_mutex.lock().unwrap();
-        let pool = Arc::new(pool_guard.deref());
-        let author = Arc::new(Author::new(pool));
-
-        // create trusted call signed
-        let nonce = 1;
-        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
-        let call = TrustedCall::balance_transfer(
-            account_with_money.into(),
-            account_without_money.into(),
-            1000,
-        );
-        let signed_call = call.sign(&pair_with_money.into(), nonce, &mrenclave, &shard);
-        let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
-        // encrypt call
-        let mut encrypted_top: Vec<u8> = Vec::new();
-        let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
-        rsa_pubkey
-            .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
-            .unwrap();
-
-        // submit trusted call to top pool
-        let result = async { author.submit_top(encrypted_top.clone(), shard).await };
-        executor::block_on(result).unwrap();
-    }
-
-    // when
-    let (_, signed_blocks) = execute_top_pool_calls(latest_onchain_header).unwrap();
-    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();
-    aes::de_or_encrypt(&mut encrypted_payload).unwrap();
-    let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
-    let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
-
-    // then
-    let acc_info_vec = state_diff
-        .get(&account_with_money_key_hash)
-        .unwrap()
-        .as_ref()
-        .unwrap();
-    let new_balance_acc_with_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
-            .unwrap()
-            .data
-            .free;
-    let acc_info_vec = state_diff
-        .get(&account_without_money_key_hash)
-        .unwrap()
-        .as_ref()
-        .unwrap();
-    let new_balance_acc_wo_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
-            .unwrap()
-            .data
-            .free;
-    // get block number
-    let block_number_key = substratee_stf::sgx::storage_value_key("System", "Number");
-    let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
-    let new_block_number =
-        substratee_stf::sgx::StfBlockNumber::decode(&mut new_block_number_encoded.as_slice())
-            .unwrap();
-    /* // get block hash
-    let last_block_hash_key = substratee_stf::sgx::storage_value_key("Chain", "LastHash");
-    let new_last_block_hash_encoded = state_diff
-        .get(&last_block_hash_key)
-        .unwrap()
-        .as_ref()
-        .unwrap();
-    let new_last_block_hash =
-        substratee_stf::Hash::decode(&mut new_last_block_hash_encoded.as_slice()).unwrap();
-    let block_hash: H256 = blake2_256(&signed_blocks[0].block().encode()).into(); */
-
-    assert_eq!(state_diff.len(), 3);
-    assert_eq!(new_balance_acc_wo_money, 1000);
-    assert_eq!(new_balance_acc_with_money, 1000);
-    assert_eq!(new_block_number, 1);
-    //assert_eq!(new_last_block_hash, block_hash);
 }

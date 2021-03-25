@@ -17,25 +17,21 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
-use std::{
-    collections::HashMap, sync::Arc, time::Instant, untrusted::time::InstantEx, vec::Vec,
-};
 use sp_runtime::{
     generic::BlockId,
     traits::{self, Block as BlockT, SaturatedConversion},
-    transaction_validity::{
-        TransactionTag as Tag, TransactionValidity, TransactionValidityError,
-    },
+    transaction_validity::{TransactionTag as Tag, TransactionValidity, TransactionValidityError},
 };
+use std::{collections::HashMap, sync::Arc, time::Instant, untrusted::time::InstantEx, vec::Vec};
 
 use crate::top_pool::{
     base_pool as base, error,
-    validated_pool::{ValidatedPool, ValidatedOperation},
     primitives::TrustedOperationSource,
+    validated_pool::{ValidatedOperation, ValidatedPool},
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
+use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -307,7 +303,11 @@ where
                     let validity = self
                         .validated_pool
                         .api()
-                        .validate_transaction(parent, TrustedOperationSource::InBlock, extrinsic.clone())
+                        .validate_transaction(
+                            parent,
+                            TrustedOperationSource::InBlock,
+                            extrinsic.clone(),
+                        )
                         .await;
 
                     if let Ok(Ok(validity)) = validity {
@@ -451,10 +451,7 @@ where
             .validated_pool
             .check_is_known(&hash, ignore_banned, shard)
         {
-            return (
-                hash.clone(),
-                ValidatedOperation::Invalid(hash, err.into()),
-            );
+            return (hash.clone(), ValidatedOperation::Invalid(hash, err.into()));
         }
 
         // no runtime validation check for now. Issue is open.
@@ -484,12 +481,14 @@ where
                     )
                 }
             }
-            Err(TransactionValidityError::Invalid(_e)) => {
-                ValidatedOperation::Invalid(hash.clone(), error::Error::InvalidTrustedOperation.into())
-            }
-            Err(TransactionValidityError::Unknown(_e)) => {
-                ValidatedOperation::Unknown(hash.clone(), error::Error::UnknownTrustedOperation.into())
-            }
+            Err(TransactionValidityError::Invalid(_e)) => ValidatedOperation::Invalid(
+                hash.clone(),
+                error::Error::InvalidTrustedOperation.into(),
+            ),
+            Err(TransactionValidityError::Unknown(_e)) => ValidatedOperation::Unknown(
+                hash.clone(),
+                error::Error::UnknownTrustedOperation.into(),
+            ),
         };
 
         (hash, validity)
@@ -509,12 +508,14 @@ impl<B: ChainApi> Clone for Pool<B> {
     }
 }
 
+
 /// tests
 ///
 /// Extrinsic for test-runtime.
 use std::collections::{HashSet};
 use jsonrpc_core::futures::executor::block_on;
 use jsonrpc_core::futures;
+use jsonrpc_core::futures::executor::block_on;
 use sp_runtime::{
     traits::{Verify,  Extrinsic as ExtrinsicT, Hash},
     transaction_validity::{ValidTransaction, InvalidTransaction as InvalidTrustedOperation},
@@ -523,6 +524,7 @@ use sp_runtime::{
 use codec::{Encode, Decode};
 use crate::top_pool::base_pool::Limit;
 use std::sync::SgxMutex as Mutex;
+use substrate_test_runtime::{AccountId, Block, Hashing, H256};
 use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use super::primitives::from_low_u64_to_be_h256;
 use core::matches;
@@ -582,7 +584,6 @@ pub mod test {
 const INVALID_NONCE: u32 = 254;
 const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
-
 #[derive(Clone, Debug, Default)]
 struct TestApi {
     delay: Arc<Mutex<Option<std::sync::mpsc::Receiver<()>>>>,
@@ -624,14 +625,21 @@ impl ChainApi for TestApi {
         if self.invalidate.lock().unwrap().contains(&hash) {
             return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
         }
-
         futures::future::ready(if nonce < block_number {
             Ok(InvalidTrustedOperation::Stale.into())
         } else {
-             let mut operation = ValidTransaction {
+            let mut operation = ValidTransaction {
                 priority: 4,
-                requires: if nonce > block_number { vec![vec![nonce as u8 - 1]] } else { vec![] },
-                provides: if nonce == INVALID_NONCE { vec![] } else { vec![vec![nonce as u8]] },
+                requires: if nonce > block_number {
+                    vec![vec![nonce as u8 - 1]]
+                } else {
+                    vec![]
+                },
+                provides: if nonce == INVALID_NONCE {
+                    vec![]
+                } else {
+                    vec![vec![nonce as u8]]
+                },
                 longevity: 3,
                 propagate: true,
             };
@@ -704,10 +712,16 @@ pub fn test_should_validate_and_import_transaction() {
         5
     ), 0), shard)).unwrap();
 
-    // then
-    assert_eq!(pool.validated_pool().ready(shard).map(|v| v.hash).collect::<Vec<_>>(), vec![hash]);
-}
 
+    // then
+    assert_eq!(
+        pool.validated_pool()
+            .ready(shard)
+            .map(|v| v.hash)
+            .collect::<Vec<_>>(),
+        vec![hash]
+    );
+}
 
 pub fn test_should_reject_if_temporarily_banned() {
     // given
@@ -720,7 +734,9 @@ pub fn test_should_reject_if_temporarily_banned() {
     ),0);
 
     // when
-    pool.validated_pool.rotator().ban(&Instant::now(), vec![pool.hash_of(&top)]);
+    pool.validated_pool
+        .rotator()
+        .ban(&Instant::now(), vec![pool.hash_of(&top)]);
     let res = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, top, shard));
     assert_eq!(pool.validated_pool().status(shard).ready, 0);
     assert_eq!(pool.validated_pool().status(shard).future, 0);
@@ -786,9 +802,10 @@ pub fn test_should_clear_stale_transactions() {
         test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
         5,
     ), 3), shard)).unwrap();
-
     // when
-    pool.validated_pool.clear_stale(&BlockId::Number(5), shard).unwrap();
+    pool.validated_pool
+        .clear_stale(&BlockId::Number(5), shard)
+        .unwrap();
 
     // then
     assert_eq!(pool.validated_pool().ready(shard).count(), 0);
@@ -811,7 +828,13 @@ pub fn test_should_ban_mined_transactions() {
     ), 0), shard)).unwrap();
 
     // when
-    block_on(pool.prune_tags(&BlockId::Number(1), vec![vec![0]], vec![hash1.clone()], shard)).unwrap();
+    block_on(pool.prune_tags(
+        &BlockId::Number(1),
+        vec![vec![0]],
+        vec![hash1.clone()],
+        shard,
+    ))
+    .unwrap();
 
     // then
     assert!(pool.validated_pool.rotator().is_banned(&hash1));
@@ -822,7 +845,7 @@ pub fn test_should_limit_futures() {
     let shard = ShardIdentifier::default();
     let limit = Limit {
         count: 100,
-        total_bytes: 200,
+        total_bytes: 300,
     };
     let pool = Pool::new(Options {
         ready: limit.clone(),
@@ -857,11 +880,14 @@ pub fn test_should_error_if_reject_immediately() {
         count: 100,
         total_bytes: 10,
     };
-    let pool = Pool::new(Options {
-        ready: limit.clone(),
-        future: limit.clone(),
-        ..Default::default()
-    }, TestApi::default().into());
+    let pool = Pool::new(
+        Options {
+            ready: limit.clone(),
+            future: limit.clone(),
+            ..Default::default()
+        },
+        TestApi::default().into(),
+    );
 
     // when
     block_on(pool.submit_one(&BlockId::Number(0), SOURCE, to_top(TrustedCall::balance_transfer(
@@ -892,3 +918,4 @@ pub fn test_should_reject_transactions_with_no_provides() {
     assert_eq!(pool.validated_pool().status(shard).future, 0);
     assert!(matches!(err, error::Error::NoTagsProvided));
 }
+

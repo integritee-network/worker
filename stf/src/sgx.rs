@@ -7,13 +7,14 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
 use support::metadata::StorageHasher;
-use sgx_runtime::{Balance, BlockNumber, Runtime};
+use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_core::Pair;
 use sp_core::H256 as Hash;
 use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::MultiAddress;
+use substratee_worker_primitives::BlockNumber;
 use support::traits::UnfilteredDispatchable;
 
 use crate::{
@@ -34,7 +35,6 @@ impl Encode for OpaqueCall {
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
 pub type AccountInfo = system::AccountInfo<Index, AccountData>;
-pub type StfBlockNumber = BlockNumber;
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
@@ -77,10 +77,14 @@ impl Stf {
                 &1u128.encode(),
             );
             // Set first sidechainblock number to 0
-            sp_io::storage::set(&storage_value_key("System", "Number"), &0.encode());
+            let init_block_number: BlockNumber = 0;
+            sp_io::storage::set(
+                &storage_value_key("System", "Number"),
+                &init_block_number.encode(),
+            );
             // Set first parent hash to initial state hash
             sp_io::storage::set(
-                &storage_value_key("Chain", "LastHash"),
+                &storage_value_key("System", "LastHash"),
                 &state_hash.encode(),
             );
             //FIXME: for testing purpose only - maybe add feature?
@@ -118,25 +122,49 @@ impl Stf {
         });
     }
 
-    pub fn update_block_number(ext: &mut State, number: BlockNumber) {
+    pub fn update_layer_one_block_number(ext: &mut State, number: L1BlockNumer) {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "LayerOneNumber");
+            sp_io::storage::set(&key, &number.encode());
+        });
+    }
+
+    pub fn get_layer_one_block_number(ext: &mut State) -> Option<L1BlockNumer> {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "LayerOneNumber");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(number) = L1BlockNumer::decode(&mut infovec.as_slice()) {
+                    Some(number)
+                } else {
+                    error!("Blocknumber l1 decode error");
+                    None
+                }
+            } else {
+                error!("No Blocknumber l1 in state?");
+                None
+            }
+        })
+    }
+
+    pub fn update_sidechain_block_number(ext: &mut State, number: BlockNumber) {
         ext.execute_with(|| {
             let key = storage_value_key("System", "Number");
             sp_io::storage::set(&key, &number.encode());
         });
     }
 
-    pub fn get_block_number(ext: &mut State) -> Option<BlockNumber> {
+    pub fn get_sidechain_block_number(ext: &mut State) -> Option<BlockNumber> {
         ext.execute_with(|| {
             let key = storage_value_key("System", "Number");
             if let Some(infovec) = sp_io::storage::get(&key) {
                 if let Ok(number) = BlockNumber::decode(&mut infovec.as_slice()) {
                     Some(number)
                 } else {
-                    error!("Blocknumber decode error");
+                    error!("Sidechain blocknumber decode error");
                     None
                 }
             } else {
-                error!("No Blocknumber in state?");
+                error!("No sidechain blocknumber in state?");
                 None
             }
         })
@@ -144,14 +172,14 @@ impl Stf {
 
     pub fn update_last_block_hash(ext: &mut State, hash: Hash) {
         ext.execute_with(|| {
-            let key = storage_value_key("Chain", "LastHash");
+            let key = storage_value_key("System", "LastHash");
             sp_io::storage::set(&key, &hash.encode());
         });
     }
 
     pub fn get_last_block_hash(ext: &mut State) -> Option<Hash> {
         ext.execute_with(|| {
-            let key = storage_value_key("Chain", "LastHash");
+            let key = storage_value_key("System", "LastHash");
             if let Some(infovec) = sp_io::storage::get(&key) {
                 if let Ok(hash) = Hash::decode(&mut infovec.as_slice()) {
                     Some(hash)

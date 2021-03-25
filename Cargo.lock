@@ -5139,6 +5139,7 @@ dependencies = [
  "substrate-api-client",
  "substrate-client-keystore",
  "substratee-node-runtime",
+ "substratee-worker-primitives",
 ]
 
 [[package]]
@@ -5210,7 +5211,6 @@ dependencies = [
  "sp-core",
  "sp-keyring",
  "sp-runtime",
- "substratee-stf",
 ]
 
 [[package]]

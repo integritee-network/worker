@@ -10,6 +10,8 @@ use codec::{Decode, Encode};
 use sp_core::H256;
 
 pub type ShardIdentifier = H256;
+pub type BlockNumber = u32;
+
 // Note in the substratee-pallet-registry this is a struct. But for the coded this does not matter.
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
 pub struct Request {

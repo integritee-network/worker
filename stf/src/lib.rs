@@ -207,7 +207,7 @@ impl TrustedGetter {
     }
 
     pub fn sign(&self, pair: &KeyPair) -> TrustedGetterSigned {
-        let signature = pair.sign(self.encode().as_slice()).into();
+        let signature = pair.sign(self.encode().as_slice());
         TrustedGetterSigned {
             getter: self.clone(),
             signature,

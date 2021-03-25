@@ -75,6 +75,7 @@ impl Stats {
     }
 }
 
+#[allow(unused)]
 pub fn test_creates_ipfs_content_struct_works() {
     let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
     let content: Vec<u8> = vec![20; 512 * 1024];
@@ -85,6 +86,7 @@ pub fn test_creates_ipfs_content_struct_works() {
     assert_eq!(ipfs_content.file_content, content);
 }
 
+#[allow(unused)]
 pub fn test_verification_ok_for_correct_content() {
     let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
     let content: Vec<u8> = vec![20; 512 * 1024];
@@ -93,6 +95,7 @@ pub fn test_verification_ok_for_correct_content() {
     assert_eq!(verification.is_ok(), true);
 }
 
+#[allow(unused)]
 pub fn test_verification_fails_for_incorrect_content() {
     let cid = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
     let content: Vec<u8> = vec![10; 512 * 1024];

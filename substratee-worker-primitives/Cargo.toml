@@ -29,19 +29,13 @@ version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
 
-[dependencies.substratee-stf]
-path = "../stf"
-default-features = false
-
 
 [features]
 default = ["std"]
 std = [ 'serde',
         'serde_derive',
-        'serde_json',
-        'substratee-stf/std']
-sgx = [ 'sgx_tstd',
-        'substratee-stf/sgx' ]
+        'serde_json',]
+sgx = [ 'sgx_tstd',]
 
 
 
