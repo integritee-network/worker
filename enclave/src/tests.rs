@@ -85,6 +85,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         top_pool::pool::test_should_notify_about_pool_events,
         top_pool::pool::test_should_clear_stale_transactions,
         top_pool::pool::test_should_ban_mined_transactions,
+        //FIXME: This test sometimes fails, sometimes succeeds..
         top_pool::pool::test_should_limit_futures,
         top_pool::pool::test_should_error_if_reject_immediately,
         top_pool::pool::test_should_reject_transactions_with_no_provides,
@@ -105,20 +106,21 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_time_is_overdue,
         test_time_is_not_overdue,
         test_compose_block_and_confirmation,
-        // these unit tests need an ipfs node running..
-        // hence not really unit tests..?
-        //ipfs::test_creates_ipfs_content_struct_works,
-        //ipfs::test_verification_ok_for_correct_content,
-        //ipfs::test_verification_fails_for_incorrect_content,
-        //test_ocall_read_write_ipfs,
-        // needs node to be running.. unit test?
-        //test_ocall_worker_request,
         test_submit_trusted_call_to_top_pool,
         test_submit_trusted_getter_to_top_pool,
         test_differentiate_getter_and_call_works,
         test_create_block_and_confirmation_works,
+
+        // needs node to be running.. unit tests?
+        test_ocall_worker_request,
         test_create_state_diff,
         test_executing_call_updates_account_nonce,
+
+        // these unit tests (?) need an ipfs node running..
+        //ipfs::test_creates_ipfs_content_struct_works,
+        //ipfs::test_verification_ok_for_correct_content,
+        //ipfs::test_verification_fails_for_incorrect_content,
+        //test_ocall_read_write_ipfs,
     )
 }
 
@@ -544,9 +546,9 @@ fn test_create_state_diff() {
     let account_with_money = pair_with_money.public();
     let account_without_money = signer_without_money.public();
     let account_with_money_key_hash =
-        substratee_stf::sgx::nonce_key_hash(&account_with_money.into());
+        substratee_stf::sgx::account_key_hash(&account_with_money.into());
     let account_without_money_key_hash =
-        substratee_stf::sgx::nonce_key_hash(&account_without_money.into());
+        substratee_stf::sgx::account_key_hash(&account_without_money.into());
 
     let _prev_state_hash = state::write(state.clone(), &shard).unwrap();
     // load top pool
@@ -642,7 +644,7 @@ fn test_executing_call_updates_account_nonce() {
 
     // ensure that state starts empty
     state::init_shard(&shard).unwrap();
-    let state = Stf::init_state();
+    let mut state = Stf::init_state();
 
     // create accounts
     let signer_without_money = ed25519::unseal_pair().unwrap();
@@ -650,9 +652,9 @@ fn test_executing_call_updates_account_nonce() {
     let account_with_money = pair_with_money.public();
     let account_without_money = signer_without_money.public();
     let account_with_money_key_hash =
-        substratee_stf::sgx::nonce_key_hash(&account_with_money.into());
+        substratee_stf::sgx::account_key_hash(&account_with_money.into());
     let account_without_money_key_hash =
-        substratee_stf::sgx::nonce_key_hash(&account_without_money.into());
+        substratee_stf::sgx::account_key_hash(&account_without_money.into());
 
     let _prev_state_hash = state::write(state.clone(), &shard).unwrap();
     // load top pool
@@ -664,7 +666,7 @@ fn test_executing_call_updates_account_nonce() {
         let system = FullSystem::new(pool);
 
         // create trusted call signed
-        let nonce = 1;
+        let nonce = 0;
         let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
         let call = TrustedCall::balance_transfer(
             account_with_money.into(),
@@ -687,47 +689,13 @@ fn test_executing_call_updates_account_nonce() {
 
     // when
     let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
-    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();
-    aes::de_or_encrypt(&mut encrypted_payload).unwrap();
-    let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
-    let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
 
     // then
-    let acc_info_vec = state_diff
-        .get(&account_with_money_key_hash)
-        .unwrap()
-        .as_ref()
-        .unwrap();
-    let new_balance_acc_with_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
-            .unwrap()
-            .data
-            .free;
-    let new_nonce_acc_with_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
-            .unwrap()
-            .nonce;
-    let acc_info_vec = state_diff
-        .get(&account_without_money_key_hash)
-        .unwrap()
-        .as_ref()
-        .unwrap();
-    let new_balance_acc_wo_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
-            .unwrap()
-            .data
-            .free;
-    // get block number
-    let block_number_key = substratee_stf::sgx::storage_value_key("System", "Number");
-    let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
-    let new_block_number =
-        substratee_worker_primitives::BlockNumber::decode(&mut new_block_number_encoded.as_slice())
-            .unwrap();
-    assert_eq!(state_diff.len(), 3);
-    assert_eq!(new_balance_acc_wo_money, 1000);
-    assert_eq!(new_balance_acc_with_money, 1000);
-    assert_eq!(new_block_number, 1);
-    assert_eq!(new_nonce_acc_with_money, 1);
+     let mut state = state::load(&shard).unwrap();
+
+    let encoded_nonce = Stf::account_nonce(&mut state, &account_with_money.into()).unwrap();
+    let nonce = substratee_stf::Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+    assert_eq!(nonce, 1);
 
     // clean up
     state::remove_shard_dir(&shard);

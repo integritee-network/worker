@@ -201,7 +201,10 @@ impl Stf {
         let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-                Self::ensure_root(root)?;
+                if !validate_nonce(&root, call.nonce) {
+                    return Err(StfError::InvalidNonce(call.nonce))
+                }
+                Self::ensure_root(root.clone())?;
                 debug!(
                     "balance_set_balance({:x?}, {}, {})",
                     who.encode(),
@@ -215,10 +218,14 @@ impl Stf {
                 )
                 .dispatch_bypass_filter(sgx_runtime::Origin::root())
                 .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
+                increment_nonce(&root);
                 Ok(())
             }
             TrustedCall::balance_transfer(from, to, value) => {
                 let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
+                if !validate_nonce(&from, call.nonce) {
+                    return Err(StfError::InvalidNonce(call.nonce))
+                }
                 debug!(
                     "balance_transfer({:x?}, {:x?}, {})",
                     from.encode(),
@@ -236,9 +243,13 @@ impl Stf {
                 )
                 .dispatch_bypass_filter(origin)
                 .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+                increment_nonce(&from);
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+                if !validate_nonce(&account_incognito, call.nonce) {
+                    return Err(StfError::InvalidNonce(call.nonce))
+                }
                 debug!(
                     "balance_unshield({:x?}, {:x?}, {}, {})",
                     account_incognito.encode(),
@@ -247,7 +258,7 @@ impl Stf {
                     shard
                 );
 
-                Self::unshield_funds(account_incognito, value)?;
+                Self::unshield_funds(account_incognito.clone(), value)?;
                 calls.push(OpaqueCall(
                     (
                         [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
@@ -258,22 +269,27 @@ impl Stf {
                     )
                         .encode(),
                 ));
+                increment_nonce(&account_incognito);
                 Ok(())
             }
             TrustedCall::balance_shield(who, value) => {
                 debug!("balance_shield({:x?}, {})", who.encode(), value);
-                Self::shield_funds(who, value)?;
+                if !validate_nonce(&who, call.nonce) {
+                    return Err(StfError::InvalidNonce(call.nonce))
+                }
+                Self::shield_funds(who.clone(), value)?;
+                increment_nonce(&who);
                 Ok(())
             }
-        })
+        }
+    )
     }
 
-    pub fn account_nonce(ext: &mut State, account: AccountId) -> Option<Vec<u8>> {
+    pub fn account_nonce(ext: &mut State, account: &AccountId) -> Option<Vec<u8>> {
         ext.execute_with(|| {
-                if let Some(info) = get_account_info(&account) {
-                debug!("AccountInfo for {:x?} is {:?}", account.encode(), info);
-                debug!("Account nonce is {}", info.nonce);
-                Some(info.nonce.encode())
+                if let Some(info) = get_account_info(account) {
+                    debug!("Account {:?} nonce is {}",account.encode(), info.nonce);
+                    Some(info.nonce.encode())
             } else {
                 None
             }
@@ -395,8 +411,8 @@ pub fn shards_key_hash() -> Vec<u8> {
     vec![]
 }
 
-// get the AccountInfo key where the nonce is stored
-pub fn nonce_key_hash(account: &AccountId) -> Vec<u8> {
+// get the AccountInfo key where the account is stored
+pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
     storage_map_key(
         "System",
         "Account",
@@ -419,6 +435,35 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
         }
     } else {
         None
+    }
+}
+
+fn validate_nonce(who: &AccountId, nonce: Index) -> bool {
+    // validate
+    let expected_nonce = get_account_info(who)
+        .map_or_else(|| 0, |acc| acc.nonce);
+    if expected_nonce == nonce {
+        return true
+    }
+    false
+}
+
+/// increment nonce after a successful call execution
+fn increment_nonce(account: &AccountId) {
+    // A none value can be returned after a successful execution
+    // in the following cases:
+    // - zero value
+    // - transfer from and to the same account
+    // for these transactions the nonce is not incremented.
+    // is that ok?
+    if let Some(mut acc_info) = get_account_info(account) {
+        debug!("incrementing account nonce");
+        acc_info.nonce += 1;
+        sp_io::storage::set(
+            &account_key_hash(account),
+            &acc_info.encode(),
+        );
+        debug!("updated account {:?} nonce: {:?}", account.encode(), get_account_info(account).unwrap().nonce);
     }
 }
 
@@ -487,4 +532,6 @@ pub enum StfError {
     MissingFunds,
     #[display(fmt = "Account does not exist {:?}", _0)]
     InexistentAccount(AccountId),
+    #[display(fmt = "Invalid Nonce {:?}", _0)]
+    InvalidNonce(Index),
 }

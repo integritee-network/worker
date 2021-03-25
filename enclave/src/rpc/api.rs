@@ -77,7 +77,7 @@ fn expected_nonce(shard: ShardIdentifier, account: &AccountId) -> Result<Index> 
         }
     };
 
-    let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, account.clone()) {
+    let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, &account) {
         match Decode::decode(&mut nonce_encoded.as_slice()) {
             Ok(index) => index,
             Err(e) => {
