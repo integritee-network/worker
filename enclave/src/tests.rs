@@ -54,10 +54,12 @@ use sp_runtime::traits::Header as HeaderT;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::StateTypeDiff as StfStateTypeDiff;
 use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
+use substratee_stf::{TrustedGetter, TrustedOperation, Index};
+use substratee_stf::sgx::{AccountData, AccountInfo};
 
 use jsonrpc_core::futures::executor;
 use sp_core::ed25519 as spEd25519;
-use substratee_stf::{TrustedGetter, TrustedOperation};
+
 
 use rpc::author::{Author, AuthorApi};
 use rpc::{api::SideChainApi, basic_pool::BasicPool, system::{FullSystem, SystemApi},};
@@ -115,6 +117,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_ocall_worker_request,
         test_create_state_diff,
         test_executing_call_updates_account_nonce,
+        test_invalid_nonce_call_is_not_executed
 
         // these unit tests (?) need an ipfs node running..
         //ipfs::test_creates_ipfs_content_struct_works,
@@ -594,7 +597,7 @@ fn test_create_state_diff() {
         .as_ref()
         .unwrap();
     let new_balance_acc_with_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
+        AccountInfo::decode(&mut acc_info_vec.as_slice())
             .unwrap()
             .data
             .free;
@@ -604,7 +607,7 @@ fn test_create_state_diff() {
         .as_ref()
         .unwrap();
     let new_balance_acc_wo_money =
-        substratee_stf::sgx::AccountInfo::decode(&mut acc_info_vec.as_slice())
+        AccountInfo::decode(&mut acc_info_vec.as_slice())
             .unwrap()
             .data
             .free;
@@ -691,11 +694,93 @@ fn test_executing_call_updates_account_nonce() {
     let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
 
     // then
-     let mut state = state::load(&shard).unwrap();
-
+    let mut state = state::load(&shard).unwrap();
     let encoded_nonce = Stf::account_nonce(&mut state, &account_with_money.into()).unwrap();
     let nonce = substratee_stf::Index::decode(&mut encoded_nonce.as_slice()).unwrap();
     assert_eq!(nonce, 1);
+
+    // clean up
+    state::remove_shard_dir(&shard);
+}
+
+
+#[allow(unused)]
+fn test_invalid_nonce_call_is_not_executed() {
+    // given
+
+    ensure_no_empty_shard_directory_exists();
+
+    // create top pool
+    unsafe { rpc::worker_api_direct::initialize_pool() };
+    let shard = ShardIdentifier::default();
+    // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
+    let latest_onchain_header = Header::new(
+        1,
+        Default::default(),
+        Default::default(),
+        [69; 32].into(),
+        Default::default(),
+    );
+    let _rsa_pair = rsa3072::unseal_pair().unwrap();
+
+    // ensure that state starts empty
+    state::init_shard(&shard).unwrap();
+    let mut state = Stf::init_state();
+
+    // create accounts
+    let signer_without_money = ed25519::unseal_pair().unwrap();
+    let pair_with_money = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+    let account_with_money = pair_with_money.public();
+    let account_without_money = signer_without_money.public();
+    let account_with_money_key_hash =
+        substratee_stf::sgx::account_key_hash(&account_with_money.into());
+    let account_without_money_key_hash =
+        substratee_stf::sgx::account_key_hash(&account_without_money.into());
+
+    let _prev_state_hash = state::write(state.clone(), &shard).unwrap();
+    // load top pool
+    {
+        let &ref pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+        let pool_guard = pool_mutex.lock().unwrap();
+        let pool = Arc::new(pool_guard.deref());
+        let author = Arc::new(Author::new(pool.clone()));
+        let system = FullSystem::new(pool);
+
+        // create trusted call signed
+        let nonce = 10;
+        let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
+        let call = TrustedCall::balance_transfer(
+            account_with_money.into(),
+            account_without_money.into(),
+            1000,
+        );
+        let signed_call = call.sign(&pair_with_money.into(), nonce, &mrenclave, &shard);
+        let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
+        // encrypt call
+        let mut encrypted_top: Vec<u8> = Vec::new();
+        let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+        rsa_pubkey
+            .encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
+            .unwrap();
+
+        // submit trusted call to top pool
+        let result = async { author.submit_top(encrypted_top.clone(), shard).await };
+        executor::block_on(result).unwrap();
+    }
+
+    // when
+    let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
+
+    // then
+    let mut state = state::load(&shard).unwrap();
+    let encoded_nonce = Stf::account_nonce(&mut state, &account_with_money.into()).unwrap();
+    let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+    assert_eq!(nonce, 0);
+
+    let encoded_data = Stf::account_data(&mut state, &account_with_money.into()).unwrap();
+    let acc_data_with_money = AccountData::decode(&mut encoded_data.as_slice()).unwrap();
+    assert_eq!(acc_data_with_money.free, 2000);
+
 
     // clean up
     state::remove_shard_dir(&shard);

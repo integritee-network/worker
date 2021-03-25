@@ -32,7 +32,7 @@ impl Encode for OpaqueCall {
     }
 }
 
-type AccountData = balances::AccountData<Balance>;
+pub type AccountData = balances::AccountData<Balance>;
 pub type AccountInfo = system::AccountInfo<Index, AccountData>;
 
 const ALICE_ENCODED: [u8; 32] = [
@@ -290,6 +290,17 @@ impl Stf {
                 if let Some(info) = get_account_info(account) {
                     debug!("Account {:?} nonce is {}",account.encode(), info.nonce);
                     Some(info.nonce.encode())
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn account_data(ext: &mut State, account: &AccountId) -> Option<Vec<u8>> {
+        ext.execute_with(|| {
+                if let Some(info) = get_account_info(account) {
+                    debug!("Account {:?} data is {:?}",account.encode(), info.data);
+                    Some(info.data.encode())
             } else {
                 None
             }
