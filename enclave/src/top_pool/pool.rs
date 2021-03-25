@@ -515,7 +515,6 @@ impl<B: ChainApi> Clone for Pool<B> {
 use std::collections::{HashSet};
 use jsonrpc_core::futures::executor::block_on;
 use jsonrpc_core::futures;
-use jsonrpc_core::futures::executor::block_on;
 use sp_runtime::{
     traits::{Verify,  Extrinsic as ExtrinsicT, Hash},
     transaction_validity::{ValidTransaction, InvalidTransaction as InvalidTrustedOperation},
@@ -524,7 +523,6 @@ use sp_runtime::{
 use codec::{Encode, Decode};
 use crate::top_pool::base_pool::Limit;
 use std::sync::SgxMutex as Mutex;
-use substrate_test_runtime::{AccountId, Block, Hashing, H256};
 use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use super::primitives::from_low_u64_to_be_h256;
 use core::matches;
@@ -918,4 +916,3 @@ pub fn test_should_reject_transactions_with_no_provides() {
     assert_eq!(pool.validated_pool().status(shard).future, 0);
     assert!(matches!(err, error::Error::NoTagsProvided));
 }
-
