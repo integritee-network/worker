@@ -45,7 +45,7 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::hexstr_to_vec, Api, GenericAddress, XtStatus};
 
-use crate::enclave::api::{enclave_init_chain_relay, enclave_sync_chain_relay};
+use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
 use enclave::api::{
     enclave_dump_ra, enclave_init, enclave_mrenclave, enclave_perform_ra, enclave_shielding_key,
     enclave_signing_key,
@@ -53,7 +53,11 @@ use enclave::api::{
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
+
+use substratee_worker_primitives::block::{
+    Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
+};
 
 mod constants;
 mod enclave;
@@ -63,6 +67,8 @@ mod tests;
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// start block production every ... ms
+const BLOCK_PRODUCTION_INTERVAL: u64 = 6000;
 
 fn main() {
     // Setup logging
@@ -288,7 +294,10 @@ fn worker(
 
     // ------------------------------------------------------------------------
     // start worker api direct invocation server
-    println!("direct-invocation-server listening on ws://{}:{}", w_ip, worker_rpc_port);
+    println!(
+        "rpc worker server listening on ws://{}:{}",
+        w_ip, worker_rpc_port
+    );
     let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
     start_worker_api_direct_server(direct_url, eid);
 
@@ -328,8 +337,16 @@ fn worker(
         println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
     }
 
-    let mut latest_head = init_chain_relay(eid, &api);
+    let latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
+
+    // ------------------------------------------------------------------------
+    // start interval block production
+    let api4 = api.clone();
+    thread::Builder::new()
+        .name("interval_block_production_timer".to_owned())
+        .spawn(move || start_interval_block_production(eid, &api4, latest_head))
+        .unwrap();
 
     // ------------------------------------------------------------------------
     // subscribe to events and react on firing
@@ -344,7 +361,7 @@ fn worker(
         })
         .unwrap();
 
-    let api3 = api.clone();
+    let api3 = api;
     let sender3 = sender.clone();
     let _block_subscriber = thread::Builder::new()
         .name("block_subscriber".to_owned())
@@ -352,14 +369,34 @@ fn worker(
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
-
     let timeout = Duration::from_millis(10);
     loop {
         if let Ok(msg) = receiver.recv_timeout(timeout) {
             if let Ok(events) = parse_events(msg.clone()) {
                 print_events(events, sender.clone())
-            } else if let Ok(_header) = parse_header(msg.clone()) {
-                latest_head = sync_chain_relay(eid, &api, latest_head)
+            }
+        }
+    }
+}
+
+/// Triggers the enclave to produce a block based on a fixed time schedule
+fn start_interval_block_production(
+    eid: sgx_enclave_id_t,
+    api: &Api<sr25519::Pair>,
+    mut latest_head: Header,
+) {
+    let block_production_interval = Duration::from_millis(BLOCK_PRODUCTION_INTERVAL);
+    let mut interval_start = SystemTime::now();
+    loop {
+        if let Ok(elapsed) = interval_start.elapsed() {
+            if elapsed >= block_production_interval {
+                // update interval time
+                interval_start = SystemTime::now();
+                latest_head = produce_blocks(eid, api, latest_head)
+            } else {
+                // sleep for the rest of the interval
+                let sleep_time = block_production_interval - elapsed;
+                thread::sleep(sleep_time);
             }
         }
     }
@@ -397,10 +434,6 @@ fn parse_events(event: String) -> Result<Events, String> {
     let _unhex = hexstr_to_vec(event).map_err(|_| "Decoding Events Failed".to_string())?;
     let mut _er_enc = _unhex.as_slice();
     Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
-}
-
-fn parse_header(header: String) -> Result<Header, String> {
-    serde_json::from_str(&header).map_err(|_| "Decoding Header Failed".to_string())
 }
 
 fn print_events(events: Events, _sender: Sender<String>) {
@@ -505,83 +538,76 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     info!("Finished initializing chain relay, syncing....");
 
-    sync_chain_relay(eid, api, latest)
+    produce_blocks(eid, api, latest)
 }
 
-pub fn sync_chain_relay(
+/// Starts block production
+///
+/// Returns the last synced header of layer one
+pub fn produce_blocks(
     eid: sgx_enclave_id_t,
     api: &Api<sr25519::Pair>,
     last_synced_head: Header,
 ) -> Header {
-    // obtain latest finalized block
+    // obtain latest finalized block from layer one
+    debug!("Getting current head");
     let curr_head: SignedBlock = api
         .get_finalized_head()
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
         .unwrap();
 
-    if curr_head.block.header.hash() == last_synced_head.hash() {
-        // we are already up to date, do nothing
-        return curr_head.block.header;
-    }
-
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
-    blocks_to_sync.push(curr_head.clone());
 
-    // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-    let mut head = curr_head.clone();
+    // add blocks to sync if not already up to date
+    if curr_head.block.header.hash() != last_synced_head.hash() {
+        blocks_to_sync.push(curr_head.clone());
 
-    let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
-    if no_blocks_to_sync > 1 {
-        println!(
-            "Chain Relay is synced until block: {:?}",
-            last_synced_head.number
-        );
-        println!(
-            "Last finalized block number: {:?}\n",
-            head.block.header.number
-        );
-    }
-
-    while head.block.header.parent_hash != last_synced_head.hash() {
-        head = api
-            .get_signed_block(Some(head.block.header.parent_hash))
-            .unwrap();
-        blocks_to_sync.push(head.clone());
-
-        if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
+        // Todo: Check, is this dangerous such that it could be an eternal or too big loop?
+        let mut head = curr_head.clone();
+        let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
+        if no_blocks_to_sync > 1 {
             println!(
-                "Remaining blocks to fetch until last synced header: {:?}",
-                head.block.header.number - last_synced_head.number
-            )
+                "Chain Relay is synced until block: {:?}",
+                last_synced_head.number
+            );
+            println!(
+                "Last finalized block number: {:?}\n",
+                head.block.header.number
+            );
         }
+        while head.block.header.parent_hash != last_synced_head.hash() {
+            debug!("Getting head of hash: {:?}", head.block.header.parent_hash);
+            head = api
+                .get_signed_block(Some(head.block.header.parent_hash))
+                .unwrap();
+            blocks_to_sync.push(head.clone());
+
+            if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
+                println!(
+                    "Remaining blocks to fetch until last synced header: {:?}",
+                    head.block.header.number - last_synced_head.number
+                )
+            }
+        }
+        blocks_to_sync.reverse();
     }
-    blocks_to_sync.reverse();
 
     let tee_accountid = enclave_account(eid);
 
     // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
-    let mut i = blocks_to_sync[0].block.header.number as usize;
+    let mut i = if curr_head.block.header.hash() == last_synced_head.hash() {
+        curr_head.block.header.number as usize
+    } else {
+        blocks_to_sync[0].block.header.number as usize
+    };
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = get_nonce(&api, &tee_accountid);
-        let xts = enclave_sync_chain_relay(eid, chunk.to_vec(), tee_nonce).unwrap();
-        let extrinsics: Vec<Vec<u8>> = Decode::decode(&mut xts.as_slice()).unwrap();
-
-        if !extrinsics.is_empty() {
-            println!(
-                "Sync chain relay: Enclave wants to send {} extrinsics",
-                extrinsics.len()
-            );
-            for xt in extrinsics.into_iter() {
-                api.send_extrinsic(hex_encode(xt), XtStatus::Ready).unwrap();
-            }
-            // await next block to avoid #37
-            let (events_in, events_out) = channel();
-            api.subscribe_events(events_in);
-            let _ = events_out.recv().unwrap();
-            let _ = events_out.recv().unwrap();
-            // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        }
-
+        // Produce blocks
+        if let Err(e) = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce) {
+            error!("{}", e);
+            // enclave might not have synced
+            return last_synced_head;
+        };
         i += chunk.len();
         println!(
             "Synced {} blocks out of {} finalized blocks",
@@ -733,6 +759,66 @@ pub unsafe extern "C" fn ocall_worker_request(
 
     write_slice_and_whitespace_pad(resp_slice, resp.encode());
     sgx_status_t::SGX_SUCCESS
+}
+
+/// # Safety
+///
+/// FFI are always unsafe
+#[no_mangle]
+pub unsafe extern "C" fn ocall_send_block_and_confirmation(
+    confirmations: *const u8,
+    confirmations_size: u32,
+    signed_blocks_ptr: *const u8,
+    signed_blocks_size: u32,
+) -> sgx_status_t {
+    debug!("    Entering ocall_send_block_and_confirmation");
+    let mut status = sgx_status_t::SGX_SUCCESS;
+    let mut confirmations_slice = slice::from_raw_parts(confirmations, confirmations_size as usize);
+    let mut signed_blocks_slice =
+        slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize);
+
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
+
+    // send confirmations to layer one
+    let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations_slice) {
+        Ok(calls) => calls,
+        Err(_) => {
+            error!("Could not decode confirmation calls");
+            status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+            vec![vec![]]
+        }
+    };
+
+    if !confirmation_calls.is_empty() {
+        println!(
+            "Enclave wants to send {} extrinsics",
+            confirmation_calls.len()
+        );
+        for call in confirmation_calls.into_iter() {
+            api.send_extrinsic(hex_encode(call), XtStatus::Ready)
+                .unwrap();
+        }
+        // await next block to avoid #37
+        let (events_in, events_out) = channel();
+        api.subscribe_events(events_in);
+        let _ = events_out.recv().unwrap();
+        let _ = events_out.recv().unwrap();
+        // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
+    }
+
+    // handle blocks
+    let signed_blocks: Vec<SignedSidechainBlock> = match Decode::decode(&mut signed_blocks_slice) {
+        Ok(blocks) => blocks,
+        Err(_) => {
+            error!("Could not decode confirmation calls");
+            status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+            vec![]
+        }
+    };
+    println! {"Received blocks: {:?}", signed_blocks};
+    // TODO: M8.3: Store blocks
+    // TODO: M8.3: broadcast blocks
+    status
 }
 
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {

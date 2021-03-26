@@ -29,15 +29,18 @@ use core::iter::Iterator;
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
 use sp_runtime::generic;
 
-use substratee_stf::{ShardIdentifier, TrustedCallSigned, Getter, TrustedOperation, TrustedGetterSigned};
+use substratee_stf::{
+    Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
+};
 
 use crate::rpc::error::Error as StateRpcError;
 use crate::rpc::error::{FutureResult, Result};
 use crate::top_pool::{
     error::Error as PoolError,
     error::IntoPoolError,
-    primitives::{BlockHash, InPoolOperation, TrustedOperationPool, 
-        TxHash, TrustedOperationSource},
+    primitives::{
+        BlockHash, InPoolOperation, TrustedOperationPool, TrustedOperationSource, TxHash,
+    },
 };
 use jsonrpc_core::Error as RpcError;
 pub mod client_error;
@@ -45,6 +48,7 @@ use client_error::Error as ClientError;
 pub mod hash;
 
 use crate::rsa3072;
+use crate::state;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -62,7 +66,10 @@ pub trait AuthorApi<Hash, BlockHash> {
     fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
     /// Returns all pending operations diveded in calls and getters, potentially grouped by sender.
-    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
+    fn get_pending_tops_separated(
+        &self,
+        shard: ShardIdentifier,
+    ) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
 
     fn get_shards(&self) -> Vec<ShardIdentifier>;
 
@@ -99,12 +106,8 @@ pub struct Author<P> {
 //impl<P, Client> Author<P, Client> {
 impl<P> Author<P> {
     /// Create new instance of Authoring API.
-    pub fn new(
-        pool: Arc<P>,
-    ) -> Self {
-        Author {
-            pool,
-        }
+    pub fn new(pool: Arc<P>) -> Self {
+        Author { pool }
     }
 }
 
@@ -130,6 +133,14 @@ where
         ext: Vec<u8>,
         shard: ShardIdentifier,
     ) -> FutureResult<TxHash<P>, RpcError> {
+        // check if shard already exists
+        let shards = match state::list_shards() {
+            Ok(shards) => shards,
+            Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
+        };
+        if !shards.contains(&shard) {
+            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
+        }
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
@@ -171,24 +182,27 @@ where
             .collect())
     }
 
-    
-    fn pending_tops_separated(&self, shard: ShardIdentifier) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
+    fn get_pending_tops_separated(
+        &self,
+        shard: ShardIdentifier,
+    ) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
         let mut calls: Vec<TrustedCallSigned> = vec![];
         let mut getters: Vec<TrustedGetterSigned> = vec![];
         for operation in self.pool.ready(shard) {
             match operation.data() {
                 TrustedOperation::direct_call(call) => calls.push(call.clone()),
-                TrustedOperation::get(getter) => {
-                    match getter {
-                        Getter::trusted(trusted_getter_signed) => getters.push(trusted_getter_signed.clone()),
-                        _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                TrustedOperation::get(getter) => match getter {
+                    Getter::trusted(trusted_getter_signed) => {
+                        getters.push(trusted_getter_signed.clone())
                     }
+                    _ => error!("Found invalid trusted getter in top pool"),
                 },
-                _ => return Err(StateRpcError::PoolError(PoolError::UnknownTrustedOperation))
+                _ => { // might be emtpy?
+                }
             }
         }
 
-        Ok((calls, getters))        
+        Ok((calls, getters))
     }
 
     fn get_shards(&self) -> Vec<ShardIdentifier> {
@@ -209,9 +223,7 @@ where
                     let op = Decode::decode(&mut &bytes[..]).unwrap();
                     Ok(self.pool.hash_of(&op))
                 }
-                hash::TrustedOperationOrHash::Operation(op) => {
-                    Ok(self.pool.hash_of(&op))
-                }
+                hash::TrustedOperationOrHash::Operation(op) => Ok(self.pool.hash_of(&op)),
             })
             .collect::<Result<Vec<_>>>()?;
         debug!("removing {:?} from top pool", hashes);
@@ -223,11 +235,15 @@ where
             .collect())
     }
 
-    fn watch_top(
-        &self,
-        ext: Vec<u8>,
-        shard: ShardIdentifier,
-    ) -> FutureResult<TxHash<P>, RpcError> {
+    fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError> {
+        // check if shard already exists
+        let shards = match state::list_shards() {
+            Ok(shards) => shards,
+            Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
+        };
+        if !shards.contains(&shard) {
+            return Box::pin(ready(Err(ClientError::InvalidShard.into())));
+        }
         // decrypt call
         let rsa_keypair = rsa3072::unseal_pair().unwrap();
         let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
@@ -260,7 +276,7 @@ where
                 }),
         )
     }
-    
+
     /*	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
         Ok(self.subscriptions.cancel(id))
     }*/

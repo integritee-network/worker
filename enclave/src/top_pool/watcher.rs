@@ -28,7 +28,7 @@ use std::hash;
 
 //use crate::top_pool::primitives::TrustedOperationStatus
 use crate::rpc::worker_api_direct;
-use substratee_worker_primitives::TrustedOperationStatus;
+use substratee_worker_primitives::{TrustedOperationStatus, BlockHash as SidechainBlockHash};
 
 /// Extrinsic watcher.
 ///
@@ -73,9 +73,8 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
     }
 
     /// Extrinsic has been included in block with given hash.
-    pub fn in_block(&mut self) {
-        //self.send(TrustedOperationStatus::InBlock(hash));
-        self.send(TrustedOperationStatus::InBlock);
+    pub fn in_block(&mut self, block_hash: SidechainBlockHash) {
+        self.send(TrustedOperationStatus::InSidechainBlock(block_hash));
         self.is_in_block = true;
     }
 

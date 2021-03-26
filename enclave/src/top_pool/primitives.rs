@@ -112,7 +112,7 @@ pub enum TrustedOperationStatus<Hash, BlockHash> {
     Dropped,
     /// TrustedOperation is no longer valid in the current state.
     Invalid,
-}
+} 
 
 /// The stream of operation events.
 pub type TrustedOperationStatusStream<Hash, BlockHash> =

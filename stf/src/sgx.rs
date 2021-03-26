@@ -7,11 +7,14 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
 use metadata::StorageHasher;
-use sgx_runtime::{Balance, BlockNumber, Runtime};
+use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
 use sp_core::crypto::AccountId32;
+use sp_core::Pair;
+use sp_core::H256 as Hash;
 use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::MultiAddress;
+use substratee_worker_primitives::BlockNumber;
 use support::traits::UnfilteredDispatchable;
 
 use crate::{
@@ -31,7 +34,7 @@ impl Encode for OpaqueCall {
 
 type Index = u32;
 type AccountData = balances::AccountData<Balance>;
-type AccountInfo = system::AccountInfo<Index, AccountData>;
+pub type AccountInfo = system::AccountInfo<Index, AccountData>;
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
@@ -42,6 +45,8 @@ impl Stf {
     pub fn init_state() -> State {
         debug!("initializing stf state");
         let mut ext = State::new();
+        // set initial state hash
+        let state_hash: Hash = blake2_256(&ext.clone().encode()).into();
         ext.execute_with(|| {
             // do not set genesis for pallets that are meant to be on-chain
             // use get_storage_hashes_to_update instead
@@ -71,6 +76,37 @@ impl Stf {
                 &storage_value_key("Balances", "ExistentialDeposit"),
                 &1u128.encode(),
             );
+            // Set first sidechainblock number to 0
+            let init_block_number: BlockNumber = 0;
+            sp_io::storage::set(
+                &storage_value_key("System", "Number"),
+                &init_block_number.encode(),
+            );
+            // Set first parent hash to initial state hash
+            sp_io::storage::set(
+                &storage_value_key("System", "LastHash"),
+                &state_hash.encode(),
+            );
+            //FIXME: for testing purpose only - maybe add feature?
+            // for example: feature = endowtestaccounts
+            let public = AccountId32::from(
+                sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public(),
+            );
+            sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                MultiAddress::Id(public.clone()),
+                2000,
+                2000,
+            )
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
+            .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
+            .unwrap();
+
+            let print_public: [u8; 32] = public.clone().into();
+            if let Some(info) = get_account_info(&public) {
+                debug!("{:?} balance is {}", print_public, info.data.free);
+            } else {
+                debug!("{:?} balance is zero", print_public);
+            }
         });
         ext
     }
@@ -86,11 +122,76 @@ impl Stf {
         });
     }
 
-    pub fn update_block_number(ext: &mut State, number: BlockNumber) {
+    pub fn update_layer_one_block_number(ext: &mut State, number: L1BlockNumer) {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "LayerOneNumber");
+            sp_io::storage::set(&key, &number.encode());
+        });
+    }
+
+    pub fn get_layer_one_block_number(ext: &mut State) -> Option<L1BlockNumer> {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "LayerOneNumber");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(number) = L1BlockNumer::decode(&mut infovec.as_slice()) {
+                    Some(number)
+                } else {
+                    error!("Blocknumber l1 decode error");
+                    None
+                }
+            } else {
+                error!("No Blocknumber l1 in state?");
+                None
+            }
+        })
+    }
+
+    pub fn update_sidechain_block_number(ext: &mut State, number: BlockNumber) {
         ext.execute_with(|| {
             let key = storage_value_key("System", "Number");
             sp_io::storage::set(&key, &number.encode());
         });
+    }
+
+    pub fn get_sidechain_block_number(ext: &mut State) -> Option<BlockNumber> {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "Number");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(number) = BlockNumber::decode(&mut infovec.as_slice()) {
+                    Some(number)
+                } else {
+                    error!("Sidechain blocknumber decode error");
+                    None
+                }
+            } else {
+                error!("No sidechain blocknumber in state?");
+                None
+            }
+        })
+    }
+
+    pub fn update_last_block_hash(ext: &mut State, hash: Hash) {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "LastHash");
+            sp_io::storage::set(&key, &hash.encode());
+        });
+    }
+
+    pub fn get_last_block_hash(ext: &mut State) -> Option<Hash> {
+        ext.execute_with(|| {
+            let key = storage_value_key("System", "LastHash");
+            if let Some(infovec) = sp_io::storage::get(&key) {
+                if let Ok(hash) = Hash::decode(&mut infovec.as_slice()) {
+                    Some(hash)
+                } else {
+                    error!("Blockhash decode error");
+                    None
+                }
+            } else {
+                error!("No Blockhash in state?");
+                None
+            }
+        })
     }
 
     pub fn execute(
@@ -98,6 +199,7 @@ impl Stf {
         call: TrustedCallSigned,
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
+        let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                 Self::ensure_root(root)?;
@@ -117,7 +219,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_transfer(from, to, value) => {
-                let origin = sgx_runtime::Origin::signed(AccountId32::from(from));
+                let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
                 debug!(
                     "balance_transfer({:x?}, {:x?}, {})",
                     from.encode(),
@@ -145,6 +247,7 @@ impl Stf {
                     value,
                     shard
                 );
+
                 Self::unshield_funds(account_incognito, value)?;
                 calls.push(OpaqueCall(
                     (
@@ -152,7 +255,7 @@ impl Stf {
                         beneficiary,
                         value,
                         shard,
-                        blake2_256(&call.encode()),
+                        call_hash,
                     )
                         .encode(),
                 ));
