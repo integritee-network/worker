@@ -6,7 +6,7 @@ use std::vec;
 use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
-use metadata::StorageHasher;
+use support::metadata::StorageHasher;
 use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_core::Pair;
