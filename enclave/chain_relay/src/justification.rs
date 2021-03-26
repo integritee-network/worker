@@ -244,13 +244,6 @@ where
 
         Ok(route)
     }
-
-    fn best_chain_containing(
-        &self,
-        _block: Block::Hash,
-    ) -> Option<(Block::Hash, NumberFor<Block>)> {
-        None
-    }
 }
 
 // copied

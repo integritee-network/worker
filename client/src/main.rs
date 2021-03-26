@@ -57,7 +57,7 @@ use substrate_api_client::{
     events::EventsDecoder,
     extrinsic::xt_primitives::{GenericAddress, UncheckedExtrinsicV4},
     node_metadata::Metadata,
-    utils::hexstr_to_vec,
+    utils::FromHexString,
     Api, XtStatus,
 };
 
@@ -164,7 +164,7 @@ fn main() {
             Command::new("print-metadata")
                 .description("query node metadata and print it as json to stdout")
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
-                    let meta = get_chain_api(matches).get_metadata();
+                    let meta = get_chain_api(matches).get_metadata().unwrap();
                     println!("Metadata:\n {}", Metadata::pretty_format(&meta).unwrap());
                     Ok(())
                 }),
@@ -231,7 +231,7 @@ fn main() {
                     let api = get_chain_api(matches);
                     let account = matches.value_of("AccountId").unwrap();
                     let accountid = get_accountid_from_str(account);
-                    let balance = if let Some(data) = api.get_account_data(&accountid) {
+                    let balance = if let Some(data) = api.get_account_data(&accountid).unwrap() {
                         data.free
                     } else {
                         0
@@ -283,7 +283,7 @@ fn main() {
                         .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
                         .unwrap();
                     println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
-                    let result = _api.get_account_data(&to).unwrap();
+                    let result = _api.get_account_data(&to).unwrap().unwrap();
                     println!("balance for {} is now {}", to, result.free);
                     Ok(())
                 }),
@@ -436,7 +436,7 @@ fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
         matches.value_of("node-port").unwrap()
     );
     info!("connecting to {}", url);
-    Api::<sr25519::Pair>::new(url)
+    Api::<sr25519::Pair>::new(url).unwrap()
 }
 
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
@@ -564,13 +564,12 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
 
     loop {
         let ret: CallConfirmedArgs = _chain_api
-            .wait_for_event(
+            .wait_for_event::<CallConfirmedArgs>(
                 "SubstrateeRegistry",
                 "CallConfirmed",
                 Some(decoder.clone()),
                 &events_out,
             )
-            .unwrap()
             .unwrap();
         let expected = H256::from(blake2_256(&call_encoded));
         info!("callConfirmed event received");
@@ -700,7 +699,7 @@ fn listen(matches: &ArgMatches<'_>) {
             return;
         };
         let event_str = events_out.recv().unwrap();
-        let _unhex = hexstr_to_vec(event_str).unwrap();
+        let _unhex = Vec::from_hex(event_str).unwrap();
         let mut _er_enc = _unhex.as_slice();
         let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
         blocks += 1;
@@ -820,7 +819,7 @@ where
     loop {
         let event_str = events_out.recv().unwrap();
 
-        let _unhex = hexstr_to_vec(event_str).unwrap();
+        let _unhex = Vec::from_hex(event_str).unwrap();
         let mut _er_enc = _unhex.as_slice();
         let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
         if let Ok(evts) = _events {
@@ -877,7 +876,7 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 }
 
 fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
-    if let Some(count) = api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None) {
+    if let Some(count) = api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None).unwrap() {
         count
     } else {
         0
@@ -885,5 +884,5 @@ fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
 }
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
-    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None)
+    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None).unwrap()
 }
