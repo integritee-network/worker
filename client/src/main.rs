@@ -61,10 +61,10 @@ use substrate_api_client::{
     Api, XtStatus,
 };
 
+use substrate_client_keystore::LocalKeystore;
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
-use substrate_client_keystore::LocalKeystore;
-use substratee_worker_primitives::{RpcRequest, RpcResponse, RpcReturnValue, DirectCallStatus};
+use substratee_worker_primitives::{DirectCallStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -442,19 +442,22 @@ fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
     match top {
         TrustedOperation::indirect_call(call) => send_request(matches, call.clone()),
-        TrustedOperation::direct_call(call) => send_direct_request(matches, TrustedOperation::direct_call(call.clone())),
-        TrustedOperation::get(getter) => get_state(matches,TrustedOperation::get(getter.clone())),
+        TrustedOperation::direct_call(call) => {
+            send_direct_request(matches, TrustedOperation::direct_call(call.clone()))
+        }
+        TrustedOperation::get(getter) => get_state(matches, TrustedOperation::get(getter.clone())),
     }
 }
 
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u8>> {
     // TODO: ensure getter is signed?
-    let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, getter) {
+    let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, getter)
+    {
         Ok((encoded, encrypted)) => (encoded, encrypted),
         Err(msg) => {
             println!("[Error] {}", msg);
-            return None
-        },
+            return None;
+        }
     };
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
@@ -480,13 +483,19 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {                    
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
                     if return_value.status == DirectCallStatus::Error {
-                        println!("[Error] {}", String::decode(&mut return_value.value.as_slice()).unwrap());
-                        return None
+                        println!(
+                            "[Error] {}",
+                            String::decode(&mut return_value.value.as_slice()).unwrap()
+                        );
+                        return None;
                     }
                     if !return_value.do_watch {
-                        return Some(return_value.value)
+                        return match Option::decode(&mut return_value.value.as_slice()) {
+                            Ok(value_opt) => value_opt,
+                            Err(_) => panic!("Error when decoding response"),
+                        };
                     }
                 };
             }
@@ -495,13 +504,16 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
     }
 }
 
-fn encode_encrypt<E: Encode>(matches: &ArgMatches<'_>, to_encrypt: E) -> Result<(Vec<u8>, Vec<u8>), String> {
-    let worker_api_direct = get_worker_api_direct(matches);    
+fn encode_encrypt<E: Encode>(
+    matches: &ArgMatches<'_>,
+    to_encrypt: E,
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let worker_api_direct = get_worker_api_direct(matches);
     let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
         Ok(key) => key,
         Err(err_msg) => return Err(err_msg),
     };
-        
+
     let encoded = to_encrypt.encode();
     let mut encrypted: Vec<u8> = Vec::new();
     shielding_pubkey
@@ -516,8 +528,8 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
         Ok((encoded, encrypted)) => (encoded, encrypted),
         Err(msg) => {
             println!("[Error]: {}", msg);
-            return None
-        },
+            return None;
+        }
     };
 
     let shard = match read_shard(matches) {
@@ -595,15 +607,19 @@ fn read_shard(matches: &ArgMatches<'_>) -> StdResult<ShardIdentifier, codec::Err
         },
     }
 }
-
-fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperation) -> Option<Vec<u8>> {
-    let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(matches, operation_call) {
-        Ok((encoded, encrypted)) => (encoded, encrypted),
-        Err(msg) => {
-            println!("[Error] {}", msg);
-            return None
-        }, 
-    };
+/// sends a rpc watch request to the worker api server
+fn send_direct_request(
+    matches: &ArgMatches<'_>,
+    operation_call: TrustedOperation,
+) -> Option<Vec<u8>> {
+    let (_operation_call_encoded, operation_call_encrypted) =
+        match encode_encrypt(matches, operation_call) {
+            Ok((encoded, encrypted)) => (encoded, encrypted),
+            Err(msg) => {
+                println!("[Error] {}", msg);
+                return None;
+            }
+        };
     let shard = match read_shard(matches) {
         Ok(shard) => shard,
         Err(e) => panic!(e),
@@ -633,20 +649,20 @@ fn send_direct_request(matches: &ArgMatches<'_>, operation_call: TrustedOperatio
         match receiver.recv() {
             Ok(response) => {
                 let response: RpcResponse = serde_json::from_str(&response).unwrap();
-                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {                   
+                if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
                     match return_value.status {
                         DirectCallStatus::Error => {
                             if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
                                 println!("[Error] {}", value);
                             }
-                            return None
-                        },
+                            return None;
+                        }
                         DirectCallStatus::TrustedOperationStatus(status) => {
                             if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
-                            println!("Trusted call {:?} is {:?}", value, status);
-                            } 
-                        },
-                        _ => return None
+                                println!("Trusted call {:?} is {:?}", value, status);
+                            }
+                        }
+                        _ => return None,
                     }
                     if !return_value.do_watch {
                         return None;
@@ -754,6 +770,15 @@ fn listen(matches: &ArgMatches<'_>) {
                                     println!(
                                         "CallConfirmed from {} with hash {:?}",
                                         accountid, call_hash
+                                    );
+                                }
+                                my_node_runtime::substratee_registry::RawEvent::BlockConfirmed(
+                                    accountid,
+                                    block_hash,
+                                ) => {
+                                    println!(
+                                        "BlockConfirmed from {} with hash {:?}",
+                                        accountid, block_hash
                                     );
                                 }
                                 my_node_runtime::substratee_registry::RawEvent::ShieldFunds(

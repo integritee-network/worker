@@ -12,7 +12,9 @@ sgx = [
     "log-sgx",
     "sp-io",
     "sgx-runtime",
+    "sgx-externalities",
     "derive_more",
+    "substratee-worker-primitives",
 ]
 std = [
     "clap",
@@ -95,14 +97,17 @@ default-features = false
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.7.0"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 optional = true
 
 [dependencies.sgx-runtime]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
-tag = "v0.7.0"
+optional = true
+
+[dependencies.sgx-externalities]
+default-features = false
+git = "https://github.com/scs/sgx-runtime"
 optional = true
 
 [dependencies.my-node-runtime]
@@ -124,6 +129,12 @@ optional = true
 [dependencies.sc-keystore]
 git = "https://github.com/paritytech/substrate.git"
 rev = "a208da16"
+optional = true
+
+[dependencies.substratee-worker-primitives]
+path = "../substratee-worker-primitives"
+default-features = false
+features = ["sgx"]
 optional = true
 
 [dev-dependencies.sp-keyring]

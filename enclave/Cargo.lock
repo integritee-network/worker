@@ -262,7 +262,7 @@ dependencies = [
  "sp-application-crypto",
  "sp-core",
  "sp-finality-grandpa",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime?tag=v0.8.0)",
  "sp-runtime",
  "sp-runtime-interface",
  "sp-trie",
@@ -273,9 +273,19 @@ name = "chrono"
 version = "0.4.11"
 source = "git+https://github.com/mesalock-linux/chrono-sgx#f964ae7f5f65bd2c9cd6f44a067e7980afc08ca0"
 dependencies = [
- "num-integer",
+ "num-integer 0.1.41",
  "num-traits 0.2.10",
  "sgx_tstd",
+]
+
+[[package]]
+name = "chrono"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+dependencies = [
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -483,7 +493,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
  "sp-tracing",
@@ -515,7 +525,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
  "sp-tracing",
@@ -563,7 +573,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
  "sp-version",
@@ -1104,7 +1114,7 @@ source = "git+https://github.com/mesalock-linux/num-sgx#22645415542cc67551890dfd
 dependencies = [
  "num-bigint",
  "num-complex",
- "num-integer",
+ "num-integer 0.1.41",
  "num-iter",
  "num-rational",
  "num-traits 0.2.10",
@@ -1116,7 +1126,7 @@ version = "0.2.5"
 source = "git+https://github.com/mesalock-linux/num-bigint-sgx#76a5bed94dc31c32bd1670dbf72877abcf9bbc09"
 dependencies = [
  "autocfg 1.0.1",
- "num-integer",
+ "num-integer 0.1.41",
  "num-traits 0.2.10",
  "sgx_tstd",
 ]
@@ -1142,11 +1152,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-integer"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-traits 0.2.14",
+]
+
+[[package]]
 name = "num-iter"
 version = "0.1.39"
 source = "git+https://github.com/mesalock-linux/num-iter-sgx#f19fc44fcad0b82a040e5a24c511e5049cc04b60"
 dependencies = [
- "num-integer",
+ "num-integer 0.1.41",
  "num-traits 0.2.10",
  "sgx_tstd",
 ]
@@ -1158,7 +1178,7 @@ source = "git+https://github.com/mesalock-linux/num-rational-sgx#be65f9ce439f3c9
 dependencies = [
  "autocfg 0.1.7",
  "num-bigint",
- "num-integer",
+ "num-integer 0.1.41",
  "num-traits 0.2.10",
  "sgx_tstd",
 ]
@@ -1265,7 +1285,7 @@ dependencies = [
  "sp-consensus-babe",
  "sp-consensus-vrf",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-session",
  "sp-staking",
@@ -1328,7 +1348,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-session",
  "sp-staking",
@@ -1343,7 +1363,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
 ]
@@ -1374,7 +1394,7 @@ dependencies = [
  "parity-scale-codec",
  "smallvec",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
 ]
@@ -1900,20 +1920,34 @@ dependencies = [
 
 [[package]]
 name = "sgx-externalities"
-version = "0.2.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.7.0#c40bc47233d516ed94ffd17422f092f0c0a16015"
+version = "0.3.0"
+source = "git+https://github.com/scs/sgx-runtime?tag=v0.8.0#3a939127d028f059b45caf4bb6b3c82655fab448"
 dependencies = [
  "environmental",
  "log",
  "sgx_serialize",
+ "sgx_serialize_derive",
+ "sgx_tstd",
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx-externalities"
+version = "0.3.0"
+source = "git+https://github.com/scs/sgx-runtime#2c744c8c9c7669be95bfcb554a69975741122c5f"
+dependencies = [
+ "environmental",
+ "log",
+ "sgx_serialize",
+ "sgx_serialize_derive",
  "sgx_tstd",
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx-runtime"
-version = "0.7.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.7.0#c40bc47233d516ed94ffd17422f092f0c0a16015"
+version = "0.8.0"
+source = "git+https://github.com/scs/sgx-runtime#2c744c8c9c7669be95bfcb554a69975741122c5f"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2223,7 +2257,7 @@ source = "git+https://github.com/paritytech/substrate.git?rev=a208da16#a208da160
 dependencies = [
  "parity-scale-codec",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-std",
 ]
 
@@ -2392,14 +2426,35 @@ dependencies = [
 
 [[package]]
 name = "sp-io"
-version = "2.0.0"
-source = "git+https://github.com/scs/sgx-runtime?tag=v0.7.0#c40bc47233d516ed94ffd17422f092f0c0a16015"
+version = "2.1.0"
+source = "git+https://github.com/scs/sgx-runtime?tag=v0.8.0#3a939127d028f059b45caf4bb6b3c82655fab448"
 dependencies = [
  "environmental",
  "hash-db",
  "log",
  "parity-scale-codec",
- "sgx-externalities",
+ "sgx-externalities 0.3.0 (git+https://github.com/scs/sgx-runtime?tag=v0.8.0)",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime-interface",
+ "sp-std",
+ "sp-tracing",
+ "sp-wasm-interface",
+ "tracing",
+ "tracing-core",
+]
+
+[[package]]
+name = "sp-io"
+version = "2.1.0"
+source = "git+https://github.com/scs/sgx-runtime#2c744c8c9c7669be95bfcb554a69975741122c5f"
+dependencies = [
+ "environmental",
+ "hash-db",
+ "log",
+ "parity-scale-codec",
+ "sgx-externalities 0.3.0 (git+https://github.com/scs/sgx-runtime)",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -2436,7 +2491,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-std",
 ]
 
@@ -2634,7 +2689,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
  "sp-version",
@@ -2664,7 +2719,7 @@ dependencies = [
  "sp-externalities",
  "sp-finality-grandpa",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-offchain",
  "sp-runtime",
  "sp-runtime-interface",
@@ -2705,12 +2760,14 @@ dependencies = [
  "log",
  "pallet-balances",
  "parity-scale-codec",
+ "sgx-externalities 0.3.0 (git+https://github.com/scs/sgx-runtime)",
  "sgx-runtime",
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
+ "substratee-worker-primitives",
 ]
 
 [[package]]
@@ -2722,7 +2779,7 @@ dependencies = [
  "bit-vec",
  "byteorder",
  "chain-relay",
- "chrono",
+ "chrono 0.4.11",
  "cid",
  "derive_more",
  "env_logger",
@@ -2744,7 +2801,7 @@ dependencies = [
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
  "serde_derive",
  "serde_json",
- "sgx-externalities",
+ "sgx-externalities 0.3.0 (git+https://github.com/scs/sgx-runtime)",
  "sgx_rand",
  "sgx_serialize",
  "sgx_serialize_derive",
@@ -2758,7 +2815,7 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-finality-grandpa",
- "sp-io",
+ "sp-io 2.1.0 (git+https://github.com/scs/sgx-runtime)",
  "sp-runtime",
  "sp-std",
  "sp-utils",
@@ -2777,10 +2834,12 @@ dependencies = [
 name = "substratee-worker-primitives"
 version = "0.8.0"
 dependencies = [
+ "chrono 0.4.19",
  "parity-scale-codec",
  "primitive-types 0.6.2",
  "sgx_tstd",
  "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -3057,7 +3116,7 @@ version = "0.3.1"
 source = "git+https://github.com/mesalock-linux/yasna.rs-sgx?rev=sgx_1.1.3#a1f50714cd3eb29608ecf7888cacedc173edfdb2"
 dependencies = [
  "bit-vec",
- "chrono",
+ "chrono 0.4.11",
  "num-bigint",
  "sgx_tstd",
 ]

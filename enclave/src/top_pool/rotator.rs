@@ -24,6 +24,7 @@
 use std::{
     collections::HashMap,
     hash, iter,
+    sync::SgxRwLock,
     time::{Duration, Instant},
     untrusted::time::InstantEx,
 };
@@ -41,7 +42,7 @@ pub struct PoolRotator<Hash> {
     /// How long the extrinsic is banned for.
     ban_time: Duration,
     /// Currently banned extrinsics.
-    banned_until: HashMap<Hash, Instant>,
+    banned_until: SgxRwLock<HashMap<Hash, Instant>>,
 }
 
 impl<Hash: hash::Hash + Eq> Default for PoolRotator<Hash> {
@@ -53,18 +54,18 @@ impl<Hash: hash::Hash + Eq> Default for PoolRotator<Hash> {
     }
 }
 
-impl<Hash: hash::Hash + Eq + Clone> PoolRotator<Hash> {
+impl<Hash: hash::Hash + Eq + Clone + core::fmt::Debug> PoolRotator<Hash> {
     /// Returns `true` if extrinsic hash is currently banned.
     pub fn is_banned(&self, hash: &Hash) -> bool {
-        self.banned_until.contains_key(hash)
+        self.banned_until.read().unwrap().contains_key(hash)
     }
 
     /// Bans given set of hashes.
     pub fn ban(&self, now: &Instant, hashes: impl IntoIterator<Item = Hash>) {
-        let mut banned = self.banned_until.clone();
+        let mut banned = self.banned_until.write().unwrap();
 
         for hash in hashes {
-            banned.insert(hash, *now + self.ban_time);
+            banned.insert(hash.clone(), *now + self.ban_time);
         }
 
         if banned.len() > 2 * EXPECTED_SIZE {
@@ -95,24 +96,22 @@ impl<Hash: hash::Hash + Eq + Clone> PoolRotator<Hash> {
 
     /// Removes timed bans.
     pub fn clear_timeouts(&self, now: &Instant) {
-        let mut banned = self.banned_until.clone();
+        let mut banned = self.banned_until.write().unwrap();
 
         banned.retain(|_, &mut v| v >= *now);
     }
 }
-/*
-#[cfg(test)]
-mod tests {
+
+pub mod tests {
     use super::*;
-    use sp_runtime::transaction_validity::TrustedOperationSource;
-    use substratee_stf::ShardIdentifier;
+    use crate::top_pool::primitives::TrustedOperationSource;
 
     type Hash = u64;
     type Ex = ();
 
     fn rotator() -> PoolRotator<Hash> {
         PoolRotator {
-            ban_time: Duration::from_millis(10),
+            ban_time: Duration::from_millis(1000),
             ..Default::default()
         }
     }
@@ -134,8 +133,7 @@ mod tests {
         (hash, tx)
     }
 
-    #[test]
-    fn should_not_ban_if_not_stale() {
+    pub fn test_should_not_ban_if_not_stale() {
         // given
         let (hash, tx) = tx();
         let rotator = rotator();
@@ -150,8 +148,7 @@ mod tests {
         assert!(!rotator.is_banned(&hash));
     }
 
-    #[test]
-    fn should_ban_stale_extrinsic() {
+    pub fn test_should_ban_stale_extrinsic() {
         // given
         let (hash, tx) = tx();
         let rotator = rotator();
@@ -164,8 +161,7 @@ mod tests {
         assert!(rotator.is_banned(&hash));
     }
 
-    #[test]
-    fn should_clear_banned() {
+    pub fn test_should_clear_banned() {
         // given
         let (hash, tx) = tx();
         let rotator = rotator();
@@ -180,10 +176,8 @@ mod tests {
         assert!(!rotator.is_banned(&hash));
     }
 
-    #[test]
-    fn should_garbage_collect() {
+    pub fn test_should_garbage_collect() {
         // given
-        let shard = ShardIdentifier::default();
         fn tx_with(i: u64, valid_till: u64) -> TrustedOperation<Hash, Ex> {
             let hash = i;
             TrustedOperation {
@@ -209,13 +203,15 @@ mod tests {
             let tx = tx_with(i as u64, past_block);
             assert!(rotator.ban_if_stale(&now, past_block, &tx));
         }
-        assert_eq!(rotator.banned_until.len(), 2 * EXPECTED_SIZE);
+        assert_eq!(
+            rotator.banned_until.read().unwrap().len(),
+            2 * EXPECTED_SIZE
+        );
 
         // then
         let tx = tx_with(2 * EXPECTED_SIZE as u64, past_block);
         // trigger a garbage collection
         assert!(rotator.ban_if_stale(&now, past_block, &tx));
-        assert_eq!(rotator.banned_until.len(), EXPECTED_SIZE);
+        assert_eq!(rotator.banned_until.read().unwrap().len(), EXPECTED_SIZE);
     }
 }
-*/

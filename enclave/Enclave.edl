@@ -46,10 +46,9 @@ enclave {
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
-        public sgx_status_t sync_chain_relay(
+        public sgx_status_t produce_blocks(
             [in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
-            [in] uint32_t* nonce,
-            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, size_t unchecked_extrinsic_size
+            [in] uint32_t* nonce
         );
 
 		public sgx_status_t get_rsa_encryption_pubkey(
@@ -117,6 +116,11 @@ enclave {
 		sgx_status_t ocall_worker_request(
 	        [in, size = req_size] uint8_t * request, uint32_t req_size,
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
+	    );
+
+		sgx_status_t ocall_send_block_and_confirmation(
+	        [in, size = confirmations_size] uint8_t * confirmations, uint32_t confirmations_size,
+	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
 	    );
 
 		sgx_status_t ocall_update_status_event(
