@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::sync::SgxMutex as Mutex;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, NumberFor, Zero},
 };
+use std::collections::HashMap;
+use std::sync::SgxMutex as Mutex;
 
 pub extern crate alloc;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
@@ -17,13 +17,16 @@ use crate::top_pool::{
     base_pool::TrustedOperation,
     error::IntoPoolError,
     pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
-    primitives::{ImportNotificationStream, PoolFuture, PoolStatus, 
-        TrustedOperationPool, TxHash, TrustedOperationSource},
+    primitives::{
+        ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
+        TrustedOperationSource, TxHash,
+    },
 };
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
-type BoxedReadyIterator<Hash, Data> = Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
+type BoxedReadyIterator<Hash, Data> =
+    Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
 
 type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, StfTrustedOperation>;
 
@@ -44,6 +47,7 @@ impl<T, Block: BlockT> Default for ReadyPoll<T, Block> {
 }
 
 impl<T, Block: BlockT> ReadyPoll<T, Block> {
+    #[allow(unused)]
     fn trigger(&mut self, number: NumberFor<Block>, iterator_factory: impl Fn() -> T) {
         self.updated_at = number;
 

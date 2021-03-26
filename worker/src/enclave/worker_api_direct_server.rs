@@ -28,7 +28,9 @@ use std::sync::{
 use std::thread;
 use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
-use substratee_worker_primitives::{RpcResponse, RpcReturnValue, TrustedOperationStatus, DirectCallStatus};
+use substratee_worker_primitives::{
+    DirectCallStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus,
+};
 
 static WATCHED_LIST: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
 static EID: AtomicPtr<u64> = AtomicPtr::new(0 as *mut sgx_enclave_id_t);
@@ -58,14 +60,26 @@ impl DirectWsServerRequest {
     }
 }
 
-pub fn start_worker_api_direct_server(
-    addr: String,
-    eid: sgx_enclave_id_t,
-) {
+pub fn start_worker_api_direct_server(addr: String, eid: sgx_enclave_id_t) {
+    // initialise top pool in enclave
+    let init = thread::spawn(move || {
+        let mut retval = sgx_status_t::SGX_SUCCESS;
+        let result = unsafe { initialize_pool(eid, &mut retval) };
+
+        match result {
+            sgx_status_t::SGX_SUCCESS => {
+                debug!("[TX-pool init] ECALL success!");
+            }
+            _ => {
+                error!("[TX-pool init] ECALL Enclave Failed {}!", result.as_str());
+            }
+        }
+    });
+
     // Server WebSocket handler
     struct Server {
         client: Sender,
-    }  
+    }
 
     // initialize static pointer to eid
     let eid_ptr = Arc::into_raw(Arc::new(eid));
@@ -73,11 +87,8 @@ pub fn start_worker_api_direct_server(
 
     impl Handler for Server {
         fn on_message(&mut self, msg: Message) -> Result<()> {
-            let request = DirectWsServerRequest::new(
-                self.client.clone(),
-                msg.to_string(),
-            );
-            if let Err(_) = handle_direct_invocation_request(request) {
+            let request = DirectWsServerRequest::new(self.client.clone(), msg.to_string());
+            if handle_direct_invocation_request(request).is_err() {
                 error!("direct invocation call was not successful");
             }
             Ok(())
@@ -93,9 +104,7 @@ pub fn start_worker_api_direct_server(
     // Server thread
     info!("Starting direct invocation WebSocket server on {}", addr);
     thread::spawn(move || {
-        match listen(addr.clone(), |out| Server {
-            client: out,
-        }) {
+        match listen(addr.clone(), |out| Server { client: out }) {
             Ok(_) => (),
             Err(e) => {
                 error!(
@@ -106,26 +115,15 @@ pub fn start_worker_api_direct_server(
         };
     });
 
-    // initialise top pool in enclave
-    thread::spawn(move || {
-        let mut retval = sgx_status_t::SGX_SUCCESS;
-        let result = unsafe { initialize_pool(eid, &mut retval) };
-
-        match result {
-            sgx_status_t::SGX_SUCCESS => {
-                debug!("[TX-pool init] ECALL success!");
-            }
-            _ => {
-                error!("[TX-pool init] ECALL Enclave Failed {}!", result.as_str());
-            }
-        }
-    });
-
     // initialize static pointer to empty HashMap
     let new_map: HashMap<Hash, WatchingClient> = HashMap::new();
     let pool_ptr = Arc::new(Mutex::new(new_map));
     let ptr = Arc::into_raw(pool_ptr);
     WATCHED_LIST.store(ptr as *mut (), Ordering::SeqCst);
+
+    // ensure top pool is initialised before returning
+    init.join().unwrap();
+    println!("Successfully initialised top pool");
 }
 
 struct WatchingClient {
@@ -142,11 +140,9 @@ fn load_watched_list() -> Option<&'static Mutex<HashMap<Hash, WatchingClient>>> 
     }
 }
 
-pub fn handle_direct_invocation_request(
-    req: DirectWsServerRequest,
-) -> Result<()> {
+pub fn handle_direct_invocation_request(req: DirectWsServerRequest) -> Result<()> {
     info!("Got message '{:?}'. ", req.request);
-    let eid = unsafe{ *EID.load(Ordering::SeqCst)};
+    let eid = unsafe { *EID.load(Ordering::SeqCst) };
     // forwarding rpc string directly to enclave
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let response_len = 8192;
@@ -174,19 +170,23 @@ pub fn handle_direct_invocation_request(
         }
     }
     let decoded_response = String::from_utf8_lossy(&response).to_string();
-    if let Ok(full_rpc_response) = 
-        serde_json::from_str(&decoded_response) as serde_json::Result<RpcResponse> {
+    if let Ok(full_rpc_response) =
+        serde_json::from_str(&decoded_response) as serde_json::Result<RpcResponse>
+    {
         if let Ok(result_of_rpc_response) =
-            RpcReturnValue::decode(&mut full_rpc_response.result.as_slice()) {
+            RpcReturnValue::decode(&mut full_rpc_response.result.as_slice())
+        {
             match result_of_rpc_response.status {
-                DirectCallStatus::TrustedOperationStatus(_) => {             
+                DirectCallStatus::TrustedOperationStatus(_) => {
                     if result_of_rpc_response.do_watch {
                         // start watching the call with the specific hash
-                        if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice()) {
+                        if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice())
+                        {
                             // Aquire lock on watched list
                             let mutex = load_watched_list().unwrap();
-                            let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> = mutex.lock().unwrap();
-                            
+                            let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> =
+                                mutex.lock().unwrap();
+
                             // create new key and value entries to store
                             let new_client = WatchingClient {
                                 client: req.client.clone(),
@@ -200,17 +200,17 @@ pub fn handle_direct_invocation_request(
                             watch_list.insert(hash, new_client);
                         }
                     }
-                },
+                }
                 // Simple return value, no need of further server actions
-                _ => { },
+                _ => {}
             }
-        }      
-        return req.client
-                .send(serde_json::to_string(&full_rpc_response).unwrap())
-    } 
+        }
+        return req
+            .client
+            .send(serde_json::to_string(&full_rpc_response).unwrap());
+    }
     // could not decode rpcresponse - maybe a String as return value?
     req.client.send(decoded_response)
-    
 }
 
 #[no_mangle]
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn ocall_update_status_event(
 
             match status_update {
                 TrustedOperationStatus::Invalid
-                | TrustedOperationStatus::InBlock
+                | TrustedOperationStatus::InSidechainBlock(_)
                 | TrustedOperationStatus::Finalized
                 | TrustedOperationStatus::Usurped => {
                     // Stop watching
@@ -275,8 +275,7 @@ pub unsafe extern "C" fn ocall_send_status(
     status_encoded: *const u8,
     status_size: u32,
 ) -> sgx_status_t {
-    let status_slice =
-        slice::from_raw_parts(status_encoded, status_size as usize);  
+    let status_slice = slice::from_raw_parts(status_encoded, status_size as usize);
     let mut hash_slice = slice::from_raw_parts(hash_encoded, hash_size as usize);
     if let Ok(hash) = Hash::decode(&mut hash_slice) {
         // Aquire watched list lock
@@ -284,22 +283,22 @@ pub unsafe extern "C" fn ocall_send_status(
         let mut guard = mutex.lock().unwrap();
         if let Some(client_response) = guard.get_mut(&hash) {
             let mut response = &mut client_response.response;
-        
+
             // create return value
             // TODO: Signature?
-            let submitted = DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted);
-            let result = RpcReturnValue::new(status_slice.to_vec(), false, submitted); 
- 
+            let submitted =
+                DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted);
+            let result = RpcReturnValue::new(status_slice.to_vec(), false, submitted);
+
             // update response
             response.result = result.encode();
             client_response
                 .client
                 .send(serde_json::to_string(&response).unwrap())
                 .unwrap();
-        
-            client_response.client.close(CloseCode::Normal).unwrap();
 
-        } 
+            client_response.client.close(CloseCode::Normal).unwrap();
+        }
         guard.remove(&hash);
     }
 

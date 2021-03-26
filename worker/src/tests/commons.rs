@@ -30,7 +30,7 @@ use std::{fs, str};
 use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned};
+use substratee_stf::{KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -45,11 +45,11 @@ pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: 
     let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
     info!("deserialized rsa key");
 
-    let call = TrustedCall::balance_set_balance(who.public(), who.public(), 33, 44);
+    let call = TrustedCall::balance_set_balance(who.public().into(), who.public().into(), 33, 44);
     encrypt_payload(
         rsa_pubkey,
         call.sign(
-            &who.pair(),
+            &KeyPair::Sr25519(who.pair()),
             nonce,
             &enclave_mrenclave(eid).unwrap(),
             &ShardIdentifier::default(),
@@ -63,12 +63,16 @@ pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: u32
     let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
     info!("deserialized rsa key");
 
-    let call =
-        TrustedCall::balance_unshield(who.public(), who.public(), 40, ShardIdentifier::default());
+    let call = TrustedCall::balance_unshield(
+        who.public().into(),
+        who.public().into(),
+        40,
+        ShardIdentifier::default(),
+    );
     encrypt_payload(
         rsa_pubkey,
         call.sign(
-            &who.pair(),
+            &KeyPair::Sr25519(who.pair()),
             nonce,
             &enclave_mrenclave(eid).unwrap(),
             &ShardIdentifier::default(),
@@ -86,8 +90,8 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
 }
 
 pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
-    let getter = TrustedGetter::free_balance(who.public());
-    getter.sign(&who.pair())
+    let getter = TrustedGetter::free_balance(who.public().into());
+    getter.sign(&KeyPair::Sr25519(who.pair()))
 }
 
 pub fn encrypted_alice(eid: sgx_enclave_id_t) -> Vec<u8> {

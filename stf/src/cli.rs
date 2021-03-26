@@ -15,7 +15,7 @@
 
 */
 
-use crate::{AccountId, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
+use crate::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation};
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -160,12 +160,13 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     let nonce = 0; // FIXME: hard coded for now
                                    // generate trusted call signed
+                    let key_pair = sr25519_core::Pair::from(from.clone());
                     let top: TrustedOperation = TrustedCall::balance_transfer(
-                        sr25519_core::Public::from(from.public()),
+                        sr25519_core::Public::from(from.public()).into(),
                         to,
                         amount,
                     )
-                    .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                    .sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
                     .into_trusted_operation(direct);
                     let _ = perform_operation(matches, &top);
                     Ok(())
@@ -206,16 +207,17 @@ pub fn cmd<'a>(
                     );
 
                     let (mrenclave, shard) = get_identifiers(matches);
+                    let key_pair = sr25519_core::Pair::from(signer.clone());
 
                     let nonce = 0; // FIXME: hard coded for now
 
                     let top: TrustedOperation = TrustedCall::balance_set_balance(
-                        sr25519_core::Public::from(signer.public()),
-                        sr25519_core::Public::from(who.public()),
+                        sr25519_core::Public::from(signer.public()).into(),
+                        sr25519_core::Public::from(who.public()).into(),
                         amount,
                         amount,
                     )
-                    .sign(&sr25519_core::Pair::from(signer), nonce, &mrenclave, &shard)
+                    .sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
                     .into_trusted_operation(direct);
                     let _ = perform_operation(matches, &top);
                     Ok(())
@@ -237,10 +239,12 @@ pub fn cmd<'a>(
                     let arg_who = matches.value_of("accountid").unwrap();
                     println!("arg_who = {:?}", arg_who);
                     let who = get_pair_from_str(matches, arg_who);
-                    let top: TrustedOperation =
-                        TrustedGetter::free_balance(sr25519_core::Public::from(who.public()))
-                            .sign(&sr25519_core::Pair::from(who))
-                            .into();
+                    let key_pair = sr25519_core::Pair::from(who.clone());
+                    let top: TrustedOperation = TrustedGetter::free_balance(
+                        sr25519_core::Public::from(who.public()).into(),
+                    )
+                    .sign(&KeyPair::Sr25519(key_pair))
+                    .into();
                     let res = perform_operation(matches, &top);
                     let bal = if let Some(v) = res {
                         if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
@@ -309,14 +313,15 @@ pub fn cmd<'a>(
 
                     let (mrenclave, shard) = get_identifiers(matches);
                     let nonce = 0; // FIXME: hard coded for now
+                    let key_pair = sr25519_core::Pair::from(from.clone());
 
                     let top: TrustedOperation = TrustedCall::balance_unshield(
-                        sr25519_core::Public::from(from.public()),
+                        sr25519_core::Public::from(from.public()).into(),
                         to,
                         amount,
                         shard,
                     )
-                    .sign(&sr25519_core::Pair::from(from), nonce, &mrenclave, &shard)
+                    .sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
                     .into_trusted_operation(direct);
                     let _ = perform_operation(matches, &top);
                     Ok(())
@@ -357,10 +362,12 @@ fn get_accountid_from_str(account: &str) -> AccountId {
         "//" => sr25519::Pair::from_string(account, None)
             .unwrap()
             .public()
-            .into_account(),
+            .into_account()
+            .into(),
         _ => sr25519::Public::from_ss58check(account)
             .unwrap()
-            .into_account(),
+            .into_account()
+            .into(),
     }
 }
 

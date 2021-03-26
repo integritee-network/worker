@@ -33,20 +33,16 @@ use codec::{Compact, Decode, Encode};
 use my_node_runtime::Balance;
 #[cfg(feature = "sgx")]
 use sgx_runtime::Balance;
-use sp_core::{sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, AnySignature};
+use sp_core::crypto::AccountId32;
+use sp_core::{ed25519, sr25519, Pair, H256};
+use sp_runtime::{traits::Verify, MultiSignature};
+// TODO: use MultiAddress instead of AccountId32?
 
-pub type ShardIdentifier = H256;
-
-#[cfg(feature = "sgx")]
-pub mod sgx;
-
-#[cfg(feature = "std")]
-pub mod cli;
-
-pub type Signature = AnySignature;
+//pub type Signature = AnySignature;
+pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
-pub type AccountId = <Signature as Verify>::Signer;
+//pub type AccountId = MultiAddress<AccountId32,;
+pub type AccountId = AccountId32;
 pub type Hash = sp_core::H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub static BALANCE_MODULE: u8 = 4u8;
@@ -55,8 +51,48 @@ pub static SUBSRATEE_REGISTRY_MODULE: u8 = 8u8;
 pub static UNSHIELD: u8 = 5u8;
 pub static CALL_CONFIRMED: u8 = 3u8;
 
+pub type ShardIdentifier = H256;
+
+#[derive(Clone)]
+pub enum KeyPair {
+    Sr25519(sr25519::Pair),
+    Ed25519(ed25519::Pair),
+}
+
+impl KeyPair {
+    fn sign(&self, payload: &[u8]) -> Signature {
+        match self {
+            Self::Sr25519(pair) => pair.sign(payload).into(),
+            Self::Ed25519(pair) => pair.sign(payload).into(),
+        }
+    }
+}
+
+impl From<ed25519::Pair> for KeyPair {
+    fn from(x: ed25519::Pair) -> Self {
+        KeyPair::Ed25519(x)
+    }
+}
+
+impl From<sr25519::Pair> for KeyPair {
+    fn from(x: sr25519::Pair) -> Self {
+        KeyPair::Sr25519(x)
+    }
+}
+
 #[cfg(feature = "sgx")]
-pub type State = sp_io::SgxExternalities;
+pub mod sgx;
+
+#[cfg(feature = "std")]
+pub mod cli;
+
+#[cfg(feature = "sgx")]
+//pub type State = sp_io::SgxExternalitiesType;
+pub type StateType = sgx_externalities::SgxExternalitiesType;
+#[cfg(feature = "sgx")]
+pub type State = sgx_externalities::SgxExternalities;
+#[cfg(feature = "sgx")]
+pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
 
 #[derive(Encode, Decode, Clone, core::fmt::Debug)]
 #[allow(non_camel_case_types)]
@@ -136,7 +172,7 @@ impl TrustedCall {
 
     pub fn sign(
         &self,
-        pair: &sr25519::Pair,
+        pair: &KeyPair,
         nonce: u32,
         mrenclave: &[u8; 32],
         shard: &ShardIdentifier,
@@ -149,7 +185,7 @@ impl TrustedCall {
         TrustedCallSigned {
             call: self.clone(),
             nonce,
-            signature: pair.sign(payload.as_slice()).into(),
+            signature: pair.sign(payload.as_slice()),
         }
     }
 }
@@ -169,8 +205,8 @@ impl TrustedGetter {
         }
     }
 
-    pub fn sign(&self, pair: &sr25519::Pair) -> TrustedGetterSigned {
-        let signature = pair.sign(self.encode().as_slice()).into();
+    pub fn sign(&self, pair: &KeyPair) -> TrustedGetterSigned {
+        let signature = pair.sign(self.encode().as_slice());
         TrustedGetterSigned {
             getter: self.clone(),
             signature,
@@ -181,11 +217,11 @@ impl TrustedGetter {
 #[derive(Encode, Decode, Clone, Debug)]
 pub struct TrustedGetterSigned {
     pub getter: TrustedGetter,
-    pub signature: AnySignature,
+    pub signature: Signature,
 }
 
 impl TrustedGetterSigned {
-    pub fn new(getter: TrustedGetter, signature: AnySignature) -> Self {
+    pub fn new(getter: TrustedGetter, signature: Signature) -> Self {
         TrustedGetterSigned { getter, signature }
     }
 
@@ -199,11 +235,11 @@ impl TrustedGetterSigned {
 pub struct TrustedCallSigned {
     pub call: TrustedCall,
     pub nonce: u32,
-    pub signature: AnySignature,
+    pub signature: Signature,
 }
 
 impl TrustedCallSigned {
-    pub fn new(call: TrustedCall, nonce: u32, signature: AnySignature) -> Self {
+    pub fn new(call: TrustedCall, nonce: u32, signature: Signature) -> Self {
         TrustedCallSigned {
             call,
             nonce,
@@ -253,12 +289,17 @@ mod tests {
         let shard = ShardIdentifier::default();
 
         let call = TrustedCall::balance_set_balance(
-            AccountKeyring::Alice.public(),
-            AccountKeyring::Alice.public(),
+            AccountKeyring::Alice.public().into(),
+            AccountKeyring::Alice.public().into(),
             42,
             42,
         );
-        let signed_call = call.sign(&AccountKeyring::Alice.pair(), nonce, &mrenclave, &shard);
+        let signed_call = call.sign(
+            &KeyPair::Sr25519(AccountKeyring::Alice.pair()),
+            nonce,
+            &mrenclave,
+            &shard,
+        );
 
         assert!(signed_call.verify_signature(&mrenclave, &shard));
     }
