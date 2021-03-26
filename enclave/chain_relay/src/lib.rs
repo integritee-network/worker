@@ -247,7 +247,7 @@ impl LightValidation {
         Ok(relay.header_hashes[0])
     }
 
-    pub fn latest_header(&self, relay_id: RelayId) -> Result<Header, Error> {
+    pub fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Header, Error> {
         let relay = self
             .tracked_relays
             .get(&relay_id)
