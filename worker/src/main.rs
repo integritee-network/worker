@@ -43,7 +43,7 @@ use sp_core::{
     Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{utils::hexstr_to_vec, Api, GenericAddress, XtStatus};
+use substrate_api_client::{Api, GenericAddress, XtStatus, utils::FromHexString};
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
 use enclave::api::{
@@ -301,7 +301,7 @@ fn worker(
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
     let mut api =
-        Api::new(NODE_URL.lock().unwrap().clone()).set_signer(AccountKeyring::Alice.pair());
+        Api::new(NODE_URL.lock().unwrap().clone()).unwrap().set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = enclave_account(eid);
@@ -427,7 +427,7 @@ fn request_keys(provider_url: &str, _shard: &ShardIdentifier) {
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
 fn parse_events(event: String) -> Result<Events, String> {
-    let _unhex = hexstr_to_vec(event).map_err(|_| "Decoding Events Failed".to_string())?;
+    let _unhex = Vec::from_hex(event).map_err(|_| "Decoding Events Failed".to_string())?;
     let mut _er_enc = _unhex.as_slice();
     Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
 }
@@ -503,14 +503,15 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 
 pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Header {
-    let genesis_hash = api.get_genesis_hash();
-    let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap();
+    let genesis_hash = api.get_genesis_hash().unwrap();
+    let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
     let grandpas: AuthorityList = api
         .get_storage_by_key_hash(
             StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
             Some(genesis_header.hash()),
         )
+        .unwrap()
         .map(|g: VersionedAuthorityList| g.into())
         .unwrap();
 
@@ -519,6 +520,7 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
             vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
             Some(genesis_header.hash()),
         )
+        .unwrap()
         .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
         .unwrap();
 
@@ -549,7 +551,9 @@ pub fn produce_blocks(
     debug!("Getting current head");
     let curr_head: SignedBlock = api
         .get_finalized_head()
+        .unwrap()
         .map(|hash| api.get_signed_block(Some(hash)).unwrap())
+        .unwrap()
         .unwrap();
 
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
@@ -575,6 +579,7 @@ pub fn produce_blocks(
             debug!("Getting head of hash: {:?}", head.block.header.parent_hash);
             head = api
                 .get_signed_block(Some(head.block.header.parent_hash))
+                .unwrap()
                 .unwrap();
             blocks_to_sync.push(head.clone());
 
@@ -686,7 +691,7 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
 }
 
 fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
-    if let Some(info) = api.get_account_info(who) {
+    if let Some(info) = api.get_account_info(who).unwrap() {
         info.nonce
     } else {
         0
@@ -694,7 +699,7 @@ fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
 }
 
 fn get_balance(api: &Api<sr25519::Pair>, who: &AccountId32) -> u128 {
-    if let Some(data) = api.get_account_data(who) {
+    if let Some(data) = api.get_account_data(who).unwrap() {
         data.free
     } else {
         0
@@ -736,7 +741,7 @@ pub unsafe extern "C" fn ocall_worker_request(
     let mut req_slice = slice::from_raw_parts(request, req_size as usize);
     let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
 
-    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
 
     let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
 
@@ -746,8 +751,9 @@ pub unsafe extern "C" fn ocall_worker_request(
             //let res =
             WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
                 key.clone(),
-                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash),
+                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash).unwrap(),
                 api.get_storage_proof_by_keys(vec![StorageKey(key)], hash)
+                    .unwrap()
                     .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()),
             ),
         })
@@ -773,7 +779,7 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
     let mut signed_blocks_slice =
         slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize);
 
-    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone());
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
 
     // send confirmations to layer one
     let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations_slice) {
