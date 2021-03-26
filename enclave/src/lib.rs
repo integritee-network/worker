@@ -391,7 +391,8 @@ pub unsafe extern "C" fn produce_blocks(
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
 
-            // get indirect worker calls from blocks
+            // get indirect worker calls from blocks. Per block
+            // one opaque call is craeted
             match scan_block_for_relevant_xt(&signed_block.block) {
                 Ok(c) => calls.extend(c.into_iter()),
                 Err(_) => error!("Error executing relevant extrinsics"),
@@ -767,16 +768,19 @@ pub fn update_states(header: Header) -> SgxResult<()> {
 }
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
+/// Per block one opaque call is created which contains a block of all
+/// executed indirect calls
 pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Scanning block {} for relevant xt", block.header.number());
-    let mut calls = Vec::<OpaqueCall>::new();
+    let mut opaque_calls = Vec::<OpaqueCall>::new();
+    let mut executed_call_hashes = Vec::<H256>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =
             UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             // confirm call decodes successfully as well
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
+                if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt) {
                     error!("Error performing shieldfunds. Error: {:?}", e);
                 }
             }
@@ -796,7 +800,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
                     };
                     // call execution
                     match handle_trusted_worker_call(
-                        &mut calls,
+                        &mut opaque_calls, // necessary for Unshielding
                         &mut state,
                         decrypted_trusted_call,
                         block.header.clone(),
@@ -806,11 +810,12 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
                         Err(e) => error!("Error performing worker call: Error: {:?}", e),
                         Ok(maybe_hashes) => {
                             if let Some((call_hash, _)) = maybe_hashes {
-                                let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+                                executed_call_hashes.push(call_hash);
+                                /* let xt_call = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
                                 let state_hash = state::write(state, &shard)?;
-                                calls.push(OpaqueCall(
+                                opaque_calls.push(OpaqueCall(
                                     (xt_call, shard, call_hash, state_hash.encode()).encode(),
-                                ));
+                                )); */
                             }
                         }
                     }
@@ -818,7 +823,10 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
             }
         }
     }
-    Ok(calls)
+    // compose conirmation
+    let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+
+    Ok(opaque_calls)
 }
 
 fn handle_shield_funds_xt(
