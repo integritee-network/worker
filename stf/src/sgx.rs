@@ -201,9 +201,7 @@ impl Stf {
         let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| match call.call {
             TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-                if !validate_nonce(&root, call.nonce) {
-                    return Err(StfError::InvalidNonce(call.nonce))
-                }
+                validate_nonce(&root, call.nonce)?;
                 Self::ensure_root(root.clone())?;
                 debug!(
                     "balance_set_balance({:x?}, {}, {})",
@@ -223,9 +221,7 @@ impl Stf {
             }
             TrustedCall::balance_transfer(from, to, value) => {
                 let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
-                if !validate_nonce(&from, call.nonce) {
-                    return Err(StfError::InvalidNonce(call.nonce))
-                }
+                validate_nonce(&from, call.nonce)?;
                 debug!(
                     "balance_transfer({:x?}, {:x?}, {})",
                     from.encode(),
@@ -247,9 +243,7 @@ impl Stf {
                 Ok(())
             }
             TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                if !validate_nonce(&account_incognito, call.nonce) {
-                    return Err(StfError::InvalidNonce(call.nonce))
-                }
+                validate_nonce(&account_incognito, call.nonce)?;
                 debug!(
                     "balance_unshield({:x?}, {:x?}, {}, {})",
                     account_incognito.encode(),
@@ -274,9 +268,7 @@ impl Stf {
             }
             TrustedCall::balance_shield(who, value) => {
                 debug!("balance_shield({:x?}, {})", who.encode(), value);
-                if !validate_nonce(&who, call.nonce) {
-                    return Err(StfError::InvalidNonce(call.nonce))
-                }
+                validate_nonce(&who, call.nonce)?;
                 Self::shield_funds(who.clone(), value)?;
                 increment_nonce(&who);
                 Ok(())
@@ -449,14 +441,14 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
     }
 }
 
-fn validate_nonce(who: &AccountId, nonce: Index) -> bool {
+fn validate_nonce(who: &AccountId, nonce: Index) -> Result<(), StfError> {
     // validate
     let expected_nonce = get_account_info(who)
         .map_or_else(|| 0, |acc| acc.nonce);
     if expected_nonce == nonce {
-        return true
+        return Ok(())
     }
-    false
+    Err(StfError::InvalidNonce(nonce))
 }
 
 /// increment nonce after a successful call execution
