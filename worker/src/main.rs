@@ -478,6 +478,14 @@ fn print_events(events: Events, _sender: Sender<String>) {
                         debug!("    From:    {:?}", sender);
                         debug!("    Payload: {:?}", hex::encode(payload));
                     }
+                    my_node_runtime::substratee_registry::RawEvent::BlockConfirmed(
+                        sender,
+                        payload,
+                    ) => {
+                        info!("[+] Received BlockConfirmed event");
+                        debug!("    From:    {:?}", sender);
+                        debug!("    Payload: {:?}", hex::encode(payload));
+                    }
                     my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
                         incognito_account,
                     ) => {

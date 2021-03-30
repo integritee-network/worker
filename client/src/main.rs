@@ -524,7 +524,7 @@ fn encode_encrypt<E: Encode>(
 
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     let chain_api = get_chain_api(matches);
-    let (call_encoded, call_encrypted) = match encode_encrypt(matches, call) {
+    let (_, call_encrypted) = match encode_encrypt(matches, call) {
         Ok((encoded, encrypted)) => (encoded, encrypted),
         Err(msg) => {
             println!("[Error]: {}", msg);
@@ -554,7 +554,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
     let (events_in, events_out) = channel();
-    _chain_api.subscribe_events(events_in);
+    _chain_api.subscribe_events(events_in).unwrap();
 
     let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
     decoder
@@ -563,21 +563,17 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     decoder.register_type_size::<Hash>("H256").unwrap();
 
     loop {
-        let ret: CallConfirmedArgs = _chain_api
-            .wait_for_event::<CallConfirmedArgs>(
+        let ret: BlockConfirmedArgs = _chain_api
+            .wait_for_event::<BlockConfirmedArgs>(
                 "SubstrateeRegistry",
-                "CallConfirmed",
+                "BlockConfirmed",
                 Some(decoder.clone()),
                 &events_out,
             )
             .unwrap();
-        let expected = H256::from(blake2_256(&call_encoded));
-        info!("callConfirmed event received");
-        debug!("Expected stf call Hash: {:?}", expected);
-        debug!("Confirmed stf call Hash: {:?}", ret.payload);
-        if ret.payload == expected {
-            return Some(ret.payload.encode());
-        }
+        info!("BlockConfirmed event received");
+        debug!("Confirmed stf block Hash: {:?}", ret.payload);
+        return Some(ret.payload.encode());
     }
 }
 
@@ -675,7 +671,7 @@ fn send_direct_request(
 
 #[allow(dead_code)]
 #[derive(Decode)]
-struct CallConfirmedArgs {
+struct BlockConfirmedArgs {
     signer: AccountId,
     payload: H256,
 }
