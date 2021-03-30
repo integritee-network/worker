@@ -524,7 +524,7 @@ fn encode_encrypt<E: Encode>(
 
 fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec<u8>> {
     let chain_api = get_chain_api(matches);
-    let (call_encoded, call_encrypted) = match encode_encrypt(matches, call) {
+    let (_, call_encrypted) = match encode_encrypt(matches, call) {
         Ok((encoded, encrypted)) => (encoded, encrypted),
         Err(msg) => {
             println!("[Error]: {}", msg);
@@ -554,7 +554,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
     info!("waiting for confirmation of stf call");
     let (events_in, events_out) = channel();
-    _chain_api.subscribe_events(events_in);
+    _chain_api.subscribe_events(events_in).unwrap();
 
     let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
     decoder
