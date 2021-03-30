@@ -285,22 +285,22 @@ impl Stf {
     )
     }
 
-    pub fn account_nonce(ext: &mut State, account: &AccountId) -> Option<Vec<u8>> {
+    pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
         ext.execute_with(|| {
-                if let Some(info) = get_account_info(account) {
-                    debug!("Account {:?} nonce is {}",account.encode(), info.nonce);
-                    Some(info.nonce.encode())
+            if let Some(info) = get_account_info(account) {
+                debug!("Account {:?} nonce is {}",account.encode(), info.nonce);
+                info.nonce
             } else {
-                None
+                0 as Index
             }
         })
     }
 
-    pub fn account_data(ext: &mut State, account: &AccountId) -> Option<Vec<u8>> {
+    pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
         ext.execute_with(|| {
-                if let Some(info) = get_account_info(account) {
-                    debug!("Account {:?} data is {:?}",account.encode(), info.data);
-                    Some(info.data.encode())
+            if let Some(info) = get_account_info(account) {
+                debug!("Account {:?} data is {:?}", account.encode(), info.data);
+                Some(info.data)
             } else {
                 None
             }

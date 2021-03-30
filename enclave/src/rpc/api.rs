@@ -77,19 +77,7 @@ fn expected_nonce(shard: ShardIdentifier, account: &AccountId) -> Result<Index> 
         }
     };
 
-    let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, &account) {
-        match Decode::decode(&mut nonce_encoded.as_slice()) {
-            Ok(index) => index,
-            Err(e) => {
-                error!("Could not decode index");
-                return Err(())
-            },
-        }
-    } else {
-        0 as Index
-    };
-
-    Ok(nonce)
+    Ok(Stf::account_nonce(&mut state, &account))
 }
 
 impl<Block> ChainApi for SideChainApi<Block>

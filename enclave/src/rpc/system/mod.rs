@@ -145,21 +145,7 @@ where
 			}
 		};
 
-		let nonce: Index = if let Some(nonce_encoded) = Stf::account_nonce(&mut state, &account) {
-			match Decode::decode(&mut nonce_encoded.as_slice()) {
-				Ok(index) => index,
-				Err(e) => {
-					error!("Could not decode index");
-					return Err(RpcError {
-						code: ErrorCode::ServerError(Error::DecodeError.into()),
-						message: "Unable to query nonce.".into(),
-						data: Some(format!("{:?}", e).into())
-					})
-				},
-			}
-		} else {
-			0 as Index
-		};
+		let nonce: Index = Stf::account_nonce(&mut state, &account);
 		Ok(adjust_nonce(self.pool.clone(), account, nonce, shard))
 	}
 }

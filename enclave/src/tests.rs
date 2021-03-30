@@ -695,8 +695,7 @@ fn test_executing_call_updates_account_nonce() {
 
     // then
     let mut state = state::load(&shard).unwrap();
-    let encoded_nonce = Stf::account_nonce(&mut state, &account_with_money.into()).unwrap();
-    let nonce = substratee_stf::Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+    let nonce = Stf::account_nonce(&mut state, &account_with_money.into());
     assert_eq!(nonce, 1);
 
     // clean up
@@ -773,12 +772,10 @@ fn test_invalid_nonce_call_is_not_executed() {
 
     // then
     let mut state = state::load(&shard).unwrap();
-    let encoded_nonce = Stf::account_nonce(&mut state, &account_with_money.into()).unwrap();
-    let nonce = Index::decode(&mut encoded_nonce.as_slice()).unwrap();
+    let nonce = Stf::account_nonce(&mut state, &account_with_money.into());
     assert_eq!(nonce, 0);
 
-    let encoded_data = Stf::account_data(&mut state, &account_with_money.into()).unwrap();
-    let acc_data_with_money = AccountData::decode(&mut encoded_data.as_slice()).unwrap();
+    let acc_data_with_money = Stf::account_data(&mut state, &account_with_money.into()).unwrap();
     assert_eq!(acc_data_with_money.free, 2000);
 
 
