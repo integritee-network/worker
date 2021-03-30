@@ -453,21 +453,14 @@ fn validate_nonce(who: &AccountId, nonce: Index) -> Result<(), StfError> {
 
 /// increment nonce after a successful call execution
 fn increment_nonce(account: &AccountId) {
-    // A none value can be returned after a successful execution
-    // in the following cases:
-    // - zero value
-    // - transfer from and to the same account
-    // for these transactions the nonce is not incremented.
-    // is that ok?
-    if let Some(mut acc_info) = get_account_info(account) {
-        debug!("incrementing account nonce");
-        acc_info.nonce += 1;
-        sp_io::storage::set(
-            &account_key_hash(account),
-            &acc_info.encode(),
-        );
-        debug!("updated account {:?} nonce: {:?}", account.encode(), get_account_info(account).unwrap().nonce);
-    }
+    debug!("incrementing account nonce");
+    let mut acc_info = get_account_info(account).unwrap();
+    acc_info.nonce += 1;
+    sp_io::storage::set(
+        &account_key_hash(account),
+        &acc_info.encode(),
+    );
+    debug!("updated account {:?} nonce: {:?}", account.encode(), get_account_info(account).unwrap().nonce);
 }
 
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
