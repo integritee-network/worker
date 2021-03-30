@@ -563,21 +563,17 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     decoder.register_type_size::<Hash>("H256").unwrap();
 
     loop {
-        let ret: CallConfirmedArgs = _chain_api
-            .wait_for_event::<CallConfirmedArgs>(
+        let ret: BlockConfirmedArgs = _chain_api
+            .wait_for_event::<BlockConfirmedArgs>(
                 "SubstrateeRegistry",
                 "BlockConfirmed",
                 Some(decoder.clone()),
                 &events_out,
             )
             .unwrap();
-        let expected = H256::from(blake2_256(&call_encoded));
-        info!("callConfirmed event received");
-        debug!("Expected stf call Hash: {:?}", expected);
-        debug!("Confirmed stf call Hash: {:?}", ret.payload);
-        if ret.payload == expected {
-            return Some(ret.payload.encode());
-        }
+        info!("BlockConfirmed event received");
+        debug!("Confirmed stf block Hash: {:?}", ret.payload);
+        return Some(ret.payload.encode());
     }
 }
 
@@ -675,7 +671,7 @@ fn send_direct_request(
 
 #[allow(dead_code)]
 #[derive(Decode)]
-struct CallConfirmedArgs {
+struct BlockConfirmedArgs {
     signer: AccountId,
     payload: H256,
 }
