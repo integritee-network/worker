@@ -817,6 +817,8 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
                     ) {
                         error!("Error performing worker call: Error: {:?}", e);
                     }
+                    // save updated state
+                    state::write(state, &shard)?;
                 }
             }
         }
