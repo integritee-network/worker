@@ -547,11 +547,12 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     };
     let xt = compose_extrinsic!(_chain_api, "SubstrateeRegistry", "call_worker", request);
 
-    // send and watch extrinsic until finalized
-    let tx_hash = _chain_api
-        .send_extrinsic(xt.hex_encode(), XtStatus::Ready)
+    // send and watch extrinsic until block is executed
+    let block_hash = _chain_api
+        .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
+        .unwrap()
         .unwrap();
-    info!("stf call extrinsic sent. Hash: {:?}", tx_hash);
+    info!("stf call extrinsic sent. Block Hash: {:?}", block_hash);
     info!("waiting for confirmation of stf call");
     let (events_in, events_out) = channel();
     _chain_api.subscribe_events(events_in).unwrap();
@@ -572,8 +573,11 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
             )
             .unwrap();
         info!("BlockConfirmed event received");
+        debug!("Expected stf block Hash: {:?}", block_hash);
         debug!("Confirmed stf block Hash: {:?}", ret.payload);
-        return Some(ret.payload.encode());
+        if ret.payload == block_hash {
+            return Some(ret.payload.encode());
+        }
     }
 }
 
