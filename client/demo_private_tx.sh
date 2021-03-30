@@ -2,19 +2,30 @@
 
 # setup:
 # run all on localhost:
-# run substratee-node --dev --ws-port 9979 -lruntime=debug
-# run substratee-worker -p 9979 run
+#   substratee-node purge-chain --dev
+#   substratee-node --tmp --dev -lruntime=debug
+#   rm chain_relay_db.bin
+#   substratee-worker init_shard
+#   substratee-worker shielding-key
+#   substratee-worker signing-key
+#   substratee-worker run
 #
 # then run this script
 
-CLIENT="./substratee-client -p 9979 -P 2079"
+# usage:
+#  demo_private_tx.sh <NODEPORT> <WORKERRPCPORT>
 
-echo "query on-chain enclave registry:"
-$CLIENT list-workers
+# using default port if none given as arguments
+NPORT=${1:-9944}
+RPORT=${3:-2000}
+
+echo "Using node-port ${NPORT}"
+echo "Using worker-rpc-port ${RPORT}"
 echo ""
 
-# does this work when multiple workers are in the registry?
-read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+CLIENT="./../bin/substratee-client -p ${NPORT} -P ${RPORT}"
+# SW mode - hardcoded MRENCLAVE!
+read MRENCLAVE <<< $(cat ~/mrenclave.b58)
 
 # only for initial setup (actually should be done in genesis)
 # pre-fund //AliceIncognito, our ROOT key
@@ -22,12 +33,6 @@ echo "issue funds on first (sender) account:"
 $CLIENT trusted set-balance //AliceIncognito 123456789 --mrenclave $MRENCLAVE
 echo -n "get balance: "
 $CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
-
-## create a new on-chain account and fund it form faucet
-#account1=$($CLIENT new-account)
-#echo "*** created new on-chain account: $account1"
-#echo "*** funding that account from faucet"
-#$CLIENT faucet $account1 
 
 # create incognito account for default shard (= MRENCLAVE)
 account1p=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
