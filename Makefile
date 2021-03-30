@@ -212,10 +212,10 @@ enclave:
 clean:
 	@echo "Removing the compiled files"
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
-	@echo "cargo clean and remove Cargo.lock in enclave directory"
-	@cd enclave && cargo clean && rm -f Cargo.lock
-	@echo "cargo clean and remove Cargo.lock in root directory"
-	@cargo clean && rm -f Cargo.lock
+	@echo "cargo clean in enclave directory"
+	@cd enclave && cargo clean
+	@echo "cargo clean in root directory"
+	@cargo clean
 
 mrenclave:
 	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity < df.out && rm df.out
