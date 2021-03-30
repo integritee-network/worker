@@ -458,10 +458,7 @@ fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Vec<u8> {
             panic!("[Error] {}", msg);
         }
     };
-    let shard = match read_shard(matches) {
-        Ok(shard) => shard,
-        Err(e) => panic!(e),
-    };
+    let shard = read_shard(matches).unwrap();
 
     // compose jsonrpc call
     let data = Request {
@@ -500,10 +497,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
             return None;
         }
     };
-    let shard = match read_shard(matches) {
-        Ok(shard) => shard,
-        Err(e) => panic!(e),
-    };
+    let shard = read_shard(matches).unwrap();
 
     // compose jsonrpc call
     let data = Request {
@@ -573,10 +567,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
         }
     };
 
-    let shard = match read_shard(matches) {
-        Ok(shard) => shard,
-        Err(e) => panic!(e),
-    };
+    let shard = read_shard(matches).unwrap();
 
     let arg_signer = matches.value_of("xt-signer").unwrap();
     let signer = get_pair_from_str(arg_signer);
@@ -660,10 +651,7 @@ fn send_direct_request(
                 return None;
             }
         };
-    let shard = match read_shard(matches) {
-        Ok(shard) => shard,
-        Err(e) => panic!(e),
-    };
+    let shard = read_shard(matches).unwrap();
 
     // compose jsonrpc call
     let data = Request {
