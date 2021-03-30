@@ -566,7 +566,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
         let ret: CallConfirmedArgs = _chain_api
             .wait_for_event::<CallConfirmedArgs>(
                 "SubstrateeRegistry",
-                "CallConfirmed",
+                "BlockConfirmed",
                 Some(decoder.clone()),
                 &events_out,
             )
