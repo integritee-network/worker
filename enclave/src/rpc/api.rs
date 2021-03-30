@@ -44,6 +44,8 @@ use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
 
+use crate::constants::MAX_ALLOWED_FUTURE_TOP;
+
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, ()>;
 
@@ -116,7 +118,7 @@ where
                         InvalidTransaction::Stale
                     )))))
                 }
-                if nonce > expected_nonce + 64 {
+                if nonce > expected_nonce + MAX_ALLOWED_FUTURE_TOP {
                     return Box::pin(ready(Ok(Err(TransactionValidityError::Invalid(
                         InvalidTransaction::Future
                     )))))
