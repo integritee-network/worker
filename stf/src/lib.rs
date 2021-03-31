@@ -202,6 +202,7 @@ impl TrustedCall {
 pub enum TrustedGetter {
     free_balance(AccountId),
     reserved_balance(AccountId),
+    nonce(AccountId),
 }
 
 impl TrustedGetter {
@@ -209,6 +210,7 @@ impl TrustedGetter {
         match self {
             TrustedGetter::free_balance(account) => account,
             TrustedGetter::reserved_balance(account) => account,
+            TrustedGetter::nonce(account) => account,
         }
     }
 
