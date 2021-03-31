@@ -288,6 +288,7 @@ impl Stf {
         })
     }
 
+    //FIXME: Add Test feature as this function is only used for unit testing currently
     pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
         ext.execute_with(|| {
             if let Some(info) = get_account_info(account) {
