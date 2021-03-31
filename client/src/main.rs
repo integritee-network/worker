@@ -418,7 +418,7 @@ fn main() {
                     Ok(())
                 }),
         )
-        .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation, &get_nonce_direct))
+        .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");
             Ok(())
@@ -448,44 +448,6 @@ fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -
         TrustedOperation::get(getter) => get_state(matches, TrustedOperation::get(getter.clone())),
     }
 }
-
-/// Returns the next valid index (aka nonce) for given account.
-fn get_nonce_direct(matches: &ArgMatches<'_>, account: &AccountId) -> Vec<u8> {
-    let (_encoded, account_encrypted) = match encode_encrypt(matches, account)
-    {
-        Ok((encoded, encrypted)) => (encoded, encrypted),
-        Err(msg) => {
-            panic!("[Error] {}", msg);
-        }
-    };
-    let shard = read_shard(matches).unwrap();
-
-    // compose jsonrpc call
-    let data = Request {
-        shard,
-        cyphertext: account_encrypted,
-    };
-    let rpc_method = "system_accountNextIndex".to_owned();
-    let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, data.encode());
-
-    let direct_api = get_worker_api_direct(matches);
-    let response_string = match direct_api.get(jsonrpc_call) {
-        Ok(string) => string,
-        Err(_) => panic!("Error sending direct invocation call"),
-    };
-    let response: RpcResponse = serde_json::from_str(&response_string).unwrap();
-    if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
-        if return_value.status == DirectRequestStatus::Error {
-            panic!(
-                "[Error] {}",
-                String::decode(&mut return_value.value.as_slice()).unwrap()
-            );
-        }
-        return return_value.value
-    };
-    panic!("[Error] Could not decode server response");
-}
-
 
 fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u8>> {
     // TODO: ensure getter is signed?
