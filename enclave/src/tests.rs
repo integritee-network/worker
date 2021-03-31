@@ -1,18 +1,17 @@
 /*
     Copyright 2019 Supercomputing Systems AG
-
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
 
         http://www.apache.org/licenses/LICENSE-2.0
 
+
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
 */
 
 use crate::aes;
@@ -64,6 +63,7 @@ use sp_core::ed25519 as spEd25519;
 use rpc::author::{Author, AuthorApi};
 use rpc::{api::SideChainApi, basic_pool::BasicPool};
 
+
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
     rsgx_unit_tests!(
@@ -110,7 +110,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_submit_trusted_getter_to_top_pool,
         test_differentiate_getter_and_call_works,
         test_create_block_and_confirmation_works,
-
+      
         // needs node to be running.. unit tests?
         test_ocall_worker_request,
         test_create_state_diff,
@@ -274,7 +274,7 @@ fn test_compose_block_and_confirmation() {
     assert!(stripped_opaque_call.starts_with(&shard.encode()));
     let stripped_opaque_call = stripped_opaque_call.split_off(shard.encode().len());
     assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
-
+  
     // clean up
     state::remove_shard_dir(&shard);
 }
@@ -325,7 +325,7 @@ fn test_submit_trusted_call_to_top_pool() {
     let call_one = format! {"{:?}", calls[0]};
     let call_two = format! {"{:?}", signed_call};
     assert_eq!(call_one, call_two);
-
+  
     // clean up
     state::remove_shard_dir(&shard);
 }
@@ -437,7 +437,7 @@ fn test_differentiate_getter_and_call_works() {
     let call_two = format! {"{:?}", signed_call};
     assert_eq!(call_one, call_two);
     assert_eq!(getter_one, getter_two);
-
+  
     // clean up
     state::remove_shard_dir(&shard);
 }
