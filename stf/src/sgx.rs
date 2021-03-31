@@ -453,14 +453,19 @@ fn validate_nonce(who: &AccountId, nonce: Index) -> Result<(), StfError> {
 
 /// increment nonce after a successful call execution
 fn increment_nonce(account: &AccountId) {
-    debug!("incrementing account nonce");
-    let mut acc_info = get_account_info(account).unwrap();
-    acc_info.nonce += 1;
-    sp_io::storage::set(
-        &account_key_hash(account),
-        &acc_info.encode(),
-    );
-    debug!("updated account {:?} nonce: {:?}", account.encode(), get_account_info(account).unwrap().nonce);
+    //FIXME: Proper error handling - should be taken into
+    // consideration after implementing pay fee check
+    if let Some(mut acc_info) = get_account_info(account) {
+        debug!("incrementing account nonce");
+        acc_info.nonce += 1;
+        sp_io::storage::set(
+            &account_key_hash(account),
+            &acc_info.encode(),
+        );
+        debug!("updated account {:?} nonce: {:?}", account.encode(), get_account_info(account).unwrap().nonce);
+    } else {
+        error!("tried to increment nonce of a non-existent account")
+    }
 }
 
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
