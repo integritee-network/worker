@@ -103,7 +103,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
         state::test_write_and_load_state_works,
         state::test_sgx_state_decode_encode_works,
         state::test_encrypt_decrypt_state_type_works,
-        rpc::api::tests::test_validate_transaction_works,
         test_time_is_overdue,
         test_time_is_not_overdue,
         test_compose_block_and_confirmation,
