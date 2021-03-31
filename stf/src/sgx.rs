@@ -199,82 +199,86 @@ impl Stf {
         calls: &mut Vec<OpaqueCall>,
     ) -> Result<(), StfError> {
         let call_hash = blake2_256(&call.encode());
-        ext.execute_with(|| match call.call {
-            TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-                validate_nonce(&root, call.nonce)?;
-                Self::ensure_root(root.clone())?;
-                debug!(
-                    "balance_set_balance({:x?}, {}, {})",
-                    who.encode(),
-                    free_balance,
-                    reserved_balance
-                );
-                sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                    MultiAddress::Id(AccountId32::from(who)),
-                    free_balance,
-                    reserved_balance,
-                )
-                .dispatch_bypass_filter(sgx_runtime::Origin::root())
-                .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
-                increment_nonce(&root);
-                Ok(())
-            }
-            TrustedCall::balance_transfer(from, to, value) => {
-                let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
-                validate_nonce(&from, call.nonce)?;
-                debug!(
-                    "balance_transfer({:x?}, {:x?}, {})",
-                    from.encode(),
-                    to.encode(),
-                    value
-                );
-                if let Some(info) = get_account_info(&from) {
-                    debug!("sender balance is {}", info.data.free);
-                } else {
-                    debug!("sender balance is zero");
-                }
-                sgx_runtime::BalancesCall::<Runtime>::transfer(
-                    MultiAddress::Id(AccountId32::from(to)),
-                    value,
-                )
-                .dispatch_bypass_filter(origin)
-                .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
-                increment_nonce(&from);
-                Ok(())
-            }
-            TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                validate_nonce(&account_incognito, call.nonce)?;
-                debug!(
-                    "balance_unshield({:x?}, {:x?}, {}, {})",
-                    account_incognito.encode(),
-                    beneficiary.encode(),
-                    value,
-                    shard
-                );
-
-                Self::unshield_funds(account_incognito.clone(), value)?;
-                calls.push(OpaqueCall(
-                    (
-                        [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-                        beneficiary,
-                        value,
-                        shard,
-                        call_hash,
+        ext.execute_with(|| {
+            let mut root_account = AccountId::default();
+            let result = match call.call {
+                TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
+                    root_account = root.clone();
+                    validate_nonce(&root_account, call.nonce)?;
+                    Self::ensure_root(root.clone())?;
+                    debug!(
+                        "balance_set_balance({:x?}, {}, {})",
+                        who.encode(),
+                        free_balance,
+                        reserved_balance
+                    );
+                    sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                        MultiAddress::Id(AccountId32::from(who)),
+                        free_balance,
+                        reserved_balance,
                     )
-                        .encode(),
-                ));
-                increment_nonce(&account_incognito);
-                Ok(())
-            }
-            TrustedCall::balance_shield(who, value) => {
-                debug!("balance_shield({:x?}, {})", who.encode(), value);
-                validate_nonce(&who, call.nonce)?;
-                Self::shield_funds(who.clone(), value)?;
-                increment_nonce(&who);
-                Ok(())
-            }
-        }
-    )
+                    .dispatch_bypass_filter(sgx_runtime::Origin::root())
+                    .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
+                    Ok(())
+                }
+                TrustedCall::balance_transfer(from, to, value) => {
+                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
+                    root_account = from.clone();
+                    validate_nonce(&root_account, call.nonce)?;
+                    debug!(
+                        "balance_transfer({:x?}, {:x?}, {})",
+                        from.encode(),
+                        to.encode(),
+                        value
+                    );
+                    if let Some(info) = get_account_info(&from) {
+                        debug!("sender balance is {}", info.data.free);
+                    } else {
+                        debug!("sender balance is zero");
+                    }
+                    sgx_runtime::BalancesCall::<Runtime>::transfer(
+                        MultiAddress::Id(AccountId32::from(to)),
+                        value,
+                    )
+                    .dispatch_bypass_filter(origin)
+                    .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+                    Ok(())
+                }
+                TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+                    root_account = account_incognito.clone();
+                    validate_nonce(&root_account, call.nonce)?;
+                    debug!(
+                        "balance_unshield({:x?}, {:x?}, {}, {})",
+                        account_incognito.encode(),
+                        beneficiary.encode(),
+                        value,
+                        shard
+                    );
+
+                    Self::unshield_funds(account_incognito.clone(), value)?;
+                    calls.push(OpaqueCall(
+                        (
+                            [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
+                            beneficiary,
+                            value,
+                            shard,
+                            call_hash,
+                        )
+                            .encode(),
+                    ));
+                    Ok(())
+                }
+                TrustedCall::balance_shield(who, value) => {
+                    root_account = who.clone();
+                    debug!("balance_shield({:x?}, {})", who.encode(), value);
+                    validate_nonce(&root_account, call.nonce)?;
+                    Self::shield_funds(who, value)?;
+                    Ok(())
+                }
+            }?;
+        increment_nonce(&root_account);
+        Ok(())
+        })
     }
 
     pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
