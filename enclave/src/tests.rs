@@ -62,7 +62,7 @@ use sp_core::ed25519 as spEd25519;
 
 
 use rpc::author::{Author, AuthorApi};
-use rpc::{api::SideChainApi, basic_pool::BasicPool, system::{FullSystem, SystemApi},};
+use rpc::{api::SideChainApi, basic_pool::BasicPool};
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -103,8 +103,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
         state::test_write_and_load_state_works,
         state::test_sgx_state_decode_encode_works,
         state::test_encrypt_decrypt_state_type_works,
-        rpc::system::tests::test_should_return_next_nonce_for_some_account,
-        rpc::api::tests::test_validate_transaction_works,
         test_time_is_overdue,
         test_time_is_not_overdue,
         test_compose_block_and_confirmation,
@@ -666,7 +664,6 @@ fn test_executing_call_updates_account_nonce() {
         let pool_guard = pool_mutex.lock().unwrap();
         let pool = Arc::new(pool_guard.deref());
         let author = Arc::new(Author::new(pool.clone()));
-        let system = FullSystem::new(pool);
 
         // create trusted call signed
         let nonce = 0;
@@ -743,7 +740,6 @@ fn test_invalid_nonce_call_is_not_executed() {
         let pool_guard = pool_mutex.lock().unwrap();
         let pool = Arc::new(pool_guard.deref());
         let author = Arc::new(Author::new(pool.clone()));
-        let system = FullSystem::new(pool);
 
         // create trusted call signed
         let nonce = 10;

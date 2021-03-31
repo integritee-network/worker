@@ -63,25 +63,6 @@ impl<Block> SideChainApi<Block> {
     }
 }
 
-fn expected_nonce(shard: ShardIdentifier, account: &AccountId) -> Result<Index> {
-    if !state::exists(&shard) {
-        //FIXME: Should this be an error? -> Issue error handling
-        error!("Shard does not exists");
-        return Ok(0 as Index)
-    }
-
-    let mut state = match state::load(&shard) {
-        Ok(s) => s,
-        Err(e) => {
-            //FIXME: Should this be an error? -> Issue error handling
-            error!("State could not be loaded");
-            return Err(())
-        }
-    };
-
-    Ok(Stf::account_nonce(&mut state, &account))
-}
-
 impl<Block> ChainApi for SideChainApi<Block>
 where
     Block: BlockT,
@@ -100,37 +81,13 @@ where
         &self,
         _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
-        shard: ShardIdentifier,
+        _shard: ShardIdentifier,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
             StfTrustedOperation::direct_call(signed_call) => {
-                let nonce = signed_call.nonce;
                 let from = signed_call.call.account();
-
-                let expected_nonce = match expected_nonce(shard, &from) {
-                    Ok(nonce) => nonce,
-                    Err(_) => return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
-                        UnknownTransaction::CannotLookup,
-                    ))))),
-                };
-                if nonce < expected_nonce {
-                    return Box::pin(ready(Ok(Err(TransactionValidityError::Invalid(
-                        InvalidTransaction::Stale
-                    )))))
-                }
-                if nonce > expected_nonce + MAX_ALLOWED_FUTURE_TOP {
-                    return Box::pin(ready(Ok(Err(TransactionValidityError::Invalid(
-                        InvalidTransaction::Future
-                    )))))
-                }
-                let encode = |from: AccountId, nonce: Index| (from, nonce).encode();
-                let requires = if nonce != expected_nonce && nonce > 0 {
-                    vec![encode(from.clone(), nonce - 1)]
-                } else {
-                    vec![]
-                };
-
-                let provides = vec![encode(from.clone(), nonce)];
+                let requires = vec![];
+                let provides = vec![from.encode()];
 
                 ValidTransaction {
                     priority: 1 << 20,
@@ -194,69 +151,4 @@ where
             )
         })
     }
-}
-
-
-pub mod tests {
-	use super::*;
-    use substratee_stf::TrustedCall;
-    use sp_core::{ed25519 as spEd25519, Pair};
-    use jsonrpc_core::futures::executor;
-    use chain_relay::Block;
-
-	pub fn test_validate_transaction_works() {
-		// given
-		let api = SideChainApi::<Block>::new();
-	    let shard = ShardIdentifier::default();
-		// ensure state starts empty
-		state::init_shard(&shard).unwrap();
-		Stf::init_state();
-
-		// create account
-		let account_pair = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-        let account = account_pair.public();
-
-		let source = TrustedOperationSource::External;
-
-		// create top call function
-		let new_top_call = |nonce: Index| {
-			let mrenclave = [0u8; 32];
-			let call = TrustedCall::balance_set_balance(
-				account.into(),
-				account.into(),
-				42,
-				42,
-			);
-			let signed_call = call.sign(&account_pair.clone().into(), nonce, &mrenclave, &shard);
-			signed_call.into_trusted_operation(true)
-		};
-		let top0 = new_top_call(0);
-        let top1 = new_top_call(1);
-
-		// when
-        let validation_result = async { api
-            .validate_transaction(source, top0, shard)
-            .await };
-        let valid_transaction: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
-
-        let validation_result = async { api
-            .validate_transaction(source, top1, shard)
-            .await };
-        let valid_transaction_two: ValidTransaction = executor::block_on(validation_result).unwrap().unwrap();
-
-		// then
-		assert_eq!(valid_transaction.priority, 1<<20);
-        assert_eq!(valid_transaction.provides, vec![(&account,0 as Index).encode()]);
-        assert_eq!(valid_transaction.longevity, 64);
-        assert!(valid_transaction.propagate);
-
-        assert_eq!(valid_transaction_two.priority, 1<<20);
-        assert_eq!(valid_transaction_two.requires, vec![(&account, 0 as Index).encode()]);
-        assert_eq!(valid_transaction_two.provides, vec![(&account, 1 as Index).encode()]);
-        assert_eq!(valid_transaction_two.longevity, 64);
-        assert!(valid_transaction_two.propagate);
-
-        // clean up
-        state::remove_shard_dir(&shard);
-	}
 }

@@ -326,6 +326,15 @@ impl Stf {
                         None
                     }
                 }
+                TrustedGetter::nonce(who) => {
+                    if let Some(info) = get_account_info(&who) {
+                        debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+                        debug!("Account nonce is {}" ,info.nonce);
+                        Some(info.nonce.encode())
+                    } else {
+                        None
+                    }
+                }
             },
             Getter::public(g) => match g {
                 PublicGetter::some_value => Some(42u32.encode()),

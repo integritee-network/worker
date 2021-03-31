@@ -41,7 +41,6 @@ use crate::rpc::{
     api::SideChainApi,
     author::{Author, AuthorApi},
     basic_pool::BasicPool,
-    system::{FullSystem, SystemApi},
 };
 
 use crate::top_pool::pool::Options as PoolOptions;
@@ -300,45 +299,6 @@ fn init_io_handler() -> IoHandler {
         let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
         Ok(json!(json_value.encode()))
     });
-
-     // system_accountNextIndex
-     let system_account_next_index_name: &str = "system_accountNextIndex";
-     rpc_methods_vec.push(system_account_next_index_name);
-     io.add_sync_method(system_account_next_index_name, move |params: Params| {
-         match params.parse::<Vec<u8>>() {
-             Ok(encoded_params) => {
-                 // Aquire lock
-                 let &ref tx_pool_mutex = load_top_pool().unwrap();
-                 let tx_pool_guard = tx_pool_mutex.lock().unwrap();
-                 let tx_pool = Arc::new(tx_pool_guard.deref());
-                 let system = FullSystem::new(tx_pool);
-
-                 match Request::decode(&mut encoded_params.as_slice()) {
-                     Ok(request) => {
-                         let json_value = match system.nonce(request.cyphertext, request.shard) {
-                             Ok(index) => {
-                                 RpcReturnValue {
-                                     do_watch: false,
-                                     value: index.encode(),
-                                     status: DirectRequestStatus::Ok,
-                                 }.encode()
-                             },
-                             Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
-                         };
-                         Ok(json!(json_value))
-                     }
-                     Err(_) => Ok(json!(compute_encoded_return_error(
-                         "Could not decode request".to_owned()
-                     ))),
-                 }
-             }
-             Err(e) => {
-                 let error_msg: String = format!("Could not parse parameter: {}", e);
-                 Ok(json!(compute_encoded_return_error(error_msg)))
-             }
-         }
-     });
-
 
     // chain_subscribeAllHeads
     let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
