@@ -13,7 +13,7 @@
 # then run this script
 
 # usage:
-#  demo_direct_call.sh <NODEPORT> <WORKERPORT> <WORKERRPCPORT>
+#  demo_direct_call.sh <NODEPORT> <WORKERRPCPORT>
 
 # using default port if none given as arguments
 NPORT=${1:-9944}
