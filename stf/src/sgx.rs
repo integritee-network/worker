@@ -200,12 +200,11 @@ impl Stf {
     ) -> Result<(), StfError> {
         let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| {
-            let mut root_account = AccountId::default();
+            let sender = call.call.account().clone();
+            validate_nonce(&sender, call.nonce)?;
             let result = match call.call {
                 TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-                    root_account = root.clone();
-                    validate_nonce(&root_account, call.nonce)?;
-                    Self::ensure_root(root.clone())?;
+                    Self::ensure_root(root)?;
                     debug!(
                         "balance_set_balance({:x?}, {}, {})",
                         who.encode(),
@@ -223,15 +222,13 @@ impl Stf {
                 }
                 TrustedCall::balance_transfer(from, to, value) => {
                     let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
-                    root_account = from.clone();
-                    validate_nonce(&root_account, call.nonce)?;
                     debug!(
                         "balance_transfer({:x?}, {:x?}, {})",
                         from.encode(),
                         to.encode(),
                         value
                     );
-                    if let Some(info) = get_account_info(&from) {
+                    if let Some(info) = get_account_info(&from.clone()) {
                         debug!("sender balance is {}", info.data.free);
                     } else {
                         debug!("sender balance is zero");
@@ -245,8 +242,6 @@ impl Stf {
                     Ok(())
                 }
                 TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-                    root_account = account_incognito.clone();
-                    validate_nonce(&root_account, call.nonce)?;
                     debug!(
                         "balance_unshield({:x?}, {:x?}, {}, {})",
                         account_incognito.encode(),
@@ -269,14 +264,12 @@ impl Stf {
                     Ok(())
                 }
                 TrustedCall::balance_shield(who, value) => {
-                    root_account = who.clone();
                     debug!("balance_shield({:x?}, {})", who.encode(), value);
-                    validate_nonce(&root_account, call.nonce)?;
                     Self::shield_funds(who, value)?;
                     Ok(())
                 }
             }?;
-        increment_nonce(&root_account);
+        increment_nonce(&sender);
         Ok(())
         })
     }
