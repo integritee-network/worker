@@ -35,7 +35,7 @@ use base58::ToBase58;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, SgxResult};
 
 use substrate_api_client::compose_extrinsic_offline;
-use substratee_node_primitives::ShieldFundsFn;
+use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_worker_primitives::block::{
     Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
 };
@@ -391,12 +391,21 @@ pub unsafe extern "C" fn produce_blocks(
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
 
-            // indirect worker calls not supported anymore since M8.2
-            // might be used again in future versions
-            /* match scan_block_for_relevant_xt(&signed_block.block) {
+            // execute indirect calls, incl. shielding and unshielding
+            match scan_block_for_relevant_xt(&signed_block.block) {
+                // push shield funds to opaque calls
                 Ok(c) => calls.extend(c.into_iter()),
                 Err(_) => error!("Error executing relevant extrinsics"),
-            }; */
+            };
+            // compose indirect block confirmation
+            let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+            let genesis_hash = validator.genesis_hash(validator.num_relays).unwrap();
+            let block_hash = signed_block.block.header.hash();
+            let prev_state_hash = signed_block.block.header.parent_hash();
+            calls.push(OpaqueCall(
+                (xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
+            ));
+
         }
     }
     // get header of last block
@@ -404,7 +413,7 @@ pub unsafe extern "C" fn produce_blocks(
         .latest_finalized_header(validator.num_relays)
         .unwrap();
     // execute pending calls from operation pool and create block
-    // (one per shard) as opaque call
+    // (one per shard) as opaque call with block confirmation
     let signed_blocks: Vec<SignedSidechainBlock> =
         match execute_top_pool_calls(latest_onchain_header) {
             Ok((confirm_calls, signed_blocks)) => {
@@ -599,9 +608,9 @@ fn execute_top_pool_calls(
                     shard,
                     Some(author.clone()),
                 ) {
-                    Ok(hash) => {
-                        if let Some(hash) = hash {
-                            call_hashes.push(hash)
+                    Ok(hashes) => {
+                        if let Some((_, operation_hash)) = hashes {
+                            call_hashes.push(operation_hash)
                         }
                     }
                     Err(e) => error!("Error performing worker call: Error: {:?}", e),
@@ -769,28 +778,39 @@ pub fn update_states(header: Header) -> SgxResult<()> {
 }
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
+/// Executes indirect invocation calls, aswell as shielding and unshielding calls
+/// Returns all unshielding call confirmations as opaque calls
 pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
     debug!("Scanning block {} for relevant xt", block.header.number());
-    let mut calls = Vec::<OpaqueCall>::new();
+    let mut opaque_calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
         if let Ok(xt) =
             UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             // confirm call decodes successfully as well
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
-                if let Err(e) = handle_shield_funds_xt(&mut calls, xt) {
+                if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt) {
                     error!("Error performing shieldfunds. Error: {:?}", e);
                 }
             }
         };
 
-        /* if let Ok(xt) =
+        if let Ok(xt) =
             UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
+                    // load state before executing any calls
+                    let mut state = if state::exists(&shard) {
+                        state::load(&shard)?
+                    } else {
+                        state::init_shard(&shard)?;
+                        Stf::init_state()
+                    };
+                    // call execution
                     if let Err(e) = handle_trusted_worker_call(
-                        &mut calls,
+                        &mut opaque_calls, // necessary for unshielding
+                        &mut state,
                         decrypted_trusted_call,
                         block.header.clone(),
                         shard,
@@ -798,11 +818,14 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
                     ) {
                         error!("Error performing worker call: Error: {:?}", e);
                     }
+                    // save updated state
+                    state::write(state, &shard)?;
                 }
             }
-        } */
+        }
     }
-    Ok(calls)
+
+    Ok(opaque_calls)
 }
 
 fn handle_shield_funds_xt(
@@ -853,7 +876,7 @@ fn handle_shield_funds_xt(
     Ok(())
 }
 
-/* fn decrypt_unchecked_extrinsic(
+fn decrypt_unchecked_extrinsic(
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
 ) -> SgxResult<(TrustedCallSigned, ShardIdentifier)> {
     let (call, request) = xt.function;
@@ -872,7 +895,7 @@ fn handle_shield_funds_xt(
         Err(_) => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     }
 }
- */
+
 fn handle_trusted_worker_call(
     calls: &mut Vec<OpaqueCall>,
     state: &mut StfState,
@@ -880,11 +903,11 @@ fn handle_trusted_worker_call(
     header: Header,
     shard: ShardIdentifier,
     author_pointer: Option<Arc<Author<&BPool>>>,
-) -> SgxResult<Option<H256>> {
+) -> SgxResult<Option<(H256, H256)>> {
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
-
     debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
+
     if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
         error!("TrustedCallSigned: bad signature");
         // do not panic here or users will be able to shoot workers dead by supplying a bad signature
@@ -953,14 +976,13 @@ fn handle_trusted_worker_call(
             )
             .unwrap();
     }
-    // convert trusted call signed to trusted operation before hashing
-    // ATTENTION: only valid for direct calls. In case of indirect
-    // one should think this over.
+    let call_hash = blake2_256(&stf_call_signed.encode());
     let operation = stf_call_signed.into_trusted_operation(true);
-    let call_hash = blake2_256(&operation.encode());
+    let operation_hash = blake2_256(&operation.encode());
+    debug!("Operation hash 0x{}", hex::encode_hex(&operation_hash));
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-    Ok(Some(H256::from(call_hash)))
+    Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
 }
 
 fn verify_worker_responses(
