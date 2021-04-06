@@ -30,7 +30,7 @@ use crate::top_pool::{
     validated_pool::{ValidatedOperation, ValidatedPool},
 };
 
-use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation, Index};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Modification notification event stream type;
@@ -67,9 +67,9 @@ pub trait ChainApi: Send + Sync {
     /// Verify extrinsic at given block.
     fn validate_transaction(
         &self,
-        at: &BlockId<Self::Block>,
         source: TrustedOperationSource,
         uxt: StfTrustedOperation,
+        shard: ShardIdentifier,
     ) -> Self::ValidationFuture;
 
     /// Returns a block number given the block id.
@@ -304,9 +304,9 @@ where
                         .validated_pool
                         .api()
                         .validate_transaction(
-                            parent,
                             TrustedOperationSource::InBlock,
                             extrinsic.clone(),
+                            shard,
                         )
                         .await;
 
@@ -416,6 +416,7 @@ where
         check: CheckBannedBeforeVerify,
         shard: ShardIdentifier,
     ) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
+        //FIXME: Nicer verify
         // we need a block number to compute tx validity
         //let block_number = self.resolve_block_number(at)?;
         // dummy blocknumber
@@ -454,11 +455,12 @@ where
             return (hash.clone(), ValidatedOperation::Invalid(hash, err.into()));
         }
 
-        // no runtime validation check for now. Issue is open.
+        //FIXME:
+        // no runtime validation check for now.
         let validation_result = self
             .validated_pool
             .api()
-            .validate_transaction(block_id, source, xt.clone())
+            .validate_transaction(source, xt.clone(), shard)
             .await;
 
         let status = match validation_result {
@@ -579,7 +581,7 @@ pub mod test {
     pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
 }
 
-const INVALID_NONCE: u32 = 254;
+const INVALID_NONCE: Index = 254;
 const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
 #[derive(Clone, Debug, Default)]
@@ -599,13 +601,12 @@ impl ChainApi for TestApi {
     /// Verify extrinsic at given block.
     fn validate_transaction(
         &self,
-        at: &BlockId<Self::Block>,
         _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
+        _shard: ShardIdentifier,
     ) -> Self::ValidationFuture {
         let hash = self.hash_and_length(&uxt).0;
-        let block_number = self.block_id_to_number(at).unwrap().unwrap() as u32;
-        let nonce: u32 = match uxt {
+        let nonce: Index = match uxt {
             StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
             _ => 0,
         };
@@ -623,12 +624,13 @@ impl ChainApi for TestApi {
         if self.invalidate.lock().unwrap().contains(&hash) {
             return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()));
         }
-        futures::future::ready(if nonce < block_number {
+
+        futures::future::ready(if nonce > 254 {
             Ok(InvalidTrustedOperation::Stale.into())
         } else {
             let mut operation = ValidTransaction {
                 priority: 4,
-                requires: if nonce > block_number {
+                requires: if nonce > 0 {
                     vec![vec![nonce as u8 - 1]]
                 } else {
                     vec![]
@@ -689,9 +691,8 @@ impl ChainApi for TestApi {
     }
 }
 
-fn to_top(call: TrustedCall, nonce: u32) -> TrustedOperation {
-    TrustedCallSigned::new(call, nonce, Default::default())
-        .into_trusted_operation(true)
+fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
+    TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
 }
 
 fn test_pool() -> Pool<TestApi> {

@@ -21,7 +21,7 @@ extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 use log::*;
 
-use codec::Encode;
+use codec::{Encode, Decode};
 use jsonrpc_core::futures::future::{ready, Future, Ready};
 use std::{marker::PhantomData, pin::Pin};
 
@@ -29,33 +29,41 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
     transaction_validity::{
-        TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
+        TransactionValidity, TransactionValidityError, UnknownTransaction,
+        InvalidTransaction, ValidTransaction,
     },
 };
 
 use crate::top_pool::pool::{ChainApi, ExtrinsicHash, NumberFor};
 use crate::top_pool::primitives::TrustedOperationSource;
+use crate::state;
 
-use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation};
+use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation, AccountId,
+     Index, ShardIdentifier, Stf};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
 
+use crate::constants::MAX_ALLOWED_FUTURE_TOP;
+
+/// Future that resolves to account nonce.
+pub type Result<T> = core::result::Result<T, ()>;
+
 /// The operation pool logic for full client.
-pub struct FillerChainApi<Block> {
+pub struct SideChainApi<Block> {
     _marker: PhantomData<Block>,
 }
 
-impl<Block> FillerChainApi<Block> {
+impl<Block> SideChainApi<Block> {
     /// Create new operation pool logic.
     pub fn new() -> Self {
-        FillerChainApi {
+        SideChainApi {
             _marker: Default::default(),
         }
     }
 }
 
-impl<Block> ChainApi for FillerChainApi<Block>
+impl<Block> ChainApi for SideChainApi<Block>
 where
     Block: BlockT,
 {
@@ -71,17 +79,23 @@ where
 
     fn validate_transaction(
         &self,
-        _at: &BlockId<Self::Block>,
         _source: TrustedOperationSource,
         uxt: StfTrustedOperation,
+        _shard: ShardIdentifier,
     ) -> Self::ValidationFuture {
         let operation = match uxt {
-            StfTrustedOperation::direct_call(call) => ValidTransaction {
-                priority: 1 << 20,
-                requires: vec![],
-                provides: vec![vec![call.nonce as u8], call.signature.encode()],
-                longevity: 3,
-                propagate: true,
+            StfTrustedOperation::direct_call(signed_call) => {
+                let from = signed_call.call.account();
+                let requires = vec![];
+                let provides = vec![from.encode()];
+
+                ValidTransaction {
+                    priority: 1 << 20,
+                    requires: requires,
+                    provides: provides,
+                    longevity: 64,
+                    propagate: true,
+                }
             },
             StfTrustedOperation::get(getter) => match getter {
                 Getter::public(_) => {
@@ -93,7 +107,7 @@ where
                     priority: 1 << 20,
                     requires: vec![],
                     provides: vec![trusted_getter.signature.encode()],
-                    longevity: 3,
+                    longevity: 64,
                     propagate: true,
                 },
             },

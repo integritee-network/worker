@@ -38,7 +38,7 @@ use codec::{Decode, Encode};
 use log::*;
 
 use crate::rpc::{
-    api::FillerChainApi,
+    api::SideChainApi,
     author::{Author, AuthorApi},
     basic_pool::BasicPool,
 };
@@ -57,7 +57,7 @@ use chain_relay::Block;
 
 use substratee_node_primitives::Request;
 use substratee_worker_primitives::RpcReturnValue;
-use substratee_worker_primitives::{TrustedOperationStatus, DirectCallStatus};
+use substratee_worker_primitives::{TrustedOperationStatus, DirectRequestStatus};
 
 use crate::utils::write_slice_and_whitespace_pad;
 use crate::rsa3072;
@@ -84,9 +84,9 @@ extern "C" {
 #[no_mangle]
 // initialise tx pool and store within static atomic pointer
 pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
-    let api = Arc::new(FillerChainApi::new());
+    let api = Arc::new(SideChainApi::new());
     let tx_pool = BasicPool::create(PoolOptions::default(), api);
-    let pool_ptr = Arc::new(SgxMutex::<BasicPool<FillerChainApi<Block>, Block>>::new(
+    let pool_ptr = Arc::new(SgxMutex::<BasicPool<SideChainApi<Block>, Block>>::new(
         tx_pool,
     ));
     let ptr = Arc::into_raw(pool_ptr);
@@ -95,9 +95,9 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<FillerChainApi<Block>, Block>>> {
+pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<SideChainApi<Block>, Block>>> {
     let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst)
-        as *mut SgxMutex<BasicPool<FillerChainApi<Block>, Block>>;
+        as *mut SgxMutex<BasicPool<SideChainApi<Block>, Block>>;
     if ptr.is_null() {
         None
     } else {
@@ -134,7 +134,7 @@ fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
     let return_value = RpcReturnValue {
         value: error_msg.encode(),
         do_watch: false,
-        status: DirectCallStatus::Error,
+        status: DirectRequestStatus::Error,
     };
     return_value.encode()
 }
@@ -173,7 +173,7 @@ fn init_io_handler() -> IoHandler {
                                     RpcReturnValue {
                                         do_watch: true,
                                         value: hash_value.encode(),
-                                        status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                        status: DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
                                     }.encode()
                                 },
                                 Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
@@ -220,7 +220,7 @@ fn init_io_handler() -> IoHandler {
                                 RpcReturnValue {
                                     do_watch: false,
                                     value: hash_value.encode(),
-                                    status: DirectCallStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
+                                    status: DirectRequestStatus::TrustedOperationStatus(TrustedOperationStatus::Submitted),
                                 }.encode()
                             },
                             Err(rpc_error) => compute_encoded_return_error(rpc_error.message)
@@ -259,26 +259,26 @@ fn init_io_handler() -> IoHandler {
                     };
                     if let Ok(vec_of_operations) = author.pending_tops(shard) {
                         retrieved_operations.push(vec_of_operations);
-                    }           
+                    }
                 }
                 let json_value = RpcReturnValue {
                             do_watch: false,
                             value: retrieved_operations.encode(),
-                            status: DirectCallStatus::Ok,
+                            status: DirectRequestStatus::Ok,
                 };
                 Ok(json!(json_value.encode()))
             }
             Err(e) => {
                 let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
                 Ok(json!(compute_encoded_return_error(error_msg)))
-            }            
+            }
         }
     });
 
     // author_getShieldingKey
     let rsa_pubkey_name: &str = "author_getShieldingKey";
     rpc_methods_vec.push(rsa_pubkey_name);
-    io.add_sync_method(rsa_pubkey_name, move |_: Params| {       
+    io.add_sync_method(rsa_pubkey_name, move |_: Params| {
         let rsa_pubkey = match rsa3072::unseal_pubkey() {
             Ok(key) => key,
             Err(status) => {
@@ -286,7 +286,7 @@ fn init_io_handler() -> IoHandler {
                 return Ok(json!(compute_encoded_return_error(error_msg)))
             },
         };
-    
+
         let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
             Ok(k) => k,
             Err(x) => {
@@ -296,11 +296,10 @@ fn init_io_handler() -> IoHandler {
                 return Ok(json!(compute_encoded_return_error(error_msg)))
             },
         };
-        let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectCallStatus::Ok);
-        Ok(json!(json_value.encode()))            
+        let json_value = RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
+        Ok(json!(json_value.encode()))
     });
 
-    
     // chain_subscribeAllHeads
     let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
     rpc_methods_vec.push(chain_subscribe_all_heads_name);
