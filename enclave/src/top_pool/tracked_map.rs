@@ -166,19 +166,16 @@ where
         self.inner_guard.get_mut(key)
     }
 }
-/*
-#[cfg(test)]
-mod tests {
+
+pub mod tests {
 
     use super::*;
 
     impl Size for i32 {
         fn size(&self) -> usize { *self as usize / 10 }
     }
-
-    #[test]
-    fn basic() {
-        let map = TrackedMap::default();
+    pub fn test_basic() {
+        let mut map = TrackedMap::default();
         map.write().insert(5, 10);
         map.write().insert(6, 20);
 
@@ -194,4 +191,4 @@ mod tests {
         assert_eq!(map.bytes(), 1);
         assert_eq!(map.len(), 1);
     }
-}*/
+}

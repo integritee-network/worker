@@ -7,7 +7,7 @@ use codec::Decode;
 
 use ws::{connect, CloseCode, Handler, Handshake, Message, Result as ClientResult, Sender};
 
-use substratee_worker_primitives::{DirectCallStatus, RpcRequest, RpcResponse, RpcReturnValue};
+use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
@@ -123,7 +123,7 @@ impl DirectApi {
             }
         };
         let shielding_pubkey_string: String = match return_value.status {
-            DirectCallStatus::Ok => match String::decode(&mut return_value.value.as_slice()) {
+            DirectRequestStatus::Ok => match String::decode(&mut return_value.value.as_slice()) {
                 Ok(key) => key,
                 Err(err) => return Err(format! {"Could not retrieve shielding pubkey: {:?}", err}),
             },
