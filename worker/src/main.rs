@@ -43,7 +43,7 @@ use sp_core::{
     Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{Api, GenericAddress, XtStatus, utils::FromHexString};
+use substrate_api_client::{utils::FromHexString, Api, GenericAddress, XtStatus};
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
 use enclave::api::{
@@ -55,9 +55,7 @@ use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::{Duration, SystemTime};
 
-use substratee_worker_primitives::block::{
-    Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
-};
+use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 mod constants;
 mod enclave;
@@ -115,7 +113,7 @@ fn main() {
         let ext_api_url = if let Some(url) = smatches.value_of("w-server") {
             url.to_string()
         } else {
-            format!("ws://127.0.0.1:{}", w_port)
+            format!("ws://127.0.0.1:{}", worker_rpc_port)
         };
         println!("Advertising worker api at {}", ext_api_url);
         let skip_ra = smatches.is_present("skip-ra");
@@ -123,7 +121,7 @@ fn main() {
             w_ip,
             mu_ra_port,
             &shard,
-            ext_api_url,
+            &ext_api_url,
             worker_rpc_port,
             skip_ra,
         );
@@ -301,11 +299,11 @@ fn worker(
     let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
     start_worker_api_direct_server(direct_url, eid);
 
-
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let mut api =
-        Api::new(NODE_URL.lock().unwrap().clone()).unwrap().set_signer(AccountKeyring::Alice.pair());
+    let mut api = Api::new(NODE_URL.lock().unwrap().clone())
+        .unwrap()
+        .set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = enclave_account(eid);
@@ -357,7 +355,7 @@ fn worker(
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api2.subscribe_events(sender2);
+            api2.subscribe_events(sender2).unwrap();
         })
         .unwrap();
 
@@ -444,7 +442,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
                 info!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
-                    pallet_balances::RawEvent::Transfer(transactor, dest, value) => {
+                    pallet_balances::Event::Transfer(transactor, dest, value) => {
                         debug!("    Transactor:  {:?}", transactor.to_ss58check());
                         debug!("    Destination: {:?}", dest.to_ss58check());
                         debug!("    Value:       {:?}", value);
@@ -763,7 +761,8 @@ pub unsafe extern "C" fn ocall_worker_request(
             //let res =
             WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
                 key.clone(),
-                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash).unwrap(),
+                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash)
+                    .unwrap(),
                 api.get_storage_proof_by_keys(vec![StorageKey(key)], hash)
                     .unwrap()
                     .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()),
@@ -814,7 +813,7 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
         }
         // await next block to avoid #37
         let (events_in, events_out) = channel();
-        api.subscribe_events(events_in);
+        api.subscribe_events(events_in).unwrap();
         let _ = events_out.recv().unwrap();
         let _ = events_out.recv().unwrap();
         // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed

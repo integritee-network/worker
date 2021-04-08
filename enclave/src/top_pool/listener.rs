@@ -18,16 +18,13 @@
 
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
-use std::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
 use sp_runtime::traits;
+use std::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
 
-use crate::top_pool::{
-    //pool::{BlockHash, ChainApi, ExtrinsicHash},
-    watcher::Watcher,
-};
+use crate::top_pool::watcher::Watcher;
 use codec::Encode;
 
-use substratee_worker_primitives::{BlockHash as SidechainBlockHash};
+use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Extrinsic pool default listener.
 pub struct Listener<H: hash::Hash + Eq> {

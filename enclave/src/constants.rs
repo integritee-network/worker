@@ -14,8 +14,6 @@
     limitations under the License.
 
 */
-use substratee_stf::Index;
-
 pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
 pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
@@ -50,8 +48,5 @@ pub static RUNTIME_SPEC_VERSION: u32 = 1;
 pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;
 
 // timeouts for getter and call execution
-pub static CALLTIMEOUT: i64 = 300;   // timeout in ms
+pub static CALLTIMEOUT: i64 = 300; // timeout in ms
 pub static GETTERTIMEOUT: i64 = 300; // timeout in ms
-
-// maximum allowed tops in the future pool per account
-pub static MAX_ALLOWED_FUTURE_TOP: Index = 64;

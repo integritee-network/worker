@@ -44,13 +44,17 @@ pub struct TrackedMap<K, V> {
 impl<K, V> Default for TrackedMap<K, V> {
     fn default() -> Self {
         Self {
-            index: Arc::new(HashMap::new().into()),
+            index: Arc::new(HashMap::new()),
             bytes: 0.into(),
             length: 0.into(),
         }
     }
 }
 
+// FIXME: obey clippy
+#[allow(clippy::type_complexity)]
+#[allow(clippy::len_without_is_empty)]
+#[allow(clippy::should_implement_trait)]
 impl<K: Clone, V: Clone> TrackedMap<K, V> {
     /// Current tracked length of the content.
     pub fn len(&self) -> usize {
@@ -143,11 +147,11 @@ where
         self.bytes
             .fetch_add(new_bytes as isize, AtomicOrdering::Relaxed);
         self.length.fetch_add(1, AtomicOrdering::Relaxed);
-        self.inner_guard.insert(key, val).and_then(|old_val| {
+        self.inner_guard.insert(key, val).map(|old_val| {
             self.bytes
                 .fetch_sub(old_val.size() as isize, AtomicOrdering::Relaxed);
             self.length.fetch_sub(1, AtomicOrdering::Relaxed);
-            Some(old_val)
+            old_val
         })
     }
 
@@ -172,7 +176,9 @@ pub mod tests {
     use super::*;
 
     impl Size for i32 {
-        fn size(&self) -> usize { *self as usize / 10 }
+        fn size(&self) -> usize {
+            *self as usize / 10
+        }
     }
     pub fn test_basic() {
         let mut map = TrackedMap::default();

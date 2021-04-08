@@ -80,7 +80,7 @@ where
     PoolApi: ChainApi<Block = Block>,
 {
     pool: Arc<Pool<PoolApi>>,
-    api: Arc<PoolApi>,
+    _api: Arc<PoolApi>,
     ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
 }
 
@@ -103,7 +103,7 @@ where
     {
         let pool = Arc::new(Pool::new(options, pool_api.clone()));
         BasicPool {
-            api: pool_api,
+            _api: pool_api,
             pool,
             ready_poll: Default::default(),
         }
@@ -115,6 +115,8 @@ where
     }
 }
 
+// FIXME: obey clippy
+#[allow(clippy::type_complexity)]
 impl<PoolApi, Block> TrustedOperationPool for BasicPool<PoolApi, Block>
 where
     Block: BlockT,

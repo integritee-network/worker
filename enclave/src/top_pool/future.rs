@@ -64,7 +64,7 @@ impl<Hash, Ex> Clone for WaitingTrustedOperations<Hash, Ex> {
         WaitingTrustedOperations {
             operation: self.operation.clone(),
             missing_tags: self.missing_tags.clone(),
-            imported_at: self.imported_at.clone(),
+            imported_at: self.imported_at,
         }
     }
 }
@@ -105,6 +105,8 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
     }
 
     /// Marks the tag as satisfied.
+    // FIXME: obey clippy
+    #[allow(clippy::ptr_arg)]
     pub fn satisfy_tag(&mut self, tag: &Tag) {
         self.missing_tags.remove(tag);
     }
@@ -159,14 +161,8 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
             );
         }
 
-        let tx_pool_waiting_map = self
-            .waiting
-            .entry(shard.clone())
-            .or_insert_with(HashMap::new);
-        let tx_pool_wanted_map = self
-            .wanted_tags
-            .entry(shard.clone())
-            .or_insert_with(HashMap::new);
+        let tx_pool_waiting_map = self.waiting.entry(shard).or_insert_with(HashMap::new);
+        let tx_pool_wanted_map = self.wanted_tags.entry(shard).or_insert_with(HashMap::new);
         // Add all tags that are missing
         for tag in &tx.missing_tags {
             let entry = tx_pool_wanted_map
@@ -184,7 +180,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
             return tx_pool_waiting.contains_key(hash);
         }
-        return false;
+        false
     }
 
     /// Returns a list of known operations
@@ -199,7 +195,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
                 .map(|h| tx_pool_waiting.get(h).map(|x| x.operation.clone()))
                 .collect();
         }
-        return vec![];
+        vec![]
     }
 
     /// Satisfies provided tags in operations that are waiting for them.
@@ -280,7 +276,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         if let Some(tx_pool) = self.waiting.get(&shard) {
             return tx_pool.values().fold(None, f);
         }
-        return None;
+        None
     }
 
     /// Returns iterator over all future operations
@@ -291,7 +287,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         if let Some(tx_pool) = self.waiting.get(&shard) {
             return Box::new(tx_pool.values().map(|waiting| &*waiting.operation));
         }
-        return Box::new(core::iter::empty());
+        Box::new(core::iter::empty())
     }
 
     /// Removes and returns all future operations.
@@ -306,7 +302,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
                 .map(|(_, tx)| tx.operation)
                 .collect();
         }
-        return vec![];
+        vec![]
     }
 
     /// Returns number of operations in the Future queue.
@@ -314,16 +310,14 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
         if let Some(tx_pool) = self.waiting.get(&shard) {
             return tx_pool.len();
         }
-        return 0;
+        0
     }
 
     /// Returns sum of encoding lengths of all operations in this queue.
     pub fn bytes(&self, shard: ShardIdentifier) -> usize {
         if let Some(tx_pool) = self.waiting.get(&shard) {
-            return tx_pool
-                .values()
-                .fold(0, |acc, tx| acc + tx.operation.bytes);
+            return tx_pool.values().fold(0, |acc, tx| acc + tx.operation.bytes);
         }
-        return 0;
+        0
     }
 }

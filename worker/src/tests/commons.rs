@@ -30,7 +30,9 @@ use std::{fs, str};
 use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned, Index};
+use substratee_stf::{
+    Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {

@@ -6,7 +6,6 @@ use std::vec;
 use codec::{Decode, Encode};
 use derive_more::Display;
 use log_sgx::*;
-use support::metadata::StorageHasher;
 use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
 use sp_core::crypto::AccountId32;
 use sp_core::Pair;
@@ -15,11 +14,12 @@ use sp_io::hashing::blake2_256;
 use sp_io::SgxExternalitiesTrait;
 use sp_runtime::MultiAddress;
 use substratee_worker_primitives::BlockNumber;
+use support::metadata::StorageHasher;
 use support::traits::UnfilteredDispatchable;
 
 use crate::{
-    AccountId, Getter, PublicGetter, ShardIdentifier, State, Stf, TrustedCall, TrustedCallSigned,
-    TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD, Index,
+    AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, Stf, TrustedCall,
+    TrustedCallSigned, TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 
 /// Simple blob that holds a call in encoded format
@@ -202,7 +202,7 @@ impl Stf {
         ext.execute_with(|| {
             let sender = call.call.account().clone();
             validate_nonce(&sender, call.nonce)?;
-            let result = match call.call {
+            match call.call {
                 TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
                     Self::ensure_root(root)?;
                     debug!(
@@ -212,7 +212,7 @@ impl Stf {
                         reserved_balance
                     );
                     sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                        MultiAddress::Id(AccountId32::from(who)),
+                        MultiAddress::Id(who),
                         free_balance,
                         reserved_balance,
                     )
@@ -221,24 +221,21 @@ impl Stf {
                     Ok(())
                 }
                 TrustedCall::balance_transfer(from, to, value) => {
-                    let origin = sgx_runtime::Origin::signed(AccountId32::from(from.clone()));
+                    let origin = sgx_runtime::Origin::signed(from.clone());
                     debug!(
                         "balance_transfer({:x?}, {:x?}, {})",
                         from.encode(),
                         to.encode(),
                         value
                     );
-                    if let Some(info) = get_account_info(&from.clone()) {
+                    if let Some(info) = get_account_info(&from) {
                         debug!("sender balance is {}", info.data.free);
                     } else {
                         debug!("sender balance is zero");
                     }
-                    sgx_runtime::BalancesCall::<Runtime>::transfer(
-                        MultiAddress::Id(AccountId32::from(to)),
-                        value,
-                    )
-                    .dispatch_bypass_filter(origin)
-                    .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+                    sgx_runtime::BalancesCall::<Runtime>::transfer(MultiAddress::Id(to), value)
+                        .dispatch_bypass_filter(origin)
+                        .map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
                     Ok(())
                 }
                 TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -250,7 +247,7 @@ impl Stf {
                         shard
                     );
 
-                    Self::unshield_funds(account_incognito.clone(), value)?;
+                    Self::unshield_funds(account_incognito, value)?;
                     calls.push(OpaqueCall(
                         (
                             [SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
@@ -269,15 +266,15 @@ impl Stf {
                     Ok(())
                 }
             }?;
-        increment_nonce(&sender);
-        Ok(())
+            increment_nonce(&sender);
+            Ok(())
         })
     }
 
     pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
         ext.execute_with(|| {
             if let Some(info) = get_account_info(account) {
-                debug!("Account {:?} nonce is {}",account.encode(), info.nonce);
+                debug!("Account {:?} nonce is {}", account.encode(), info.nonce);
                 info.nonce
             } else {
                 0 as Index
@@ -296,7 +293,6 @@ impl Stf {
             }
         })
     }
-
 
     pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
         ext.execute_with(|| match getter {
@@ -322,7 +318,7 @@ impl Stf {
                 TrustedGetter::nonce(who) => {
                     if let Some(info) = get_account_info(&who) {
                         debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-                        debug!("Account nonce is {}" ,info.nonce);
+                        debug!("Account nonce is {}", info.nonce);
                         Some(info.nonce.encode())
                     } else {
                         None
@@ -346,14 +342,14 @@ impl Stf {
     fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
         match get_account_info(&account) {
             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                MultiAddress::Id(account.into()),
+                MultiAddress::Id(account),
                 account_info.data.free + amount,
                 account_info.data.reserved,
             )
             .dispatch_bypass_filter(sgx_runtime::Origin::root())
             .map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
             None => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                MultiAddress::Id(account.into()),
+                MultiAddress::Id(account),
                 amount,
                 0,
             )
@@ -371,7 +367,7 @@ impl Stf {
                 }
 
                 sgx_runtime::BalancesCall::<Runtime>::set_balance(
-                    MultiAddress::Id(account.into()),
+                    MultiAddress::Id(account),
                     account_info.data.free - amount,
                     account_info.data.reserved,
                 )
@@ -450,10 +446,9 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
 
 fn validate_nonce(who: &AccountId, nonce: Index) -> Result<(), StfError> {
     // validate
-    let expected_nonce = get_account_info(who)
-        .map_or_else(|| 0, |acc| acc.nonce);
+    let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
     if expected_nonce == nonce {
-        return Ok(())
+        return Ok(());
     }
     Err(StfError::InvalidNonce(nonce))
 }
@@ -465,11 +460,12 @@ fn increment_nonce(account: &AccountId) {
     if let Some(mut acc_info) = get_account_info(account) {
         debug!("incrementing account nonce");
         acc_info.nonce += 1;
-        sp_io::storage::set(
-            &account_key_hash(account),
-            &acc_info.encode(),
+        sp_io::storage::set(&account_key_hash(account), &acc_info.encode());
+        debug!(
+            "updated account {:?} nonce: {:?}",
+            account.encode(),
+            get_account_info(account).unwrap().nonce
         );
-        debug!("updated account {:?} nonce: {:?}", account.encode(), get_account_info(account).unwrap().nonce);
     } else {
         error!("tried to increment nonce of a non-existent account")
     }

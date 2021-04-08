@@ -111,12 +111,12 @@ impl From<Error> for rpc_core::Error {
         match e {
 			Error::BadFormat => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
-				message: format!("Trusted operation has invalid format").into(),
+				message: "Trusted operation has invalid format".into(),
 				data: None,
 			},
 			Error::BadFormatDecipher => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
-				message: format!("Trusted oprations could not be deciphered").into(),
+				message: "Trusted oprations could not be deciphered".into(),
 				data: None,
 			},
 			Error::Verification => rpc_core::Error {

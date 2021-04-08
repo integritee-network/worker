@@ -67,7 +67,7 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     trace!("state decoded successfully");
     // add empty state-diff
     let state_with_diff = StfState {
-        state: state,
+        state,
         state_diff: StfStateTypeDiff::new(),
     };
     Ok(state_with_diff)
@@ -196,7 +196,7 @@ pub fn test_sgx_state_decode_encode_works() {
     let key: Vec<u8> = "hello".encode();
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
-    state.insert(key.clone(), value);
+    state.insert(key, value);
 
     // when
     let encoded_state = state.state.clone().encode();
@@ -212,12 +212,12 @@ pub fn test_encrypt_decrypt_state_type_works() {
     let key: Vec<u8> = "hello".encode();
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
-    state.insert(key.clone(), value);
+    state.insert(key, value);
 
     // when
     let encrypted = encrypt(state.state.clone().encode()).unwrap();
     debug!("State encrypted:{:?}", encrypted);
-    let decrypted = encrypt(encrypted.clone()).unwrap();
+    let decrypted = encrypt(encrypted).unwrap();
     let decoded = StfStateType::decode(decrypted);
 
     // then
@@ -234,7 +234,7 @@ pub fn test_write_and_load_state_works() {
     let value: Vec<u8> = "world".encode();
     let mut state = StfState::new();
     let shard: ShardIdentifier = [94u8; 32].into();
-    state.insert(key.clone(), value);
+    state.insert(key, value);
 
     // when
     if !exists(&shard) {

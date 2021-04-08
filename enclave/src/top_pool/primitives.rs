@@ -1,7 +1,7 @@
 // File replacing substrate crate sp_transaction_pool::{error, PoolStatus};
 
 extern crate alloc;
-use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, string::String, string::ToString, sync::Arc, vec::Vec};
 use core::{hash::Hash, pin::Pin};
 use std::collections::HashMap;
 
@@ -9,17 +9,15 @@ use jsonrpc_core::futures::{channel, Future, Stream};
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Member, NumberFor},
-    transaction_validity::{
-        TransactionLongevity, TransactionPriority, TransactionTag,
-    },
+    transaction_validity::{TransactionLongevity, TransactionPriority, TransactionTag},
 };
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 use crate::top_pool::error;
-use byteorder::{ByteOrder, BigEndian};
+use byteorder::{BigEndian, ByteOrder};
 use sp_core::H256;
 
 /// TrustedOperation pool status.
@@ -49,20 +47,20 @@ impl PoolStatus {
 ///
 /// The status events can be grouped based on their kinds as:
 /// 1. Entering/Moving within the pool:
-///		- `Future`
-///		- `Ready`
+///    - `Future`
+///    - `Ready`
 /// 2. Inside `Ready` queue:
-///		- `Broadcast`
+///    - `Broadcast`
 /// 3. Leaving the pool:
-///		- `InBlock`
-///		- `Invalid`
-///		- `Usurped`
-///		- `Dropped`
-///	4. Re-entering the pool:
-///		- `Retracted`
-///	5. Block finalized:
-///		- `Finalized`
-///		- `FinalityTimeout`
+///    - `InBlock`
+///    - `Invalid`
+///    - `Usurped`
+///    - `Dropped`
+/// 4. Re-entering the pool:
+///    - `Retracted`
+/// 5. Block finalized:
+///    - `Finalized`
+///    - `FinalityTimeout`
 ///
 /// The events will always be received in the order described above, however
 /// there might be cases where operations alternate between `Future` and `Ready`
@@ -112,7 +110,7 @@ pub enum TrustedOperationStatus<Hash, BlockHash> {
     Dropped,
     /// TrustedOperation is no longer valid in the current state.
     Invalid,
-} 
+}
 
 /// The stream of operation events.
 pub type TrustedOperationStatusStream<Hash, BlockHash> =
@@ -127,7 +125,6 @@ pub type TxHash<P> = <P as TrustedOperationPool>::Hash;
 pub type BlockHash<P> = <<P as TrustedOperationPool>::Block as BlockT>::Hash;
 /// Type of operations event stream for a pool.
 pub type TrustedOperationStatusStreamFor<P> = TrustedOperationStatusStream<TxHash<P>, BlockHash<P>>;
-
 
 /// Typical future type used in operation pool api.
 pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
@@ -165,13 +162,18 @@ pub trait TrustedOperationPool: Send + Sync {
     /// TrustedOperation hash type.
     type Hash: Hash + Eq + Member;
     /// In-pool operation type.
-    type InPoolOperation: InPoolOperation<TrustedOperation = StfTrustedOperation, Hash = TxHash<Self>>;
+    type InPoolOperation: InPoolOperation<
+        TrustedOperation = StfTrustedOperation,
+        Hash = TxHash<Self>,
+    >;
     /// Error type.
     type Error: From<error::Error> + error::IntoPoolError;
 
     // *** RPC
 
     /// Returns a future that imports a bunch of unverified operations to the pool.
+    // FIXME: obey clippy
+    #[allow(clippy::type_complexity)]
     fn submit_at(
         &self,
         at: &BlockId<Self::Block>,
@@ -203,14 +205,15 @@ pub trait TrustedOperationPool: Send + Sync {
     ///
     /// Guarantees to return only when operation pool got updated at `at` block.
     /// Guarantees to return immediately when `None` is passed.
+    // FIXME: obey clippy
+    #[allow(clippy::type_complexity)]
     fn ready_at(
         &self,
         at: NumberFor<Self::Block>,
         shard: ShardIdentifier,
     ) -> Pin<
         Box<
-            dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>>
-                + Send,
+            dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>> + Send,
         >,
     >;
 
@@ -262,26 +265,26 @@ pub trait TrustedOperationPool: Send + Sync {
 /// by our local node (for instance off-chain workers).
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, Debug)]
 pub enum TrustedOperationSource {
-	/// Transaction is already included in block.
-	///
-	/// This means that we can't really tell where the transaction is coming from,
-	/// since it's already in the received block. Note that the custom validation logic
-	/// using either `Local` or `External` should most likely just allow `InBlock`
-	/// transactions as well.
-	InBlock,
+    /// Transaction is already included in block.
+    ///
+    /// This means that we can't really tell where the transaction is coming from,
+    /// since it's already in the received block. Note that the custom validation logic
+    /// using either `Local` or `External` should most likely just allow `InBlock`
+    /// transactions as well.
+    InBlock,
 
-	/// Transaction is coming from a local source.
-	///
-	/// This means that the transaction was produced internally by the node
-	/// (for instance an Off-Chain Worker, or an Off-Chain Call), as opposed
-	/// to being received over the network.
-	Local,
+    /// Transaction is coming from a local source.
+    ///
+    /// This means that the transaction was produced internally by the node
+    /// (for instance an Off-Chain Worker, or an Off-Chain Call), as opposed
+    /// to being received over the network.
+    Local,
 
-	/// Transaction has been received externally.
-	///
-	/// This means the transaction has been received from (usually) "untrusted" source,
-	/// for instance received over the network or RPC.
-	External,
+    /// Transaction has been received externally.
+    ///
+    /// This means the transaction has been received from (usually) "untrusted" source,
+    /// for instance received over the network or RPC.
+    External,
 }
 
 // Replacement of primitive function from_low_u64_be
@@ -296,20 +299,39 @@ pub fn from_low_u64_to_be_h256(val: u64) -> H256 {
 
 /// test
 pub fn test_h256() {
-	let tests = vec![
-		(from_low_u64_to_be_h256(0), "0x0000000000000000000000000000000000000000000000000000000000000000"),
-		(from_low_u64_to_be_h256(2), "0x0000000000000000000000000000000000000000000000000000000000000002"),
-		(from_low_u64_to_be_h256(15), "0x000000000000000000000000000000000000000000000000000000000000000f"),
-		(from_low_u64_to_be_h256(16), "0x0000000000000000000000000000000000000000000000000000000000000010"),
-		(from_low_u64_to_be_h256(1_000), "0x00000000000000000000000000000000000000000000000000000000000003e8"),
-		(from_low_u64_to_be_h256(100_000), "0x00000000000000000000000000000000000000000000000000000000000186a0"),
-		(from_low_u64_to_be_h256(u64::max_value()), "0x000000000000000000000000000000000000000000000000ffffffffffffffff"),
-	];
+    let tests = vec![
+        (
+            from_low_u64_to_be_h256(0),
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        ),
+        (
+            from_low_u64_to_be_h256(2),
+            "0x0000000000000000000000000000000000000000000000000000000000000002",
+        ),
+        (
+            from_low_u64_to_be_h256(15),
+            "0x000000000000000000000000000000000000000000000000000000000000000f",
+        ),
+        (
+            from_low_u64_to_be_h256(16),
+            "0x0000000000000000000000000000000000000000000000000000000000000010",
+        ),
+        (
+            from_low_u64_to_be_h256(1_000),
+            "0x00000000000000000000000000000000000000000000000000000000000003e8",
+        ),
+        (
+            from_low_u64_to_be_h256(100_000),
+            "0x00000000000000000000000000000000000000000000000000000000000186a0",
+        ),
+        (
+            from_low_u64_to_be_h256(u64::max_value()),
+            "0x000000000000000000000000000000000000000000000000ffffffffffffffff",
+        ),
+    ];
 
-	for (number, expected) in tests {
+    for (number, expected) in tests {
         // workaround, as H256 in no_std does not implement (de)serialize
-        assert_eq!(format!("{}", expected), format!("{:?}", number));
-		//assert_eq!(format!("{:?}", expected), serde_json::to_string_pretty(&number).unwrap());
-		//assert_eq!(number, serde_json::from_str(&format!("{:?}", expected)).unwrap());
-	}
+        assert_eq!(expected.to_string(), format!("{:?}", number));
+    }
 }
