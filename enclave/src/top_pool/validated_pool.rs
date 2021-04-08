@@ -193,7 +193,7 @@ where
                 if let base::Imported::Ready { ref hash, .. } = imported {
                     self.import_notification_sinks.lock().unwrap()
 					.retain_mut(|sink| {
-							match sink.try_send(hash.clone()) {
+							match sink.try_send(*hash) {
 								Ok(()) => true,
 								Err(e) => {
 									if e.is_full() {
@@ -209,15 +209,15 @@ where
 
                 let mut listener = self.listener.write().unwrap();
                 fire_events(&mut listener, &imported);
-                Ok(imported.hash().clone())
+                Ok(*imported.hash())
             }
             ValidatedOperation::Invalid(hash, err) => {
                 self.rotator.ban(&Instant::now(), core::iter::once(hash));
-                Err(err.into())
+                Err(err)
             }
             ValidatedOperation::Unknown(hash, err) => {
                 self.listener.write().unwrap().invalid(&hash);
-                Err(err.into())
+                Err(err)
             }
         }
     }
@@ -244,11 +244,10 @@ where
                 let removed = pool
                     .enforce_limits(ready_limit, future_limit, shard)
                     .into_iter()
-                    .map(|x| x.hash.clone())
+                    .map(|x| x.hash)
                     .collect::<HashSet<_>>();
                 // ban all removed operations
-                self.rotator
-                    .ban(&Instant::now(), removed.iter().map(|x| x.clone()));
+                self.rotator.ban(&Instant::now(), removed.iter().copied());
                 removed
             };
             if !removed.is_empty() {
@@ -287,9 +286,9 @@ where
             }
             ValidatedOperation::Invalid(hash, err) => {
                 self.rotator.ban(&Instant::now(), core::iter::once(hash));
-                Err(err.into())
+                Err(err)
             }
-            ValidatedOperation::Unknown(_, err) => Err(err.into()),
+            ValidatedOperation::Unknown(_, err) => Err(err),
         }
     }
 
@@ -332,9 +331,9 @@ where
                 // note we are not considering tx with hash invalid here - we just want
                 // to remove it along with dependent operations and `remove_subtree()`
                 // does exactly what we need
-                let removed = pool.remove_subtree(&[hash.clone()], shard);
+                let removed = pool.remove_subtree(&[hash], shard);
                 for removed_tx in removed {
-                    let removed_hash = removed_tx.hash.clone();
+                    let removed_hash = removed_tx.hash;
                     let updated_transaction = updated_transactions.remove(&removed_hash);
                     let tx_to_resubmit = if let Some(updated_tx) = updated_transaction {
                         updated_tx
@@ -348,7 +347,7 @@ where
                         ValidatedOperation::Valid(operation)
                     };
 
-                    initial_statuses.insert(removed_hash.clone(), Status::Ready);
+                    initial_statuses.insert(removed_hash, Status::Ready);
                     txs_to_resubmit.push((removed_hash, tx_to_resubmit));
                 }
                 // make sure to remove the hash even if it's not present in the pool any more.
@@ -380,7 +379,7 @@ where
                                         final_statuses.insert(hash, Status::Failed);
                                     }
                                     for tx in removed {
-                                        final_statuses.insert(tx.hash.clone(), Status::Dropped);
+                                        final_statuses.insert(tx.hash, Status::Dropped);
                                     }
                                 }
                                 base::Imported::Future { .. } => {
@@ -410,7 +409,7 @@ where
                 // queue, updating final statuses as required
                 if reject_future_operations {
                     for future_tx in pool.clear_future(shard) {
-                        final_statuses.insert(future_tx.hash.clone(), Status::Dropped);
+                        final_statuses.insert(future_tx.hash, Status::Dropped);
                     }
                 }
 
@@ -444,9 +443,7 @@ where
             .unwrap()
             .by_hashes(&hashes, shard)
             .into_iter()
-            .map(|existing_in_pool| {
-                existing_in_pool.map(|operation| operation.provides.iter().cloned().collect())
-            })
+            .map(|existing_in_pool| existing_in_pool.map(|operation| operation.provides.to_vec()))
             .collect()
     }
 
@@ -502,7 +499,7 @@ where
         // Collect the hashes of operations that now became invalid (meaning that they are successfully pruned).
         let hashes = results.into_iter().enumerate().filter_map(|(idx, r)| {
             match r.map_err(error::IntoPoolError::into_pool_error) {
-                Err(Ok(error::Error::InvalidTrustedOperation)) => Some(pruned_hashes[idx].clone()),
+                Err(Ok(error::Error::InvalidTrustedOperation)) => Some(pruned_hashes[idx]),
                 _ => None,
             }
         });
@@ -526,7 +523,7 @@ where
         let header_hash = self
             .api
             .block_id_to_hash(at)?
-            .ok_or_else(|| error::Error::InvalidBlockId(format!("{:?}", at)).into())?;
+            .ok_or_else(|| error::Error::InvalidBlockId(format!("{:?}", at)))?;
         let mut listener = self.listener.write().unwrap();
         let mut set = HashSet::with_capacity(hashes.size_hint().0);
         for h in hashes {
@@ -553,13 +550,13 @@ where
         let block_number = self
             .api
             .block_id_to_number(at)?
-            .ok_or_else(|| error::Error::InvalidBlockId(format!("{:?}", at)).into())?
+            .ok_or_else(|| error::Error::InvalidBlockId(format!("{:?}", at)))?
             .saturated_into::<u64>();
         let now = Instant::now();
         let to_remove = {
             self.ready(shard)
                 .filter(|tx| self.rotator.ban_if_stale(&now, block_number, &tx))
-                .map(|tx| tx.hash.clone())
+                .map(|tx| tx.hash)
                 .collect::<Vec<_>>()
         };
         let futures_to_remove: Vec<ExtrinsicHash<B>> = {
@@ -567,7 +564,7 @@ where
             let mut hashes = Vec::new();
             for tx in p.futures(shard) {
                 if self.rotator.ban_if_stale(&now, block_number, &tx) {
-                    hashes.push(tx.hash.clone());
+                    hashes.push(tx.hash);
                 }
             }
             hashes
@@ -663,7 +660,7 @@ where
         let base_pool = self.pool.read().unwrap();
         let shard_iterator = base_pool.get_shards();
         for shard in shard_iterator {
-            shards.push(shard.clone());
+            shards.push(*shard);
         }
         shards
     }
@@ -690,7 +687,7 @@ where
 
     /// Notify the listener of top inclusion in sidechain block
     pub fn on_block_created(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
-        for top_hash in hashes.into_iter() {
+        for top_hash in hashes.iter() {
             self.listener
                 .write()
                 .unwrap()

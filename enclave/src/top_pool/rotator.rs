@@ -121,7 +121,7 @@ pub mod tests {
         let tx = TrustedOperation {
             data: (),
             bytes: 1,
-            hash: hash.clone(),
+            hash,
             priority: 5,
             valid_till: 1,
             requires: vec![],

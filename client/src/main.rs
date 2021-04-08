@@ -43,7 +43,7 @@ use my_node_runtime::{
     substratee_registry::{Enclave, Request},
     AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
-use sp_core::{crypto::Ss58Codec, hashing::blake2_256, sr25519 as sr25519_core, Pair, H256};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     MultiSignature,
@@ -677,7 +677,7 @@ fn listen(matches: &ArgMatches<'_>) {
     let (events_in, events_out) = channel();
     let mut count = 0u32;
     let mut blocks = 0u32;
-    api.subscribe_events(events_in);
+    api.subscribe_events(events_in).unwrap();
     loop {
         if matches.is_present("events")
             && count >= value_t!(matches.value_of("events"), u32).unwrap()
@@ -802,7 +802,7 @@ where
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api.subscribe_events(events_in.clone());
+            api.subscribe_events(events_in.clone()).unwrap();
         })
         .unwrap();
 
@@ -867,7 +867,10 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 }
 
 fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
-    if let Some(count) = api.get_storage_value("SubstrateeRegistry", "EnclaveCount", None).unwrap() {
+    if let Some(count) = api
+        .get_storage_value("SubstrateeRegistry", "EnclaveCount", None)
+        .unwrap()
+    {
         count
     } else {
         0
@@ -875,5 +878,6 @@ fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
 }
 
 fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
-    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None).unwrap()
+    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None)
+        .unwrap()
 }

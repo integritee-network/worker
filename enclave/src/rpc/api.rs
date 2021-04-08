@@ -21,7 +21,7 @@ extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 use log::*;
 
-use codec::{Encode, Decode};
+use codec::Encode;
 use jsonrpc_core::futures::future::{ready, Future, Ready};
 use std::{marker::PhantomData, pin::Pin};
 
@@ -29,22 +29,17 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
     transaction_validity::{
-        TransactionValidity, TransactionValidityError, UnknownTransaction,
-        InvalidTransaction, ValidTransaction,
+        TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
     },
 };
 
 use crate::top_pool::pool::{ChainApi, ExtrinsicHash, NumberFor};
 use crate::top_pool::primitives::TrustedOperationSource;
-use crate::state;
 
-use substratee_stf::{Getter, TrustedOperation as StfTrustedOperation, AccountId,
-     Index, ShardIdentifier, Stf};
+use substratee_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
-
-use crate::constants::MAX_ALLOWED_FUTURE_TOP;
 
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, ()>;
@@ -60,6 +55,12 @@ impl<Block> SideChainApi<Block> {
         SideChainApi {
             _marker: Default::default(),
         }
+    }
+}
+
+impl<Block> Default for SideChainApi<Block> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -91,12 +92,12 @@ where
 
                 ValidTransaction {
                     priority: 1 << 20,
-                    requires: requires,
-                    provides: provides,
+                    requires,
+                    provides,
                     longevity: 64,
                     propagate: true,
                 }
-            },
+            }
             StfTrustedOperation::get(getter) => match getter {
                 Getter::public(_) => {
                     return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(

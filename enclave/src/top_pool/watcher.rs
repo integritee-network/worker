@@ -28,7 +28,7 @@ use std::hash;
 
 //use crate::top_pool::primitives::TrustedOperationStatus
 use crate::rpc::worker_api_direct;
-use substratee_worker_primitives::{TrustedOperationStatus, BlockHash as SidechainBlockHash};
+use substratee_worker_primitives::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 
 /// Extrinsic watcher.
 ///

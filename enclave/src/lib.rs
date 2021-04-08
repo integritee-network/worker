@@ -42,7 +42,7 @@ use substratee_worker_primitives::block::{
 use substratee_worker_primitives::BlockHash;
 
 use codec::{Decode, Encode};
-use sp_core::{crypto::Pair, blake2_256, H256};
+use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
 use constants::{
@@ -373,7 +373,7 @@ pub unsafe extern "C" fn produce_blocks(
 
     debug!("Syncing chain relay!");
     if !blocks_to_sync.is_empty() {
-        for signed_block in blocks_to_sync.clone().into_iter() {
+        for signed_block in blocks_to_sync.into_iter() {
             validator
                 .check_xt_inclusion(validator.num_relays, &signed_block.block)
                 .unwrap(); // panic can only happen if relay_id does not exist
@@ -405,7 +405,6 @@ pub unsafe extern "C" fn produce_blocks(
             calls.push(OpaqueCall(
                 (xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
             ));
-
         }
     }
     // get header of last block
@@ -438,7 +437,7 @@ pub unsafe extern "C" fn produce_blocks(
             .unwrap();
     }
 
-    if let Err(_) = io::light_validation::seal(validator) {
+    if io::light_validation::seal(validator).is_err() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
@@ -515,7 +514,7 @@ fn execute_top_pool_calls(
     let mut blocks = Vec::<SignedSidechainBlock>::new();
     {
         // load top pool
-        let &ref pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
+        let pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
             Some(mutex) => mutex,
             None => {
                 error!("Could not get mutex to pool");
@@ -547,7 +546,7 @@ fn execute_top_pool_calls(
                 // get hash
                 let hash_of_getter = author.hash_of(&trusted_getter_signed.into());
                 // let client know of current state
-                if let Err(_) = worker_api_direct::send_state(hash_of_getter, value_opt) {
+                if worker_api_direct::send_state(hash_of_getter, value_opt).is_err() {
                     error!("Could not get state from stf");
                 }
                 // remove getter from pool
@@ -665,11 +664,7 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
         Timeout::Call => CALLTIMEOUT,
         Timeout::Getter => GETTERTIMEOUT,
     };
-    if (now - start_time) * 1000 >= max_time_ms {
-        true
-    } else {
-        false
-    }
+    (now - start_time) * 1000 >= max_time_ms
 }
 
 /// Composes a sidechain block of a shard
@@ -687,9 +682,9 @@ pub fn compose_block_and_confirmation(
         Some(number) => number + 1,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
-    Stf::update_sidechain_block_number(state, block_number.into());
+    Stf::update_sidechain_block_number(state, block_number);
 
-    let block_number: u64 = (block_number).into(); //FIXME! Should be either u64 or u32! Not both..
+    let block_number: u64 = block_number; //FIXME! Should be either u64 or u32! Not both..
     let parent_hash = match Stf::get_last_block_hash(state) {
         Some(hash) => hash,
         None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),

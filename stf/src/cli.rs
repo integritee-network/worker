@@ -15,7 +15,9 @@
 
 */
 
-use crate::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation, Index};
+use crate::{
+    AccountId, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation,
+};
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
@@ -160,11 +162,10 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     // get nonce
                     let key_pair = sr25519_core::Pair::from(from.clone());
-                    let top: TrustedOperation = TrustedGetter::nonce(
-                        sr25519_core::Public::from(from.public()).into(),
-                    )
-                    .sign(&KeyPair::Sr25519(key_pair.clone()))
-                    .into();
+                    let top: TrustedOperation =
+                        TrustedGetter::nonce(sr25519_core::Public::from(from.public()).into())
+                            .sign(&KeyPair::Sr25519(key_pair.clone()))
+                            .into();
                     let res = perform_operation(matches, &top);
                     let nonce: Index = if let Some(n) = res {
                         if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
@@ -225,11 +226,10 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     // get nonce
                     let key_pair = sr25519_core::Pair::from(who.clone());
-                    let top: TrustedOperation = TrustedGetter::nonce(
-                        sr25519_core::Public::from(who.public()).into(),
-                    )
-                    .sign(&KeyPair::Sr25519(key_pair.clone()))
-                    .into();
+                    let top: TrustedOperation =
+                        TrustedGetter::nonce(sr25519_core::Public::from(who.public()).into())
+                            .sign(&KeyPair::Sr25519(key_pair.clone()))
+                            .into();
                     let res = perform_operation(matches, &top);
                     let nonce: Index = if let Some(n) = res {
                         if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
@@ -345,11 +345,10 @@ pub fn cmd<'a>(
                     let (mrenclave, shard) = get_identifiers(matches);
                     // get nonce
                     let key_pair = sr25519_core::Pair::from(from.clone());
-                    let top: TrustedOperation = TrustedGetter::nonce(
-                        sr25519_core::Public::from(from.public()).into(),
-                    )
-                    .sign(&KeyPair::Sr25519(key_pair.clone()))
-                    .into();
+                    let top: TrustedOperation =
+                        TrustedGetter::nonce(sr25519_core::Public::from(from.public()).into())
+                            .sign(&KeyPair::Sr25519(key_pair.clone()))
+                            .into();
                     let res = perform_operation(matches, &top);
                     let nonce: Index = if let Some(n) = res {
                         if let Ok(nonce) = Index::decode(&mut n.as_slice()) {

@@ -176,33 +176,28 @@ pub fn handle_direct_invocation_request(req: DirectWsServerRequest) -> Result<()
         if let Ok(result_of_rpc_response) =
             RpcReturnValue::decode(&mut full_rpc_response.result.as_slice())
         {
-            match result_of_rpc_response.status {
-                DirectRequestStatus::TrustedOperationStatus(_) => {
-                    if result_of_rpc_response.do_watch {
-                        // start watching the call with the specific hash
-                        if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice())
-                        {
-                            // Aquire lock on watched list
-                            let mutex = load_watched_list().unwrap();
-                            let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> =
-                                mutex.lock().unwrap();
+            if let DirectRequestStatus::TrustedOperationStatus(_) = result_of_rpc_response.status {
+                if result_of_rpc_response.do_watch {
+                    // start watching the call with the specific hash
+                    if let Ok(hash) = Hash::decode(&mut result_of_rpc_response.value.as_slice()) {
+                        // Aquire lock on watched list
+                        let mutex = load_watched_list().unwrap();
+                        let mut watch_list: MutexGuard<HashMap<Hash, WatchingClient>> =
+                            mutex.lock().unwrap();
 
-                            // create new key and value entries to store
-                            let new_client = WatchingClient {
-                                client: req.client.clone(),
-                                response: RpcResponse {
-                                    result: result_of_rpc_response.encode(),
-                                    jsonrpc: full_rpc_response.jsonrpc.clone(),
-                                    id: full_rpc_response.id,
-                                },
-                            };
-                            // save in watch list
-                            watch_list.insert(hash, new_client);
-                        }
+                        // create new key and value entries to store
+                        let new_client = WatchingClient {
+                            client: req.client.clone(),
+                            response: RpcResponse {
+                                result: result_of_rpc_response.encode(),
+                                jsonrpc: full_rpc_response.jsonrpc.clone(),
+                                id: full_rpc_response.id,
+                            },
+                        };
+                        // save in watch list
+                        watch_list.insert(hash, new_client);
                     }
                 }
-                // Simple return value, no need of further server actions
-                _ => {}
             }
         }
         return req
