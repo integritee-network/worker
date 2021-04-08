@@ -17,7 +17,7 @@
 
 # using default port if none given as arguments
 NPORT=${1:-9944}
-RPORT=${3:-2000}
+RPORT=${2:-2000}
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
