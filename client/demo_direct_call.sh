@@ -23,7 +23,7 @@ echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
 echo ""
 
-CLIENT="./../bin/substratee-client -p ${NPORT} -P ${RPORT}"
+CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
 # SW mode - hardcoded MRENCLAVE!
 #echo "* Query on-chain enclave registry:"
 #${CLIENT} list-workers
