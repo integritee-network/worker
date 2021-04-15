@@ -23,6 +23,10 @@ echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
 echo ""
 
+AMOUNTSHIELD=50000000000
+AMOUNTTRANSFER=40000000000
+
+
 CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
 # SW mode - hardcoded MRENCLAVE!
 #echo "* Query on-chain enclave registry:"
@@ -30,33 +34,49 @@ CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
 #echo ""
 
 # does this work when multiple workers are in the registry?
-read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
-#read MRENCLAVE <<< $(cat ~/mrenclave.b58)
+#read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+read MRENCLAVE <<< $(cat ~/mrenclave.b58)
 
-# only for initial setup (actually should be done in genesis)
-# pre-fund //AliceIncognito, our ROOT key
-echo "issue funds on first (sender) account:"
-$CLIENT trusted set-balance //AliceIncognito 123456789 --mrenclave $MRENCLAVE --direct
-echo -n "get balance: "
-$CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
+echo "* Create a new incognito account for Alice"
+ICGACCOUNTALICE=//AliceIncognito
+echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
+echo ""
 
-# create incognito account for default shard (= MRENCLAVE)
-account1p=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
-echo "created new incognito account: $account1p"
+echo "* Create a new incognito account for Bob"
+ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
+echo ""
 
-#send 10M funds from AliceIncognito to new account
-$CLIENT trusted transfer //AliceIncognito $account1p 23456789 --mrenclave $MRENCLAVE --direct
+echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
+${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
+echo ""
 
-echo -n "receiver balance: "
-$CLIENT trusted balance $account1p --mrenclave $MRENCLAVE
+echo "* Waiting 10 seconds"
+sleep 10
+echo ""
 
-echo "Get balance of Alice's incognito account (sender)"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
-echo $RESULT
+echo "Get balance of Alice's incognito account"
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+echo ""
+
+#send funds from Alice to bobs account
+echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
+$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
+echo ""
+
+echo "* Get balance of Alice's incognito account"
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+echo ""
+
+echo "* Bob's incognito account balance"
+${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+echo ""
+
+
 
 # the following tests are for automated CI
 # they only work if you're running from fresh genesis
-case "$3" in 
+case "$3" in
     first)
         if [ "10000000000" = "$RESULT" ]; then
             echo "test passed (1st time)"

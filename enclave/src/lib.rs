@@ -849,7 +849,7 @@ fn handle_shield_funds_xt(
         &mut state,
         TrustedCallSigned::new(
             TrustedCall::balance_shield(account, amount),
-            0,                  //nonce
+            0,                  //FIXME::::nonce
             Default::default(), //don't care about signature here
         ),
         calls,
