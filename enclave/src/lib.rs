@@ -844,12 +844,13 @@ fn handle_shield_funds_xt(
     let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
     let account = AccountId::decode(&mut account_vec.as_slice())
         .sgx_error_with_log("[ShieldFunds] Could not decode account")?;
+    let nonce = Stf::account_nonce(&mut state, &account);
 
     if let Err(e) = Stf::execute(
         &mut state,
         TrustedCallSigned::new(
             TrustedCall::balance_shield(account, amount),
-            0,                  //FIXME::::nonce
+            nonce,
             Default::default(), //don't care about signature here
         ),
         calls,
