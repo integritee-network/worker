@@ -530,7 +530,6 @@ fn test_create_block_and_confirmation_works() {
 #[allow(unused)]
 fn test_create_state_diff() {
     // given
-
     ensure_no_empty_shard_directory_exists();
 
     // create top pool
@@ -549,6 +548,16 @@ fn test_create_state_diff() {
     // ensure that state starts empty
     state::init_shard(&shard).unwrap();
     let state = Stf::init_state();
+
+    // get index of current shard
+    let shards = state::list_shards().unwrap();
+    let mut index = 0;
+    for s in shards.into_iter() {
+        if s == shard {
+            break;
+        }
+        index += 1;
+    }
 
     // create accounts
     let signer_without_money = ed25519::unseal_pair().unwrap();
@@ -592,7 +601,7 @@ fn test_create_state_diff() {
 
     // when
     let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
-    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();
+    let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
     aes::de_or_encrypt(&mut encrypted_payload).unwrap();
     let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
     let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
