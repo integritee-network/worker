@@ -13,30 +13,52 @@
 # then run this script
 
 # usage:
-#  demo_direct_call.sh <NODEPORT> <WORKERRPCPORT>
+#  demo_direct_call.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
+#
+# TEST_BALANCE_RUN is either "first" or "second"
+# if -m file is set, the mrenclave will be read from file
+
+while getopts ":m:p:P:t:" opt; do
+    case $opt in
+        t)
+            TEST=$OPTARG
+            ;;
+        m)
+            READMRENCLAVE=$OPTARG
+            ;;
+        p)
+            NPORT=$OPTARG
+            ;;
+        P)
+            RPORT=$OPTARG
+            ;;
+    esac
+done
 
 # using default port if none given as arguments
-NPORT=${1:-9944}
-RPORT=${2:-2000}
+NPORT=${NPORT:-9944}
+RPORT=${RPORT:-2000}
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
-echo ""
 
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
 
 CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
-# SW mode - hardcoded MRENCLAVE!
-#echo "* Query on-chain enclave registry:"
-#${CLIENT} list-workers
-#echo ""
 
-# does this work when multiple workers are in the registry?
-#read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
-read MRENCLAVE <<< $(cat ~/mrenclave.b58)
+if [ "$READMRENCLAVE" = "file" ]
+then
+    read MRENCLAVE <<< $(cat ~/mrenclave.b58)
+    echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
+else
+    # does this work when multiple workers are in the registry?
+    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+    echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
+fi
 
+echo ""
 echo "* Create a new incognito account for Alice"
 ICGACCOUNTALICE=//AliceIncognito
 echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
@@ -76,7 +98,7 @@ echo ""
 
 # the following tests are for automated CI
 # they only work if you're running from fresh genesis
-case "$3" in
+case $TEST in
     first)
         if [ "10000000000" = "$RESULT" ]; then
             echo "test passed (1st time)"
