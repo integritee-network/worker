@@ -165,7 +165,7 @@ pub enum TrustedCall {
     balance_set_balance(AccountId, AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
     balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
-    balance_shield(AccountId, Balance),                               // (AccountIncognito, Amount)
+    balance_shield(AccountId, AccountId, Balance),                    // (Root, AccountIncognito, Amount)
 }
 
 impl TrustedCall {
@@ -174,7 +174,7 @@ impl TrustedCall {
             TrustedCall::balance_set_balance(account, _, _, _) => account,
             TrustedCall::balance_transfer(account, _, _) => account,
             TrustedCall::balance_unshield(account, _, _, _) => account,
-            TrustedCall::balance_shield(account, _) => account,
+            TrustedCall::balance_shield(account,_ , _) => account,
         }
     }
 

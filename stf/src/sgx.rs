@@ -260,7 +260,8 @@ impl Stf {
                     ));
                     Ok(())
                 }
-                TrustedCall::balance_shield(who, value) => {
+                TrustedCall::balance_shield(root, who, value) => {
+                    Self::ensure_root(root)?;
                     debug!("balance_shield({:x?}, {})", who.encode(), value);
                     Self::shield_funds(who, value)?;
                     Ok(())
@@ -291,6 +292,14 @@ impl Stf {
             } else {
                 None
             }
+        })
+    }
+
+    pub fn get_root(ext: &mut State) -> AccountId {
+        ext.execute_with(|| {
+            AccountId::decode(
+                &mut sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap().as_slice()
+            ).unwrap()
         })
     }
 
@@ -385,7 +394,7 @@ impl Stf {
             TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
             TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
             TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
-            TrustedCall::balance_shield(_, _) => debug!("No storage updates needed..."),
+            TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
         };
         key_hashes
     }
