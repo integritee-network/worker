@@ -308,8 +308,11 @@ impl Stf {
     pub fn get_root(ext: &mut State) -> AccountId {
         ext.execute_with(|| {
             AccountId::decode(
-                &mut sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap().as_slice()
-            ).unwrap()
+                &mut sp_io::storage::get(&storage_value_key("Sudo", "Key"))
+                    .unwrap()
+                    .as_slice(),
+            )
+            .unwrap()
         })
     }
 
