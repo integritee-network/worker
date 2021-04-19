@@ -108,14 +108,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_submit_trusted_getter_to_top_pool,
         test_differentiate_getter_and_call_works,
         test_create_block_and_confirmation_works,
-
         // needs node to be running.. unit tests?
         test_ocall_worker_request,
         test_create_state_diff,
         test_executing_call_updates_account_nonce,
         test_invalid_nonce_call_is_not_executed,
         test_non_root_shielding_call_is_not_executed,
-
         // these unit tests (?) need an ipfs node running..
         //ipfs::test_creates_ipfs_content_struct_works,
         //ipfs::test_verification_ok_for_correct_content,
@@ -787,13 +785,13 @@ fn test_invalid_nonce_call_is_not_executed() {
     let nonce = Stf::account_nonce(&mut updated_state, &account_with_money.into());
     assert_eq!(nonce, 0);
 
-    let acc_data_with_money = Stf::account_data(&mut updated_state, &account_with_money.into()).unwrap();
+    let acc_data_with_money =
+        Stf::account_data(&mut updated_state, &account_with_money.into()).unwrap();
     assert_eq!(acc_data_with_money.free, 2000);
 
     // clean up
     state::remove_shard_dir(&shard);
 }
-
 
 #[allow(unused)]
 fn test_non_root_shielding_call_is_not_executed() {
@@ -819,7 +817,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 
     // create account
     let signer_pair = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-    let account= signer_pair.public();
+    let account = signer_pair.public();
     let prev_acc_money = Stf::account_data(&mut state, &account.into()).unwrap().free;
     // load top pool
     {
@@ -831,11 +829,7 @@ fn test_non_root_shielding_call_is_not_executed() {
         // create trusted call signed
         let nonce = 0;
         let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
-        let call = TrustedCall::balance_shield(
-            account.into(),
-            account.into(),
-            1000,
-        );
+        let call = TrustedCall::balance_shield(account.into(), account.into(), 1000);
         let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
         let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
         // encrypt call
@@ -856,7 +850,9 @@ fn test_non_root_shielding_call_is_not_executed() {
     // then
     let mut updated_state = state::load(&shard).unwrap();
     let nonce = Stf::account_nonce(&mut updated_state, &account.into());
-    let new_acc_money = Stf::account_data(&mut updated_state, &account.into()).unwrap().free;
+    let new_acc_money = Stf::account_data(&mut updated_state, &account.into())
+        .unwrap()
+        .free;
     assert_eq!(nonce, 0);
     assert_eq!(new_acc_money, prev_acc_money);
 

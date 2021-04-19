@@ -39,6 +39,7 @@ const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
     76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
+const ALICE_FUNDS: Balance = 1000000000000000;
 
 impl Stf {
     pub fn init_state() -> State {
@@ -50,6 +51,15 @@ impl Stf {
             // do not set genesis for pallets that are meant to be on-chain
             // use get_storage_hashes_to_update instead
             sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
+            // fund root account
+            sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                MultiAddress::Id(AccountId32::from(ALICE_ENCODED)),
+                ALICE_FUNDS,
+                ALICE_FUNDS,
+            )
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
+            .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
+            .unwrap();
 
             sp_io::storage::set(
                 &storage_value_key("Balances", "TotalIssuance"),
@@ -298,8 +308,11 @@ impl Stf {
     pub fn get_root(ext: &mut State) -> AccountId {
         ext.execute_with(|| {
             AccountId::decode(
-                &mut sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap().as_slice()
-            ).unwrap()
+                &mut sp_io::storage::get(&storage_value_key("Sudo", "Key"))
+                    .unwrap()
+                    .as_slice(),
+            )
+            .unwrap()
         })
     }
 
