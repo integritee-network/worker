@@ -54,7 +54,7 @@ then
     echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
 else
     # this will always take the first MRENCLAVE found in the registry !!
-    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2; exit }')
+    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
     echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
