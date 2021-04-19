@@ -89,6 +89,7 @@ echo ""
 
 echo "* Get balance of Alice's incognito account"
 RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+echo $RESULT
 echo ""
 
 

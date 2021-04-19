@@ -844,8 +844,8 @@ fn handle_shield_funds_xt(
     let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
     let account = AccountId::decode(&mut account_vec.as_slice())
         .sgx_error_with_log("[ShieldFunds] Could not decode account")?;
-    let nonce = Stf::account_nonce(&mut state, &account);
     let root = Stf::get_root(&mut state);
+    let nonce = Stf::account_nonce(&mut state, &root);
 
     if let Err(e) = Stf::execute(
         &mut state,
