@@ -453,6 +453,17 @@ fn test_create_block_and_confirmation_works() {
     state::init_shard(&shard).unwrap();
     let mut state = Stf::init_state();
     assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
+
+    // get index of current shard
+    let shards = state::list_shards().unwrap();
+    let mut index = 0;
+    for s in shards.into_iter() {
+        if s == shard {
+            break;
+        }
+        index += 1;
+    }
+
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
     let latest_onchain_header = Header::new(
         1,
@@ -473,7 +484,7 @@ fn test_create_block_and_confirmation_works() {
         // create trusted call signed
         let nonce = 0;
         let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
-        let signer_pair = ed25519::unseal_pair().unwrap();
+        let signer_pair = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
         let call = TrustedCall::balance_transfer(
             signer_pair.public().into(),
             signer_pair.public().into(),
@@ -497,8 +508,8 @@ fn test_create_block_and_confirmation_works() {
     let (confirm_calls, signed_blocks) =
         crate::execute_top_pool_calls(latest_onchain_header).unwrap();
 
-    let signed_block = signed_blocks[0].clone();
-    let mut opaque_call_vec = confirm_calls[0].0.clone();
+    let signed_block = signed_blocks[index].clone();
+    let mut opaque_call_vec = confirm_calls[index].0.clone();
     let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 
@@ -519,7 +530,6 @@ fn test_create_block_and_confirmation_works() {
 #[allow(unused)]
 fn test_create_state_diff() {
     // given
-
     ensure_no_empty_shard_directory_exists();
 
     // create top pool
@@ -538,6 +548,16 @@ fn test_create_state_diff() {
     // ensure that state starts empty
     state::init_shard(&shard).unwrap();
     let state = Stf::init_state();
+
+    // get index of current shard
+    let shards = state::list_shards().unwrap();
+    let mut index = 0;
+    for s in shards.into_iter() {
+        if s == shard {
+            break;
+        }
+        index += 1;
+    }
 
     // create accounts
     let signer_without_money = ed25519::unseal_pair().unwrap();
@@ -581,7 +601,7 @@ fn test_create_state_diff() {
 
     // when
     let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
-    let mut encrypted_payload: Vec<u8> = signed_blocks[0].block().state_payload().to_vec();
+    let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
     aes::de_or_encrypt(&mut encrypted_payload).unwrap();
     let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
     let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
