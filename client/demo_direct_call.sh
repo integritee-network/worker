@@ -53,10 +53,11 @@ then
     read MRENCLAVE <<< $(cat ~/mrenclave.b58)
     echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
 else
-    # does this work when multiple workers are in the registry?
-    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2 }')
+    # this will always take the first MRENCLAVE found in the registry !!
+    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE:[[:space:]]/ { print $2; exit }')
     echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 fi
+[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
 echo ""
 echo "* Create a new incognito account for Alice"
