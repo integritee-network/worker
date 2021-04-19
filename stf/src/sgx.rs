@@ -50,6 +50,16 @@ impl Stf {
             // do not set genesis for pallets that are meant to be on-chain
             // use get_storage_hashes_to_update instead
             sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
+            // fund root account
+            let public = AccountId32::from(ALICE_ENCODED);
+            sgx_runtime::BalancesCall::<Runtime>::set_balance(
+                MultiAddress::Id(public.clone()),
+                100000,
+                100000,
+            )
+            .dispatch_bypass_filter(sgx_runtime::Origin::root())
+            .map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
+            .unwrap();
 
             sp_io::storage::set(
                 &storage_value_key("Balances", "TotalIssuance"),
