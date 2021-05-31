@@ -359,13 +359,6 @@ fn worker(
         })
         .unwrap();
 
-    let api3 = api;
-    let sender3 = sender.clone();
-    let _block_subscriber = thread::Builder::new()
-        .name("block_subscriber".to_owned())
-        .spawn(move || api3.subscribe_finalized_heads(sender3))
-        .unwrap();
-
     println!("[+] Subscribed to events. waiting...");
     let timeout = Duration::from_millis(10);
     loop {
