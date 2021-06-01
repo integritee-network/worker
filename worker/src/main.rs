@@ -56,11 +56,13 @@ use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORI
 use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use config::Config;
 
 mod constants;
 mod enclave;
 mod ipfs;
 mod tests;
+mod config;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -75,20 +77,10 @@ fn main() {
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
-    let node_ip = matches.value_of("node-server").unwrap_or("ws://127.0.0.1");
-    let node_port = matches.value_of("node-port").unwrap_or("9944");
-    let n_url = format!("{}:{}", node_ip, node_port);
-    info!("Interacting with node on {}", n_url);
-    *NODE_URL.lock().unwrap() = n_url;
+    let mut config = Config::from(&matches);
+    println!("Worker Config: {:?}", config);
 
-    let w_ip = if matches.is_present("ws-external") {
-        "0.0.0.0"
-    } else {
-        "127.0.0.1"
-    };
-    let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
-
-    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("2000");
+    *NODE_URL.lock().unwrap() = config.node_url();
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -110,19 +102,16 @@ fn main() {
             }
         };
 
-        let ext_api_url = if let Some(url) = smatches.value_of("w-server") {
-            url.to_string()
+        config.ext_api_url = if let Some(url) = smatches.value_of("w-server") {
+            Some(url.to_string())
         } else {
-            format!("ws://127.0.0.1:{}", worker_rpc_port)
+            Some(format!("ws://127.0.0.1:{}", config.worker_rpc_port))
         };
-        println!("Advertising worker api at {}", ext_api_url);
+        println!("Advertising worker api at {}", config.ext_api_url.as_ref().unwrap());
         let skip_ra = smatches.is_present("skip-ra");
         worker(
-            w_ip,
-            mu_ra_port,
+            config.clone(),
             &shard,
-            &ext_api_url,
-            worker_rpc_port,
             skip_ra,
         );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
@@ -231,7 +220,7 @@ fn main() {
             enclave_run_key_provisioning_server(
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &format!("localhost:{}", mu_ra_port),
+                &format!("localhost:{}", config.worker_mu_ra_port),
             );
             println!("[+] Done!");
             enclave.destroy();
@@ -241,13 +230,13 @@ fn main() {
             enclave_request_key_provisioning(
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &format!("localhost:{}", mu_ra_port),
+                &format!("localhost:{}", config.worker_mu_ra_port),
             )
             .unwrap();
             println!("[+] Done!");
             enclave.destroy();
         } else {
-            tests::run_enclave_tests(_matches, node_port);
+            tests::run_enclave_tests(_matches, &config.node_port);
         }
     } else {
         println!("For options: use --help");
@@ -255,11 +244,8 @@ fn main() {
 }
 
 fn worker(
-    w_ip: &str,
-    mu_ra_port: &str,
+    config: Config,
     shard: &ShardIdentifier,
-    ext_api_url: &str,
-    worker_rpc_port: &str,
     skip_ra: bool,
 ) {
     println!("Encointer Worker v{}", VERSION);
@@ -280,8 +266,8 @@ fn worker(
     let eid = enclave.geteid();
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
-    println!("MU-RA server listening on ws://{}:{}", w_ip, mu_ra_port);
-    let ra_url = format!("{}:{}", w_ip, mu_ra_port);
+    println!("MU-RA server listening on ws://{}", config.mu_ra_url());
+    let ra_url = config.mu_ra_url();
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
             eid,
@@ -292,12 +278,8 @@ fn worker(
 
     // ------------------------------------------------------------------------
     // start worker api direct invocation server
-    println!(
-        "rpc worker server listening on ws://{}:{}",
-        w_ip, worker_rpc_port
-    );
-    let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
-    start_worker_api_direct_server(direct_url, eid);
+    println!("rpc worker server listening on ws://{}", config.worker_url());
+    start_worker_api_direct_server( config.worker_url(), eid);
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
@@ -320,7 +302,7 @@ fn worker(
         info!("Enclave nonce = {:?}", nonce);
 
         let uxt =
-            enclave_perform_ra(eid, genesis_hash, nonce, ext_api_url.as_bytes().to_vec()).unwrap();
+            enclave_perform_ra(eid, genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec()).unwrap();
 
         let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
 
