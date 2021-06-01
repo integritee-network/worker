@@ -88,11 +88,11 @@ fn main() {
         println!("*** Starting substraTEE-worker");
         let shard = extract_shard(&smatches);
 
-        config.ext_api_url = if let Some(url) = smatches.value_of("w-server") {
-            Some(url.to_string())
-        } else {
-            Some(format!("ws://127.0.0.1:{}", config.worker_rpc_port))
-        };
+        // Todo: Is this deprecated??
+        config.set_ext_api_url(
+            smatches.value_of("w-server")
+                .unwrap_or_else(|| &format!("ws://127.0.0.1:{}", config.worker_rpc_port))
+        );
         println!("Advertising worker api at {}", config.ext_api_url.as_ref().unwrap());
         let skip_ra = smatches.is_present("skip-ra");
         worker(

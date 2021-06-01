@@ -25,6 +25,10 @@ impl Config {
 	pub fn mu_ra_url(&self) -> String {
 		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
 	}
+
+	pub fn set_ext_api_url(&mut self, url: &str) {
+		self.ext_api_url = Some(url.into())
+	}
 }
 
 impl From<&ArgMatches<'_>> for Config {
