@@ -28,7 +28,7 @@ use std::thread;
 
 use sgx_types::*;
 
-use base58::{FromBase58, ToBase58};
+use base58::ToBase58;
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use lazy_static::lazy_static;
@@ -57,12 +57,14 @@ use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use config::Config;
+use crate::utils::extract_shard;
 
 mod constants;
 mod enclave;
 mod ipfs;
 mod tests;
 mod config;
+mod utils;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -84,23 +86,7 @@ fn main() {
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
-        let shard: ShardIdentifier = match smatches.value_of("shard") {
-            Some(value) => {
-                let shard_vec = value.from_base58().unwrap();
-                let mut shard = [0u8; 32];
-                shard.copy_from_slice(&shard_vec[..]);
-                shard.into()
-            }
-            _ => {
-                let enclave = enclave_init().unwrap();
-                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
-                info!(
-                    "no shard specified. using mrenclave as id: {}",
-                    mrenclave.to_base58()
-                );
-                ShardIdentifier::from_slice(&mrenclave[..])
-            }
-        };
+        let shard = extract_shard(&smatches);
 
         config.ext_api_url = if let Some(url) = smatches.value_of("w-server") {
             Some(url.to_string())
@@ -115,23 +101,7 @@ fn main() {
             skip_ra,
         );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-        let shard: ShardIdentifier = match smatches.value_of("shard") {
-            Some(value) => {
-                let shard_vec = value.from_base58().unwrap();
-                let mut shard = [0u8; 32];
-                shard.copy_from_slice(&shard_vec[..]);
-                shard.into()
-            }
-            _ => {
-                let enclave = enclave_init().unwrap();
-                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
-                info!(
-                    "no shard specified. using mrenclave as id: {}",
-                    mrenclave.to_base58()
-                );
-                ShardIdentifier::from_slice(&mrenclave[..])
-            }
-        };
+        let shard = extract_shard(&smatches);
         let provider_url = smatches
             .value_of("provider")
             .expect("provider must be specified");
@@ -195,24 +165,8 @@ fn main() {
         return;
     }
     if let Some(_matches) = matches.subcommand_matches("init-shard") {
-        match _matches.values_of("shard") {
-            Some(values) => {
-                for shard in values {
-                    match shard.from_base58() {
-                        Ok(s) => {
-                            init_shard(&ShardIdentifier::from_slice(&s[..]));
-                        }
-                        _ => panic!("shard must be hex encoded"),
-                    }
-                }
-            }
-            _ => {
-                let enclave = enclave_init().unwrap();
-                let shard =
-                    ShardIdentifier::from_slice(&enclave_mrenclave(enclave.geteid()).unwrap());
-                init_shard(&shard);
-            }
-        };
+        let shard = extract_shard(&_matches);
+        init_shard(&shard);
     } else if let Some(_matches) = matches.subcommand_matches("test") {
         if _matches.is_present("provisioning-server") {
             println!("*** Running Enclave MU-RA TLS server\n");
