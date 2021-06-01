@@ -17,7 +17,7 @@
 
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= HW
+SGX_MODE ?= SW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
@@ -167,7 +167,7 @@ $(Worker_Enclave_u_Object): worker/Enclave_u.o
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
 	@echo "Building the substraTEE-worker"
-	@cd worker && SGX_SDK=$(SGX_SDK) cargo build $(Worker_Rust_Flags)
+	@cd worker && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/substratee-worker ./bin
 	cp $(Worker_Rust_Path)/substratee-worker ./bin2
@@ -211,7 +211,11 @@ enclave:
 .PHONY: clean
 clean:
 	@echo "Removing the compiled files"
-	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* worker/*_u.* lib/*.a bin/*.bin
+	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) \
+ 			enclave/*_t.* \
+ 			worker/*_u.* \
+ 			lib/*.a \
+ 			bin/*.bin
 	@echo "cargo clean in enclave directory"
 	@cd enclave && cargo clean
 	@echo "cargo clean in root directory"
