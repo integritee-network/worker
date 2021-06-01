@@ -91,7 +91,8 @@ fn main() {
         // Todo: Is this deprecated??
         config.set_ext_api_url(
             smatches.value_of("w-server")
-                .unwrap_or_else(|| &format!("ws://127.0.0.1:{}", config.worker_rpc_port))
+                .map(ToString::to_string)
+                .unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port))
         );
         println!("Advertising worker api at {}", config.ext_api_url.as_ref().unwrap());
         let skip_ra = smatches.is_present("skip-ra");
