@@ -57,7 +57,7 @@ use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use config::Config;
-use crate::utils::extract_shard;
+use utils::extract_shard;
 
 mod constants;
 mod enclave;
