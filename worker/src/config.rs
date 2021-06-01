@@ -7,7 +7,7 @@ pub struct Config {
 	pub node_port: String,
 	pub worker_ip: String,
 	pub worker_rpc_port: String,
-	/// Port the worker listens for the mutual-remote attestation requests
+	/// listening port for the mutual-remote attestation requests
 	pub worker_mu_ra_port: String,
 	/// Todo: Is this deprecated? I can only see it in `enclave_perform_ra`
 	pub ext_api_url: Option<String>,
