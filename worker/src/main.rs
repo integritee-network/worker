@@ -88,7 +88,7 @@ fn main() {
         println!("*** Starting substraTEE-worker");
         let shard = extract_shard(&smatches);
 
-        // Todo: Is this deprecated??
+        // Todo: Is this deprecated?? It is only used in remote attestation.
         config.set_ext_api_url(
             smatches.value_of("w-server")
                 .map(ToString::to_string)
