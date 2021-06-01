@@ -288,11 +288,10 @@ fn worker(
     println!("*** Subscribing to events");
     let (sender, receiver) = channel();
     let sender2 = sender.clone();
-    let api2 = api.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api2.subscribe_events(sender2).unwrap();
+            api.subscribe_events(sender2).unwrap();
         })
         .unwrap();
 
