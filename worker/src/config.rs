@@ -26,8 +26,8 @@ impl Config {
 		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
 	}
 
-	pub fn set_ext_api_url(&mut self, url: &str) {
-		self.ext_api_url = Some(url.into())
+	pub fn set_ext_api_url(&mut self, url: String) {
+		self.ext_api_url = Some(url)
 	}
 }
 
