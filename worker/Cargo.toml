@@ -82,4 +82,4 @@ path = "../stf"
 
 [features]
 default = []
-production = []
+production = ['substratee-settings/production']
