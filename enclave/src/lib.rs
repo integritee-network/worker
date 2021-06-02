@@ -94,8 +94,8 @@ pub mod top_pool;
 
 pub use substratee_settings as constants;
 
-use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED,RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
-use substratee_settings::enclave::{CALLTIMEOUT, GETTERTIMEOUT};
+use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
+use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -396,7 +396,7 @@ pub unsafe extern "C" fn produce_blocks(
                 Err(_) => error!("Error executing relevant extrinsics"),
             };
             // compose indirect block confirmation
-            let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+            let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
             let genesis_hash = validator.genesis_hash(validator.num_relays).unwrap();
             let block_hash = signed_block.block.header.hash();
             let prev_state_hash = signed_block.block.header.parent_hash();
@@ -659,8 +659,8 @@ pub fn time_is_overdue(timeout: Timeout, start_time: i64) -> bool {
         .unwrap()
         .as_secs() as i64;
     let max_time_ms: i64 = match timeout {
-        Timeout::Call => CALLTIMEOUT,
-        Timeout::Getter => GETTERTIMEOUT,
+        Timeout::Call => CALL_TIMEOUT,
+        Timeout::Getter => GETTER_TIMEOUT,
     };
     (now - start_time) * 1000 >= max_time_ms
 }
@@ -712,7 +712,7 @@ pub fn compose_block_and_confirmation(
     debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
     Stf::update_last_block_hash(state, block_hash.into());
 
-    let xt_block = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+    let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
     let opaque_call =
         OpaqueCall((xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode());
     Ok((opaque_call, signed_block))
@@ -781,7 +781,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
             UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
         {
             // confirm call decodes successfully as well
-            if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
+            if xt.function.0 == [SUBSTRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
                 if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt) {
                     error!("Error performing shieldfunds. Error: {:?}", e);
                 }
@@ -791,7 +791,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
         if let Ok(xt) =
             UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
         {
-            if xt.function.0 == [SUBSRATEE_REGISTRY_MODULE, CALL_WORKER] {
+            if xt.function.0 == [SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER] {
                 if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
                     // load state before executing any calls
                     let mut state = if state::exists(&shard) {
@@ -860,7 +860,7 @@ fn handle_shield_funds_xt(
 
     let state_hash = state::write(state, &shard)?;
 
-    let xt_call = [SUBSRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+    let xt_call = [SUBSTRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
     let call_hash = blake2_256(&xt.encode());
     debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 

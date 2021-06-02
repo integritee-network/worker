@@ -54,8 +54,8 @@ use substratee_stf::StateTypeDiff as StfStateTypeDiff;
 use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
 use substratee_stf::{TrustedGetter, TrustedOperation};
 
-use substratee_settings::enclave::{GETTERTIMEOUT};
-use substratee_settings::node::{BLOCK_CONFIRMED, SUBSRATEE_REGISTRY_MODULE};
+use substratee_settings::enclave::{GETTER_TIMEOUT};
+use substratee_settings::node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE};
 
 use jsonrpc_core::futures::executor;
 use sp_core::ed25519 as spEd25519;
@@ -211,7 +211,7 @@ fn test_time_is_overdue() {
         .unwrap()
         .as_secs() as i64;
     // when
-    let before_start_time = (start_time * 1000 - GETTERTIMEOUT) / 1000;
+    let before_start_time = (start_time * 1000 - GETTER_TIMEOUT) / 1000;
     let time_has_run_out = crate::time_is_overdue(Timeout::Getter, before_start_time);
     // then
     assert!(time_has_run_out)
@@ -260,7 +260,7 @@ fn test_compose_block_and_confirmation() {
         &mut state,
     )
     .unwrap();
-    let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
+    let xt_block_encoded = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
     let mut opaque_call_vec = opaque_call.0;
 
@@ -510,7 +510,7 @@ fn test_create_block_and_confirmation_works() {
 
     let signed_block = signed_blocks[index].clone();
     let mut opaque_call_vec = confirm_calls[index].0.clone();
-    let xt_block_encoded = [SUBSRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
+    let xt_block_encoded = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
     let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 
     // then

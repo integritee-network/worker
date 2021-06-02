@@ -20,7 +20,7 @@
 #![no_std]
 
 pub mod files {
-	// use by worker
+	// used by worker
 	pub static ENCLAVE_TOKEN: &str = "enclave.token";
 	pub static ENCLAVE_FILE: &str = "enclave.signed.so";
 	pub static SHIELDING_KEY_FILE: &str = "enclave-shielding-pubkey.json";
@@ -60,15 +60,15 @@ pub mod worker {
 /// Settings concerning the enclave
 pub mod enclave {
 	// timeouts for getter and call execution
-	pub static CALLTIMEOUT: i64 = 300; // timeout in ms
-	pub static GETTERTIMEOUT: i64 = 300; // timeout in ms
+	pub static CALL_TIMEOUT: i64 = 300; // timeout in ms
+	pub static GETTER_TIMEOUT: i64 = 300; // timeout in ms
 }
 
 /// Settings concerning the node
 pub mod node {
 	// you may have to update these indices upon new builds of the runtime
 	// you can get the index from metadata, counting modules starting with zero
-	pub static SUBSRATEE_REGISTRY_MODULE: u8 = 8u8;
+	pub static SUBSTRATEE_REGISTRY_MODULE: u8 = 8u8;
 	pub static REGISTER_ENCLAVE: u8 = 0u8;
 	//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
 	pub static CALL_WORKER: u8 = 2u8;

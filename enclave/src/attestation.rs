@@ -52,7 +52,7 @@ use substratee_settings::{
     files::{RA_DUMP_CERT_DER_FILE, RA_API_KEY_FILE, RA_SPID_FILE},
     node::{
         REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-        RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
+        RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE,
     }
 };
 
@@ -642,7 +642,7 @@ pub unsafe extern "C" fn perform_ra(
     let genesis_hash = hash_from_slice(genesis_hash_slice);
     debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
     debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-    let call = [SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
+    let call = [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
 
     let xt = compose_extrinsic_offline!(
         signer,
