@@ -1,5 +1,8 @@
 import pathlib
 import shutil
+from subprocess import Popen, STDOUT
+
+from typing.io import TextIO
 
 from .helpers import run_piped_subprocess, setup_working_dir, mkdir_p
 
@@ -116,3 +119,6 @@ class Worker:
 
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')
+
+    def run_in_background(self, log_file: TextIO):
+        return Popen(self.cli + ['run'], stdout=log_file, stderr=STDOUT, bufsize=1, cwd=self.cwd)
