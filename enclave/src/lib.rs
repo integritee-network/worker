@@ -92,10 +92,10 @@ pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
 
-pub use stee_settings as constants;
+pub use substratee_settings as constants;
 
-use stee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED,RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
-use stee_settings::enclave::{CALLTIMEOUT, GETTERTIMEOUT};
+use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED,RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
+use substratee_settings::enclave::{CALLTIMEOUT, GETTERTIMEOUT};
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 

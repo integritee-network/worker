@@ -54,8 +54,8 @@ use substratee_stf::StateTypeDiff as StfStateTypeDiff;
 use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
 use substratee_stf::{TrustedGetter, TrustedOperation};
 
-use stee_settings::enclave::{GETTERTIMEOUT};
-use stee_settings::node::{BLOCK_CONFIRMED, SUBSRATEE_REGISTRY_MODULE};
+use substratee_settings::enclave::{GETTERTIMEOUT};
+use substratee_settings::node::{BLOCK_CONFIRMED, SUBSRATEE_REGISTRY_MODULE};
 
 use jsonrpc_core::futures::executor;
 use sp_core::ed25519 as spEd25519;

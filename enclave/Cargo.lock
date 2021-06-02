@@ -2474,7 +2474,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "stee-settings"
+name = "substratee-settings"
 version = "0.8.0"
 
 [[package]]
@@ -2585,7 +2585,7 @@ dependencies = [
  "sp-std",
  "sp-utils",
  "sp-version",
- "stee-settings",
+ "substratee-settings",
  "substrate-api-client",
  "substratee-node-primitives",
  "substratee-stf",

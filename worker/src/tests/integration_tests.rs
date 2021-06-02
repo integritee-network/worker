@@ -29,7 +29,7 @@ use std::time::Duration;
 use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
 use substratee_node_primitives::{CallWorkerFn, Request, ShieldFundsFn};
 
-use stee_settings::worker::{SIGNING_KEY_FILE};
+use substratee_settings::worker::{SIGNING_KEY_FILE};
 use crate::enclave::api::*;
 use crate::tests::commons::*;
 
