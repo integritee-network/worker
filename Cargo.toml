@@ -1,4 +1,8 @@
+# this can be removed when the enclave's toolchain is > rustc 1.50
+cargo-features = ["resolver"]
+
 [workspace]
+resolver = "2"
 members = [
     "client",
     "primitives/api-client-extensions",
@@ -8,6 +12,7 @@ members = [
     "stf",
     "worker",
     "worker/worker-api",
+    "worker/rpc",
     #	 "enclave",
 ]
 

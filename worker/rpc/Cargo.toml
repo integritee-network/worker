@@ -1,0 +1,23 @@
+[package]
+name = "substratee-worker-rpc"
+version = "0.8.0"
+authors = ["Supercomputing Systems AG <info@scs.ch>"]
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+anyhow = "1.0.40"
+log = "0.4.14"
+jsonrpsee = { version = "0.2.0-alpha.7", features = ["server"] }
+serde_json = "1.0.64"
+tokio = { version = "1.6.1", features = ["full"] }
+
+[features]
+default = ["std"]
+std = []
+
+[dev-dependencies]
+env_logger = { version = "*" }
+soketto = "0.5.0"
+futures-util = { version = "*" }
+tokio-util = { version = "0.6", features = ["compat"] }
