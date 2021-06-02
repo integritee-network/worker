@@ -2474,10 +2474,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "substratee-settings"
-version = "0.8.0"
-
-[[package]]
 name = "stream-cipher"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2512,6 +2508,10 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
 ]
+
+[[package]]
+name = "substratee-settings"
+version = "0.8.0"
 
 [[package]]
 name = "substratee-stf"
@@ -2585,9 +2585,9 @@ dependencies = [
  "sp-std",
  "sp-utils",
  "sp-version",
- "substratee-settings",
  "substrate-api-client",
  "substratee-node-primitives",
+ "substratee-settings",
  "substratee-stf",
  "substratee-worker-primitives",
  "webpki",
