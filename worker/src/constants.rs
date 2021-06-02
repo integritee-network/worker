@@ -17,8 +17,8 @@
 
 pub static ENCRYPTED_STATE_FILE: &str = "state.bin";
 pub static SHARDS_PATH: &str = "./shards";
-pub static ENCLAVE_TOKEN: &str = "../bin/enclave.token";
-pub static ENCLAVE_FILE: &str = "../bin/enclave.signed.so";
+pub static ENCLAVE_TOKEN: &str = "enclave.token";
+pub static ENCLAVE_FILE: &str = "enclave.signed.so";
 pub static SHIELDING_KEY_FILE: &str = "enclave-shielding-pubkey.json";
 pub static SIGNING_KEY_FILE: &str = "enclave-signing-pubkey.bin";
 
