@@ -24,7 +24,7 @@ use sgx_types::*;
 
 use log::*;
 
-use crate::constants::RSA3072_SEALED_KEY_FILE;
+use stee_settings::enclave::RSA3072_SEALED_KEY_FILE;
 use crate::io;
 
 pub fn unseal_pair() -> SgxResult<Rsa3072KeyPair> {

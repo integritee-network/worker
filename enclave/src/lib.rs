@@ -45,11 +45,6 @@ use codec::{Decode, Encode};
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 
-use constants::{
-    BLOCK_CONFIRMED, CALLTIMEOUT, CALL_CONFIRMED, GETTERTIMEOUT, RUNTIME_SPEC_VERSION,
-    RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
-};
-
 use std::slice;
 use std::vec::Vec;
 
@@ -61,7 +56,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::untrusted::time::SystemTimeEx;
 use utils::write_slice_and_whitespace_pad;
 
-use crate::constants::{CALL_WORKER, SHIELD_FUNDS};
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use chain_relay::{
     storage_proof::{StorageProof, StorageProofChecker},
@@ -99,6 +93,9 @@ pub mod tls_ra;
 pub mod top_pool;
 
 pub use stee_settings as constants;
+
+use stee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED,RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
+use stee_settings::enclave::{CALLTIMEOUT, GETTERTIMEOUT};
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 

@@ -57,8 +57,8 @@ use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
-// tode rename for debug leave the name as before
-use stee_settings as constants;
+use stee_settings::worker::{SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE};
+use stee_settings::global::{RA_SPID_FILE, RA_API_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE};
 
 mod enclave;
 mod ipfs;
@@ -153,19 +153,19 @@ fn main() {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
         let pubkey = enclave_shielding_key(enclave.geteid()).unwrap();
-        let file = File::create(constants::SHIELDING_KEY_FILE).unwrap();
+        let file = File::create(SHIELDING_KEY_FILE).unwrap();
         match serde_json::to_writer(file, &pubkey) {
             Err(x) => {
                 error!(
                     "[-] Failed to write '{}'. {}",
-                    constants::SHIELDING_KEY_FILE,
+                    SHIELDING_KEY_FILE,
                     x
                 );
             }
             _ => {
                 println!(
                     "[+] File '{}' written successfully",
-                    constants::SHIELDING_KEY_FILE
+                    SHIELDING_KEY_FILE
                 );
             }
         }
@@ -175,18 +175,18 @@ fn main() {
         let enclave = enclave_init().unwrap();
         let pubkey = enclave_signing_key(enclave.geteid()).unwrap();
         debug!("[+] Signing key raw: {:?}", pubkey);
-        match fs::write(constants::SIGNING_KEY_FILE, pubkey) {
+        match fs::write(SIGNING_KEY_FILE, pubkey) {
             Err(x) => {
                 error!(
                     "[-] Failed to write '{}'. {}",
-                    constants::SIGNING_KEY_FILE,
+                    SIGNING_KEY_FILE,
                     x
                 );
             }
             _ => {
                 println!(
                     "[+] File '{}' written successfully",
-                    constants::SIGNING_KEY_FILE
+                    SIGNING_KEY_FILE
                 );
             }
         }
@@ -639,11 +639,11 @@ fn hex_encode(data: Vec<u8>) -> String {
 }
 
 fn init_shard(shard: &ShardIdentifier) {
-    let path = format!("{}/{}", constants::SHARDS_PATH, shard.encode().to_base58());
+    let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
     println!("initializing shard at {}", path);
     fs::create_dir_all(path.clone()).expect("could not create dir");
 
-    let path = format!("{}/{}", path, constants::ENCRYPTED_STATE_FILE);
+    let path = format!("{}/{}", path, ENCRYPTED_STATE_FILE);
     if Path::new(&path).exists() {
         println!("shard state exists. Overwrite? [y/N]");
         let buffer = &mut String::new();
@@ -721,11 +721,11 @@ fn get_balance(api: &Api<sr25519::Pair>, who: &AccountId32) -> u128 {
 pub fn check_files() {
     debug!("*** Check files");
     let files = vec![
-        constants::ENCLAVE_FILE,
-        constants::SHIELDING_KEY_FILE,
-        constants::SIGNING_KEY_FILE,
-        constants::RA_SPID_FILE,
-        constants::RA_API_KEY_FILE,
+        ENCLAVE_FILE,
+        SHIELDING_KEY_FILE,
+        SIGNING_KEY_FILE,
+        RA_SPID_FILE,
+        RA_API_KEY_FILE,
     ];
     for f in files.iter() {
         if !Path::new(f).exists() {

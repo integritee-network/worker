@@ -25,7 +25,6 @@ use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_types::*;
 
 use crate::aes;
-use crate::constants::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use crate::hex;
 use crate::io;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
@@ -38,6 +37,8 @@ use substratee_stf::{
     ShardIdentifier, State as StfState, StateType as StfStateType,
     StateTypeDiff as StfStateTypeDiff, Stf,
 };
+use stee_settings::global::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
+
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
     // load last state

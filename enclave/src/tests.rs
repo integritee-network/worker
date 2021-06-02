@@ -34,8 +34,6 @@ use substratee_worker_primitives::block::StatePayload;
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256, H256};
 
-use crate::constants::{BLOCK_CONFIRMED, GETTERTIMEOUT, SUBSRATEE_REGISTRY_MODULE};
-
 use std::string::String;
 use std::vec::Vec;
 
@@ -55,6 +53,9 @@ use substratee_stf::sgx::AccountInfo;
 use substratee_stf::StateTypeDiff as StfStateTypeDiff;
 use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
 use substratee_stf::{TrustedGetter, TrustedOperation};
+
+use stee_settings::enclave::{GETTERTIMEOUT};
+use stee_settings::node::{BLOCK_CONFIRMED, SUBSRATEE_REGISTRY_MODULE};
 
 use jsonrpc_core::futures::executor;
 use sp_core::ed25519 as spEd25519;

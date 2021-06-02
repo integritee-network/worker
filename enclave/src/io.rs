@@ -74,7 +74,7 @@ fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
 }
 
 pub mod light_validation {
-    use crate::constants::CHAIN_RELAY_DB;
+    use stee_settings::enclave::CHAIN_RELAY_DB;
     use crate::utils::UnwrapOrSgxErrorUnexpected;
     use chain_relay::storage_proof::StorageProof;
     use chain_relay::{Header, LightValidation};

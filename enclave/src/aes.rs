@@ -26,7 +26,7 @@ use log::info;
 use ofb::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 use ofb::Ofb;
 
-use crate::constants::AES_KEY_FILE_AND_INIT_V;
+use stee_settings::enclave::AES_KEY_FILE_AND_INIT_V;
 use crate::io;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 
