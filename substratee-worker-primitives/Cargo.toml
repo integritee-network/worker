@@ -32,9 +32,15 @@ features = ["full_crypto"]
 
 [features]
 default = ["std"]
-std = [ 'serde',
+std = [ 'codec/std',
+        'chrono/std',
+        'serde',
         'serde_derive',
-        'serde_json',]
+        'serde_json',
+        'sp-runtime/std',
+        'sp-core/std',
+        'primitive-types/std'
+]
 sgx = [ 'sgx_tstd',]
 
 
