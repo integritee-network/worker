@@ -37,7 +37,7 @@ use substratee_stf::{
     ShardIdentifier, State as StfState, StateType as StfStateType,
     StateTypeDiff as StfStateTypeDiff, Stf,
 };
-use substratee_settings::global::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
+use substratee_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 
 
 pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {

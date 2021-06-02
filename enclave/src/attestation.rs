@@ -48,12 +48,13 @@ use log::*;
 use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
-use substratee_settings::enclave::{RA_DUMP_CERT_DER_FILE};
-use substratee_settings::node::{
-    REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-    RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
+use substratee_settings::{
+    files::{RA_DUMP_CERT_DER_FILE, RA_API_KEY_FILE, RA_SPID_FILE},
+    node::{
+        REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+        RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
+    }
 };
-use substratee_settings::global::{RA_API_KEY_FILE, RA_SPID_FILE};
 
 use crate::ed25519;
 use crate::io;

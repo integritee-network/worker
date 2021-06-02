@@ -57,8 +57,10 @@ use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
-use substratee_settings::worker::{SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE};
-use substratee_settings::global::{RA_SPID_FILE, RA_API_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE};
+use substratee_settings::files::{
+    SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE,
+    RA_SPID_FILE, RA_API_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
+};
 
 mod enclave;
 mod ipfs;

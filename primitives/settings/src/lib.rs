@@ -19,21 +19,22 @@
 
 #![no_std]
 
-/// Settings used by the worker
-pub mod worker {
+pub mod files {
+	// use by worker
 	pub static ENCLAVE_TOKEN: &str = "enclave.token";
 	pub static ENCLAVE_FILE: &str = "enclave.signed.so";
 	pub static SHIELDING_KEY_FILE: &str = "enclave-shielding-pubkey.json";
 	pub static SIGNING_KEY_FILE: &str = "enclave-signing-pubkey.bin";
 
-	// the maximum size of any extrinsic that the enclave will ever generate in B
-	pub static EXTRINSIC_MAX_SIZE: usize = 4196;
-	// the maximum size of a value that will be queried from the state in B
-	pub static STATE_VALUE_MAX_SIZE: usize = 1024;
-}
+	// used by enclave
+	pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
+	pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
+	pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
+	pub const CHAIN_RELAY_DB: &str = "chain_relay_db.bin";
 
-/// Settings used by the enclave and the worker
-pub mod global {
+	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
+
+	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "./shards";
 	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
 
@@ -48,15 +49,16 @@ pub mod global {
 	pub static RA_API_KEY_FILE: &str = "key.txt";
 }
 
-/// Settings used by the worker
+/// Settings concerning the worker
+pub mod worker {
+	// the maximum size of any extrinsic that the enclave will ever generate in B
+	pub static EXTRINSIC_MAX_SIZE: usize = 4196;
+	// the maximum size of a value that will be queried from the state in B
+	pub static STATE_VALUE_MAX_SIZE: usize = 1024;
+}
+
+/// Settings concerning the enclave
 pub mod enclave {
-	pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
-	pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
-	pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
-	pub const CHAIN_RELAY_DB: &str = "chain_relay_db.bin";
-
-	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
-
 	// timeouts for getter and call execution
 	pub static CALLTIMEOUT: i64 = 300; // timeout in ms
 	pub static GETTERTIMEOUT: i64 = 300; // timeout in ms
