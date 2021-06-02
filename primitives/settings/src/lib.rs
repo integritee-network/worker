@@ -14,6 +14,24 @@
     limitations under the License.
 
 */
+
+//! Common settings for the worker and the enclave. It is strictly `no_std`
+
+#![no_std]
+
+// from worker file
+pub static ENCLAVE_TOKEN: &str = "enclave.token";
+pub static ENCLAVE_FILE: &str = "enclave.signed.so";
+pub static SHIELDING_KEY_FILE: &str = "enclave-shielding-pubkey.json";
+pub static SIGNING_KEY_FILE: &str = "enclave-signing-pubkey.bin";
+
+// the maximum size of any extrinsic that the enclave will ever generate in B
+pub static EXTRINSIC_MAX_SIZE: usize = 4196;
+// the maximum size of a value that will be queried from the state in B
+pub static STATE_VALUE_MAX_SIZE: usize = 1024;
+
+// from enclave file
+
 pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
 pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
@@ -23,15 +41,6 @@ pub const CHAIN_RELAY_DB: &str = "chain_relay_db.bin";
 
 pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
-#[cfg(feature = "production")]
-pub static RA_SPID_FILE: &str = "../bin/spid_production.txt";
-#[cfg(feature = "production")]
-pub static RA_API_KEY_FILE: &str = "../bin/key_production.txt";
-
-#[cfg(not(feature = "production"))]
-pub static RA_SPID_FILE: &str = "../bin/spid.txt";
-#[cfg(not(feature = "production"))]
-pub static RA_API_KEY_FILE: &str = "../bin/key.txt";
 
 // you may have to update these indices upon new builds of the runtime
 // you can get the index from metadata, counting modules starting with zero
@@ -50,3 +59,15 @@ pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;
 // timeouts for getter and call execution
 pub static CALLTIMEOUT: i64 = 300; // timeout in ms
 pub static GETTERTIMEOUT: i64 = 300; // timeout in ms
+
+// from both
+
+#[cfg(feature = "production")]
+pub static RA_SPID_FILE: &str = "spid_production.txt";
+#[cfg(feature = "production")]
+pub static RA_API_KEY_FILE: &str = "key_production.txt";
+
+#[cfg(not(feature = "production"))]
+pub static RA_SPID_FILE: &str = "spid.txt";
+#[cfg(not(feature = "production"))]
+pub static RA_API_KEY_FILE: &str = "key.txt";

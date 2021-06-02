@@ -57,7 +57,9 @@ use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
-mod constants;
+// tode rename for debug leave the name as before
+use stee_settings as constants;
+
 mod enclave;
 mod ipfs;
 mod tests;

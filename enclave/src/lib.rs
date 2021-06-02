@@ -84,7 +84,6 @@ use rpc::{api::SideChainApi, basic_pool::BasicPool};
 
 mod aes;
 mod attestation;
-mod constants;
 mod ed25519;
 mod io;
 mod ipfs;
@@ -98,6 +97,8 @@ pub mod rpc;
 pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
+
+pub use stee_settings as constants;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 

@@ -4924,6 +4924,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "stee-settings"
+version = "0.8.0"
+
+[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5193,6 +5197,7 @@ dependencies = [
  "sp-finality-grandpa",
  "sp-keyring",
  "sp-runtime",
+ "stee-settings",
  "substrate-api-client",
  "substratee-node-primitives",
  "substratee-node-runtime",
