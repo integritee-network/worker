@@ -40,14 +40,11 @@ signal.signal(signal.SIGINT, signal_handler)
 
 print('Starting substraTee-node-process in background')
 node = processes.append(
-    Popen([node_bin, '--tmp', '--dev'], stdout=node_log, stderr=STDOUT, bufsize=1)
+    Popen([node_bin, '--tmp', '--dev', '-lruntime=debug'], stdout=node_log, stderr=STDOUT, bufsize=1)
 )
 print(f'Setting up worker 1 in {w1_working_dir}')
-worker1 = Worker(cwd=w1_working_dir)
-worker1.setup_cwd(source_bin_folder)
-
-mrenclave = worker1.get_mrenclave()
-print(worker1.init_shard(mrenclave))
+worker1 = Worker(cwd=w1_working_dir, source_dir=source_bin_folder)
+worker1.init_clean()
 print('Initialized worker 1.')
 
 # print('Starting worker 1 in background')
