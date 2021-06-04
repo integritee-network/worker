@@ -39,7 +39,7 @@ def main(processes):
     w2 = setup_worker(w2_working_dir)
 
     print('Starting worker 1 in background')
-    processes.append(w1.run_in_background(log_file=worker1_log))
+    processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2001']))
     print('Starting worker 2 in background')
     processes.append(w2.run_in_background(log_file=worker2_log))
 

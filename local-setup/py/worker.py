@@ -125,9 +125,13 @@ class Worker:
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')
 
-    def run_in_background(self, log_file: TextIO):
+    def run_in_background(self, log_file: TextIO, flags: [str] = None):
         """ Runs the worker in the background and writes to the supplied logfile.
 
         :return: process handle for the spawned background process.
         """
-        return Popen(self.cli + ['run'], stdout=log_file, stderr=STDOUT, bufsize=1, cwd=self.cwd)
+        if flags is None:
+            return Popen(self.cli + ['run'], stdout=log_file, stderr=STDOUT, bufsize=1, cwd=self.cwd)
+        else:
+            return Popen(self.cli + flags + ['run'], stdout=log_file, stderr=STDOUT, bufsize=1, cwd=self.cwd)
+
