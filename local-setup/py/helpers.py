@@ -1,3 +1,4 @@
+import signal
 import subprocess
 import shutil
 
@@ -22,3 +23,24 @@ def setup_working_dir(source_dir: str, target_dir: str):
 def mkdir_p(path):
     """ Surprisingly, there is no simple function to create a dir if it does not exist in python """
     return subprocess.run(['mkdir', '-p', path])
+
+
+class GracefulKiller:
+    signals = {
+        signal.SIGINT: 'SIGINT',
+        signal.SIGTERM: 'SIGTERM'
+    }
+
+    def __init__(self, processes):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+        self.processes = processes
+
+    def exit_gracefully(self, signum, frame):
+        print("\nReceived {} signal".format(self.signals[signum]))
+        print("Cleaning up processes")
+        for p in self.processes:
+            try:
+                p.kill()
+            except:
+                pass
