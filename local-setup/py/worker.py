@@ -35,14 +35,15 @@ class Worker:
 
     def init_clean(self):
         """ Purges all db files first and initializes the environment afterwards """
+        mkdir_p(self.cwd)
+        print('Copying source files to working directory')
+        self.setup_cwd(self.source_dir)
+
         self.purge()
         self.init()
 
     def init(self):
         """ Initializes the environment such the the worker can be run """
-        print('Copying source files to working directory')
-        self.setup_cwd(self.source_dir)
-
         print('Initializing worker')
         print(self.init_shard())
         print(self.write_signer_pub())
