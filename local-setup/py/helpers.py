@@ -2,11 +2,14 @@ import signal
 import subprocess
 import shutil
 import sys
+from typing import Union
+
+from typing.io import IO
 
 
-def run_piped_subprocess(args, cwd='./'):
+def run_subprocess(args, stdout: Union[None, int, IO], stderr: Union[None, int, IO], cwd: str = './'):
     """ Wrapper around subprocess that allows a less verbose call """
-    return subprocess.run(args, stdout=subprocess.PIPE, cwd=cwd).stdout.decode('utf-8').strip()
+    return subprocess.run(args, stdout=stdout, cwd=cwd, stderr=stderr).stdout.decode('utf-8').strip()
 
 
 def setup_working_dir(source_dir: str, target_dir: str):

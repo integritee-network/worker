@@ -1,17 +1,20 @@
 import pathlib
 import shutil
+import subprocess
 from subprocess import Popen, STDOUT
+from typing import Union
 
-from typing.io import TextIO
+from typing.io import TextIO, IO
 
-from .helpers import run_piped_subprocess, setup_working_dir, mkdir_p
+from .helpers import run_subprocess, setup_working_dir, mkdir_p
 
 
 class Worker:
     def __init__(self,
-                 worker_bin='./substratee-worker',
-                 cwd='./',
-                 source_dir='./'
+                 worker_bin: str = './substratee-worker',
+                 cwd: str = './',
+                 source_dir: str = './',
+                 std_err: Union[None, int, IO] = STDOUT,
                  ):
         """
         SubstraTEE-worker wrapper.
@@ -21,11 +24,16 @@ class Worker:
             cwd (str):  working directory of the worker.
             source_dir (str):   directory of the source binaries, which will be copied to cwd because
                                 the rust worker looks for files relative to cwd.
+            std_err:    Were the workers error output will be logged. Note: `std_out` is intended to be unconfigurable
+                        because the prints from the rust worker are often intended to be used in scripts. Making this
+                        configurable, could cause some weird errors.
+
 
         """
         self.cwd = cwd
         self.cli = [worker_bin]
         self.source_dir = source_dir
+        self.std_err = std_err
         # cache fields
         self._mrenclave = None
 
@@ -59,7 +67,7 @@ class Worker:
         if self.check_shard_and_prompt_delete(shard):
             return 'Shard exists already, will not initialize.'
 
-        return run_piped_subprocess(self.cli + ['init-shard', shard], cwd=self.cwd)
+        return run_subprocess(self.cli + ['init-shard', shard], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
     def shard_exists(self, shard):
         """ Checks if the shard in './shards/[shard]' exists
@@ -113,14 +121,15 @@ class Worker:
     def mrenclave(self):
         """ Returns the mrenclave and caches it. """
         if not self._mrenclave:
-            self._mrenclave = run_piped_subprocess(self.cli + ['mrenclave'], cwd=self.cwd)
+            # `std_out` needs to be subProcess.PIPE here!
+            self._mrenclave = run_subprocess(self.cli + ['mrenclave'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
         return self._mrenclave
 
     def write_shielding_pub(self):
-        return run_piped_subprocess(self.cli + ['shielding-key'], cwd=self.cwd)
+        return run_subprocess(self.cli + ['shielding-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
     def write_signer_pub(self):
-        return run_piped_subprocess(self.cli + ['signing-key'], cwd=self.cwd)
+        return run_subprocess(self.cli + ['signing-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')
