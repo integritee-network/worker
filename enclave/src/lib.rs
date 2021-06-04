@@ -92,8 +92,6 @@ pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
 
-pub use substratee_settings as constants;
-
 use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
 use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
 
