@@ -156,6 +156,6 @@ class Worker:
         cmd += ['run']
         if subcommand_flags:
             cmd += subcommand_flags
-            return cmd
+        return cmd
 
 
