@@ -334,7 +334,7 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
     debug!("    [Enclave] tls.read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).sgx_error()?;
 
-    debug!("    [Enclave] resp_string = {}", resp_string);
+    error!("    [Enclave] resp_string = {}", resp_string);
 
     parse_response_attn_report(&plaintext)
 }
