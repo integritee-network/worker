@@ -1,6 +1,7 @@
 import signal
 import subprocess
 import shutil
+import sys
 
 
 def run_piped_subprocess(args, cwd='./'):
@@ -44,3 +45,4 @@ class GracefulKiller:
                 p.kill()
             except:
                 pass
+        sys.exit(0)
