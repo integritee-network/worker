@@ -157,5 +157,3 @@ class Worker:
         if subcommand_flags:
             cmd += subcommand_flags
         return cmd
-
-
