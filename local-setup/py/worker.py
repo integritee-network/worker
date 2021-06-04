@@ -134,13 +134,27 @@ class Worker:
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')
 
-    def run_in_background(self, log_file: TextIO, flags: [str] = None):
+    def run_in_background(self, log_file: TextIO, flags: [str] = None, subcommand_flags: [str] = None):
         """ Runs the worker in the background and writes to the supplied logfile.
 
         :return: process handle for the spawned background process.
         """
-        if flags is None:
-            return Popen(self.cli + ['run'], stdout=log_file, stderr=STDOUT, bufsize=1, cwd=self.cwd)
-        else:
-            return Popen(self.cli + flags + ['run'], stdout=log_file, stderr=STDOUT, bufsize=1, cwd=self.cwd)
+        return Popen(
+            self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),
+            stdout=log_file,
+            stderr=STDOUT,
+            bufsize=1,
+            cwd=self.cwd
+        )
+
+    def _assemble_cmd(self, flags: [str] = None, subcommand_flags: [str] = None):
+        """ Assembles the cmd skipping None values """
+        cmd = self.cli
+        if flags:
+            cmd += flags
+        cmd += ['run']
+        if subcommand_flags:
+            cmd += subcommand_flags
+            return cmd
+
 
