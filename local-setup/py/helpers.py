@@ -23,7 +23,7 @@ def setup_working_dir(source_dir: str, target_dir: str):
 
 
 def mkdir_p(path):
-    """ Surprisingly, there is no simple function to create a dir if it does not exist in python """
+    """ Surprisingly, there is no simple function in python to create a dir if it does not exist."""
     return subprocess.run(['mkdir', '-p', path])
 
 
@@ -40,7 +40,7 @@ class GracefulKiller:
 
     def exit_gracefully(self, signum, frame):
         print("\nReceived {} signal".format(self.signals[signum]))
-        print("Cleaning up processes")
+        print("Cleaning up processes.")
         for p in self.processes:
             try:
                 p.kill()
