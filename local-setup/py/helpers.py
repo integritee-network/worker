@@ -2,9 +2,7 @@ import signal
 import subprocess
 import shutil
 import sys
-from typing import Union
-
-from typing.io import IO
+from typing import Union, IO
 
 
 def run_subprocess(args, stdout: Union[None, int, IO], stderr: Union[None, int, IO], cwd: str = './'):
