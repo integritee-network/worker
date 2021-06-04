@@ -80,7 +80,7 @@ path = "../primitives/api-client-extensions"
 path = "../stf"
 
 [dependencies.substratee-worker-api]
-path = "../worker/worker-api"
+path = "../worker/rpc/client"
 
 [dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"

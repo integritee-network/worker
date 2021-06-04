@@ -11,8 +11,8 @@ members = [
     "primitives/worker",
     "stf",
     "worker",
-    "worker/worker-api",
-    "worker/rpc",
+    "worker/rpc/client",
+    "worker/rpc/server",
     #	 "enclave",
 ]
 
