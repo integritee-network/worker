@@ -28,7 +28,7 @@ use std::thread;
 
 use sgx_types::*;
 
-use base58::{FromBase58, ToBase58};
+use base58::ToBase58;
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use lazy_static::lazy_static;
@@ -56,6 +56,8 @@ use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORI
 use std::time::{Duration, SystemTime};
 
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use config::Config;
+use utils::extract_shard;
 
 use substratee_settings::files::{
     SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE,
@@ -65,6 +67,8 @@ use substratee_settings::files::{
 mod enclave;
 mod ipfs;
 mod tests;
+mod config;
+mod utils;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -79,74 +83,30 @@ fn main() {
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
-    let node_ip = matches.value_of("node-server").unwrap_or("ws://127.0.0.1");
-    let node_port = matches.value_of("node-port").unwrap_or("9944");
-    let n_url = format!("{}:{}", node_ip, node_port);
-    info!("Interacting with node on {}", n_url);
-    *NODE_URL.lock().unwrap() = n_url;
+    let mut config = Config::from(&matches);
+    println!("Worker Config: {:?}", config);
 
-    let w_ip = if matches.is_present("ws-external") {
-        "0.0.0.0"
-    } else {
-        "127.0.0.1"
-    };
-    let mu_ra_port = matches.value_of("mu-ra-port").unwrap_or("3443");
-
-    let worker_rpc_port = matches.value_of("worker-rpc-port").unwrap_or("2000");
+    *NODE_URL.lock().unwrap() = config.node_url();
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
-        let shard: ShardIdentifier = match smatches.value_of("shard") {
-            Some(value) => {
-                let shard_vec = value.from_base58().unwrap();
-                let mut shard = [0u8; 32];
-                shard.copy_from_slice(&shard_vec[..]);
-                shard.into()
-            }
-            _ => {
-                let enclave = enclave_init().unwrap();
-                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
-                info!(
-                    "no shard specified. using mrenclave as id: {}",
-                    mrenclave.to_base58()
-                );
-                ShardIdentifier::from_slice(&mrenclave[..])
-            }
-        };
+        let shard = extract_shard(&smatches);
 
-        let ext_api_url = if let Some(url) = smatches.value_of("w-server") {
-            url.to_string()
-        } else {
-            format!("ws://127.0.0.1:{}", worker_rpc_port)
-        };
-        println!("Advertising worker api at {}", ext_api_url);
+        // Todo: Is this deprecated?? It is only used in remote attestation.
+        config.set_ext_api_url(
+            smatches.value_of("w-server")
+                .map(ToString::to_string)
+                .unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port))
+        );
+        println!("Advertising worker api at {}", config.ext_api_url.as_ref().unwrap());
         let skip_ra = smatches.is_present("skip-ra");
         worker(
-            w_ip,
-            mu_ra_port,
+            config.clone(),
             &shard,
-            &ext_api_url,
-            worker_rpc_port,
             skip_ra,
         );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-        let shard: ShardIdentifier = match smatches.value_of("shard") {
-            Some(value) => {
-                let shard_vec = value.from_base58().unwrap();
-                let mut shard = [0u8; 32];
-                shard.copy_from_slice(&shard_vec[..]);
-                shard.into()
-            }
-            _ => {
-                let enclave = enclave_init().unwrap();
-                let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
-                info!(
-                    "no shard specified. using mrenclave as id: {}",
-                    mrenclave.to_base58()
-                );
-                ShardIdentifier::from_slice(&mrenclave[..])
-            }
-        };
+        let shard = extract_shard(&smatches);
         let provider_url = smatches
             .value_of("provider")
             .expect("provider must be specified");
@@ -210,24 +170,8 @@ fn main() {
         return;
     }
     if let Some(_matches) = matches.subcommand_matches("init-shard") {
-        match _matches.values_of("shard") {
-            Some(values) => {
-                for shard in values {
-                    match shard.from_base58() {
-                        Ok(s) => {
-                            init_shard(&ShardIdentifier::from_slice(&s[..]));
-                        }
-                        _ => panic!("shard must be hex encoded"),
-                    }
-                }
-            }
-            _ => {
-                let enclave = enclave_init().unwrap();
-                let shard =
-                    ShardIdentifier::from_slice(&enclave_mrenclave(enclave.geteid()).unwrap());
-                init_shard(&shard);
-            }
-        };
+        let shard = extract_shard(&_matches);
+        init_shard(&shard);
     } else if let Some(_matches) = matches.subcommand_matches("test") {
         if _matches.is_present("provisioning-server") {
             println!("*** Running Enclave MU-RA TLS server\n");
@@ -235,7 +179,7 @@ fn main() {
             enclave_run_key_provisioning_server(
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &format!("localhost:{}", mu_ra_port),
+                &format!("localhost:{}", config.worker_mu_ra_port),
             );
             println!("[+] Done!");
             enclave.destroy();
@@ -245,13 +189,13 @@ fn main() {
             enclave_request_key_provisioning(
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-                &format!("localhost:{}", mu_ra_port),
+                &format!("localhost:{}", config.worker_mu_ra_port),
             )
             .unwrap();
             println!("[+] Done!");
             enclave.destroy();
         } else {
-            tests::run_enclave_tests(_matches, node_port);
+            tests::run_enclave_tests(_matches, &config.node_port);
         }
     } else {
         println!("For options: use --help");
@@ -259,11 +203,8 @@ fn main() {
 }
 
 fn worker(
-    w_ip: &str,
-    mu_ra_port: &str,
+    config: Config,
     shard: &ShardIdentifier,
-    ext_api_url: &str,
-    worker_rpc_port: &str,
     skip_ra: bool,
 ) {
     println!("Encointer Worker v{}", VERSION);
@@ -284,8 +225,8 @@ fn worker(
     let eid = enclave.geteid();
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
-    println!("MU-RA server listening on ws://{}:{}", w_ip, mu_ra_port);
-    let ra_url = format!("{}:{}", w_ip, mu_ra_port);
+    println!("MU-RA server listening on ws://{}", config.mu_ra_url());
+    let ra_url = config.mu_ra_url();
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
             eid,
@@ -296,12 +237,8 @@ fn worker(
 
     // ------------------------------------------------------------------------
     // start worker api direct invocation server
-    println!(
-        "rpc worker server listening on ws://{}:{}",
-        w_ip, worker_rpc_port
-    );
-    let direct_url = format!("{}:{}", w_ip, worker_rpc_port);
-    start_worker_api_direct_server(direct_url, eid);
+    println!("rpc worker server listening on ws://{}", config.worker_url());
+    start_worker_api_direct_server( config.worker_url(), eid);
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
@@ -324,7 +261,7 @@ fn worker(
         info!("Enclave nonce = {:?}", nonce);
 
         let uxt =
-            enclave_perform_ra(eid, genesis_hash, nonce, ext_api_url.as_bytes().to_vec()).unwrap();
+            enclave_perform_ra(eid, genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec()).unwrap();
 
         let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
 
@@ -355,19 +292,11 @@ fn worker(
     println!("*** Subscribing to events");
     let (sender, receiver) = channel();
     let sender2 = sender.clone();
-    let api2 = api.clone();
     let _eventsubscriber = thread::Builder::new()
         .name("eventsubscriber".to_owned())
         .spawn(move || {
-            api2.subscribe_events(sender2).unwrap();
+            api.subscribe_events(sender2).unwrap();
         })
-        .unwrap();
-
-    let api3 = api;
-    let sender3 = sender.clone();
-    let _block_subscriber = thread::Builder::new()
-        .name("block_subscriber".to_owned())
-        .spawn(move || api3.subscribe_finalized_heads(sender3))
         .unwrap();
 
     println!("[+] Subscribed to events. waiting...");
