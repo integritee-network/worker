@@ -24,7 +24,7 @@ use sgx_types::*;
 use log::*;
 use sp_core::{crypto::Pair, ed25519};
 
-use crate::constants::SEALED_SIGNER_SEED_FILE;
+use substratee_settings::files::SEALED_SIGNER_SEED_FILE;
 use crate::io;
 
 pub fn unseal_pair() -> SgxResult<ed25519::Pair> {

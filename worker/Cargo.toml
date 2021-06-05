@@ -35,6 +35,8 @@ sgx_urts				= { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types 				= { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_crypto_helper 		= { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
+substratee-settings = { path = "../primitives/settings" }
+
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
 
@@ -80,4 +82,4 @@ path = "../stf"
 
 [features]
 default = []
-production = []
+production = ['substratee-settings/production']

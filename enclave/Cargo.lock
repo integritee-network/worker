@@ -2510,6 +2510,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-settings"
+version = "0.8.0"
+
+[[package]]
 name = "substratee-stf"
 version = "0.8.0"
 dependencies = [
@@ -2583,6 +2587,7 @@ dependencies = [
  "sp-version",
  "substrate-api-client",
  "substratee-node-primitives",
+ "substratee-settings",
  "substratee-stf",
  "substratee-worker-primitives",
  "webpki",

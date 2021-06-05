@@ -48,10 +48,14 @@ use log::*;
 use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
-use crate::constants::{
-    RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-    RUNTIME_TRANSACTION_VERSION, SUBSRATEE_REGISTRY_MODULE,
+use substratee_settings::{
+    files::{RA_DUMP_CERT_DER_FILE, RA_API_KEY_FILE, RA_SPID_FILE},
+    node::{
+        REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+        RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE,
+    }
 };
+
 use crate::ed25519;
 use crate::io;
 use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected};
@@ -638,7 +642,7 @@ pub unsafe extern "C" fn perform_ra(
     let genesis_hash = hash_from_slice(genesis_hash_slice);
     debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
     debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-    let call = [SUBSRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
+    let call = [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
 
     let xt = compose_extrinsic_offline!(
         signer,
