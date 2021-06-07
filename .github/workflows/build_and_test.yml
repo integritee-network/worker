@@ -26,7 +26,6 @@ jobs:
           ./substratee-worker test -e
           ./substratee-worker test -u
 
-
   unit-tests:
     runs-on: ubuntu-latest
     steps:
