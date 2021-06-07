@@ -6,13 +6,12 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-#  schedule:
-#    - cron:  '42 3 * * *'
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-all-and-test-enclave:
+  build-test:
     runs-on: ubuntu-latest
     container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
     steps:
@@ -30,30 +29,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run:  SGX_MODE=SW make
+      - name: Worker & Client
+        run: cargo test
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: |
           cd bin
           ./substratee-worker test -e
           ./substratee-worker test -u
-
-  unit-tests:
-    runs-on: ubuntu-latest
-    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
-    steps:
-      - uses: actions/checkout@v2
-      - name: init-rust-target
-        run: rustup target add wasm32-unknown-unknown
-      - name: Cache Rust Dependecies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-            enclave/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Worker & Client
-        run: cargo test
 
   clippy:
     runs-on: ubuntu-latest
