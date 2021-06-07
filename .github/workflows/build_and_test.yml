@@ -34,7 +34,6 @@ jobs:
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: |
           cd bin
-          ./substratee-worker test -e
           ./substratee-worker test -u
 
   clippy:
