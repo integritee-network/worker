@@ -30,9 +30,7 @@ use std::{fs, str};
 use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{
-    Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedGetterSigned,
-};
+use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -91,9 +89,9 @@ pub fn encrypt_payload(rsa_pubkey: Rsa3072PubKey, payload: Vec<u8>) -> Vec<u8> {
     payload_encrypted
 }
 
-pub fn test_trusted_getter_signed(who: AccountKeyring) -> TrustedGetterSigned {
+pub fn test_trusted_getter_signed(who: AccountKeyring) -> Getter {
     let getter = TrustedGetter::free_balance(who.public().into());
-    getter.sign(&KeyPair::Sr25519(who.pair()))
+    Getter::trusted(getter.sign(&KeyPair::Sr25519(who.pair())))
 }
 
 pub fn encrypted_alice(eid: sgx_enclave_id_t) -> Vec<u8> {
