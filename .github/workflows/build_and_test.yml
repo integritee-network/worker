@@ -1,11 +1,11 @@
-name: build and test notee client and node
+name: Build, Test, Clippy
 
 on:
   workflow_dispatch:
   push:
-    branches: [ master, sgx-master ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, sgx-master ]
+    branches: [ master ]
 #  schedule:
 #    - cron:  '42 3 * * *'
 env:
