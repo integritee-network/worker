@@ -110,7 +110,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_differentiate_getter_and_call_works,
         test_create_block_and_confirmation_works,
         // needs node to be running.. unit tests?
-        test_ocall_worker_request,
+        // test_ocall_worker_request,
         test_create_state_diff,
         test_executing_call_updates_account_nonce,
         test_invalid_nonce_call_is_not_executed,
