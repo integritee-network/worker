@@ -24,7 +24,7 @@ use sp_keyring::AccountKeyring;
 use sgx_types::*;
 use sp_core::hash::H256;
 
-/// Todo: this is broken. It in the test it tries to read inexistent `chain_realay_db.bin`
+/// Todo: this is broken. In the test it tries to read nonexistent `chain_relay_db.bin`
 /// Tackle in: https://github.com/scs/substraTEE-worker/issues/246
 pub fn get_state_works(eid: sgx_enclave_id_t) {
     let alice = AccountKeyring::Alice;
