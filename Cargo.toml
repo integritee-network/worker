@@ -3,7 +3,7 @@ members = [
     "primitives/settings",
     "worker",
     "worker/worker-api",
-    "substratee-node-primitives",
+    "primitives/node",
     "substratee-worker-primitives",
     "client",
     "stf",

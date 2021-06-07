@@ -41,7 +41,7 @@ substratee-settings = { path = "../primitives/settings" }
 git = "https://github.com/scs/substrate-api-client"
 
 [dependencies.substratee-node-primitives]
-path = "../substratee-node-primitives"
+path = "../primitives/node"
 
 [dependencies.substratee-worker-primitives]
 path = "../substratee-worker-primitives"
