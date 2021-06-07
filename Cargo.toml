@@ -4,7 +4,7 @@ members = [
     "worker",
     "worker/worker-api",
     "primitives/node",
-    "substratee-worker-primitives",
+    "primitives/worker",
     "client",
     "stf",
     #	 "enclave",

@@ -149,7 +149,7 @@ default-features = false
 features = ["sgx"]
 
 [dependencies.substratee-worker-primitives]
-path = "../substratee-worker-primitives"
+path = "../primitives/worker"
 default-features = false
 features = ["sgx"]
 

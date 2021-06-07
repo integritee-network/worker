@@ -44,7 +44,7 @@ git = "https://github.com/scs/substrate-api-client"
 path = "../primitives/node"
 
 [dependencies.substratee-worker-primitives]
-path = "../substratee-worker-primitives"
+path = "../primitives/worker"
 
 [dependencies.substratee-worker-api]
 path = "worker-api"
