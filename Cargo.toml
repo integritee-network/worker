@@ -1,12 +1,12 @@
 [workspace]
 members = [
+    "client",
     "primitives/settings",
-    "worker",
-    "worker/worker-api",
     "primitives/node",
     "primitives/worker",
-    "client",
     "stf",
+    "worker",
+    "worker/worker-api",
     #	 "enclave",
 ]
 
