@@ -684,9 +684,12 @@ pub unsafe extern "C" fn ocall_worker_request(
     let mut req_slice = slice::from_raw_parts(request, req_size as usize);
     let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
 
-    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
-
     let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
+    if requests.is_empty() {
+        return sgx_status_t::SGX_SUCCESS
+    }
+
+    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
 
     let resp: Vec<WorkerResponse<Vec<u8>>> = requests
         .into_iter()
