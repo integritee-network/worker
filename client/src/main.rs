@@ -386,7 +386,7 @@ fn main() {
                     };
                     let shard = match shard_opt {
                         Ok(shard) => shard,
-                        Err(e) => panic!(e),
+                        Err(e) => panic!("{}", e),
                     };
 
                     // get the sender
@@ -399,7 +399,7 @@ fn main() {
                     let to = get_accountid_from_str(arg_to);
                     let (_to_encoded, to_encrypted) = match encode_encrypt(matches, to){
                         Ok((encoded, encrypted)) => (encoded, encrypted),
-                        Err(e) => panic!(e),
+                        Err(e) => panic!("{}", e)
                     };
                     // compose the extrinsic
                     let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
