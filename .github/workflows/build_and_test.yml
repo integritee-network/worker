@@ -1,0 +1,50 @@
+name: build and test notee client and node
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master, sgx-master ]
+  pull_request:
+    branches: [ master, sgx-master ]
+#  schedule:
+#    - cron:  '42 3 * * *'
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-all-and-test-enclave:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust-target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build
+        run:  SGX_MODE=SW make
+      - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+        run: |
+          cd bin
+          ./substratee-worker test -e
+          ./substratee-worker test -u
+
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust-target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Worker & Client
+        run: cargo test
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust
+        run: |
+          rustup component add clippy
+          rustup target add wasm32-unknown-unknown
+      - name: Worker & Client
+        run: cargo clippy
+      - name: Enclave # Enclave is separate as it's not in the workspace
+        run: cd enclave && cargo clippy
