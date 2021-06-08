@@ -55,6 +55,7 @@ use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::{Duration, SystemTime};
 
+use substratee_node_primitives::ApiClientExt;
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use config::Config;
 use utils::extract_shard;
@@ -257,7 +258,7 @@ fn worker(
         println!("[!] skipping remote attestation. will not register this enclave on chain");
     } else {
         // get enclaves's account nonce
-        let nonce = get_nonce(&api, &tee_accountid);
+        let nonce = api.get_nonce_of(&tee_accountid);
         info!("Enclave nonce = {:?}", nonce);
 
         let uxt =
@@ -545,7 +546,7 @@ pub fn produce_blocks(
         blocks_to_sync[0].block.header.number as usize
     };
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-        let tee_nonce = get_nonce(&api, &tee_accountid);
+        let tee_nonce = api.get_nonce_of(&tee_accountid);
         // Produce blocks
         if let Err(e) = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce) {
             error!("{}", e);
@@ -605,13 +606,13 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
     let alice_acc = AccountId32::from(*alice.public().as_array_ref());
     info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-    let free = get_balance(&api, &alice_acc);
+    let free = api.get_free_balance(&alice_acc);
     info!("    Alice's free balance = {:?}", free);
-    let nonce = get_nonce(&api, &alice_acc);
+    let nonce = api.get_nonce_of(&alice_acc);
     info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let free = get_balance(&api, &accountid);
+    let free = api.get_free_balance(&accountid);
     info!("TEE's free balance = {:?}", free);
 
     if free < 1_000_000_000_000 {
@@ -626,26 +627,10 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
         //verify funds have arrived
-        let free = get_balance(&api, &accountid);
+        let free = api.get_free_balance(&accountid);
         info!("TEE's NEW free balance = {:?}", free);
 
         api.signer = signer_orig;
-    }
-}
-
-fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
-    if let Some(info) = api.get_account_info(who).unwrap() {
-        info.nonce
-    } else {
-        0
-    }
-}
-
-fn get_balance(api: &Api<sr25519::Pair>, who: &AccountId32) -> u128 {
-    if let Some(data) = api.get_account_data(who).unwrap() {
-        data.free
-    } else {
-        0
     }
 }
 

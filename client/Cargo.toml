@@ -63,6 +63,9 @@ package = "substratee-node-runtime"
 [dependencies.substratee-worker-primitives]
 path = "../primitives/worker"
 
+[dependencies.substratee-node-primitives]
+path = "../primitives/node"
+
 [dependencies.substratee-stf]
 path = "../stf"
 

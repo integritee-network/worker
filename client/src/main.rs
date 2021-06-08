@@ -40,7 +40,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{
-    substratee_registry::{Enclave, Request},
+    substratee_registry::Request,
     AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
@@ -64,6 +64,7 @@ use substrate_api_client::{
 use substrate_client_keystore::LocalKeystore;
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
+use substratee_node_primitives::SubstrateeRegistryApi;
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -293,10 +294,10 @@ fn main() {
                 .description("query enclave registry and list all workers")
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
-                    let wcount = get_enclave_count(&api);
+                    let wcount = api.enclave_count();
                     println!("number of workers registered: {}", wcount);
                     for w in 1..=wcount {
-                        let enclave = get_enclave(&api, w);
+                        let enclave = api.enclave(w);
                         if enclave.is_none() {
                             println!("error reading enclave data");
                             continue;
@@ -864,20 +865,4 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
             _pair
         }
     }
-}
-
-fn get_enclave_count(api: &Api<sr25519::Pair>) -> u64 {
-    if let Some(count) = api
-        .get_storage_value("SubstrateeRegistry", "EnclaveCount", None)
-        .unwrap()
-    {
-        count
-    } else {
-        0
-    }
-}
-
-fn get_enclave(api: &Api<sr25519::Pair>, eindex: u64) -> Option<Enclave<AccountId, Vec<u8>>> {
-    api.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", eindex, None)
-        .unwrap()
 }
