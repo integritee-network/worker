@@ -258,7 +258,7 @@ fn worker(
         println!("[!] skipping remote attestation. will not register this enclave on chain");
     } else {
         // get enclaves's account nonce
-        let nonce = api.get_nonce_of(&tee_accountid);
+        let nonce = api.get_nonce_of(&tee_accountid).unwrap();
         info!("Enclave nonce = {:?}", nonce);
 
         let uxt =
@@ -546,7 +546,7 @@ pub fn produce_blocks(
         blocks_to_sync[0].block.header.number as usize
     };
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-        let tee_nonce = api.get_nonce_of(&tee_accountid);
+        let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
         // Produce blocks
         if let Err(e) = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce) {
             error!("{}", e);
@@ -608,11 +608,11 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
 
     let free = api.get_free_balance(&alice_acc);
     info!("    Alice's free balance = {:?}", free);
-    let nonce = api.get_nonce_of(&alice_acc);
+    let nonce = api.get_nonce_of(&alice_acc).unwrap();
     info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let free = api.get_free_balance(&accountid);
+    let free = api.get_free_balance(&accountid).unwrap();
     info!("TEE's free balance = {:?}", free);
 
     if free < 1_000_000_000_000 {

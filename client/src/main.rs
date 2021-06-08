@@ -43,6 +43,7 @@ use my_node_runtime::{
     substratee_registry::Request,
     AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
+
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
@@ -294,10 +295,10 @@ fn main() {
                 .description("query enclave registry and list all workers")
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
-                    let wcount = api.enclave_count();
+                    let wcount = api.enclave_count().unwrap();
                     println!("number of workers registered: {}", wcount);
                     for w in 1..=wcount {
-                        let enclave = api.enclave(w);
+                        let enclave = api.enclave(w).unwrap();
                         if enclave.is_none() {
                             println!("error reading enclave data");
                             continue;
