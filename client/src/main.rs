@@ -65,7 +65,7 @@ use substrate_api_client::{
 use substrate_client_keystore::LocalKeystore;
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
-use substratee_node_primitives::SubstrateeRegistryApi;
+use substratee_api_client_extensions::SubstrateeRegistryApi;
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 type AccountPublic = <Signature as Verify>::Signer;

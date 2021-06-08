@@ -5041,6 +5041,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-api-client-extensions"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec 2.0.1",
+ "sp-core",
+ "sp-runtime",
+ "substrate-api-client",
+ "substratee-node-primitives",
+]
+
+[[package]]
 name = "substratee-client"
 version = "0.8.0"
 dependencies = [
@@ -5069,6 +5080,7 @@ dependencies = [
  "substrate-api-client",
  "substrate-bip39 0.3.1",
  "substrate-client-keystore",
+ "substratee-api-client-extensions",
  "substratee-node-primitives",
  "substratee-node-runtime",
  "substratee-stf",
@@ -5194,6 +5206,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
+ "substratee-api-client-extensions",
  "substratee-node-primitives",
  "substratee-node-runtime",
  "substratee-settings",

@@ -1,0 +1,18 @@
+[package]
+name = "substratee-api-client-extensions"
+version = "0.8.0"
+authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
+edition = "2018"
+
+[dependencies]
+codec           = { package = "parity-scale-codec", version = "2.0.0", features = ["derive"] }
+
+# substrate
+sp-core = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
+sp-runtime = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
+
+# scs
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client" }
+
+# substratee
+substratee-node-primitives = { path = "../node"}

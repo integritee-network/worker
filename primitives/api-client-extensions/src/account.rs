@@ -1,10 +1,10 @@
 use sp_core::crypto::Pair;
-use my_node_runtime::AccountId;
 use substrate_api_client::Api;
 use sp_runtime::MultiSignature;
 
-use crate::ApiResult;
+use substratee_node_primitives::AccountId;
 
+use crate::ApiResult;
 
 /// ApiClient extension that contains some convenience methods around accounts.
 pub trait AccountApi {

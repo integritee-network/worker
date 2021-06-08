@@ -55,7 +55,7 @@ use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::{Duration, SystemTime};
 
-use substratee_node_primitives::{AccountApi, ChainApi};
+use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use config::Config;
 use utils::extract_shard;

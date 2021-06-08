@@ -1,8 +1,8 @@
-use sp_core::Pair;
+use sp_core::{Pair, H256};
 use sp_runtime::MultiSignature;
-use my_node_runtime::SignedBlock;
-use primitive_types::H256;
 use substrate_api_client::Api;
+
+use substratee_node_primitives::SignedBlock;
 
 use crate::ApiResult;
 

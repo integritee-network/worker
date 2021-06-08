@@ -66,6 +66,9 @@ path = "../primitives/worker"
 [dependencies.substratee-node-primitives]
 path = "../primitives/node"
 
+[dependencies.substratee-api-client-extensions]
+path = "../primitives/api-client-extensions"
+
 [dependencies.substratee-stf]
 path = "../stf"
 

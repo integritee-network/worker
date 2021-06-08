@@ -1,12 +1,10 @@
-use my_node_runtime::{AccountId, substratee_registry::Enclave as EnclaveGen};
 use sp_runtime::MultiSignature;
 use substrate_api_client::Api;
 use sp_core::Pair;
 
-use crate::{ShardIdentifier, ApiResult};
+use substratee_node_primitives::{Enclave, ShardIdentifier, IpfsHash};
 
-pub type Enclave = EnclaveGen<AccountId, Vec<u8>>;
-pub type IpfsHash = [u8; 46];
+use crate::ApiResult;
 
 /// ApiClient extension that enables communication with the `substratee-registry` pallet.
 pub trait SubstrateeRegistryApi {
@@ -45,7 +43,7 @@ impl<P: Pair> SubstrateeRegistryApi for Api<P>
 			.map_or_else(|| Ok(None), |w_index| self.enclave(w_index))
 	}
 
-	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<[u8; 46]>> {
+	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<IpfsHash>> {
 		self.get_storage_map("SubstrateeRegistry", "LatestIPFSHash", shard, None)
 	}
 }
