@@ -15,9 +15,9 @@ pub type IpfsHash = [u8; 46];
 /// ApiClient extension that enables communication with the `substratee-registry` pallet.
 pub trait SubstrateeRegistryApi {
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>>;
+	fn enclave_count(&self) -> ApiResult<u64>;
 	fn all_enclaves(&self) -> ApiResult<Vec<Enclave>>;
 	fn worker_for_shard(&self, shard: &ShardIdentifier) -> ApiResult<Option<Enclave>>;
-	fn enclave_count(&self) -> ApiResult<u64>;
 	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<IpfsHash>>;
 }
 
@@ -51,6 +51,11 @@ impl<P: Pair> SubstrateeRegistryApi for Api<P>
 		self.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", index, None)
 	}
 
+	fn enclave_count(&self) -> ApiResult<u64> {
+		Ok(self.get_storage_value("SubstrateeRegistry", "EnclaveCount", None)?
+			.unwrap_or(0u64))
+	}
+
 	fn all_enclaves(&self) -> ApiResult<Vec<Enclaves>> {
 		let count = self.enclave_count()?;
 		let mut enclaves = Vec::with_capacity(count as usize);
@@ -63,11 +68,6 @@ impl<P: Pair> SubstrateeRegistryApi for Api<P>
 	fn worker_for_shard(&self, shard: &ShardIdentifier) -> ApiResult<Option<Enclave>> {
 		self.get_storage_map("SubstrateeRegistry", "WorkerForShard", shard, None)?
 			.map_or_else(|| Ok(None), |w_index| self.enclave(w_index))
-	}
-
-	fn enclave_count(&self) -> ApiResult<u64> {
-		Ok(self.get_storage_value("SubstrateeRegistry", "EnclaveCount", None)?
-			.unwrap_or(0u64))
 	}
 
 	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<[u8; 46]>> {
