@@ -6,6 +6,8 @@ pub use my_node_runtime::{
 };
 use substrate_api_client::{Api, ApiClientError};
 use sp_runtime::MultiSignature;
+use my_node_runtime::SignedBlock;
+use sp_core::H256;
 
 
 pub type ApiResult<T> = Result<T, ApiClientError>;
@@ -27,6 +29,12 @@ pub trait ApiClientExt {
 	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
 }
 
+/// ApiClient extension that simplifies chain data access.
+pub trait ChainApi {
+	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>>;
+	fn signed_block(&self, hash: Option<H256>) -> ApiResult<Option<SignedBlock>>;
+}
+
 impl<P: Pair> ApiClientExt for Api<P>
 	where
 		MultiSignature: From<P::Signature>
@@ -39,6 +47,23 @@ impl<P: Pair> ApiClientExt for Api<P>
 	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
 		Ok(self.get_account_data(who)?
 			.map_or_else(|| 0, |data| data.free))
+	}
+}
+
+impl<P: Pair> ChainApi for Api<P>
+	where
+		MultiSignature: From<P::Signature>
+{
+	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
+		self.get_finalized_head()?
+			.map_or_else(|| Ok(None), |hash| self.signed_block(Some(hash)))
+	}
+
+	fn signed_block(&self, hash: Option<H256>) -> ApiResult<Option<SignedBlock>> {
+		// Even though this is only a wrapper here, we want to have this in the trait
+		// to be able to be generic over the trait and mock the `signed_block` method
+		// in tests.
+		self.get_signed_block(hash)
 	}
 }
 

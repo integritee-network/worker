@@ -55,7 +55,7 @@ use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use std::time::{Duration, SystemTime};
 
-use substratee_node_primitives::ApiClientExt;
+use substratee_node_primitives::{ApiClientExt, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use config::Config;
 use utils::extract_shard;
@@ -493,12 +493,7 @@ pub fn produce_blocks(
 ) -> Header {
     // obtain latest finalized block from layer one
     debug!("Getting current head");
-    let curr_head: SignedBlock = api
-        .get_finalized_head()
-        .unwrap()
-        .map(|hash| api.get_signed_block(Some(hash)).unwrap())
-        .unwrap()
-        .unwrap();
+    let curr_head: SignedBlock = api.last_finalized_block().unwrap().unwrap();
 
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
 
@@ -522,7 +517,7 @@ pub fn produce_blocks(
         while head.block.header.parent_hash != last_synced_head.hash() {
             debug!("Getting head of hash: {:?}", head.block.header.parent_hash);
             head = api
-                .get_signed_block(Some(head.block.header.parent_hash))
+                .signed_block(Some(head.block.header.parent_hash))
                 .unwrap()
                 .unwrap();
             blocks_to_sync.push(head.clone());
