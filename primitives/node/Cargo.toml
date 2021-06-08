@@ -20,7 +20,6 @@ optional = true
 git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
 optional = true
-default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
@@ -34,13 +33,14 @@ default-features = false
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
 version = "3.0.0"
-default-features = false
 optional = true
 
 [features]
 default = ['std']
-std = [ 'substrate-api-client',
+std = [ 'codec/std',
+        'substrate-api-client',
         'my-node-runtime',
+        'primitive-types/std',
         'sp-core/std',
         'sp-runtime',
         'base58',
