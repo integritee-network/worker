@@ -26,4 +26,3 @@ impl<P: Pair> AccountApi for Api<P>
 			.map_or_else(|| 0, |data| data.free))
 	}
 }
-

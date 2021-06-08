@@ -5,10 +5,7 @@ authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"
 
 [dependencies]
-log             = { version = "0.4", optional = true }
 codec           = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.9", default-features = false, features = ["codec"] }
-base58 			= { version = "0.1", optional = true }
 
 [dependencies.sgx_tstd]
 git = "https://github.com/apache/teaclave-sgx-sdk.git"
@@ -21,28 +18,15 @@ git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
 optional = true
 
-[dependencies.substrate-api-client]
-git = "https://github.com/scs/substrate-api-client"
-optional = true
-
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
 version = "3.0.0"
 default-features = false
 
-[dependencies.sp-runtime]
-git = "https://github.com/paritytech/substrate.git"
-version = "3.0.0"
-optional = true
-
 [features]
 default = ['std']
 std = [ 'codec/std',
-        'substrate-api-client',
         'my-node-runtime',
-        'primitive-types/std',
-        'sp-core/std',
-        'sp-runtime',
-        'base58',
-        'log']
+        'sp-core/std'
+]
 sgx = [ 'sgx_tstd' ]
