@@ -15,6 +15,7 @@ pub type IpfsHash = [u8; 46];
 /// ApiClient extension that enables communication with the `substratee-registry` pallet.
 pub trait SubstrateeRegistryApi {
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>>;
+	fn all_enclaves(&self) -> ApiResult<Vec<Enclave>>;
 	fn worker_for_shard(&self, shard: &ShardIdentifier) -> ApiResult<Option<Enclave>>;
 	fn enclave_count(&self) -> ApiResult<u64>;
 	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<IpfsHash>>;
@@ -48,6 +49,15 @@ impl<P: Pair> SubstrateeRegistryApi for Api<P>
 {
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>> {
 		self.get_storage_map("SubstrateeRegistry", "EnclaveRegistry", index, None)
+	}
+
+	fn all_enclaves(&self) -> ApiResult<Vec<Enclaves>> {
+		let count = self.enclave_count()?;
+		let mut enclaves = Vec::with_capacity(count as usize);
+		for n in 1..=count {
+			enclaves.push(self.enclave(n)?)
+		}
+		Ok(enclaves)
 	}
 
 	fn worker_for_shard(&self, shard: &ShardIdentifier) -> ApiResult<Option<Enclave>> {
