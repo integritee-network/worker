@@ -56,11 +56,11 @@ impl<P: Pair> SubstrateeRegistryApi for Api<P>
 			.unwrap_or(0u64))
 	}
 
-	fn all_enclaves(&self) -> ApiResult<Vec<Enclaves>> {
+	fn all_enclaves(&self) -> ApiResult<Vec<Enclave>> {
 		let count = self.enclave_count()?;
 		let mut enclaves = Vec::with_capacity(count as usize);
 		for n in 1..=count {
-			enclaves.push(self.enclave(n)?)
+			enclaves.push(self.enclave(n)?.unwrap())
 		}
 		Ok(enclaves)
 	}
