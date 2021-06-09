@@ -36,6 +36,7 @@ use log::*;
 use my_node_runtime::{
     substratee_registry::ShardIdentifier, Event, Hash, Header, UncheckedExtrinsic
 };
+use parking_lot::RwLock;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519,
@@ -57,7 +58,10 @@ use std::time::{Duration, SystemTime};
 
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_enclave_api::{Enclave, EnclaveApi};
+use substratee_worker_rpc_server::{RpcServer};
 use substratee_node_primitives::SignedBlock;
+
 use config::Config;
 use utils::extract_shard;
 
@@ -66,17 +70,28 @@ use substratee_settings::files::{
     RA_SPID_FILE, RA_API_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
 };
 
+use worker::{Worker as WorkerGen};
+
 mod enclave;
 mod ipfs;
 mod tests;
 mod config;
 mod utils;
+mod worker;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// start block production every ... ms
 const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
+
+type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, RpcServer<Enclave>>;
+
+lazy_static! {
+    // todo: replace with &str, but use &str in api-client first
+    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
+    static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
+}
 
 fn main() {
     // Setup logging
@@ -629,11 +644,6 @@ pub fn check_files() {
             panic!("file doesn't exist: {}", f);
         }
     }
-}
-
-lazy_static! {
-    // todo: replace with &str, but use &str in api-client first
-    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
 }
 
 /// # Safety

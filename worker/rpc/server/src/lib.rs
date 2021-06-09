@@ -19,24 +19,41 @@ use std::net::{SocketAddr};
 
 use log::debug;
 
-use jsonrpsee::ws_server::{WsServer};
+use jsonrpsee::	ws_server::{RpcModule, WsServerBuilder};
 use tokio::net::ToSocketAddrs;
+
+use substratee_enclave_api::EnclaveApi;
+use std::marker::PhantomData;
 
 #[cfg(test)]
 mod tests;
 
-pub async fn run_server(addr: impl ToSocketAddrs) -> anyhow::Result<SocketAddr> {
-	let mut server = WsServer::new(addr).await?;
+pub struct RpcServer<EnclaveApi>{
+	_enclave: PhantomData<EnclaveApi>
+}
 
-	server.register_method("author_importBlock", |params| {
+impl<Enclave: EnclaveApi> ServerApi for RpcServer<Enclave> {
+
+}
+
+pub trait ServerApi {}
+
+
+pub async fn run_server(addr: impl ToSocketAddrs) -> anyhow::Result<SocketAddr> {
+	let mut server = WsServerBuilder::default().build(addr).await?;
+	let mut module = RpcModule::new(());
+
+	module.register_method("author_importBlock", |params, _| {
 		debug!("author_importBlock params: {:?}", params);
 		Ok("Hello")
 	})?;
 
-	server.register_method("enclave_directRequest", |params| {
+	module.register_method("enclave_directRequest", |params, _| {
 		debug!("enclave_directRequest params: {:?}", params);
 		Ok("Hello")
 	})?;
+
+	server.register_module(module).unwrap();
 
 	let socket_addr = server.local_addr()?;
 	tokio::spawn(async move { server.start().await });

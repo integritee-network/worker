@@ -14,6 +14,7 @@ base58 			        = "0.1"
 rust-crypto 			= "0.2"
 clap 					= { version = "2.33", features = [ "yaml" ] }
 lazy_static             = "1.4.0"
+parking_lot             = "0.11.1"
 
 dirs 					= "1.0.2"
 serde 					= "1.0"
@@ -52,6 +53,12 @@ path = "../primitives/api-client-extensions"
 
 [dependencies.substratee-worker-api]
 path = "rpc/client"
+
+[dependencies.substratee-worker-rpc-server]
+path = "rpc/server"
+
+[dependencies.substratee-enclave-api]
+path = "../primitives/enclave-api"
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"

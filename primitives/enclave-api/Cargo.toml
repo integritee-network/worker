@@ -1,0 +1,7 @@
+[package]
+name = "substratee-enclave-api"
+version = "0.8.0"
+authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
+edition = "2018"
+
+[dependencies]

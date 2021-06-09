@@ -1,5 +1,5 @@
 [package]
-name = "substratee-worker-rpc"
+name = "substratee-worker-rpc-server"
 version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
@@ -11,6 +11,8 @@ log = "0.4.14"
 jsonrpsee = { version = "0.2.0-alpha.7", features = ["server"] }
 serde_json = "1.0.64"
 tokio = { version = "1.6.1", features = ["full"] }
+
+substratee-enclave-api = { path = "../../../primitives/enclave-api" }
 
 [features]
 default = ["std"]
