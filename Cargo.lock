@@ -5046,6 +5046,7 @@ version = "0.8.0"
 dependencies = [
  "parity-scale-codec 2.0.1",
  "sp-core",
+ "sp-finality-grandpa",
  "sp-runtime",
  "substrate-api-client",
  "substratee-node-primitives",

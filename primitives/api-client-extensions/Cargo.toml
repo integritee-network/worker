@@ -9,6 +9,7 @@ codec           = { package = "parity-scale-codec", version = "2.0.0", features 
 
 # substrate
 sp-core = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
+sp-finality-grandpa = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
 sp-runtime = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
 
 # scs

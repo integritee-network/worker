@@ -52,7 +52,7 @@ use enclave::api::{
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use enclave::worker_api_direct_server::start_worker_api_direct_server;
-use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
+use sp_finality_grandpa::VersionedAuthorityList;
 use std::time::{Duration, SystemTime};
 
 use substratee_api_client_extensions::{AccountApi, ChainApi};
@@ -450,23 +450,8 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_hash = api.get_genesis_hash().unwrap();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
-    let grandpas: AuthorityList = api
-        .get_storage_by_key_hash(
-            StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
-            Some(genesis_header.hash()),
-        )
-        .unwrap()
-        .map(|g: VersionedAuthorityList| g.into())
-        .unwrap();
-
-    let grandpa_proof = api
-        .get_storage_proof_by_keys(
-            vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
-            Some(genesis_header.hash()),
-        )
-        .unwrap()
-        .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
-        .unwrap();
+    let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+    let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
