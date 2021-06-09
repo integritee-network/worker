@@ -79,6 +79,7 @@ mod tests;
 mod config;
 mod utils;
 mod worker;
+mod error;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -86,7 +87,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// start block production every ... ms
 const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
 
-type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, RpcServer<Enclave>>;
+type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectApi>;
 
 lazy_static! {
     // todo: replace with &str, but use &str in api-client first
