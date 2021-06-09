@@ -71,6 +71,7 @@ use substratee_settings::files::{
 };
 
 use worker::{Worker as WorkerGen};
+use crate::utils::hex_encode;
 
 mod enclave;
 mod ipfs;
@@ -558,12 +559,6 @@ pub fn produce_blocks(
     }
 
     curr_head.block.header
-}
-
-fn hex_encode(data: Vec<u8>) -> String {
-    let mut hex_str = hex::encode(data);
-    hex_str.insert_str(0, "0x");
-    hex_str
 }
 
 fn init_shard(shard: &ShardIdentifier) {

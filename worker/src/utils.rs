@@ -23,3 +23,9 @@ pub fn extract_shard(m: &ArgMatches<'_>) -> ShardIdentifier {
 		}
 	}
 }
+
+pub fn hex_encode(data: Vec<u8>) -> String {
+	let mut hex_str = hex::encode(data);
+	hex_str.insert_str(0, "0x");
+	hex_str
+}
