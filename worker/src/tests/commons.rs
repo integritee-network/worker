@@ -22,7 +22,7 @@ use serde_derive::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::crypto::AccountId32;
-use sp_core::{sr25519, H256, Pair};
+use sp_core::sr25519;
 use sp_keyring::AccountKeyring;
 
 use std::{fs, str};
@@ -31,8 +31,11 @@ use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
 use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
-use substratee_worker_primitives::block::{SignedBlock, Block};
+
+#[test]
 use crate::config::Config;
+#[test]
+use substratee_worker_primitives::block::{SignedBlock, Block};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -135,7 +138,11 @@ pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
     }
 }
 
+#[cfg(test)]
 pub fn test_sidechain_block() -> SignedBlock {
+    use sp_core::{H256, Pair};
+
+
     let signer_pair = sp_core::ed25519::Pair::from_string("//Alice", None).unwrap();
     let author: AccountId32 = signer_pair.public().into();
     let block_number: u64 = 0;
@@ -160,6 +167,7 @@ pub fn test_sidechain_block() -> SignedBlock {
 
 /// Local Worker config. Fields are the default values except for
 /// the worker's rpc server.
+#[cfg(test)]
 pub fn local_worker_config(worker_url: String) -> Config {
     let mut url = worker_url.split(":");
     Config::new(

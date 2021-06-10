@@ -30,8 +30,7 @@ impl Config {
 		}
 	}
 
-
-	pub fn node_url(&self) -> String {
+    pub fn node_url(&self) -> String {
 		format!("{}:{}", self.node_ip, self.node_port)
 	}
 
@@ -50,17 +49,16 @@ impl Config {
 
 impl From<&ArgMatches<'_>> for Config {
 	fn from(m: &ArgMatches<'_>) -> Self {
-		Self {
-			node_ip: m.value_of("node-server").unwrap_or("ws://127.0.0.1").into(),
-			node_port: m.value_of("node-port").unwrap_or("9944").into(),
-			worker_ip: if m.is_present("ws-external") {
+		Self::new(
+			m.value_of("node-server").unwrap_or("ws://127.0.0.1").into(),
+			m.value_of("node-port").unwrap_or("9944").into(),
+			if m.is_present("ws-external") {
 				"0.0.0.0".into()
 			} else {
 				"127.0.0.1".into()
 			},
-			worker_rpc_port: m.value_of("worker-rpc-port").unwrap_or("2000").into(),
-			worker_mu_ra_port: m.value_of("mu-ra-port").unwrap_or("3443").into(),
-			ext_api_url: None,
-		}
+			m.value_of("worker-rpc-port").unwrap_or("2000").into(),
+			m.value_of("mu-ra-port").unwrap_or("3443").into(),
+		)
 	}
 }

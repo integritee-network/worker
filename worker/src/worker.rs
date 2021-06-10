@@ -37,6 +37,8 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
         }
     }
 
+    // will soon be used.
+    #[allow(dead_code)]
     pub fn node_api(&self) -> &NodeApi {
         &self.node_api
     }
