@@ -66,12 +66,11 @@ use config::Config;
 use utils::extract_shard;
 
 use substratee_settings::files::{
-    SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE,
-    RA_SPID_FILE, RA_API_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
+    SIGNING_KEY_FILE, SHIELDING_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
 };
 
 use worker::{Worker as WorkerGen};
-use crate::utils::hex_encode;
+use crate::utils::{hex_encode, check_files};
 
 mod enclave;
 mod ipfs;
@@ -623,22 +622,6 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
         info!("TEE's NEW free balance = {:?}", free);
 
         api.signer = signer_orig;
-    }
-}
-
-pub fn check_files() {
-    debug!("*** Check files");
-    let files = vec![
-        ENCLAVE_FILE,
-        SHIELDING_KEY_FILE,
-        SIGNING_KEY_FILE,
-        RA_SPID_FILE,
-        RA_API_KEY_FILE,
-    ];
-    for f in files.iter() {
-        if !Path::new(f).exists() {
-            panic!("file doesn't exist: {}", f);
-        }
     }
 }
 
