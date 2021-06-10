@@ -32,8 +32,19 @@ impl Encode for OpaqueCall {
     }
 }
 
-pub type AccountData = balances::AccountData<Balance>;
-pub type AccountInfo = system::AccountInfo<Index, AccountData>;
+pub mod types {
+    pub use sgx_runtime::{Balance, Index};
+    pub type AccountData = balances::AccountData<Balance>;
+    pub type AccountInfo = system::AccountInfo<Index, AccountData>;
+
+    pub type StateType = sgx_externalities::SgxExternalitiesType;
+    pub type State = sgx_externalities::SgxExternalities;
+    pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
+    pub struct Stf {}
+}
+
+use types::*;
+
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,

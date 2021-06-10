@@ -33,10 +33,6 @@ use codec::{Compact, Decode, Encode};
 use my_node_runtime::Balance;
 #[cfg(feature = "std")]
 pub use my_node_runtime::Index;
-#[cfg(feature = "sgx")]
-use sgx_runtime::Balance;
-#[cfg(feature = "sgx")]
-pub use sgx_runtime::Index;
 
 use sp_core::crypto::AccountId32;
 //use sp_core::{Encode, Decode};
@@ -91,16 +87,11 @@ impl From<sr25519::Pair> for KeyPair {
 #[cfg(feature = "sgx")]
 pub mod sgx;
 
+#[cfg(feature = "sgx")]
+pub use sgx::types::*;
+
 #[cfg(feature = "std")]
 pub mod cli;
-
-#[cfg(feature = "sgx")]
-//pub type State = sp_io::SgxExternalitiesType;
-pub type StateType = sgx_externalities::SgxExternalitiesType;
-#[cfg(feature = "sgx")]
-pub type State = sgx_externalities::SgxExternalities;
-#[cfg(feature = "sgx")]
-pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
 
 #[derive(Encode, Decode, Clone, core::fmt::Debug)]
 #[allow(non_camel_case_types)]
@@ -283,9 +274,6 @@ pub struct TrustedReturnValue<T> {
 
 impl TrustedReturnValue
 */
-
-#[cfg(feature = "sgx")]
-pub struct Stf {}
 
 #[cfg(test)]
 mod tests {

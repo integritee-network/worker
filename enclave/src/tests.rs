@@ -49,7 +49,7 @@ use chain_relay::{Block, Header};
 use sp_runtime::traits::Header as HeaderT;
 
 use sgx_externalities::SgxExternalitiesTypeTrait;
-use substratee_stf::sgx::AccountInfo;
+use substratee_stf::AccountInfo;
 use substratee_stf::StateTypeDiff as StfStateTypeDiff;
 use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
 use substratee_stf::{TrustedGetter, TrustedOperation};
