@@ -64,7 +64,7 @@ where
             let response: String = client
                 .request(
                     "author_importBlock",
-                    vec![to_json_value(blocks.clone()).unwrap()].into(),
+                    vec![to_json_value(blocks.clone())?].into(),
                 )
                 .await?;
             println!("Response: {:?}", response);

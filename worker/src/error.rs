@@ -9,4 +9,6 @@ pub enum Error {
 	ApiClientError(#[from] ApiClientError),
 	#[error("{0}")]
 	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
+	#[error("{0}")]
+	Serialization(#[from] serde_json::Error),
 }
