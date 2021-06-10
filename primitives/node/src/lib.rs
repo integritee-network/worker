@@ -37,7 +37,7 @@ pub type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
 
-// Todo: move this improved enclave definition into a primitives crate substratee-registry repo.
+// Todo: move this improved enclave definition into a primitives crate in the substratee-registry repo.
 #[derive(Encode, Decode, Default, Clone, PartialEq, sp_core::RuntimeDebug)]
 pub struct EnclaveGen<AccountId> {
     pub pubkey: AccountId,
