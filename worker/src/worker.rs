@@ -84,9 +84,8 @@ mod tests {
     use std::net::SocketAddr;
     use tokio::net::ToSocketAddrs;
 
-    use crate::config::Config;
     use crate::tests::{
-        commons::test_sidechain_block,
+        commons::{test_sidechain_block, local_worker_config},
         mock::{TestNodeApi, W1_URL, W2_URL},
     };
     use crate::worker::{Worker, WorkerT};
@@ -111,22 +110,12 @@ mod tests {
         Ok(socket_addr)
     }
 
-    fn test_config(worker_url: String) -> Config {
-        Config::new(
-            Default::default(),
-            Default::default(),
-            "127.0.0.1".into(),
-            worker_url.split(":").collect::<Vec<&str>>()[1].into(),
-            Default::default(),
-        )
-    }
-
     #[tokio::test]
     async fn gossip_blocks_works() {
         init();
         run_server(W2_URL).await.unwrap();
 
-        let worker = Worker::new(test_config(W1_URL.into()), TestNodeApi, (), ());
+        let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, (), ());
 
         worker
             .gossip_blocks(vec![test_sidechain_block()])
