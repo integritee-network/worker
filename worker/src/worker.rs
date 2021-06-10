@@ -20,13 +20,13 @@ pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
 	_worker_api_direct: Arc<WorkerApiDirect>,
 }
 
-pub trait Ocall {
+pub trait WorkerT {
 	fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()>;
 	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
 
 // todo make generic over api also, but for this, we need to hide sending extrinsics behind a trait
-impl<Enclave, WorkerApiDirect> Ocall for Worker<Config, Api<sr25519::Pair>, Enclave, WorkerApiDirect> {
+impl<Enclave, WorkerApiDirect> WorkerT for Worker<Config, Api<sr25519::Pair>, Enclave, WorkerApiDirect> {
 	fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()> {
 		if !confirms.is_empty() {
 			println!("Enclave wants to send {} extrinsics", confirms.len());
@@ -51,4 +51,11 @@ impl<Enclave, WorkerApiDirect> Ocall for Worker<Config, Api<sr25519::Pair>, Encl
 		info!("Gossiping sidechain blocks to peers: {:?}", peers);
 		Ok(())
 	}
+}
+
+#[cfg(test)]
+mod tests {
+
+
+
 }

@@ -345,6 +345,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "beef"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6736e2428df2ca2848d846c43e88745121a6654696e349ce0054a420815a7409"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -452,6 +461,15 @@ name = "bs58"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
+
+[[package]]
+name = "bstr"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90682c8d613ad3373e66de8c6411e0ae2ab2571e879d2efbf73558cc66f21279"
+dependencies = [
+ "memchr 2.4.0",
+]
 
 [[package]]
 name = "build-helper"
@@ -1424,6 +1442,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4075386626662786ddb0ec9081e7c7eeb1ba31951f447ca780ef9f5d568189"
 
 [[package]]
+name = "globset"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10463d9ff00a2a068db14231982f5132edebad0d7660cd956a1c30292dbcbfbd"
+dependencies = [
+ "aho-corasick 0.7.18",
+ "bstr",
+ "fnv",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 1.5.4",
+]
+
+[[package]]
 name = "gloo-timers"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1719,7 +1750,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=master#10f13173d2a07b3eb1062a956cda0e9dcd99a541"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=feature-gate-ias-check#8fc938ba1d78678552acd8b7f0a5b73521c4f48e"
 dependencies = [
  "base64 0.11.0",
  "chrono",
@@ -1973,6 +2004,97 @@ dependencies = [
  "parking_lot 0.10.2",
  "rand 0.7.3",
  "serde",
+]
+
+[[package]]
+name = "jsonrpsee"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "316a89048d2ea5530ab5502aa31e1128f6429b524a37e4c0bc54903bcdf3d342"
+dependencies = [
+ "jsonrpsee-http-server",
+ "jsonrpsee-utils",
+ "jsonrpsee-ws-server",
+]
+
+[[package]]
+name = "jsonrpsee-http-server"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d22372378f63f7d16de453e786afc740fca5ee80bd260be024a616b6ac2cefe5"
+dependencies = [
+ "futures-channel",
+ "futures-util",
+ "globset",
+ "hyper 0.14.9",
+ "jsonrpsee-types",
+ "jsonrpsee-utils",
+ "lazy_static",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "socket2",
+ "thiserror",
+ "tokio 1.7.1",
+ "unicase",
+]
+
+[[package]]
+name = "jsonrpsee-types"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0cf7bd4e93b3b56e59131de7f24afbea871faf914e97bcdd942c86927ab0172"
+dependencies = [
+ "async-trait",
+ "beef",
+ "futures-channel",
+ "futures-util",
+ "hyper 0.14.9",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "soketto",
+ "thiserror",
+]
+
+[[package]]
+name = "jsonrpsee-utils"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47554ecaacb479285da68799d9b6afc258c32b332cc8b85829c6a9304ee98776"
+dependencies = [
+ "futures-channel",
+ "futures-util",
+ "hyper 0.14.9",
+ "jsonrpsee-types",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.11.1",
+ "rand 0.8.4",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "jsonrpsee-ws-server"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b512c3c679a89d20f97802f69188a2d01f6234491b7513076e21e8424efccafe"
+dependencies = [
+ "futures-channel",
+ "futures-util",
+ "jsonrpsee-types",
+ "jsonrpsee-utils",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "soketto",
+ "thiserror",
+ "tokio 1.7.1",
+ "tokio-stream",
+ "tokio-util 0.6.7",
 ]
 
 [[package]]
@@ -2809,7 +2931,7 @@ dependencies = [
 [[package]]
 name = "pallet-substratee-registry"
 version = "0.9.0"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=master#10f13173d2a07b3eb1062a956cda0e9dcd99a541"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=feature-gate-ias-check#8fc938ba1d78678552acd8b7f0a5b73521c4f48e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4096,7 +4218,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
+source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
 dependencies = [
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -4109,7 +4231,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
+source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4290,6 +4412,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha-1"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c4cfa741c5832d0ef7fab46cabed29c2aae926db0b11bb2069edd8db5e64e16"
+dependencies = [
+ "block-buffer 0.9.0",
+ "cfg-if 1.0.0",
+ "cpufeatures",
+ "digest 0.9.0",
+ "opaque-debug 0.3.0",
+]
+
+[[package]]
 name = "sha1"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4434,6 +4569,21 @@ checksum = "9e3dfc207c526015c632472a77be09cf1b6e46866581aecae5cc38fb4235dea2"
 dependencies = [
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "soketto"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4919971d141dbadaa0e82b5d369e2d7666c98e4625046140615ca363e50d4daa"
+dependencies = [
+ "base64 0.13.0",
+ "bytes 1.0.1",
+ "futures 0.3.15",
+ "httparse",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.8.4",
+ "sha-1 0.9.6",
 ]
 
 [[package]]
@@ -4731,7 +4881,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "3.1.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
+source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
 dependencies = [
  "environmental",
  "hash-db",
@@ -5098,7 +5248,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=master#731a3a5c3a16ed3ce7f1f6b50593a2cdfd08a39f"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#3c8c04cd785b383dfbacb48a374503e644d13a08"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-metadata",
@@ -5136,7 +5286,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=master#731a3a5c3a16ed3ce7f1f6b50593a2cdfd08a39f"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#3c8c04cd785b383dfbacb48a374503e644d13a08"
 dependencies = [
  "async-trait",
  "hex 0.4.3",
@@ -5231,6 +5381,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-enclave-api"
+version = "0.8.0"
+
+[[package]]
 name = "substratee-node-primitives"
 version = "0.8.0"
 dependencies = [
@@ -5243,8 +5397,8 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-runtime"
-version = "0.9.0"
-source = "git+https://github.com/scs/substraTEE-node?branch=master#d0df8591618ca175cf03970a26b1ab1e52aef4a5"
+version = "0.8.0"
+source = "git+https://github.com/scs/substraTEE-node?branch=feature-gate-ias-verify#102dee0f031a1aca16962dc9899db0607a6e9515"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -5327,6 +5481,7 @@ dependencies = [
  "multihash 0.8.0",
  "pallet-balances",
  "parity-scale-codec 2.1.3",
+ "parking_lot 0.11.1",
  "primitive-types 0.9.0",
  "rust-crypto",
  "serde",
@@ -5342,12 +5497,15 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "substratee-api-client-extensions",
+ "substratee-enclave-api",
  "substratee-node-primitives",
  "substratee-node-runtime",
  "substratee-settings",
  "substratee-stf",
  "substratee-worker-api",
  "substratee-worker-primitives",
+ "substratee-worker-rpc-server",
+ "thiserror",
  "tokio 0.2.25",
  "ws 0.7.9",
 ]
@@ -5379,6 +5537,22 @@ dependencies = [
  "sp-core",
  "sp-keyring",
  "sp-runtime",
+]
+
+[[package]]
+name = "substratee-worker-rpc-server"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-util",
+ "jsonrpsee",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json",
+ "soketto",
+ "substratee-enclave-api",
+ "tokio 1.7.1",
+ "tokio-util 0.6.7",
 ]
 
 [[package]]
@@ -5607,7 +5781,7 @@ dependencies = [
  "futures-core",
  "memchr 2.4.0",
  "pin-project-lite 0.1.12",
- "tokio-macros",
+ "tokio-macros 0.2.6",
 ]
 
 [[package]]
@@ -5621,7 +5795,12 @@ dependencies = [
  "libc",
  "memchr 2.4.0",
  "mio 0.7.13",
+ "num_cpus",
+ "once_cell 1.8.0",
+ "parking_lot 0.11.1",
  "pin-project-lite 0.2.6",
+ "signal-hook-registry",
+ "tokio-macros 1.2.0",
  "winapi 0.3.9",
 ]
 
@@ -5637,12 +5816,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-macros"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c49e3df43841dafb86046472506755d8501c5615673955f6aa17181125d13c37"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.9",
+ "syn 1.0.73",
+]
+
+[[package]]
 name = "tokio-native-tls"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7d995660bd2b7f8c1568414c1126076c13fbb725c40112dc0120b78eb9b717b"
 dependencies = [
  "native-tls",
+ "tokio 1.7.1",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8864d706fdb3cc0843a49647ac892720dac98a6eeb818b77190592cf4994066"
+dependencies = [
+ "futures-core",
+ "pin-project-lite 0.2.6",
  "tokio 1.7.1",
 ]
 
@@ -5668,6 +5869,7 @@ checksum = "1caa0b0c8d94a049db56b5acf8cba99dc0623aab1b26d5b5f5e2d945846b3592"
 dependencies = [
  "bytes 1.0.1",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project-lite 0.2.6",
@@ -5810,7 +6012,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.6.5",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
@@ -6267,7 +6469,7 @@ dependencies = [
  "mio-extras",
  "openssl",
  "rand 0.7.3",
- "sha-1",
+ "sha-1 0.8.2",
  "slab",
  "url 2.2.2",
 ]

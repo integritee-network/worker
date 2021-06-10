@@ -87,7 +87,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// start block production every ... ms
 const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
 
-type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectApi>;
+type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectClient>;
 
 lazy_static! {
     // todo: replace with &str, but use &str in api-client first
