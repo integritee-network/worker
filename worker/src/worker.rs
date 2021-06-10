@@ -46,7 +46,7 @@ impl<Enclave, WorkerApiDirect> WorkerT for Worker<Config, Api<sr25519::Pair>, En
 
 	fn gossip_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		let mut peers = self.node_api.all_enclaves()?;
-		peers.retain(|e| e.url != self.config.worker_url().as_bytes().to_vec());
+		peers.retain(|e| e.url != self.config.worker_url());
 
 		info!("Gossiping sidechain blocks to peers: {:?}", peers);
 		Ok(())

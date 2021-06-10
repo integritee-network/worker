@@ -7,6 +7,15 @@ use sgx_tstd as std;
 use sp_core::H256;
 use std::vec::Vec;
 
+/// Substrate runtimes provide no string type. Hence, for arbitrary data of varying length the
+/// `Vec<u8>` is used. In the polkadot-js the typedef `Text` is used to automatically
+/// utf8 decode bytes into a string.
+#[cfg(not(feature = "std"))]
+pub type PalletString = Vec<u8>;
+
+#[cfg(feature = "std")]
+pub type PalletString = String;
+
 #[cfg(feature = "std")]
 pub type SignedBlock = sp_runtime::generic::SignedBlock<my_node_runtime::Block>;
 
@@ -26,7 +35,7 @@ pub struct Request {
 }
 
 #[cfg(feature = "std")]
-pub type Enclave = EnclaveGen<AccountId, Vec<u8>>;
+pub type Enclave = EnclaveGen<AccountId, PalletString>;
 pub type IpfsHash = [u8; 46];
 
 pub type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
