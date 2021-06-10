@@ -67,7 +67,7 @@ where
                     vec![to_json_value(blocks.clone())?].into(),
                 )
                 .await?;
-            println!("Response: {:?}", response);
+            info!("author_importBlock response: {:?}", response);
         }
         Ok(())
     }
