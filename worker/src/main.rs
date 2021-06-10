@@ -70,6 +70,7 @@ use substratee_settings::files::{
 
 use worker::{Worker as WorkerGen};
 use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
+use crate::worker::WorkerT;
 
 mod enclave;
 mod ipfs;
@@ -104,6 +105,14 @@ fn main() {
     println!("Worker Config: {:?}", config);
 
     *NODE_URL.lock().unwrap() = config.node_url();
+    *WORKER.write() = Some(
+        Worker::new(
+            config.clone(),
+            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
+            Enclave,
+            DirectClient::new(config.worker_url()),
+        )
+    );
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -668,7 +677,7 @@ pub unsafe extern "C" fn ocall_worker_request(
 ///
 /// FFI are always unsafe
 #[no_mangle]
-pub unsafe extern "C" fn ocall_send_block_and_confirmation(
+pub async unsafe extern "C" fn ocall_send_block_and_confirmation(
     confirmations: *const u8,
     confirmations_size: u32,
     signed_blocks_ptr: *const u8,
@@ -718,9 +727,12 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
             vec![]
         }
     };
+
     println! {"Received blocks: {:?}", signed_blocks};
+
+    let w = WORKER.read();
+    w.as_ref().unwrap().gossip_blocks(signed_blocks).await.unwrap();
     // TODO: M8.3: Store blocks
-    // TODO: M8.3: broadcast blocks
     status
 }
 
