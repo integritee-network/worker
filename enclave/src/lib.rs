@@ -37,7 +37,7 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, SgxResult}
 use substrate_api_client::compose_extrinsic_offline;
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_worker_primitives::block::{
-    Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
+    Block as SidechainBlock, SignedBlock as SignedSidechainBlock,
 };
 use substratee_worker_primitives::BlockHash;
 
@@ -69,7 +69,7 @@ use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::State as StfState;
 use substratee_stf::{
-    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
+    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned, StatePayload
 };
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};

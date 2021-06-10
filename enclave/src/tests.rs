@@ -29,7 +29,6 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
 use substrate_api_client::utils::storage_key;
-use substratee_worker_primitives::block::StatePayload;
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256, H256};
@@ -51,7 +50,7 @@ use sp_runtime::traits::Header as HeaderT;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::AccountInfo;
 use substratee_stf::StateTypeDiff as StfStateTypeDiff;
-use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
+use substratee_stf::{ShardIdentifier, Stf, TrustedCall, StatePayload};
 use substratee_stf::{TrustedGetter, TrustedOperation};
 
 use substratee_settings::enclave::{GETTER_TIMEOUT};

@@ -40,7 +40,7 @@ pub mod types {
     pub type StateType = sgx_externalities::SgxExternalitiesType;
     pub type State = sgx_externalities::SgxExternalities;
     pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
-    pub struct Stf {}
+    pub struct Stf;
 }
 
 use types::*;
