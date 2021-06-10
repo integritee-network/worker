@@ -31,6 +31,17 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 	hex_str
 }
 
+pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
+	if data.len() > writable.len() {
+		panic!("not enough bytes in output buffer for return value");
+	}
+	let (left, right) = writable.split_at_mut(data.len());
+	left.clone_from_slice(&data);
+	// fill the right side with whitespace
+	right.iter_mut().for_each(|x| *x = 0x20);
+}
+
+
 pub fn check_files() {
 	use substratee_settings::files::{
 		SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE,

@@ -63,14 +63,13 @@ use substratee_worker_rpc_server::{RpcServer};
 use substratee_node_primitives::SignedBlock;
 
 use config::Config;
-use utils::extract_shard;
 
 use substratee_settings::files::{
     SIGNING_KEY_FILE, SHIELDING_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
 };
 
 use worker::{Worker as WorkerGen};
-use crate::utils::{hex_encode, check_files};
+use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
 
 mod enclave;
 mod ipfs;
@@ -723,16 +722,6 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
     // TODO: M8.3: Store blocks
     // TODO: M8.3: broadcast blocks
     status
-}
-
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
-    if data.len() > writable.len() {
-        panic!("not enough bytes in output buffer for return value");
-    }
-    let (left, right) = writable.split_at_mut(data.len());
-    left.clone_from_slice(&data);
-    // fill the right side with whitespace
-    right.iter_mut().for_each(|x| *x = 0x20);
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
