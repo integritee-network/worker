@@ -102,3 +102,6 @@ path = "../stf"
 [features]
 default = []
 production = ['substratee-settings/production']
+
+[dev-dependencies]
+jsonrpsee = { version = "0.2.0", features = ["server", "client"]}
