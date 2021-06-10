@@ -1,6 +1,5 @@
 use substratee_api_client_extensions::{SubstrateeRegistryApi, ApiResult};
 use substratee_node_primitives::{Enclave, ShardIdentifier};
-use primitive_types::H256;
 
 pub struct TestNodeApi;
 
@@ -10,14 +9,14 @@ pub const W2_URL: &str = "127.0.0.1:2223";
 fn enclaves() -> Vec<Enclave> {
 	vec![
 		Enclave::new(
-			H256::random().to_fixed_bytes().into(),
-			H256::random().to_fixed_bytes().into(),
+			[0;32].into(),
+			[1;32].into(),
 			1,
 			W1_URL.into(),
 		),
 		Enclave::new(
-			H256::random().to_fixed_bytes().into(),
-			H256::random().to_fixed_bytes().into(),
+			[2;32].into(),
+			[3;32].into(),
 			2,
 			W2_URL.into(),
 		),
@@ -34,7 +33,6 @@ impl SubstrateeRegistryApi for TestNodeApi {
 	}
 
 	fn all_enclaves(&self) -> ApiResult<Vec<Enclave>> {
-		// the args are okay here. The IDE does not grasp types depending on feature flags.
 		Ok(enclaves())
 	}
 
