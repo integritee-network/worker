@@ -14,6 +14,23 @@ pub struct Config {
 }
 
 impl Config {
+	pub fn new(
+		node_ip: String,
+		node_port: String,
+		worker_ip: String,
+		worker_rpc_port: String,
+		worker_mu_ra_port: String) -> Self {
+		Self {
+			node_ip,
+			node_port,
+			worker_ip,
+			worker_rpc_port,
+			worker_mu_ra_port,
+			ext_api_url: None,
+		}
+	}
+
+
 	pub fn node_url(&self) -> String {
 		format!("{}:{}", self.node_ip, self.node_port)
 	}

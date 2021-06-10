@@ -22,7 +22,7 @@ use serde_derive::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::crypto::AccountId32;
-use sp_core::sr25519;
+use sp_core::{sr25519, H256, Pair};
 use sp_keyring::AccountKeyring;
 
 use std::{fs, str};
@@ -31,6 +31,7 @@ use crate::enclave::api::*;
 use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
 use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
+use substratee_worker_primitives::block::{SignedBlock, Block};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -131,4 +132,27 @@ pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
     } else {
         0
     }
+}
+
+pub fn test_sidechain_block() -> SignedBlock {
+    let signer_pair = sp_core::ed25519::Pair::from_string("//Alice", None).unwrap();
+    let author: AccountId32 = signer_pair.public().into();
+    let block_number: u64 = 0;
+    let parent_hash = H256::random();
+    let layer_one_head = H256::random();
+    let signed_top_hashes = vec![];
+    let encrypted_payload: Vec<u8> = vec![];
+    let shard = ShardIdentifier::default();
+
+    // when
+    let block = Block::construct_block(
+        author,
+        block_number,
+        parent_hash.clone(),
+        layer_one_head.clone(),
+        shard.clone(),
+        signed_top_hashes.clone(),
+        encrypted_payload.clone(),
+    );
+    block.sign(&signer_pair)
 }

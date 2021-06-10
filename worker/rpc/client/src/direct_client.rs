@@ -10,6 +10,7 @@ use ws::{connect, CloseCode, Handler, Handshake, Message, Result as ClientResult
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use substratee_worker_primitives::block::SignedBlock;
 
 pub struct WsClient {
     pub out: Sender,
@@ -45,6 +46,12 @@ pub struct DirectClient {
 pub trait DirectApi {
     fn watch(&self,  request: String, sender: MpscSender<String>) -> Result<(), ()>;
     fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String>;
+}
+
+pub trait WorkerToWorkerApi {
+    // If I understand correctly, this should never be more than one block.
+    // Will migrate to that later
+    fn send_blocks(&self, block: Vec<SignedBlock>) -> Result<(), ()>;
 }
 
 impl DirectClient {

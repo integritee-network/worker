@@ -311,7 +311,7 @@ fn main() {
                         println!("   AccountId: {}", enclave.pubkey.to_ss58check());
                         println!("   MRENCLAVE: {}", enclave.mr_enclave.to_base58());
                         println!("   RA timestamp: {}", timestamp);
-                        println!("   URL: {}", String::from_utf8(enclave.url).unwrap());
+                        println!("   URL: {}", enclave.url);
                     }
                     Ok(())
                 }),

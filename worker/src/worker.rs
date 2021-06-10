@@ -1,16 +1,17 @@
+use async_trait::async_trait;
+use jsonrpsee::{
+    types::{to_json_value, traits::Client},
+    ws_client::WsClientBuilder,
+};
 use log::info;
-use sp_core::sr25519;
-use std::sync::mpsc::channel;
 use std::sync::Arc;
-use substrate_api_client::{Api, XtStatus};
-use substratee_api_client_extensions::SubstrateeRegistryApi;
 
+use substratee_api_client_extensions::SubstrateeRegistryApi;
+// use substratee_worker_api::direct_client::WorkerToWorkerApi;
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 use crate::config::Config;
 use crate::error::Error;
-use crate::utils::hex_encode;
-use substratee_worker_api::direct_client::WorkerToWorkerApi;
 
 pub type WorkerResult<T> = Result<T, Error>;
 
@@ -21,56 +22,111 @@ pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
     _worker_api_direct: Arc<WorkerApiDirect>,
 }
 
-pub trait WorkerT {
-    fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()>;
-    fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
+    pub fn new(
+        config: Config,
+        node_api: NodeApi,
+        _enclave_api: Enclave,
+        _worker_api_direct: WorkerApiDirect,
+    ) -> Self {
+        Self {
+            config,
+            node_api,
+            _enclave_api,
+            _worker_api_direct: Arc::new(_worker_api_direct),
+        }
+    }
 }
 
-// todo make generic over api also, but for this, we need to hide sending extrinsics behind a trait
-impl<Enclave, WorkerApiDirect: WorkerToWorkerApi> WorkerT
-    for Worker<Config, Api<sr25519::Pair>, Enclave, WorkerApiDirect>
+#[async_trait]
+pub trait WorkerT {
+    // fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()>;
+    async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+}
+
+#[async_trait]
+impl<NodeApi, Enclave, WorkerApiDirect> WorkerT
+    for Worker<Config, NodeApi, Enclave, WorkerApiDirect>
+where
+    NodeApi: SubstrateeRegistryApi + Send + Sync,
+    Enclave: Send + Sync,
+    WorkerApiDirect: Send + Sync,
 {
-    fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()> {
-        if !confirms.is_empty() {
-            println!("Enclave wants to send {} extrinsics", confirms.len());
-
-            for call in confirms.into_iter() {
-                self.node_api
-                    .send_extrinsic(hex_encode(call), XtStatus::Ready)?;
-            }
-            // await next block to avoid #37
-            let (events_in, events_out) = channel();
-            self.node_api.subscribe_events(events_in)?;
-            let _ = events_out.recv().unwrap();
-            let _ = events_out.recv().unwrap();
-            // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-        }
-        Ok(())
-    }
-
-    fn gossip_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+    async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
         let mut peers = self.node_api.all_enclaves()?;
         peers.retain(|e| e.url != self.config.worker_url());
 
         info!("Gossiping sidechain blocks to peers: {:?}", peers);
-        // for p in peers.iter() {
-        // 	self.worker_api_direct.send_blocks()
-        // }
+        for p in peers.iter() {
+            let url = format!("ws://{}", p.url);
+            info!("Gossiping block to peer with address: {:?}", url);
+            let client = WsClientBuilder::default().build(&url).await?;
+            let response: String = client
+                .request(
+                    "author_importBlock",
+                    vec![to_json_value(blocks.clone()).unwrap()].into(),
+                )
+                .await?;
+            println!("Response: {:?}", response);
+        }
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use jsonrpsee::{wsclient::WsClientBuilder, wsserver::WsServerBuilder};
-    use sp_core::H256;
-    use substratee_api_client_extensions::{ApiResult, SubstrateeRegistryApi};
-    use substratee_node_primitives::{Enclave, ShardIdentifier};
-    use crate::tests::mock::TestNodeApi;
+    use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
+    use log::debug;
+    use std::net::SocketAddr;
+    use tokio::net::ToSocketAddrs;
 
-    #[test]
-    fn gossip_blocks_works() {
+    use crate::config::Config;
+    use crate::tests::{
+        commons::test_sidechain_block,
+        mock::{TestNodeApi, W1_URL, W2_URL},
+    };
+    use crate::worker::{Worker, WorkerT};
 
+    fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
+    async fn run_server(addr: impl ToSocketAddrs) -> anyhow::Result<SocketAddr> {
+        let mut server = WsServerBuilder::default().build(addr).await?;
+        let mut module = RpcModule::new(());
+
+        module.register_method("author_importBlock", |params, _| {
+            debug!("author_importBlock params: {:?}", params);
+            Ok("Hello")
+        })?;
+
+        server.register_module(module).unwrap();
+
+        let socket_addr = server.local_addr()?;
+        tokio::spawn(async move { server.start().await });
+        Ok(socket_addr)
+    }
+
+    fn test_config(worker_url: String) -> Config {
+        Config::new(
+            Default::default(),
+            Default::default(),
+            "127.0.0.1".into(),
+            worker_url.split(":").collect::<Vec<&str>>()[1].into(),
+            Default::default(),
+        )
+    }
+
+    #[tokio::test]
+    async fn gossip_blocks_works() {
+        init();
+        run_server(W2_URL).await.unwrap();
+
+        let worker = Worker::new(test_config(W1_URL.into()), TestNodeApi, (), ());
+
+        worker
+            .gossip_blocks(vec![test_sidechain_block()])
+            .await
+            .unwrap();
     }
 }
