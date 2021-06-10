@@ -6,7 +6,7 @@ pub struct TestNodeApi;
 pub const W1_URL: &str = "127.0.0.1:2222";
 pub const W2_URL: &str = "127.0.0.1:2223";
 
-fn enclaves() -> Vec<Enclave> {
+pub fn enclaves() -> Vec<Enclave> {
 	vec![
 		Enclave::new(
 			[0;32].into(),

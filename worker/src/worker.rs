@@ -36,6 +36,10 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
             _worker_api_direct: Arc::new(_worker_api_direct),
         }
     }
+
+    pub fn node_api(&self) -> &NodeApi {
+        &self.node_api
+    }
 }
 
 #[async_trait]

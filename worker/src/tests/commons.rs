@@ -32,6 +32,7 @@ use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
 use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
 use substratee_worker_primitives::block::{SignedBlock, Block};
+use crate::config::Config;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -155,4 +156,17 @@ pub fn test_sidechain_block() -> SignedBlock {
         encrypted_payload.clone(),
     );
     block.sign(&signer_pair)
+}
+
+/// Local Worker config. Fields are the default values except for
+/// the worker's rpc server.
+pub fn local_worker_config(worker_url: String) -> Config {
+    let mut url = worker_url.split(":");
+    Config::new(
+        Default::default(),
+        Default::default(),
+        url.next().unwrap().into(),
+        url.next().unwrap().into(),
+        Default::default(),
+    )
 }
