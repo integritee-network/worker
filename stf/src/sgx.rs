@@ -18,7 +18,7 @@ use support::metadata::StorageHasher;
 use support::traits::UnfilteredDispatchable;
 
 use crate::{
-    AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, Stf, TrustedCall,
+    AccountId, Getter, Index, PublicGetter, ShardIdentifier, TrustedCall, StatePayload,
     TrustedCallSigned, TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 
@@ -30,6 +30,12 @@ impl Encode for OpaqueCall {
     fn encode(&self) -> Vec<u8> {
         self.0.clone()
     }
+}
+
+pub trait StfTrait = SgxExternalitiesTrait + StateHash;
+
+pub trait StateHash {
+    fn hash() -> Hash;
 }
 
 pub mod types {
@@ -218,7 +224,7 @@ impl Stf {
         ext: &mut State,
         call: TrustedCallSigned,
         calls: &mut Vec<OpaqueCall>,
-    ) -> Result<(), StfError> {
+    ) -> StfResult<()> {
         let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| {
             let sender = call.call.account().clone();
@@ -364,7 +370,7 @@ impl Stf {
         })
     }
 
-    fn ensure_root(account: AccountId) -> Result<(), StfError> {
+    fn ensure_root(account: AccountId) -> StfResult<()> {
         if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
             Ok(())
         } else {
@@ -372,7 +378,7 @@ impl Stf {
         }
     }
 
-    fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+    fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
         match get_account_info(&account) {
             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
                 MultiAddress::Id(account),
@@ -392,7 +398,7 @@ impl Stf {
         Ok(())
     }
 
-    fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+    fn unshield_funds(account: AccountId, amount: u128) -> StfResult<()> {
         match get_account_info(&account) {
             Some(account_info) => {
                 if account_info.data.free < amount {
@@ -421,6 +427,12 @@ impl Stf {
             TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
         };
         key_hashes
+    }
+
+    pub fn apply_state_dif(ext: &mut StfTrait, getter: StatePayload) -> StfResult<()> {
+        ext.e
+
+        Ok(())
     }
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
@@ -477,7 +489,7 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
     }
 }
 
-fn validate_nonce(who: &AccountId, nonce: Index) -> Result<(), StfError> {
+fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
     // validate
     let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
     if expected_nonce == nonce {
@@ -559,11 +571,13 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
     }
 }
 
+pub type StfResult<T> = Result<T, StfError>;
+
 #[derive(Debug, Display)]
 pub enum StfError {
     #[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
     MissingPrivileges(AccountId),
-    #[display(fmt = "Error dispatching runtime call")]
+    #[display(fmt = "Error dispatching runtime call. {:?}", _0)]
     Dispatch(String),
     #[display(fmt = "Not enough funds to perform operation")]
     MissingFunds,
@@ -571,4 +585,5 @@ pub enum StfError {
     InexistentAccount(AccountId),
     #[display(fmt = "Invalid Nonce {:?}", _0)]
     InvalidNonce(Index),
+    StorageHashMismatch,
 }
