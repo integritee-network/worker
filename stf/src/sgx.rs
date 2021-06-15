@@ -8,14 +8,16 @@ use derive_more::Display;
 use log_sgx::*;
 use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
 use sp_core::crypto::AccountId32;
-use sp_core::Pair;
-use sp_core::H256 as Hash;
-use sp_io::hashing::blake2_256;
-use sp_io::SgxExternalitiesTrait;
+use sp_core::{Pair, H256 as Hash};
+use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
+use sgx_externalities::SgxExternalitiesTypeTrait;
 use sp_runtime::MultiAddress;
 use substratee_worker_primitives::BlockNumber;
-use support::metadata::StorageHasher;
-use support::traits::UnfilteredDispatchable;
+use support::{
+    ensure,
+    metadata::StorageHasher,
+    traits::UnfilteredDispatchable
+};
 
 use crate::{
     AccountId, Getter, Index, PublicGetter, ShardIdentifier, TrustedCall, StatePayload,
@@ -35,7 +37,7 @@ impl Encode for OpaqueCall {
 pub trait StfTrait = SgxExternalitiesTrait + StateHash;
 
 pub trait StateHash {
-    fn hash() -> Hash;
+    fn hash(&self) -> Hash;
 }
 
 pub mod types {
@@ -137,7 +139,7 @@ impl Stf {
         ext
     }
 
-    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
+    pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
         ext.execute_with(|| {
             map_update.iter().for_each(|(k, v)| {
                 match v {
@@ -429,9 +431,9 @@ impl Stf {
         key_hashes
     }
 
-    pub fn apply_state_dif(ext: &mut StfTrait, getter: StatePayload) -> StfResult<()> {
-        ext.e
-
+    pub fn apply_state_diff(ext: &mut impl StfTrait, state_payload: &mut StatePayload) -> StfResult<()> {
+        ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
+        Self::update_storage(ext, &StateTypeDiff::decode(state_payload.state_update.clone()));
         Ok(())
     }
 
