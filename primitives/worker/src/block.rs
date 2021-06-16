@@ -1,10 +1,9 @@
-#[cfg(target_env = "sgx")]
-extern crate sgx_tstd as std;
-
 use crate::{BlockNumber, ShardIdentifier};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "sgx")]
+use sgx_tstd as std;
 use std::vec::Vec;
 
 //FIXME: Should use blocknumber from sgxruntime
@@ -18,7 +17,8 @@ use sp_runtime::{traits::Verify, MultiSignature};
 pub type Signature = MultiSignature;
 
 use std::time::{SystemTime, UNIX_EPOCH};
-
+#[cfg(feature = "sgx")]
+use std::untrusted::time::SystemTimeEx;
 /* use chrono::Utc as TzUtc;
 use chrono::TimeZone; */
 
