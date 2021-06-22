@@ -437,6 +437,8 @@ impl Stf {
         Self::update_storage(&mut ext2, &StateTypeDiff::decode(state_payload.state_update.clone()));
         ensure!(ext2.hash() == state_payload.state_hash_aposteriori(), StfError::InvalidStorageDiff);
         *ext = ext2;
+        // If the apriori state hash matches, we should not prune any state_diffs we want to gossip.
+        ext.prune_state_diff();
         Ok(())
     }
 
@@ -578,7 +580,7 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
 
 pub type StfResult<T> = Result<T, StfError>;
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, PartialEq, Eq)]
 pub enum StfError {
     #[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
     MissingPrivileges(AccountId),
@@ -592,4 +594,69 @@ pub enum StfError {
     InvalidNonce(Index),
     StorageHashMismatch,
     InvalidStorageDiff,
+}
+
+// this must be pub to be able to test it in the enclave. In the future this should be testable
+// with cargo test. See: https://github.com/scs/substraTEE-worker/issues/272.
+pub mod tests {
+    use super::{Stf, StfTrait, StateHash, State, StatePayload};
+    use support::{assert_ok, assert_err};
+    use sp_core::H256;
+    use sp_runtime::traits::{BlakeTwo256, Hash};
+    use sgx_externalities::{SgxExternalitiesTypeTrait};
+    use crate::sgx::StfError;
+
+    impl StateHash for State {
+        fn hash(&self) -> H256 {
+            BlakeTwo256::hash(self.state.clone().encode().as_slice())
+        }
+    }
+
+    pub fn apply_state_diff_works() {
+        let mut state1 = State::new();
+        let mut state2 = State::new();
+
+        let apriori = state1.hash();
+        state1.insert(b"Hello".to_vec(), b"World".to_vec());
+        let aposteriori = state1.hash();
+
+        let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+
+        assert_ok!(Stf::apply_state_diff(&mut state2, &mut state_update));
+        assert_eq!(state2.hash(), aposteriori);
+        assert_eq!(*state2.get(b"Hello").unwrap(), b"World".to_vec());
+        assert!(state2.state_diff.is_empty());
+    }
+
+    pub fn apply_state_diff_returns_storage_hash_mismatch_err() {
+        let mut state1 = State::new();
+        let mut state2 = State::new();
+
+        let apriori = H256::from([1; 32]);
+        state1.insert(b"Hello".to_vec(), b"World".to_vec());
+        let aposteriori = state1.hash();
+
+        let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+
+        assert_err!(Stf::apply_state_diff(&mut state2, &mut state_update), StfError::StorageHashMismatch);
+        // todo: Derive `Eq` on State
+        assert_eq!(state2.hash(), State::new().hash());
+        assert!(state2.state_diff.is_empty());
+    }
+
+    pub fn apply_state_diff_returns_invalid_storage_diff_err() {
+        let mut state1 = State::new();
+        let mut state2 = State::new();
+
+        let apriori = state1.hash();
+        state1.insert(b"Hello".to_vec(), b"World".to_vec());
+        let aposteriori =  H256::from([1; 32]);
+
+        let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+
+        assert_err!(Stf::apply_state_diff(&mut state2, &mut state_update), StfError::InvalidStorageDiff);
+        // todo: Derive `Eq` on State
+        assert_eq!(state2.hash(), State::new().hash());
+        assert!(state2.state_diff.is_empty());
+    }
 }
