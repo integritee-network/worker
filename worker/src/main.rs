@@ -105,14 +105,6 @@ fn main() {
     println!("Worker Config: {:?}", config);
 
     *NODE_URL.lock().unwrap() = config.node_url();
-    *WORKER.write() = Some(
-        Worker::new(
-            config.clone(),
-            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
-            Enclave,
-            DirectClient::new(config.worker_url()),
-        )
-    );
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -244,6 +236,15 @@ fn worker(
     println!("*** Starting enclave in production mode");
     #[cfg(not(feature = "production"))]
     println!("*** Starting enclave in development mode");
+
+    *WORKER.write() = Some(
+        Worker::new(
+            config.clone(),
+            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
+            Enclave,
+            DirectClient::new(config.worker_url()),
+        )
+    );
 
     let enclave = enclave_init().unwrap();
     let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
