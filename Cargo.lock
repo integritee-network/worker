@@ -5556,14 +5556,11 @@ version = "0.8.0"
 dependencies = [
  "anyhow",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-util",
  "jsonrpsee",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json",
- "soketto",
  "substratee-enclave-api",
  "tokio 1.6.1",
- "tokio-util 0.6.5",
 ]
 
 [[package]]
