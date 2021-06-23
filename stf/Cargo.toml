@@ -122,7 +122,7 @@ version = "3.0.0"
 optional = true
 
 [dependencies.substratee-worker-primitives]
-path = "../substratee-worker-primitives"
+path = "../primitives/worker"
 default-features = false
 features = ["sgx"]
 optional = true

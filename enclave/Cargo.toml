@@ -144,12 +144,12 @@ git = "https://github.com/scs/sgx-runtime"
 default-features = false
 
 [dependencies.substratee-node-primitives]
-path = "../substratee-node-primitives"
+path = "../primitives/node"
 default-features = false
 features = ["sgx"]
 
 [dependencies.substratee-worker-primitives]
-path = "../substratee-worker-primitives"
+path = "../primitives/worker"
 default-features = false
 features = ["sgx"]
 

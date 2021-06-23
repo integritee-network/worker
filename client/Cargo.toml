@@ -61,7 +61,7 @@ git = "https://github.com/scs/substraTEE-node"
 package = "substratee-node-runtime"
 
 [dependencies.substratee-worker-primitives]
-path = "../substratee-worker-primitives"
+path = "../primitives/worker"
 
 [dependencies.substratee-stf]
 path = "../stf"

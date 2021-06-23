@@ -11,7 +11,6 @@
 bin/*.so
 bin/substratee-*
 bin/*.wasm
-bin2/substratee-*
 
 # sealed data
 bin/*.bin
@@ -53,13 +52,6 @@ bin/attestation_report.json
 bin/shards
 bin/*.der
 bin/enclave-shielding-pubkey.json
-
-# in order to have 2 workers run and exchange keys
-bin2/substratee-worker
-bin2/*.bin
-bin2/*.txt
-bin2/shards
-bin2/enclave-shielding-pubkey.json
 
 # client
 client/my_keystore

@@ -170,7 +170,6 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@cd worker && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/substratee-worker ./bin
-	cp $(Worker_Rust_Path)/substratee-worker ./bin2
 
 ######## SubstraTEE-client objects ########
 $(Client_Name): $(Client_SRC_Files)
