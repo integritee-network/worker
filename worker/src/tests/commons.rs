@@ -32,9 +32,9 @@ use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
 use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
 
-#[test]
+#[cfg(test)]
 use crate::config::Config;
-#[test]
+#[cfg(test)]
 use substratee_worker_primitives::block::{SignedBlock, Block};
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -67,13 +67,13 @@ where
             let url = format!("ws://{}", p.url);
             info!("Gossiping block to peer with address: {:?}", url);
             let client = WsClientBuilder::default().build(&url).await?;
-            let response: String = client
+            let response: Vec<SignedSidechainBlock> = client
                 .request(
-                    "author_importBlock",
+                    "sidechain_importBlock",
                     vec![to_json_value(blocks.clone())?].into(),
                 )
                 .await?;
-            info!("author_importBlock response: {:?}", response);
+            info!("sidechain_importBlock response: {:?}", response);
         }
         Ok(())
     }
@@ -84,10 +84,11 @@ mod tests {
     use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
     use log::debug;
     use std::net::SocketAddr;
+    use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
     use tokio::net::ToSocketAddrs;
 
     use crate::tests::{
-        commons::{test_sidechain_block, local_worker_config},
+        commons::{local_worker_config, test_sidechain_block},
         mock::{TestNodeApi, W1_URL, W2_URL},
     };
     use crate::worker::{Worker, WorkerT};
@@ -100,9 +101,10 @@ mod tests {
         let mut server = WsServerBuilder::default().build(addr).await?;
         let mut module = RpcModule::new(());
 
-        module.register_method("author_importBlock", |params, _| {
-            debug!("author_importBlock params: {:?}", params);
-            Ok("Hello")
+        module.register_method("sidechain_importBlock", |params, _| {
+            debug!("sidechain_importBlock params: {:?}", params);
+            let blocks: Vec<SignedSidechainBlock> = params.one()?;
+            Ok(blocks)
         })?;
 
         server.register_module(module).unwrap();

@@ -1,22 +1,17 @@
 use log::info;
 
 use super::*;
+use parity_scale_codec::Decode;
 use jsonrpsee::{
     types::{to_json_value, traits::Client},
     ws_client::WsClientBuilder,
 };
-use substratee_enclave_api::EnclaveResult;
+
+use mock::{test_sidechain_block, TestEnclave};
+use substratee_worker_primitives::RpcResponse;
 
 fn init() {
     let _ = env_logger::builder().is_test(true).try_init();
-}
-
-struct TestEnclave;
-
-impl EnclaveApi for TestEnclave {
-    fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-        Ok(request)
-    }
 }
 
 #[tokio::test]
@@ -30,10 +25,10 @@ async fn test_client_calls() {
     let response: Vec<u8> = client
         .request(
             "sidechain_importBlock",
-            vec![to_json_value(vec![1, 1, 2]).unwrap()].into(),
+            vec![to_json_value(vec![test_sidechain_block()]).unwrap()].into(),
         )
         .await
         .unwrap();
 
-    assert_eq!(response, vec![1, 1, 2]);
+    assert!(RpcResponse::decode(&mut response.as_slice()).is_ok());
 }

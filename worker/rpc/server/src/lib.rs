@@ -17,18 +17,22 @@
 
 use std::net::SocketAddr;
 
-use log::debug;
-
 use jsonrpsee::{
     types::error::CallError,
     ws_server::{RpcModule, WsServerBuilder},
 };
+use log::debug;
+use parity_scale_codec::Encode;
 use tokio::net::ToSocketAddrs;
 
 use substratee_enclave_api::EnclaveApi;
+use substratee_worker_primitives::block::SignedBlock;
+use substratee_worker_primitives::RpcRequest;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod mock;
 
 pub async fn run_server<Enclave>(
     addr: impl ToSocketAddrs,
@@ -44,10 +48,14 @@ where
     module.register_method("sidechain_importBlock", |params, enclave| {
         debug!("sidechain_importBlock params: {:?}", params);
 
-        enclave
-            .rpc(params.one()?)
-            .map_err(|e| CallError::Failed(e.into()))
+        let enclave_req = RpcRequest::compose_jsonrpc_call(
+            "sidechain_importBlock".into(),
+            params.one::<Vec<SignedBlock>>()?.encode(),
+        );
 
+        enclave
+            .rpc(enclave_req.as_bytes().to_vec())
+            .map_err(|e| CallError::Failed(e.into()))
     })?;
 
     server.register_module(module).unwrap();

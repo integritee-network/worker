@@ -75,6 +75,7 @@ impl RpcReturnValue {
 
 #[cfg(feature = "std")]
 #[derive(Encode, Decode, Serialize, Deserialize)]
+// Todo: result should not be Vec<u8>, but `T: Serialize`
 pub struct RpcResponse {
     pub jsonrpc: String,
     pub result: Vec<u8>, // encoded RpcReturnValue
@@ -83,6 +84,7 @@ pub struct RpcResponse {
 
 #[cfg(feature = "std")]
 #[derive(Encode, Decode, Serialize)]
+// Todo: params should not be Vec<u8>, but `T: Serialize`
 pub struct RpcRequest {
     pub jsonrpc: String,
     pub method: String,
