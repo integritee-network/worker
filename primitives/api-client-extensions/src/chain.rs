@@ -39,7 +39,7 @@ impl<P: Pair> ChainApi for Api<P>
 				at_block,
 			)?
 			.map(|g: VersionedAuthorityList| g.into())
-			.expect("No grandpa authorities found. Can that be??"))
+			.unwrap()) // todo: Introduce an error instead of unwrap: See: https://github.com/scs/substrate-api-client/issues/123
 	}
 
 	fn grandpa_authorities_proof(&self, at_block: Option<H256>) -> ApiResult<StorageProof> {
@@ -48,6 +48,6 @@ impl<P: Pair> ChainApi for Api<P>
 				at_block,
 			)?
 			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
-			.expect("No grandpa authorities found. Can that be??"))
+			.unwrap()) // todo: Introduce an error instead of unwrap: See: https://github.com/scs/substrate-api-client/issues/123
 	}
 }
