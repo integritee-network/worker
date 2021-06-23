@@ -220,7 +220,8 @@ fn main() {
     }
 }
 
-fn worker(
+#[tokio::main]
+async fn worker(
     config: Config,
     shard: &ShardIdentifier,
     skip_ra: bool,
@@ -237,19 +238,20 @@ fn worker(
     #[cfg(not(feature = "production"))]
     println!("*** Starting enclave in development mode");
 
-    *WORKER.write() = Some(
-        Worker::new(
-            config.clone(),
-            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
-            Enclave,
-            DirectClient::new(config.worker_url()),
-        )
-    );
-
     let enclave = enclave_init().unwrap();
     let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
+
+    *WORKER.write() = Some(
+        Worker::new(
+            config.clone(),
+            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
+            Enclave::new(eid),
+            DirectClient::new(config.worker_url()),
+        )
+    );
+
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
     println!("MU-RA server listening on ws://{}", config.mu_ra_url());
@@ -266,6 +268,15 @@ fn worker(
     // start worker api direct invocation server
     println!("rpc worker server listening on ws://{}", config.worker_url());
     start_worker_api_direct_server( config.worker_url(), eid);
+
+    // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
+    // should be merged into this one.
+    let enclave = Enclave::new(eid);
+    let port: i32 = config.worker_rpc_port.parse().unwrap();
+    substratee_worker_rpc_server::run_server(
+        format!("{}:{}", config.worker_ip, (port + 1)),
+        enclave,
+    ).await.unwrap();
 
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node

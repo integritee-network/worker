@@ -19,38 +19,26 @@ use std::net::{SocketAddr};
 
 use log::debug;
 
-use jsonrpsee::	ws_server::{RpcModule, WsServerBuilder};
+use jsonrpsee::{ws_server::{RpcModule, WsServerBuilder}, types::error::CallError};
 use tokio::net::ToSocketAddrs;
 
 use substratee_enclave_api::EnclaveApi;
-use std::marker::PhantomData;
 
 #[cfg(test)]
 mod tests;
 
-pub struct RpcServer<EnclaveApi>{
-	_enclave: PhantomData<EnclaveApi>
-}
+pub async fn run_server<Enclave>(addr: impl ToSocketAddrs, enclave: Enclave) -> anyhow::Result<SocketAddr>
+where
+	Enclave: EnclaveApi
 
-impl<Enclave: EnclaveApi> ServerApi for RpcServer<Enclave> {
-
-}
-
-pub trait ServerApi {}
-
-
-pub async fn run_server(addr: impl ToSocketAddrs) -> anyhow::Result<SocketAddr> {
+{
 	let mut server = WsServerBuilder::default().build(addr).await?;
-	let mut module = RpcModule::new(());
 
-	module.register_method("author_importBlock", |params, _| {
-		debug!("author_importBlock params: {:?}", params);
-		Ok("Hello")
-	})?;
+	let mut module = RpcModule::new(enclave);
 
-	module.register_method("enclave_directRequest", |params, _| {
-		debug!("enclave_directRequest params: {:?}", params);
-		Ok("Hello")
+	module.register_method("sidechain_importBlock", |params, enclave| {
+		debug!("sidechain_importBlock params: {:?}", params);
+		enclave.rpc(params.parse()?).map_err(|e| CallError::Failed(e.into()))
 	})?;
 
 	server.register_module(module).unwrap();
