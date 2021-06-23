@@ -15,11 +15,14 @@
 
 */
 
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 
 use log::debug;
 
-use jsonrpsee::{ws_server::{RpcModule, WsServerBuilder}, types::error::CallError};
+use jsonrpsee::{
+    types::error::CallError,
+    ws_server::{RpcModule, WsServerBuilder},
+};
 use tokio::net::ToSocketAddrs;
 
 use substratee_enclave_api::EnclaveApi;
@@ -27,23 +30,29 @@ use substratee_enclave_api::EnclaveApi;
 #[cfg(test)]
 mod tests;
 
-pub async fn run_server<Enclave>(addr: impl ToSocketAddrs, enclave: Enclave) -> anyhow::Result<SocketAddr>
+pub async fn run_server<Enclave>(
+    addr: impl ToSocketAddrs,
+    enclave: Enclave,
+) -> anyhow::Result<SocketAddr>
 where
-	Enclave: EnclaveApi
-
+    Enclave: EnclaveApi,
 {
-	let mut server = WsServerBuilder::default().build(addr).await?;
+    let mut server = WsServerBuilder::default().build(addr).await?;
 
-	let mut module = RpcModule::new(enclave);
+    let mut module = RpcModule::new(enclave);
 
-	module.register_method("sidechain_importBlock", |params, enclave| {
-		debug!("sidechain_importBlock params: {:?}", params);
-		enclave.rpc(params.parse()?).map_err(|e| CallError::Failed(e.into()))
-	})?;
+    module.register_method("sidechain_importBlock", |params, enclave| {
+        debug!("sidechain_importBlock params: {:?}", params);
 
-	server.register_module(module).unwrap();
+        enclave
+            .rpc(params.one()?)
+            .map_err(|e| CallError::Failed(e.into()))
 
-	let socket_addr = server.local_addr()?;
-	tokio::spawn(async move { server.start().await });
-	Ok(socket_addr)
+    })?;
+
+    server.register_module(module).unwrap();
+
+    let socket_addr = server.local_addr()?;
+    tokio::spawn(async move { server.start().await });
+    Ok(socket_addr)
 }

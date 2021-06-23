@@ -2,17 +2,13 @@ use log::info;
 
 use super::*;
 use jsonrpsee::{
-    types::{to_json_value, traits::Client}, ws_client::WsClientBuilder,
-    };
-use serde_json::Value as JsonValue;
+    types::{to_json_value, traits::Client},
+    ws_client::WsClientBuilder,
+};
 use substratee_enclave_api::EnclaveResult;
 
 fn init() {
     let _ = env_logger::builder().is_test(true).try_init();
-}
-
-pub fn ok_response(result: JsonValue, id: u32) -> String {
-    format!(r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#, result, id)
 }
 
 struct TestEnclave;
@@ -31,7 +27,7 @@ async fn test_client_calls() {
 
     let url = format!("ws://{}", addr);
     let client = WsClientBuilder::default().build(&url).await.unwrap();
-    let response: String = client
+    let response: Vec<u8> = client
         .request(
             "sidechain_importBlock",
             vec![to_json_value(vec![1, 1, 2]).unwrap()].into(),
@@ -39,5 +35,5 @@ async fn test_client_calls() {
         .await
         .unwrap();
 
-    assert_eq!(response, ok_response(to_json_value([1, 1, 2]).unwrap(), 1));
+    assert_eq!(response, vec![1, 1, 2]);
 }
