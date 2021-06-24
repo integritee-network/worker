@@ -39,6 +39,7 @@ substratee-settings = { path = "../primitives/settings" }
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+branch = "master"
 
 [dependencies.substratee-node-primitives]
 path = "../primitives/node"
@@ -54,30 +55,37 @@ path = "worker-api"
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
+branch = "feature-gate-ias-verify"
 package = "substratee-node-runtime"
 
 [dependencies.sp-finality-grandpa]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.pallet-balances]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.frame-system]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.substratee-stf]

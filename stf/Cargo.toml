@@ -56,34 +56,40 @@ features = ["derive"]
 default-features = false
 package = 'pallet-balances'
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.system]
 default-features = false
 package = 'frame-system'
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.support]
 default-features = false
 package = 'frame-support'
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-application-crypto]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 
@@ -105,19 +111,23 @@ optional = true
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
+branch = "feature-gate-ias-verify"
 package = "substratee-node-runtime"
 optional = true
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+branch = "master"
 optional = true
 
 [dependencies.substrate-client-keystore]
 git = "https://github.com/scs/substrate-api-client"
+branch = "master"
 optional = true
 
 [dependencies.sc-keystore]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 optional = true
 
@@ -129,4 +139,5 @@ optional = true
 
 [dev-dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"

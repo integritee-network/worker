@@ -20,11 +20,13 @@ optional = true
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
@@ -47,4 +49,5 @@ sgx = [ 'sgx_tstd',]
 
 [dev-dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
