@@ -380,7 +380,7 @@ pub unsafe extern "C" fn produce_blocks(
             if let Err(e) = validator.submit_simple_header(
                 validator.num_relays,
                 signed_block.block.header.clone(),
-                signed_block.justification.clone(),
+                signed_block.justifications.clone(),
             ) {
                 error!("Block verification failed. Error : {:?}", e);
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;

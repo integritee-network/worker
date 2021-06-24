@@ -33,8 +33,9 @@ use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
+use my_node_primitives::Hash;
 use my_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
+    substratee_registry::ShardIdentifier, Event, Header, SignedBlock, UncheckedExtrinsic,
 };
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
@@ -452,7 +453,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
                     }
                 }
             }
-            Event::substratee_registry(re) => {
+            Event::pallet_substratee_registry(re) => {
                 debug!("{:?}", re);
                 match &re {
                     my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
@@ -463,7 +464,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
                         println!("    Sender (Worker):  {:?}", sender);
                         println!(
                             "    Registered URL: {:?}",
-                            str::from_utf8(worker_url).unwrap()
+                            str::from_utf8(&worker_url).unwrap()
                         );
                     }
                     my_node_runtime::substratee_registry::RawEvent::Forwarded(shard) => {

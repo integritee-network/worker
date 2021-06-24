@@ -39,9 +39,10 @@ use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
+use my_node_primitives::{AccountId, Hash, Signature};
 use my_node_runtime::{
     substratee_registry::{Enclave, Request},
-    AccountId, BalancesCall, Call, Event, Hash, Signature,
+    BalancesCall, Call, Event,
 };
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
@@ -713,7 +714,7 @@ fn listen(matches: &ArgMatches<'_>) {
                                 }
                             }
                         },*/
-                        Event::substratee_registry(ee) => {
+                        Event::pallet_substratee_registry(ee) => {
                             println!(">>>>>>>>>> substraTEE event: {:?}", ee);
                             count += 1;
                             match &ee {
@@ -816,7 +817,7 @@ where
         if let Ok(evts) = _events {
             for evr in &evts {
                 info!("received event {:?}", evr.event);
-                if let Event::substratee_registry(pe) = &evr.event {
+                if let Event::pallet_substratee_registry(pe) = &evr.event {
                     if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
                         payload,
@@ -859,6 +860,7 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
                 .key_pair::<sr25519::AppPair>(
                     &sr25519::Public::from_ss58check(account).unwrap().into(),
                 )
+                .unwrap()
                 .unwrap();
             drop(store);
             _pair

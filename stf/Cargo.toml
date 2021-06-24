@@ -27,7 +27,8 @@ std = [
     "hex",
     "substrate-api-client",
     "substrate-client-keystore",
-    "my-node-runtime"
+    "my-node-runtime",
+    "my-node-primitives",
 ]
 
 [dependencies]
@@ -90,30 +91,40 @@ default-features = false
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
+branch = "version-update-e5437e"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 optional = true
 
 [dependencies.sgx-runtime]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
+branch = "version-update-e5437e"
 optional = true
 
 [dependencies.sgx-externalities]
 default-features = false
 git = "https://github.com/scs/sgx-runtime"
+branch = "version-update-e5437e"
 optional = true
 
 [dependencies.my-node-runtime]
-git = "https://github.com/scs/substraTEE-node"
-package = "substratee-node-runtime"
+git = "https://github.com/capsule-corp-ternoa/chain"
+package = "ternoa-runtime"
+optional = true
+
+[dependencies.my-node-primitives]
+git = "https://github.com/capsule-corp-ternoa/chain"
+package = "ternoa-primitives"
 optional = true
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+branch = "version-update-e5437e"
 optional = true
 
 [dependencies.substrate-client-keystore]
 git = "https://github.com/scs/substrate-api-client"
+branch = "version-update-e5437e"
 optional = true
 
 [dependencies.sc-keystore]

@@ -17,13 +17,20 @@ rev = "v1.1.3"
 optional = true
 
 [dependencies.my-node-runtime]
-git = "https://github.com/scs/substraTEE-node"
-package = "substratee-node-runtime"
+git = "https://github.com/capsule-corp-ternoa/chain"
+package = "ternoa-runtime"
+optional = true
+default-features = false
+
+[dependencies.my-node-primitives]
+git = "https://github.com/capsule-corp-ternoa/chain"
+package = "ternoa-primitives"
 optional = true
 default-features = false
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+branch = "version-update-e5437e"
 optional = true
 
 [dependencies.sp-core]
@@ -44,5 +51,7 @@ std = [ 'substrate-api-client',
         'sp-core/std',
         'sp-runtime',
         'base58',
-        'log']
+        'log',
+        'my-node-primitives',
+        ]
 sgx = [ 'sgx_tstd' ]

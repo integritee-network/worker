@@ -37,6 +37,7 @@ sgx_crypto_helper 		= { rev = "v1.1.3", git = "https://github.com/apache/teaclav
 
 [dependencies.substrate-api-client]
 git = "https://github.com/scs/substrate-api-client"
+branch = "version-update-e5437e"
 
 [dependencies.substratee-node-primitives]
 path = "../substratee-node-primitives"
@@ -48,8 +49,12 @@ path = "../substratee-worker-primitives"
 path = "worker-api"
 
 [dependencies.my-node-runtime]
-git = "https://github.com/scs/substraTEE-node"
-package = "substratee-node-runtime"
+git = "https://github.com/capsule-corp-ternoa/chain"
+package = "ternoa-runtime"
+
+[dependencies.my-node-primitives]
+git = "https://github.com/capsule-corp-ternoa/chain"
+package = "ternoa-primitives"
 
 [dependencies.sp-finality-grandpa]
 git = "https://github.com/paritytech/substrate.git"

@@ -51,7 +51,7 @@ use sp_runtime::generic::{
 use sp_runtime::traits::{
     BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor,
 };
-use sp_runtime::{Justification, OpaqueExtrinsic};
+use sp_runtime::{Justifications, Justification, OpaqueExtrinsic};
 
 type RelayId = u64;
 pub type Blocknumber = u32;
@@ -102,7 +102,7 @@ impl LightValidation {
         ancestry_proof: Vec<Header>,
         validator_set: AuthorityList,
         validator_set_id: SetId,
-        grandpa_proof: Option<Justification>,
+        grandpa_proofs: Option<Justifications>,
     ) -> Result<(), Error> {
         let mut relay = self
             .tracked_relays
@@ -113,7 +113,7 @@ impl LightValidation {
         let last_header = &relay.last_finalized_block_header;
         Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-        if grandpa_proof.is_none() {
+        if grandpa_proofs.is_none() {
             relay.last_finalized_block_header = header.clone();
             relay.unjustified_headers.push(header.hash());
             debug!(
@@ -129,13 +129,20 @@ impl LightValidation {
         // Check that the header has been finalized
         let voter_set =
             VoterSet::new(validator_set.clone().into_iter()).expect("VoterSet may not be empty");
-        Self::verify_grandpa_proof::<Block>(
-            grandpa_proof.unwrap(),
-            block_hash,
-            block_num,
-            validator_set_id,
-            &voter_set,
-        )?;
+        // https://github.com/paritytech/substrate/pull/7640/files
+        // multiple proofs due to multiple consensus protococol possible..
+        for grandpa_proof in grandpa_proofs.unwrap().iter() {
+            Self::verify_grandpa_proof::<Block>(
+                // https://github.com/paritytech/substrate/pull/7640/files
+                // only works for one consenus protocol. In case of multiple
+                // use .into_justification(consensusprotocol) of substrate
+                grandpa_proof.clone(),
+                block_hash,
+                block_num,
+                validator_set_id,
+                &voter_set,
+            )?;
+        }
 
         relay.last_finalized_block_header = header.clone();
 
@@ -157,7 +164,7 @@ impl LightValidation {
         &mut self,
         relay_id: RelayId,
         header: Header,
-        grandpa_proof: Option<Justification>,
+        grandpa_proofs: Option<Justifications>,
     ) -> Result<(), Error> {
         let mut relay = self
             .tracked_relays
@@ -179,7 +186,7 @@ impl LightValidation {
             ancestry_proof,
             validator_set,
             validator_set_id,
-            grandpa_proof,
+            grandpa_proofs,
         )
     }
 
@@ -320,7 +327,7 @@ impl LightValidation {
     {
         // We don't really care about the justification, as long as it's valid
         let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
-            &justification,
+            &justification.1,
             (hash, number),
             set_id,
             voters,

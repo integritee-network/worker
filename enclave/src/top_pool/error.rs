@@ -30,10 +30,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
-    #[display("Unknown trusted operation validity")]
+    #[display(fmt = "Unknown trusted operation validity")]
     UnknownTrustedOperation,
 
-    #[display("Invalid trusted operation validity")]
+    #[display(fmt = "Invalid trusted operation validity")]
     InvalidTrustedOperation,
 
     /// Incorrect extrinsic format.
@@ -42,29 +42,29 @@ pub enum Error {
     ///
     /// Such operations are not accepted to the pool, since we use those tags
     /// to define identity of operations (occupance of the same "slot").
-    #[display("Trusted Operation does not provide any tags, so the pool can't identify it")]
+    #[display(fmt = "Trusted Operation does not provide any tags, so the pool can't identify it")]
     NoTagsProvided,
 
-    #[display("Trusted Operation temporarily Banned")]
+    #[display(fmt = "Trusted Operation temporarily Banned")]
     TemporarilyBanned,
 
-    #[display("Already imported")]
+    #[display(fmt = "Already imported")]
     AlreadyImported,
 
-    #[display("Too low priority")]
+    #[display(fmt = "Too low priority")]
     TooLowPriority(Priority),
 
-    #[display("TrustedOperation with cyclic dependency")]
+    #[display(fmt = "TrustedOperation with cyclic dependency")]
     CycleDetected,
 
-    #[display("TrustedOperation couldn't enter the pool because of the limit")]
+    #[display(fmt = "TrustedOperation couldn't enter the pool because of the limit")]
     ImmediatelyDropped,
 
     #[from(ignore)]
-    #[display("{0}")]
+    #[display(fmt = "Invalid Block")]
     InvalidBlockId(String),
 
-    #[display("The pool is not accepting future trusted operations")]
+    #[display(fmt = "The pool is not accepting future trusted operations")]
     RejectedFutureTrustedOperation,
 
     #[display(fmt = "Extrinsic verification error")]

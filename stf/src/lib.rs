@@ -30,9 +30,9 @@ extern crate clap;
 
 use codec::{Compact, Decode, Encode};
 #[cfg(feature = "std")]
-use my_node_runtime::Balance;
+use my_node_primitives::Balance;
 #[cfg(feature = "std")]
-pub use my_node_runtime::Index;
+pub use my_node_primitives::Index;
 #[cfg(feature = "sgx")]
 use sgx_runtime::Balance;
 #[cfg(feature = "sgx")]
