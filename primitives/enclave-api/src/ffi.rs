@@ -9,4 +9,14 @@ extern "C" {
 		response: *mut u8,
 		response_len: u32,
 	) -> sgx_status_t;
+
+	pub fn mock_register_enclave_xt(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		nonce: *const u32,
+		w_url: *const u8,
+		w_url_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+	) -> sgx_status_t;
 }

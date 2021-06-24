@@ -39,10 +39,9 @@ def main(processes):
     w2 = setup_worker(w2_working_dir, worker2_log)
 
     print('Starting worker 1 in background')
-    processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2001']))
+    processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2001'], subcommand_flags=['--skip-ra']))
     print('Starting worker 2 in background')
-    processes.append(w2.run_in_background(log_file=worker2_log))
-
+    processes.append(w2.run_in_background(log_file=worker2_log, subcommand_flags=['--skip-ra']))
     # keep script alive until terminated
     signal.pause()
 
