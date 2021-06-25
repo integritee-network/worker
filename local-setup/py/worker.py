@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 import subprocess
@@ -142,8 +143,13 @@ class Worker:
 
         :return: process handle for the spawned background process.
         """
+
+        # Todo: make this configurable
+        env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=info')
+
         return Popen(
             self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),
+            env=env,
             stdout=log_file,
             stderr=STDOUT,
             bufsize=1,
