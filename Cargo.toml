@@ -7,6 +7,7 @@ members = [
     "client",
     "primitives/api-client-extensions",
     "primitives/enclave-api",
+    "primitives/enclave-api/ffi",
     "primitives/node",
     "primitives/settings",
     "primitives/worker",

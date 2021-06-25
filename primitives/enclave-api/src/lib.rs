@@ -7,7 +7,8 @@ use crate::error::Error;
 use codec::Encode;
 use frame_support::sp_runtime::app_crypto::sp_core::H256;
 
-pub mod ffi;
+use substratee_enclave_api_ffi as ffi;
+
 pub mod error;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
