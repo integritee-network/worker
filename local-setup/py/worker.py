@@ -113,11 +113,11 @@ class Worker:
         else:
             shutil.rmtree(self._shard_path(shard))
 
-    @staticmethod
-    def purge_chain_relay_db():
-        db = pathlib.Path('./chain_relay_db.bin')
-        if db.exists():
-            db.unlink()
+    def purge_chain_relay_db(self):
+        print(f'remove chain relay db')
+        for db in pathlib.Path(self.cwd).glob('chain_relay_db.bin*'):
+                print(f'remove chain relay db: {db}')
+                db.unlink()
 
     def mrenclave(self):
         """ Returns the mrenclave and caches it. """
