@@ -17,7 +17,7 @@ pub type PalletString = Vec<u8>;
 pub type PalletString = String;
 
 #[cfg(feature = "std")]
-pub use my_node_runtime::SignedBlock;
+pub type SignedBlock = sp_runtime::generic::SignedBlock<my_node_runtime::Block>;
 
 pub use sp_core::crypto::AccountId32 as AccountId;
 
