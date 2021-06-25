@@ -33,7 +33,7 @@ def setup_worker(work_dir: str, std_err: Union[None, int, IO]):
 def main(processes):
     print('Starting substraTee-node-process in background')
     processes.append(
-        Popen([node_bin, '--tmp', '--dev', '-lruntime=debug'], stdout=node_log, stderr=STDOUT, bufsize=1)
+        Popen([node_bin, '--tmp', '--dev', '-lruntime=info'], stdout=node_log, stderr=STDOUT, bufsize=1)
     )
 
     w1 = setup_worker(w1_working_dir, worker1_log)
