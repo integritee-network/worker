@@ -974,12 +974,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itoa"
-version = "0.4.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
-
-[[package]]
 name = "jsonrpc-core"
 version = "16.1.0"
 source = "git+https://github.com/scs/jsonrpc?branch=no_std#e5ee60bc30dedf513743843be2523dc384bbcae1"
@@ -988,7 +982,7 @@ dependencies = [
  "log",
  "serde 1.0.118",
  "serde_derive",
- "serde_json 1.0.60",
+ "serde_json",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate.git)",
 ]
 
@@ -1873,21 +1867,10 @@ name = "serde_json"
 version = "1.0.60"
 source = "git+https://github.com/mesalock-linux/serde-json-sgx#380893814ad2a057758d825bab798aa117f7362a"
 dependencies = [
- "itoa 0.4.5",
+ "itoa",
  "ryu",
  "serde 1.0.118",
  "sgx_tstd",
-]
-
-[[package]]
-name = "serde_json"
-version = "1.0.64"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
-dependencies = [
- "itoa 0.4.7",
- "ryu",
- "serde 1.0.126",
 ]
 
 [[package]]
@@ -2661,7 +2644,7 @@ dependencies = [
  "rustls",
  "serde 1.0.118",
  "serde_derive",
- "serde_json 1.0.60",
+ "serde_json",
  "sgx-externalities",
  "sgx_rand",
  "sgx_serialize",
@@ -2699,7 +2682,6 @@ dependencies = [
  "chrono 0.4.19",
  "parity-scale-codec",
  "primitive-types",
- "serde_json 1.0.64",
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
