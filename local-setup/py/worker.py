@@ -108,15 +108,17 @@ class Worker:
         if not shard:
             shard = self.mrenclave()
 
+        print(f'Purging shard: {shard}')
+
         if not self.shard_exists(shard):
             print('The shard to be purged does not exist.')
         else:
             shutil.rmtree(self._shard_path(shard))
 
     def purge_chain_relay_db(self):
-        print(f'remove chain relay db')
+        print(f'purging chain_relay_db')
         for db in pathlib.Path(self.cwd).glob('chain_relay_db.bin*'):
-                print(f'remove chain relay db: {db}')
+                print(f'remove: {db}')
                 db.unlink()
 
     def mrenclave(self):
