@@ -685,7 +685,7 @@ pub unsafe extern "C" fn ocall_worker_request(
 ///
 /// FFI are always unsafe
 #[no_mangle]
-pub async unsafe extern "C" fn ocall_send_block_and_confirmation(
+pub unsafe extern "C" fn ocall_send_block_and_confirmation(
     confirmations: *const u8,
     confirmations_size: u32,
     signed_blocks_ptr: *const u8,
@@ -738,8 +738,8 @@ pub async unsafe extern "C" fn ocall_send_block_and_confirmation(
 
     println! {"Received blocks: {:?}", signed_blocks};
 
-    let w = WORKER.read();
-    w.as_ref().unwrap().gossip_blocks(signed_blocks).await.unwrap();
+    // let w = WORKER.read();
+    // w.as_ref().unwrap().gossip_blocks(signed_blocks).await.unwrap();
     // TODO: M8.3: Store blocks
     status
 }
