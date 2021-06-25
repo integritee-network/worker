@@ -94,6 +94,7 @@ pub mod top_pool;
 
 use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS, REGISTER_ENCLAVE};
 use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
+use codec::alloc::string::String;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -204,7 +205,8 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
     let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
     let genesis_hash = hash_from_slice(genesis_hash_slice);
 
-    let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+    let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+    let url: String = Decode::decode(&mut url_slice).unwrap();
     let extrinsic_slice =
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
@@ -214,7 +216,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 
     let xt = compose_extrinsic_offline!(
         signer,
-        (call, Vec::<u8>::new(), url_slice.to_vec()),
+        (call, Vec::<u8>::new(), url.clone()),
         *nonce,
         Era::Immortal,
         genesis_hash,

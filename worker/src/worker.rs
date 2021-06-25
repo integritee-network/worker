@@ -64,9 +64,8 @@ where
 
         info!("Gossiping sidechain blocks to peers: {:?}", peers);
         for p in peers.iter() {
-            let url = format!("ws://{}", p.url);
-            info!("Gossiping block to peer with address: {:?}", url);
-            let client = WsClientBuilder::default().build(&url).await?;
+            info!("Gossiping block to peer with address: {:?}", p.url);
+            let client = WsClientBuilder::default().build(&p.url).await?;
             let response: Vec<SignedSidechainBlock> = client
                 .request(
                     "sidechain_importBlock",

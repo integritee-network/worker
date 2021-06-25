@@ -71,6 +71,7 @@ use substratee_settings::files::{
 use worker::{Worker as WorkerGen};
 use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
 use crate::worker::WorkerT;
+use futures::executor::block_on;
 
 mod enclave;
 mod ipfs;
@@ -738,8 +739,14 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
 
     println! {"Received blocks: {:?}", signed_blocks};
 
-    // let w = WORKER.read();
-    // w.as_ref().unwrap().gossip_blocks(signed_blocks).await.unwrap();
+    let w = WORKER.read();
+
+    // make it sync sgx ffi do not support async/await
+    block_on(
+    w.as_ref().unwrap()
+        .gossip_blocks(signed_blocks)
+    )
+        .unwrap();
     // TODO: M8.3: Store blocks
     status
 }
