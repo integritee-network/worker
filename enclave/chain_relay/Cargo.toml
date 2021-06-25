@@ -30,7 +30,8 @@ default-features = false
 
 [dependencies.sp-io]
 default-features = false
-git = "https://github.com/scs/sgx-runtime"
+git = "https://github.com/paritytech/substrate.git"
+branch = "version-update"
 package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
