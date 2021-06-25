@@ -22,4 +22,4 @@ std = []
 
 [dev-dependencies]
 env_logger = { version = "*" }
-sp-core = { git = "https://github.com/paritytech/substrate.git" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
