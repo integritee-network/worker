@@ -102,7 +102,6 @@ fn main() {
     let matches = App::from_yaml(yml).get_matches();
 
     let mut config = Config::from(&matches);
-    println!("Worker Config: {:?}", config);
 
     *NODE_URL.lock().unwrap() = config.node_url();
 
@@ -116,7 +115,8 @@ fn main() {
                 .map(ToString::to_string)
                 .unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port))
         );
-        println!("Advertising worker api at {}", config.ext_api_url.as_ref().unwrap());
+
+        println!("Worker Config: {:?}", config);
         let skip_ra = smatches.is_present("skip-ra");
         worker(
             config.clone(),
@@ -297,7 +297,7 @@ async fn worker(
 
     let uxt = if skip_ra {
         println!("[!] skipping remote attestation. Registering enclave without attestation report.");
-        enclave.mock_register_enclave_xt(nonce, &config.ext_api_url.unwrap()).unwrap()
+        enclave.mock_register_enclave_xt(api.genesis_hash, nonce, &config.ext_api_url.unwrap()).unwrap()
     } else {
         enclave_perform_ra(eid, genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec()).unwrap()
     };
@@ -307,7 +307,7 @@ async fn worker(
 
     // send the extrinsic and wait for confirmation
     println!("[>] Register the enclave (send the extrinsic)");
-    let tx_hash = api.send_extrinsic(xthex, XtStatus::InBlock).unwrap();
+    let tx_hash = api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
     let latest_head = init_chain_relay(eid, &api);
