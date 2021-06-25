@@ -25,10 +25,17 @@ branch = "master"
 version = "3.0.0"
 default-features = false
 
+[dependencies.sp-runtime]
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+version = "3.0.0"
+default-features = false
+
 [features]
 default = ['std']
 std = [ 'codec/std',
         'my-node-runtime',
-        'sp-core/std'
+        'sp-core/std',
+        'sp-runtime/std'
 ]
 sgx = [ 'sgx_tstd' ]
