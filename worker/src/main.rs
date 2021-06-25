@@ -60,8 +60,6 @@ use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use substratee_node_primitives::SignedBlock;
 use substratee_enclave_api::{Enclave, EnclaveApi};
-use substratee_worker_rpc_server::{RpcServer};
-use substratee_node_primitives::SignedBlock;
 use substratee_worker_api::direct_client::DirectClient;
 
 use config::Config;
