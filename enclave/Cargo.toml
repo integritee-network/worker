@@ -86,7 +86,7 @@ rev      = "sgx_1.1.3"
 features = ["dangerous_configuration"]
 
 [dependencies.sp-io]
-git = "https://github.com/paritytech/substrate.git"
+git = "https://github.com/scs/sgx-runtime"
 branch = "version-update"
 default-features = false
 optional = true
@@ -148,7 +148,7 @@ default-features = false
 features = ["sgx"]
 
 [dependencies.sgx-externalities]
-git = "https://github.com/paritytech/substrate.git"
+git = "https://github.com/scs/sgx-runtime"
 branch = "version-update"
 default-features = false
 
@@ -181,11 +181,8 @@ default-features = false
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"] }
-#serde = { git = "https://github.com/mesalock-linux/serde-sgx", default-features = false, features = ["mesalock_sgx"]}
-#serde_json = {git = "https://github.com/mesalock-linux/serde-json-sgx", default-features = false, features = ["alloc", "mesalock_sgx"]}
 
 [patch."https://github.com/paritytech/substrate"]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"] }
-#sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 sp-io = {git = "https://github.com/scs/sgx-runtime", branch = "version-update", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}

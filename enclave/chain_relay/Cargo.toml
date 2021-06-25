@@ -31,6 +31,7 @@ default-features = false
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
