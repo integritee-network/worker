@@ -34,7 +34,7 @@ use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
 use my_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header,
+    substratee_registry::ShardIdentifier, Event, Hash, Header, UncheckedExtrinsic
 };
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
@@ -57,6 +57,7 @@ use std::time::{Duration, SystemTime};
 
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_node_primitives::SignedBlock;
 use config::Config;
 use utils::extract_shard;
 
