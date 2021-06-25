@@ -34,7 +34,7 @@ use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
 use my_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header, UncheckedExtrinsic
+    substratee_registry::ShardIdentifier, Event, Hash, Header
 };
 use parking_lot::RwLock;
 use sp_core::{
@@ -58,6 +58,7 @@ use std::time::{Duration, SystemTime};
 
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_node_primitives::SignedBlock;
 use substratee_enclave_api::{Enclave, EnclaveApi};
 use substratee_worker_rpc_server::{RpcServer};
 use substratee_node_primitives::SignedBlock;
