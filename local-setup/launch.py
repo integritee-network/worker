@@ -4,6 +4,7 @@ Launch a local dev setup consisting of one substraTEE-node and two workers.
 """
 import signal
 from subprocess import Popen, STDOUT
+from time import sleep
 from typing import Union, IO
 
 from py.worker import Worker
@@ -40,6 +41,9 @@ def main(processes):
 
     print('Starting worker 1 in background')
     processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2001'], subcommand_flags=['--skip-ra']))
+
+    # prevent nonce clash, when bootstrapping the enclave's account
+    sleep(5)
     print('Starting worker 2 in background')
     processes.append(w2.run_in_background(log_file=worker2_log, subcommand_flags=['--skip-ra']))
     # keep script alive until terminated
