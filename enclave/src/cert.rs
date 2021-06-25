@@ -375,12 +375,11 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
 
                     if rt != sgx_status_t::SGX_SUCCESS {
                         warn!("ocall_get_update_info unsuccessful. rt={:?}", rt);
-                        // Borrow of packed field is unsafe in future Rust releases
-                        unsafe {
-                            debug!("update_info.pswUpdate: {}", update_info.pswUpdate);
-                            debug!("update_info.csmeFwUpdate: {}", update_info.csmeFwUpdate);
-                            debug!("update_info.ucodeUpdate: {}", update_info.ucodeUpdate);
-                        }
+                        // Curly braces to copy `unaligned_references` of packed fields into properly aligned temporary:
+                        // https://github.com/rust-lang/rust/issues/82523
+                        debug!("update_info.pswUpdate: {}", {update_info.pswUpdate});
+                        debug!("update_info.csmeFwUpdate: {}", {update_info.csmeFwUpdate});
+                        debug!("update_info.ucodeUpdate: {}", {update_info.ucodeUpdate});
                         return Err(rt);
                     }
                 } else {
@@ -411,27 +410,27 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
 
-        // Borrow of packed field is unsafe in future Rust releases
         // ATTENTION
         // DO SECURITY CHECK ON DEMAND
         // DO SECURITY CHECK ON DEMAND
         // DO SECURITY CHECK ON DEMAND
-        unsafe {
-            debug!("sgx quote version = {}", sgx_quote.version);
-            debug!("sgx quote signature type = {}", sgx_quote.sign_type);
-            debug!(
-                "sgx quote report_data = {:02x}",
-                sgx_quote.report_body.report_data.d.iter().format("")
-            );
-            debug!(
-                "sgx quote mr_enclave = {:02x}",
-                sgx_quote.report_body.mr_enclave.m.iter().format("")
-            );
-            debug!(
-                "sgx quote mr_signer = {:02x}",
-                sgx_quote.report_body.mr_signer.m.iter().format("")
-            );
-        }
+
+        // Curly braces to copy `unaligned_references` of packed fields into properly aligned temporary:
+        // https://github.com/rust-lang/rust/issues/82523
+        debug!("sgx quote version = {}", {sgx_quote.version});
+        debug!("sgx quote signature type = {}", {sgx_quote.sign_type});
+        debug!(
+            "sgx quote report_data = {:02x}",
+            sgx_quote.report_body.report_data.d.iter().format("")
+        );
+        debug!(
+            "sgx quote mr_enclave = {:02x}",
+            sgx_quote.report_body.mr_enclave.m.iter().format("")
+        );
+        debug!(
+            "sgx quote mr_signer = {:02x}",
+            sgx_quote.report_body.mr_signer.m.iter().format("")
+        );
         debug!("Anticipated public key = {:02x}", pub_k.iter().format(""));
         if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
             info!("Mutual RA done!");
