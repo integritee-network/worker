@@ -5,6 +5,7 @@ use frame_support::ensure;
 
 use crate::error::Error;
 use codec::Encode;
+use frame_support::sp_runtime::app_crypto::sp_core::H256;
 
 pub mod ffi;
 pub mod error;
@@ -26,7 +27,7 @@ pub trait EnclaveApi: Send + Sync + 'static {
 	// Todo: Vec<u8> shall be replaced by D: Decode, E: Encode but this is currently
 	// not compatible with the direct_api_server...
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>>;
-	fn mock_register_enclave_xt(&self, nonce: u32, w_url: &str) -> EnclaveResult<Vec<u8>>;
+	fn mock_register_enclave_xt(&self, genesis_hash: H256, nonce: u32, w_url: &str) -> EnclaveResult<Vec<u8>>;
 }
 
 impl EnclaveApi for Enclave {
@@ -54,6 +55,7 @@ impl EnclaveApi for Enclave {
 
 	fn mock_register_enclave_xt(
 		&self,
+		genesis_hash: H256,
 		nonce: u32,
 		w_url: &str,
 	) -> EnclaveResult<Vec<u8>> {
@@ -62,11 +64,14 @@ impl EnclaveApi for Enclave {
 		let mut response: Vec<u8> = vec![0u8; response_len as usize];
 
 		let url =  w_url.encode();
+		let gen = genesis_hash.as_bytes().to_vec();
 
 		let res = unsafe {
 			ffi::mock_register_enclave_xt(
 				self.eid,
 				&mut retval,
+				gen.as_ptr(),
+				gen.len() as u32,
 				&nonce,
 				url.as_ptr(),
 				url.len() as u32,
