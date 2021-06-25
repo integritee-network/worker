@@ -34,7 +34,7 @@ use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
 use my_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
+    substratee_registry::ShardIdentifier, Event, Hash, Header,
 };
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
@@ -372,7 +372,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
     for evr in &events {
         debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
         match &evr.event {
-            Event::pallet_balances(be) => {
+            Event::Balances(be) => {
                 info!("[+] Received balances event");
                 debug!("{:?}", be);
                 match &be {
@@ -386,7 +386,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
                     }
                 }
             }
-            Event::substratee_registry(re) => {
+            Event::SubstrateeRegistry(re) => {
                 debug!("{:?}", re);
                 match &re {
                     my_node_runtime::substratee_registry::RawEvent::AddedEnclave(

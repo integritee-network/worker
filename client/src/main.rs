@@ -62,7 +62,7 @@ use substrate_api_client::{
     Api, XtStatus,
 };
 
-use substrate_client_keystore::LocalKeystore;
+use substrate_client_keystore::{LocalKeystore, KeystoreExt};
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_api_client_extensions::SubstrateeRegistryApi;
@@ -715,7 +715,7 @@ fn listen(matches: &ArgMatches<'_>) {
                                 }
                             }
                         },*/
-                        Event::substratee_registry(ee) => {
+                        Event::SubstrateeRegistry(ee) => {
                             println!(">>>>>>>>>> substraTEE event: {:?}", ee);
                             count += 1;
                             match &ee {
@@ -818,7 +818,7 @@ where
         if let Ok(evts) = _events {
             for evr in &evts {
                 info!("received event {:?}", evr.event);
-                if let Event::substratee_registry(pe) = &evr.event {
+                if let Event::SubstrateeRegistry(pe) = &evr.event {
                     if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
                         sender,
                         payload,
@@ -861,6 +861,7 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
                 .key_pair::<sr25519::AppPair>(
                     &sr25519::Public::from_ss58check(account).unwrap().into(),
                 )
+                .unwrap()
                 .unwrap();
             drop(store);
             _pair

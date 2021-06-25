@@ -25,7 +25,8 @@ use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
 use codec::{Decode, Encode};
-use my_node_runtime::{Header, SignedBlock};
+use my_node_runtime::Header;
+use substratee_node_primitives::SignedBlock;
 use sp_core::ed25519;
 use sp_finality_grandpa::VersionedAuthorityList;
 
