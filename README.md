@@ -1,8 +1,10 @@
-# substraTEE-worker
+# integritee-worker
 
-SubstraTEE worker for SubstraTEE node
+Integritee worker for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain)
 
-This is part of [substraTEE](https://github.com/scs/substraTEE)
+This is part of [Integritee](https://integritee.network)
+
+SubstraTEE is in the process of rebranding to Integritee. In the following, please treat the two as synonyms
 
 ## Build and Run
 Please see our [SubstraTEE Book](https://www.substratee.com/howto_worker.html) to learn how to build and run this.
