@@ -742,11 +742,11 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
     let w = WORKER.read();
 
     // make it sync sgx ffi do not support async/await
-    block_on(
-    w.as_ref().unwrap()
-        .gossip_blocks(signed_blocks)
-    )
-        .unwrap();
+    if let Err(e) = block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks)) {
+        error!("Error gossiping blocks: {:?}", e);
+        // Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
+        // status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
     // TODO: M8.3: Store blocks
     status
 }
