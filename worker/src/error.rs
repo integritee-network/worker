@@ -11,4 +11,6 @@ pub enum Error {
 	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
 	#[error("{0}")]
 	Serialization(#[from] serde_json::Error),
+	#[error("Custom Error: {0}")]
+	Custom(Box<dyn std::error::Error>),
 }
