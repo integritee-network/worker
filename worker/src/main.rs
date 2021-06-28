@@ -71,8 +71,6 @@ use substratee_settings::files::{
 use worker::{Worker as WorkerGen};
 use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
 use crate::worker::{WorkerT, worker_url_into_async_rpc_port};
-use futures::executor::block_on;
-use tokio::runtime::Handle;
 
 mod enclave;
 mod ipfs;
