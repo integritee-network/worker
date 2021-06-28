@@ -12,6 +12,7 @@ use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 use crate::config::Config;
 use crate::error::Error;
+use std::num::ParseIntError;
 
 pub type WorkerResult<T> = Result<T, Error>;
 
@@ -64,8 +65,10 @@ where
 
         info!("Gossiping sidechain blocks to peers: {:?}", peers);
         for p in peers.iter() {
-            info!("Gossiping block to peer with address: {:?}", p.url);
-            let client = WsClientBuilder::default().build(&p.url).await?;
+            // Todo: once this is the two direct servers are merged, remove this.
+            let url = worker_url_into_async_rpc_port(&p.url)?;
+            info!("Gossiping block to peer with address: {:?}", url);
+            let client = WsClientBuilder::default().build(&url).await?;
             let response: Vec<SignedSidechainBlock> = client
                 .request(
                     "sidechain_importBlock",
@@ -76,6 +79,31 @@ where
         }
         Ok(())
     }
+}
+
+/// Temporary method that transforms the workers rpc port of the direct api defined in rpc/direct_client
+/// to the new version in rpc/server. Remove this, when all the methods have been migrated to the new one
+/// in rpc/server.
+pub fn worker_url_into_async_rpc_port(url: &str) -> WorkerResult<String> {
+    // [Option("ws"), //ip, port]
+    let mut url_vec: Vec<&str> = url.split(":").collect();
+    log::warn!("URL vec: {:?}", url_vec );
+    log::warn!("URL vec len: {:?}", url_vec.len());
+
+    match url_vec.len() {
+        3 | 2 => (),
+        _ => Err(Error::Custom("Invalid worker url format".into()))?,
+    };
+
+    let ip = if url_vec.len() == 3 {
+        format!("{}:{}", url_vec.remove(0), url_vec.remove(0))
+    } else {
+        url_vec.remove(0).into()
+    };
+
+    let port: i32 = url_vec.remove(0).parse().map_err(|e:ParseIntError| Error::Custom(e.into()))?;
+
+    Ok(format!("{}:{}", ip, (port + 1)))
 }
 
 #[cfg(test)]

@@ -70,7 +70,7 @@ use substratee_settings::files::{
 
 use worker::{Worker as WorkerGen};
 use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
-use crate::worker::WorkerT;
+use crate::worker::{WorkerT, worker_url_into_async_rpc_port};
 use futures::executor::block_on;
 
 mod enclave;
@@ -273,9 +273,8 @@ async fn worker(
     // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
     // should be merged into this one.
     let enclave = Enclave::new(eid);
-    let port: i32 = config.worker_rpc_port.parse().unwrap();
     substratee_worker_rpc_server::run_server(
-        format!("{}:{}", config.worker_ip, (port + 1)),
+        &worker_url_into_async_rpc_port(&config.worker_url()).unwrap(),
         enclave,
     ).await.unwrap();
 
