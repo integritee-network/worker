@@ -70,12 +70,13 @@ where
             let url = worker_url_into_async_rpc_port(&p.url)?;
             info!("Gossiping block to peer with address: {:?}", url);
             let client = WsClientBuilder::default().build(&url).await?;
-            let response: Vec<u8> = client
-                .request(
+            let response: String = client
+                .request::<Vec<u8>>(
                     "sidechain_importBlock",
                     vec![to_json_value(blocks.clone())?].into(),
                 )
-                .await?;
+                .await
+                .map(String::from_utf8)??;
             info!("sidechain_importBlock response: {:?}", response);
         }
         Ok(())
