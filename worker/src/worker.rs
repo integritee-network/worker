@@ -13,6 +13,7 @@ use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use crate::config::Config;
 use crate::error::Error;
 use std::num::ParseIntError;
+use substratee_node_primitives::Enclave as EnclaveMetadata;
 
 pub type WorkerResult<T> = Result<T, Error>;
 
@@ -49,6 +50,7 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
 pub trait WorkerT {
     // fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()>;
     async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+    fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>>;
 }
 
 #[async_trait]
@@ -60,10 +62,9 @@ where
     WorkerApiDirect: Send + Sync,
 {
     async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
-        let mut peers = self.node_api.all_enclaves()?;
-        peers.retain(|e| e.url != self.config.worker_url());
-
+        let peers = self.peers()?;
         info!("Gossiping sidechain blocks to peers: {:?}", peers);
+
         for p in peers.iter() {
             // Todo: once this is the two direct servers are merged, remove this.
             let url = worker_url_into_async_rpc_port(&p.url)?;
@@ -78,6 +79,12 @@ where
             info!("sidechain_importBlock response: {:?}", response);
         }
         Ok(())
+    }
+
+    fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>> {
+        let mut peers = self.node_api.all_enclaves()?;
+        peers.retain(|e| e.url.trim_start_matches("ws://") != self.config.worker_url());
+        Ok(peers)
     }
 }
 
