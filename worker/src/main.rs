@@ -72,6 +72,7 @@ use worker::{Worker as WorkerGen};
 use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
 use crate::worker::{WorkerT, worker_url_into_async_rpc_port};
 use futures::executor::block_on;
+use tokio::runtime::Handle;
 
 mod enclave;
 mod ipfs;
@@ -93,6 +94,7 @@ lazy_static! {
     // todo: replace with &str, but use &str in api-client first
     static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
     static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
+    static ref TOKIO_HANDLE: Mutex<Option<tokio::runtime::Handle>> = Default::default();
 }
 
 fn main() {
@@ -221,8 +223,7 @@ fn main() {
     }
 }
 
-#[tokio::main]
-async fn worker(
+fn worker(
     config: Config,
     shard: &ShardIdentifier,
     skip_ra: bool,
@@ -244,6 +245,8 @@ async fn worker(
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
 
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    *TOKIO_HANDLE.lock().unwrap() = Some(rt.handle().clone());
     *WORKER.write() = Some(
         Worker::new(
             config.clone(),
@@ -273,11 +276,15 @@ async fn worker(
     // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
     // should be merged into this one.
     let enclave = Enclave::new(eid);
-    substratee_worker_rpc_server::run_server(
-        &worker_url_into_async_rpc_port(&config.worker_url()).unwrap(),
-        enclave,
-    ).await.unwrap();
+    let url = worker_url_into_async_rpc_port(&config.worker_url()).unwrap();
 
+    let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
+    handle.spawn(async move {
+        substratee_worker_rpc_server::run_server(
+            &url,
+            enclave,
+        ).await.unwrap()
+    });
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
     let mut api = Api::new(NODE_URL.lock().unwrap().clone())
@@ -740,8 +747,9 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
 
     let w = WORKER.read();
 
-    // make it sync sgx ffi do not support async/await
-    if let Err(e) = block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks)) {
+    // make it sync, as sgx ffi does not support async/await
+    let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
+    if let Err(e) = handle.block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks)) {
         error!("Error gossiping blocks: {:?}", e);
         // Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
         // status = sgx_status_t::SGX_ERROR_UNEXPECTED;
