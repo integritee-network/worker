@@ -69,7 +69,7 @@ where
             let url = worker_url_into_async_rpc_port(&p.url)?;
             info!("Gossiping block to peer with address: {:?}", url);
             let client = WsClientBuilder::default().build(&url).await?;
-            let response: Vec<SignedSidechainBlock> = client
+            let response: Vec<u8> = client
                 .request(
                     "sidechain_importBlock",
                     vec![to_json_value(blocks.clone())?].into(),
@@ -87,9 +87,6 @@ where
 pub fn worker_url_into_async_rpc_port(url: &str) -> WorkerResult<String> {
     // [Option("ws"), //ip, port]
     let mut url_vec: Vec<&str> = url.split(":").collect();
-    log::warn!("URL vec: {:?}", url_vec );
-    log::warn!("URL vec len: {:?}", url_vec.len());
-
     match url_vec.len() {
         3 | 2 => (),
         _ => Err(Error::Custom("Invalid worker url format".into()))?,
