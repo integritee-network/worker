@@ -1,6 +1,3 @@
-# this can be removed when the enclave's toolchain is > rustc 1.50
-cargo-features = ["resolver"]
-
 [workspace]
 resolver = "2"
 members = [
