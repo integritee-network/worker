@@ -24,23 +24,27 @@ default-features=false
 
 [dependencies.frame-system]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 
 [dependencies.sp-io]
 default-features = false
-git = "https://github.com/scs/sgx-runtime"
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 package = "sp-io"
 features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
 
 [dependencies.sp-application-crypto]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 features = ["full_crypto"]
@@ -51,21 +55,25 @@ default-features = false
 
 [dependencies.sp-finality-grandpa]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 
 [dependencies.sp-runtime-interface]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false
 features = ["disable_target_static_assertions"]
 
 [dependencies.sp-trie]
 git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 version = "3.0.0"
 default-features = false

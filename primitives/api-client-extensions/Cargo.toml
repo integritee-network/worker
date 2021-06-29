@@ -8,12 +8,12 @@ edition = "2018"
 codec           = { package = "parity-scale-codec", version = "2.0.0", features = ["derive"] }
 
 # substrate
-sp-core = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
-sp-finality-grandpa = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
-sp-runtime = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git" }
+sp-core = { version = "3.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-finality-grandpa = { version = "3.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "3.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 # scs
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
 
 # substratee
 substratee-node-primitives = { path = "../node"}

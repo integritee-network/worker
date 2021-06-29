@@ -8,7 +8,12 @@ use sp_core::H256;
 use std::vec::Vec;
 
 #[cfg(feature = "std")]
-pub use my_node_runtime::{AccountId, substratee_registry::Enclave as EnclaveGen, SignedBlock};
+pub type SignedBlock = sp_runtime::generic::SignedBlock<my_node_runtime::Block>;
+
+#[cfg(feature = "std")]
+pub use my_node_runtime::substratee_registry::Enclave as EnclaveGen;
+
+pub use sp_core::crypto::AccountId32 as AccountId;
 
 pub type ShardIdentifier = H256;
 pub type BlockNumber = u32;
