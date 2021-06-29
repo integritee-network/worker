@@ -11,7 +11,6 @@ use jsonrpsee::{
     ws_client::WsClientBuilder,
 };
 use log::info;
-use std::sync::Arc;
 
 use substratee_api_client_extensions::SubstrateeRegistryApi;
 //
@@ -28,10 +27,10 @@ pub type WorkerResult<T> = Result<T, Error>;
 // also serves a guide when traits should be split into subtraits.
 pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
     config: Config,
-    node_api: NodeApi,
+    node_api: NodeApi, // todo: Depending on system design, all the api fields should be Arc<Api>
     // unused yet, but will be used when more methods are migrated to the worker
     _enclave_api: Enclave,
-    _worker_api_direct: Arc<WorkerApiDirect>,
+    _worker_api_direct: WorkerApiDirect,
 }
 
 impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
@@ -45,7 +44,7 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
             config,
             node_api,
             _enclave_api,
-            _worker_api_direct: Arc::new(_worker_api_direct),
+            _worker_api_direct,
         }
     }
 

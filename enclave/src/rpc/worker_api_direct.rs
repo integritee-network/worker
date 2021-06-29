@@ -360,6 +360,10 @@ fn init_io_handler() -> IoHandler {
     let sidechain_import_import_name: &str = "sidechain_importBlock";
     rpc_methods_vec.push(sidechain_import_import_name);
     io.add_sync_method(sidechain_import_import_name, |sidechain_blocks: Params| {
+        // Todo: actually do something with the block, i.e., apply the state diff.
+        // However, this requires importing the stf here. So, before doing that and increase
+        // the size of init_io_handler even more. We should think about how we can do that more
+        // modularized.
         debug!("sidechain_importBlock rpc. Params: {:?}", sidechain_blocks);
         let block_vec: Vec<u8> = sidechain_blocks.parse()?;
         let blocks: Vec<SignedBlock> = Decode::decode(&mut block_vec.as_slice())

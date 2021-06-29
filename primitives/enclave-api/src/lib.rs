@@ -3,7 +3,7 @@
 //! This serves as a proof of concept on how we could design the interface between the worker and
 //! the enclave.
 //!
-//! Design principle here should be to keep the interfaces as slim as possible - because then the
+//! Design principle here should be to keep the traits as slim as possible - because then the
 //! worker can also define slim interfaces with less demanding trait bounds.
 //!
 //! This can further be simplified once https://github.com/integritee-network/worker/issues/254

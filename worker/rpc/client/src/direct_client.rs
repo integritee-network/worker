@@ -1,7 +1,7 @@
 ///! Interface for direct access to a workers rpc.
 ///
 /// This is should be replaced with the `jsonrpsee::WsClient` it is async an removes a lot of
-/// boilerplate code.
+/// boilerplate code. Example usage in worker/worker.rs.
 ///
 
 use log::*;
@@ -16,7 +16,6 @@ use ws::{connect, CloseCode, Handler, Handshake, Message, Result as ClientResult
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use substratee_worker_primitives::block::SignedBlock;
 
 pub struct WsClient {
     pub out: Sender,

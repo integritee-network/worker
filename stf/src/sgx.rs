@@ -432,12 +432,12 @@ impl Stf {
     }
 
     pub fn apply_state_diff(ext: &mut impl StfTrait, state_payload: &mut StatePayload) -> StfResult<()> {
+        // Todo: how do we ensure that the apriori state hash matches?
         ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
         let mut ext2 = ext.clone();
         Self::update_storage(&mut ext2, &StateTypeDiff::decode(state_payload.state_update.clone()));
         ensure!(ext2.hash() == state_payload.state_hash_aposteriori(), StfError::InvalidStorageDiff);
         *ext = ext2;
-        // If the apriori state hash matches, we should not prune any state_diffs we want to gossip.
         ext.prune_state_diff();
         Ok(())
     }
