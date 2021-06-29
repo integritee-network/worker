@@ -2568,7 +2568,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=fix-hex-crate#b76eb4603ded4a9bc88b37806e67e519e4071e62"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#731a3a5c3a16ed3ce7f1f6b50593a2cdfd08a39f"
 dependencies = [
  "frame-metadata",
  "frame-support",
