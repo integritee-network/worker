@@ -2580,7 +2580,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=master#3c8c04cd785b383dfbacb48a374503e644d13a08"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#731a3a5c3a16ed3ce7f1f6b50593a2cdfd08a39f"
 dependencies = [
  "frame-metadata",
  "frame-support",
