@@ -1,3 +1,9 @@
+///! Interface for direct access to a workers rpc.
+///
+/// This is should be replaced with the `jsonrpsee::WsClient` it is async an removes a lot of
+/// boilerplate code.
+///
+
 use log::*;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender as MpscSender;
@@ -46,12 +52,6 @@ pub struct DirectClient {
 pub trait DirectApi {
     fn watch(&self,  request: String, sender: MpscSender<String>) -> Result<(), ()>;
     fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String>;
-}
-
-pub trait WorkerToWorkerApi {
-    // If I understand correctly, this should never be more than one block.
-    // Will migrate to that later
-    fn send_blocks(&self, block: Vec<SignedBlock>) -> Result<(), ()>;
 }
 
 impl DirectClient {

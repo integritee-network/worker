@@ -4,7 +4,7 @@ use substratee_node_primitives::{Enclave, ShardIdentifier};
 pub struct TestNodeApi;
 
 pub const W1_URL: &str = "127.0.0.1:2222";
-pub const W2_URL: &str = "127.0.0.1:2223";
+pub const W2_URL: &str = "127.0.0.1:3333";
 
 pub fn enclaves() -> Vec<Enclave> {
 	vec![
