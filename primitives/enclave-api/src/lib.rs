@@ -1,4 +1,16 @@
-//! some definitions and traits that facilitate interaction with the enclave.
+//! Some definitions and traits that facilitate interaction with the enclave.
+//!
+//! This serves as a proof of concept on how we could design the interface between the worker and
+//! the enclave.
+//!
+//! Design principle here should be to keep the interfaces as slim as possible - because then the
+//! worker can also define slim interfaces with less demanding trait bounds.
+//!
+//! This can further be simplified once https://github.com/integritee-network/worker/issues/254
+//! is implemented. Then we can replace the several ffi::<enclave_call> and the boilerplate code
+//! around it with a simple `fn ecall(call: CallEnum) -> Result<D: Decode>`, which wraps one single
+//! ffi function.
+//!
 
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use frame_support::ensure;
