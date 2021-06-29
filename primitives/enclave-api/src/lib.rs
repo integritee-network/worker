@@ -28,8 +28,13 @@ pub trait EnclaveApi: Send + Sync + 'static {
 	// Todo: Vec<u8> shall be replaced by D: Decode, E: Encode but this is currently
 	// not compatible with the direct_api_server...
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>>;
-	fn mock_register_enclave_xt(&self, genesis_hash: H256, nonce: u32, w_url: &str) -> EnclaveResult<Vec<u8>>;
 }
+
+
+pub trait TeeRexApi : Send + Sync + 'static {
+	/// Register enclave xt with an empty attestation report.
+	fn mock_register_xt(&self, genesis_hash: H256, nonce: u32, w_url: &str) -> EnclaveResult<Vec<u8>>;
+} 
 
 impl EnclaveApi for Enclave {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
@@ -53,8 +58,10 @@ impl EnclaveApi for Enclave {
 
 		Ok(response)
 	}
+}
 
-	fn mock_register_enclave_xt(
+impl TeeRexApi for Enclave {
+	fn mock_register_xt(
 		&self,
 		genesis_hash: H256,
 		nonce: u32,
@@ -87,3 +94,4 @@ impl EnclaveApi for Enclave {
 		Ok(response)
 	}
 }
+
