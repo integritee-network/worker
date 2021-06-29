@@ -117,6 +117,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
         substratee_stf::sgx::tests::apply_state_diff_works,
         substratee_stf::sgx::tests::apply_state_diff_returns_storage_hash_mismatch_err,
         substratee_stf::sgx::tests::apply_state_diff_returns_invalid_storage_diff_err,
+        rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
+        rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
+        rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
         // these unit tests (?) need an ipfs node running..
         //ipfs::test_creates_ipfs_content_struct_works,
         //ipfs::test_verification_ok_for_correct_content,

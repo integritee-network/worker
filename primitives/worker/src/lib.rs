@@ -15,6 +15,8 @@ pub type BlockHash = H256;
 pub type BlockNumber = u64;
 pub type ShardIdentifier = H256;
 
+use std::string::String;
+
 //use sp_core::ed25519::Signature;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
@@ -73,8 +75,8 @@ impl RpcReturnValue {
     }
 }
 
-#[cfg(feature = "std")]
-#[derive(Encode, Decode, Serialize, Deserialize)]
+#[derive(Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 // Todo: result should not be Vec<u8>, but `T: Serialize`
 pub struct RpcResponse {
     pub jsonrpc: String,
@@ -82,8 +84,8 @@ pub struct RpcResponse {
     pub id: u32,
 }
 
-#[cfg(feature = "std")]
-#[derive(Encode, Decode, Serialize)]
+#[derive(Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 // Todo: params should not be Vec<u8>, but `T: Serialize`
 pub struct RpcRequest {
     pub jsonrpc: String,
