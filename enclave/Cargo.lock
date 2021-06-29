@@ -2495,7 +2495,6 @@ name = "substratee-node-primitives"
 version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
- "primitive-types",
  "sgx_tstd",
  "sp-core",
 ]

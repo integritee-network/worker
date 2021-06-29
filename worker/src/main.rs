@@ -52,9 +52,10 @@ use enclave::api::{
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use enclave::worker_api_direct_server::start_worker_api_direct_server;
-use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
+use sp_finality_grandpa::VersionedAuthorityList;
 use std::time::{Duration, SystemTime};
 
+use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use config::Config;
 use utils::extract_shard;
@@ -257,7 +258,7 @@ fn worker(
         println!("[!] skipping remote attestation. will not register this enclave on chain");
     } else {
         // get enclaves's account nonce
-        let nonce = get_nonce(&api, &tee_accountid);
+        let nonce = api.get_nonce_of(&tee_accountid).unwrap();
         info!("Enclave nonce = {:?}", nonce);
 
         let uxt =
@@ -449,23 +450,8 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
     let genesis_hash = api.get_genesis_hash().unwrap();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
-    let grandpas: AuthorityList = api
-        .get_storage_by_key_hash(
-            StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
-            Some(genesis_header.hash()),
-        )
-        .unwrap()
-        .map(|g: VersionedAuthorityList| g.into())
-        .unwrap();
-
-    let grandpa_proof = api
-        .get_storage_proof_by_keys(
-            vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
-            Some(genesis_header.hash()),
-        )
-        .unwrap()
-        .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
-        .unwrap();
+    let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+    let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
@@ -492,12 +478,7 @@ pub fn produce_blocks(
 ) -> Header {
     // obtain latest finalized block from layer one
     debug!("Getting current head");
-    let curr_head: SignedBlock = api
-        .get_finalized_head()
-        .unwrap()
-        .map(|hash| api.get_signed_block(Some(hash)).unwrap())
-        .unwrap()
-        .unwrap();
+    let curr_head: SignedBlock = api.last_finalized_block().unwrap().unwrap();
 
     let mut blocks_to_sync = Vec::<SignedBlock>::new();
 
@@ -521,7 +502,7 @@ pub fn produce_blocks(
         while head.block.header.parent_hash != last_synced_head.hash() {
             debug!("Getting head of hash: {:?}", head.block.header.parent_hash);
             head = api
-                .get_signed_block(Some(head.block.header.parent_hash))
+                .signed_block(Some(head.block.header.parent_hash))
                 .unwrap()
                 .unwrap();
             blocks_to_sync.push(head.clone());
@@ -545,7 +526,7 @@ pub fn produce_blocks(
         blocks_to_sync[0].block.header.number as usize
     };
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-        let tee_nonce = get_nonce(&api, &tee_accountid);
+        let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
         // Produce blocks
         if let Err(e) = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce) {
             error!("{}", e);
@@ -605,13 +586,13 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
     let alice_acc = AccountId32::from(*alice.public().as_array_ref());
     info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-    let free = get_balance(&api, &alice_acc);
+    let free = api.get_free_balance(&alice_acc);
     info!("    Alice's free balance = {:?}", free);
-    let nonce = get_nonce(&api, &alice_acc);
+    let nonce = api.get_nonce_of(&alice_acc).unwrap();
     info!("    Alice's Account Nonce is {}", nonce);
 
     // check account balance
-    let free = get_balance(&api, &accountid);
+    let free = api.get_free_balance(&accountid).unwrap();
     info!("TEE's free balance = {:?}", free);
 
     if free < 1_000_000_000_000 {
@@ -626,26 +607,10 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
         info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
         //verify funds have arrived
-        let free = get_balance(&api, &accountid);
+        let free = api.get_free_balance(&accountid);
         info!("TEE's NEW free balance = {:?}", free);
 
         api.signer = signer_orig;
-    }
-}
-
-fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
-    if let Some(info) = api.get_account_info(who).unwrap() {
-        info.nonce
-    } else {
-        0
-    }
-}
-
-fn get_balance(api: &Api<sr25519::Pair>, who: &AccountId32) -> u128 {
-    if let Some(data) = api.get_account_data(who).unwrap() {
-        data.free
-    } else {
-        0
     }
 }
 

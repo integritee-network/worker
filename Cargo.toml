@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "client",
+    "primitives/api-client-extensions",
     "primitives/settings",
     "primitives/node",
     "primitives/worker",
