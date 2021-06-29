@@ -17,6 +17,8 @@ impl EnclaveApi for TestEnclave {
 	}
 }
 
+// todo: this is a duplicate that is also defined in the worker. We should extract an independent
+// test-utils crate because here we don't want to depend on the worker itself.
 pub fn test_sidechain_block() -> SignedBlock {
 	use sp_core::{H256, Pair};
 

@@ -70,7 +70,7 @@ use substratee_settings::files::{
 
 use worker::{Worker as WorkerGen};
 use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
-use crate::worker::{WorkerT, worker_url_into_async_rpc_port};
+use crate::worker::{WorkerT, worker_url_into_async_rpc_url};
 
 mod enclave;
 mod ipfs;
@@ -274,7 +274,7 @@ fn worker(
     // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
     // should be merged into this one.
     let enclave = Enclave::new(eid);
-    let url = worker_url_into_async_rpc_port(&config.worker_url()).unwrap();
+    let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
 
     let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
     handle.spawn(async move {

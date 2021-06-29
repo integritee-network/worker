@@ -1,6 +1,6 @@
 ///! Interface for direct access to a workers rpc.
 ///
-/// This is should be replaced with the `jsonrpsee::WsClient` it is async an removes a lot of
+/// This should be replaced with the `jsonrpsee::WsClient` it is async an removes a lot of
 /// boilerplate code. Example usage in worker/worker.rs.
 ///
 

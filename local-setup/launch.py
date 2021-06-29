@@ -42,7 +42,7 @@ def main(processes):
     print('Starting worker 1 in background')
     processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2000'], subcommand_flags=['--skip-ra']))
 
-    # prevent nonce clash, when bootstrapping the enclave's account
+    # sleep to prevent nonce clash when bootstrapping the enclave's account
     sleep(6)
     print('Starting worker 2 in background')
     processes.append(w2.run_in_background(log_file=worker2_log, flags=['-P', '3000'], subcommand_flags=['--skip-ra']))

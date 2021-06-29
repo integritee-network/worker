@@ -11,15 +11,14 @@ use jsonrpsee::{
     ws_client::WsClientBuilder,
 };
 use log::info;
+use std::num::ParseIntError;
 
 use substratee_api_client_extensions::SubstrateeRegistryApi;
-//
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_node_primitives::Enclave as EnclaveMetadata;
 
 use crate::config::Config;
 use crate::error::Error;
-use std::num::ParseIntError;
-use substratee_node_primitives::Enclave as EnclaveMetadata;
 
 pub type WorkerResult<T> = Result<T, Error>;
 
@@ -76,7 +75,7 @@ where
 
         for p in peers.iter() {
             // Todo: once the two direct servers are merged, remove this.
-            let url = worker_url_into_async_rpc_port(&p.url)?;
+            let url = worker_url_into_async_rpc_url(&p.url)?;
             info!("Gossiping block to peer with address: {:?}", url);
             let client = WsClientBuilder::default().build(&url).await?;
             let response: String = client
@@ -101,7 +100,7 @@ where
 /// Temporary method that transforms the workers rpc port of the direct api defined in rpc/direct_client
 /// to the new version in rpc/server. Remove this, when all the methods have been migrated to the new one
 /// in rpc/server.
-pub fn worker_url_into_async_rpc_port(url: &str) -> WorkerResult<String> {
+pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
     // [Option("ws"), //ip, port]
     let mut url_vec: Vec<&str> = url.split(":").collect();
     match url_vec.len() {
@@ -133,7 +132,7 @@ mod tests {
         commons::{local_worker_config, test_sidechain_block},
         mock::{TestNodeApi, W1_URL, W2_URL},
     };
-    use crate::worker::{Worker, WorkerT, worker_url_into_async_rpc_port};
+    use crate::worker::{Worker, WorkerT, worker_url_into_async_rpc_url};
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -159,7 +158,7 @@ mod tests {
     #[tokio::test]
     async fn gossip_blocks_works() {
         init();
-        run_server(worker_url_into_async_rpc_port(W2_URL).unwrap()).await.unwrap();
+        run_server(worker_url_into_async_rpc_url(W2_URL).unwrap()).await.unwrap();
 
         let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, (), ());
 
