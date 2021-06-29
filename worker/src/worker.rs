@@ -1,3 +1,10 @@
+
+///! Substratee worker. Inspiration for this design came from parity's substrate Client.
+///
+/// This should serve as a proof of concept for a design I have in mind. Ultimately, everything
+/// from the main.rs should be covered by the worker struct here - hidden and split across
+/// multiple traits.
+
 use async_trait::async_trait;
 use jsonrpsee::{
     types::{to_json_value, traits::Client},
@@ -7,7 +14,7 @@ use log::info;
 use std::sync::Arc;
 
 use substratee_api_client_extensions::SubstrateeRegistryApi;
-// use substratee_worker_api::direct_client::WorkerToWorkerApi;
+//
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 use crate::config::Config;
@@ -17,9 +24,12 @@ use substratee_node_primitives::Enclave as EnclaveMetadata;
 
 pub type WorkerResult<T> = Result<T, Error>;
 
+// don't put any trait bounds here. It is good practise to only enforce them where needed. This
+// also serves a guide when traits should be split into subtraits.
 pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
     config: Config,
     node_api: NodeApi,
+    // unused yet, but will be used when more methods are migrated to the worker
     _enclave_api: Enclave,
     _worker_api_direct: Arc<WorkerApiDirect>,
 }
@@ -66,7 +76,7 @@ where
         info!("Gossiping sidechain blocks to peers: {:?}", peers);
 
         for p in peers.iter() {
-            // Todo: once this is the two direct servers are merged, remove this.
+            // Todo: once the two direct servers are merged, remove this.
             let url = worker_url_into_async_rpc_port(&p.url)?;
             info!("Gossiping block to peer with address: {:?}", url);
             let client = WsClientBuilder::default().build(&url).await?;
@@ -116,6 +126,7 @@ mod tests {
     use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
     use log::debug;
     use std::net::SocketAddr;
+    use frame_support::assert_ok;
     use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
     use tokio::net::ToSocketAddrs;
 
@@ -123,7 +134,7 @@ mod tests {
         commons::{local_worker_config, test_sidechain_block},
         mock::{TestNodeApi, W1_URL, W2_URL},
     };
-    use crate::worker::{Worker, WorkerT};
+    use crate::worker::{Worker, WorkerT, worker_url_into_async_rpc_port};
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -135,8 +146,8 @@ mod tests {
 
         module.register_method("sidechain_importBlock", |params, _| {
             debug!("sidechain_importBlock params: {:?}", params);
-            let blocks: Vec<SignedSidechainBlock> = params.one()?;
-            Ok(blocks)
+            let _blocks: Vec<SignedSidechainBlock> = params.one()?;
+            Ok("ok".as_bytes().to_vec())
         })?;
 
         server.register_module(module).unwrap();
@@ -149,13 +160,13 @@ mod tests {
     #[tokio::test]
     async fn gossip_blocks_works() {
         init();
-        run_server(W2_URL).await.unwrap();
+        run_server(worker_url_into_async_rpc_port(W2_URL).unwrap()).await.unwrap();
 
         let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, (), ());
 
-        worker
+        let resp = worker
             .gossip_blocks(vec![test_sidechain_block()])
-            .await
-            .unwrap();
+            .await;
+        assert_ok!(resp);
     }
 }

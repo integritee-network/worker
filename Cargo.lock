@@ -5629,6 +5629,7 @@ dependencies = [
  "clap",
  "dirs 1.0.5",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-support",
  "frame-system",
  "futures 0.3.15",
  "hex 0.3.2",

@@ -107,3 +107,4 @@ production = ['substratee-settings/production']
 
 [dev-dependencies]
 anyhow = "1.0.40"
+frame-support =  { git = "https://github.com/paritytech/substrate.git", branch = "master" }
