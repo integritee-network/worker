@@ -64,7 +64,7 @@ default-features=false
 
 [dependencies.my-node-runtime]
 git = "https://github.com/scs/substraTEE-node"
-branch = "feature-gate-ias-verify"
+branch = "master"
 package = "substratee-node-runtime"
 
 [dependencies.substratee-worker-primitives]

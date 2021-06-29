@@ -1876,7 +1876,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "environmental",
  "log",
@@ -1889,7 +1889,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2334,7 +2334,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "3.1.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "environmental",
  "hash-db",

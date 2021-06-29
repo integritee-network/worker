@@ -1719,7 +1719,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=feature-gate-ias-check#8fc938ba1d78678552acd8b7f0a5b73521c4f48e"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=master#10f13173d2a07b3eb1062a956cda0e9dcd99a541"
 dependencies = [
  "base64 0.11.0",
  "chrono",
@@ -2809,7 +2809,7 @@ dependencies = [
 [[package]]
 name = "pallet-substratee-registry"
 version = "0.9.0"
-source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=feature-gate-ias-check#8fc938ba1d78678552acd8b7f0a5b73521c4f48e"
+source = "git+https://github.com/scs/pallet-substratee-registry.git?branch=master#10f13173d2a07b3eb1062a956cda0e9dcd99a541"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4096,7 +4096,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -4109,7 +4109,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4731,7 +4731,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "3.1.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "environmental",
  "hash-db",
@@ -5243,8 +5243,8 @@ dependencies = [
 
 [[package]]
 name = "substratee-node-runtime"
-version = "0.8.0"
-source = "git+https://github.com/scs/substraTEE-node?branch=feature-gate-ias-verify#102dee0f031a1aca16962dc9899db0607a6e9515"
+version = "0.9.0"
+source = "git+https://github.com/scs/substraTEE-node?branch=master#d0df8591618ca175cf03970a26b1ab1e52aef4a5"
 dependencies = [
  "frame-executive",
  "frame-support",
