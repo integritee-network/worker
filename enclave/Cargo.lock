@@ -1893,7 +1893,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "environmental",
  "log",
@@ -1906,7 +1906,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2351,7 +2351,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "3.1.0"
-source = "git+https://github.com/scs/sgx-runtime?branch=version-update#de9fc665a1e5268e53432841d642d61ddc793db2"
+source = "git+https://github.com/scs/sgx-runtime?branch=master#bb0b6a206006299ab773a375197c4846a4c83a30"
 dependencies = [
  "environmental",
  "hash-db",
@@ -2457,7 +2457,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=master#8a9a8f17
 [[package]]
 name = "sp-std"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate.git#8a9a8f170f556beb7c86e996f0576ae3df632f9b"
+source = "git+https://github.com/paritytech/substrate.git#3f7d2b7658cb87de61b75e3a782d17abd8a915d1"
 
 [[package]]
 name = "sp-storage"
@@ -2585,7 +2585,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=fix-hex-crate#b76eb4603ded4a9bc88b37806e67e519e4071e62"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#3c8c04cd785b383dfbacb48a374503e644d13a08"
 dependencies = [
  "frame-metadata",
  "frame-support",
