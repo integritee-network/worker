@@ -15,7 +15,7 @@ impl From<Error> for sgx_status_t {
 		match error {
 			Error::Sgx(status) => status,
 			_=>  {
-				log::warn!("Tried extracting sgx_status for non-sgx error: {:?}", error);
+				log::warn!("Tried extracting sgx_status from non-sgx error: {:?}", error);
 				sgx_status_t::SGX_ERROR_UNEXPECTED
 			}
 		}

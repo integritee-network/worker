@@ -34,7 +34,6 @@ use base58::ToBase58;
 
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t};
 
-
 use substrate_api_client::compose_extrinsic_offline;
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_worker_primitives::block::{
@@ -98,7 +97,6 @@ pub mod error;
 use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS, REGISTER_ENCLAVE};
 use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
 use codec::alloc::string::String;
-use crate::error::Error;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -111,7 +109,8 @@ pub enum Timeout {
 pub type Hash = sp_core::H256;
 type BPool = BasicPool<SideChainApi<Block>, Block>;
 
-pub type EnclaveResult<T> = Result<T, error::Error>;
+use crate::error::Error;
+pub type EnclaveResult<T> = Result<T, Error>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
