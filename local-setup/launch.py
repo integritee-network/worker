@@ -4,6 +4,7 @@ Launch a local dev setup consisting of one substraTEE-node and two workers.
 """
 import signal
 from subprocess import Popen, STDOUT
+from time import sleep
 from typing import Union, IO
 
 from py.worker import Worker
@@ -32,17 +33,19 @@ def setup_worker(work_dir: str, std_err: Union[None, int, IO]):
 def main(processes):
     print('Starting substraTee-node-process in background')
     processes.append(
-        Popen([node_bin, '--tmp', '--dev', '-lruntime=debug'], stdout=node_log, stderr=STDOUT, bufsize=1)
+        Popen([node_bin, '--tmp', '--dev', '-lruntime=info'], stdout=node_log, stderr=STDOUT, bufsize=1)
     )
 
     w1 = setup_worker(w1_working_dir, worker1_log)
     w2 = setup_worker(w2_working_dir, worker2_log)
 
     print('Starting worker 1 in background')
-    processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2001'], subcommand_flags=['--skip-ra']))
-    print('Starting worker 2 in background')
-    processes.append(w2.run_in_background(log_file=worker2_log, subcommand_flags=['--skip-ra']))
+    processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2000'], subcommand_flags=['--skip-ra']))
 
+    # sleep to prevent nonce clash when bootstrapping the enclave's account
+    sleep(6)
+    print('Starting worker 2 in background')
+    processes.append(w2.run_in_background(log_file=worker2_log, flags=['-P', '3000'], subcommand_flags=['--skip-ra']))
     # keep script alive until terminated
     signal.pause()
 

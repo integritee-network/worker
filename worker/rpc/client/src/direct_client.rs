@@ -1,3 +1,9 @@
+///! Interface for direct access to a workers rpc.
+///
+/// This should be replaced with the `jsonrpsee::WsClient`. It is async an removes a lot of
+/// boilerplate code. Example usage in worker/worker.rs.
+///
+
 use log::*;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender as MpscSender;
@@ -11,14 +17,14 @@ use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse,
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
-pub struct DirectWsClient {
+pub struct WsClient {
     pub out: Sender,
     pub request: String,
     pub result: MpscSender<String>,
     pub do_watch: bool,
 }
 
-impl Handler for DirectWsClient {
+impl Handler for WsClient {
     fn on_open(&mut self, _: Handshake) -> ClientResult<()> {
         debug!("sending request: {:?}", self.request.clone());
         match self.out.send(self.request.clone()) {
@@ -38,11 +44,16 @@ impl Handler for DirectWsClient {
 }
 
 #[derive(Clone)]
-pub struct DirectApi {
+pub struct DirectClient {
     url: String,
 }
 
-impl DirectApi {
+pub trait DirectApi {
+    fn watch(&self,  request: String, sender: MpscSender<String>) -> Result<(), ()>;
+    fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String>;
+}
+
+impl DirectClient {
     pub fn new(url: String) -> Self {
         Self { url }
     }
@@ -55,7 +66,7 @@ impl DirectApi {
 
         info!("[WorkerApi Direct]: Sending request: {:?}", request);
         let client = thread::spawn(move || {
-            match connect(url, |out| DirectWsClient {
+            match connect(url, |out| WsClient {
                 out,
                 request: request.clone(),
                 result: port_in.clone(),
@@ -77,14 +88,17 @@ impl DirectApi {
             }
         }
     }
+}
+
+impl DirectApi for DirectClient {
     /// server connection with more than one response
     #[allow(clippy::result_unit_err)]
-    pub fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
+    fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
         let url = self.url.clone();
 
         info!("[WorkerApi Direct]: Sending request: {:?}", request);
         thread::spawn(move || {
-            match connect(url, |out| DirectWsClient {
+            match connect(url, |out| WsClient {
                 out,
                 request: request.clone(),
                 result: sender.clone(),
@@ -99,7 +113,7 @@ impl DirectApi {
         Ok(())
     }
 
-    pub fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String> {
+    fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String> {
         // compose jsonrpc call
         let method = "author_getShieldingKey".to_owned();
         let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(method, vec![]);

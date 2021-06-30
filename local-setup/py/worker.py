@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 import subprocess
@@ -108,16 +109,18 @@ class Worker:
         if not shard:
             shard = self.mrenclave()
 
+        print(f'Purging shard: {shard}')
+
         if not self.shard_exists(shard):
             print('The shard to be purged does not exist.')
         else:
             shutil.rmtree(self._shard_path(shard))
 
-    @staticmethod
-    def purge_chain_relay_db():
-        db = pathlib.Path('./chain_relay_db.bin')
-        if db.exists():
-            db.unlink()
+    def purge_chain_relay_db(self):
+        print(f'purging chain_relay_db')
+        for db in pathlib.Path(self.cwd).glob('chain_relay_db.bin*'):
+                print(f'remove: {db}')
+                db.unlink()
 
     def mrenclave(self):
         """ Returns the mrenclave and caches it. """
@@ -140,8 +143,13 @@ class Worker:
 
         :return: process handle for the spawned background process.
         """
+
+        # Todo: make this configurable
+        env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=info')
+
         return Popen(
             self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),
+            env=env,
             stdout=log_file,
             stderr=STDOUT,
             bufsize=1,

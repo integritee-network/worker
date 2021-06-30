@@ -31,38 +31,6 @@ pub struct SignedBlock {
     signature: Signature,
 }
 
-/// payload of block that needs to be encrypted
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct StatePayload {
-    state_hash_apriori: H256,
-    state_hash_aposteriori: H256,
-    /// encoded state update
-    state_update: Vec<u8>,
-}
-
-impl StatePayload {
-    /// get hash of state before block execution
-    pub fn state_hash_apriori(&self) -> H256 {
-        self.state_hash_apriori
-    }
-    /// get hash of state after block execution
-    pub fn state_hash_aposteriori(&self) -> H256 {
-        self.state_hash_aposteriori
-    }
-    /// get encoded state update reference
-    pub fn state_update(&self) -> &Vec<u8> {
-        &self.state_update
-    }
-    pub fn new(apriori: H256, aposteriori: H256, update: Vec<u8>) -> StatePayload {
-        StatePayload {
-            state_hash_apriori: apriori,
-            state_hash_aposteriori: aposteriori,
-            state_update: update,
-        }
-    }
-}
-
 /// simplified block structure for relay chain submission as an extrinsic
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -183,26 +151,6 @@ mod tests {
     use super::*;
     use std::thread;
     use std::time::Duration;
-
-    #[test]
-    fn new_payload_works() {
-        // given
-        let state_hash_apriori = H256::random();
-        let state_hash_aposteriori = H256::random();
-        let state_update: Vec<u8> = vec![];
-
-        // when
-        let payload = StatePayload::new(
-            state_hash_apriori.clone(),
-            state_hash_aposteriori.clone(),
-            state_update.clone(),
-        );
-
-        // then
-        assert_eq!(state_hash_apriori, payload.state_hash_apriori());
-        assert_eq!(state_hash_aposteriori, payload.state_hash_aposteriori());
-        assert_eq!(state_update, *payload.state_update());
-    }
 
     #[test]
     fn construct_block_works() {

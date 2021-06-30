@@ -1,13 +1,17 @@
 [workspace]
+resolver = "2"
 members = [
     "client",
     "primitives/api-client-extensions",
-    "primitives/settings",
+    "primitives/enclave-api",
+    "primitives/enclave-api/ffi",
     "primitives/node",
+    "primitives/settings",
     "primitives/worker",
     "stf",
     "worker",
-    "worker/worker-api",
+    "worker/rpc/client",
+    "worker/rpc/server",
     #	 "enclave",
 ]
 

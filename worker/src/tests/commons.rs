@@ -32,6 +32,11 @@ use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
 use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
 
+#[cfg(test)]
+use crate::config::Config;
+#[cfg(test)]
+use substratee_worker_primitives::block::{SignedBlock, Block};
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
     pub account: String,
@@ -131,4 +136,45 @@ pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
     } else {
         0
     }
+}
+
+#[cfg(test)]
+pub fn test_sidechain_block() -> SignedBlock {
+    use sp_core::{H256, Pair};
+
+
+    let signer_pair = sp_core::ed25519::Pair::from_string("//Alice", None).unwrap();
+    let author: AccountId32 = signer_pair.public().into();
+    let block_number: u64 = 0;
+    let parent_hash = H256::random();
+    let layer_one_head = H256::random();
+    let signed_top_hashes = vec![];
+    let encrypted_payload: Vec<u8> = vec![];
+    let shard = ShardIdentifier::default();
+
+    // when
+    let block = Block::construct_block(
+        author,
+        block_number,
+        parent_hash.clone(),
+        layer_one_head.clone(),
+        shard.clone(),
+        signed_top_hashes.clone(),
+        encrypted_payload.clone(),
+    );
+    block.sign(&signer_pair)
+}
+
+/// Local Worker config. Fields are the default values except for
+/// the worker's rpc server.
+#[cfg(test)]
+pub fn local_worker_config(worker_url: String) -> Config {
+    let mut url = worker_url.split(":");
+    Config::new(
+        Default::default(),
+        Default::default(),
+        url.next().unwrap().into(),
+        url.next().unwrap().into(),
+        Default::default(),
+    )
 }

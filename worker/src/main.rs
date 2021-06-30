@@ -34,8 +34,9 @@ use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
 use my_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header, UncheckedExtrinsic
+    substratee_registry::ShardIdentifier, Event, Hash, Header
 };
+use parking_lot::RwLock;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519,
@@ -58,25 +59,41 @@ use std::time::{Duration, SystemTime};
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 use substratee_node_primitives::SignedBlock;
+use substratee_enclave_api::{Enclave, TeeRexApi};
+use substratee_worker_api::direct_client::DirectClient;
+
 use config::Config;
-use utils::extract_shard;
 
 use substratee_settings::files::{
-    SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE,
-    RA_SPID_FILE, RA_API_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
+    SIGNING_KEY_FILE, SHIELDING_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
 };
+
+use worker::{Worker as WorkerGen};
+use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
+use crate::worker::{WorkerT, worker_url_into_async_rpc_url};
 
 mod enclave;
 mod ipfs;
 mod tests;
 mod config;
 mod utils;
+mod worker;
+mod error;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// start block production every ... ms
 const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
+
+type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectClient>;
+
+lazy_static! {
+    // todo: replace with &str, but use &str in api-client first
+    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
+    static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
+    static ref TOKIO_HANDLE: Mutex<Option<tokio::runtime::Handle>> = Default::default();
+}
 
 fn main() {
     // Setup logging
@@ -86,7 +103,6 @@ fn main() {
     let matches = App::from_yaml(yml).get_matches();
 
     let mut config = Config::from(&matches);
-    println!("Worker Config: {:?}", config);
 
     *NODE_URL.lock().unwrap() = config.node_url();
 
@@ -100,7 +116,8 @@ fn main() {
                 .map(ToString::to_string)
                 .unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port))
         );
-        println!("Advertising worker api at {}", config.ext_api_url.as_ref().unwrap());
+
+        println!("Worker Config: {:?}", config);
         let skip_ra = smatches.is_present("skip-ra");
         worker(
             config.clone(),
@@ -225,6 +242,18 @@ fn worker(
     let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
+
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    *TOKIO_HANDLE.lock().unwrap() = Some(rt.handle().clone());
+    *WORKER.write() = Some(
+        Worker::new(
+            config.clone(),
+            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
+            Enclave::new(eid),
+            DirectClient::new(config.worker_url()),
+        )
+    );
+
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
     println!("MU-RA server listening on ws://{}", config.mu_ra_url());
@@ -242,6 +271,18 @@ fn worker(
     println!("rpc worker server listening on ws://{}", config.worker_url());
     start_worker_api_direct_server( config.worker_url(), eid);
 
+    // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
+    // should be merged into this one.
+    let enclave = Enclave::new(eid);
+    let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
+
+    let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
+    handle.spawn(async move {
+        substratee_worker_rpc_server::run_server(
+            &url,
+            enclave,
+        ).await.unwrap()
+    });
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
     let mut api = Api::new(NODE_URL.lock().unwrap().clone())
@@ -255,28 +296,24 @@ fn worker(
     // ------------------------------------------------------------------------
     // perform a remote attestation and get an unchecked extrinsic back
 
-    if skip_ra {
-        println!("[!] skipping remote attestation. will not register this enclave on chain");
+    // get enclaves's account nonce
+    let nonce = api.get_nonce_of(&tee_accountid).unwrap();
+    info!("Enclave nonce = {:?}", nonce);
+
+    let uxt = if skip_ra {
+        println!("[!] skipping remote attestation. Registering enclave without attestation report.");
+        enclave.mock_register_xt(api.genesis_hash, nonce, &config.ext_api_url.unwrap()).unwrap()
     } else {
-        // get enclaves's account nonce
-        let nonce = api.get_nonce_of(&tee_accountid).unwrap();
-        info!("Enclave nonce = {:?}", nonce);
+        enclave_perform_ra(eid, genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec()).unwrap()
+    };
 
-        let uxt =
-            enclave_perform_ra(eid, genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec()).unwrap();
+    let mut xthex = hex::encode(uxt);
+    xthex.insert_str(0, "0x");
 
-        let ue = UncheckedExtrinsic::decode(&mut uxt.as_slice()).unwrap();
-
-        debug!("RA extrinsic: {:?}", ue);
-
-        let mut _xthex = hex::encode(ue.encode());
-        _xthex.insert_str(0, "0x");
-
-        // send the extrinsic and wait for confirmation
-        println!("[>] Register the enclave (send the extrinsic)");
-        let tx_hash = api.send_extrinsic(_xthex, XtStatus::InBlock).unwrap();
-        println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
-    }
+    // send the extrinsic and wait for confirmation
+    println!("[>] Register the enclave (send the extrinsic)");
+    let tx_hash = api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+    println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
     let latest_head = init_chain_relay(eid, &api);
     println!("*** [+] Finished syncing chain relay\n");
@@ -545,12 +582,6 @@ pub fn produce_blocks(
     curr_head.block.header
 }
 
-fn hex_encode(data: Vec<u8>) -> String {
-    let mut hex_str = hex::encode(data);
-    hex_str.insert_str(0, "0x");
-    hex_str
-}
-
 fn init_shard(shard: &ShardIdentifier) {
     let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
     println!("initializing shard at {}", path);
@@ -613,27 +644,6 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
 
         api.signer = signer_orig;
     }
-}
-
-pub fn check_files() {
-    debug!("*** Check files");
-    let files = vec![
-        ENCLAVE_FILE,
-        SHIELDING_KEY_FILE,
-        SIGNING_KEY_FILE,
-        RA_SPID_FILE,
-        RA_API_KEY_FILE,
-    ];
-    for f in files.iter() {
-        if !Path::new(f).exists() {
-            panic!("file doesn't exist: {}", f);
-        }
-    }
-}
-
-lazy_static! {
-    // todo: replace with &str, but use &str in api-client first
-    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
 }
 
 /// # Safety
@@ -730,20 +740,20 @@ pub unsafe extern "C" fn ocall_send_block_and_confirmation(
             vec![]
         }
     };
-    println! {"Received blocks: {:?}", signed_blocks};
-    // TODO: M8.3: Store blocks
-    // TODO: M8.3: broadcast blocks
-    status
-}
 
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
-    if data.len() > writable.len() {
-        panic!("not enough bytes in output buffer for return value");
-    }
-    let (left, right) = writable.split_at_mut(data.len());
-    left.clone_from_slice(&data);
-    // fill the right side with whitespace
-    right.iter_mut().for_each(|x| *x = 0x20);
+    println! {"Received blocks: {:?}", signed_blocks};
+
+    let w = WORKER.read();
+
+    // make it sync, as sgx ffi does not support async/await
+    let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
+    if let Err(e) = handle.block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks)) {
+        error!("Error gossiping blocks: {:?}", e);
+        // Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
+        // status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+    // TODO: M8.3: Store blocks
+    status
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]

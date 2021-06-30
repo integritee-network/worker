@@ -25,6 +25,10 @@ use self::integration_tests::*;
 pub mod commons;
 pub mod ecalls;
 pub mod integration_tests;
+pub mod mock;
+
+#[cfg(test)]
+pub mod worker;
 
 pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
     println!("*** Starting Test enclave");

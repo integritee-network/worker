@@ -1,8 +1,9 @@
 use substratee_stf::ShardIdentifier;
 use clap::ArgMatches;
 use base58::{FromBase58, ToBase58};
-use log::info;
+use log::{info, debug};
 use crate::enclave::api::{enclave_init, enclave_mrenclave};
+use std::path::Path;
 
 pub fn extract_shard(m: &ArgMatches<'_>) -> ShardIdentifier {
 	match m.value_of("shard") {
@@ -20,6 +21,43 @@ pub fn extract_shard(m: &ArgMatches<'_>) -> ShardIdentifier {
 				mrenclave.to_base58()
 			);
 			ShardIdentifier::from_slice(&mrenclave[..])
+		}
+	}
+}
+
+pub fn hex_encode(data: Vec<u8>) -> String {
+	let mut hex_str = hex::encode(data);
+	hex_str.insert_str(0, "0x");
+	hex_str
+}
+
+pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
+	if data.len() > writable.len() {
+		panic!("not enough bytes in output buffer for return value");
+	}
+	let (left, right) = writable.split_at_mut(data.len());
+	left.clone_from_slice(&data);
+	// fill the right side with whitespace
+	right.iter_mut().for_each(|x| *x = 0x20);
+}
+
+
+pub fn check_files() {
+	use substratee_settings::files::{
+		SIGNING_KEY_FILE, SHIELDING_KEY_FILE, ENCLAVE_FILE,
+		RA_SPID_FILE, RA_API_KEY_FILE,
+	};
+	debug!("*** Check files");
+	let files = vec![
+		ENCLAVE_FILE,
+		SHIELDING_KEY_FILE,
+		SIGNING_KEY_FILE,
+		RA_SPID_FILE,
+		RA_API_KEY_FILE,
+	];
+	for f in files.iter() {
+		if !Path::new(f).exists() {
+			panic!("file doesn't exist: {}", f);
 		}
 	}
 }

@@ -29,7 +29,6 @@ use sgx_tunittest::*;
 use sgx_types::{sgx_status_t, size_t};
 
 use substrate_api_client::utils::storage_key;
-use substratee_worker_primitives::block::StatePayload;
 
 use codec::{Decode, Encode};
 use sp_core::{crypto::Pair, hashing::blake2_256, H256};
@@ -49,9 +48,9 @@ use chain_relay::{Block, Header};
 use sp_runtime::traits::Header as HeaderT;
 
 use sgx_externalities::SgxExternalitiesTypeTrait;
-use substratee_stf::sgx::AccountInfo;
+use substratee_stf::AccountInfo;
 use substratee_stf::StateTypeDiff as StfStateTypeDiff;
-use substratee_stf::{ShardIdentifier, Stf, TrustedCall};
+use substratee_stf::{ShardIdentifier, Stf, TrustedCall, StatePayload};
 use substratee_stf::{TrustedGetter, TrustedOperation};
 
 use substratee_settings::enclave::{GETTER_TIMEOUT};
@@ -115,6 +114,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_executing_call_updates_account_nonce,
         test_invalid_nonce_call_is_not_executed,
         test_non_root_shielding_call_is_not_executed,
+        substratee_stf::sgx::tests::apply_state_diff_works,
+        substratee_stf::sgx::tests::apply_state_diff_returns_storage_hash_mismatch_err,
+        substratee_stf::sgx::tests::apply_state_diff_returns_invalid_storage_diff_err,
+        rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
+        rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
+        rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
         // these unit tests (?) need an ipfs node running..
         //ipfs::test_creates_ipfs_content_struct_works,
         //ipfs::test_verification_ok_for_correct_content,

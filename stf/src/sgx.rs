@@ -8,17 +8,19 @@ use derive_more::Display;
 use log_sgx::*;
 use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
 use sp_core::crypto::AccountId32;
-use sp_core::Pair;
-use sp_core::H256 as Hash;
-use sp_io::hashing::blake2_256;
-use sp_io::SgxExternalitiesTrait;
+use sp_core::{Pair, H256 as Hash};
+use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
+use sgx_externalities::SgxExternalitiesTypeTrait;
 use sp_runtime::MultiAddress;
 use substratee_worker_primitives::BlockNumber;
-use support::metadata::StorageHasher;
-use support::traits::UnfilteredDispatchable;
+use support::{
+    ensure,
+    metadata::StorageHasher,
+    traits::UnfilteredDispatchable
+};
 
 use crate::{
-    AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, Stf, TrustedCall,
+    AccountId, Getter, Index, PublicGetter, ShardIdentifier, TrustedCall, StatePayload,
     TrustedCallSigned, TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 
@@ -32,8 +34,25 @@ impl Encode for OpaqueCall {
     }
 }
 
-pub type AccountData = balances::AccountData<Balance>;
-pub type AccountInfo = system::AccountInfo<Index, AccountData>;
+pub trait StfTrait = SgxExternalitiesTrait + StateHash + Clone + Send + Sync;
+
+pub trait StateHash {
+    fn hash(&self) -> Hash;
+}
+
+pub mod types {
+    pub use sgx_runtime::{Balance, Index};
+    pub type AccountData = balances::AccountData<Balance>;
+    pub type AccountInfo = system::AccountInfo<Index, AccountData>;
+
+    pub type StateType = sgx_externalities::SgxExternalitiesType;
+    pub type State = sgx_externalities::SgxExternalities;
+    pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
+    pub struct Stf;
+}
+
+use types::*;
+
 
 const ALICE_ENCODED: [u8; 32] = [
     212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
@@ -120,7 +139,7 @@ impl Stf {
         ext
     }
 
-    pub fn update_storage(ext: &mut State, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
+    pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>) {
         ext.execute_with(|| {
             map_update.iter().for_each(|(k, v)| {
                 match v {
@@ -207,7 +226,7 @@ impl Stf {
         ext: &mut State,
         call: TrustedCallSigned,
         calls: &mut Vec<OpaqueCall>,
-    ) -> Result<(), StfError> {
+    ) -> StfResult<()> {
         let call_hash = blake2_256(&call.encode());
         ext.execute_with(|| {
             let sender = call.call.account().clone();
@@ -353,7 +372,7 @@ impl Stf {
         })
     }
 
-    fn ensure_root(account: AccountId) -> Result<(), StfError> {
+    fn ensure_root(account: AccountId) -> StfResult<()> {
         if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
             Ok(())
         } else {
@@ -361,7 +380,7 @@ impl Stf {
         }
     }
 
-    fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+    fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
         match get_account_info(&account) {
             Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
                 MultiAddress::Id(account),
@@ -381,7 +400,7 @@ impl Stf {
         Ok(())
     }
 
-    fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+    fn unshield_funds(account: AccountId, amount: u128) -> StfResult<()> {
         match get_account_info(&account) {
             Some(account_info) => {
                 if account_info.data.free < amount {
@@ -410,6 +429,17 @@ impl Stf {
             TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
         };
         key_hashes
+    }
+
+    pub fn apply_state_diff(ext: &mut impl StfTrait, state_payload: &mut StatePayload) -> StfResult<()> {
+        // Todo: how do we ensure that the apriori state hash matches?
+        ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
+        let mut ext2 = ext.clone();
+        Self::update_storage(&mut ext2, &StateTypeDiff::decode(state_payload.state_update.clone()));
+        ensure!(ext2.hash() == state_payload.state_hash_aposteriori(), StfError::InvalidStorageDiff);
+        *ext = ext2;
+        ext.prune_state_diff();
+        Ok(())
     }
 
     pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
@@ -466,7 +496,7 @@ fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
     }
 }
 
-fn validate_nonce(who: &AccountId, nonce: Index) -> Result<(), StfError> {
+fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
     // validate
     let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
     if expected_nonce == nonce {
@@ -548,11 +578,13 @@ fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
     }
 }
 
-#[derive(Debug, Display)]
+pub type StfResult<T> = Result<T, StfError>;
+
+#[derive(Debug, Display, PartialEq, Eq)]
 pub enum StfError {
     #[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
     MissingPrivileges(AccountId),
-    #[display(fmt = "Error dispatching runtime call")]
+    #[display(fmt = "Error dispatching runtime call. {:?}", _0)]
     Dispatch(String),
     #[display(fmt = "Not enough funds to perform operation")]
     MissingFunds,
@@ -560,4 +592,71 @@ pub enum StfError {
     InexistentAccount(AccountId),
     #[display(fmt = "Invalid Nonce {:?}", _0)]
     InvalidNonce(Index),
+    StorageHashMismatch,
+    InvalidStorageDiff,
+}
+
+// this must be pub to be able to test it in the enclave. In the future this should be testable
+// with cargo test. See: https://github.com/scs/substraTEE-worker/issues/272.
+pub mod tests {
+    use super::{Stf, StfTrait, StateHash, State, StatePayload};
+    use support::{assert_ok, assert_err};
+    use sp_core::H256;
+    use sp_runtime::traits::{BlakeTwo256, Hash};
+    use sgx_externalities::{SgxExternalitiesTypeTrait};
+    use crate::sgx::StfError;
+
+    impl StateHash for State {
+        fn hash(&self) -> H256 {
+            BlakeTwo256::hash(self.state.clone().encode().as_slice())
+        }
+    }
+
+    pub fn apply_state_diff_works() {
+        let mut state1 = State::new();
+        let mut state2 = State::new();
+
+        let apriori = state1.hash();
+        state1.insert(b"Hello".to_vec(), b"World".to_vec());
+        let aposteriori = state1.hash();
+
+        let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+
+        assert_ok!(Stf::apply_state_diff(&mut state2, &mut state_update));
+        assert_eq!(state2.hash(), aposteriori);
+        assert_eq!(*state2.get(b"Hello").unwrap(), b"World".to_vec());
+        assert!(state2.state_diff.is_empty());
+    }
+
+    pub fn apply_state_diff_returns_storage_hash_mismatch_err() {
+        let mut state1 = State::new();
+        let mut state2 = State::new();
+
+        let apriori = H256::from([1; 32]);
+        state1.insert(b"Hello".to_vec(), b"World".to_vec());
+        let aposteriori = state1.hash();
+
+        let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+
+        assert_err!(Stf::apply_state_diff(&mut state2, &mut state_update), StfError::StorageHashMismatch);
+        // todo: Derive `Eq` on State
+        assert_eq!(state2.hash(), State::new().hash());
+        assert!(state2.state_diff.is_empty());
+    }
+
+    pub fn apply_state_diff_returns_invalid_storage_diff_err() {
+        let mut state1 = State::new();
+        let mut state2 = State::new();
+
+        let apriori = state1.hash();
+        state1.insert(b"Hello".to_vec(), b"World".to_vec());
+        let aposteriori =  H256::from([1; 32]);
+
+        let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+
+        assert_err!(Stf::apply_state_diff(&mut state2, &mut state_update), StfError::InvalidStorageDiff);
+        // todo: Derive `Eq` on State
+        assert_eq!(state2.hash(), State::new().hash());
+        assert!(state2.state_diff.is_empty());
+    }
 }

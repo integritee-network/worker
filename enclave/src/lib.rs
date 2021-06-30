@@ -37,7 +37,7 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, SgxResult}
 use substrate_api_client::compose_extrinsic_offline;
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_worker_primitives::block::{
-    Block as SidechainBlock, SignedBlock as SignedSidechainBlock, StatePayload,
+    Block as SidechainBlock, SignedBlock as SignedSidechainBlock,
 };
 use substratee_worker_primitives::BlockHash;
 
@@ -56,7 +56,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::untrusted::time::SystemTimeEx;
 use utils::write_slice_and_whitespace_pad;
 
-use crate::utils::UnwrapOrSgxErrorUnexpected;
+use crate::utils::{UnwrapOrSgxErrorUnexpected, hash_from_slice};
 use chain_relay::{
     storage_proof::{StorageProof, StorageProofChecker},
     Block, Header, LightValidation,
@@ -69,7 +69,7 @@ use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::State as StfState;
 use substratee_stf::{
-    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
+    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned, StatePayload
 };
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
@@ -92,8 +92,9 @@ pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
 
-use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS};
+use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS, REGISTER_ENCLAVE};
 use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
+use codec::alloc::string::String;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -187,6 +188,44 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
     let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
     pubkey_slice.clone_from_slice(&signer.public());
 
+    sgx_status_t::SGX_SUCCESS
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn mock_register_enclave_xt(
+    genesis_hash: *const u8,
+    genesis_hash_size: u32,
+    nonce: *const u32,
+    w_url: *const u8,
+    w_url_size: u32,
+    unchecked_extrinsic: *mut u8,
+    unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+    let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+    let genesis_hash = hash_from_slice(genesis_hash_slice);
+
+    let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+    let url: String = Decode::decode(&mut url_slice).unwrap();
+    let extrinsic_slice =
+        slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+    let signer = ed25519::unseal_pair().unwrap();
+
+    let call = [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
+
+    let xt = compose_extrinsic_offline!(
+        signer,
+        (call, Vec::<u8>::new(), url.clone()),
+        *nonce,
+        Era::Immortal,
+        genesis_hash,
+        genesis_hash,
+        RUNTIME_SPEC_VERSION,
+        RUNTIME_TRANSACTION_VERSION
+    ).encode();
+
+    write_slice_and_whitespace_pad(extrinsic_slice, xt);
     sgx_status_t::SGX_SUCCESS
 }
 

@@ -13,4 +13,4 @@ sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 
 [dependencies.substratee-worker-primitives]
-path = "../../primitives/worker"
+path = "../../../primitives/worker"

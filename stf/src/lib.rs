@@ -20,6 +20,7 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
+#![feature(trait_alias)]
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
@@ -28,15 +29,14 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate clap;
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 use codec::{Compact, Decode, Encode};
 #[cfg(feature = "std")]
 use my_node_runtime::Balance;
 #[cfg(feature = "std")]
 pub use my_node_runtime::Index;
-#[cfg(feature = "sgx")]
-use sgx_runtime::Balance;
-#[cfg(feature = "sgx")]
-pub use sgx_runtime::Index;
 
 use sp_core::crypto::AccountId32;
 //use sp_core::{Encode, Decode};
@@ -91,16 +91,11 @@ impl From<sr25519::Pair> for KeyPair {
 #[cfg(feature = "sgx")]
 pub mod sgx;
 
+#[cfg(feature = "sgx")]
+pub use sgx::types::*;
+
 #[cfg(feature = "std")]
 pub mod cli;
-
-#[cfg(feature = "sgx")]
-//pub type State = sp_io::SgxExternalitiesType;
-pub type StateType = sgx_externalities::SgxExternalitiesType;
-#[cfg(feature = "sgx")]
-pub type State = sgx_externalities::SgxExternalities;
-#[cfg(feature = "sgx")]
-pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
 
 #[derive(Encode, Decode, Clone, core::fmt::Debug)]
 #[allow(non_camel_case_types)]
@@ -284,8 +279,44 @@ pub struct TrustedReturnValue<T> {
 impl TrustedReturnValue
 */
 
+
 #[cfg(feature = "sgx")]
-pub struct Stf {}
+use sgx_tstd as std;
+
+#[cfg(feature = "sgx")]
+use std::vec::Vec;
+
+/// payload of block that needs to be encrypted
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct StatePayload {
+    state_hash_apriori: H256,
+    state_hash_aposteriori: H256,
+    /// encoded state update
+    state_update: Vec<u8>,
+}
+
+impl StatePayload {
+    /// get hash of state before block execution
+    pub fn state_hash_apriori(&self) -> H256 {
+        self.state_hash_apriori
+    }
+    /// get hash of state after block execution
+    pub fn state_hash_aposteriori(&self) -> H256 {
+        self.state_hash_aposteriori
+    }
+    /// get encoded state update reference
+    pub fn state_update(&self) -> &Vec<u8> {
+        &self.state_update
+    }
+    pub fn new(apriori: H256, aposteriori: H256, update: Vec<u8>) -> StatePayload {
+        StatePayload {
+            state_hash_apriori: apriori,
+            state_hash_aposteriori: aposteriori,
+            state_update: update,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -312,5 +343,25 @@ mod tests {
         );
 
         assert!(signed_call.verify_signature(&mrenclave, &shard));
+    }
+
+    #[test]
+    fn new_payload_works() {
+        // given
+        let state_hash_apriori = H256::random();
+        let state_hash_aposteriori = H256::random();
+        let state_update: Vec<u8> = vec![];
+
+        // when
+        let payload = StatePayload::new(
+            state_hash_apriori.clone(),
+            state_hash_aposteriori.clone(),
+            state_update.clone(),
+        );
+
+        // then
+        assert_eq!(state_hash_apriori, payload.state_hash_apriori());
+        assert_eq!(state_hash_aposteriori, payload.state_hash_aposteriori());
+        assert_eq!(state_update, *payload.state_update());
     }
 }
