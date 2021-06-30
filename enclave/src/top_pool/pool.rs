@@ -247,6 +247,7 @@ where
         shard: ShardIdentifier,
     ) -> Result<(), B::Error> {
         // Get details of all extrinsics that are already in the pool
+        #[allow(clippy::filter_map_identity)] // false positive. Filter map does filter because x is an option
         let in_pool_tags = self
             .validated_pool
             .extrinsics_tags(hashes, shard)
