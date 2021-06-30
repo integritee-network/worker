@@ -32,7 +32,8 @@ extern crate sgx_tstd as std;
 
 use base58::ToBase58;
 
-use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t, SgxResult};
+use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t};
+
 
 use substrate_api_client::compose_extrinsic_offline;
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
@@ -61,6 +62,7 @@ use chain_relay::{
     storage_proof::{StorageProof, StorageProofChecker},
     Block, Header, LightValidation,
 };
+use frame_support::ensure;
 use sp_runtime::OpaqueExtrinsic;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT};
 use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
@@ -91,10 +93,12 @@ pub mod rpc;
 pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
+pub mod error;
 
 use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS, REGISTER_ENCLAVE};
 use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
 use codec::alloc::string::String;
+use crate::error::Error;
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -106,6 +110,8 @@ pub enum Timeout {
 
 pub type Hash = sp_core::H256;
 type BPool = BasicPool<SideChainApi<Block>, Block>;
+
+pub type EnclaveResult<T> = Result<T, error::Error>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -232,7 +238,7 @@ fn create_extrinsics(
     validator: LightValidation,
     calls_buffer: Vec<OpaqueCall>,
     mut nonce: u32,
-) -> SgxResult<Vec<Vec<u8>>> {
+) -> EnclaveResult<Vec<Vec<u8>>> {
     // get information for composing the extrinsic
     let signer = ed25519::unseal_pair()?;
     debug!("Restored ECC pubkey: {:?}", signer.public());
@@ -313,12 +319,12 @@ pub unsafe extern "C" fn get_state(
     if !requests.is_empty() {
         let responses: Vec<WorkerResponse<Vec<u8>>> = match worker_request(requests) {
             Ok(resp) => resp,
-            Err(e) => return e,
+            Err(e) => return e.into(),
         };
 
         let update_map = match verify_worker_responses(responses, latest_header) {
             Ok(map) => map,
-            Err(e) => return e,
+            Err(e) => return e.into(),
         };
 
         Stf::update_storage(&mut state, &update_map);
@@ -486,7 +492,7 @@ pub unsafe extern "C" fn produce_blocks(
 fn send_block_and_confirmation(
     confirmations: Vec<Vec<u8>>,
     signed_blocks: Vec<SignedSidechainBlock>,
-) -> SgxResult<()> {
+) -> EnclaveResult<()> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
     let res = unsafe {
@@ -499,13 +505,8 @@ fn send_block_and_confirmation(
         )
     };
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
+    ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+    ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 
     Ok(())
 }
@@ -542,7 +543,7 @@ fn get_stf_state(
 
 fn execute_top_pool_calls(
     latest_onchain_header: Header,
-) -> SgxResult<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
+) -> EnclaveResult<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     let mut blocks = Vec::<SignedSidechainBlock>::new();
@@ -552,7 +553,7 @@ fn execute_top_pool_calls(
             Some(mutex) => mutex,
             None => {
                 error!("Could not get mutex to pool");
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into();
             }
         };
         let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
@@ -570,10 +571,8 @@ fn execute_top_pool_calls(
         let mut is_done = false;
         for shard in shards.clone().into_iter() {
             // retrieve trusted operations from pool
-            let trusted_getters = match author.get_pending_tops_separated(shard) {
-                Ok((_, getters)) => getters,
-                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-            };
+            let trusted_getters = author
+                .get_pending_tops_separated(shard)?.1;
             for trusted_getter_signed in trusted_getters.into_iter() {
                 // get state
                 let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
@@ -626,10 +625,8 @@ fn execute_top_pool_calls(
             let prev_state_hash = state::hash_of(state.state.clone())?;
 
             // retrieve trusted operations from pool
-            let trusted_calls = match author.get_pending_tops_separated(shard) {
-                Ok((calls, _)) => calls,
-                Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-            };
+            let trusted_calls = author.get_pending_tops_separated(shard)?.0;
+
             debug!("Got following trusted calls from pool: {:?}", trusted_calls);
             // call execution
             for trusted_call_signed in trusted_calls.into_iter() {
@@ -708,21 +705,20 @@ pub fn compose_block_and_confirmation(
     shard: ShardIdentifier,
     state_hash_apriori: H256,
     state: &mut StfState,
-) -> SgxResult<(OpaqueCall, SignedSidechainBlock)> {
+) -> EnclaveResult<(OpaqueCall, SignedSidechainBlock)> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
-    let block_number = match Stf::get_sidechain_block_number(state) {
-        Some(number) => number + 1,
-        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    };
+    let block_number = Stf::get_sidechain_block_number(state)
+        .map(|n| n + 1)
+        .ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
+
     Stf::update_sidechain_block_number(state, block_number);
 
     let block_number: u64 = block_number; //FIXME! Should be either u64 or u32! Not both..
-    let parent_hash = match Stf::get_last_block_hash(state) {
-        Some(hash) => hash,
-        None => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    };
+    let parent_hash = Stf::get_last_block_hash(state)
+        .ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
+
     // hash previous of state
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
     let state_update = state.state_diff.clone().encode();
@@ -754,7 +750,7 @@ pub fn compose_block_and_confirmation(
     Ok((opaque_call, signed_block))
 }
 
-pub fn update_states(header: Header) -> SgxResult<()> {
+pub fn update_states(header: Header) -> EnclaveResult<()> {
     debug!("Update STF storage upon block import!");
     let requests: Vec<WorkerRequest> = Stf::storage_hashes_to_update_on_block()
         .into_iter()
@@ -809,7 +805,7 @@ pub fn update_states(header: Header) -> SgxResult<()> {
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, aswell as shielding and unshielding calls
 /// Returns all unshielding call confirmations as opaque calls
-pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
+pub fn scan_block_for_relevant_xt(block: &Block) -> EnclaveResult<Vec<OpaqueCall>> {
     debug!("Scanning block {} for relevant xt", block.header.number());
     let mut opaque_calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
@@ -860,7 +856,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> SgxResult<Vec<OpaqueCall>> {
 fn handle_shield_funds_xt(
     calls: &mut Vec<OpaqueCall>,
     xt: UncheckedExtrinsicV4<ShieldFundsFn>,
-) -> SgxResult<()> {
+) -> EnclaveResult<()> {
     let (call, account_encrypted, amount, shard) = xt.function.clone();
     info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         call, account_encrypted, amount, shard.encode().to_base58(),
@@ -909,7 +905,7 @@ fn handle_shield_funds_xt(
 
 fn decrypt_unchecked_extrinsic(
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
-) -> SgxResult<(TrustedCallSigned, ShardIdentifier)> {
+) -> EnclaveResult<(TrustedCallSigned, ShardIdentifier)> {
     let (call, request) = xt.function;
     let (shard, cyphertext) = (request.shard, request.cyphertext);
     debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
@@ -921,10 +917,9 @@ fn decrypt_unchecked_extrinsic(
     debug!("decrypt the call");
     let rsa_keypair = rsa3072::unseal_pair()?;
     let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
-    match TrustedCallSigned::decode(&mut request_vec.as_slice()) {
-        Ok(call) => Ok((call, shard)),
-        Err(_) => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    }
+
+    Ok(TrustedCallSigned::decode(&mut request_vec.as_slice())
+        .map(|call| (call, shard))?)
 }
 
 fn handle_trusted_worker_call(
@@ -934,7 +929,7 @@ fn handle_trusted_worker_call(
     header: Header,
     shard: ShardIdentifier,
     author_pointer: Option<Arc<Author<&BPool>>>,
-) -> SgxResult<Option<(H256, H256)>> {
+) -> EnclaveResult<Option<(H256, H256)>> {
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
     debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
@@ -1019,7 +1014,7 @@ fn handle_trusted_worker_call(
 fn verify_worker_responses(
     responses: Vec<WorkerResponse<Vec<u8>>>,
     header: Header,
-) -> SgxResult<HashMap<Vec<u8>, Option<Vec<u8>>>> {
+) -> EnclaveResult<HashMap<Vec<u8>, Option<Vec<u8>>>> {
     let mut update_map = HashMap::new();
     for response in responses.iter() {
         match response {
@@ -1038,7 +1033,8 @@ fn verify_worker_responses(
                 // Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
                 if &actual != value {
                     error!("Wrong storage value supplied");
-                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                    // todo: return another error now that we introduced our custom error
+                    return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into();
                 }
                 update_map.insert(key.clone(), value.clone());
             }
@@ -1098,7 +1094,7 @@ pub enum WorkerResponse<V: Encode + Decode> {
 
 fn worker_request<V: Encode + Decode>(
     req: Vec<WorkerRequest>,
-) -> SgxResult<Vec<WorkerResponse<V>>> {
+) -> EnclaveResult<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut resp: Vec<u8> = vec![0; 4196 * 4];
 
@@ -1112,12 +1108,8 @@ fn worker_request<V: Encode + Decode>(
         )
     };
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
+    ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+    ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-    Ok(Decode::decode(&mut resp.as_slice()).unwrap())
+    Ok(Decode::decode(&mut resp.as_slice())?)
 }
