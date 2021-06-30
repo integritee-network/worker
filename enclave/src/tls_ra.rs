@@ -14,6 +14,8 @@ use webpki::DNSName;
 use crate::aes;
 use crate::attestation::{create_ra_report_and_signature, DEV_HOSTNAME};
 use crate::cert;
+use crate::ocall::ocall_api::EnclaveAttestationOCallApi;
+use crate::ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait};
 use crate::rsa3072;
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 
@@ -107,7 +109,9 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 ) -> sgx_status_t {
     let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-    let cfg = match tls_server_config(sign_type) {
+    let ocall_api = OCallComponentFactory::get_attestation_api();
+
+    let cfg = match tls_server_config(sign_type, ocall_api) {
         Ok(cfg) => cfg,
         Err(e) => return e,
     };
@@ -142,8 +146,11 @@ fn tls_server_sesssion_stream(
     Ok((sess, conn))
 }
 
-fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig> {
-    let (key_der, cert_der) = create_ra_report_and_signature(sign_type).sgx_error()?;
+fn tls_server_config<A: EnclaveAttestationOCallApi>(
+    sign_type: sgx_quote_sign_type_t,
+    ocall_api: Arc<A>,
+) -> SgxResult<ServerConfig> {
+    let (key_der, cert_der) = create_ra_report_and_signature(sign_type, ocall_api).sgx_error()?;
 
     let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true)));
     let certs = vec![rustls::Certificate(cert_der)];
@@ -184,7 +191,9 @@ pub extern "C" fn request_key_provisioning(
 ) -> sgx_status_t {
     let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-    let cfg = match tls_client_config(sign_type) {
+    let ocall_api = OCallComponentFactory::get_attestation_api();
+
+    let cfg = match tls_client_config(sign_type, ocall_api) {
         Ok(cfg) => cfg,
         Err(e) => return e,
     };
@@ -259,8 +268,11 @@ fn tls_client_session_stream(
     Ok((sess, conn))
 }
 
-fn tls_client_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ClientConfig> {
-    let (key_der, cert_der) = create_ra_report_and_signature(sign_type).sgx_error()?;
+fn tls_client_config<A: EnclaveAttestationOCallApi>(
+    sign_type: sgx_quote_sign_type_t,
+    ocall_api: Arc<A>,
+) -> SgxResult<ClientConfig> {
+    let (key_der, cert_der) = create_ra_report_and_signature(sign_type, ocall_api).sgx_error()?;
 
     let mut cfg = rustls::ClientConfig::new();
     let certs = vec![rustls::Certificate(cert_der)];

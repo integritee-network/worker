@@ -56,7 +56,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::untrusted::time::SystemTimeEx;
 use utils::write_slice_and_whitespace_pad;
 
-use crate::utils::{UnwrapOrSgxErrorUnexpected, hash_from_slice};
+use crate::utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected};
 use chain_relay::{
     storage_proof::{StorageProof, StorageProofChecker},
     Block, Header, LightValidation,
@@ -69,7 +69,8 @@ use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall};
 use substratee_stf::State as StfState;
 use substratee_stf::{
-    AccountId, Getter, ShardIdentifier, Stf, TrustedCall, TrustedCallSigned, TrustedGetterSigned, StatePayload
+    AccountId, Getter, ShardIdentifier, StatePayload, Stf, TrustedCall, TrustedCallSigned,
+    TrustedGetterSigned,
 };
 
 use rpc::author::{hash::TrustedOperationOrHash, Author, AuthorApi};
@@ -81,6 +82,7 @@ mod attestation;
 mod ed25519;
 mod io;
 mod ipfs;
+mod ocall;
 mod rsa3072;
 mod state;
 mod utils;
@@ -92,9 +94,12 @@ pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
 
-use substratee_settings::node::{BLOCK_CONFIRMED, CALL_CONFIRMED, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER, SHIELD_FUNDS, REGISTER_ENCLAVE};
-use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
 use codec::alloc::string::String;
+use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
+use substratee_settings::node::{
+    BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+    RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
+};
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -191,7 +196,6 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
     sgx_status_t::SGX_SUCCESS
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn mock_register_enclave_xt(
     genesis_hash: *const u8,
@@ -211,7 +215,11 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
     let signer = ed25519::unseal_pair().unwrap();
-    let call = ([SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],  Vec::<u8>::new(), url);
+    let call = (
+        [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
+        Vec::<u8>::new(),
+        url,
+    );
 
     let xt = compose_extrinsic_offline!(
         signer,
@@ -222,7 +230,8 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
         genesis_hash,
         RUNTIME_SPEC_VERSION,
         RUNTIME_TRANSACTION_VERSION
-    ).encode();
+    )
+    .encode();
 
     write_slice_and_whitespace_pad(extrinsic_slice, xt);
     sgx_status_t::SGX_SUCCESS
