@@ -211,12 +211,11 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
         slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
     let signer = ed25519::unseal_pair().unwrap();
-
-    let call = [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
+    let call = ([SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],  Vec::<u8>::new(), url);
 
     let xt = compose_extrinsic_offline!(
         signer,
-        (call, Vec::<u8>::new(), url.clone()),
+        call,
         *nonce,
         Era::Immortal,
         genesis_hash,

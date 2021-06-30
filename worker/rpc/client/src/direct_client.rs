@@ -49,6 +49,8 @@ pub struct DirectClient {
 }
 
 pub trait DirectApi {
+    // will remove unit err in refactoring process
+    #[allow(clippy::result_unit_err)]
     fn watch(&self,  request: String, sender: MpscSender<String>) -> Result<(), ()>;
     fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey, String>;
 }

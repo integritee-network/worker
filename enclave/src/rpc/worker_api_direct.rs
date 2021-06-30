@@ -411,6 +411,8 @@ pub unsafe extern "C" fn call_rpc_methods(
     sgx_status_t::SGX_SUCCESS
 }
 
+// todo: remove unit err in refactoring process
+#[allow(clippy::result_unit_err)]
 pub fn update_status_event<H: Encode>(
     hash: H,
     status_update: TrustedOperationStatus,
@@ -441,6 +443,8 @@ pub fn update_status_event<H: Encode>(
     Ok(())
 }
 
+// todo: remove unit err in refactoring process
+#[allow(clippy::result_unit_err)]
 pub fn send_state<H: Encode>(hash: H, value_opt: Option<Vec<u8>>) -> Result<(), ()> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 

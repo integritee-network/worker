@@ -282,7 +282,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
     let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
     let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).sgx_error()?;
 
-    let mut ca_reader = BufReader::new(&IAS_REPORT_CA[..]);
+    let mut ca_reader = BufReader::new(IAS_REPORT_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
@@ -295,15 +295,12 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         .map(|cert| cert.to_trust_anchor())
         .collect();
 
-    let mut chain: Vec<&[u8]> = Vec::new();
-    chain.push(&ias_cert_dec);
-
     let now_func = webpki::Time::try_from(SystemTime::now());
 
     match sig_cert.verify_is_valid_tls_server_cert(
         SUPPORTED_SIG_ALGS,
         &webpki::TLSServerTrustAnchors(&trust_anchors),
-        &chain,
+        &[ias_cert_dec.as_slice()],
         now_func.sgx_error()?,
     ) {
         Ok(_) => info!("Cert is good"),
