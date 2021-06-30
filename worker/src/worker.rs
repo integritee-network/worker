@@ -102,10 +102,10 @@ where
 /// in rpc/server.
 pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
     // [Option("ws"), //ip, port]
-    let mut url_vec: Vec<&str> = url.split(":").collect();
+    let mut url_vec: Vec<&str> = url.split(':').collect();
     match url_vec.len() {
         3 | 2 => (),
-        _ => Err(Error::Custom("Invalid worker url format".into()))?,
+        _ => return Err(Error::Custom("Invalid worker url format".into())),
     };
 
     let ip = if url_vec.len() == 3 {

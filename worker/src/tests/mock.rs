@@ -10,13 +10,13 @@ pub fn enclaves() -> Vec<Enclave> {
 	vec![
 		Enclave::new(
 			[0;32].into(),
-			[1;32].into(),
+			[1;32],
 			1,
 			format!("ws://{}", W1_URL),
 		),
 		Enclave::new(
 			[2;32].into(),
-			[3;32].into(),
+			[3;32],
 			2,
 			format!("ws://{}", W2_URL),
 		),

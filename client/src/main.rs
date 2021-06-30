@@ -188,10 +188,10 @@ fn main() {
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
                     let _api = api.set_signer(AccountKeyring::Alice.pair());
-                    let accounts: Vec<_> = matches.values_of("accounts").unwrap().collect();
+                    let accounts = matches.values_of("accounts").unwrap();
 
                     let mut nonce = _api.get_nonce().unwrap();
-                    for account in accounts.into_iter() {
+                    for account in accounts {
                         let to = get_accountid_from_str(account);
                         #[allow(clippy::redundant_clone)]
                         let xt: UncheckedExtrinsicV4<_> = compose_extrinsic_offline!(
@@ -273,7 +273,7 @@ fn main() {
                     let api = get_chain_api(matches);
                     let arg_from = matches.value_of("from").unwrap();
                     let arg_to = matches.value_of("to").unwrap();
-                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                    let amount = matches.value_of("amount").unwrap().parse()
                         .expect("amount can be converted to u128");
                     let from = get_pair_from_str(arg_from);
                     let to = get_accountid_from_str(arg_to);
@@ -376,7 +376,7 @@ fn main() {
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
                     let chain_api = get_chain_api(matches);
-                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                    let amount = matches.value_of("amount").unwrap().parse()
                         .expect("amount can't be converted to u128");
 
                     let shard_opt = match matches.value_of("shard") {
