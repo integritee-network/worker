@@ -24,7 +24,7 @@ use crate::Hash;
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
     let mut g = [0; 32];
-    g.copy_from_slice(&hash_slize[..]);
+    g.copy_from_slice(hash_slize);
     Hash::from(&mut g)
 }
 
