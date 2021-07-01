@@ -682,12 +682,12 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
     let free = get_balance(&api, &accountid);
     info!("TEE's free balance = {:?}", free);
 
-    if free < 1_000_000_000_000 {
+    if free < 1_000_000_000_000_000_000 {
         let signer_orig = api.signer.clone();
         api.signer = Some(alice);
 
         println!("[+] bootstrap funding Enclave form Alice's funds");
-        let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), 1_000_000_000_000);
+        let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), 1_000_000_000_000_000_000);
         let xt_hash = api
             .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
             .unwrap();
