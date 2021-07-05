@@ -20,14 +20,14 @@ use crate::ocall_bridge::attestation_ocall_impl::RemoteAttestationOCallImpl;
 use crate::ocall_bridge::bridge_api::RemoteAttestationOCall;
 use std::sync::Arc;
 
-pub trait OCallBridgeComponentFactory<A: RemoteAttestationOCall> {
-    fn get_ra_api() -> Arc<A>;
+pub trait OCallBridgeComponentFactory {
+    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall>;
 }
 
 pub struct OCallBridgeComponentFactoryImpl {}
 
-impl OCallBridgeComponentFactory<RemoteAttestationOCallImpl> for OCallBridgeComponentFactoryImpl {
-    fn get_ra_api() -> Arc<RemoteAttestationOCallImpl> {
+impl OCallBridgeComponentFactory for OCallBridgeComponentFactoryImpl {
+    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall> {
         Arc::new(RemoteAttestationOCallImpl {})
     }
 }

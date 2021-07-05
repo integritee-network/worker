@@ -22,7 +22,7 @@ use std::slice;
 use std::str;
 use std::sync::{
     mpsc::{channel, Sender},
-    Mutex,
+    Arc, Mutex,
 };
 use std::thread;
 
@@ -66,6 +66,8 @@ use substratee_settings::files::{
     ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
 };
 
+use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
+use crate::ocall_bridge::component_factory::OCallBridgeComponentFactoryImpl;
 use crate::utils::{check_files, extract_shard, hex_encode, write_slice_and_whitespace_pad};
 use crate::worker::{worker_url_into_async_rpc_url, WorkerT};
 use worker::Worker as WorkerGen;
@@ -97,6 +99,9 @@ lazy_static! {
 fn main() {
     // Setup logging
     env_logger::init();
+
+    // initialize o-call bridge
+    OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl {}));
 
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();

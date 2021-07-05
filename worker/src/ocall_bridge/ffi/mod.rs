@@ -16,10 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::RemoteAttestationOCall;
-use crate::ocall_bridge::component_factory::{
-    OCallBridgeComponentFactory, OCallBridgeComponentFactoryImpl,
-};
+use crate::ocall_bridge::bridge_api::Bridge;
 use log::*;
 use sgx_types::{
     c_int, sgx_epid_group_id_t, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t,
@@ -33,7 +30,7 @@ pub extern "C" fn ocall_sgx_init_quote(
     ret_gid: *mut sgx_epid_group_id_t,
 ) -> sgx_status_t {
     debug!("    Entering ocall_sgx_init_quote");
-    let init_result = OCallBridgeComponentFactoryImpl::get_ra_api().init_quote();
+    let init_result = Bridge::get_ra_api().init_quote();
 
     unsafe {
         *ret_ti = init_result.1;
@@ -46,7 +43,7 @@ pub extern "C" fn ocall_sgx_init_quote(
 #[no_mangle]
 pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
     debug!("    Entering ocall_get_ias_socket");
-    let socket = OCallBridgeComponentFactoryImpl::get_ra_api().get_ias_socket();
+    let socket = Bridge::get_ra_api().get_ias_socket();
 
     unsafe {
         *ret_fd = socket;
@@ -76,13 +73,8 @@ pub extern "C" fn ocall_get_quote(
     let spid = unsafe { *p_spid };
     let quote_nonce = unsafe { *p_nonce };
 
-    let get_quote_result = OCallBridgeComponentFactoryImpl::get_ra_api().get_quote(
-        revocation_list,
-        report,
-        quote_type,
-        spid,
-        quote_nonce,
-    );
+    let get_quote_result =
+        Bridge::get_ra_api().get_quote(revocation_list, report, quote_type, spid, quote_nonce);
 
     let quote = get_quote_result.2;
 
@@ -107,10 +99,11 @@ pub extern "C" fn ocall_get_update_info(
     enclave_trusted: i32,
     p_update_info: *mut sgx_update_info_bit_t,
 ) -> sgx_status_t {
+    debug!("    Entering ocall_get_update_info");
+
     let platform_blob = unsafe { *p_platform_blob };
 
-    let update_info_result = OCallBridgeComponentFactoryImpl::get_ra_api()
-        .get_update_info(platform_blob, enclave_trusted);
+    let update_info_result = Bridge::get_ra_api().get_update_info(platform_blob, enclave_trusted);
 
     if update_info_result.0 != sgx_status_t::SGX_SUCCESS {
         return update_info_result.0;

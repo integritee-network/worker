@@ -16,11 +16,41 @@
 
 */
 
+use crate::ocall_bridge::component_factory::OCallBridgeComponentFactory;
+use lazy_static::lazy_static;
+use log::*;
+use parking_lot::RwLock;
 use sgx_types::{
     sgx_epid_group_id_t, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t,
     sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t,
 };
+use std::sync::Arc;
 use std::vec::Vec;
+
+lazy_static! {
+    static ref COMPONENT_FACTORY: RwLock<Option<Arc<dyn OCallBridgeComponentFactory + Send + Sync>>> =
+        RwLock::new(None);
+}
+
+pub struct Bridge {}
+
+impl Bridge {
+    pub fn get_ra_api() -> Arc<dyn RemoteAttestationOCall> {
+        debug!("Requesting RemoteAttestation OCall API instance");
+
+        COMPONENT_FACTORY
+            .read()
+            .as_ref()
+            .expect("Component factory has not been set. Use `initialize()`")
+            .get_ra_api()
+    }
+
+    pub fn initialize(component_factory: Arc<dyn OCallBridgeComponentFactory + Send + Sync>) {
+        debug!("Initializing OCall bridge with component factory");
+
+        *COMPONENT_FACTORY.write() = Some(component_factory);
+    }
+}
 
 pub trait RemoteAttestationOCall {
     fn init_quote(&self) -> (sgx_status_t, sgx_target_info_t, sgx_epid_group_id_t);
