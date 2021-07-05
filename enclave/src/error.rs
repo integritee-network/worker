@@ -2,6 +2,10 @@ use derive_more::{Display, From};
 use sgx_types::sgx_status_t;
 use crate::rpc;
 
+use std::result::Result as StdResult;
+
+pub type Result<T> = StdResult<T, Error>;
+
 #[derive(Debug, Display, From)]
 pub enum Error {
 	Rpc(rpc::error::Error),
@@ -22,8 +26,8 @@ impl From<Error> for sgx_status_t {
 	}
 }
 
-impl<T> From<Error> for Result<T, Error> {
-	fn from(error: Error) -> Result<T, Error> {
+impl<T> From<Error> for StdResult<T, Error> {
+	fn from(error: Error) -> StdResult<T, Error> {
 		Err(error)
 	}
 }

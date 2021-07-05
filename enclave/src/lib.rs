@@ -109,8 +109,7 @@ pub enum Timeout {
 pub type Hash = sp_core::H256;
 type BPool = BasicPool<SideChainApi<Block>, Block>;
 
-use crate::error::Error;
-pub type EnclaveResult<T> = Result<T, Error>;
+use crate::error::{Error, Result};
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -237,7 +236,7 @@ fn create_extrinsics(
     validator: LightValidation,
     calls_buffer: Vec<OpaqueCall>,
     mut nonce: u32,
-) -> EnclaveResult<Vec<Vec<u8>>> {
+) -> Result<Vec<Vec<u8>>> {
     // get information for composing the extrinsic
     let signer = ed25519::unseal_pair()?;
     debug!("Restored ECC pubkey: {:?}", signer.public());
@@ -491,7 +490,7 @@ pub unsafe extern "C" fn produce_blocks(
 fn send_block_and_confirmation(
     confirmations: Vec<Vec<u8>>,
     signed_blocks: Vec<SignedSidechainBlock>,
-) -> EnclaveResult<()> {
+) -> Result<()> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
     let res = unsafe {
@@ -542,7 +541,7 @@ fn get_stf_state(
 
 fn execute_top_pool_calls(
     latest_onchain_header: Header,
-) -> EnclaveResult<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
+) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)> {
     debug!("Executing pending pool operations");
     let mut calls = Vec::<OpaqueCall>::new();
     let mut blocks = Vec::<SignedSidechainBlock>::new();
@@ -704,7 +703,7 @@ pub fn compose_block_and_confirmation(
     shard: ShardIdentifier,
     state_hash_apriori: H256,
     state: &mut StfState,
-) -> EnclaveResult<(OpaqueCall, SignedSidechainBlock)> {
+) -> Result<(OpaqueCall, SignedSidechainBlock)> {
     let signer_pair = ed25519::unseal_pair()?;
     let layer_one_head = latest_onchain_header.hash();
 
@@ -749,7 +748,7 @@ pub fn compose_block_and_confirmation(
     Ok((opaque_call, signed_block))
 }
 
-pub fn update_states(header: Header) -> EnclaveResult<()> {
+pub fn update_states(header: Header) -> Result<()> {
     debug!("Update STF storage upon block import!");
     let requests: Vec<WorkerRequest> = Stf::storage_hashes_to_update_on_block()
         .into_iter()
@@ -804,7 +803,7 @@ pub fn update_states(header: Header) -> EnclaveResult<()> {
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, aswell as shielding and unshielding calls
 /// Returns all unshielding call confirmations as opaque calls
-pub fn scan_block_for_relevant_xt(block: &Block) -> EnclaveResult<Vec<OpaqueCall>> {
+pub fn scan_block_for_relevant_xt(block: &Block) -> Result<Vec<OpaqueCall>> {
     debug!("Scanning block {} for relevant xt", block.header.number());
     let mut opaque_calls = Vec::<OpaqueCall>::new();
     for xt_opaque in block.extrinsics.iter() {
@@ -855,7 +854,7 @@ pub fn scan_block_for_relevant_xt(block: &Block) -> EnclaveResult<Vec<OpaqueCall
 fn handle_shield_funds_xt(
     calls: &mut Vec<OpaqueCall>,
     xt: UncheckedExtrinsicV4<ShieldFundsFn>,
-) -> EnclaveResult<()> {
+) -> Result<()> {
     let (call, account_encrypted, amount, shard) = xt.function.clone();
     info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         call, account_encrypted, amount, shard.encode().to_base58(),
@@ -904,7 +903,7 @@ fn handle_shield_funds_xt(
 
 fn decrypt_unchecked_extrinsic(
     xt: UncheckedExtrinsicV4<CallWorkerFn>,
-) -> EnclaveResult<(TrustedCallSigned, ShardIdentifier)> {
+) -> Result<(TrustedCallSigned, ShardIdentifier)> {
     let (call, request) = xt.function;
     let (shard, cyphertext) = (request.shard, request.cyphertext);
     debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
@@ -928,7 +927,7 @@ fn handle_trusted_worker_call(
     header: Header,
     shard: ShardIdentifier,
     author_pointer: Option<Arc<Author<&BPool>>>,
-) -> EnclaveResult<Option<(H256, H256)>> {
+) -> Result<Option<(H256, H256)>> {
     debug!("query mrenclave of self");
     let mrenclave = attestation::get_mrenclave_of_self()?;
     debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
@@ -1013,7 +1012,7 @@ fn handle_trusted_worker_call(
 fn verify_worker_responses(
     responses: Vec<WorkerResponse<Vec<u8>>>,
     header: Header,
-) -> EnclaveResult<HashMap<Vec<u8>, Option<Vec<u8>>>> {
+) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
     let mut update_map = HashMap::new();
     for response in responses.iter() {
         match response {
@@ -1093,7 +1092,7 @@ pub enum WorkerResponse<V: Encode + Decode> {
 
 fn worker_request<V: Encode + Decode>(
     req: Vec<WorkerRequest>,
-) -> EnclaveResult<Vec<WorkerResponse<V>>> {
+) -> Result<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut resp: Vec<u8> = vec![0; 4196 * 4];
 
