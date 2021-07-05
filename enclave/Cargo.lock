@@ -2639,6 +2639,7 @@ dependencies = [
  "cid",
  "derive_more",
  "env_logger",
+ "frame-support",
  "httparse",
  "ipfs-unixfs",
  "itertools",
