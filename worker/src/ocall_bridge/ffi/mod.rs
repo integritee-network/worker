@@ -24,6 +24,9 @@ use sgx_types::{
 };
 use std::slice;
 
+#[cfg(test)]
+mod tests;
+
 #[no_mangle]
 pub extern "C" fn ocall_sgx_init_quote(
     ret_ti: *mut sgx_target_info_t,

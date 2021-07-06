@@ -27,6 +27,11 @@ use sgx_types::{
 use std::sync::Arc;
 use std::vec::Vec;
 
+#[cfg(test)]
+use mockall::predicate::*;
+#[cfg(test)]
+use mockall::*;
+
 lazy_static! {
     static ref COMPONENT_FACTORY: RwLock<Option<Arc<dyn OCallBridgeComponentFactory + Send + Sync>>> =
         RwLock::new(None);
@@ -50,8 +55,16 @@ impl Bridge {
 
         *COMPONENT_FACTORY.write() = Some(component_factory);
     }
+
+    #[cfg(test)]
+    pub fn clear() {
+        debug!("Clearing OCall bridge state");
+
+        *COMPONENT_FACTORY.write() = None;
+    }
 }
 
+#[cfg_attr(test, automock)]
 pub trait RemoteAttestationOCall {
     fn init_quote(&self) -> (sgx_status_t, sgx_target_info_t, sgx_epid_group_id_t);
 
