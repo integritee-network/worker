@@ -55,13 +55,6 @@ impl Bridge {
 
         *COMPONENT_FACTORY.write() = Some(component_factory);
     }
-
-    #[cfg(test)]
-    pub fn clear() {
-        debug!("Clearing OCall bridge state");
-
-        *COMPONENT_FACTORY.write() = None;
-    }
 }
 
 #[cfg_attr(test, automock)]
