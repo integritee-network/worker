@@ -47,7 +47,7 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=25000000000
 AMOUNTUNSHIELD=15000000000
 
-CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
+CLIENT="./ternoa-client -p ${NPORT} -P ${RPORT}"
 
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers

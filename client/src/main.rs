@@ -67,6 +67,8 @@ use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::DirectApi as DirectWorkerApi;
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
+pub mod ternoa_commands;
+
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
@@ -118,16 +120,16 @@ fn main() {
                     .default_value("2000")
                     .help("worker direct invocation port"),
             )
-            .name("substratee-client")
+            .name("ternoa-client")
             .version(VERSION)
             .author("Supercomputing Systems AG <info@scs.ch>")
-            .about("interact with substratee-node and workers")
+            .about("interact with ternoa-node and workers")
             .after_help("stf subcommands depend on the stf crate this has been built against")
         })
         .args(|_args, matches| matches.value_of("environment").unwrap_or("dev"))
         .add_cmd(
             Command::new("new-account")
-                .description("generates a new account for the substraTEE chain")
+                .description("generates a new account for the ternoa chain")
                 .runner(|_args: &str, _matches: &ArgMatches<'_>| {
                     let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
                     let key: sr25519::AppPair = store.generate().unwrap();
@@ -138,7 +140,7 @@ fn main() {
         )
         .add_cmd(
             Command::new("list-accounts")
-                .description("lists all accounts in keystore for the substraTEE chain")
+                .description("lists all accounts in keystore for the ternoa chain")
                 .runner(|_args: &str, _matches: &ArgMatches<'_>| {
                     let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
                     println!("sr25519 keys:");
@@ -187,10 +189,9 @@ fn main() {
                 .runner(|_args: &str, matches: &ArgMatches<'_>| {
                     let api = get_chain_api(matches);
                     let _api = api.set_signer(AccountKeyring::Alice.pair());
-                    let accounts: Vec<_> = matches.values_of("accounts").unwrap().collect();
 
                     let mut nonce = _api.get_nonce().unwrap();
-                    for account in accounts.into_iter() {
+                    for account in matches.values_of("accounts").unwrap() {
                         let to = get_accountid_from_str(account);
                         #[allow(clippy::redundant_clone)]
                         let xt: UncheckedExtrinsicV4<_> = compose_extrinsic_offline!(
@@ -272,7 +273,7 @@ fn main() {
                     let api = get_chain_api(matches);
                     let arg_from = matches.value_of("from").unwrap();
                     let arg_to = matches.value_of("to").unwrap();
-                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                    let amount = matches.value_of("amount").unwrap().parse::<u128>()
                         .expect("amount can be converted to u128");
                     let from = get_pair_from_str(arg_from);
                     let to = get_accountid_from_str(arg_to);
@@ -375,7 +376,7 @@ fn main() {
                 })
                 .runner(move |_args: &str, matches: &ArgMatches<'_>| {
                     let chain_api = get_chain_api(matches);
-                    let amount = u128::from_str_radix(matches.value_of("amount").unwrap(), 10)
+                    let amount = matches.value_of("amount").unwrap().parse::<u128>()
                         .expect("amount can't be converted to u128");
 
                     let shard_opt = match matches.value_of("shard") {
@@ -387,7 +388,7 @@ fn main() {
                     };
                     let shard = match shard_opt {
                         Ok(shard) => shard,
-                        Err(e) => panic!(e),
+                        Err(e) => panic!("{}", e),
                     };
 
                     // get the sender
@@ -400,7 +401,7 @@ fn main() {
                     let to = get_accountid_from_str(arg_to);
                     let (_to_encoded, to_encrypted) = match encode_encrypt(matches, to){
                         Ok((encoded, encrypted)) => (encoded, encrypted),
-                        Err(e) => panic!(e),
+                        Err(e) => panic!("{}", e),
                     };
                     // compose the extrinsic
                     let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
@@ -419,6 +420,10 @@ fn main() {
                     Ok(())
                 }),
         )
+        .add_cmd(ternoa_commands::encrypt_cmd())
+        .add_cmd(ternoa_commands::decrypt_cmd())
+        .add_cmd(ternoa_commands::nft_commands())
+        .add_cmd(ternoa_commands::keyvault_commands())
         .add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
         .no_cmd(|_args, _matches| {
             println!("No subcommand matched");

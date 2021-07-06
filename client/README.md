@@ -8,9 +8,9 @@ Includes
 
 ## examples
 ```
-> substratee-client new-account
-> substratee-client 127.0.0.1 transfer 5GpuFm6t1AU9xpTAnQnHXakTGA9rSHz8xNkEvx7RVQz2BVpd 5FkGDttiYa9ZoDAuNxzwEdLzkgt6ngWykSBhobGvoFUcUo8B 12345
-> substratee-client 127.0.0.1:9979 list-workers
+> ternoa-client new-account
+> ternoa-client 127.0.0.1 transfer 5GpuFm6t1AU9xpTAnQnHXakTGA9rSHz8xNkEvx7RVQz2BVpd 5FkGDttiYa9ZoDAuNxzwEdLzkgt6ngWykSBhobGvoFUcUo8B 12345
+> ternoa-client 127.0.0.1:9979 list-workers
 number of workers registered: 1
 Enclave 1
    AccountId: 5DvVAZAWnFS6ufCteSbuh46miVUCQH5oZ231SXHQGswCdGx9

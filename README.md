@@ -52,7 +52,7 @@ rm -rf shards/ chain_relay_db.bin
 wait until you see the worker synching a few blocks. then check MRENCLAVE and update bot-community.py constants accordingly
 
 ```
-./substratee-client -p 9979 list-workers
+./ternoa-client -p 9979 list-workers
 ```
 
 now bootstrap a new bot community

@@ -8,8 +8,10 @@
 # binaries
 bin/*.so
 bin/substratee-*
+bin/ternoa-*
 bin/*.wasm
 bin2/substratee-*
+bin2/ternoa-*
 
 # sealed data
 bin/*.bin

@@ -102,7 +102,7 @@ Worker_Rust_Path := target/$(OUTPUT_PATH)
 Worker_Enclave_u_Object :=worker/libEnclave_u.a
 Worker_Name := bin/app
 
-######## SubstraTEE-client settings ########
+######## ternoa-client settings ########
 Client_SRC_Path := client
 STF_SRC_Path := stf
 Client_Rust_Flags := $(CARGO_TARGET)
@@ -112,7 +112,7 @@ Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Client_Include_Pa
 
 Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
-Client_Binary := substratee-client
+Client_Binary := ternoa-client
 Client_Name := $(Client_Path)/$(Client_Binary)
 
 ######## Enclave settings ########
@@ -172,10 +172,10 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	cp $(Worker_Rust_Path)/substratee-worker ./bin
 	cp $(Worker_Rust_Path)/substratee-worker ./bin2
 
-######## SubstraTEE-client objects ########
+######## ternoa-client objects ########
 $(Client_Name): $(Client_SRC_Files)
 	@echo
-	@echo "Building the substraTEE-client"
+	@echo "Building the ternoa-client"
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
@@ -248,7 +248,7 @@ help:
 	@echo "Available targets"
 	@echo "  all      - builds all targets (default)"
 	@echo "  worker   - builds the substraTEE-worker"
-	@echo "  client   - builds the substraTEE-client"
+	@echo "  client   - builds the ternoa-client"
 	@echo "  githooks - installs the git hooks (copy .githooks/pre-commit to .git/hooks)"
 	@echo ""
 	@echo "  clean   - cleanup"

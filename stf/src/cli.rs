@@ -73,7 +73,7 @@ pub fn cmd<'a>(
                         .global(true)
                         .help("insert if direct invocation call is desired"),
                 )
-                .name("substratee-client")
+                .name("ternoa-client")
                 .version(VERSION)
                 .author("Supercomputing Systems AG <info@scs.ch>")
                 .about("trusted calls to worker enclave")
