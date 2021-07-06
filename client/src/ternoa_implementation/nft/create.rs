@@ -64,3 +64,23 @@ pub fn create(owner_ss58: &str, filename: &str, chain_api: Api<sr25519::Pair>) -
         }
     }
 }
+
+#[cfg(test)]
+mod mock {
+    use sp_application_crypto::sr25519;
+    use sp_core::Pair;
+    use substrate_api_client::Api;
+    /*
+    pub struct MockApi<sr25519::Pair>;
+
+    impl MockApi {
+        pub signer: Option<sr25519::Pair>,
+        pub metadata: Metadata,
+    }*/
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn verify_create_nft() {}
+}
