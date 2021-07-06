@@ -61,11 +61,7 @@ impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
     ) -> (sgx_status_t, sgx_report_t, Vec<u8>) {
         let mut real_quote_len: u32 = 0;
 
-        let (p_sig_rl, sig_rl_size) = if revocation_list.is_empty() {
-            (ptr::null(), 0)
-        } else {
-            (revocation_list.as_ptr(), revocation_list.len() as u32)
-        };
+        let (p_sig_rl, sig_rl_size) = vec_to_c_pointer_with_len(revocation_list);
 
         let ret =
             unsafe { sgx_calc_quote_size(p_sig_rl, sig_rl_size, &mut real_quote_len as *mut u32) };
@@ -156,4 +152,12 @@ fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
     }
 
     unreachable!("Cannot lookup address");
+}
+
+fn vec_to_c_pointer_with_len<A>(input: Vec<A>) -> (*const A, u32) {
+    if input.is_empty() {
+        (ptr::null(), 0)
+    } else {
+        (input.as_ptr(), input.len() as u32)
+    }
 }
