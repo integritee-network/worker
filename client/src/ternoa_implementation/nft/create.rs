@@ -5,15 +5,13 @@ use substrate_api_client::{compose_extrinsic, events::EventsDecoder, Api, XtStat
 use crate::{get_accountid_from_str, get_pair_from_str};
 use codec::Decode;
 use log::*;
-use my_node_primitives::AccountId;
+use my_node_primitives::{AccountId, NFTId};
 use std::convert::TryFrom;
 use std::sync::mpsc::channel;
 
-pub type NFTId = u32;
 pub type NFTSeriesId = u32;
 pub type NFTIdOf = NFTId;
 
-#[allow(dead_code)]
 #[derive(Decode)]
 struct CreatedArgs {
     nft_id: NFTId,
@@ -65,20 +63,7 @@ pub fn create(owner_ss58: &str, filename: &str, chain_api: Api<sr25519::Pair>) -
     }
 }
 
-#[cfg(test)]
-mod mock {
-    use sp_application_crypto::sr25519;
-    use sp_core::Pair;
-    use substrate_api_client::Api;
-    /*
-    pub struct MockApi<sr25519::Pair>;
-
-    impl MockApi {
-        pub signer: Option<sr25519::Pair>,
-        pub metadata: Metadata,
-    }*/
-}
-
+//TODO add test
 #[cfg(test)]
 mod test {
     #[test]
