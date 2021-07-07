@@ -28,19 +28,27 @@ pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
 
 fn get_ias_socket(ret_fd: *mut c_int, ra_api: Arc<dyn RemoteAttestationOCall>) -> sgx_status_t {
     debug!("    Entering ocall_get_ias_socket");
-    let socket = ra_api.get_ias_socket();
+    let socket_result = ra_api.get_ias_socket();
 
-    unsafe {
-        *ret_fd = socket;
-    }
-    sgx_status_t::SGX_SUCCESS
+    return match socket_result {
+        Ok(s) => {
+            unsafe {
+                *ret_fd = s;
+            }
+            sgx_status_t::SGX_SUCCESS
+        }
+        Err(e) => {
+            error!("[-]  Failed to get IAS socket: {:?}", e);
+            return e.into();
+        }
+    };
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::ocall_bridge::bridge_api::MockRemoteAttestationOCall;
+    use crate::ocall_bridge::bridge_api::{MockRemoteAttestationOCall, OCallBridgeError};
     use std::sync::Arc;
 
     #[test]
@@ -51,7 +59,7 @@ mod tests {
         ra_ocall_api_mock
             .expect_get_ias_socket()
             .times(1)
-            .return_const(expected_socket);
+            .return_const(Ok(expected_socket));
 
         let mut ias_sock: i32 = 0;
 
@@ -59,5 +67,22 @@ mod tests {
 
         assert_eq!(ret_status, sgx_status_t::SGX_SUCCESS);
         assert_eq!(ias_sock, expected_socket);
+    }
+
+    #[test]
+    fn given_error_from_ocall_impl_then_return_sgx_error() {
+        let mut ra_ocall_api_mock = MockRemoteAttestationOCall::new();
+        ra_ocall_api_mock
+            .expect_get_ias_socket()
+            .times(1)
+            .return_const(Err(OCallBridgeError::GetIasSocket(
+                "test error".to_string(),
+            )));
+
+        let mut ias_sock: i32 = 0;
+        let ret_status = get_ias_socket(&mut ias_sock as *mut i32, Arc::new(ra_ocall_api_mock));
+
+        assert_ne!(ret_status, sgx_status_t::SGX_SUCCESS);
+        assert_eq!(ias_sock, 0);
     }
 }

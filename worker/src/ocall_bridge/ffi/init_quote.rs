@@ -35,14 +35,20 @@ fn sgx_init_quote(
     ra_api: Arc<dyn RemoteAttestationOCall>,
 ) -> sgx_status_t {
     debug!("    Entering ocall_sgx_init_quote");
-    let init_result = ra_api.init_quote();
+    let init_result = match ra_api.init_quote() {
+        Ok(r) => r,
+        Err(e) => {
+            error!("[-]  Failed to init quote: {:?}", e);
+            return e.into();
+        }
+    };
 
     unsafe {
-        *ret_ti = init_result.1;
-        *ret_gid = init_result.2;
+        *ret_ti = init_result.0;
+        *ret_gid = init_result.1;
     }
 
-    init_result.0
+    sgx_status_t::SGX_SUCCESS
 }
 
 #[cfg(test)]
@@ -58,7 +64,7 @@ mod tests {
         ra_ocall_api_mock
             .expect_init_quote()
             .times(1)
-            .returning(|| (sgx_status_t::SGX_SUCCESS, dummy_target_info(), [8u8; 4]));
+            .returning(|| Ok((dummy_target_info(), [8u8; 4])));
 
         let mut ti: sgx_target_info_t = sgx_target_info_t::default();
         let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();

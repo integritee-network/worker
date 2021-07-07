@@ -16,7 +16,10 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::RemoteAttestationOCall;
+use crate::ocall_bridge::bridge_api::{
+    OCallBridgeError, OCallBridgeResult, RemoteAttestationOCall,
+};
+use frame_support::ensure;
 use log::*;
 use sgx_types::*;
 use std::net::{SocketAddr, TcpStream};
@@ -28,27 +31,37 @@ pub struct RemoteAttestationOCallImpl {
 }
 
 impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
-    fn init_quote(&self) -> (sgx_status_t, sgx_target_info_t, sgx_epid_group_id_t) {
+    fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
         // TODO this translation to unsafe C-API should be moved to the EnclaveApi / ECall API
         let mut ti: sgx_target_info_t = sgx_target_info_t::default();
         let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
 
-        unsafe {
-            let ret_status = sgx_init_quote(
+        let ret_status = unsafe {
+            sgx_init_quote(
                 &mut ti as *mut sgx_target_info_t,
                 &mut eg as *mut sgx_epid_group_id_t,
-            );
-            (ret_status, ti, eg)
-        }
+            )
+        };
+
+        ensure!(
+            ret_status == sgx_status_t::SGX_SUCCESS,
+            OCallBridgeError::InitQuote(ret_status)
+        );
+
+        Ok((ti, eg))
     }
 
-    fn get_ias_socket(&self) -> i32 {
+    fn get_ias_socket(&self) -> OCallBridgeResult<i32> {
         let port = 443;
         let hostname = "api.trustedservices.intel.com";
-        let addr = lookup_ipv4(hostname, port);
-        let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
 
-        sock.into_raw_fd()
+        let addr = lookup_ipv4(hostname, port).map_err(|e| OCallBridgeError::GetIasSocket(e))?;
+
+        let sock = TcpStream::connect(&addr).map_err(|_| {
+            OCallBridgeError::GetIasSocket("[-] Connect tls server failed!".to_string())
+        })?;
+
+        Ok(sock.into_raw_fd())
     }
 
     fn get_quote(
@@ -58,7 +71,7 @@ impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
         quote_type: sgx_quote_sign_type_t,
         spid: sgx_spid_t,
         quote_nonce: sgx_quote_nonce_t,
-    ) -> (sgx_status_t, sgx_report_t, Vec<u8>) {
+    ) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)> {
         let mut real_quote_len: u32 = 0;
 
         let (p_sig_rl, sig_rl_size) = vec_to_c_pointer_with_len(revocation_list);
@@ -66,10 +79,10 @@ impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
         let ret =
             unsafe { sgx_calc_quote_size(p_sig_rl, sig_rl_size, &mut real_quote_len as *mut u32) };
 
-        if ret != sgx_status_t::SGX_SUCCESS {
-            error!("   sgx_calc_quote_size failed. {}", ret);
-            return (ret, sgx_report_t::default(), Vec::new());
-        }
+        ensure!(
+            ret == sgx_status_t::SGX_SUCCESS,
+            OCallBridgeError::GetQuote(ret)
+        );
 
         debug!("    Quote size = {}", real_quote_len);
 
@@ -89,11 +102,9 @@ impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
                 "   effective quote length ({}) exceeds buffer size ({})",
                 real_quote_len, RET_QUOTE_BUF_LEN
             );
-            return (
+            return Err(OCallBridgeError::GetQuote(
                 sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT,
-                sgx_report_t::default(),
-                Vec::new(),
-            );
+            ));
         }
 
         let ret = unsafe {
@@ -110,23 +121,22 @@ impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
             )
         };
 
-        if ret != sgx_status_t::SGX_SUCCESS {
-            error!("    sgx_get_quote failed. {}", ret);
-            return (ret, sgx_report_t::default(), Vec::new());
-        }
+        ensure!(
+            ret == sgx_status_t::SGX_SUCCESS,
+            OCallBridgeError::GetQuote(ret)
+        );
 
-        (
-            sgx_status_t::SGX_SUCCESS,
+        Ok((
             qe_report,
             Vec::from(&return_quote_buf[..real_quote_len as usize]),
-        )
+        ))
     }
 
     fn get_update_info(
         &self,
         platform_blob: sgx_platform_info_t,
         enclave_trusted: i32,
-    ) -> (sgx_status_t, sgx_update_info_bit_t) {
+    ) -> OCallBridgeResult<sgx_update_info_bit_t> {
         let mut update_info: sgx_update_info_bit_t = sgx_update_info_bit_t::default();
 
         let result = unsafe {
@@ -137,21 +147,28 @@ impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
             )
         };
 
-        (result, update_info)
+        ensure!(
+            result == sgx_status_t::SGX_SUCCESS,
+            OCallBridgeError::GetUpdateInfo(result)
+        );
+
+        Ok(update_info)
     }
 }
 
-fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
+fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, String> {
     use std::net::ToSocketAddrs;
 
-    let addrs = (host, port).to_socket_addrs().unwrap();
+    let addrs = (host, port)
+        .to_socket_addrs()
+        .map_err(|e| format!("{:?}", e))?;
     for addr in addrs {
         if let SocketAddr::V4(_) = addr {
-            return addr;
+            return Ok(addr);
         }
     }
 
-    unreachable!("Cannot lookup address");
+    Err("Cannot lookup address".to_string())
 }
 
 fn vec_to_c_pointer_with_len<A>(input: Vec<A>) -> (*const A, u32) {

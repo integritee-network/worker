@@ -72,9 +72,16 @@ fn get_quote(
     let spid = unsafe { *p_spid };
     let quote_nonce = unsafe { *p_nonce };
 
-    let get_quote_result = ra_api.get_quote(revocation_list, report, quote_type, spid, quote_nonce);
+    let get_quote_result =
+        match ra_api.get_quote(revocation_list, report, quote_type, spid, quote_nonce) {
+            Ok(r) => r,
+            Err(e) => {
+                error!("[-]  Failed to get quote: {:?}", e);
+                return e.into();
+            }
+        };
 
-    let quote = get_quote_result.2;
+    let quote = get_quote_result.1;
 
     if quote.len() as u32 > maxlen {
         return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT;
@@ -84,9 +91,9 @@ fn get_quote(
     quote_slice.clone_from_slice(quote.as_slice());
 
     unsafe {
-        *p_qe_report = get_quote_result.1;
+        *p_qe_report = get_quote_result.0;
         *p_quote_len = quote.len() as u32;
     };
 
-    get_quote_result.0
+    sgx_status_t::SGX_SUCCESS
 }

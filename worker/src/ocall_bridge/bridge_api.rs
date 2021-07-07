@@ -37,7 +37,7 @@ lazy_static! {
         RwLock::new(None);
 }
 
-pub struct Bridge {}
+pub struct Bridge;
 
 impl Bridge {
     pub fn get_ra_api() -> Arc<dyn RemoteAttestationOCall> {
@@ -57,11 +57,36 @@ impl Bridge {
     }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+pub enum OCallBridgeError {
+    #[error("GetQuote Error: {0}")]
+    GetQuote(sgx_status_t),
+    #[error("InitQuote Error: {0}")]
+    InitQuote(sgx_status_t),
+    #[error("GetUpdateInfo Error: {0}")]
+    GetUpdateInfo(sgx_status_t),
+    #[error("GetIasSocket Error: {0}")]
+    GetIasSocket(String),
+}
+
+impl Into<sgx_status_t> for OCallBridgeError {
+    fn into(self) -> sgx_status_t {
+        match self {
+            OCallBridgeError::GetQuote(s) => s,
+            OCallBridgeError::InitQuote(s) => s,
+            OCallBridgeError::GetUpdateInfo(s) => s,
+            OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+        }
+    }
+}
+
+pub type OCallBridgeResult<T> = Result<T, OCallBridgeError>;
+
 #[cfg_attr(test, automock)]
 pub trait RemoteAttestationOCall {
-    fn init_quote(&self) -> (sgx_status_t, sgx_target_info_t, sgx_epid_group_id_t);
+    fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
-    fn get_ias_socket(&self) -> i32;
+    fn get_ias_socket(&self) -> OCallBridgeResult<i32>;
 
     fn get_quote(
         &self,
@@ -70,11 +95,11 @@ pub trait RemoteAttestationOCall {
         quote_type: sgx_quote_sign_type_t,
         spid: sgx_spid_t,
         quote_nonce: sgx_quote_nonce_t,
-    ) -> (sgx_status_t, sgx_report_t, Vec<u8>);
+    ) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)>;
 
     fn get_update_info(
         &self,
         platform_blob: sgx_platform_info_t,
         enclave_trusted: i32,
-    ) -> (sgx_status_t, sgx_update_info_bit_t);
+    ) -> OCallBridgeResult<sgx_update_info_bit_t>;
 }

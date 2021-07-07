@@ -24,7 +24,7 @@ pub trait OCallBridgeComponentFactory {
     fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall>;
 }
 
-pub struct OCallBridgeComponentFactoryImpl {}
+pub struct OCallBridgeComponentFactoryImpl;
 
 impl OCallBridgeComponentFactory for OCallBridgeComponentFactoryImpl {
     fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall> {

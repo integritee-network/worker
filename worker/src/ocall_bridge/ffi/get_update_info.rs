@@ -45,14 +45,16 @@ fn get_update_info(
 
     let platform_blob = unsafe { *p_platform_blob };
 
-    let update_info_result = ra_api.get_update_info(platform_blob, enclave_trusted);
-
-    if update_info_result.0 != sgx_status_t::SGX_SUCCESS {
-        return update_info_result.0;
-    }
+    let update_info_result = match ra_api.get_update_info(platform_blob, enclave_trusted) {
+        Ok(r) => r,
+        Err(e) => {
+            error!("[-]  Failed to get update info: {:?}", e);
+            return e.into();
+        }
+    };
 
     unsafe {
-        *p_update_info = update_info_result.1;
+        *p_update_info = update_info_result;
     }
 
     sgx_status_t::SGX_SUCCESS
