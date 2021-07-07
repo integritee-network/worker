@@ -50,6 +50,7 @@ pub extern "C" fn ocall_get_quote(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_quote(
     p_sigrl: *const u8,
     sigrl_len: u32,

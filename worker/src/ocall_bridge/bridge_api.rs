@@ -69,6 +69,7 @@ pub enum OCallBridgeError {
     GetIasSocket(String),
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<sgx_status_t> for OCallBridgeError {
     fn into(self) -> sgx_status_t {
         match self {
