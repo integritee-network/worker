@@ -31,7 +31,7 @@ pub extern "C" fn ocall_get_update_info(
         p_platform_blob,
         enclave_trusted,
         p_update_info,
-        Bridge::get_ra_api(),
+        Bridge::get_ra_api(), // inject the RA API (global state)
     )
 }
 

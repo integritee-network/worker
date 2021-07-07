@@ -100,7 +100,7 @@ fn main() {
     // Setup logging
     env_logger::init();
 
-    // initialize o-call bridge
+    // initialize o-call bridge with a concrete factory implementation
     OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl {}));
 
     let yml = load_yaml!("cli.yml");

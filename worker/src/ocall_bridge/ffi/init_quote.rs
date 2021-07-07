@@ -26,7 +26,7 @@ pub extern "C" fn ocall_sgx_init_quote(
     ret_ti: *mut sgx_target_info_t,
     ret_gid: *mut sgx_epid_group_id_t,
 ) -> sgx_status_t {
-    sgx_init_quote(ret_ti, ret_gid, Bridge::get_ra_api())
+    sgx_init_quote(ret_ti, ret_gid, Bridge::get_ra_api()) // inject the RA API (global state)
 }
 
 fn sgx_init_quote(

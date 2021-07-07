@@ -33,10 +33,16 @@ use mockall::predicate::*;
 use mockall::*;
 
 lazy_static! {
+    /// global state for the component factory
+    /// access is always routed through 'Bridge', do not use directly!
     static ref COMPONENT_FACTORY: RwLock<Option<Arc<dyn OCallBridgeComponentFactory + Send + Sync>>> =
         RwLock::new(None);
 }
 
+/// The Bridge is the static/global interface to inject concrete implementations
+/// (or rather the factories for them) - this is done at startup of the worker.
+/// On the other side, it is used by the o-call FFI to retrieve the state and forward calls
+/// to their respective implementation.
 pub struct Bridge;
 
 impl Bridge {
@@ -83,12 +89,16 @@ impl Into<sgx_status_t> for OCallBridgeError {
 
 pub type OCallBridgeResult<T> = Result<T, OCallBridgeError>;
 
+/// Trait for all the OCalls related to remote attestation
 #[cfg_attr(test, automock)]
 pub trait RemoteAttestationOCall {
+    /// initialize the quote
     fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
+    /// get the intel attestation service socket
     fn get_ias_socket(&self) -> OCallBridgeResult<i32>;
 
+    /// retrieve the quote from intel
     fn get_quote(
         &self,
         revocation_list: Vec<u8>,
@@ -98,6 +108,7 @@ pub trait RemoteAttestationOCall {
         quote_nonce: sgx_quote_nonce_t,
     ) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)>;
 
+    /// --
     fn get_update_info(
         &self,
         platform_blob: sgx_platform_info_t,

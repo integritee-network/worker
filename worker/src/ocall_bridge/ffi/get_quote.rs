@@ -46,7 +46,7 @@ pub extern "C" fn ocall_get_quote(
         p_quote,
         maxlen,
         p_quote_len,
-        Bridge::get_ra_api(),
+        Bridge::get_ra_api(), // inject the RA API (global state)
     )
 }
 

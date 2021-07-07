@@ -20,10 +20,16 @@ use crate::ocall_bridge::attestation_ocall_impl::RemoteAttestationOCallImpl;
 use crate::ocall_bridge::bridge_api::RemoteAttestationOCall;
 use std::sync::Arc;
 
+/// Factory trait (abstract factory) that creates instances
+/// of all the components of the OCall Bridge
 pub trait OCallBridgeComponentFactory {
+    /// remote attestation OCall API
     fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall>;
 }
 
+/// Concrete implementation, should be moved out of the OCall Bridge, into the worker
+/// since the OCall bridge itself should not know any concrete types to ensure
+/// our dependency graph is worker -> ocall bridge
 pub struct OCallBridgeComponentFactoryImpl;
 
 impl OCallBridgeComponentFactory for OCallBridgeComponentFactoryImpl {
