@@ -17,7 +17,7 @@
 */
 
 use lazy_static::lazy_static;
-use sp_core::{sr25519, Pair};
+use sp_core::sr25519;
 use std::sync::Mutex;
 use substrate_api_client::Api;
 
@@ -26,8 +26,8 @@ lazy_static! {
     static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
 }
 
-pub trait NodeApiFactory<P: Pair> {
-    fn create_api(&self) -> Api<P>;
+pub trait NodeApiFactory {
+    fn create_api(&self) -> Api<sr25519::Pair>;
 }
 
 pub struct NodeApiFactoryImpl;
@@ -40,10 +40,17 @@ impl NodeApiFactoryImpl {
     pub fn read_node_url() -> String {
         NODE_URL.lock().unwrap().clone()
     }
+
+    /// creates a new instance and initializes the global state
+    pub fn new(url: String) -> Self {
+        NodeApiFactoryImpl::write_node_url(url);
+
+        NodeApiFactoryImpl
+    }
 }
 
-impl NodeApiFactory<sr25519> for NodeApiFactoryImpl {
-    fn create_api(&self) -> Api<sr25519> {
+impl NodeApiFactory for NodeApiFactoryImpl {
+    fn create_api(&self) -> Api<sr25519::Pair> {
         Api::<sr25519::Pair>::new(NodeApiFactoryImpl::read_node_url()).unwrap()
     }
 }

@@ -25,7 +25,7 @@ lazy_static! {
 }
 
 pub trait TokioHandleAccessor {
-    fn get_handle(&self) -> Option<tokio::runtime::Handle>;
+    fn get_handle(&self) -> Handle;
 }
 
 pub struct TokioHandleAccessorImpl;
@@ -39,7 +39,12 @@ impl TokioHandleAccessorImpl {
     }
 
     pub fn read_handle() -> Handle {
-        TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone()
+        TOKIO_HANDLE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .expect("Tokio handle has not been initialized!")
+            .clone()
     }
 }
 

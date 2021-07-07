@@ -56,6 +56,16 @@ impl Bridge {
             .get_ra_api()
     }
 
+    pub fn get_oc_api() -> Arc<dyn WorkerOnChainOCall> {
+        debug!("Requesting WorkerOnChain OCall API instance");
+
+        COMPONENT_FACTORY
+            .read()
+            .as_ref()
+            .expect("Component factory has not been set. Use `initialize()`")
+            .get_oc_api()
+    }
+
     pub fn initialize(component_factory: Arc<dyn OCallBridgeComponentFactory + Send + Sync>) {
         debug!("Initializing OCall bridge with component factory");
 
@@ -119,13 +129,14 @@ pub trait RemoteAttestationOCall {
     ) -> OCallBridgeResult<sgx_update_info_bit_t>;
 }
 
+/// Trait for all the OCalls related to on-chain operations
 #[cfg_attr(test, automock)]
 pub trait WorkerOnChainOCall {
     fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
 
     fn send_block_and_confirmation(
         &self,
-        confirmations: &mut [u8],
-        signed_blocks: &mut [u8],
+        confirmations: Vec<u8>,
+        signed_blocks: Vec<u8>,
     ) -> OCallBridgeResult<()>;
 }

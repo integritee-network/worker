@@ -18,11 +18,10 @@ use std::fs::{self, File};
 use std::io::stdin;
 use std::io::Write;
 use std::path::Path;
-use std::slice;
 use std::str;
 use std::sync::{
     mpsc::{channel, Sender},
-    Arc, Mutex,
+    Arc,
 };
 use std::thread;
 use std::time::{Duration, SystemTime};
@@ -30,16 +29,12 @@ use std::time::{Duration, SystemTime};
 use base58::ToBase58;
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
-use lazy_static::lazy_static;
 use log::*;
 use my_node_runtime::{substratee_registry::ShardIdentifier, Event, Hash, Header};
-use parking_lot::RwLock;
 use sgx_types::*;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
-    sr25519,
-    storage::StorageKey,
-    Pair,
+    sr25519, Pair,
 };
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
@@ -59,15 +54,15 @@ use substratee_settings::files::{
     ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
 };
 use substratee_worker_api::direct_client::DirectClient;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
 use crate::node_api_factory::{NodeApiFactory, NodeApiFactoryImpl};
 use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
 use crate::ocall_bridge::component_factory::OCallBridgeComponentFactoryImpl;
+use crate::sync_block_gossiper::SyncBlockGossiperImpl;
 use crate::tokio_handle_accessor::{TokioHandleAccessor, TokioHandleAccessorImpl};
-use crate::utils::{check_files, extract_shard, hex_encode, write_slice_and_whitespace_pad};
-use crate::worker::{worker_url_into_async_rpc_url, WorkerT};
+use crate::utils::{check_files, extract_shard};
+use crate::worker::worker_url_into_async_rpc_url;
 use crate::worker_accessor::Worker;
 use crate::worker_accessor::WorkerAccessorImpl;
 
@@ -77,6 +72,7 @@ mod error;
 mod ipfs;
 mod node_api_factory;
 mod ocall_bridge;
+mod sync_block_gossiper;
 mod tests;
 mod tokio_handle_accessor;
 mod utils;
@@ -102,16 +98,27 @@ fn main() {
     // Setup logging
     env_logger::init();
 
-    // initialize o-call bridge with a concrete factory implementation
-    OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl {}));
-
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
     let mut config = Config::from(&matches);
 
-    NodeApiFactoryImpl::write_node_url(config.node_url());
-    let node_api_factory = NodeApiFactoryImpl;
+    TokioHandleAccessorImpl::initialize();
+
+    // build the entire dependency tree
+    let worker_accessor = Arc::new(WorkerAccessorImpl {});
+    let tokio_handle_accessor = Arc::new(TokioHandleAccessorImpl {});
+    let sync_block_gossiper = Arc::new(SyncBlockGossiperImpl::new(
+        tokio_handle_accessor.clone(),
+        worker_accessor.clone(),
+    ));
+    let node_api_factory = Arc::new(NodeApiFactoryImpl::new(config.node_url()));
+
+    // initialize o-call bridge with a concrete factory implementation
+    OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl::new(
+        node_api_factory.clone(),
+        sync_block_gossiper,
+    )));
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -127,7 +134,13 @@ fn main() {
 
         println!("Worker Config: {:?}", config);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(config.clone(), &shard, skip_ra);
+        worker(
+            config.clone(),
+            &shard,
+            skip_ra,
+            node_api_factory.clone(),
+            tokio_handle_accessor.clone(),
+        );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard = extract_shard(&smatches);
         let provider_url = smatches
@@ -211,11 +224,12 @@ fn main() {
     }
 }
 
-fn worker<P: Pair>(
+fn worker<NF: NodeApiFactory, THA: TokioHandleAccessor>(
     config: Config,
     shard: &ShardIdentifier,
     skip_ra: bool,
-    node_api_factory: NodeApiFactory<P>,
+    node_api_factory: Arc<NF>,
+    tokio_handle_accessor: Arc<THA>,
 ) {
     println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
@@ -234,17 +248,16 @@ fn worker<P: Pair>(
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
 
-    TokioHandleAccessorImpl::initialize();
+    let node_api = node_api_factory
+        .create_api()
+        .set_signer(AccountKeyring::Alice.pair());
+
     WorkerAccessorImpl::reset_worker(Worker::new(
         config.clone(),
-        Api::new(config.node_url())
-            .map(|api| api.set_signer(AccountKeyring::Alice.pair()))
-            .unwrap(),
+        node_api,
         Enclave::new(eid),
         DirectClient::new(config.worker_url()),
     ));
-
-    let tokio_handle_accessor = TokioHandleAccessorImpl;
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
@@ -279,8 +292,8 @@ fn worker<P: Pair>(
     });
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let mut api = Api::new(NODE_URL.lock().unwrap().clone())
-        .unwrap()
+    let mut api = node_api_factory
+        .create_api()
         .set_signer(AccountKeyring::Alice.pair());
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
@@ -648,116 +661,6 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
 
         api.signer = signer_orig;
     }
-}
-
-/// # Safety
-///
-/// FFI are always unsafe
-#[no_mangle]
-pub unsafe extern "C" fn ocall_worker_request(
-    request: *const u8,
-    req_size: u32,
-    response: *mut u8,
-    resp_size: u32,
-) -> sgx_status_t {
-    debug!("    Entering ocall_worker_request");
-    let mut req_slice = slice::from_raw_parts(request, req_size as usize);
-    let resp_slice = slice::from_raw_parts_mut(response, resp_size as usize);
-
-    let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
-    if requests.is_empty() {
-        return sgx_status_t::SGX_SUCCESS;
-    }
-
-    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
-
-    let resp: Vec<WorkerResponse<Vec<u8>>> = requests
-        .into_iter()
-        .map(|req| match req {
-            //let res =
-            WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
-                key.clone(),
-                api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash)
-                    .unwrap(),
-                api.get_storage_proof_by_keys(vec![StorageKey(key)], hash)
-                    .unwrap()
-                    .map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()),
-            ),
-        })
-        .collect();
-
-    write_slice_and_whitespace_pad(resp_slice, resp.encode());
-    sgx_status_t::SGX_SUCCESS
-}
-
-/// # Safety
-///
-/// FFI are always unsafe
-#[no_mangle]
-pub unsafe extern "C" fn ocall_send_block_and_confirmation(
-    confirmations: *const u8,
-    confirmations_size: u32,
-    signed_blocks_ptr: *const u8,
-    signed_blocks_size: u32,
-) -> sgx_status_t {
-    debug!("    Entering ocall_send_block_and_confirmation");
-    let mut status = sgx_status_t::SGX_SUCCESS;
-    let mut confirmations_slice = slice::from_raw_parts(confirmations, confirmations_size as usize);
-    let mut signed_blocks_slice =
-        slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize);
-
-    let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
-
-    // send confirmations to layer one
-    let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations_slice) {
-        Ok(calls) => calls,
-        Err(_) => {
-            error!("Could not decode confirmation calls");
-            status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-            vec![vec![]]
-        }
-    };
-
-    if !confirmation_calls.is_empty() {
-        println!(
-            "Enclave wants to send {} extrinsics",
-            confirmation_calls.len()
-        );
-        for call in confirmation_calls.into_iter() {
-            api.send_extrinsic(hex_encode(call), XtStatus::Ready)
-                .unwrap();
-        }
-        // await next block to avoid #37
-        let (events_in, events_out) = channel();
-        api.subscribe_events(events_in).unwrap();
-        let _ = events_out.recv().unwrap();
-        let _ = events_out.recv().unwrap();
-        // FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
-    }
-
-    // handle blocks
-    let signed_blocks: Vec<SignedSidechainBlock> = match Decode::decode(&mut signed_blocks_slice) {
-        Ok(blocks) => blocks,
-        Err(_) => {
-            error!("Could not decode confirmation calls");
-            status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-            vec![]
-        }
-    };
-
-    println! {"Received blocks: {:?}", signed_blocks};
-
-    let w = WORKER.read();
-
-    // make it sync, as sgx ffi does not support async/await
-    let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
-    if let Err(e) = handle.block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks)) {
-        error!("Error gossiping blocks: {:?}", e);
-        // Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-        // status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    };
-    // TODO: M8.3: Store blocks
-    status
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]

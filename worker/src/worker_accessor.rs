@@ -17,13 +17,13 @@
 */
 
 use crate::config::Config;
+use crate::worker::Worker as WorkerGen;
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockReadGuard};
 use sp_core::sr25519;
 use substrate_api_client::Api;
 use substratee_enclave_api::Enclave;
 use substratee_worker_api::direct_client::DirectClient;
-use worker::Worker as WorkerGen;
 
 pub type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectClient>;
 
@@ -32,7 +32,7 @@ lazy_static! {
 }
 
 pub trait WorkerAccessor {
-    fn get_worker(&self) -> Option<Worker>;
+    fn get_worker<'a>(&self) -> RwLockReadGuard<'a, Option<Worker>>;
 }
 
 pub struct WorkerAccessorImpl;
@@ -44,13 +44,13 @@ impl WorkerAccessorImpl {
         *WORKER.write() = Some(worker);
     }
 
-    pub fn read_worker() -> Option<Worker> {
-        WORKER.read().as_ref()
+    pub fn read_worker<'a>() -> RwLockReadGuard<'a, Option<Worker>> {
+        WORKER.read()
     }
 }
 
 impl WorkerAccessor for WorkerAccessorImpl {
-    fn get_worker(&self) -> Option<Worker> {
+    fn get_worker<'a>(&self) -> RwLockReadGuard<'a, Option<Worker>> {
         WorkerAccessorImpl::read_worker()
     }
 }

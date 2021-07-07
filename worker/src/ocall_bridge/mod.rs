@@ -22,4 +22,3 @@ pub mod component_factory;
 mod attestation_ocall_impl;
 mod ffi;
 mod on_chain_ocall_impl;
-mod sync_block_gossiper;

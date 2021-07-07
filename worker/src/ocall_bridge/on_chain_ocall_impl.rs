@@ -18,47 +18,80 @@
 
 use crate::node_api_factory::NodeApiFactory;
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainOCall};
+use crate::sync_block_gossiper::SyncBlockGossiper;
 use crate::utils::hex_encode;
-use codec::Decode;
-use frame_support::ensure;
+use crate::{WorkerRequest, WorkerResponse};
+use codec::{Decode, Encode};
 use log::*;
-use sgx_types::sgx_status_t;
-use sp_core::Pair;
-use std::slice;
+use sp_core::storage::StorageKey;
 use std::sync::mpsc::channel;
-use substrate_api_client::{Api, XtStatus};
+use std::sync::Arc;
+use std::vec::Vec;
+use substrate_api_client::XtStatus;
+use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
-pub struct WorkerOnChainOCallImpl<P, F>
+pub struct WorkerOnChainOCallImpl<F, S>
 where
-    P: Pair,
-    F: NodeApiFactory<P>,
+    F: NodeApiFactory,
+    S: SyncBlockGossiper,
 {
-    node_api_factory: F,
+    node_api_factory: Arc<F>,
+    block_gossiper: Arc<S>,
 }
 
-impl<P, F> WorkerOnChainOCallImpl<P, F>
+impl<F, S> WorkerOnChainOCallImpl<F, S>
 where
-    P: Pair,
-    F: NodeApiFactory<P>,
+    F: NodeApiFactory,
+    S: SyncBlockGossiper,
 {
-    pub fn new(node_api_factory: F) -> Self {
-        WorkerOnChainOCallImpl { node_api_factory }
+    pub fn new(node_api_factory: Arc<F>, block_gossiper: Arc<S>) -> Self {
+        WorkerOnChainOCallImpl {
+            node_api_factory,
+            block_gossiper,
+        }
     }
 }
 
-impl<P, F> WorkerOnChainOCall for WorkerOnChainOCallImpl<P, F>
+impl<F, S> WorkerOnChainOCall for WorkerOnChainOCallImpl<F, S>
 where
-    P: Pair,
-    F: NodeApiFactory<P>,
+    F: NodeApiFactory,
+    S: SyncBlockGossiper,
 {
     fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>> {
-        todo!()
+        debug!("    Entering ocall_worker_request");
+
+        let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice()).unwrap();
+        if requests.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let api = self.node_api_factory.create_api();
+
+        let resp: Vec<WorkerResponse<Vec<u8>>> = requests
+            .into_iter()
+            .map(|req| match req {
+                WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
+                    key.clone(),
+                    api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash)
+                        .unwrap(),
+                    api.get_storage_proof_by_keys(vec![StorageKey(key)], hash)
+                        .unwrap()
+                        .map(|read_proof| {
+                            read_proof.proof.into_iter().map(|bytes| bytes.0).collect()
+                        }),
+                ),
+            })
+            .collect();
+
+        let encoded_response: Vec<u8> = resp.encode();
+
+        Ok(encoded_response)
     }
 
     fn send_block_and_confirmation(
         &self,
-        confirmations: &mut [u8],
-        signed_blocks: &mut [u8],
+        confirmations: Vec<u8>,
+        signed_blocks: Vec<u8>,
     ) -> OCallBridgeResult<()> {
         debug!("    Entering ocall_send_block_and_confirmation");
 
@@ -67,7 +100,7 @@ where
         let api = self.node_api_factory.create_api();
 
         // send confirmations to layer one
-        let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(confirmations) {
+        let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations.as_slice()) {
             Ok(calls) => calls,
             Err(_) => {
                 status = Err(OCallBridgeError::SendBlockAndConfirmation(
@@ -95,27 +128,24 @@ where
         }
 
         // handle blocks
-        let signed_blocks: Vec<SignedSidechainBlock> = match Decode::decode(signed_blocks) {
-            Ok(blocks) => blocks,
-            Err(_) => {
-                status = Err(OCallBridgeError::SendBlockAndConfirmation(
-                    "Could not decode confirmation calls".to_string(),
-                ));
-                vec![]
-            }
-        };
+        let signed_blocks: Vec<SignedSidechainBlock> =
+            match Decode::decode(&mut signed_blocks.as_slice()) {
+                Ok(blocks) => blocks,
+                Err(_) => {
+                    status = Err(OCallBridgeError::SendBlockAndConfirmation(
+                        "Could not decode confirmation calls".to_string(),
+                    ));
+                    vec![]
+                }
+            };
 
         println! {"Received blocks: {:?}", signed_blocks};
 
-        let w = WORKER.read();
-
-        // make it sync, as sgx ffi does not support async/await
-        let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
-        if let Err(e) = handle.block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks)) {
+        if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
             error!("Error gossiping blocks: {:?}", e);
             // Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
             // status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-        };
+        }
         // TODO: M8.3: Store blocks
 
         status
