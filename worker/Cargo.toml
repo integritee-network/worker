@@ -98,6 +98,11 @@ git = "https://github.com/paritytech/substrate.git"
 branch = "master"
 version = "3.0.0"
 
+[dependencies.frame-support]
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+version = "3.0.0"
+
 [dependencies.substratee-stf]
 path = "../stf"
 
@@ -108,4 +113,3 @@ production = ['substratee-settings/production']
 [dev-dependencies]
 anyhow = "1.0.40"
 mockall = "0.10.1"
-frame-support =  { git = "https://github.com/paritytech/substrate.git", branch = "master" }
