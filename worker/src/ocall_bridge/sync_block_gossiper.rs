@@ -16,10 +16,19 @@
 
 */
 
-pub mod bridge_api;
-pub mod component_factory;
+use crate::worker::WorkerResult;
 
-mod attestation_ocall_impl;
-mod ffi;
-mod on_chain_ocall_impl;
-mod sync_block_gossiper;
+pub trait SyncBlockGossiper {
+    fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+}
+
+pub struct SyncBlockGossiperImpl;
+
+impl SyncBlockGossiper for SyncBlockGossiperImpl {
+    fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+        let w = WORKER.read();
+        let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
+
+        handle.block_on(w.as_ref().unwrap().gossip_blocks(signed_blocks))
+    }
+}

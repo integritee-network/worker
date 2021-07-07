@@ -25,8 +25,7 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::thread;
-
-use sgx_types::*;
+use std::time::{Duration, SystemTime};
 
 use base58::ToBase58;
 use clap::{load_yaml, App};
@@ -35,51 +34,54 @@ use lazy_static::lazy_static;
 use log::*;
 use my_node_runtime::{substratee_registry::ShardIdentifier, Event, Hash, Header};
 use parking_lot::RwLock;
+use sgx_types::*;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
     sr25519,
     storage::StorageKey,
     Pair,
 };
+use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::FromHexString, Api, GenericAddress, XtStatus};
 
-use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
+use config::Config;
 use enclave::api::{
     enclave_dump_ra, enclave_init, enclave_mrenclave, enclave_perform_ra, enclave_shielding_key,
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use enclave::worker_api_direct_server::start_worker_api_direct_server;
-use sp_finality_grandpa::VersionedAuthorityList;
-use std::time::{Duration, SystemTime};
-
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_enclave_api::{Enclave, TeeRexApi};
 use substratee_node_primitives::SignedBlock;
-use substratee_worker_api::direct_client::DirectClient;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
-
-use config::Config;
-
 use substratee_settings::files::{
     ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
 };
+use substratee_worker_api::direct_client::DirectClient;
+use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
+use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
+use crate::node_api_factory::{NodeApiFactory, NodeApiFactoryImpl};
 use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
 use crate::ocall_bridge::component_factory::OCallBridgeComponentFactoryImpl;
+use crate::tokio_handle_accessor::{TokioHandleAccessor, TokioHandleAccessorImpl};
 use crate::utils::{check_files, extract_shard, hex_encode, write_slice_and_whitespace_pad};
 use crate::worker::{worker_url_into_async_rpc_url, WorkerT};
-use worker::Worker as WorkerGen;
+use crate::worker_accessor::Worker;
+use crate::worker_accessor::WorkerAccessorImpl;
 
 mod config;
 mod enclave;
 mod error;
 mod ipfs;
+mod node_api_factory;
 mod ocall_bridge;
 mod tests;
+mod tokio_handle_accessor;
 mod utils;
 mod worker;
+mod worker_accessor;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -87,14 +89,14 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// start block production every ... ms
 const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
 
-type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectClient>;
+//type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectClient>;
 
-lazy_static! {
-    // todo: replace with &str, but use &str in api-client first
-    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
-    static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
-    static ref TOKIO_HANDLE: Mutex<Option<tokio::runtime::Handle>> = Default::default();
-}
+// lazy_static! {
+//     // todo: replace with &str, but use &str in api-client first
+//     static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
+//     static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
+//     static ref TOKIO_HANDLE: Mutex<Option<tokio::runtime::Handle>> = Default::default();
+// }
 
 fn main() {
     // Setup logging
@@ -108,7 +110,8 @@ fn main() {
 
     let mut config = Config::from(&matches);
 
-    *NODE_URL.lock().unwrap() = config.node_url();
+    NodeApiFactoryImpl::write_node_url(config.node_url());
+    let node_api_factory = NodeApiFactoryImpl;
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
@@ -208,7 +211,12 @@ fn main() {
     }
 }
 
-fn worker(config: Config, shard: &ShardIdentifier, skip_ra: bool) {
+fn worker<P: Pair>(
+    config: Config,
+    shard: &ShardIdentifier,
+    skip_ra: bool,
+    node_api_factory: NodeApiFactory<P>,
+) {
     println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
@@ -226,9 +234,8 @@ fn worker(config: Config, shard: &ShardIdentifier, skip_ra: bool) {
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
 
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    *TOKIO_HANDLE.lock().unwrap() = Some(rt.handle().clone());
-    *WORKER.write() = Some(Worker::new(
+    TokioHandleAccessorImpl::initialize();
+    WorkerAccessorImpl::reset_worker(Worker::new(
         config.clone(),
         Api::new(config.node_url())
             .map(|api| api.set_signer(AccountKeyring::Alice.pair()))
@@ -236,6 +243,8 @@ fn worker(config: Config, shard: &ShardIdentifier, skip_ra: bool) {
         Enclave::new(eid),
         DirectClient::new(config.worker_url()),
     ));
+
+    let tokio_handle_accessor = TokioHandleAccessorImpl;
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
@@ -262,7 +271,7 @@ fn worker(config: Config, shard: &ShardIdentifier, skip_ra: bool) {
     let enclave = Enclave::new(eid);
     let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
 
-    let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
+    let handle = tokio_handle_accessor.get_handle();
     handle.spawn(async move {
         substratee_worker_rpc_server::run_server(&url, enclave)
             .await

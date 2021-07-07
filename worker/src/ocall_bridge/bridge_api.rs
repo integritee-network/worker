@@ -73,6 +73,8 @@ pub enum OCallBridgeError {
     GetUpdateInfo(sgx_status_t),
     #[error("GetIasSocket Error: {0}")]
     GetIasSocket(String),
+    #[error("SendBlockAndConfirmation Error: {0}")]
+    SendBlockAndConfirmation(String),
 }
 
 #[allow(clippy::from_over_into)]
@@ -83,6 +85,7 @@ impl Into<sgx_status_t> for OCallBridgeError {
             OCallBridgeError::InitQuote(s) => s,
             OCallBridgeError::GetUpdateInfo(s) => s,
             OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+            OCallBridgeError::SendBlockAndConfirmation(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
         }
     }
 }
@@ -114,4 +117,15 @@ pub trait RemoteAttestationOCall {
         platform_blob: sgx_platform_info_t,
         enclave_trusted: i32,
     ) -> OCallBridgeResult<sgx_update_info_bit_t>;
+}
+
+#[cfg_attr(test, automock)]
+pub trait WorkerOnChainOCall {
+    fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
+
+    fn send_block_and_confirmation(
+        &self,
+        confirmations: &mut [u8],
+        signed_blocks: &mut [u8],
+    ) -> OCallBridgeResult<()>;
 }
