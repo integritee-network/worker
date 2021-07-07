@@ -31,14 +31,16 @@ lazy_static! {
     static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
 }
 
+/// Trait for accessing a worker instance
+/// Prefer injecting a trait object of this, instead of using the associated functions of WorkerAccessorImpl
 pub trait WorkerAccessor {
     fn get_worker<'a>(&self) -> RwLockReadGuard<'a, Option<Worker>>;
 }
 
 pub struct WorkerAccessorImpl;
 
-// these are the static (global) accessors
-// reduce their usage where possible and use an instance of WorkerAccessorImpl or the trait
+/// these are the static (global) accessors
+/// reduce their usage where possible and use an instance of WorkerAccessorImpl or the trait
 impl WorkerAccessorImpl {
     pub fn reset_worker(worker: Worker) {
         *WORKER.write() = Some(worker);

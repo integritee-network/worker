@@ -24,20 +24,26 @@ lazy_static! {
     static ref TOKIO_HANDLE: Mutex<Option<tokio::runtime::Handle>> = Default::default();
 }
 
+/// Wrapper for accessing a tokio handle
 pub trait TokioHandleAccessor {
     fn get_handle(&self) -> Handle;
 }
 
+/// implementation, using a static global variable internally
+///
 pub struct TokioHandleAccessorImpl;
 
-// these are the static (global) accessors
-// reduce their usage where possible and use an instance of TokioHandleAccessorImpl or the trait
+/// these are the static (global) accessors
+/// reduce their usage where possible and use an instance of TokioHandleAccessorImpl or the trait
 impl TokioHandleAccessorImpl {
+    /// this needs to be called once at application startup!
     pub fn initialize() {
         let rt = tokio::runtime::Runtime::new().unwrap();
         *TOKIO_HANDLE.lock().unwrap() = Some(rt.handle().clone());
     }
 
+    /// static / global getter of the handle (use as little as possible!)
+    /// whenever possible, inject the accessor using the trait and access it that way
     pub fn read_handle() -> Handle {
         TOKIO_HANDLE
             .lock()

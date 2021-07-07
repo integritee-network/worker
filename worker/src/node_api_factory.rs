@@ -26,12 +26,16 @@ lazy_static! {
     static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
 }
 
+/// trait to create a node API, based on a node URL
 pub trait NodeApiFactory {
     fn create_api(&self) -> Api<sr25519::Pair>;
 }
 
 pub struct NodeApiFactoryImpl;
 
+/// global access to the node URL - don't use if possible, prefer usin a trait object and
+/// then get your node API from that
+/// needs to be initialized (i.e. call 'write_node_url()' once) at application startup
 impl NodeApiFactoryImpl {
     pub fn write_node_url(url: String) {
         *NODE_URL.lock().unwrap() = url;

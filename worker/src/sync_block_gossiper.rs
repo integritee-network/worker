@@ -24,6 +24,7 @@ use log::*;
 use std::sync::Arc;
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
+/// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner
 pub trait SyncBlockGossiper {
     fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
