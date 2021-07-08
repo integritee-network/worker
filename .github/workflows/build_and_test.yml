@@ -55,6 +55,6 @@ jobs:
             enclave/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Worker & Client
-        run: cargo clippy
+        run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave && cargo clippy
+        run: cd enclave && cargo clippy -- -D warnings
