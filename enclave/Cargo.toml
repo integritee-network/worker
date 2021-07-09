@@ -1,5 +1,3 @@
-cargo-features = ["resolver"]
-
 [package]
 name = "substratee-worker-enclave"
 version = "0.8.0"

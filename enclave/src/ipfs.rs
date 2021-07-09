@@ -92,7 +92,7 @@ pub fn test_verification_ok_for_correct_content() {
     let content: Vec<u8> = vec![20; 512 * 1024];
     let mut ipfs_content = IpfsContent::new(cid, content);
     let verification = ipfs_content.verify();
-    assert_eq!(verification.is_ok(), true);
+    assert!(verification.is_ok());
 }
 
 #[allow(unused)]

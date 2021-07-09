@@ -18,11 +18,6 @@ use crate::std::collections::{HashMap, HashSet};
 use crate::std::string::ToString;
 use crate::std::vec::Vec;
 
-#[cfg(test)]
-use sc_client::Client;
-#[cfg(test)]
-use sc_client_api::{backend::Backend, CallExecutor};
-
 use super::error::JustificationError as ClientError;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;

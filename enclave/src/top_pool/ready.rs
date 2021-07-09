@@ -252,8 +252,8 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
         }
 
         let operation = OperationRef {
-            insertion_id,
             operation,
+            insertion_id,
         };
 
         // insert to best if it doesn't require any other operation to be included before it
@@ -566,19 +566,16 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
     }
 
     /// Returns number of operations in this queue.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self, shard: ShardIdentifier) -> usize {
-        if let Some(ready_map) = self.ready.get(&shard) {
-            return ready_map.len();
-        }
-        0
+        self.ready.get(&shard)
+            .map_or(0, |ready_map| ready_map.len())
     }
 
     /// Returns sum of encoding lengths of all operations in this queue.
     pub fn bytes(&self, shard: ShardIdentifier) -> usize {
-        if let Some(ready_map) = self.ready.get(&shard) {
-            return ready_map.bytes();
-        }
-        0
+        self.ready.get(&shard)
+            .map_or(0, |ready_map| ready_map.bytes())
     }
 }
 
@@ -636,10 +633,8 @@ impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
                     satisfied += 1;
                     Some((satisfied, tx_ref))
                 // then get from the pool
-                } else if let Some(next) = self.all.read().get(hash) {
-                    Some((next.requires_offset + 1, next.operation.clone()))
                 } else {
-                    None
+                    self.all.read().get(hash).map(|next| (next.requires_offset + 1, next.operation.clone()))
                 };
 
                 if let Some((satisfied, tx_ref)) = res {

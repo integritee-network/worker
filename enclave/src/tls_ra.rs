@@ -146,8 +146,7 @@ fn tls_server_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ServerConfig
     let (key_der, cert_der) = create_ra_report_and_signature(sign_type).sgx_error()?;
 
     let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true)));
-    let mut certs = Vec::new();
-    certs.push(rustls::Certificate(cert_der));
+    let certs = vec![rustls::Certificate(cert_der)];
     let privkey = rustls::PrivateKey(key_der);
     cfg.set_single_cert_with_ocsp_and_sct(certs, privkey, vec![], vec![])
         .sgx_error()?;
@@ -264,8 +263,7 @@ fn tls_client_config(sign_type: sgx_quote_sign_type_t) -> SgxResult<ClientConfig
     let (key_der, cert_der) = create_ra_report_and_signature(sign_type).sgx_error()?;
 
     let mut cfg = rustls::ClientConfig::new();
-    let mut certs = Vec::new();
-    certs.push(rustls::Certificate(cert_der));
+    let certs = vec![rustls::Certificate(cert_der)];
     let privkey = rustls::PrivateKey(key_der);
 
     cfg.set_single_client_cert(certs, privkey).unwrap();

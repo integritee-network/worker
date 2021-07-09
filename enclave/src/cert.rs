@@ -282,7 +282,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
     let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
     let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).sgx_error()?;
 
-    let mut ca_reader = BufReader::new(&IAS_REPORT_CA[..]);
+    let mut ca_reader = BufReader::new(IAS_REPORT_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
@@ -295,15 +295,12 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
         .map(|cert| cert.to_trust_anchor())
         .collect();
 
-    let mut chain: Vec<&[u8]> = Vec::new();
-    chain.push(&ias_cert_dec);
-
     let now_func = webpki::Time::try_from(SystemTime::now());
 
     match sig_cert.verify_is_valid_tls_server_cert(
         SUPPORTED_SIG_ALGS,
         &webpki::TLSServerTrustAnchors(&trust_anchors),
-        &chain,
+        &[ias_cert_dec.as_slice()],
         now_func.sgx_error()?,
     ) {
         Ok(_) => info!("Cert is good"),
@@ -376,11 +373,6 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
                     if rt != sgx_status_t::SGX_SUCCESS {
                         warn!("ocall_get_update_info unsuccessful. rt={:?}", rt);
                         // Borrow of packed field is unsafe in future Rust releases
-                        unsafe {
-                            debug!("update_info.pswUpdate: {}", update_info.pswUpdate);
-                            debug!("update_info.csmeFwUpdate: {}", update_info.csmeFwUpdate);
-                            debug!("update_info.ucodeUpdate: {}", update_info.ucodeUpdate);
-                        }
                         return Err(rt);
                     }
                 } else {
@@ -416,22 +408,18 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
         // DO SECURITY CHECK ON DEMAND
         // DO SECURITY CHECK ON DEMAND
         // DO SECURITY CHECK ON DEMAND
-        unsafe {
-            debug!("sgx quote version = {}", sgx_quote.version);
-            debug!("sgx quote signature type = {}", sgx_quote.sign_type);
-            debug!(
-                "sgx quote report_data = {:02x}",
-                sgx_quote.report_body.report_data.d.iter().format("")
-            );
-            debug!(
-                "sgx quote mr_enclave = {:02x}",
-                sgx_quote.report_body.mr_enclave.m.iter().format("")
-            );
-            debug!(
-                "sgx quote mr_signer = {:02x}",
-                sgx_quote.report_body.mr_signer.m.iter().format("")
-            );
-        }
+        debug!(
+            "sgx quote report_data = {:02x}",
+            sgx_quote.report_body.report_data.d.iter().format("")
+        );
+        debug!(
+            "sgx quote mr_enclave = {:02x}",
+            sgx_quote.report_body.mr_enclave.m.iter().format("")
+        );
+        debug!(
+            "sgx quote mr_signer = {:02x}",
+            sgx_quote.report_body.mr_signer.m.iter().format("")
+        );
         debug!("Anticipated public key = {:02x}", pub_k.iter().format(""));
         if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
             info!("Mutual RA done!");

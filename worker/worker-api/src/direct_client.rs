@@ -47,7 +47,10 @@ impl DirectApi {
         Self { url }
     }
 
+
     /// server connection with only one response
+    /// todo: remove unit err in refactoring process
+    #[allow(clippy::result_unit_err)]
     pub fn get(&self, request: String) -> Result<String, ()> {
         let url = self.url.clone();
         let (port_in, port_out) = channel();
@@ -77,6 +80,8 @@ impl DirectApi {
         }
     }
     /// server connection with more than one response
+    /// todo: remove unit err in refactoring process
+    #[allow(clippy::result_unit_err)]
     pub fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
         let url = self.url.clone();
 

@@ -307,7 +307,7 @@ where
             Ready,
             Failed,
             Dropped,
-        };
+        }
 
         let (mut initial_statuses, final_statuses) = {
             let mut pool = self.pool.write().unwrap();

@@ -109,7 +109,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
         test_differentiate_getter_and_call_works,
         test_create_block_and_confirmation_works,
         // needs node to be running.. unit tests?
-        test_ocall_worker_request,
+        // test_ocall_worker_request,
         test_create_state_diff,
         test_executing_call_updates_account_nonce,
         test_invalid_nonce_call_is_not_executed,
@@ -160,31 +160,26 @@ fn test_ocall_read_write_ipfs() {
         )
     };
 
-    if res == sgx_status_t::SGX_SUCCESS {
-        let cid = std::str::from_utf8(&cid_buf).unwrap();
-        let mut f = File::open(&cid).unwrap();
-        let mut content_buf = Vec::new();
-        f.read_to_end(&mut content_buf).unwrap();
-        info!("reading file {:?} of size {} bytes", f, &content_buf.len());
+    assert_eq!(res, sgx_status_t::SGX_SUCCESS);
 
-        let mut ipfs_content = IpfsContent::new(cid, content_buf);
-        let verification = ipfs_content.verify();
-        assert_eq!(verification.is_ok(), true);
-    } else {
-        error!("was not able to write to file");
-        assert!(false);
-    }
+    let cid = std::str::from_utf8(&cid_buf).unwrap();
+    let mut f = File::open(&cid).unwrap();
+    let mut content_buf = Vec::new();
+    f.read_to_end(&mut content_buf).unwrap();
+    info!("reading file {:?} of size {} bytes", f, &content_buf.len());
+
+    let mut ipfs_content = IpfsContent::new(cid, content_buf);
+    let verification = ipfs_content.verify();
+    assert!(verification.is_ok());
 }
 
 #[allow(unused)]
 fn test_ocall_worker_request() {
     info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
-    let mut requests = Vec::new();
-
-    requests.push(WorkerRequest::ChainStorage(
+    let requests = vec![WorkerRequest::ChainStorage(
         storage_key("Balances", "TotalIssuance").0,
         None,
-    ));
+    )];
 
     let mut resp: Vec<WorkerResponse<Vec<u8>>> = match crate::worker_request(requests) {
         Ok(response) => response,
