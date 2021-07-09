@@ -88,7 +88,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: init-rust
         run: |
-          rustup component add fmt
+          rustup component add rustfmt
           rustup target add wasm32-unknown-unknown
       - name: Cache Rust Dependecies
         uses: actions/cache@v2
