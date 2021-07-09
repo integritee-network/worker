@@ -100,9 +100,9 @@ jobs:
             enclave/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Worker & Client
-        run: cargo fmt --all -- --ceck
+        run: cargo fmt --all -- --check
       - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave && cargo fmt --all -- --ceck
+        run: cd enclave && cargo fmt --all -- --check
 
   integration-tests:
     runs-on: ubuntu-latest
