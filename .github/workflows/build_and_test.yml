@@ -81,6 +81,28 @@ jobs:
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave && cargo clippy -- -D warnings
+  fmt:
+    runs-on: ubuntu-latest
+    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust
+        run: |
+          rustup component add fmt
+          rustup target add wasm32-unknown-unknown
+      - name: Cache Rust Dependecies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            enclave/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Worker & Client
+        run: cargo fmt --all -- --ceck
+      - name: Enclave # Enclave is separate as it's not in the workspace
+        run: cd enclave && cargo fmt --all -- --ceck
 
   integration-tests:
     runs-on: ubuntu-latest
