@@ -21,7 +21,7 @@ pub fn transfer(from: &str, to: &str, nft_id: NFTId, chain_api: Api<sr25519::Pai
     let signer = get_pair_from_str(from);
     let account_id = get_accountid_from_str(to);
     let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
-    let to_id = GenericAddress::Id(account_id.clone());
+    let to_id = GenericAddress::Id(account_id);
     info!("transfer the nft {} from {} to {}", nft_id, from, to);
 
     // compose the extrinsic
@@ -56,8 +56,11 @@ pub fn transfer(from: &str, to: &str, nft_id: NFTId, chain_api: Api<sr25519::Pai
             .unwrap();
 
         info!("Transfer event received");
-        debug!("NFTId: {:?}", ret.nft_id);
-        debug!("old owner accountId: {:?}", ret.old_owner);
-        debug!("NFTSeriesId: {:?}", ret.new_owner);
+        if ret.nft_id == nft_id {
+            debug!("NFTId: {:?}", ret.nft_id);
+            debug!("old owner accountId: {:?}", ret.old_owner);
+            debug!("new owner accountId: {:?}", ret.new_owner);
+            break;
+        }
     }
 }
