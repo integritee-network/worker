@@ -17,13 +17,13 @@
 */
 
 use lazy_static::lazy_static;
+use parking_lot::RwLock;
 use sp_core::sr25519;
-use std::sync::Mutex;
 use substrate_api_client::Api;
 
 lazy_static! {
     // todo: replace with &str, but use &str in api-client first
-    static ref NODE_URL: Mutex<String> = Mutex::new("".to_string());
+    static ref NODE_URL: RwLock<String> = RwLock::new("".to_string());
 }
 
 /// trait to create a node API, based on a node URL
@@ -38,11 +38,11 @@ pub struct NodeApiFactoryImpl;
 /// needs to be initialized (i.e. call 'write_node_url()' once) at application startup
 impl NodeApiFactoryImpl {
     pub fn write_node_url(url: String) {
-        *NODE_URL.lock().unwrap() = url;
+        *NODE_URL.write() = url;
     }
 
     pub fn read_node_url() -> String {
-        NODE_URL.lock().unwrap().clone()
+        NODE_URL.read().clone()
     }
 
     /// creates a new instance and initializes the global state
@@ -51,6 +51,13 @@ impl NodeApiFactoryImpl {
 
         NodeApiFactoryImpl
     }
+}
+
+pub fn read_node_url() -> String {
+    NODE_URL.read().clone()
+}
+pub fn write_node_url(url: String) {
+    *NODE_URL.write() = url;
 }
 
 impl NodeApiFactory for NodeApiFactoryImpl {

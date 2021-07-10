@@ -56,7 +56,7 @@ use substratee_settings::files::{
 use substratee_worker_api::direct_client::DirectClient;
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
-use crate::node_api_factory::{NodeApiFactory, NodeApiFactoryImpl};
+use crate::node_api_factory::{read_node_url, write_node_url, NodeApiFactory, NodeApiFactoryImpl};
 use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
 use crate::ocall_bridge::component_factory::OCallBridgeComponentFactoryImpl;
 use crate::sync_block_gossiper::SyncBlockGossiperImpl;
@@ -112,11 +112,12 @@ fn main() {
         tokio_handle_accessor.clone(),
         worker_accessor.clone(),
     ));
-    let node_api_factory = Arc::new(NodeApiFactoryImpl::new(config.node_url()));
+    // let node_api_factory = Arc::new(NodeApiFactoryImpl::new(config.node_url()));
+    // write_node_url(config.node_url());
 
     // initialize o-call bridge with a concrete factory implementation
     OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl::new(
-        node_api_factory.clone(),
+        Arc<|| Api::new(read_node_url()).unwrap()>,
         sync_block_gossiper,
     )));
 
@@ -138,7 +139,7 @@ fn main() {
             config.clone(),
             &shard,
             skip_ra,
-            node_api_factory.clone(),
+            || Api::new(read_node_url()).unwrap(),
             tokio_handle_accessor.clone(),
         );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
@@ -224,13 +225,16 @@ fn main() {
     }
 }
 
-fn worker<NF: NodeApiFactory, THA: TokioHandleAccessor>(
+fn worker<NodeApiConstructor, THA>(
     config: Config,
     shard: &ShardIdentifier,
     skip_ra: bool,
-    node_api_factory: Arc<NF>,
+    node_api_factory: NodeApiConstructor,
     tokio_handle_accessor: Arc<THA>,
-) {
+) where
+    NodeApiConstructor: FnOnce() -> Api<sr25519::Pair>,
+    THA: TokioHandleAccessor,
+{
     println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
@@ -248,13 +252,11 @@ fn worker<NF: NodeApiFactory, THA: TokioHandleAccessor>(
     println!("MRENCLAVE={}", mrenclave.to_base58());
     let eid = enclave.geteid();
 
-    let node_api = node_api_factory
-        .create_api()
-        .set_signer(AccountKeyring::Alice.pair());
+    let node_api = node_api_factory().set_signer(AccountKeyring::Alice.pair());
 
     WorkerAccessorImpl::reset_worker(Worker::new(
         config.clone(),
-        node_api,
+        node_api.clone(),
         Enclave::new(eid),
         DirectClient::new(config.worker_url()),
     ));
@@ -292,9 +294,9 @@ fn worker<NF: NodeApiFactory, THA: TokioHandleAccessor>(
     });
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
-    let mut api = node_api_factory
-        .create_api()
-        .set_signer(AccountKeyring::Alice.pair());
+
+    // make mut
+    let mut api = node_api;
     let genesis_hash = api.genesis_hash.as_bytes().to_vec();
 
     let tee_accountid = enclave_account(eid);
