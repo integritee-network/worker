@@ -56,7 +56,7 @@ use substratee_settings::files::{
 use substratee_worker_api::direct_client::DirectClient;
 
 use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
-use crate::node_api_factory::{read_node_url, write_node_url, NodeApiFactory, NodeApiFactoryImpl};
+use crate::node_api_factory::{read_node_url, write_node_url, NodeApiFactoryImpl};
 use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
 use crate::ocall_bridge::component_factory::OCallBridgeComponentFactoryImpl;
 use crate::sync_block_gossiper::SyncBlockGossiperImpl;
@@ -112,12 +112,12 @@ fn main() {
         tokio_handle_accessor.clone(),
         worker_accessor.clone(),
     ));
-    // let node_api_factory = Arc::new(NodeApiFactoryImpl::new(config.node_url()));
-    // write_node_url(config.node_url());
+    let node_api_factory = Arc::new(NodeApiFactoryImpl::new(config.node_url()));
+    write_node_url(config.node_url());
 
     // initialize o-call bridge with a concrete factory implementation
     OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl::new(
-        Arc<|| Api::new(read_node_url()).unwrap()>,
+        node_api_factory.clone(),
         sync_block_gossiper,
     )));
 
