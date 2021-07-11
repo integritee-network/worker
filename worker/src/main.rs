@@ -672,3 +672,11 @@ pub enum WorkerRequest {
 pub enum WorkerResponse<V: Encode + Decode> {
     ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
+
+#[no_mangle]
+pub extern "C" fn ocall_sgx_init_quote(
+    ret_ti: *mut sgx_target_info_t,
+    ret_gid: *mut sgx_epid_group_id_t,
+) -> sgx_status_t {
+    ocall_bridge::ffi::init_quote::sgx_init_quote(ret_ti, ret_gid, OCallBridge::get_ra_api())
+}
