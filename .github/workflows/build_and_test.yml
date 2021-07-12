@@ -120,6 +120,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build.yml
           # todo: change to master when the branch below is merged
           branch: upload-artifacts
           name: integritee-node-skip-ias-check
