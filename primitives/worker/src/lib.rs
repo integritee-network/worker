@@ -75,7 +75,7 @@ impl RpcReturnValue {
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 // Todo: result should not be Vec<u8>, but `T: Serialize`
 pub struct RpcResponse {
@@ -84,7 +84,7 @@ pub struct RpcResponse {
     pub id: u32,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 // Todo: params should not be Vec<u8>, but `T: Serialize`
 pub struct RpcRequest {

@@ -1,6 +1,5 @@
 /*
     Copyright 2019 Supercomputing Systems AG
-    Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,16 +15,8 @@
 
 */
 
-/// Foreign Function interface for all the OCalls
-/// Implementations of C-API functions, that can be called from the Enclave
-/// These should just be wrappers that transform the C-API structures and call the
-/// actual implementation of the OCalls (using the traits defined in the bridge_api)
-pub mod get_ias_socket;
-pub mod get_quote;
-pub mod get_update_info;
-pub mod init_quote;
-pub mod ipfs;
-pub mod send_block_and_confirmation;
-pub mod send_status;
-pub mod update_status_event;
-pub mod worker_request;
+pub mod direct_invocation_ocall;
+pub mod watch_list_service;
+pub mod watching_client;
+pub mod ws_direct_server_runner;
+pub mod ws_handler;

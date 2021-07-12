@@ -75,6 +75,16 @@ impl Bridge {
             .get_ipfs_api()
     }
 
+    pub fn get_direct_invocation_api() -> Arc<dyn DirectInvocationBridge> {
+        debug!("Requesting direct invocation OCall API instance");
+
+        COMPONENT_FACTORY
+            .read()
+            .as_ref()
+            .expect("Component factory has not been set. Use `initialize()`")
+            .get_direct_invocation_api()
+    }
+
     pub fn initialize(component_factory: Arc<dyn GetOCallBridgeComponents + Send + Sync>) {
         debug!("Initializing OCall bridge with component factory");
 
@@ -93,6 +103,9 @@ pub trait GetOCallBridgeComponents {
 
     /// ipfs OCall API
     fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge>;
+
+    /// direct invocation API
+    fn get_direct_invocation_api(&self) -> Arc<dyn DirectInvocationBridge>;
 }
 
 /// OCall bridge errors
@@ -110,6 +123,8 @@ pub enum OCallBridgeError {
     SendBlockAndConfirmation(String),
     #[error("IPFS Error: {0}")]
     IpfsError(String),
+    #[error("DirectInvocation Error: {0}")]
+    DirectInvocationError(String),
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
@@ -121,6 +136,7 @@ impl From<OCallBridgeError> for sgx_status_t {
             OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
             OCallBridgeError::SendBlockAndConfirmation(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
             OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+            OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
         }
     }
 }
@@ -175,4 +191,16 @@ pub trait IpfsBridge {
     fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<Cid>;
 
     fn read_from_ipfs(&self, cid: Cid) -> OCallBridgeResult<()>;
+}
+
+/// Trait for the direct invocation OCalls
+#[cfg_attr(test, automock)]
+pub trait DirectInvocationBridge {
+    fn update_status_event(
+        &self,
+        hash_vec: Vec<u8>,
+        status_update_vec: Vec<u8>,
+    ) -> OCallBridgeResult<()>;
+
+    fn send_status(&self, hash_vec: Vec<u8>, status_vec: Vec<u8>) -> OCallBridgeResult<()>;
 }
