@@ -148,7 +148,7 @@ jobs:
           ln -sf ../${{ bin.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
           ./demo_direct_call.sh -p 9944 -P 2000 -t first
 
-      - name: "Start client and transfer funds directly #1"
+      - name: "Start client and transfer funds directly #2"
         # the change the symbolic link which points to the target folder
         run: |
           cd client
