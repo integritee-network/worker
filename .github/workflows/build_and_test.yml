@@ -146,8 +146,6 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
-          # todo: change to master when the branch below is merged
-          branch: upload-artifacts
           name: integritee-node-skip-ias-check
           path: node
           repo: integritee-network/integritee-node
