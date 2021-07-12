@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationOCall};
+use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationBridge};
 use log::*;
 use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t};
 use std::sync::Arc;
@@ -32,7 +32,7 @@ pub extern "C" fn ocall_sgx_init_quote(
 fn sgx_init_quote(
     ret_ti: *mut sgx_target_info_t,
     ret_gid: *mut sgx_epid_group_id_t,
-    ra_api: Arc<dyn RemoteAttestationOCall>,
+    ra_api: Arc<dyn RemoteAttestationBridge>,
 ) -> sgx_status_t {
     debug!("    Entering ocall_sgx_init_quote");
     let init_result = match ra_api.init_quote() {
@@ -55,12 +55,12 @@ fn sgx_init_quote(
 mod tests {
 
     use super::*;
-    use crate::ocall_bridge::bridge_api::MockRemoteAttestationOCall;
+    use crate::ocall_bridge::bridge_api::MockRemoteAttestationBridge;
     use std::sync::Arc;
 
     #[test]
     fn init_quote_sets_results() {
-        let mut ra_ocall_api_mock = MockRemoteAttestationOCall::new();
+        let mut ra_ocall_api_mock = MockRemoteAttestationBridge::new();
         ra_ocall_api_mock
             .expect_init_quote()
             .times(1)

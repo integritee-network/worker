@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationOCall};
+use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationBridge};
 use log::*;
 use sgx_types::{c_int, sgx_status_t};
 use std::sync::Arc;
@@ -26,7 +26,7 @@ pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
     get_ias_socket(ret_fd, Bridge::get_ra_api()) // inject the RA API (global state)
 }
 
-fn get_ias_socket(ret_fd: *mut c_int, ra_api: Arc<dyn RemoteAttestationOCall>) -> sgx_status_t {
+fn get_ias_socket(ret_fd: *mut c_int, ra_api: Arc<dyn RemoteAttestationBridge>) -> sgx_status_t {
     debug!("    Entering ocall_get_ias_socket");
     let socket_result = ra_api.get_ias_socket();
 
@@ -48,14 +48,14 @@ fn get_ias_socket(ret_fd: *mut c_int, ra_api: Arc<dyn RemoteAttestationOCall>) -
 mod tests {
 
     use super::*;
-    use crate::ocall_bridge::bridge_api::{MockRemoteAttestationOCall, OCallBridgeError};
+    use crate::ocall_bridge::bridge_api::{MockRemoteAttestationBridge, OCallBridgeError};
     use std::sync::Arc;
 
     #[test]
     fn get_socket_sets_pointer_result() {
         let expected_socket = 4321i32;
 
-        let mut ra_ocall_api_mock = MockRemoteAttestationOCall::new();
+        let mut ra_ocall_api_mock = MockRemoteAttestationBridge::new();
         ra_ocall_api_mock
             .expect_get_ias_socket()
             .times(1)
@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn given_error_from_ocall_impl_then_return_sgx_error() {
-        let mut ra_ocall_api_mock = MockRemoteAttestationOCall::new();
+        let mut ra_ocall_api_mock = MockRemoteAttestationBridge::new();
         ra_ocall_api_mock
             .expect_get_ias_socket()
             .times(1)

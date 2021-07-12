@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationOCall};
+use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationBridge};
 use log::*;
 use sgx_types::{sgx_platform_info_t, sgx_status_t, sgx_update_info_bit_t};
 use std::sync::Arc;
@@ -39,7 +39,7 @@ fn get_update_info(
     p_platform_blob: *const sgx_platform_info_t,
     enclave_trusted: i32,
     p_update_info: *mut sgx_update_info_bit_t,
-    ra_api: Arc<dyn RemoteAttestationOCall>,
+    ra_api: Arc<dyn RemoteAttestationBridge>,
 ) -> sgx_status_t {
     debug!("    Entering ocall_get_update_info");
 

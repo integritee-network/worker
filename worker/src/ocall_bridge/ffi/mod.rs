@@ -24,3 +24,5 @@ pub mod get_ias_socket;
 pub mod get_quote;
 pub mod get_update_info;
 pub mod init_quote;
+pub mod send_block_and_confirmation;
+pub mod worker_request;
