@@ -167,7 +167,7 @@ jobs:
           ./${{ env.WORKER_BIN }} shielding-key
           ./${{ env.WORKER_BIN }} init-shard
           ./${{ env.WORKER_BIN }} dump-ra
-          ./${{ env.WORKER_BIN }} run &
+          ./${{ env.WORKER_BIN }} run --skip-ra &
           sleep 30
 
       - name: "Start client and transfer funds directly #1"
