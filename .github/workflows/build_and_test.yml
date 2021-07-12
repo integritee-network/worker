@@ -12,6 +12,7 @@ env:
   WORKER_BIN: substratee-worker
   CLIENT_BIN: substratee-client
   ENCLAVE_BIN: enclave.signed.so
+  RUST_TOOLCHAIN: nightly-2021-06-24
 
 jobs:
 #  build-test:
@@ -94,7 +95,7 @@ jobs:
       - name: Install rust latest nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-03-25
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           override: true
           target: wasm32-unknown-unknown
 #      - name: Download Worker
