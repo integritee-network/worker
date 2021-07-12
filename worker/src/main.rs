@@ -46,7 +46,6 @@ use enclave::api::{
     enclave_signing_key,
 };
 use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
-use enclave::worker_api_direct_server::start_worker_api_direct_server;
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_enclave_api::{Enclave, TeeRexApi};
 use substratee_node_primitives::SignedBlock;
@@ -55,6 +54,10 @@ use substratee_settings::files::{
 };
 use substratee_worker_api::direct_client::DirectClient;
 
+use crate::direct_invocation::watch_list_service::{WatchList, WatchListService};
+use crate::direct_invocation::watching_client::WsWatchingClient;
+use crate::direct_invocation::ws_direct_server_runner::{RunWsServer, WsDirectServerRunner};
+use crate::direct_invocation::ws_handler::WsHandlerFactory;
 use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
 use crate::globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle};
 use crate::globals::worker::{GlobalWorker, Worker};
@@ -66,6 +69,7 @@ use crate::utils::{check_files, extract_shard};
 use crate::worker::worker_url_into_async_rpc_url;
 
 mod config;
+mod direct_invocation;
 mod enclave;
 mod error;
 mod globals;
@@ -98,11 +102,13 @@ fn main() {
     let tokio_handle = Arc::new(GlobalTokioHandle {});
     let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
     let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
+    let direct_invocation_watch_list = Arc::new(WatchListService::<WsWatchingClient>::new());
 
     // initialize o-call bridge with a concrete factory implementation
     OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
         node_api_factory.clone(),
         sync_block_gossiper,
+        direct_invocation_watch_list.clone(),
     )));
 
     if let Some(smatches) = matches.subcommand_matches("run") {
@@ -126,19 +132,14 @@ fn main() {
             skip_ra,
             node_api_factory,
             tokio_handle,
+            direct_invocation_watch_list,
         );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard = extract_shard(&smatches);
         let provider_url = smatches
             .value_of("provider")
             .expect("provider must be specified");
-        request_keys(
-            provider_url,
-            &shard,
-            smatches.is_present("skip-ra"),
-        );
-
-
+        request_keys(provider_url, &shard, smatches.is_present("skip-ra"));
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
@@ -205,7 +206,7 @@ fn main() {
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", config.worker_mu_ra_port),
-            _matches.is_present("skip-ra"),
+                _matches.is_present("skip-ra"),
             )
             .unwrap();
             println!("[+] Done!");
@@ -218,13 +219,18 @@ fn main() {
     }
 }
 
-fn start_worker<C: CreateNodeApi, T: GetTokioHandle>(
+fn start_worker<C, T, W>(
     config: Config,
     shard: &ShardIdentifier,
     skip_ra: bool,
     node_api_factory: Arc<C>,
     tokio_handle: Arc<T>,
-) {
+    watch_list: Arc<W>,
+) where
+    C: CreateNodeApi,
+    T: GetTokioHandle,
+    W: WatchList<Client = WsWatchingClient>,
+{
     println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
@@ -246,10 +252,12 @@ fn start_worker<C: CreateNodeApi, T: GetTokioHandle>(
         .create_api()
         .set_signer(AccountKeyring::Alice.pair());
 
+    let enclave_api = Enclave::new(eid);
+
     GlobalWorker::reset_worker(Worker::new(
         config.clone(),
         node_api.clone(),
-        Enclave::new(eid),
+        enclave_api,
         DirectClient::new(config.worker_url()),
     ));
 
@@ -262,7 +270,7 @@ fn start_worker<C: CreateNodeApi, T: GetTokioHandle>(
             eid,
             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
             &ra_url,
-            skip_ra
+            skip_ra,
         )
     });
 
@@ -272,16 +280,18 @@ fn start_worker<C: CreateNodeApi, T: GetTokioHandle>(
         "rpc worker server listening on ws://{}",
         config.worker_url()
     );
-    start_worker_api_direct_server(config.worker_url(), eid);
+
+    let ws_handler_factory = Arc::new(WsHandlerFactory::new(enclave_api, watch_list));
+    let ws_direct_server = WsDirectServerRunner::new(ws_handler_factory, eid);
+    ws_direct_server.run(config.worker_url());
 
     // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
     // should be merged into this one.
-    let enclave = Enclave::new(eid);
     let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
 
     let handle = tokio_handle.get_handle();
     handle.spawn(async move {
-        substratee_worker_rpc_server::run_server(&url, enclave)
+        substratee_worker_rpc_server::run_server(&url, enclave_api)
             .await
             .unwrap()
     });
@@ -303,7 +313,7 @@ fn start_worker<C: CreateNodeApi, T: GetTokioHandle>(
         println!(
             "[!] skipping remote attestation. Registering enclave without attestation report."
         );
-        enclave
+        enclave_api
             .mock_register_xt(node_api.genesis_hash, nonce, &config.ext_api_url.unwrap())
             .unwrap()
     } else {
@@ -402,7 +412,7 @@ fn request_keys(provider_url: &str, _shard: &ShardIdentifier, skip_ra: bool) {
         eid,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         &provider_url,
-        skip_ra
+        skip_ra,
     )
     .unwrap();
     println!("key provisioning successfully performed");

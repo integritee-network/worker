@@ -13,3 +13,6 @@ sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.
 frame-support = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 substratee-enclave-api-ffi = { path = "ffi" }
+
+[dev-dependencies]
+mockall = { version = "0.10.1" }

@@ -16,9 +16,12 @@
 
 */
 
+use crate::direct_invocation::direct_invocation_ocall::DirectInvocationOCall;
+use crate::direct_invocation::watch_list_service::WatchList;
 use crate::node_api_factory::CreateNodeApi;
 use crate::ocall_bridge::bridge_api::{
-    GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge, WorkerOnChainBridge,
+    DirectInvocationBridge, GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge,
+    WorkerOnChainBridge,
 };
 use crate::ocall_bridge::ipfs_ocall::IpfsOCall;
 use crate::ocall_bridge::remote_attestation_ocall::RemoteAttestationOCall;
@@ -29,24 +32,27 @@ use std::sync::Arc;
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
 /// our dependency graph is worker -> ocall bridge
-pub struct OCallBridgeComponentFactory<N, B> {
+pub struct OCallBridgeComponentFactory<N, B, W> {
     node_api_factory: Arc<N>,
     block_gossiper: Arc<B>,
+    watch_list: Arc<W>,
 }
 
-impl<N, B> OCallBridgeComponentFactory<N, B> {
-    pub fn new(node_api_factory: Arc<N>, block_gossiper: Arc<B>) -> Self {
+impl<N, B, W> OCallBridgeComponentFactory<N, B, W> {
+    pub fn new(node_api_factory: Arc<N>, block_gossiper: Arc<B>, watch_list: Arc<W>) -> Self {
         OCallBridgeComponentFactory {
             node_api_factory,
             block_gossiper,
+            watch_list,
         }
     }
 }
 
-impl<N, B> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B>
+impl<N, B, W> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B, W>
 where
     N: CreateNodeApi + 'static,
     B: GossipBlocks + 'static,
+    W: WatchList + 'static,
 {
     fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
         Arc::new(RemoteAttestationOCall {})
@@ -61,5 +67,9 @@ where
 
     fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {
         Arc::new(IpfsOCall {})
+    }
+
+    fn get_direct_invocation_api(&self) -> Arc<dyn DirectInvocationBridge> {
+        Arc::new(DirectInvocationOCall::new(self.watch_list.clone()))
     }
 }
