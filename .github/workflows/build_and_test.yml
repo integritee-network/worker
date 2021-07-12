@@ -137,13 +137,9 @@ jobs:
       - name: Prepare working directory
         run: |
           cd ${{ env.BIN_DIR }}
-          echo ${{ secrets.IAS_PRIMARY_KEY }} > key.txt
-          echo ${{ secrets.IAS_SPID }} > spid.txt
           chmod +x ${{ env.WORKER_BIN }}
           chmod +x ${{ env.CLIENT_BIN }}
           chmod +x ${{ env.ENCLAVE_BIN }}
-          cat key.txt
-          cat spid.txt
 
       - name: Download integritee-node
         uses: dawidd6/action-download-artifact@v2
