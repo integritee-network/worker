@@ -93,23 +93,23 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: integritee-worker-${{ github.sha }}
-          path: ${{ bin.BIN_DIR }}
+          path: ${{ env.BIN_DIR }}
 
       - name: Download Client
         uses: actions/download-artifact@v2
         with:
           name: integritee-client-${{ github.sha }}
-          path: ${{ bin.BIN_DIR }}
+          path: ${{ env.BIN_DIR }}
 
       - name: Download Enclave
         uses: actions/download-artifact@v2
         with:
           name: enclave-signed-${{ github.sha }}
-          path: ${{ bin.BIN_DIR }}
+          path: ${{ env.BIN_DIR }}
 
       - name: Prepare working directory
         run: |
-          cd ${{ bin.BIN_DIR }}
+          cd ${{ env.BIN_DIR }}
           echo ${{ secrets.IAS_PRIMARY_KEY }} > key.txt
           echo ${{ secrets.IAS_SPID }} > spid.txt
           chmod +x ${{ env.WORKER_BIN }}
@@ -132,7 +132,7 @@ jobs:
 
       - name: Start worker
         run: |
-          cd ${{ bin.BIN_DIR }}
+          cd ${{ env.BIN_DIR }}
           mkdir -p shards/
           ./${{ env.WORKER_BIN }} signing-key
           ./${{ env.WORKER_BIN }} shielding-key
@@ -145,7 +145,7 @@ jobs:
         # the change the symbolic link which points to the target/release... folder
         run: |
           cd client
-          ln -sf ../${{ bin.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
+          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
           ./demo_direct_call.sh -p 9944 -P 2000 -t first
 
       - name: "Start client and transfer funds directly #2"
