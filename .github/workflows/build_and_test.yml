@@ -158,9 +158,14 @@ jobs:
           ./node/integritee-node --dev 2>&1 | tee node.log &
 
       - name: Start worker
+        env:
+          KEY: ${{ secrets.IAS_PRIMARY_KEY }}
+          SPID: ${{ secrets.IAS_SPID }}
         run: |
           cd ${{ env.BIN_DIR }}
           mkdir -p shards/
+          'echo "env.KEY" > key.txt'
+          'echo "env.SPID" > spid.txt'
           ./${{ env.WORKER_BIN }} signing-key
           ./${{ env.WORKER_BIN }} shielding-key
           ./${{ env.WORKER_BIN }} init-shard
