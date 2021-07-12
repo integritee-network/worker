@@ -89,10 +89,6 @@ jobs:
       BIN_DIR: bin
     steps:
       - uses: actions/checkout@v2
-      - name: init-rust-target
-        run: rustup target add wasm32-unknown-unknown
-      - name: Install llvm-10
-        run: sudo apt-get install llvm-10 clang-10
 #      - name: Download Worker
 #        uses: actions/download-artifact@v2
 #        with:
