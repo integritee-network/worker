@@ -9,6 +9,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  WORKER_BIN: substratee-worker
+  CLIENT_BIN: substratee-client
+  ENCLAVE_BIN: enclave.signed.so
 
 jobs:
   build-test:
@@ -36,6 +39,25 @@ jobs:
           cd bin
           ./substratee-worker test -u
 
+      # Todo: #REBRAND path names
+      - name: Upload worker
+        uses: actions/upload-artifact@v2
+        with:
+          name: integritee-worker-${{ github.sha }}
+          path: bin/substratee-worker
+
+      - name: Upload client
+        uses: actions/upload-artifact@v2
+        with:
+          name: integritee-client-${{ github.sha }}
+          path: bin/substratee-client
+
+      - name: Upload enclave
+        uses: actions/upload-artifact@v2
+        with:
+          name: enclave-signed-${{ github.sha }}
+          path: bin/enclave.signed.so
+
   clippy:
     runs-on: ubuntu-latest
     container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
@@ -58,3 +80,76 @@ jobs:
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave && cargo clippy -- -D warnings
+
+  M8-integration-test:
+    runs-on: ubuntu-latest
+    needs: build-test
+    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
+    env:
+      BIN_DIR: bin
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download Worker
+        uses: actions/download-artifact@v2
+        with:
+          name: integritee-worker-${{ github.sha }}
+          path: ${{ bin.BIN_DIR }}
+
+      - name: Download Client
+        uses: actions/download-artifact@v2
+        with:
+          name: integritee-client-${{ github.sha }}
+          path: ${{ bin.BIN_DIR }}
+
+      - name: Download Enclave
+        uses: actions/download-artifact@v2
+        with:
+          name: enclave-signed-${{ github.sha }}
+          path: ${{ bin.BIN_DIR }}
+
+      - name: Prepare working directory
+        run: |
+          cd ${{ bin.BIN_DIR }}
+          echo ${{ secrets.IAS_PRIMARY_KEY }} > key.txt
+          echo ${{ secrets.IAS_SPID }} > spid.txt
+          chmod +x ${{ env.WORKER_BIN }}
+          chmod +x ${{ env.CLIENT_BIN }}
+          chmod +x ${{ env.ENCLAVE_BIN }}
+
+      - name: Download integritee-node
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          # todo: change to master when the branch below is merged
+          branch: upload-artifacts
+          name: integritee-node-skip-ias-check
+          path: node
+
+      - name: Start integritee-node
+        run: |
+          chmod +x node/integritee-node
+          ./node/integritee-node --dev 2>&1 | tee node.log &
+
+      - name: Start worker
+        run: |
+          cd ${{ bin.BIN_DIR }}
+          mkdir -p shards/
+          ./${{ env.WORKER_BIN }} signing-key
+          ./${{ env.WORKER_BIN }} shielding-key
+          ./${{ env.WORKER_BIN }} init-shard
+          ./${{ env.WORKER_BIN }} dump-ra
+          ./${{ env.WORKER_BIN }} run &
+          sleep 30
+
+      - name: "Start client and transfer funds directly #1"
+        # the change the symbolic link which points to the target/release... folder
+        run: |
+          cd client
+          ln -sf ../${{ bin.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
+          ./demo_direct_call.sh -p 9944 -P 2000 -t first
+
+      - name: "Start client and transfer funds directly #1"
+        # the change the symbolic link which points to the target folder
+        run: |
+          cd client
+          ./demo_direct_call.sh -p 9944 -P 2000 -t second
