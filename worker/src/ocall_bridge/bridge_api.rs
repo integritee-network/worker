@@ -16,7 +16,6 @@
 
 */
 
-use crate::ocall_bridge::component_factory::GetOCallBridgeComponents;
 use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;
@@ -66,6 +65,16 @@ impl Bridge {
             .get_oc_api()
     }
 
+    pub fn get_ipfs_api() -> Arc<dyn IpfsBridge> {
+        debug!("Requesting IPFS OCall API instance");
+
+        COMPONENT_FACTORY
+            .read()
+            .as_ref()
+            .expect("Component factory has not been set. Use `initialize()`")
+            .get_ipfs_api()
+    }
+
     pub fn initialize(component_factory: Arc<dyn GetOCallBridgeComponents + Send + Sync>) {
         debug!("Initializing OCall bridge with component factory");
 
@@ -73,6 +82,20 @@ impl Bridge {
     }
 }
 
+/// Factory trait (abstract factory) that creates instances
+/// of all the components of the OCall Bridge
+pub trait GetOCallBridgeComponents {
+    /// remote attestation OCall API
+    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge>;
+
+    /// on chain OCall API
+    fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge>;
+
+    /// ipfs OCall API
+    fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge>;
+}
+
+/// OCall bridge errors
 #[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
 pub enum OCallBridgeError {
     #[error("GetQuote Error: {0}")]
@@ -85,17 +108,19 @@ pub enum OCallBridgeError {
     GetIasSocket(String),
     #[error("SendBlockAndConfirmation Error: {0}")]
     SendBlockAndConfirmation(String),
+    #[error("IPFS Error: {0}")]
+    IpfsError(String),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<sgx_status_t> for OCallBridgeError {
-    fn into(self) -> sgx_status_t {
-        match self {
+impl From<OCallBridgeError> for sgx_status_t {
+    fn from(o: OCallBridgeError) -> sgx_status_t {
+        match o {
             OCallBridgeError::GetQuote(s) => s,
             OCallBridgeError::InitQuote(s) => s,
             OCallBridgeError::GetUpdateInfo(s) => s,
             OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
             OCallBridgeError::SendBlockAndConfirmation(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+            OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
         }
     }
 }
@@ -139,4 +164,15 @@ pub trait WorkerOnChainBridge {
         confirmations: Vec<u8>,
         signed_blocks: Vec<u8>,
     ) -> OCallBridgeResult<()>;
+}
+
+/// type for IPFS
+pub type Cid = [u8; 46];
+
+/// Trait for all the OCalls related to IPFS
+#[cfg_attr(test, automock)]
+pub trait IpfsBridge {
+    fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<Cid>;
+
+    fn read_from_ipfs(&self, cid: Cid) -> OCallBridgeResult<()>;
 }

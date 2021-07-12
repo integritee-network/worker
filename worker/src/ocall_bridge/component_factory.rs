@@ -17,21 +17,14 @@
 */
 
 use crate::node_api_factory::CreateNodeApi;
-use crate::ocall_bridge::bridge_api::{RemoteAttestationBridge, WorkerOnChainBridge};
+use crate::ocall_bridge::bridge_api::{
+    GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge, WorkerOnChainBridge,
+};
+use crate::ocall_bridge::ipfs_ocall::IpfsOCall;
 use crate::ocall_bridge::remote_attestation_ocall::RemoteAttestationOCall;
 use crate::ocall_bridge::worker_on_chain_ocall::WorkerOnChainOCall;
 use crate::sync_block_gossiper::GossipBlocks;
 use std::sync::Arc;
-
-/// Factory trait (abstract factory) that creates instances
-/// of all the components of the OCall Bridge
-pub trait GetOCallBridgeComponents {
-    /// remote attestation OCall API
-    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge>;
-
-    /// on chain OCall API
-    fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge>;
-}
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
@@ -64,5 +57,9 @@ where
             self.node_api_factory.clone(),
             self.block_gossiper.clone(),
         ))
+    }
+
+    fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {
+        Arc::new(IpfsOCall {})
     }
 }

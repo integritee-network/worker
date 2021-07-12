@@ -126,7 +126,7 @@ where
                 Ok(blocks) => blocks,
                 Err(_) => {
                     status = Err(OCallBridgeError::SendBlockAndConfirmation(
-                        "Could not decode confirmation calls".to_string(),
+                        "Could not decode signed blocks".to_string(),
                     ));
                     vec![]
                 }

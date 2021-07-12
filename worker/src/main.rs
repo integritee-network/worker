@@ -69,7 +69,6 @@ mod config;
 mod enclave;
 mod error;
 mod globals;
-mod ipfs;
 mod node_api_factory;
 mod ocall_bridge;
 mod sync_block_gossiper;

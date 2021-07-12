@@ -1,5 +1,6 @@
 /*
     Copyright 2019 Supercomputing Systems AG
+    Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -15,19 +16,48 @@
 
 */
 
-use std::fs::File;
-use std::io::{Cursor, Write};
-use std::slice;
-use std::str;
-use std::sync::mpsc::channel;
-
-use sgx_types::*;
-
+use crate::ocall_bridge::bridge_api::{Cid, IpfsBridge, OCallBridgeError, OCallBridgeResult};
 use futures::TryStreamExt;
 use ipfs_api::IpfsClient;
 use log::*;
+use std::fs::File;
+use std::io::{Cursor, Write};
+use std::str;
+use std::sync::mpsc::channel;
 
-pub type Cid = [u8; 46];
+pub struct IpfsOCall;
+
+impl IpfsBridge for IpfsOCall {
+    fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<Cid> {
+        debug!("    Entering ocall_write_ipfs");
+        Ok(write_to_ipfs(data))
+    }
+
+    fn read_from_ipfs(&self, cid: Cid) -> OCallBridgeResult<()> {
+        debug!("Entering ocall_read_ipfs");
+
+        let result = read_from_ipfs(cid);
+        match result {
+            Ok(res) => {
+                let filename = str::from_utf8(&cid).unwrap();
+                create_file(filename, &res).map_err(OCallBridgeError::IpfsError)
+            }
+            Err(_) => Err(OCallBridgeError::IpfsError(
+                "failed to read from IPFS".to_string(),
+            )),
+        }
+    }
+}
+
+fn create_file(filename: &str, result: &[u8]) -> Result<(), String> {
+    match File::create(filename) {
+        Ok(mut f) => f.write_all(result).map_or_else(
+            |e| Err(format!("failed writing to file: {}", e)),
+            |_| Ok(()),
+        ),
+        Err(e) => Err(format!("failed to create file: {}", e)),
+    }
+}
 
 #[tokio::main]
 async fn write_to_ipfs(data: &'static [u8]) -> Cid {
@@ -70,52 +100,4 @@ pub async fn read_from_ipfs(cid: Cid) -> Result<Vec<u8>, String> {
         .map_err(|e| e.to_string())
         .try_concat()
         .await
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ocall_write_ipfs(
-    enc_state: *const u8,
-    enc_state_size: u32,
-    cid: *mut u8,
-    cid_size: u32,
-) -> sgx_status_t {
-    debug!("    Entering ocall_write_ipfs");
-
-    let state = slice::from_raw_parts(enc_state, enc_state_size as usize);
-    let cid = slice::from_raw_parts_mut(cid, cid_size as usize);
-
-    let _cid = write_to_ipfs(state);
-    cid.clone_from_slice(&_cid);
-    sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ocall_read_ipfs(cid: *const u8, cid_size: u32) -> sgx_status_t {
-    debug!("Entering ocall_read_ipfs");
-
-    let _cid = slice::from_raw_parts(cid, cid_size as usize);
-
-    let mut cid = [0; 46];
-    cid.clone_from_slice(_cid);
-
-    let result = read_from_ipfs(cid);
-    match result {
-        Ok(res) => {
-            let filename = str::from_utf8(&cid).unwrap();
-            match File::create(filename) {
-                Ok(mut f) => f.write_all(&res).map_or_else(
-                    |e| {
-                        error!("ocall_read_ipfs failed writing to file. {}", e);
-                        sgx_status_t::SGX_ERROR_UNEXPECTED
-                    },
-                    |_| sgx_status_t::SGX_SUCCESS,
-                ),
-                Err(e) => {
-                    error!("ocall_read_ipfs failed at creating file. {}", e);
-                    sgx_status_t::SGX_ERROR_UNEXPECTED
-                }
-            }
-        }
-        Err(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-    }
 }
