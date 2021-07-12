@@ -16,24 +16,53 @@
 
 */
 
-use crate::ocall_bridge::attestation_ocall_impl::RemoteAttestationOCallImpl;
-use crate::ocall_bridge::bridge_api::RemoteAttestationOCall;
+use crate::node_api_factory::CreateNodeApi;
+use crate::ocall_bridge::bridge_api::{RemoteAttestationBridge, WorkerOnChainBridge};
+use crate::ocall_bridge::remote_attestation_ocall::RemoteAttestationOCall;
+use crate::ocall_bridge::worker_on_chain_ocall::WorkerOnChainOCall;
+use crate::sync_block_gossiper::GossipBlocks;
 use std::sync::Arc;
 
 /// Factory trait (abstract factory) that creates instances
 /// of all the components of the OCall Bridge
-pub trait OCallBridgeComponentFactory {
+pub trait GetOCallBridgeComponents {
     /// remote attestation OCall API
-    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall>;
+    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge>;
+
+    /// on chain OCall API
+    fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge>;
 }
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
 /// our dependency graph is worker -> ocall bridge
-pub struct OCallBridgeComponentFactoryImpl;
+pub struct OCallBridgeComponentFactory<N, B> {
+    node_api_factory: Arc<N>,
+    block_gossiper: Arc<B>,
+}
 
-impl OCallBridgeComponentFactory for OCallBridgeComponentFactoryImpl {
-    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationOCall> {
-        Arc::new(RemoteAttestationOCallImpl {})
+impl<N, B> OCallBridgeComponentFactory<N, B> {
+    pub fn new(node_api_factory: Arc<N>, block_gossiper: Arc<B>) -> Self {
+        OCallBridgeComponentFactory {
+            node_api_factory,
+            block_gossiper,
+        }
+    }
+}
+
+impl<N, B> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B>
+where
+    N: CreateNodeApi + 'static,
+    B: GossipBlocks + 'static,
+{
+    fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
+        Arc::new(RemoteAttestationOCall {})
+    }
+
+    fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge> {
+        Arc::new(WorkerOnChainOCall::new(
+            self.node_api_factory.clone(),
+            self.block_gossiper.clone(),
+        ))
     }
 }

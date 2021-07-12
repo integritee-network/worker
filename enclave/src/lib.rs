@@ -89,12 +89,12 @@ mod state;
 mod utils;
 
 pub mod cert;
+pub mod error;
 pub mod hex;
 pub mod rpc;
 pub mod tests;
 pub mod tls_ra;
 pub mod top_pool;
-pub mod error;
 
 use codec::alloc::string::String;
 use substratee_settings::enclave::{CALL_TIMEOUT, GETTER_TIMEOUT};
@@ -114,8 +114,8 @@ pub enum Timeout {
 pub type Hash = sp_core::H256;
 type BPool = BasicPool<SideChainApi<Block>, Block>;
 
-use crate::error::{Error, Result};
 use crate::attestation::get_mrenclave_of_self;
+use crate::error::{Error, Result};
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -222,9 +222,8 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
     let signer = ed25519::unseal_pair().unwrap();
     let call = (
         [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
-        get_mrenclave_of_self()
-        .map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
-        url
+        get_mrenclave_of_self().map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
+        url,
     );
 
     let xt = compose_extrinsic_offline!(
@@ -580,8 +579,7 @@ fn execute_top_pool_calls(
         let mut is_done = false;
         for shard in shards.clone().into_iter() {
             // retrieve trusted operations from pool
-            let trusted_getters = author
-                .get_pending_tops_separated(shard)?.1;
+            let trusted_getters = author.get_pending_tops_separated(shard)?.1;
             for trusted_getter_signed in trusted_getters.into_iter() {
                 // get state
                 let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
@@ -652,7 +650,10 @@ fn execute_top_pool_calls(
                             call_hashes.push(operation_hash)
                         }
                     }
-                    Err(e) => error!("Error performing worker call: Error: {:?}", e),
+                    Err(e) => error!(
+                        "Error performing worker call (will not push top hash): Error: {:?}",
+                        e
+                    ),
                 };
                 // Check time
                 if time_is_overdue(Timeout::Call, start_time) {
@@ -725,8 +726,8 @@ pub fn compose_block_and_confirmation(
     Stf::update_sidechain_block_number(state, block_number);
 
     let block_number: u64 = block_number; //FIXME! Should be either u64 or u32! Not both..
-    let parent_hash = Stf::get_last_block_hash(state)
-        .ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
+    let parent_hash =
+        Stf::get_last_block_hash(state).ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
 
     // hash previous of state
     let state_hash_aposteriori = state::hash_of(state.state.clone())?;
@@ -927,8 +928,7 @@ fn decrypt_unchecked_extrinsic(
     let rsa_keypair = rsa3072::unseal_pair()?;
     let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
 
-    Ok(TrustedCallSigned::decode(&mut request_vec.as_slice())
-        .map(|call| (call, shard))?)
+    Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
 }
 
 fn handle_trusted_worker_call(
@@ -1101,9 +1101,7 @@ pub enum WorkerResponse<V: Encode + Decode> {
     ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
 
-fn worker_request<V: Encode + Decode>(
-    req: Vec<WorkerRequest>,
-) -> Result<Vec<WorkerResponse<V>>> {
+fn worker_request<V: Encode + Decode>(req: Vec<WorkerRequest>) -> Result<Vec<WorkerResponse<V>>> {
     let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut resp: Vec<u8> = vec![0; 4196 * 4];
 

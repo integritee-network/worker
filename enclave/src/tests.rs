@@ -50,10 +50,10 @@ use sp_runtime::traits::Header as HeaderT;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use substratee_stf::AccountInfo;
 use substratee_stf::StateTypeDiff as StfStateTypeDiff;
-use substratee_stf::{ShardIdentifier, Stf, TrustedCall, StatePayload};
+use substratee_stf::{ShardIdentifier, StatePayload, Stf, TrustedCall};
 use substratee_stf::{TrustedGetter, TrustedOperation};
 
-use substratee_settings::enclave::{GETTER_TIMEOUT};
+use substratee_settings::enclave::GETTER_TIMEOUT;
 use substratee_settings::node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE};
 
 use jsonrpc_core::futures::executor;
@@ -455,14 +455,7 @@ fn test_create_block_and_confirmation_works() {
     assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
 
     // get index of current shard
-    let shards = state::list_shards().unwrap();
-    let mut index = 0;
-    for s in shards.into_iter() {
-        if s == shard {
-            break;
-        }
-        index += 1;
-    }
+    let index = get_current_shard_index(&shard);
 
     // Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
     let latest_onchain_header = Header::new(
@@ -508,6 +501,8 @@ fn test_create_block_and_confirmation_works() {
     let (confirm_calls, signed_blocks) =
         crate::execute_top_pool_calls(latest_onchain_header).unwrap();
 
+    debug!("got {} signed block(s)", signed_blocks.len());
+
     let signed_block = signed_blocks[index].clone();
     let mut opaque_call_vec = confirm_calls[index].0.clone();
     let xt_block_encoded = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
@@ -550,14 +545,7 @@ fn test_create_state_diff() {
     let state = Stf::init_state();
 
     // get index of current shard
-    let shards = state::list_shards().unwrap();
-    let mut index = 0;
-    for s in shards.into_iter() {
-        if s == shard {
-            break;
-        }
-        index += 1;
-    }
+    let index = get_current_shard_index(&shard);
 
     // create accounts
     let signer_without_money = ed25519::unseal_pair().unwrap();
@@ -859,4 +847,19 @@ fn test_non_root_shielding_call_is_not_executed() {
 
     // clean up
     state::remove_shard_dir(&shard);
+}
+
+fn get_current_shard_index(shard: &ShardIdentifier) -> usize {
+    let shards = state::list_shards().unwrap();
+    let mut index = 0;
+    for s in shards.into_iter() {
+        if s == *shard {
+            break;
+        }
+        index += 1;
+    }
+
+    debug!("current shard index is {}", index);
+
+    index
 }

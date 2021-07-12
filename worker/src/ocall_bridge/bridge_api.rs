@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::component_factory::OCallBridgeComponentFactory;
+use crate::ocall_bridge::component_factory::GetOCallBridgeComponents;
 use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;
@@ -35,7 +35,7 @@ use mockall::*;
 lazy_static! {
     /// global state for the component factory
     /// access is always routed through 'Bridge', do not use directly!
-    static ref COMPONENT_FACTORY: RwLock<Option<Arc<dyn OCallBridgeComponentFactory + Send + Sync>>> =
+    static ref COMPONENT_FACTORY: RwLock<Option<Arc<dyn GetOCallBridgeComponents + Send + Sync>>> =
         RwLock::new(None);
 }
 
@@ -46,7 +46,7 @@ lazy_static! {
 pub struct Bridge;
 
 impl Bridge {
-    pub fn get_ra_api() -> Arc<dyn RemoteAttestationOCall> {
+    pub fn get_ra_api() -> Arc<dyn RemoteAttestationBridge> {
         debug!("Requesting RemoteAttestation OCall API instance");
 
         COMPONENT_FACTORY
@@ -56,7 +56,17 @@ impl Bridge {
             .get_ra_api()
     }
 
-    pub fn initialize(component_factory: Arc<dyn OCallBridgeComponentFactory + Send + Sync>) {
+    pub fn get_oc_api() -> Arc<dyn WorkerOnChainBridge> {
+        debug!("Requesting WorkerOnChain OCall API instance");
+
+        COMPONENT_FACTORY
+            .read()
+            .as_ref()
+            .expect("Component factory has not been set. Use `initialize()`")
+            .get_oc_api()
+    }
+
+    pub fn initialize(component_factory: Arc<dyn GetOCallBridgeComponents + Send + Sync>) {
         debug!("Initializing OCall bridge with component factory");
 
         *COMPONENT_FACTORY.write() = Some(component_factory);
@@ -73,6 +83,8 @@ pub enum OCallBridgeError {
     GetUpdateInfo(sgx_status_t),
     #[error("GetIasSocket Error: {0}")]
     GetIasSocket(String),
+    #[error("SendBlockAndConfirmation Error: {0}")]
+    SendBlockAndConfirmation(String),
 }
 
 #[allow(clippy::from_over_into)]
@@ -83,6 +95,7 @@ impl Into<sgx_status_t> for OCallBridgeError {
             OCallBridgeError::InitQuote(s) => s,
             OCallBridgeError::GetUpdateInfo(s) => s,
             OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+            OCallBridgeError::SendBlockAndConfirmation(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
         }
     }
 }
@@ -91,7 +104,7 @@ pub type OCallBridgeResult<T> = Result<T, OCallBridgeError>;
 
 /// Trait for all the OCalls related to remote attestation
 #[cfg_attr(test, automock)]
-pub trait RemoteAttestationOCall {
+pub trait RemoteAttestationBridge {
     /// initialize the quote
     fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
@@ -114,4 +127,16 @@ pub trait RemoteAttestationOCall {
         platform_blob: sgx_platform_info_t,
         enclave_trusted: i32,
     ) -> OCallBridgeResult<sgx_update_info_bit_t>;
+}
+
+/// Trait for all the OCalls related to on-chain operations
+#[cfg_attr(test, automock)]
+pub trait WorkerOnChainBridge {
+    fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
+
+    fn send_block_and_confirmation(
+        &self,
+        confirmations: Vec<u8>,
+        signed_blocks: Vec<u8>,
+    ) -> OCallBridgeResult<()>;
 }

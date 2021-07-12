@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationOCall};
+use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationBridge};
 use log::*;
 use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_status_t};
 use std::slice;
@@ -62,7 +62,7 @@ fn get_quote(
     p_quote: *mut u8,
     maxlen: u32,
     p_quote_len: *mut u32,
-    ra_api: Arc<dyn RemoteAttestationOCall>,
+    ra_api: Arc<dyn RemoteAttestationBridge>,
 ) -> sgx_status_t {
     debug!("    Entering ocall_get_quote");
 

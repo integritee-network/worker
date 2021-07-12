@@ -35,6 +35,7 @@ def setup_worker(work_dir: str, source_dir: str, std_err: Union[None, int, IO]):
 
 def run_node(config):
     node_cmd = [config["node"]["bin"]] + config["node"]["flags"]
+    print(f'Run node with command: {node_cmd}')
     return Popen(node_cmd, stdout=node_log, stderr=STDOUT, bufsize=1)
 
 

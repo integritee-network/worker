@@ -17,7 +17,7 @@
 */
 
 use crate::ocall_bridge::bridge_api::{
-    OCallBridgeError, OCallBridgeResult, RemoteAttestationOCall,
+    OCallBridgeError, OCallBridgeResult, RemoteAttestationBridge,
 };
 use frame_support::ensure;
 use log::*;
@@ -26,11 +26,11 @@ use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
 use std::ptr;
 
-pub struct RemoteAttestationOCallImpl {
+pub struct RemoteAttestationOCall {
     // TODO as a member here we need the e-call API trait, so we can use it instead of making the e-call directly
 }
 
-impl RemoteAttestationOCall for RemoteAttestationOCallImpl {
+impl RemoteAttestationBridge for RemoteAttestationOCall {
     fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
         // TODO this translation to unsafe C-API should be moved to the EnclaveApi / ECall API
         let mut ti: sgx_target_info_t = sgx_target_info_t::default();
