@@ -168,7 +168,6 @@ jobs:
           ./${{ env.WORKER_BIN }} signing-key
           ./${{ env.WORKER_BIN }} shielding-key
           ./${{ env.WORKER_BIN }} init-shard
-          ./${{ env.WORKER_BIN }} dump-ra
           ./${{ env.WORKER_BIN }} run --skip-ra &
           sleep 30
 
@@ -182,5 +181,5 @@ jobs:
       - name: "Start client and transfer funds directly #2"
         # the change the symbolic link which points to the target folder
         run: |
-          cd client
+          cd clienty
           ./demo_direct_call.sh -p 9944 -P 2000 -t second
