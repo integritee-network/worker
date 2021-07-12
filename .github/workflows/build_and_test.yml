@@ -12,7 +12,6 @@ env:
   WORKER_BIN: substratee-worker
   CLIENT_BIN: substratee-client
   ENCLAVE_BIN: enclave.signed.so
-  RUST_TOOLCHAIN: nightly-2021-06-24
 
 jobs:
 #  build-test:
@@ -90,14 +89,10 @@ jobs:
       BIN_DIR: bin
     steps:
       - uses: actions/checkout@v2
+      - name: init-rust-target
+        run: rustup target add wasm32-unknown-unknown
       - name: Install llvm-10
         run: sudo apt-get install llvm-10 clang-10
-      - name: Install rust latest nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          override: true
-          target: wasm32-unknown-unknown
 #      - name: Download Worker
 #        uses: actions/download-artifact@v2
 #        with:
