@@ -125,6 +125,7 @@ jobs:
           branch: upload-artifacts
           name: integritee-node-skip-ias-check
           path: node
+          repo: integritee-network/integritee-node
 
       - name: Start integritee-node
         run: |
