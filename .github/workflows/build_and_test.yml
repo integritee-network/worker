@@ -112,7 +112,7 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build_and_test.yml
-          commit: cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
+          run_id: 1023030553
           name: integritee-worker-cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
           path: ${{ env.BIN_DIR }}
 
@@ -121,7 +121,7 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build_and_test.yml
-          commit: cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
+          run_id: 1023030553
           name: integritee-client-cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
           path: ${{ env.BIN_DIR }}
 
@@ -130,7 +130,7 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build_and_test.yml
-          commit: cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
+          run_id: 1023030553
           name: integritee-client-cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
           path: ${{ env.BIN_DIR }}
 
