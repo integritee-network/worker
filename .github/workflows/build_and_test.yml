@@ -206,6 +206,7 @@ jobs:
           cd client
           touch ${{ env.LOG_1 }}
           touch ${{ env.LOG_2 }}
+          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
           ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
           ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
