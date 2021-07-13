@@ -17,7 +17,7 @@ worker1_log = open(f'{log_dir}/worker1.log', 'w+')
 worker2_log = open(f'{log_dir}/worker2.log', 'w+')
 
 source_bin_folder = '../bin'
-node_bin = '../../substraTEE-node/target/release/substratee-node'
+node_bin = '../../integritee-node/target/release/integritee-node'
 w1_working_dir = '/tmp/w1'
 w2_working_dir = '/tmp/w2'
 
