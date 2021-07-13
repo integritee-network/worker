@@ -90,11 +90,6 @@ jobs:
       BIN_DIR: bin
     steps:
       - uses: actions/checkout@v2
-      - name: test
-        shell: bash --noprofile --norc -eo pipefail {0}
-        run: |
-          touch test.log
-          false 2>&1 | tee test.log
 
       # we can't use the `actions/setup-python@v2` due to cross compiling issues with
       # ubuntu 18.04 and python > 3.6, but we need >3.6 for our scripts.
