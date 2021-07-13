@@ -187,8 +187,8 @@ jobs:
           touch ${{ env.LOG_DIR}}/demo_direct_2.log
           cd client
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_DIR}}/demo_direct_1.log
-          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_DIR}}/demo_direct_2.log
+          ./demo_direct_call.sh -p 9944 -P 2000 -t first
+          ./demo_direct_call.sh -p 9944 -P 2000 -t second
 
       - name: "M6: Demo shielding/unshielding"
         run: |
