@@ -202,8 +202,8 @@ jobs:
           cd client
           touch ${{ env.LOG_1 }}
           touch ${{ env.LOG_2 }}
-          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first | tee ${{ env.LOG_1 }}
-          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second | tee ${{ env.LOG_2 }}
+          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first
+          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second
 
       - name: Upload logs
         if: always()
