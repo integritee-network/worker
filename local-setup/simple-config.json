@@ -1,0 +1,33 @@
+{
+  "node": {
+    "bin": "../integritee-node/target/release/integritee-node",
+    "flags": [
+      "--tmp",
+      "--dev",
+      "-lruntime=info"
+    ]
+  },
+  "workers": {
+    "source": "bin",
+    "instances": [
+      {
+        "flags": [
+          "-P",
+          "2000"
+        ],
+        "subcommand_flags": [
+          "--skip-ra"
+        ]
+      },
+      {
+        "flags": [
+          "-P",
+          "3000"
+        ],
+        "subcommand_flags": [
+          "--skip-ra"
+        ]
+      }
+    ]
+  }
+}
