@@ -84,7 +84,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-#    needs: build-test
+    needs: build-test
     container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
     env:
       BIN_DIR: bin
