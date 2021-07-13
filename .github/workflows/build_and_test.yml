@@ -14,124 +14,101 @@ env:
   ENCLAVE_BIN: enclave.signed.so
 
 jobs:
-#  build-test:
-#    runs-on: ubuntu-latest
-#    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: init-rust-target
-#        run: rustup target add wasm32-unknown-unknown
-#      - name: Cache Rust Dependecies
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/.cargo/registry
-#            ~/.cargo/git
-#            target
-#            enclave/target
-#          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-#      - name: Build
-#        run:  SGX_MODE=SW make
-#      - name: Worker & Client
-#        run: cargo test
-#      - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-#        run: |
-#          cd bin
-#          ./substratee-worker test -u
-#
-#      # Todo: #REBRAND path names
-#      - name: Upload worker
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: integritee-worker-${{ github.sha }}
-#          path: bin/substratee-worker
-#
-#      - name: Upload client
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: integritee-client-${{ github.sha }}
-#          path: bin/substratee-client
-#
-#      - name: Upload enclave
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: enclave-signed-${{ github.sha }}
-#          path: bin/enclave.signed.so
-#
-#  clippy:
-#    runs-on: ubuntu-latest
-#    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: init-rust
-#        run: |
-#          rustup component add clippy
-#          rustup target add wasm32-unknown-unknown
-#      - name: Cache Rust Dependecies
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/.cargo/registry
-#            ~/.cargo/git
-#            target
-#            enclave/target
-#          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-#      - name: Worker & Client
-#        run: cargo clippy -- -D warnings
-#      - name: Enclave # Enclave is separate as it's not in the workspace
-#        run: cd enclave && cargo clippy -- -D warnings
-
-  M8-integration-test:
+  build-test:
     runs-on: ubuntu-latest
-#    needs: build-test
+    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust-target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Cache Rust Dependecies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            enclave/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run:  SGX_MODE=SW make
+      - name: Worker & Client
+        run: cargo test
+      - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+        run: |
+          cd bin
+          ./substratee-worker test -u
+
+      # Todo: #REBRAND path names
+      - name: Upload worker
+        uses: actions/upload-artifact@v2
+        with:
+          name: integritee-worker-${{ github.sha }}
+          path: bin/substratee-worker
+
+      - name: Upload client
+        uses: actions/upload-artifact@v2
+        with:
+          name: integritee-client-${{ github.sha }}
+          path: bin/substratee-client
+
+      - name: Upload enclave
+        uses: actions/upload-artifact@v2
+        with:
+          name: enclave-signed-${{ github.sha }}
+          path: bin/enclave.signed.so
+
+  clippy:
+    runs-on: ubuntu-latest
+    container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust
+        run: |
+          rustup component add clippy
+          rustup target add wasm32-unknown-unknown
+      - name: Cache Rust Dependecies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            enclave/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Worker & Client
+        run: cargo clippy -- -D warnings
+      - name: Enclave # Enclave is separate as it's not in the workspace
+        run: cd enclave && cargo clippy -- -D warnings
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: build-test
     container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
     env:
       BIN_DIR: bin
     steps:
       - uses: actions/checkout@v2
-#      - name: Download Worker
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: integritee-worker-${{ github.sha }}
-#          path: ${{ env.BIN_DIR }}
-#
-#      - name: Download Client
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: integritee-client-${{ github.sha }}
-#          path: ${{ env.BIN_DIR }}
-#
-#      - name: Download Enclave
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: enclave-signed-${{ github.sha }}
-#          path: ${{ env.BIN_DIR }}
-
-      - name: Download Worker
-        uses: dawidd6/action-download-artifact@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_and_test.yml
-          run_id: 1023030553
-          name: integritee-worker-cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
+          python-version: 3.9
+      - name: Download Worker
+        uses: actions/download-artifact@v2
+        with:
+          name: integritee-worker-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Download Client
-        uses: dawidd6/action-download-artifact@v2
+        uses: actions/download-artifact@v2
         with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_and_test.yml
-          run_id: 1023030553
-          name: integritee-client-cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
+          name: integritee-client-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Download Enclave
-        uses: dawidd6/action-download-artifact@v2
+        uses: actions/download-artifact@v2
         with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_and_test.yml
-          run_id: 1023030553
-          name: enclave-signed-cf739bc4f795aa3ffe2ea7cc18a9b38b0de1ff0d
+          name: enclave-signed-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Prepare working directory
@@ -147,7 +124,10 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
           name: integritee-node-skip-ias-check
-          run_id: 1023505349
+          # in fact this action should download the latest artifact, but sometimes fails.
+          # (Could be that github caches some api-calls.) Then the `run_id` needs to be set
+          # to force download of a certain run.
+          run_id: 1026142211
           path: node
           repo: integritee-network/integritee-node
 
@@ -156,30 +136,59 @@ jobs:
           chmod +x node/integritee-node
           ./node/integritee-node --dev 2>&1 | tee node.log &
 
-      - name: Start worker
+      - name: "Setup Keys"
         env:
           KEY: ${{ secrets.IAS_PRIMARY_KEY }}
           SPID: ${{ secrets.IAS_SPID }}
         run: |
           cd ${{ env.BIN_DIR }}
-          mkdir -p shards/
           echo "${{ env.KEY }}" > key.txt
           echo "$$ {{ env.SPID }}" > spid.txt
-          ./${{ env.WORKER_BIN }} signing-key
-          ./${{ env.WORKER_BIN }} shielding-key
-          ./${{ env.WORKER_BIN }} init-shard
-          ./${{ env.WORKER_BIN }} run --skip-ra &
-          sleep 30
 
-      - name: "Start client and transfer funds directly #1"
+      - name: Run local setup
+        run: ./local-setup/launch.py local-setup/github-action-config.json
+
+      - name: "M8: Demo direct"
         # the change the symbolic link which points to the target/release... folder
         run: |
           cd client
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
           ./demo_direct_call.sh -p 9944 -P 2000 -t first
-
-      - name: "Start client and transfer funds directly #2"
-        # the change the symbolic link which points to the target folder
-        run: |
-          cd clienty
           ./demo_direct_call.sh -p 9944 -P 2000 -t second
+
+      - name: "M6: Demo shielding/unshielding"
+        run: |
+          cd client
+          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first
+          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second
+
+
+# If you want to debug ci and you don't want to build the binaries, you can use the commands
+# below to download the binaries from a previous run, with the given run_id.
+#
+#      - name: Download Worker
+#        uses: dawidd6/action-download-artifact@v2
+#        with:
+#          github_token: ${{secrets.GITHUB_TOKEN}}
+#          workflow: build_and_test.yml
+#          run_id: 1023030553
+#          name: integritee-worker-${{ <Github-Sha-of-that-run> }}
+#          path: ${{ env.BIN_DIR }}
+#
+#      - name: Download Client
+#        uses: dawidd6/action-download-artifact@v2
+#        with:
+#          github_token: ${{secrets.GITHUB_TOKEN}}
+#          workflow: build_and_test.yml
+#          run_id: 1023030553
+#          name: integritee-client-${{ <Github-Sha-of-that-run> }}
+#          path: ${{ env.BIN_DIR }}
+#
+#      - name: Download Enclave
+#        uses: dawidd6/action-download-artifact@v2
+#        with:
+#          github_token: ${{secrets.GITHUB_TOKEN}}
+#          workflow: build_and_test.yml
+#          run_id: 1023030553
+#          name: enclave-signed-${{ <Github-Sha-of-that-run> }}
+#          path: ${{ env.BIN_DIR }}
