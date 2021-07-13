@@ -49,10 +49,6 @@ AMOUNTUNSHIELD=15000000000
 
 CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
 
-echo "Give Charlie and Dave some funds from faucet"
-${CLIENT} transfer "//Alice" "//Charlie" 5000000000000
-${CLIENT} transfer "//Alice" "//Dave" 5000000000000
-
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
@@ -68,7 +64,7 @@ else
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
-echo "* Get balance of Charlie's on-chain account"
+echo "* Get balance of Alice's on-chain account"
 ${CLIENT} balance "//Charlie"
 echo ""
 
