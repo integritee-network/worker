@@ -90,9 +90,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.6
+        run: |
+          sudo apt install software-properties-common -y
+          sudo add-apt-repository ppa:deadsnakes/ppa -y
+          sudo apt install python3.7 -y
+          python3.7 --version
 #      - name: Download Worker
 #        uses: actions/download-artifact@v2
 #        with:
