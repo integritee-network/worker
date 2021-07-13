@@ -181,8 +181,9 @@ jobs:
           sleep 30
 
       - name: "M8: Demo direct"
-        # the change the symbolic link which points to the target/release... folder
-        # Explicitly use bash (default=sh) to implicitly get `set -eo pipefail`.
+        # * the change the symbolic link which points to the target/release... folder
+        # * Explicitly use bash (default=sh) to implicitly get `set -eo pipefail`. (Otherwise the exit 1, from
+        # the demo scripts is not correctly forwarded)
         env:
           LOG_1: ../${{ env.LOG_DIR }}/demo_direct_1.log
           LOG_2: ../${{ env.LOG_DIR }}/demo_direct_2.log
