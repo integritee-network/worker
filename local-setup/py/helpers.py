@@ -22,6 +22,11 @@ def setup_working_dir(source_dir: str, target_dir: str):
     [shutil.copy(f'{source_dir}/{f}', f'{target_dir}/{f}') for f in files_to_copy]
 
 
+def copy_shielding_key(source_dir: str, target_dir: str):
+    f = 'rsa3072_key_sealed.bin'
+    shutil.copy(f'{source_dir}/{f}', f'{target_dir}/{f}')
+
+
 def mkdir_p(path):
     """ Surprisingly, there is no simple function in python to create a dir if it does not exist."""
     return subprocess.run(['mkdir', '-p', path])
