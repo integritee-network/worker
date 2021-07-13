@@ -180,6 +180,7 @@ jobs:
 
       - name: Run local setup
         run: |
+          touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
           sleep 30
 
@@ -188,12 +189,16 @@ jobs:
         run: |
           cd client
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
+          touch ${{ env.LOG_DIR}}/demo_direct_1.log
+          touch ${{ env.LOG_DIR}}/demo_direct_2.log
           ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_DIR}}/demo_direct_1.log
           ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_DIR}}/demo_direct_2.log
 
       - name: "M6: Demo shielding/unshielding"
         run: |
           cd client
+          touch ${{ env.LOG_DIR}}/demo_shielding_1.log
+          touch ${{ env.LOG_DIR}}/demo_shielding_2.log
           ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_DIR}}/demo_shielding_1.log
           ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_DIR}}/demo_shielding_2.log
 
