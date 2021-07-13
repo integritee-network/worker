@@ -2,6 +2,7 @@
 """
 Launch a local dev setup consisting of one substraTEE-node and two workers.
 """
+import argparse
 import json
 import signal
 from subprocess import Popen, STDOUT
@@ -27,30 +28,31 @@ def setup_worker(work_dir: str, source_dir: str, std_err: Union[None, int, IO]):
     print('Initialized worker.')
     return worker
 
+
 def run_node(config):
     node_cmd = [config["node"]["bin"]] + config["node"]["flags"]
     return Popen(node_cmd, stdout=node_log, stderr=STDOUT, bufsize=1)
 
 
-def main(processes):
+def run_worker(config, i: int):
+    log = open(f'{log_dir}/worker{i}.log', 'w+')
+    w = setup_worker(f'/tmp/w{i}', config["source"], log)
+
+    print(f'Starting worker {i} in background')
+    w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
+
+
+def main(processes, config_path):
     print('Starting substraTee-node-process in background')
 
-    with open('./local-setup/simple-config.json') as config_file:
+    with open(config_path) as config_file:
         config = json.load(config_file)
 
     processes.append(run_node(config))
 
-    w_source = config["workers"]["source"]
-
     i = 1
-    for instance in config["workers"]["instances"]:
-        log = open(f'{log_dir}/worker{i}.log', 'w+')
-        w = setup_worker(f'/tmp/w{i}', w_source, log)
-
-        print(f'Starting worker {i} in background')
-        processes.append(
-            w.run_in_background(log_file=log, flags=instance["flags"], subcommand_flags=instance["subcommand_flags"]))
-
+    for w_conf in config["workers"]:
+        processes.append(run_worker(w_conf, i))
         # sleep to prevent nonce clash when bootstrapping the enclave's account
         sleep(6)
 
@@ -61,8 +63,10 @@ def main(processes):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run a setup consisting of a node and some workers')
+    parser.add_argument('config', type=str, help='Config for the node and workers')
+    args = parser.parse_args()
+
     process_list = []
     killer = GracefulKiller(process_list)
-    main(process_list)
-
-
+    main(process_list, args.config)
