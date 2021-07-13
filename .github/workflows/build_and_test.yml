@@ -12,6 +12,7 @@ env:
   WORKER_BIN: substratee-worker
   CLIENT_BIN: substratee-client
   ENCLAVE_BIN: enclave.signed.so
+  LOG_DIR: log
 
 jobs:
 #  build-test:
@@ -175,7 +176,9 @@ jobs:
           echo "$$ {{ env.SPID }}" > spid.txt
 
       - name: Run local setup
-        run: ./local-setup/launch.py local-setup/github-action-config.json
+        run: |
+        ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
+        sleep 30
 
       - name: "M8: Demo direct"
         # the change the symbolic link which points to the target/release... folder
