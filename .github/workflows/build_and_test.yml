@@ -206,8 +206,7 @@ jobs:
 
 
 
-# If you want to debug ci and you don't want to build the binaries, you can use the commands
-# below to download the binaries from a previous run, with the given run_id.
+# If you want to debug ci and you don't want to build the binaries, you can replace the downloas abo
 #
 #      - name: Download Worker
 #        uses: dawidd6/action-download-artifact@v2
