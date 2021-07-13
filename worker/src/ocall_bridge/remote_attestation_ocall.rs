@@ -19,36 +19,31 @@
 use crate::ocall_bridge::bridge_api::{
     OCallBridgeError, OCallBridgeResult, RemoteAttestationBridge,
 };
-use frame_support::ensure;
-use log::*;
 use sgx_types::*;
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
-use std::ptr;
+use std::sync::Arc;
+use substratee_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 
-pub struct RemoteAttestationOCall {
-    // TODO as a member here we need the e-call API trait, so we can use it instead of making the e-call directly
+pub struct RemoteAttestationOCall<E> {
+    enclave_api: Arc<E>,
 }
 
-impl RemoteAttestationBridge for RemoteAttestationOCall {
+impl<E> RemoteAttestationOCall<E> {
+    pub fn new(enclave_api: Arc<E>) -> Self {
+        RemoteAttestationOCall { enclave_api }
+    }
+}
+
+impl<E> RemoteAttestationBridge for RemoteAttestationOCall<E>
+where
+    E: RemoteAttestationCallBacks,
+{
     fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
-        // TODO this translation to unsafe C-API should be moved to the EnclaveApi / ECall API
-        let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-        let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-
-        let ret_status = unsafe {
-            sgx_init_quote(
-                &mut ti as *mut sgx_target_info_t,
-                &mut eg as *mut sgx_epid_group_id_t,
-            )
-        };
-
-        ensure!(
-            ret_status == sgx_status_t::SGX_SUCCESS,
-            OCallBridgeError::InitQuote(ret_status)
-        );
-
-        Ok((ti, eg))
+        self.enclave_api.init_quote().map_err(|e| match e {
+            substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::InitQuote(s),
+            _ => OCallBridgeError::InitQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        })
     }
 
     fn get_ias_socket(&self) -> OCallBridgeResult<i32> {
@@ -72,64 +67,27 @@ impl RemoteAttestationBridge for RemoteAttestationOCall {
         spid: sgx_spid_t,
         quote_nonce: sgx_quote_nonce_t,
     ) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)> {
-        let mut real_quote_len: u32 = 0;
+        let real_quote_len = self
+            .enclave_api
+            .calc_quote_size(revocation_list.clone())
+            .map_err(|e| match e {
+                substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
+                _ => OCallBridgeError::GetQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
+            })?;
 
-        let (p_sig_rl, sig_rl_size) = vec_to_c_pointer_with_len(revocation_list);
-
-        let ret =
-            unsafe { sgx_calc_quote_size(p_sig_rl, sig_rl_size, &mut real_quote_len as *mut u32) };
-
-        ensure!(
-            ret == sgx_status_t::SGX_SUCCESS,
-            OCallBridgeError::GetQuote(ret)
-        );
-
-        debug!("    Quote size = {}", real_quote_len);
-
-        let p_report = &report as *const sgx_report_t;
-        let p_spid = &spid as *const sgx_spid_t;
-        let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
-
-        let mut qe_report = sgx_report_t::default();
-        let p_qe_report = &mut qe_report as *mut sgx_report_t;
-
-        const RET_QUOTE_BUF_LEN: usize = 2048;
-        let mut return_quote_buf = [0u8; RET_QUOTE_BUF_LEN];
-        let p_quote = return_quote_buf.as_mut_ptr();
-
-        if real_quote_len > RET_QUOTE_BUF_LEN as u32 {
-            error!(
-                "   effective quote length ({}) exceeds buffer size ({})",
-                real_quote_len, RET_QUOTE_BUF_LEN
-            );
-            return Err(OCallBridgeError::GetQuote(
-                sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT,
-            ));
-        }
-
-        let ret = unsafe {
-            sgx_get_quote(
-                p_report,
+        self.enclave_api
+            .get_quote(
+                revocation_list,
+                report,
                 quote_type,
-                p_spid,
-                p_nonce,
-                p_sig_rl,
-                sig_rl_size,
-                p_qe_report,
-                p_quote as *mut sgx_quote_t,
+                spid,
+                quote_nonce,
                 real_quote_len,
             )
-        };
-
-        ensure!(
-            ret == sgx_status_t::SGX_SUCCESS,
-            OCallBridgeError::GetQuote(ret)
-        );
-
-        Ok((
-            qe_report,
-            Vec::from(&return_quote_buf[..real_quote_len as usize]),
-        ))
+            .map_err(|e| match e {
+                substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
+                _ => OCallBridgeError::GetQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
+            })
     }
 
     fn get_update_info(
@@ -137,22 +95,12 @@ impl RemoteAttestationBridge for RemoteAttestationOCall {
         platform_blob: sgx_platform_info_t,
         enclave_trusted: i32,
     ) -> OCallBridgeResult<sgx_update_info_bit_t> {
-        let mut update_info: sgx_update_info_bit_t = sgx_update_info_bit_t::default();
-
-        let result = unsafe {
-            sgx_report_attestation_status(
-                &platform_blob as *const sgx_platform_info_t,
-                enclave_trusted,
-                &mut update_info as *mut sgx_update_info_bit_t,
-            )
-        };
-
-        ensure!(
-            result == sgx_status_t::SGX_SUCCESS,
-            OCallBridgeError::GetUpdateInfo(result)
-        );
-
-        Ok(update_info)
+        self.enclave_api
+            .get_update_info(platform_blob, enclave_trusted)
+            .map_err(|e| match e {
+                substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetUpdateInfo(s),
+                _ => OCallBridgeError::GetUpdateInfo(sgx_status_t::SGX_ERROR_UNEXPECTED),
+            })
     }
 }
 
@@ -169,12 +117,4 @@ fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, String> {
     }
 
     Err("Cannot lookup address".to_string())
-}
-
-fn vec_to_c_pointer_with_len<A>(input: Vec<A>) -> (*const A, u32) {
-    if input.is_empty() {
-        (ptr::null(), 0)
-    } else {
-        (input.as_ptr(), input.len() as u32)
-    }
 }

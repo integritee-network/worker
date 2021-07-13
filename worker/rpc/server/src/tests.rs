@@ -1,11 +1,11 @@
 use log::info;
 
 use super::*;
-use parity_scale_codec::Decode;
 use jsonrpsee::{
     types::{to_json_value, traits::Client},
     ws_client::WsClientBuilder,
 };
+use parity_scale_codec::Decode;
 
 use mock::{test_sidechain_block, TestEnclave};
 use substratee_worker_primitives::RpcResponse;
@@ -17,7 +17,9 @@ fn init() {
 #[tokio::test]
 async fn test_client_calls() {
     init();
-    let addr = run_server("127.0.0.1:0", TestEnclave).await.unwrap();
+    let addr = run_server("127.0.0.1:0", Arc::new(TestEnclave))
+        .await
+        .unwrap();
     info!("ServerAddress: {:?}", addr);
 
     let url = format!("ws://{}", addr);

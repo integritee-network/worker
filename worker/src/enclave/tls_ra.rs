@@ -14,35 +14,19 @@
     limitations under the License.
 
 */
+use log::*;
+use sgx_types::*;
 use std::net::{TcpListener, TcpStream};
 use std::os::unix::io::AsRawFd;
+use substratee_enclave_api::error::Error;
+use substratee_enclave_api::remote_attestation::TlsRemoteAttestation;
+use substratee_enclave_api::EnclaveResult;
 
-use sgx_types::*;
-
-use log::*;
-
-extern "C" {
-    fn run_key_provisioning_server(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        socket_fd: c_int,
-        sign_type: sgx_quote_sign_type_t,
-        skip_ra: c_int,
-    ) -> sgx_status_t;
-    fn request_key_provisioning(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        socket_fd: c_int,
-        sign_type: sgx_quote_sign_type_t,
-        skip_ra: c_int,
-    ) -> sgx_status_t;
-}
-
-pub fn enclave_run_key_provisioning_server(
-    eid: sgx_enclave_id_t,
+pub fn enclave_run_key_provisioning_server<E: TlsRemoteAttestation>(
+    enclave_api: &E,
     sign_type: sgx_quote_sign_type_t,
     addr: &str,
-    skip_ra: bool
+    skip_ra: bool,
 ) {
     info!("Starting MU-RA-Server on: {}", addr);
     let listener = match TcpListener::bind(addr) {
@@ -59,16 +43,16 @@ pub fn enclave_run_key_provisioning_server(
                     "[MU-RA-Server] a worker at {} is requesting key provisiong",
                     addr
                 );
-                let mut retval = sgx_status_t::SGX_SUCCESS;
-                let result = unsafe {
-                    run_key_provisioning_server(eid, &mut retval, socket.as_raw_fd(), sign_type, skip_ra.into())
-                };
+
+                let result =
+                    enclave_api.run_key_provisioning_server(socket.as_raw_fd(), sign_type, skip_ra);
+
                 match result {
-                    sgx_status_t::SGX_SUCCESS => {
+                    Ok(_) => {
                         debug!("[MU-RA-Server] ECALL success!");
                     }
-                    _ => {
-                        error!("[MU-RA-Server] ECALL Enclave Failed {}!", result.as_str());
+                    Err(e) => {
+                        error!("[MU-RA-Server] ECALL Enclave Failed {:?}!", e);
                     }
                 }
             }
@@ -77,29 +61,15 @@ pub fn enclave_run_key_provisioning_server(
     }
 }
 
-pub fn enclave_request_key_provisioning(
-    eid: sgx_enclave_id_t,
+pub fn enclave_request_key_provisioning<E: TlsRemoteAttestation>(
+    enclave_api: &E,
     sign_type: sgx_quote_sign_type_t,
     addr: &str,
     skip_ra: bool,
-) -> SgxResult<()> {
+) -> EnclaveResult<()> {
     info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
-    let socket = match TcpStream::connect(addr) {
-        Ok(s) => s,
-        Err(e) => {
-            error!("error connecting to {}: {}", addr, e);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
-    };
-    let mut status = sgx_status_t::SGX_SUCCESS;
 
-    let result =
-        unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type, skip_ra.into()) };
-    if status != sgx_status_t::SGX_SUCCESS {
-        return Err(status);
-    }
-    if result != sgx_status_t::SGX_SUCCESS {
-        return Err(result);
-    }
-    Ok(())
+    let socket = TcpStream::connect(addr).map_err(|e| Error::Other(Box::new(e)))?;
+
+    enclave_api.request_key_provisioning(socket.as_raw_fd(), sign_type, skip_ra)
 }

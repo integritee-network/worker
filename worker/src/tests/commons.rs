@@ -15,6 +15,7 @@
 
 */
 
+use crate::{enclave_account, ensure_account_has_funds};
 use base58::ToBase58;
 use codec::Encode;
 use log::*;
@@ -24,18 +25,15 @@ use sgx_types::*;
 use sp_core::crypto::AccountId32;
 use sp_core::sr25519;
 use sp_keyring::AccountKeyring;
-
 use std::{fs, str};
-
-use crate::enclave::api::*;
-use crate::{enclave_account, ensure_account_has_funds};
 use substrate_api_client::Api;
-use substratee_stf::{Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, Getter};
+use substratee_enclave_api::enclave_base::EnclaveBase;
+use substratee_stf::{Getter, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter};
 
 #[cfg(test)]
 use crate::config::Config;
 #[cfg(test)]
-use substratee_worker_primitives::block::{SignedBlock, Block};
+use substratee_worker_primitives::block::{Block, SignedBlock};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -45,9 +43,13 @@ pub struct Message {
 }
 
 /// Who must be root account
-pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: Index) -> Vec<u8> {
+pub fn encrypted_set_balance<E: EnclaveBase>(
+    enclave_api: &E,
+    who: AccountKeyring,
+    nonce: Index,
+) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
-    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
+    let rsa_pubkey: Rsa3072PubKey = enclave_api.get_rsa_shielding_pubkey().unwrap();
     info!("deserialized rsa key");
 
     let call = TrustedCall::balance_set_balance(who.public().into(), who.public().into(), 33, 44);
@@ -56,16 +58,20 @@ pub fn encrypted_set_balance(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: 
         call.sign(
             &KeyPair::Sr25519(who.pair()),
             nonce,
-            &enclave_mrenclave(eid).unwrap(),
+            &enclave_api.get_mrenclave().unwrap(),
             &ShardIdentifier::default(),
         )
         .encode(),
     )
 }
 
-pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: Index) -> Vec<u8> {
+pub fn encrypted_unshield<E: EnclaveBase>(
+    enclave_api: &E,
+    who: AccountKeyring,
+    nonce: Index,
+) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
-    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
+    let rsa_pubkey: Rsa3072PubKey = enclave_api.get_rsa_shielding_pubkey().unwrap();
     info!("deserialized rsa key");
 
     let call = TrustedCall::balance_unshield(
@@ -79,7 +85,7 @@ pub fn encrypted_unshield(eid: sgx_enclave_id_t, who: AccountKeyring, nonce: Ind
         call.sign(
             &KeyPair::Sr25519(who.pair()),
             nonce,
-            &enclave_mrenclave(eid).unwrap(),
+            &enclave_api.get_mrenclave().unwrap(),
             &ShardIdentifier::default(),
         )
         .encode(),
@@ -99,20 +105,20 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> Getter {
     Getter::trusted(getter.sign(&KeyPair::Sr25519(who.pair())))
 }
 
-pub fn encrypted_alice(eid: sgx_enclave_id_t) -> Vec<u8> {
+pub fn encrypted_alice<E: EnclaveBase>(enclave_api: &E) -> Vec<u8> {
     info!("*** Get the public key from the TEE\n");
-    let rsa_pubkey: Rsa3072PubKey = enclave_shielding_key(eid).unwrap();
+    let rsa_pubkey: Rsa3072PubKey = enclave_api.get_rsa_shielding_pubkey().unwrap();
     encrypt_payload(rsa_pubkey, AccountKeyring::Alice.encode())
 }
 
-pub fn setup(
-    eid: sgx_enclave_id_t,
+pub fn setup<E: EnclaveBase>(
+    enclave_api: &E,
     who: Option<AccountKeyring>,
     port: &str,
 ) -> (Api<sr25519::Pair>, Option<u32>, ShardIdentifier) {
     let node_url = format!("ws://{}:{}", "127.0.0.1", port);
     let mut api = Api::<sr25519::Pair>::new(node_url).unwrap();
-    ensure_account_has_funds(&mut api, &enclave_account(eid));
+    ensure_account_has_funds(&mut api, &enclave_account(enclave_api));
 
     // create the state such that we do not need to initialize it manually
     let shard = ShardIdentifier::default();
@@ -140,8 +146,7 @@ pub fn get_nonce(api: &Api<sr25519::Pair>, who: &AccountId32) -> u32 {
 
 #[cfg(test)]
 pub fn test_sidechain_block() -> SignedBlock {
-    use sp_core::{H256, Pair};
-
+    use sp_core::{Pair, H256};
 
     let signer_pair = sp_core::ed25519::Pair::from_string("//Alice", None).unwrap();
     let author: AccountId32 = signer_pair.public().into();

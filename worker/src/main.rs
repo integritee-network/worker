@@ -14,6 +14,33 @@
     limitations under the License.
 
 */
+use crate::direct_invocation::watch_list_service::{WatchList, WatchListService};
+use crate::direct_invocation::watching_client::WsWatchingClient;
+use crate::direct_invocation::ws_direct_server_runner::{RunWsServer, WsDirectServerRunner};
+use crate::direct_invocation::ws_handler::WsHandlerFactory;
+use crate::globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle};
+use crate::globals::worker::{GlobalWorker, Worker};
+use crate::node_api_factory::{CreateNodeApi, GlobalUrlNodeApiFactory};
+use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
+use crate::ocall_bridge::component_factory::OCallBridgeComponentFactory;
+use crate::sync_block_gossiper::SyncBlockGossiper;
+use crate::utils::{check_files, extract_shard};
+use crate::worker::worker_url_into_async_rpc_url;
+use base58::ToBase58;
+use clap::{load_yaml, App};
+use codec::{Decode, Encode};
+use config::Config;
+use enclave::api::enclave_init;
+use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
+use log::*;
+use my_node_runtime::{substratee_registry::ShardIdentifier, Event, Hash, Header};
+use sgx_types::*;
+use sp_core::{
+    crypto::{AccountId32, Ss58Codec},
+    sr25519, Pair,
+};
+use sp_finality_grandpa::VersionedAuthorityList;
+use sp_keyring::AccountKeyring;
 use std::fs::{self, File};
 use std::io::stdin;
 use std::io::Write;
@@ -25,48 +52,18 @@ use std::sync::{
 };
 use std::thread;
 use std::time::{Duration, SystemTime};
-
-use base58::ToBase58;
-use clap::{load_yaml, App};
-use codec::{Decode, Encode};
-use log::*;
-use my_node_runtime::{substratee_registry::ShardIdentifier, Event, Hash, Header};
-use sgx_types::*;
-use sp_core::{
-    crypto::{AccountId32, Ss58Codec},
-    sr25519, Pair,
-};
-use sp_finality_grandpa::VersionedAuthorityList;
-use sp_keyring::AccountKeyring;
 use substrate_api_client::{utils::FromHexString, Api, GenericAddress, XtStatus};
-
-use config::Config;
-use enclave::api::{
-    enclave_dump_ra, enclave_init, enclave_mrenclave, enclave_perform_ra, enclave_shielding_key,
-    enclave_signing_key,
-};
-use enclave::tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server};
 use substratee_api_client_extensions::{AccountApi, ChainApi};
-use substratee_enclave_api::{Enclave, TeeRexApi};
+use substratee_enclave_api::direct_request::DirectRequest;
+use substratee_enclave_api::enclave_base::EnclaveBase;
+use substratee_enclave_api::remote_attestation::{RemoteAttestation, TlsRemoteAttestation};
+use substratee_enclave_api::side_chain::SideChain;
+use substratee_enclave_api::teerex_api::TeerexApi;
 use substratee_node_primitives::SignedBlock;
 use substratee_settings::files::{
     ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
 };
 use substratee_worker_api::direct_client::DirectClient;
-
-use crate::direct_invocation::watch_list_service::{WatchList, WatchListService};
-use crate::direct_invocation::watching_client::WsWatchingClient;
-use crate::direct_invocation::ws_direct_server_runner::{RunWsServer, WsDirectServerRunner};
-use crate::direct_invocation::ws_handler::WsHandlerFactory;
-use crate::enclave::api::{enclave_init_chain_relay, enclave_produce_blocks};
-use crate::globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle};
-use crate::globals::worker::{GlobalWorker, Worker};
-use crate::node_api_factory::{CreateNodeApi, GlobalUrlNodeApiFactory};
-use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
-use crate::ocall_bridge::component_factory::OCallBridgeComponentFactory;
-use crate::sync_block_gossiper::SyncBlockGossiper;
-use crate::utils::{check_files, extract_shard};
-use crate::worker::worker_url_into_async_rpc_url;
 
 mod config;
 mod direct_invocation;
@@ -103,17 +100,19 @@ fn main() {
     let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
     let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
     let direct_invocation_watch_list = Arc::new(WatchListService::<WsWatchingClient>::new());
+    let enclave = Arc::new(enclave_init().unwrap());
 
     // initialize o-call bridge with a concrete factory implementation
     OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
         node_api_factory.clone(),
         sync_block_gossiper,
         direct_invocation_watch_list.clone(),
+        enclave.clone(),
     )));
 
     if let Some(smatches) = matches.subcommand_matches("run") {
         println!("*** Starting substraTEE-worker");
-        let shard = extract_shard(&smatches);
+        let shard = extract_shard(&smatches, enclave.as_ref());
 
         // Todo: Is this deprecated?? It is only used in remote attestation.
         config.set_ext_api_url(
@@ -126,24 +125,40 @@ fn main() {
         println!("Worker Config: {:?}", config);
         let skip_ra = smatches.is_present("skip-ra");
 
-        start_worker(
+        let node_api = node_api_factory
+            .create_api()
+            .set_signer(AccountKeyring::Alice.pair());
+
+        GlobalWorker::reset_worker(Worker::new(
             config.clone(),
+            node_api.clone(),
+            enclave.clone(),
+            DirectClient::new(config.worker_url()),
+        ));
+
+        start_worker(
+            config,
             &shard,
+            enclave,
             skip_ra,
-            node_api_factory,
+            node_api,
             tokio_handle,
             direct_invocation_watch_list,
         );
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-        let shard = extract_shard(&smatches);
+        let shard = extract_shard(&smatches, enclave.as_ref());
         let provider_url = smatches
             .value_of("provider")
             .expect("provider must be specified");
-        request_keys(provider_url, &shard, smatches.is_present("skip-ra"));
+        request_keys(
+            provider_url,
+            &shard,
+            enclave.as_ref(),
+            smatches.is_present("skip-ra"),
+        );
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
-        let enclave = enclave_init().unwrap();
-        let pubkey = enclave_shielding_key(enclave.geteid()).unwrap();
+        let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
         let file = File::create(SHIELDING_KEY_FILE).unwrap();
         match serde_json::to_writer(file, &pubkey) {
             Err(x) => {
@@ -153,11 +168,9 @@ fn main() {
                 println!("[+] File '{}' written successfully", SHIELDING_KEY_FILE);
             }
         }
-        return;
     } else if matches.is_present("signing-key") {
         info!("*** Get the signing key from the TEE\n");
-        let enclave = enclave_init().unwrap();
-        let pubkey = enclave_signing_key(enclave.geteid()).unwrap();
+        let pubkey = enclave.get_ecc_signing_pubkey().unwrap();
         debug!("[+] Signing key raw: {:?}", pubkey);
         match fs::write(SIGNING_KEY_FILE, pubkey) {
             Err(x) => {
@@ -167,50 +180,34 @@ fn main() {
                 println!("[+] File '{}' written successfully", SIGNING_KEY_FILE);
             }
         }
-        return;
     } else if matches.is_present("dump-ra") {
         info!("*** Perform RA and dump cert to disk");
-        let enclave = enclave_init().unwrap();
-        enclave_dump_ra(enclave.geteid()).unwrap();
-        return;
+        enclave.dump_ra_to_disk().unwrap();
     } else if matches.is_present("mrenclave") {
-        let enclave = enclave_init().unwrap();
-        println!(
-            "{}",
-            enclave_mrenclave(enclave.geteid())
-                .unwrap()
-                .encode()
-                .to_base58()
-        );
-        return;
-    }
-    if let Some(_matches) = matches.subcommand_matches("init-shard") {
-        let shard = extract_shard(&_matches);
+        println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
+    } else if let Some(_matches) = matches.subcommand_matches("init-shard") {
+        let shard = extract_shard(&_matches, enclave.as_ref());
         init_shard(&shard);
     } else if let Some(_matches) = matches.subcommand_matches("test") {
         if _matches.is_present("provisioning-server") {
             println!("*** Running Enclave MU-RA TLS server\n");
-            let enclave = enclave_init().unwrap();
             enclave_run_key_provisioning_server(
-                enclave.geteid(),
+                enclave.as_ref(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", config.worker_mu_ra_port),
                 _matches.is_present("skip-ra"),
             );
             println!("[+] Done!");
-            enclave.destroy();
         } else if _matches.is_present("provisioning-client") {
             println!("*** Running Enclave MU-RA TLS client\n");
-            let enclave = enclave_init().unwrap();
             enclave_request_key_provisioning(
-                enclave.geteid(),
+                enclave.as_ref(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", config.worker_mu_ra_port),
                 _matches.is_present("skip-ra"),
             )
             .unwrap();
             println!("[+] Done!");
-            enclave.destroy();
         } else {
             tests::run_enclave_tests(_matches, &config.node_port);
         }
@@ -219,19 +216,26 @@ fn main() {
     }
 }
 
-fn start_worker<C, T, W>(
+fn start_worker<E, T, W>(
     config: Config,
     shard: &ShardIdentifier,
+    enclave: Arc<E>,
     skip_ra: bool,
-    node_api_factory: Arc<C>,
+    mut node_api: Api<sr25519::Pair>,
     tokio_handle: Arc<T>,
     watch_list: Arc<W>,
 ) where
-    C: CreateNodeApi,
     T: GetTokioHandle,
     W: WatchList<Client = WsWatchingClient>,
+    E: EnclaveBase
+        + DirectRequest
+        + SideChain
+        + RemoteAttestation
+        + TlsRemoteAttestation
+        + TeerexApi
+        + Clone,
 {
-    println!("Encointer Worker v{}", VERSION);
+    println!("IntegriTEE Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
     // check for required files
@@ -243,31 +247,17 @@ fn start_worker<C, T, W>(
     #[cfg(not(feature = "production"))]
     println!("*** Starting enclave in development mode");
 
-    let enclave = enclave_init().unwrap();
-    let mrenclave = enclave_mrenclave(enclave.geteid()).unwrap();
+    let mrenclave = enclave.get_mrenclave().unwrap();
     println!("MRENCLAVE={}", mrenclave.to_base58());
-    let eid = enclave.geteid();
-
-    let mut node_api = node_api_factory
-        .create_api()
-        .set_signer(AccountKeyring::Alice.pair());
-
-    let enclave_api = Enclave::new(eid);
-
-    GlobalWorker::reset_worker(Worker::new(
-        config.clone(),
-        node_api.clone(),
-        enclave_api,
-        DirectClient::new(config.worker_url()),
-    ));
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
     println!("MU-RA server listening on ws://{}", config.mu_ra_url());
     let ra_url = config.mu_ra_url();
+    let enclave_api_key_prov = enclave.clone();
     thread::spawn(move || {
         enclave_run_key_provisioning_server(
-            eid,
+            enclave_api_key_prov.as_ref(),
             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
             &ra_url,
             skip_ra,
@@ -281,8 +271,8 @@ fn start_worker<C, T, W>(
         config.worker_url()
     );
 
-    let ws_handler_factory = Arc::new(WsHandlerFactory::new(enclave_api, watch_list));
-    let ws_direct_server = WsDirectServerRunner::new(ws_handler_factory, eid);
+    let ws_handler_factory = Arc::new(WsHandlerFactory::new(enclave.clone(), watch_list));
+    let ws_direct_server = WsDirectServerRunner::new(ws_handler_factory, enclave.clone());
     ws_direct_server.run(config.worker_url());
 
     // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
@@ -290,8 +280,9 @@ fn start_worker<C, T, W>(
     let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
 
     let handle = tokio_handle.get_handle();
+    let enclave_rpc_server = enclave.clone();
     handle.spawn(async move {
-        substratee_worker_rpc_server::run_server(&url, enclave_api)
+        substratee_worker_rpc_server::run_server(&url, enclave_rpc_server)
             .await
             .unwrap()
     });
@@ -299,7 +290,7 @@ fn start_worker<C, T, W>(
     // start the substrate-api-client to communicate with the node
     let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
-    let tee_accountid = enclave_account(eid);
+    let tee_accountid = enclave_account(enclave.as_ref());
     ensure_account_has_funds(&mut node_api, &tee_accountid);
 
     // ------------------------------------------------------------------------
@@ -313,17 +304,17 @@ fn start_worker<C, T, W>(
         println!(
             "[!] skipping remote attestation. Registering enclave without attestation report."
         );
-        enclave_api
+        enclave
             .mock_register_xt(node_api.genesis_hash, nonce, &config.ext_api_url.unwrap())
             .unwrap()
     } else {
-        enclave_perform_ra(
-            eid,
-            genesis_hash,
-            nonce,
-            config.ext_api_url.unwrap().as_bytes().to_vec(),
-        )
-        .unwrap()
+        enclave
+            .perform_ra(
+                genesis_hash,
+                nonce,
+                config.ext_api_url.unwrap().as_bytes().to_vec(),
+            )
+            .unwrap()
     };
 
     let mut xthex = hex::encode(uxt);
@@ -334,7 +325,7 @@ fn start_worker<C, T, W>(
     let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
     println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-    let latest_head = init_chain_relay(eid, &node_api);
+    let latest_head = init_chain_relay(&node_api, enclave.as_ref());
     println!("*** [+] Finished syncing chain relay\n");
 
     // ------------------------------------------------------------------------
@@ -342,7 +333,9 @@ fn start_worker<C, T, W>(
     let api4 = node_api.clone();
     thread::Builder::new()
         .name("interval_block_production_timer".to_owned())
-        .spawn(move || start_interval_block_production(eid, &api4, latest_head))
+        .spawn(move || {
+            start_interval_block_production(enclave.clone().as_ref(), &api4, latest_head)
+        })
         .unwrap();
 
     // ------------------------------------------------------------------------
@@ -369,8 +362,8 @@ fn start_worker<C, T, W>(
 }
 
 /// Triggers the enclave to produce a block based on a fixed time schedule
-fn start_interval_block_production(
-    eid: sgx_enclave_id_t,
+fn start_interval_block_production<E: EnclaveBase + SideChain>(
+    enclave_api: &E,
     api: &Api<sr25519::Pair>,
     mut latest_head: Header,
 ) {
@@ -381,7 +374,7 @@ fn start_interval_block_production(
             if elapsed >= block_production_interval {
                 // update interval time
                 interval_start = SystemTime::now();
-                latest_head = produce_blocks(eid, api, latest_head)
+                latest_head = produce_blocks(enclave_api, api, latest_head)
             } else {
                 // sleep for the rest of the interval
                 let sleep_time = block_production_interval - elapsed;
@@ -391,7 +384,12 @@ fn start_interval_block_production(
     }
 }
 
-fn request_keys(provider_url: &str, _shard: &ShardIdentifier, skip_ra: bool) {
+fn request_keys<E: TlsRemoteAttestation>(
+    provider_url: &str,
+    _shard: &ShardIdentifier,
+    enclave_api: &E,
+    skip_ra: bool,
+) {
     // FIXME: we now assume that keys are equal for all shards
 
     // initialize the enclave
@@ -400,16 +398,13 @@ fn request_keys(provider_url: &str, _shard: &ShardIdentifier, skip_ra: bool) {
     #[cfg(not(feature = "production"))]
     println!("*** Starting enclave in development mode");
 
-    let enclave = enclave_init().unwrap();
-    let eid = enclave.geteid();
-
     println!(
         "Requesting key provisioning from worker at {}",
         provider_url
     );
 
     enclave_request_key_provisioning(
-        eid,
+        enclave_api,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         &provider_url,
         skip_ra,
@@ -504,7 +499,10 @@ fn print_events(events: Events, _sender: Sender<String>) {
     }
 }
 
-pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Header {
+pub fn init_chain_relay<E: EnclaveBase + SideChain>(
+    api: &Api<sr25519::Pair>,
+    enclave_api: &E,
+) -> Header {
     let genesis_hash = api.get_genesis_hash().unwrap();
     let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
     info!("Got genesis Header: \n {:?} \n", genesis_header);
@@ -513,24 +511,22 @@ pub fn init_chain_relay(eid: sgx_enclave_id_t, api: &Api<sr25519::Pair>) -> Head
 
     debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-    let latest = enclave_init_chain_relay(
-        eid,
-        genesis_header,
-        VersionedAuthorityList::from(grandpas),
-        grandpa_proof,
-    )
-    .unwrap();
+    let authority_list = VersionedAuthorityList::from(grandpas);
+
+    let latest = enclave_api
+        .init_chain_relay(genesis_header, authority_list, grandpa_proof)
+        .unwrap();
 
     info!("Finished initializing chain relay, syncing....");
 
-    produce_blocks(eid, api, latest)
+    produce_blocks(enclave_api, api, latest)
 }
 
 /// Starts block production
 ///
 /// Returns the last synced header of layer one
-pub fn produce_blocks(
-    eid: sgx_enclave_id_t,
+pub fn produce_blocks<E: EnclaveBase + SideChain>(
+    enclave_api: &E,
     api: &Api<sr25519::Pair>,
     last_synced_head: Header,
 ) -> Header {
@@ -575,7 +571,7 @@ pub fn produce_blocks(
         blocks_to_sync.reverse();
     }
 
-    let tee_accountid = enclave_account(eid);
+    let tee_accountid = enclave_account(enclave_api);
 
     // only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
     let mut i = if curr_head.block.header.hash() == last_synced_head.hash() {
@@ -586,8 +582,11 @@ pub fn produce_blocks(
     for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
         let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
         // Produce blocks
-        if let Err(e) = enclave_produce_blocks(eid, chunk.to_vec(), tee_nonce) {
-            error!("{}", e);
+        if let Err(e) = chunk
+            .to_vec()
+            .using_encoded(|b| enclave_api.produce_blocks(b.to_vec(), tee_nonce))
+        {
+            error!("{:?}", e);
             // enclave might not have synced
             return last_synced_head;
         };
@@ -622,8 +621,8 @@ fn init_shard(shard: &ShardIdentifier) {
 }
 
 // get the public signing key of the TEE
-fn enclave_account(eid: sgx_enclave_id_t) -> AccountId32 {
-    let tee_public = enclave_signing_key(eid).unwrap();
+fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
+    let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
     trace!(
         "[+] Got ed25519 account of TEE = {}",
         tee_public.to_ss58check()

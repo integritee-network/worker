@@ -6,6 +6,7 @@ use crate::config::Config;
 use crate::tests::commons::local_worker_config;
 use crate::tests::mock::{enclaves, TestNodeApi, W2_URL};
 use crate::worker::Worker as WorkerGen;
+use std::sync::Arc;
 
 type TestWorker = WorkerGen<Config, TestNodeApi, (), ()>;
 
@@ -20,7 +21,7 @@ fn worker_rw_lock_works() {
         *w = Some(TestWorker::new(
             local_worker_config(W2_URL.into()),
             TestNodeApi,
-            (),
+            Arc::new(()),
             (),
         ));
     }

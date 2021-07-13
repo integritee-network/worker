@@ -17,35 +17,32 @@
 
 use crate::direct_invocation::ws_handler::CreateWsHandler;
 use log::*;
-use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
+use substratee_enclave_api::direct_request::DirectRequest;
 use ws::{listen, Handler};
-
-// TODO replace these extern C e-calls with a EnclaveAPI member field in the server impl
-extern "C" {
-    fn initialize_pool(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
-}
 
 /// Trait for a WebSocket Server for direct invocation
 pub trait RunWsServer {
     fn run(&self, addr: String);
 }
 
-pub struct WsDirectServerRunner<H, HF>
+pub struct WsDirectServerRunner<H, HF, E>
 where
     H: Handler,
     HF: CreateWsHandler<Handler = H> + Sync + Send + 'static,
+    E: DirectRequest,
 {
     handler_factory: Arc<HF>,
-    enclave_id: sgx_enclave_id_t,
+    enclave_api: Arc<E>,
 }
 
-impl<H, HF> RunWsServer for WsDirectServerRunner<H, HF>
+impl<H, HF, E> RunWsServer for WsDirectServerRunner<H, HF, E>
 where
     H: Handler,
     HF: CreateWsHandler<Handler = H> + Sync + Send + 'static,
+    E: DirectRequest,
 {
     fn run(&self, addr: String) {
         let init_top_pool_handle = self.init_top_pool();
@@ -58,32 +55,32 @@ where
     }
 }
 
-impl<H, HF> WsDirectServerRunner<H, HF>
+impl<H, HF, E> WsDirectServerRunner<H, HF, E>
 where
     H: Handler,
     HF: CreateWsHandler<Handler = H> + Sync + Send + 'static,
+    E: DirectRequest,
 {
-    pub fn new(handler_factory: Arc<HF>, enclave_id: sgx_enclave_id_t) -> Self {
+    pub fn new(handler_factory: Arc<HF>, enclave_api: Arc<E>) -> Self {
         WsDirectServerRunner {
             handler_factory,
-            enclave_id,
+            enclave_api,
         }
     }
 
     fn init_top_pool(&self) -> JoinHandle<()> {
-        // initialise top pool in enclave
-        let enclave_id = self.enclave_id;
+        // initialize top pool in enclave
+        let enclave_api = self.enclave_api.clone();
 
         thread::spawn(move || {
-            let mut retval = sgx_status_t::SGX_SUCCESS;
-            let result = unsafe { initialize_pool(enclave_id, &mut retval) };
+            let result = enclave_api.initialize_pool();
 
             match result {
-                sgx_status_t::SGX_SUCCESS => {
+                Ok(_) => {
                     debug!("[TX-pool init] ECALL success!");
                 }
-                _ => {
-                    error!("[TX-pool init] ECALL Enclave Failed {}!", result.as_str());
+                Err(e) => {
+                    error!("[TX-pool init] ECALL Enclave Failed {:?}!", e);
                 }
             }
         })

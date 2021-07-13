@@ -23,7 +23,7 @@ use codec::{Decode, Encode};
 use log::*;
 use sp_core::H256 as Hash;
 use std::sync::Arc;
-use substratee_enclave_api::EnclaveApi;
+use substratee_enclave_api::direct_request::DirectRequest;
 use substratee_worker_primitives::{DirectRequestStatus, RpcResponse, RpcReturnValue};
 use ws::{CloseCode, Handler, Message, Result, Sender};
 
@@ -38,19 +38,19 @@ pub trait CreateWsHandler {
 /// WS handler factory implementation, requires the enclave ID and a watch_list facade
 pub struct WsHandlerFactory<Enclave, Watch>
 where
-    Enclave: EnclaveApi + Clone,
+    Enclave: DirectRequest + Clone,
     Watch: WatchList<Client = <WsSender as CreateWatchingClient>::Client>,
 {
-    enclave_api: Enclave,
+    enclave_api: Arc<Enclave>,
     watch_list: Arc<Watch>,
 }
 
 impl<Enclave, Watch> WsHandlerFactory<Enclave, Watch>
 where
-    Enclave: EnclaveApi + Clone,
+    Enclave: DirectRequest + Clone,
     Watch: WatchList<Client = <WsSender as CreateWatchingClient>::Client>,
 {
-    pub fn new(enclave_api: Enclave, watch_list: Arc<Watch>) -> Self {
+    pub fn new(enclave_api: Arc<Enclave>, watch_list: Arc<Watch>) -> Self {
         WsHandlerFactory {
             enclave_api,
             watch_list,
@@ -60,7 +60,7 @@ where
 
 impl<Enclave, Watch> CreateWsHandler for WsHandlerFactory<Enclave, Watch>
 where
-    Enclave: EnclaveApi + Clone,
+    Enclave: DirectRequest + Clone,
     Watch: WatchList<Client = <WsSender as CreateWatchingClient>::Client>,
 {
     type Handler = WsHandler<WsSender, Enclave, Watch, <WsSender as CreateWatchingClient>::Client>;
@@ -79,11 +79,11 @@ pub struct WsHandler<Sender, Enclave, Watch, Client>
 where
     Client: WatchingClient,
     Sender: WsSend + CreateWatchingClient<Client = Client>,
-    Enclave: EnclaveApi,
+    Enclave: DirectRequest,
     Watch: WatchList<Client = Client>,
 {
     sender: Sender,
-    enclave_api: Enclave,
+    enclave_api: Arc<Enclave>,
     watch_list: Arc<Watch>,
 }
 
@@ -91,7 +91,7 @@ impl<Sender, Enclave, Watch, Client> Handler for WsHandler<Sender, Enclave, Watc
 where
     Client: WatchingClient,
     Sender: WsSend + CreateWatchingClient<Client = Client>,
-    Enclave: EnclaveApi,
+    Enclave: DirectRequest,
     Watch: WatchList<Client = Client>,
 {
     fn on_message(&mut self, msg: Message) -> Result<()> {
@@ -116,7 +116,7 @@ impl<Sender, Enclave, Watch, Client> WsHandler<Sender, Enclave, Watch, Client>
 where
     Client: WatchingClient,
     Sender: WsSend + CreateWatchingClient<Client = Client>,
-    Enclave: EnclaveApi,
+    Enclave: DirectRequest,
     Watch: WatchList<Client = Client>,
 {
     fn handle_direct_invocation_request(&self, request_message: &str) -> Result<()> {
@@ -180,8 +180,8 @@ mod tests {
     use super::*;
     use crate::direct_invocation::watch_list_service::WatchListService;
     use crate::direct_invocation::watching_client::WatchingClient;
+    use crate::tests::direct_request_mock::DirectRequestMock;
     use mockall::mock;
-    use substratee_enclave_api::EnclaveResult;
     use ws::Result;
 
     mock! {
@@ -240,19 +240,10 @@ mod tests {
         }
     }
 
-    mock! {
-        EnclaveApi{}
-        impl EnclaveApi for EnclaveApi {
-            fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-                Ok(request)
-            }
-        }
-    }
-
     #[test]
     fn given_request_when_response_cannot_be_decoded_then_do_not_add_to_watch_list() {
         let watch_list = Arc::new(WatchListService::<MockWatchingClient>::new());
-        let enclave_api = MockEnclaveApi::new();
+        let enclave_api = Arc::new(DirectRequestMock);
         let ws_sender = MockSender::new();
 
         let ws_handler = WsHandler {
