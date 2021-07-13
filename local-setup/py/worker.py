@@ -135,6 +135,11 @@ class Worker:
     def write_signer_pub(self):
         return run_subprocess(self.cli + ['signing-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
+    def request_keys(self, provider_addr: str):
+        """ Returns the keys from another worker. """
+        run_subprocess(self.cli + ['request-keys', provider_addr], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
+        return self._mrenclave
+
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')
 
