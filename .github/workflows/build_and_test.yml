@@ -181,9 +181,9 @@ jobs:
           sleep 30
 
       - name: "M8: Demo direct"
-        # * the change the symbolic link which points to the target/release... folder
-        # * Explicitly use bash (default=sh) to implicitly get `set -eo pipefail`. (Otherwise the exit 1, from
-        # the demo scripts is not correctly forwarded)
+        # * the change the symbolic link which points to the target/release... folder.
+        # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
+        shell: bash --noprofile --norc -eo pipefail {0}
         env:
           LOG_1: ../${{ env.LOG_DIR }}/demo_direct_1.log
           LOG_2: ../${{ env.LOG_DIR }}/demo_direct_2.log
@@ -192,11 +192,12 @@ jobs:
           touch ${{ env.LOG_1 }}
           touch ${{ env.LOG_2 }}
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          bash demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_1 }}
-          bash demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_2 }}
+          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_1 }}
+          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
 
       - name: "M6: Demo shielding/unshielding"
+        shell: bash --noprofile --norc -eo pipefail {0}
         env:
           LOG_1: ../${{ env.LOG_DIR }}/demo_shielding_1.log
           LOG_2: ../${{ env.LOG_DIR }}/demo_shielding_2.log
@@ -204,8 +205,8 @@ jobs:
           cd client
           touch ${{ env.LOG_1 }}
           touch ${{ env.LOG_2 }}
-          bash demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
-          bash demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
+          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
+          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
       - name: Upload logs
         if: always()
