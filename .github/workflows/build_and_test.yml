@@ -175,25 +175,26 @@ jobs:
           echo "$$ {{ env.SPID }}" > spid.txt
 
       - name: Run local setup
+        # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
         run: |
           touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
           sleep 30
-
-      - name: "M8: Demo direct"
-        # * the change the symbolic link which points to the target/release... folder.
-        # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
-        shell: bash --noprofile --norc -eo pipefail {0}
-        env:
-          LOG_1: ../${{ env.LOG_DIR }}/demo_direct_1.log
-          LOG_2: ../${{ env.LOG_DIR }}/demo_direct_2.log
-        run: |
-          cd client
-          touch ${{ env.LOG_1 }}
-          touch ${{ env.LOG_2 }}
-          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_1 }}
-          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_2 }}
+#
+#      - name: "M8: Demo direct"
+#        # * the change the symbolic link which points to the target/release... folder.
+#        # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
+#        shell: bash --noprofile --norc -eo pipefail {0}
+#        env:
+#          LOG_1: ../${{ env.LOG_DIR }}/demo_direct_1.log
+#          LOG_2: ../${{ env.LOG_DIR }}/demo_direct_2.log
+#        run: |
+#          cd client
+#          touch ${{ env.LOG_1 }}
+#          touch ${{ env.LOG_2 }}
+#          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
+#          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_1 }}
+#          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
 
       - name: "M6: Demo shielding/unshielding"
