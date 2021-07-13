@@ -67,7 +67,7 @@ pub fn seal(pair: &[u8]) -> Result<()> {
     Ok(())
 }
 
-pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> SgxResult<Vec<u8>> {
+pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> Result<Vec<u8>> {
     let mut decrypted_buffer = Vec::new();
 
     rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer)?;
@@ -82,8 +82,7 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
     Unseal,
     Seal,
-    Encrypt,
-    Decrypt
+    Decrypt(sgx_status_t)
 }
 
 
@@ -97,6 +96,7 @@ impl From<Error> for sgx_status_t {
     /// return sgx_status for top level enclave functions
     fn from(error: Error) -> sgx_status_t {
         match error {
+            Error::Decrypt(status) => status,
             _=>  {
                 log::error!("RsaError into sgx_status: {:?}", error);
                 sgx_status_t::SGX_ERROR_UNEXPECTED
