@@ -180,8 +180,8 @@ jobs:
 
       - name: Run local setup
         run: |
-        ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
-        sleep 30
+          ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
+          sleep 30
 
       - name: "M8: Demo direct"
         # the change the symbolic link which points to the target/release... folder
