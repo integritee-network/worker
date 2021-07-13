@@ -158,9 +158,8 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
           name: integritee-node-skip-ias-check
-          # in fact this action should download the latest artifact, but sometimes fails.
-          # (Could be that github caches some api-calls.) Then the `run_id` needs to be set
-          # to force download of a certain run.
+          # in fact this action should download the latest artifact, but sometimes fails. Then we need to
+          # set the `run_id` to force a download of an updated binary.
           run_id: 1026142211
           path: node
           repo: integritee-network/integritee-node
