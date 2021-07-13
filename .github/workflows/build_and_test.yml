@@ -185,14 +185,21 @@ jobs:
         run: |
           cd client
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./demo_direct_call.sh -p 9944 -P 2000 -t first
-          ./demo_direct_call.sh -p 9944 -P 2000 -t second
+          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_DIR}}/demo_direct_1.log
+          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_DIR}}/demo_direct_2.log
 
       - name: "M6: Demo shielding/unshielding"
         run: |
           cd client
-          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first
-          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second
+          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_DIR}}/demo_shielding_1.log
+          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_DIR}}/demo_shielding_2.log
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: log
+
 
 
 # If you want to debug ci and you don't want to build the binaries, you can use the commands
