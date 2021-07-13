@@ -16,9 +16,6 @@ log_dir = 'log'
 mkdir_p(log_dir)
 node_log = open(f'{log_dir}/node.log', 'w+')
 
-w1_working_dir = '/tmp/w1'
-w2_working_dir = '/tmp/w2'
-
 
 def setup_worker(work_dir: str, source_dir: str, std_err: Union[None, int, IO]):
     print(f'Setting up worker in {work_dir}')
