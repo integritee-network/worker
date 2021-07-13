@@ -22,26 +22,28 @@ use sgx_crypto_helper::rsa3072::{Rsa3072KeyPair, Rsa3072PubKey};
 use sgx_crypto_helper::RsaKeyPair;
 use sgx_types::*;
 
+use derive_more::{Display, From};
 use log::*;
 
 use substratee_settings::files::RSA3072_SEALED_KEY_FILE;
 use crate::io;
 
-pub fn unseal_pair() -> SgxResult<Rsa3072KeyPair> {
-    let keyvec = io::unseal(RSA3072_SEALED_KEY_FILE)?;
+pub fn unseal_pair() -> Result<Rsa3072KeyPair> {
+    let keyvec = io::unseal(RSA3072_SEALED_KEY_FILE)
+        .map_err(|_| Error::Unseal)?;
     let key_json_str = std::str::from_utf8(&keyvec).unwrap();
     let pair: Rsa3072KeyPair = serde_json::from_str(&key_json_str).unwrap();
     Ok(pair)
 }
 
-pub fn unseal_pubkey() -> SgxResult<Rsa3072PubKey> {
-    let pair = (unseal_pair())?;
+pub fn unseal_pubkey() -> Result<Rsa3072PubKey> {
+    let pair = unseal_pair()?;
     let pubkey = pair.export_pubkey().unwrap();
 
     Ok(pubkey)
 }
 
-pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
+pub fn create_sealed_if_absent() -> Result<()> {
     if SgxFile::open(RSA3072_SEALED_KEY_FILE).is_err() {
         info!(
             "[Enclave] Keyfile not found, creating new! {}",
@@ -49,18 +51,20 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
         );
         return create_sealed();
     }
-    Ok(sgx_status_t::SGX_SUCCESS)
+    Ok(())
 }
 
-pub fn create_sealed() -> Result<sgx_status_t, sgx_status_t> {
+pub fn create_sealed() -> Result<()> {
     let rsa_keypair = Rsa3072KeyPair::new().unwrap();
     let rsa_key_json = serde_json::to_string(&rsa_keypair).unwrap();
     // println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
     seal(rsa_key_json.as_bytes())
 }
 
-pub fn seal(pair: &[u8]) -> SgxResult<sgx_status_t> {
+pub fn seal(pair: &[u8]) -> Result<()> {
     io::seal(pair, RSA3072_SEALED_KEY_FILE)
+        .map_err(|_| Error::Seal)?;
+    Ok(())
 }
 
 pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> SgxResult<Vec<u8>> {
@@ -68,4 +72,35 @@ pub fn decrypt(ciphertext_slice: &[u8], rsa_pair: &Rsa3072KeyPair) -> SgxResult<
 
     rsa_pair.decrypt_buffer(ciphertext_slice, &mut decrypted_buffer)?;
     Ok(decrypted_buffer)
+}
+
+use std::result::Result as StdResult;
+
+pub type Result<T> = StdResult<T, Error>;
+
+#[derive(Debug, Display, From)]
+pub enum Error {
+    Unseal,
+    Seal,
+    Encrypt,
+    Decrypt
+}
+
+
+impl<T> From<Error> for StdResult<T, Error> {
+    fn from(error: Error) -> StdResult<T, Error> {
+        Err(error)
+    }
+}
+
+impl From<Error> for sgx_status_t {
+    /// return sgx_status for top level enclave functions
+    fn from(error: Error) -> sgx_status_t {
+        match error {
+            _=>  {
+                log::error!("RsaError into sgx_status: {:?}", error);
+                sgx_status_t::SGX_ERROR_UNEXPECTED
+            }
+        }
+    }
 }

@@ -135,8 +135,8 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
         signer.public().0
     );
 
-    if let Err(status) = rsa3072::create_sealed_if_absent() {
-        return status;
+    if let Err(e) = rsa3072::create_sealed_if_absent() {
+        return e.into();
     }
 
     // create the aes key that is used for state encryption such that a key is always present in tests.
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 ) -> sgx_status_t {
     let rsa_pubkey = match rsa3072::unseal_pubkey() {
         Ok(key) => key,
-        Err(status) => return status,
+        Err(e) => return e.into(),
     };
 
     let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
