@@ -165,11 +165,6 @@ jobs:
           path: node
           repo: integritee-network/integritee-node
 
-      - name: Start integritee-node
-        run: |
-          chmod +x node/integritee-node
-          ./node/integritee-node --dev 2>&1 | tee node.log &
-
       - name: "Setup Keys"
         env:
           KEY: ${{ secrets.IAS_PRIMARY_KEY }}
