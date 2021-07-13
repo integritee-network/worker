@@ -206,6 +206,7 @@ jobs:
           ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
       - name: Upload logs
+        if: always()
         uses: actions/upload-artifact@v2
         with:
           name: logs
