@@ -32,7 +32,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run:  SGX_MODE=SW make
-      - name: Worker & Client
+      - name: Test Worker & Client
         run: cargo test
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: |
