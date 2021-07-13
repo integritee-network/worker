@@ -90,6 +90,9 @@ jobs:
       BIN_DIR: bin
     steps:
       - uses: actions/checkout@v2
+
+      # we can't use the python setup action due to cross compiling issues with
+      # ubuntu 18.04 with python > 3.6. But we need >3.6 for our scripts.
       - name: Set up Python
         run: |
           sudo apt install software-properties-common -y
