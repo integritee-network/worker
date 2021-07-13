@@ -182,27 +182,34 @@ jobs:
 
       - name: "M8: Demo direct"
         # the change the symbolic link which points to the target/release... folder
+        env:
+          LOG_1: ../${{ env.LOG_DIR }}/demo_direct_1.log
+          LOG_2: ../${{ env.LOG_DIR }}/demo_direct_2.log
         run: |
-          touch ${{ env.LOG_DIR}}/demo_direct_1.log
-          touch ${{ env.LOG_DIR}}/demo_direct_2.log
           cd client
+          touch ${{ env.LOG_1 }}
+          touch ${{ env.LOG_2 }}
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./demo_direct_call.sh -p 9944 -P 2000 -t first
-          ./demo_direct_call.sh -p 9944 -P 2000 -t second
+          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_1 }}
+          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_2 }}
+
 
       - name: "M6: Demo shielding/unshielding"
+        env:
+          LOG_1: ../${{ env.LOG_DIR }}/demo_shielding_1.log
+          LOG_2: ../${{ env.LOG_DIR }}/demo_shielding_2.log
         run: |
-          touch ${{ env.LOG_DIR}}/demo_shielding_1.log
-          touch ${{ env.LOG_DIR}}/demo_shielding_2.log
           cd client
-          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_DIR}}/demo_shielding_1.log
-          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_DIR}}/demo_shielding_2.log
+          touch ${{ env.LOG_1 }}
+          touch ${{ env.LOG_2 }}
+          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
+          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
       - name: Upload logs
         uses: actions/upload-artifact@v2
         with:
           name: logs
-          path: log
+          path: ${{ env.LOG_DIR }}
 
 
 
