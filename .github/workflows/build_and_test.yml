@@ -93,8 +93,8 @@ jobs:
       - name: test
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
-          mkdir test
-          echo 'exit 1' 2>&1 | tee test
+          mkdir test.log
+          echo 'exit 1' 2>&1 | tee test.log
 
       # we can't use the `actions/setup-python@v2` due to cross compiling issues with
       # ubuntu 18.04 and python > 3.6, but we need >3.6 for our scripts.
