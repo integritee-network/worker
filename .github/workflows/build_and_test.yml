@@ -147,6 +147,7 @@ jobs:
       - name: Prepare working directory
         run: |
           mkdir -p ${{ env.LOG_DIR}}
+          chmod +x node/integritee-node
           cd ${{ env.BIN_DIR }}
           chmod +x ${{ env.WORKER_BIN }}
           chmod +x ${{ env.CLIENT_BIN }}
