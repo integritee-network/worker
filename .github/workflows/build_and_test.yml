@@ -150,6 +150,7 @@ jobs:
           chmod +x ${{ env.WORKER_BIN }}
           chmod +x ${{ env.CLIENT_BIN }}
           chmod +x ${{ env.ENCLAVE_BIN }}
+          mkdir -p ${{ env.LOG_DIR}}
 
       - name: Download integritee-node
         uses: dawidd6/action-download-artifact@v2
