@@ -19,6 +19,10 @@ struct CreatedArgs {
     series_id: NFTSeriesId,
 }
 
+///Create a NFT for this owner
+///The NFT contains a filename of the capsule/ciphertext file.
+/// Returns the NFTid: u32
+/// Note: the series id, this nft belongs to, is hardcoded to 1 and the capsule flag is true -> nfts can only be created by one owner.
 pub fn create(owner_ss58: &str, filename: &str, chain_api: Api<sr25519::Pair>) -> Option<NFTId> {
     let signer = get_pair_from_str(owner_ss58);
     let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
@@ -61,11 +65,4 @@ pub fn create(owner_ss58: &str, filename: &str, chain_api: Api<sr25519::Pair>) -
             return Some(ret.nft_id);
         }
     }
-}
-
-//TODO add test
-#[cfg(test)]
-mod test {
-    #[test]
-    fn verify_create_nft() {}
 }

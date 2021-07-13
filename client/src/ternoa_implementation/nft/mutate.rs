@@ -13,6 +13,9 @@ struct MutatedArgs {
     nft_id: NFTId,
 }
 
+/// Update the file included in the NFT with id nft_id.
+/// Must be called by the owner of the NFT and while the NFT is not sealed.
+/// Note: the series id, this nft belongs to, is hardcoded to 1 and the capsule flag is true.
 pub fn mutate(owner_ss58: &str, nft_id: u32, new_filename: &str, chain_api: Api<sr25519::Pair>) {
     let signer = get_pair_from_str(owner_ss58);
     let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));

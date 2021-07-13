@@ -17,6 +17,8 @@ struct TransferArgs {
     new_owner: AccountId,
 }
 
+///Transfer an NFT from an account to another one.
+///Must be called by the current owner of the NFT.
 pub fn transfer(from: &str, to: &str, nft_id: NFTId, chain_api: Api<sr25519::Pair>) {
     let signer = get_pair_from_str(from);
     let account_id = get_accountid_from_str(to);
