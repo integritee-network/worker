@@ -14,11 +14,7 @@ from py.helpers import GracefulKiller, mkdir_p
 log_dir = 'log'
 mkdir_p(log_dir)
 node_log = open(f'{log_dir}/node.log', 'w+')
-worker1_log = open(f'{log_dir}/worker1.log', 'w+')
-worker2_log = open(f'{log_dir}/worker2.log', 'w+')
 
-source_bin_folder = 'bin'
-node_bin = '../integritee-node/target/release/integritee-node'
 w1_working_dir = '/tmp/w1'
 w2_working_dir = '/tmp/w2'
 
