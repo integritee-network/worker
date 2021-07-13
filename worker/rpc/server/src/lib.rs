@@ -25,21 +25,22 @@ use log::debug;
 use parity_scale_codec::Encode;
 use tokio::net::ToSocketAddrs;
 
-use substratee_enclave_api::EnclaveApi;
+use std::sync::Arc;
+use substratee_enclave_api::direct_request::DirectRequest;
 use substratee_worker_primitives::block::SignedBlock;
 use substratee_worker_primitives::RpcRequest;
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;
 
 pub async fn run_server<Enclave>(
     addr: impl ToSocketAddrs,
-    enclave: Enclave,
+    enclave: Arc<Enclave>,
 ) -> anyhow::Result<SocketAddr>
 where
-    Enclave: EnclaveApi,
+    Enclave: DirectRequest,
 {
     let mut server = WsServerBuilder::default().build(addr).await?;
 
