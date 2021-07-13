@@ -30,6 +30,7 @@ use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::Unchecke
 use substratee_node_primitives::{CallWorkerFn, Request, ShieldFundsFn};
 
 use substratee_settings::files::SIGNING_KEY_FILE;
+use substratee_api_client_extensions::TEEREX;
 use crate::enclave::api::*;
 use crate::tests::commons::*;
 
@@ -65,7 +66,7 @@ pub fn call_worker_encrypted_set_balance_works(
     };
 
     let xt: UncheckedExtrinsicV4<CallWorkerFn> =
-        compose_extrinsic!(api, "SubstrateeRegistry", "call_worker", req);
+        compose_extrinsic!(api, TEEREX, "call_worker", req);
 
     api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
         .unwrap();
@@ -87,7 +88,7 @@ pub fn forward_encrypted_unshield_works(
     };
 
     let xt: UncheckedExtrinsicV4<CallWorkerFn> =
-        compose_extrinsic!(api, "SubstrateeRegistry", "call_worker", req);
+        compose_extrinsic!(api, TEEREX, "call_worker", req);
 
     api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
         .unwrap();

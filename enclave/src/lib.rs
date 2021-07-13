@@ -115,6 +115,7 @@ pub type Hash = sp_core::H256;
 type BPool = BasicPool<SideChainApi<Block>, Block>;
 
 use crate::error::{Error, Result};
+use crate::attestation::get_mrenclave_of_self;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -221,8 +222,9 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
     let signer = ed25519::unseal_pair().unwrap();
     let call = (
         [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
-        Vec::<u8>::new(),
-        url,
+        get_mrenclave_of_self()
+        .map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
+        url
     );
 
     let xt = compose_extrinsic_offline!(
