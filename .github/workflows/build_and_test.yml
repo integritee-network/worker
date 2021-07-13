@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: test
-        shell: bash --noprofile --norc -eo pipefail {0}
+        shell: bash --noprofile --norc -eo pipefail
         run: |
           touch test.log
           echo 'exit 1' 2>&1 | tee test.log
