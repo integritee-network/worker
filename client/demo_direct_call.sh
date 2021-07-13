@@ -105,7 +105,6 @@ case $TEST in
     first)
         if [ "10000000000" = "$RESULT" ]; then
             echo "test passed (1st time)"
-            return 0
         else
             echo "test ran through but balance is wrong. have you run the script from fresh genesis?"
             exit 1
@@ -114,12 +113,9 @@ case $TEST in
     second)
         if [ "20000000000" = "$RESULT" ]; then
             echo "test passed (2nd time)"
-            return 0
         else
             echo "test ran through but balance is wrong. is this really the second time you run this since genesis?"
             exit 1
         fi
         ;;
 esac
-
-return 0
