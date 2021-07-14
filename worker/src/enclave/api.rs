@@ -57,7 +57,7 @@ extern "C" {
         latest_header_size: usize,
     ) -> sgx_status_t;
 
-    fn produce_blocks(
+    fn sync_chain(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         blocks: *const u8,
@@ -232,7 +232,7 @@ pub fn enclave_init_chain_relay(
 /// Starts block production within enclave
 ///
 /// Returns the produced blocks
-pub fn enclave_produce_blocks(
+pub fn enclave_sync_chain(
     eid: sgx_enclave_id_t,
     blocks_to_sync: Vec<SignedBlock>,
     tee_nonce: u32,
@@ -241,7 +241,7 @@ pub fn enclave_produce_blocks(
 
     let result = unsafe {
         blocks_to_sync
-            .using_encoded(|b| produce_blocks(eid, &mut status, b.as_ptr(), b.len(), &tee_nonce))
+            .using_encoded(|b| sync_chain(eid, &mut status, b.as_ptr(), b.len(), &tee_nonce))
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
