@@ -39,15 +39,15 @@ class Worker:
         # cache fields
         self._mrenclave = None
 
-    def setup_cwd(self, source_files: str):
+    def setup_cwd(self):
         mkdir_p(self.cwd)
-        setup_working_dir(source_files, self.cwd)
+        setup_working_dir(self.source_dir, self.cwd)
 
     def init_clean(self):
         """ Purges all db files first and initializes the environment afterwards. """
         mkdir_p(self.cwd)
         print('Copying source files to working directory')
-        self.setup_cwd(self.source_dir)
+        self.setup_cwd()
 
         self.purge()
         self.init()
@@ -150,7 +150,7 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=info')
+        env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=warn')
 
         return Popen(
             self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),

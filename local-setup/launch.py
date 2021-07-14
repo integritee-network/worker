@@ -10,7 +10,7 @@ from time import sleep
 from typing import Union, IO
 
 from py.worker import Worker
-from py.helpers import GracefulKiller, mkdir_p, copy_shielding_key
+from py.helpers import GracefulKiller, mkdir_p
 
 log_dir = 'log'
 mkdir_p(log_dir)
@@ -36,15 +36,13 @@ def key_provider_addr(config):
     return f'localhost:{key_provider}'
 
 
-def run_worker(config, i: int, provider_addr_or_source):
-    if i > 1:
-        # print(f'Worker {i} fetching keys from first worker at {provider_addr}.')
-        # w.request_keys(provider_addr)
-        print(f'Worker {i} copying keys from first worker at {provider_addr_or_source}.')
-        copy_shielding_key(provider_addr_or_source, f'/tmp/w{i}')
-
+def run_worker(config, i: int, provider_addr):
     log = open(f'{log_dir}/worker{i}.log', 'w+')
     w = setup_worker(f'/tmp/w{i}', config["source"], log)
+
+    if i > 1:
+        print(f'Worker {i} fetching keys from first worker at {provider_addr}.')
+        w.request_keys(provider_addr)
 
     print(f'Starting worker {i} in background')
     w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
@@ -58,12 +56,11 @@ def main(processes, config_path):
 
     processes.append(run_node(config))
 
-    # provider_addr = key_provider_addr(config["workers"][0])
-    w1_source = config["workers"][0]["source"]
+    provider_addr = key_provider_addr(config["workers"][0])
 
     i = 1
     for w_conf in config["workers"]:
-        processes.append(run_worker(w_conf, i, w1_source))
+        processes.append(run_worker(w_conf, i, provider_addr))
         # sleep to prevent nonce clash when bootstrapping the enclave's account
         sleep(6)
 

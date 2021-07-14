@@ -1,3 +1,4 @@
+import os
 import signal
 import subprocess
 import shutil
@@ -7,7 +8,10 @@ from typing import Union, IO
 
 def run_subprocess(args, stdout: Union[None, int, IO], stderr: Union[None, int, IO], cwd: str = './'):
     """ Wrapper around subprocess that allows a less verbose call """
-    return subprocess.run(args, stdout=stdout, cwd=cwd, stderr=stderr).stdout.decode('utf-8').strip()
+
+    env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=warn,enclave=trace')
+
+    return subprocess.run(args, stdout=stdout, env=env, cwd=cwd, stderr=stderr).stdout.decode('utf-8').strip()
 
 
 def setup_working_dir(source_dir: str, target_dir: str):
@@ -20,11 +24,6 @@ def setup_working_dir(source_dir: str, target_dir: str):
 
     files_to_copy = ['enclave.signed.so', 'key.txt', 'spid.txt', 'substratee-worker']
     [shutil.copy(f'{source_dir}/{f}', f'{target_dir}/{f}') for f in files_to_copy]
-
-
-def copy_shielding_key(source_dir: str, target_dir: str):
-    f = 'rsa3072_key_sealed.bin'
-    shutil.copy(f'{source_dir}/{f}', f'{target_dir}/{f}')
 
 
 def mkdir_p(path):
