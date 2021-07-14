@@ -27,12 +27,14 @@ extern "C" {
         retval: *mut sgx_status_t,
         socket_fd: c_int,
         sign_type: sgx_quote_sign_type_t,
+        skip_ra: c_int,
     ) -> sgx_status_t;
     fn request_key_provisioning(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         socket_fd: c_int,
         sign_type: sgx_quote_sign_type_t,
+        skip_ra: c_int,
     ) -> sgx_status_t;
 }
 
@@ -40,6 +42,7 @@ pub fn enclave_run_key_provisioning_server(
     eid: sgx_enclave_id_t,
     sign_type: sgx_quote_sign_type_t,
     addr: &str,
+    skip_ra: bool
 ) {
     info!("Starting MU-RA-Server on: {}", addr);
     let listener = match TcpListener::bind(addr) {
@@ -58,7 +61,7 @@ pub fn enclave_run_key_provisioning_server(
                 );
                 let mut retval = sgx_status_t::SGX_SUCCESS;
                 let result = unsafe {
-                    run_key_provisioning_server(eid, &mut retval, socket.as_raw_fd(), sign_type)
+                    run_key_provisioning_server(eid, &mut retval, socket.as_raw_fd(), sign_type, skip_ra.into())
                 };
                 match result {
                     sgx_status_t::SGX_SUCCESS => {
@@ -78,6 +81,7 @@ pub fn enclave_request_key_provisioning(
     eid: sgx_enclave_id_t,
     sign_type: sgx_quote_sign_type_t,
     addr: &str,
+    skip_ra: bool,
 ) -> SgxResult<()> {
     info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
     let socket = match TcpStream::connect(addr) {
@@ -90,7 +94,7 @@ pub fn enclave_request_key_provisioning(
     let mut status = sgx_status_t::SGX_SUCCESS;
 
     let result =
-        unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type) };
+        unsafe { request_key_provisioning(eid, &mut status, socket.as_raw_fd(), sign_type, skip_ra.into()) };
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
     }

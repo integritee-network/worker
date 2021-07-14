@@ -69,7 +69,8 @@ class Worker:
         if self.check_shard_and_prompt_delete(shard):
             return 'Shard exists already, will not initialize.'
 
-        return run_subprocess(self.cli + ['init-shard', shard], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
+        return run_subprocess(self.cli + ['init-shard', shard], stdout=subprocess.PIPE, stderr=self.std_err,
+                              cwd=self.cwd)
 
     def shard_exists(self, shard):
         """ Checks if the shard in './shards/[shard]' exists
@@ -119,14 +120,15 @@ class Worker:
     def purge_chain_relay_db(self):
         print(f'purging chain_relay_db')
         for db in pathlib.Path(self.cwd).glob('chain_relay_db.bin*'):
-                print(f'remove: {db}')
-                db.unlink()
+            print(f'remove: {db}')
+            db.unlink()
 
     def mrenclave(self):
         """ Returns the mrenclave and caches it. """
         if not self._mrenclave:
             # `std_out` needs to be subProcess.PIPE here!
-            self._mrenclave = run_subprocess(self.cli + ['mrenclave'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
+            self._mrenclave = run_subprocess(self.cli + ['mrenclave'], stdout=subprocess.PIPE, stderr=self.std_err,
+                                             cwd=self.cwd)
         return self._mrenclave
 
     def write_shielding_pub(self):
@@ -135,10 +137,15 @@ class Worker:
     def write_signer_pub(self):
         return run_subprocess(self.cli + ['signing-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
-    def request_keys(self, provider_addr: str):
+    def request_keys(self, provider_addr: str, skip_ra: bool = False):
         """ Returns the keys from another worker. """
-        run_subprocess(self.cli + ['request-keys', provider_addr], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
-        return self._mrenclave
+
+        if skip_ra:
+            flags = ['request-keys', '--skip-ra', provider_addr]
+        else:
+            flags = ['request-keys', provider_addr]
+
+        return run_subprocess(self.cli + flags, stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')

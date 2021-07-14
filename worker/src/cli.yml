@@ -69,6 +69,10 @@ subcommands:
                 short: s
                 required: false
                 help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
+            - skip-ra:
+                  long: skip-ra
+                  short: s
+                  help: skip remote attestation. Set this flag if running enclave in SW mode
     - shielding-key:
         about: Get the public RSA3072 key from the TEE to be used to encrypt requests
     - signing-key:
