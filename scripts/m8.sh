@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+# Runs M8 demo: Either set `CLIENT_DIR` env var directly or run script with:
+#
+# source ./init_env.sh && ./m8.sh
+
 cd "$CLIENT_DIR" || exit
 
 if [[ -z "${LOG_1}" ]] && [[ -z "${LOG_2}" ]]; then
