@@ -5,7 +5,14 @@ set -euo pipefail
 #
 # source ./init_env.sh && ./m8.sh
 
+echo "$CLIENT_DIR"
+echo pwd
+
 cd "$CLIENT_DIR" || exit
+
+echo "CurrDir"
+echo pwd
+
 
 if [[ -z "$LOG_1" ]] && [[ -z "$LOG_2" ]]; then
   ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first
