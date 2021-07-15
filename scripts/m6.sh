@@ -3,8 +3,11 @@ set -euo pipefail
 
 cd "$CLIENT_DIR" || exit
 
-if [[ -z "${LOG_1}" ]] && [[ -z "${LOG_2}" ]]; then
+if [[ -z "$LOG_1" ]] && [[ -z "$LOG_2" ]]; then
   # we are in github actions if this exists, then we print to the logs
+
+    echo "We are in ga actions!"
+
     touch "$LOG_1"
     touch "$LOG_2"
 
