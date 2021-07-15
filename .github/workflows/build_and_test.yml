@@ -41,23 +41,23 @@ jobs:
           ./substratee-worker test -u
 
       # Todo: #REBRAND path names
-      - name: Upload worker
-        uses: actions/upload-artifact@v2
-        with:
-          name: integritee-worker-${{ github.sha }}
-          path: bin/substratee-worker
-
-      - name: Upload client
-        uses: actions/upload-artifact@v2
-        with:
-          name: integritee-client-${{ github.sha }}
-          path: bin/substratee-client
-
-      - name: Upload enclave
-        uses: actions/upload-artifact@v2
-        with:
-          name: enclave-signed-${{ github.sha }}
-          path: bin/enclave.signed.so
+#      - name: Upload worker
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: integritee-worker-${{ github.sha }}
+#          path: bin/${{ env.WORKER_BIN }}
+#
+#      - name: Upload client
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: integritee-client-${{ github.sha }}
+#          path: bin/${{ env.CLIENT_BIN }}
+#
+#      - name: Upload enclave
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: enclave-signed-${{ github.sha }}
+#          path: bin/${{ env.ENCLAVE_BIN }}
 
   clippy:
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    needs: build-test
+#    needs: build-test
     container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
     strategy:
       fail-fast: false
@@ -111,52 +111,52 @@ jobs:
           sudo add-apt-repository ppa:deadsnakes/ppa -y
           sudo apt install python3.7 -y
           python3.7 --version
-      - name: Download Worker
-        uses: actions/download-artifact@v2
-        with:
-          name: integritee-worker-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-      - name: Download Client
-        uses: actions/download-artifact@v2
-        with:
-          name: integritee-client-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-      - name: Download Enclave
-        uses: actions/download-artifact@v2
-        with:
-          name: enclave-signed-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
-        # the actions below to download binaries from an earlier run.
 #      - name: Download Worker
-#        uses: dawidd6/action-download-artifact@v2
+#        uses: actions/download-artifact@v2
 #        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1033249727
-#          name: integritee-worker-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+#          name: integritee-worker-${{ github.sha }}
 #          path: ${{ env.BIN_DIR }}
 #
 #      - name: Download Client
-#        uses: dawidd6/action-download-artifact@v2
+#        uses: actions/download-artifact@v2
 #        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1033249727
-#          name: integritee-client-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+#          name: integritee-client-${{ github.sha }}
 #          path: ${{ env.BIN_DIR }}
 #
 #      - name: Download Enclave
-#        uses: dawidd6/action-download-artifact@v2
+#        uses: actions/download-artifact@v2
 #        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1033249727
-#          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+#          name: enclave-signed-${{ github.sha }}
 #          path: ${{ env.BIN_DIR }}
+
+        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
+        # the actions below to download binaries from an earlier run.
+      - name: Download Worker
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build_and_test.yml
+          run_id: 1033249727
+          name: integritee-worker-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+          path: ${{ env.BIN_DIR }}
+
+      - name: Download Client
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build_and_test.yml
+          run_id: 1033249727
+          name: integritee-client-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+          path: ${{ env.BIN_DIR }}
+
+      - name: Download Enclave
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build_and_test.yml
+          run_id: 1033249727
+          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+          path: ${{ env.BIN_DIR }}
 
       - name: Download integritee-node
         uses: dawidd6/action-download-artifact@v2
@@ -203,7 +203,7 @@ jobs:
           LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_1.log
           LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_2.log
         run: |
-          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} client/substratee-client
+          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} ${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }}
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 
       - name: Upload logs
