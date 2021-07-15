@@ -203,7 +203,8 @@ jobs:
           LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_1.log
           LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_2.log
         run: |
-          ln -sf ${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} client/${{ env.CLIENT_BIN }}
+          ls ${{ env.BIN_DIR }}
+          ln -sf ./${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} ./client/${{ env.CLIENT_BIN }}
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 
       - name: Upload logs
