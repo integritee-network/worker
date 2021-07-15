@@ -197,7 +197,7 @@ jobs:
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
           sleep 30
 
-      - name: ${{ matrix.test }} ${{ matrix.demo_name }}
+      - name: ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.
         env:
           LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_1.log
