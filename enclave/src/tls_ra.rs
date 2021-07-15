@@ -46,11 +46,9 @@ impl rustls::ClientCertVerifier for ClientAuth {
         debug!("client cert: {:?}", _certs);
         // This call will automatically verify cert is properly signed
         if self.skip_ra {
-            warn!("Skipping ra-report");
+            warn!("Skip verifying ra-report");
             return Ok(rustls::ClientCertVerified::assertion());
         }
-
-        info!("Not skipping ra-report");
 
         match cert::verify_mra_cert(&_certs[0].0) {
             Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
@@ -93,6 +91,7 @@ impl rustls::ServerCertVerifier for ServerAuth {
         debug!("server cert: {:?}", _certs);
 
         if self.skip_ra {
+            warn!("Skip verifying ra-report");
             return Ok(rustls::ServerCertVerified::assertion());
         }
 
