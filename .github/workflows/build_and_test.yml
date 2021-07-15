@@ -202,6 +202,8 @@ jobs:
 
 
       - name: "M6: Demo shielding/unshielding"
+        # also run the test when M8 failed
+        if: always()
         shell: bash --noprofile --norc -eo pipefail {0}
         env:
           LOG_1: ../${{ env.LOG_DIR }}/demo_shielding_1.log
