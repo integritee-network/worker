@@ -89,7 +89,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [M6, M8]
+        test: [M6]
         include:
           - test: M6
             demo_script: demo_shielding_unshielding
@@ -203,9 +203,8 @@ jobs:
           LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_1.log
           LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_2.log
         run: |
-          cd client
-          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          cd .. && ./scripts/init_env.sh && ./scripts/m6.sh
+          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} client/substratee-client
+          source ./scripts/init_env.sh && ./scripts/m6.sh
 
       - name: Upload logs
         if: always()
