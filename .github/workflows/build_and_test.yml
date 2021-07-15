@@ -93,8 +93,8 @@ jobs:
         include:
           - test: M6
             demo_script: demo_shielding_unshielding
-          - test: M8
-            demo_script: demo_direct_call
+#          - test: M8
+#            demo_script: demo_direct_call
 
     env:
       BIN_DIR: bin
@@ -204,11 +204,8 @@ jobs:
           LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_2.log
         run: |
           cd client
-          touch ${{ env.LOG_1 }}
-          touch ${{ env.LOG_2 }}
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./${{ matrix.demo_script}}.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
-          ./${{ matrix.demo_script}}.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
+          cd .. && ./scripts/init_env.sh && ./scripts/m6.sh
 
       - name: Upload logs
         if: always()
