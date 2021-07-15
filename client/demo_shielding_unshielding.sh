@@ -65,66 +65,66 @@ fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
 echo "* Get balance of Alice's on-chain account"
-${CLIENT} balance "//Charlie"
+${CLIENT} balance "//Alice"
 echo ""
 
-echo "* Get balance of Dave's on-chain account"
-${CLIENT} balance "//Dave"
+echo "* Get balance of Bob's on-chain account"
+${CLIENT} balance "//Bob"
 echo ""
 
-echo "* Create a new incognito account for Charlie"
-#ICGACCOUNTCHARLIE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
-ICGACCOUNTCHARLIE=//CharlieIncognito
-echo "  Charlie's incognito account = ${ICGACCOUNTCHARLIE}"
+echo "* Create a new incognito account for Alice"
+#ICGACCOUNTALICE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTALICE=//AliceIncognito
+echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
-echo "* Create a new incognito account for Dave"
-ICGACCOUNTDAVE=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
-echo "  Dave's incognito account = ${ICGACCOUNTDAVE}"
+echo "* Create a new incognito account for Bob"
+ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Shield ${AMOUNTSHIELD} tokens to Charlie's incognito account"
-${CLIENT} shield-funds //Charlie ${ICGACCOUNTCHARLIE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
-echo ""
-
-echo "* Waiting 10 seconds"
-sleep 10
-echo ""
-
-echo "Get balance of Charlie's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTCHARLIE} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Get balance of Charlie's on-chain account"
-${CLIENT} balance "//Charlie"
-echo ""
-
-echo "* Send ${AMOUNTTRANSFER} funds from Charlie's incognito account to Dave's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTCHARLIE} ${ICGACCOUNTDAVE} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Get balance of Charlie's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTCHARLIE} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Dave's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTDAVE} --mrenclave ${MRENCLAVE}
-echo ""
-
-echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Charlie's incognito account"
-${CLIENT} trusted unshield-funds ${ICGACCOUNTCHARLIE} //Charlie ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Charlie
+echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
+${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
 echo ""
 
 echo "* Waiting 10 seconds"
 sleep 10
 echo ""
 
-echo "Get balance of Charlie's incognito account"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTCHARLIE} --mrenclave ${MRENCLAVE} | xargs)
+echo "Get balance of Alice's incognito account"
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+echo ""
+
+echo "* Get balance of Alice's on-chain account"
+${CLIENT} balance "//Alice"
+echo ""
+
+echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
+$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
+echo ""
+
+echo "* Get balance of Alice's incognito account"
+${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+echo ""
+
+echo "* Bob's incognito account balance"
+${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+echo ""
+
+echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
+${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
+echo ""
+
+echo "* Waiting 10 seconds"
+sleep 10
+echo ""
+
+echo "Get balance of Alice's incognito account"
+RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
 echo $RESULT
 
-echo "* Get balance of Charlie's on-chain account"
-${CLIENT} balance "//Charlie"
+echo "* Get balance of Alice's on-chain account"
+${CLIENT} balance "//Alice"
 echo ""
 
 
