@@ -9,7 +9,7 @@ if [[ -z "$LOG_1" ]] && [[ -z "$LOG_2" ]]; then
 else
   # we are in github actions if this exists, then we print to the logs
 
-  echo "[m8.sh] printing to logs:"
+  echo "[m6.sh] printing to logs:"
   echo "        $LOG_1"
   echo "        $LOG_2"
 
