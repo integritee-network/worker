@@ -199,11 +199,12 @@ jobs:
 
       - name: ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.
+        # * need overwrite default shell to bash to get access to the `source` cmd.
+        shell: bash --noprofile --norc -eo pipefail {0}
         env:
           LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_1.log
           LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_2.log
         run: |
-          ls ${{ env.BIN_DIR }}
           ln -sf ./${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} ./client/${{ env.CLIENT_BIN }}
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 
