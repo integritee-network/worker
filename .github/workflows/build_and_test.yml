@@ -117,8 +117,8 @@ jobs:
           name: enclave-signed-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
-        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above, with
-        # the action below, to download binaries from an earlier run.
+        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
+        # the actions below to download binaries from an earlier run.
 #      - name: Download Worker
 #        uses: dawidd6/action-download-artifact@v2
 #        with:
@@ -151,10 +151,11 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build.yml
+          # Todo: Change branch to master once merged
           name: integritee-node-skip-ias-check
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1026142211
+#          run_id: 1026142211
           path: node
           repo: integritee-network/integritee-node
 
@@ -178,6 +179,7 @@ jobs:
 
       - name: Run local setup
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
+        shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
