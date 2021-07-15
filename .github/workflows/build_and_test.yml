@@ -201,7 +201,7 @@ jobs:
           ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
       - name: "M8: Demo direct"
-        # also run the test when M8 failed
+        # also run the test when M6 failed
         if: always()
         shell: bash --noprofile --norc -eo pipefail {0}
         env:
