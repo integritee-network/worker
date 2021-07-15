@@ -29,7 +29,6 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::prelude::v1::*;
-use std::ptr;
 use std::slice;
 use std::str;
 use std::string::String;
@@ -49,15 +48,17 @@ use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use substratee_settings::{
-    files::{RA_DUMP_CERT_DER_FILE, RA_API_KEY_FILE, RA_SPID_FILE},
+    files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
     node::{
-        REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-        RUNTIME_TRANSACTION_VERSION, SUBSTRATEE_REGISTRY_MODULE,
-    }
+        REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION,
+        SUBSTRATEE_REGISTRY_MODULE,
+    },
 };
 
 use crate::ed25519;
 use crate::io;
+use crate::ocall::ocall_api::EnclaveAttestationOCallApi;
+use crate::ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait};
 use crate::utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected};
 use crate::{cert, hex};
 
@@ -73,31 +74,10 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
-extern "C" {
-    pub fn ocall_sgx_init_quote(
-        ret_val: *mut sgx_status_t,
-        ret_ti: *mut sgx_target_info_t,
-        ret_gid: *mut sgx_epid_group_id_t,
-    ) -> sgx_status_t;
-    pub fn ocall_get_ias_socket(ret_val: *mut sgx_status_t, ret_fd: *mut i32) -> sgx_status_t;
-    pub fn ocall_get_quote(
-        ret_val: *mut sgx_status_t,
-        p_sigrl: *const u8,
-        sigrl_len: u32,
-        p_report: *const sgx_report_t,
-        quote_type: sgx_quote_sign_type_t,
-        p_spid: *const sgx_spid_t,
-        p_nonce: *const sgx_quote_nonce_t,
-        p_qe_report: *mut sgx_report_t,
-        p_quote: *mut u8,
-        maxlen: u32,
-        p_quote_len: *mut u32,
-    ) -> sgx_status_t;
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
     let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
+
     match get_mrenclave_of_self() {
         Ok(m) => {
             mrenclave_slice.copy_from_slice(&m.m[..]);
@@ -108,36 +88,25 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) 
 }
 
 pub fn get_mrenclave_of_self() -> SgxResult<sgx_measurement_t> {
-    Ok(get_report_of_self()?.mr_enclave)
+    let ocall_api = OCallComponentFactory::get_attestation_api();
+
+    Ok(get_report_of_self(ocall_api)?.mr_enclave)
 }
 
-fn get_report_of_self() -> SgxResult<sgx_report_body_t> {
+fn get_report_of_self<A: EnclaveAttestationOCallApi>(
+    ocall_api: Arc<A>,
+) -> SgxResult<sgx_report_body_t> {
     // (1) get ti + eg
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let init_quote_result = ocall_api.ocall_sgx_init_quote();
 
-    let res = unsafe {
-        ocall_sgx_init_quote(
-            &mut rt as *mut sgx_status_t,
-            &mut ti as *mut sgx_target_info_t,
-            &mut eg as *mut sgx_epid_group_id_t,
-        )
-    };
-
-    debug!("    [Enclave] EPID group id = {:?}", eg);
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
+    if init_quote_result.0 != sgx_status_t::SGX_SUCCESS {
+        return Err(init_quote_result.0);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
+    let target_info = init_quote_result.1;
     let report_data: sgx_report_data_t = sgx_report_data_t::default();
 
-    let rep = match rsgx_create_report(&ti, &report_data) {
+    let rep = match rsgx_create_report(&target_info, &report_data) {
         Ok(r) => {
             debug!(
                 "    [Enclave] Report creation successful. mr_signer.m = {:?}",
@@ -351,9 +320,10 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
 }
 
 #[allow(const_err)]
-pub fn create_attestation_report(
+pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
     pub_k: &[u8; 32],
     sign_type: sgx_quote_sign_type_t,
+    ocall_api: Arc<A>,
 ) -> SgxResult<(String, String, String)> {
     // Workflow:
     // (1) ocall to get the target_info structure (ti) and epid group id (eg)
@@ -362,54 +332,38 @@ pub fn create_attestation_report(
     // (3) ocall to sgx_get_quote to generate (*mut sgx-quote_t, uint32_t)
 
     // (1) get ti + eg
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let init_quote = ocall_api.ocall_sgx_init_quote();
 
-    let res = unsafe {
-        ocall_sgx_init_quote(
-            &mut rt as *mut sgx_status_t,
-            &mut ti as *mut sgx_target_info_t,
-            &mut eg as *mut sgx_epid_group_id_t,
-        )
-    };
-
-    debug!("    [Enclave] EPID group id = {:?}", eg);
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
+    if init_quote.0 != sgx_status_t::SGX_SUCCESS {
+        return Err(init_quote.0);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
+    let epid_group_id: sgx_epid_group_id_t = init_quote.2;
+    let target_info: sgx_target_info_t = init_quote.1;
 
-    let eg_num = as_u32_le(eg);
+    debug!("    [Enclave] EPID group id = {:?}", epid_group_id);
+
+    let eg_num = as_u32_le(epid_group_id);
 
     // (1.5) get sigrl
-    let mut ias_sock: i32 = 0;
+    let ias_socket_result = ocall_api.ocall_get_ias_socket();
 
-    let res =
-        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
+    if ias_socket_result.0 != sgx_status_t::SGX_SUCCESS {
+        return Err(ias_socket_result.0);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
+    let ias_socket = ias_socket_result.1;
 
-    info!("    [Enclave] ias_sock = {}", ias_sock);
+    info!("    [Enclave] ias_sock = {}", ias_socket);
 
     // Now sigrl_vec is the revocation list, a vec<u8>
-    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num)?;
+    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_socket, eg_num)?;
 
     // (2) Generate the report
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
     report_data.d[..32].clone_from_slice(&pub_k[..]);
 
-    let rep = match rsgx_create_report(&ti, &report_data) {
+    let report = match rsgx_create_report(&target_info, &report_data) {
         Ok(r) => {
             debug!(
                 "    [Enclave] Report creation successful. mr_signer.m = {:x?}",
@@ -426,10 +380,6 @@ pub fn create_attestation_report(
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
     let mut os_rng = os::SgxRng::new().sgx_error()?;
     os_rng.fill_bytes(&mut quote_nonce.rand);
-    let mut qe_report = sgx_report_t::default();
-    const RET_QUOTE_BUF_LEN: u32 = 2048;
-    let mut return_quote_buf: [u8; RET_QUOTE_BUF_LEN as usize] = [0; RET_QUOTE_BUF_LEN as usize];
-    let mut quote_len: u32 = 0;
 
     // (3) Generate the quote
     // Args:
@@ -442,47 +392,17 @@ pub fn create_attestation_report(
     //       7. [out]p_qe_report need further check
     //       8. [out]p_quote
     //       9. quote_size
-    let (p_sigrl, sigrl_len) = if sigrl_vec.is_empty() {
-        (ptr::null(), 0)
-    } else {
-        (sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
-    };
-    let p_report = &rep as *const sgx_report_t;
-    let quote_type = sign_type;
 
     let spid: sgx_spid_t = load_spid(RA_SPID_FILE)?;
 
-    let p_spid = &spid as *const sgx_spid_t;
-    let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
-    let p_qe_report = &mut qe_report as *mut sgx_report_t;
-    let p_quote = return_quote_buf.as_mut_ptr();
-    let maxlen = RET_QUOTE_BUF_LEN;
-    let p_quote_len = &mut quote_len as *mut u32;
+    let quote_result = ocall_api.ocall_get_quote(sigrl_vec, report, sign_type, spid, quote_nonce);
 
-    let result = unsafe {
-        ocall_get_quote(
-            &mut rt as *mut sgx_status_t,
-            p_sigrl,
-            sigrl_len,
-            p_report,
-            quote_type,
-            p_spid,
-            p_nonce,
-            p_qe_report,
-            p_quote,
-            maxlen,
-            p_quote_len,
-        )
-    };
-
-    if result != sgx_status_t::SGX_SUCCESS {
-        return Err(result);
+    if quote_result.0 != sgx_status_t::SGX_SUCCESS {
+        return Err(quote_result.0);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        error!("    [Enclave] ocall_get_quote failed. {}", rt);
-        return Err(rt);
-    }
+    let qe_report = quote_result.1;
+    let quote_content = quote_result.2;
 
     // Added 09-28-2018
     // Perform a check on qe_report to verify if the qe_report is valid
@@ -495,9 +415,9 @@ pub fn create_attestation_report(
     }
 
     // Check if the qe_report is produced on the same platform
-    if ti.mr_enclave.m != qe_report.body.mr_enclave.m
-        || ti.attributes.flags != qe_report.body.attributes.flags
-        || ti.attributes.xfrm != qe_report.body.attributes.xfrm
+    if target_info.mr_enclave.m != qe_report.body.mr_enclave.m
+        || target_info.attributes.flags != qe_report.body.attributes.flags
+        || target_info.attributes.xfrm != qe_report.body.attributes.xfrm
     {
         error!("    [Enclave] qe_report does not match current target_info!");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
@@ -515,7 +435,7 @@ pub fn create_attestation_report(
     // is not a replay. It is optional.
 
     let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
-    rhs_vec.extend(&return_quote_buf[..quote_len as usize]);
+    rhs_vec.extend(&quote_content);
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..])?;
     let lhs_hash = &qe_report.body.report_data.d[..32];
 
@@ -533,19 +453,7 @@ pub fn create_attestation_report(
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    let quote_vec: Vec<u8> = return_quote_buf[..quote_len as usize].to_vec();
-    let res =
-        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    let (attn_report, sig, cert) = get_report_from_intel(ias_sock, quote_vec)?;
+    let (attn_report, sig, cert) = get_report_from_intel(ias_socket, quote_content)?;
     Ok((attn_report, sig, cert))
 }
 
@@ -559,8 +467,9 @@ fn get_ias_api_key() -> SgxResult<String> {
     io::read_to_string(RA_API_KEY_FILE).map(|key| key.trim_end().to_owned())
 }
 
-pub fn create_ra_report_and_signature(
+pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
     sign_type: sgx_quote_sign_type_t,
+    ocall_api: Arc<A>,
 ) -> SgxResult<(Vec<u8>, Vec<u8>)> {
     let chain_signer = ed25519::unseal_pair()?;
     info!(
@@ -578,7 +487,7 @@ pub fn create_ra_report_and_signature(
 
     info!("    [Enclave] Create attestation report");
     let (attn_report, sig, cert) =
-        match create_attestation_report(&chain_signer.public().0, sign_type) {
+        match create_attestation_report(&chain_signer.public().0, sign_type, ocall_api) {
             Ok(r) => r,
             Err(e) => {
                 error!("    [Enclave] Error in create_attestation_report: {:?}", e);
@@ -621,7 +530,9 @@ pub unsafe extern "C" fn perform_ra(
     // our certificate is unlinkable
     let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-    let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
+    let ocall_api = OCallComponentFactory::get_attestation_api();
+
+    let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, ocall_api) {
         Ok(r) => r,
         Err(e) => return e,
     };
@@ -672,7 +583,9 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
     // our certificate is unlinkable
     let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-    let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type) {
+    let ocall_api = OCallComponentFactory::get_attestation_api();
+
+    let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, ocall_api) {
         Ok(r) => r,
         Err(e) => return e,
     };
