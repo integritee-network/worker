@@ -9,10 +9,6 @@ echo "$CLIENT_DIR"
 
 cd "$CLIENT_DIR" || exit
 
-echo "CurrDir"
-echo "$pwd"
-
-
 if [[ -z "$LOG_1" ]] && [[ -z "$LOG_2" ]]; then
   ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first
   ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second
