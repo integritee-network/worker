@@ -92,9 +92,11 @@ jobs:
         test: [M6]
         include:
           - test: M6
-            demo_script: demo_shielding_unshielding
-#          - test: M8
-#            demo_script: demo_direct_call
+            demo_name: demo_shielding_unshielding
+            demo_script: m6.sh
+          - test: M8
+            demo_name: demo_direct_call
+            demo_script: m8.sh
 
     env:
       BIN_DIR: bin
@@ -195,7 +197,7 @@ jobs:
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
           sleep 30
 
-      - name: ${{ matrix.test }} ":" ${{ matrix.demo_script}}
+      - name: ${{ matrix.test }} ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
         shell: bash --noprofile --norc -eo pipefail {0}
@@ -204,7 +206,7 @@ jobs:
           LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_2.log
         run: |
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} client/substratee-client
-          source ./scripts/init_env.sh && ./scripts/m6.sh
+          source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 
       - name: Upload logs
         if: always()
