@@ -42,7 +42,10 @@ def run_worker(config, i: int, provider_addr):
 
     if i > 1:
         print(f'Worker {i} fetching keys from first worker at {provider_addr}.')
-        w.request_keys(provider_addr, skip_ra=True)
+        skip_ra = "--skip-ra" in config["subcommand_flags"]
+        print(f'Skip remote attestation: {skip_ra}')
+
+        w.request_keys(provider_addr, skip_ra=skip_ra)
 
     print(f'Starting worker {i} in background')
     w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
