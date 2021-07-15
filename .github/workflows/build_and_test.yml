@@ -155,7 +155,7 @@ jobs:
           name: integritee-node-skip-ias-check
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-#          run_id: 1026142211
+          run_id: 1033090291
           path: node
           repo: integritee-network/integritee-node
 
