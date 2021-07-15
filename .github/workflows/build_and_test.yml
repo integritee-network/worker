@@ -86,6 +86,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-test
     container: "scssubstratee/substratee_dev:1804-2.12-1.1.3-001"
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [M6, M8]
+        include:
+          - test: M6
+            demo_script: demo_shielding_unshielding
+          - test: M8
+            demo_script: demo_direct_call
+
     env:
       BIN_DIR: bin
     steps:
@@ -99,52 +109,52 @@ jobs:
           sudo add-apt-repository ppa:deadsnakes/ppa -y
           sudo apt install python3.7 -y
           python3.7 --version
-      - name: Download Worker
-        uses: actions/download-artifact@v2
-        with:
-          name: integritee-worker-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-      - name: Download Client
-        uses: actions/download-artifact@v2
-        with:
-          name: integritee-client-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-      - name: Download Enclave
-        uses: actions/download-artifact@v2
-        with:
-          name: enclave-signed-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
-        # the actions below to download binaries from an earlier run.
 #      - name: Download Worker
-#        uses: dawidd6/action-download-artifact@v2
+#        uses: actions/download-artifact@v2
 #        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1026618919
-#          name: integritee-worker-4962a95442cd23b8516162ab394c94eae6d8e10c
+#          name: integritee-worker-${{ github.sha }}
 #          path: ${{ env.BIN_DIR }}
 #
 #      - name: Download Client
-#        uses: dawidd6/action-download-artifact@v2
+#        uses: actions/download-artifact@v2
 #        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1026618919
-#          name: integritee-client-4962a95442cd23b8516162ab394c94eae6d8e10c
+#          name: integritee-client-${{ github.sha }}
 #          path: ${{ env.BIN_DIR }}
 #
 #      - name: Download Enclave
-#        uses: dawidd6/action-download-artifact@v2
+#        uses: actions/download-artifact@v2
 #        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1026618919
-#          name: enclave-signed-4962a95442cd23b8516162ab394c94eae6d8e10c
+#          name: enclave-signed-${{ github.sha }}
 #          path: ${{ env.BIN_DIR }}
+
+        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
+        # the actions below to download binaries from an earlier run.
+      - name: Download Worker
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build_and_test.yml
+          run_id: 1033249727
+          name: integritee-worker-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+          path: ${{ env.BIN_DIR }}
+
+      - name: Download Client
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build_and_test.yml
+          run_id: 1033249727
+          name: integritee-client-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+          path: ${{ env.BIN_DIR }}
+
+      - name: Download Enclave
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build_and_test.yml
+          run_id: 1033249727
+          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+          path: ${{ env.BIN_DIR }}
 
       - name: Download integritee-node
         uses: dawidd6/action-download-artifact@v2
@@ -185,35 +195,20 @@ jobs:
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
           sleep 30
 
-      - name: "M6: Demo shielding/unshielding"
+      - name: ${{ matrix.test }} ":" ${{ matrix.demo_script}}
         # * the change the symbolic link which points to the target/release... folder.
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
         shell: bash --noprofile --norc -eo pipefail {0}
         env:
-          LOG_1: ../${{ env.LOG_DIR }}/demo_shielding_1.log
-          LOG_2: ../${{ env.LOG_DIR }}/demo_shielding_2.log
+          LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_1.log
+          LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_2.log
         run: |
           cd client
           touch ${{ env.LOG_1 }}
           touch ${{ env.LOG_2 }}
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./demo_shielding_unshielding.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
-          ./demo_shielding_unshielding.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
-
-      - name: "M8: Demo direct"
-        # also run the test when M6 failed
-        if: always()
-        shell: bash --noprofile --norc -eo pipefail {0}
-        env:
-          LOG_1: ../${{ env.LOG_DIR }}/demo_direct_1.log
-          LOG_2: ../${{ env.LOG_DIR }}/demo_direct_2.log
-        run: |
-          cd client
-          touch ${{ env.LOG_1 }}
-          touch ${{ env.LOG_2 }}
-          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
-          ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee ${{ env.LOG_1 }}
-          ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee ${{ env.LOG_2 }}
+          ./${{ matrix.demo_script}}.sh -p 9944 -P 2000 -t first  2>&1 | tee ${{ env.LOG_1 }}
+          ./${{ matrix.demo_script}}.sh -p 9944 -P 3000 -t second 2>&1 | tee ${{ env.LOG_2 }}
 
       - name: Upload logs
         if: always()
