@@ -89,7 +89,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [M6]
+        test: [M6, M8]
         include:
           - test: M6
             demo_name: demo_shielding_unshielding
