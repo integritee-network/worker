@@ -92,10 +92,10 @@ jobs:
         test: [M6, M8]
         include:
           - test: M6
-            demo_name: demo_shielding_unshielding
+            demo_name: m6_demo_shielding_unshielding
             demo_script: m6.sh
           - test: M8
-            demo_name: demo_direct_call
+            demo_name: m8_demo_direct_call
             demo_script: m8.sh
 
     env:
@@ -202,8 +202,8 @@ jobs:
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
         shell: bash --noprofile --norc -eo pipefail {0}
         env:
-          LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_1.log
-          LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_script}}_2.log
+          LOG_1: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_1.log
+          LOG_2: ../${{ env.LOG_DIR }}/${{ matrix.demo_name }}_2.log
         run: |
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} client/substratee-client
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
