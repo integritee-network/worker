@@ -125,7 +125,7 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 
     let ocall_api = OCallComponentFactory::get_attestation_api();
 
-    let cfg = match tls_server_config(sign_type, skip_ra == 1) {
+    let cfg = match tls_server_config(sign_type, ocall_api, skip_ra == 1) {
         Ok(cfg) => cfg,
         Err(e) => return e,
     };
@@ -291,7 +291,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi>(
 ) -> SgxResult<ClientConfig> {
     let (key_der, cert_der) = match skip_ra{
         true => Default::default(),
-        false => create_ra_report_and_signature(sign_type, ocall_api, skip_ra).sgx_error()?;
+        false => create_ra_report_and_signature(sign_type, ocall_api, skip_ra).sgx_error()?,
     };
 
     let mut cfg = rustls::ClientConfig::new();

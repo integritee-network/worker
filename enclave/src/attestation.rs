@@ -489,7 +489,7 @@ pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
     let payload = if !skip_ra {
         info!("    [Enclave] Create attestation report");
         let (attn_report, sig, cert) =
-            match create_attestation_report(&chain_signer.public().0, ocall_api, sign_type) {
+            match create_attestation_report(&chain_signer.public().0, sign_type, ocall_api) {
                 Ok(r) => r,
                 Err(e) => {
                     error!("    [Enclave] Error in create_attestation_report: {:?}", e);
