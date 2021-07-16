@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
-Launch a local dev setup consisting of one substraTEE-node and two workers.
+Launch handily a local dev setup consisting of one substraTEE-node and some workers.
+
+Example usage: `./local-setup/launch.py /local-setup/simple-config.py`
+
+The node and workers logs are piped to `./log/node.log` etc. folder in the current-working dir.
+
+run: `cd local-setup && tmux_logger.sh` to automatically `tail -f` these three logs.
+
 """
 import argparse
 import json
