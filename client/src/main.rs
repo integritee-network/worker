@@ -40,8 +40,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{
-    substratee_registry::Request,
-    AccountId, BalancesCall, Call, Event, Hash, Signature,
+    substratee_registry::Request, AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
 
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
@@ -62,10 +61,10 @@ use substrate_api_client::{
     Api, XtStatus,
 };
 
-use substrate_client_keystore::{LocalKeystore, KeystoreExt};
+use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+use substratee_api_client_extensions::{SubstrateeRegistryApi, TEEREX};
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
-use substratee_worker_api::direct_client::{DirectClient as DirectWorkerApi, DirectApi};
-use substratee_api_client_extensions::SubstrateeRegistryApi;
+use substratee_worker_api::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -406,7 +405,7 @@ fn main() {
                     // compose the extrinsic
                     let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> = compose_extrinsic!(
                         chain_api,
-                        "SubstrateeRegistry",
+                        TEEREX,
                         "shield_funds",
                         to_encrypted,
                         amount,
@@ -541,7 +540,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
         shard,
         cyphertext: call_encrypted,
     };
-    let xt = compose_extrinsic!(_chain_api, "SubstrateeRegistry", "call_worker", request);
+    let xt = compose_extrinsic!(_chain_api, TEEREX, "call_worker", request);
 
     // send and watch extrinsic until block is executed
     let block_hash = _chain_api
@@ -562,7 +561,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
     loop {
         let ret: BlockConfirmedArgs = _chain_api
             .wait_for_event::<BlockConfirmedArgs>(
-                "SubstrateeRegistry",
+                TEEREX,
                 "BlockConfirmed",
                 Some(decoder.clone()),
                 &events_out,

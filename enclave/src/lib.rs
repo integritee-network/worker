@@ -115,6 +115,7 @@ pub type Hash = sp_core::H256;
 type BPool = BasicPool<SideChainApi<Block>, Block>;
 
 use crate::error::{Error, Result};
+use crate::attestation::get_mrenclave_of_self;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -134,8 +135,8 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
         signer.public().0
     );
 
-    if let Err(status) = rsa3072::create_sealed_if_absent() {
-        return status;
+    if let Err(e) = rsa3072::create_sealed_if_absent() {
+        return e.into();
     }
 
     // create the aes key that is used for state encryption such that a key is always present in tests.
@@ -162,7 +163,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 ) -> sgx_status_t {
     let rsa_pubkey = match rsa3072::unseal_pubkey() {
         Ok(key) => key,
-        Err(status) => return status,
+        Err(e) => return e.into(),
     };
 
     let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
@@ -221,8 +222,9 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
     let signer = ed25519::unseal_pair().unwrap();
     let call = (
         [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
-        Vec::<u8>::new(),
-        url,
+        get_mrenclave_of_self()
+        .map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
+        url
     );
 
     let xt = compose_extrinsic_offline!(

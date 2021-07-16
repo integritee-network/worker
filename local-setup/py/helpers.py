@@ -1,3 +1,4 @@
+import os
 import signal
 import subprocess
 import shutil
@@ -7,7 +8,11 @@ from typing import Union, IO
 
 def run_subprocess(args, stdout: Union[None, int, IO], stderr: Union[None, int, IO], cwd: str = './'):
     """ Wrapper around subprocess that allows a less verbose call """
-    return subprocess.run(args, stdout=stdout, cwd=cwd, stderr=stderr).stdout.decode('utf-8').strip()
+
+    # todo: make configurable
+    env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=warn,enclave=debug')
+
+    return subprocess.run(args, stdout=stdout, env=env, cwd=cwd, stderr=stderr).stdout.decode('utf-8').strip()
 
 
 def setup_working_dir(source_dir: str, target_dir: str):

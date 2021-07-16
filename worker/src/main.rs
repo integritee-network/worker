@@ -129,7 +129,13 @@ fn main() {
         let provider_url = smatches
             .value_of("provider")
             .expect("provider must be specified");
-        request_keys(provider_url, &shard);
+        request_keys(
+            provider_url,
+            &shard,
+            smatches.is_present("skip-ra"),
+        );
+
+
     } else if matches.is_present("shielding-key") {
         info!("*** Get the public key from the TEE\n");
         let enclave = enclave_init().unwrap();
@@ -199,6 +205,7 @@ fn main() {
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", config.worker_mu_ra_port),
+                _matches.is_present("skip-ra"),
             );
             println!("[+] Done!");
             enclave.destroy();
@@ -209,6 +216,7 @@ fn main() {
                 enclave.geteid(),
                 sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
                 &format!("localhost:{}", config.worker_mu_ra_port),
+            _matches.is_present("skip-ra"),
             )
             .unwrap();
             println!("[+] Done!");
@@ -263,6 +271,7 @@ fn worker(
             eid,
             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
             &ra_url,
+            skip_ra
         )
     });
 
@@ -372,7 +381,7 @@ fn start_interval_block_production(
     }
 }
 
-fn request_keys(provider_url: &str, _shard: &ShardIdentifier) {
+fn request_keys(provider_url: &str, _shard: &ShardIdentifier, skip_ra: bool) {
     // FIXME: we now assume that keys are equal for all shards
 
     // initialize the enclave
@@ -393,6 +402,7 @@ fn request_keys(provider_url: &str, _shard: &ShardIdentifier) {
         eid,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         &provider_url,
+        skip_ra
     )
     .unwrap();
     println!("key provisioning successfully performed");

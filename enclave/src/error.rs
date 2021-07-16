@@ -10,6 +10,7 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
 	Rpc(rpc::error::Error),
 	Codec(codec::Error),
+	Rsa(crate::rsa3072::Error),
 	Sgx(sgx_status_t)
 }
 

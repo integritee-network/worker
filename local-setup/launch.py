@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-Launch a local dev setup consisting of one substraTEE-node and two workers.
+Launch handily a local dev setup consisting of one substraTEE-node and some workers.
+
+Example usage: `./local-setup/launch.py /local-setup/simple-config.py`
+
+The node and workers logs are piped to `./log/node.log` etc. folder in the current-working dir.
+
+run: `cd local-setup && tmux_logger.sh` to automatically `tail -f` these three logs.
+
 """
+import argparse
+import json
 import signal
 from subprocess import Popen, STDOUT
 from time import sleep
@@ -10,49 +19,72 @@ from typing import Union, IO
 from py.worker import Worker
 from py.helpers import GracefulKiller, mkdir_p
 
-log_dir = '../log'
+log_dir = 'log'
 mkdir_p(log_dir)
 node_log = open(f'{log_dir}/node.log', 'w+')
-worker1_log = open(f'{log_dir}/worker1.log', 'w+')
-worker2_log = open(f'{log_dir}/worker2.log', 'w+')
-
-source_bin_folder = '../bin'
-node_bin = '../../substraTEE-node/target/release/substratee-node'
-w1_working_dir = '/tmp/w1'
-w2_working_dir = '/tmp/w2'
 
 
-def setup_worker(work_dir: str, std_err: Union[None, int, IO]):
+def setup_worker(work_dir: str, source_dir: str, std_err: Union[None, int, IO]):
     print(f'Setting up worker in {work_dir}')
-    worker = Worker(cwd=work_dir, source_dir=source_bin_folder, std_err=std_err)
+    print(f'Copying files from {source_dir}')
+    worker = Worker(cwd=work_dir, source_dir=source_dir, std_err=std_err)
     worker.init_clean()
     print('Initialized worker.')
     return worker
 
 
-def main(processes):
+def run_node(config):
+    node_cmd = [config["node"]["bin"]] + config["node"]["flags"]
+    return Popen(node_cmd, stdout=node_log, stderr=STDOUT, bufsize=1)
+
+
+def key_provider_addr(config):
+    key_provider = config.get('mu-ra-port', '3443')
+    return f'localhost:{key_provider}'
+
+
+def run_worker(config, i: int, provider_addr):
+    log = open(f'{log_dir}/worker{i}.log', 'w+')
+    w = setup_worker(f'/tmp/w{i}', config["source"], log)
+
+    if i > 1:
+        print(f'Worker {i} fetching keys from first worker at {provider_addr}.')
+        skip_ra = "--skip-ra" in config["subcommand_flags"]
+        print(f'Skip remote attestation: {skip_ra}')
+
+        w.request_keys(provider_addr, skip_ra=skip_ra)
+
+    print(f'Starting worker {i} in background')
+    w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
+
+
+def main(processes, config_path):
     print('Starting substraTee-node-process in background')
-    processes.append(
-        Popen([node_bin, '--tmp', '--dev', '-lruntime=info'], stdout=node_log, stderr=STDOUT, bufsize=1)
-    )
 
-    w1 = setup_worker(w1_working_dir, worker1_log)
-    w2 = setup_worker(w2_working_dir, worker2_log)
+    with open(config_path) as config_file:
+        config = json.load(config_file)
 
-    print('Starting worker 1 in background')
-    processes.append(w1.run_in_background(log_file=worker1_log, flags=['-P', '2000'], subcommand_flags=['--skip-ra']))
+    processes.append(run_node(config))
 
-    # sleep to prevent nonce clash when bootstrapping the enclave's account
-    sleep(6)
-    print('Starting worker 2 in background')
-    processes.append(w2.run_in_background(log_file=worker2_log, flags=['-P', '3000'], subcommand_flags=['--skip-ra']))
+    provider_addr = key_provider_addr(config["workers"][0])
+
+    i = 1
+    for w_conf in config["workers"]:
+        processes.append(run_worker(w_conf, i, provider_addr))
+        # sleep to prevent nonce clash when bootstrapping the enclave's account
+        sleep(6)
+
+        i += 1
+
     # keep script alive until terminated
     signal.pause()
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run a setup consisting of a node and some workers')
+    parser.add_argument('config', type=str, help='Config for the node and workers')
+    args = parser.parse_args()
+
     process_list = []
     killer = GracefulKiller(process_list)
-    main(process_list)
-
-
+    main(process_list, args.config)
