@@ -289,10 +289,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi>(
     ocall_api: Arc<A>,
     skip_ra: bool
 ) -> SgxResult<ClientConfig> {
-    let (key_der, cert_der) = match skip_ra{
-        true => Default::default(),
-        false => create_ra_report_and_signature(sign_type, ocall_api, skip_ra).sgx_error()?,
-    };
+    let (key_der, cert_der) = create_ra_report_and_signature(sign_type, ocall_api, skip_ra).sgx_error()?;
 
     let mut cfg = rustls::ClientConfig::new();
     let certs = vec![rustls::Certificate(cert_der)];
