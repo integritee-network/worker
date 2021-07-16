@@ -47,7 +47,6 @@ impl DirectApi {
         Self { url }
     }
 
-
     /// server connection with only one response
     /// todo: remove unit err in refactoring process
     #[allow(clippy::result_unit_err)]
