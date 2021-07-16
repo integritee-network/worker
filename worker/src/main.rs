@@ -730,7 +730,7 @@ pub unsafe extern "C" fn ocall_worker_request(
     let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
 
     if requests.is_empty() {
-        return sgx_status_t::SGX_SUCCESS
+        return sgx_status_t::SGX_SUCCESS;
     }
 
     let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();

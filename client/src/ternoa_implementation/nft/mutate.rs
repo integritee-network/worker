@@ -15,7 +15,7 @@ struct MutatedArgs {
 
 /// Update the file included in the NFT with id nft_id.
 /// Must be called by the owner of the NFT and while the NFT is not sealed.
-/// Note: the series id, this nft belongs to, is hardcoded to 1 and the capsule flag is true.
+/// Note: the series id, this nft belongs to, is hardcoded to 0 (the default series id) and the capsule flag is true.
 pub fn mutate(owner_ss58: &str, nft_id: u32, new_filename: &str, chain_api: Api<sr25519::Pair>) {
     let signer = get_pair_from_str(owner_ss58);
     let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
@@ -27,7 +27,7 @@ pub fn mutate(owner_ss58: &str, nft_id: u32, new_filename: &str, chain_api: Api<
         "mutate",
         nft_id,
         offchain_uri,
-        1u32,
+        0u32,
         true
     );
     let tx_hash = chain_api
@@ -40,10 +40,12 @@ pub fn mutate(owner_ss58: &str, nft_id: u32, new_filename: &str, chain_api: Api<
     let (events_in, events_out) = channel();
     chain_api.subscribe_events(events_in).unwrap();
 
-    //Wait for Created event to extract and return the NFTid
+    //Wait for Mutated event to extract and return the NFTid
     let mut decoder = EventsDecoder::try_from(chain_api.metadata.clone()).unwrap();
     decoder.register_type_size::<NFTId>("NFTId").unwrap();
 
+    //For now no possibility to catch here the errors coming from chain. infinite loop.
+    //See issue https://github.com/scs/substrate-api-client/issues/138#issuecomment-879733584
     loop {
         let ret = chain_api
             .wait_for_event::<MutatedArgs>("Nfts", "Mutated", Some(decoder.clone()), &events_out)

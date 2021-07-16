@@ -19,16 +19,16 @@ struct CreatedArgs {
     series_id: NFTSeriesId,
 }
 
-///Create a NFT for this owner
-///The NFT contains a filename of the capsule/ciphertext file.
+/// Create a NFT for this owner
+/// The NFT contains a filename of the capsule/ciphertext file.
 /// Returns the NFTid: u32
-/// Note: the series id, this nft belongs to, is hardcoded to 1 and the capsule flag is true -> nfts can only be created by one owner.
+/// Note: the series id, this nft belongs to, is hardcoded to 0 (the default series id) and the capsule flag is true
 pub fn create(owner_ss58: &str, filename: &str, chain_api: Api<sr25519::Pair>) -> Option<NFTId> {
     let signer = get_pair_from_str(owner_ss58);
     let chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
     // compose the extrinsic
     let offchain_uri = filename.as_bytes().to_vec();
-    let xt = compose_extrinsic!(chain_api, "Nfts", "create", offchain_uri, 1u32, true);
+    let xt = compose_extrinsic!(chain_api, "Nfts", "create", offchain_uri, 0u32, true);
     let tx_hash = chain_api
         .send_extrinsic(xt.hex_encode(), XtStatus::InBlock)
         .unwrap();
@@ -52,6 +52,8 @@ pub fn create(owner_ss58: &str, filename: &str, chain_api: Api<sr25519::Pair>) -
     let account_id = get_accountid_from_str(owner_ss58);
     debug!("AccountId of signer  {:?}", account_id);
 
+    //For now no possibility to catch here the errors coming from chain. infinite loop.
+    //See issue https://github.com/scs/substrate-api-client/issues/138#issuecomment-879733584
     loop {
         let ret = chain_api
             .wait_for_event::<CreatedArgs>("Nfts", "Created", Some(decoder.clone()), &events_out)

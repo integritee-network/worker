@@ -148,14 +148,14 @@ pub fn nft_commands() -> MultiCommand<'static, str, str> {
                     //         Filename
                     let chain_api = get_ternoa_chain_api(matches);
                     let owner_ss58: &str = matches.value_of(OWNER).unwrap();
-                    let nftid = get_nft_id_from_matches(matches);
+                    let nft_id = get_nft_id_from_matches(matches);
                     let filename: &str = matches.value_of("filename").unwrap();
                     debug!(
                         "entering nft mutate function, owner: {}, filename: {}, id: {:?}",
-                        owner_ss58, filename, nftid
+                        owner_ss58, filename, nft_id
                     );
-                    // NFT MUTATE FUNCTION HERE
-                    mutate(owner_ss58, nftid, filename, chain_api);
+                    mutate(owner_ss58, nft_id, filename, chain_api);
+                    info!("NFT was mutated {}", nft_id);
                     Ok(())
                 }),
         )
@@ -176,14 +176,13 @@ pub fn nft_commands() -> MultiCommand<'static, str, str> {
                     let chain_api = get_ternoa_chain_api(matches);
                     let from: &str = matches.value_of(FROM).unwrap();
                     let to: &str = matches.value_of(TO).unwrap();
-                    let nftid = get_nft_id_from_matches(matches);
+                    let nft_id = get_nft_id_from_matches(matches);
                     debug!(
                         "entering nft transfer function, owner: {}, new owner: {}, id: {:?}",
-                        from, to, nftid
+                        from, to, nft_id
                     );
-                    // TRANFER FUNCTION HERE
-                    transfer(from, to, nftid, chain_api);
-                    info!("NFT was transfered {} to {}", nftid, to);
+                    transfer(from, to, nft_id, chain_api);
+                    info!("NFT was transferred {} to {}", nft_id, to);
                     Ok(())
                 }),
         )
@@ -346,6 +345,7 @@ pub fn add_url_arg<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
+//Duplicate code. See get_chain_api in main.rs.
 fn get_ternoa_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
     let url = format!(
         "{}:{}",

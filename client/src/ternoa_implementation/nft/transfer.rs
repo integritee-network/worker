@@ -35,7 +35,7 @@ pub fn transfer(from: &str, to: &str, nft_id: NFTId, chain_api: Api<sr25519::Pai
     info!("nft transfer extrinsic sent. Block Hash: {:?}", tx_hash);
     info!("waiting for confirmation of nft transfer");
 
-    //subscribe to event Created
+    //subscribe to event Transfer
     let (events_in, events_out) = channel();
     chain_api.subscribe_events(events_in).unwrap();
 
@@ -49,9 +49,10 @@ pub fn transfer(from: &str, to: &str, nft_id: NFTId, chain_api: Api<sr25519::Pai
         .register_type_size::<AccountId>("AccountId")
         .unwrap();
 
-    let old_account_id = get_accountid_from_str(from);
-    debug!("AccountId of signer  {:?}", old_account_id);
+    debug!("AccountId of signer  {:?}", get_accountid_from_str(from));
 
+    //For now no possibility to catch here the errors coming from chain. infinite loop.
+    //See issue https://github.com/scs/substrate-api-client/issues/138#issuecomment-879733584
     loop {
         let ret = chain_api
             .wait_for_event::<TransferArgs>("Nfts", "Transfer", Some(decoder.clone()), &events_out)
