@@ -7,19 +7,15 @@ set -euo pipefail
 
 cd "$CLIENT_DIR" || exit
 
-if [[ -z "${LOG_1}" ]] && [[ -z "${LOG_2}" ]]; then
-  ./demo_direct_call.sh -p 9944 -P 2000 -t first
-  ./demo_direct_call.sh -p 9944 -P 2000 -t second
-else
-  # we are in github actions if this exists, then we print to the logs
+LOG_1="${LOG_1:-$LOG_DIR/m8_demo_direct_call_1.log}"
+LOG_2="${LOG_2:-$LOG_DIR/m8_demo_direct_call_1.log}"
 
-  echo "[m8.sh] printing to logs:"
-  echo "        $LOG_1"
-  echo "        $LOG_2"
+echo "[m8.sh] printing to logs:"
+echo "        $LOG_1"
+echo "        $LOG_2"
 
-  touch "$LOG_1"
-  touch "$LOG_2"
+touch "$LOG_1"
+touch "$LOG_2"
 
-  ./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee "$LOG_1"
-  ./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee "$LOG_2"
-fi
+./demo_direct_call.sh -p 9944 -P 2000 -t first 2>&1 | tee "$LOG_1"
+./demo_direct_call.sh -p 9944 -P 2000 -t second 2>&1 | tee "$LOG_2"
