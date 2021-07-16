@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$CLIENT_DIR" || exit
 
 LOG_1="${LOG_1:-$LOG_DIR/m8_demo_direct_call_1.log}"
-LOG_2="${LOG_2:-$LOG_DIR/m8_demo_direct_call_1.log}"
+LOG_2="${LOG_2:-$LOG_DIR/m8_demo_direct_call_2.log}"
 
 echo "[m8.sh] printing to logs:"
 echo "        $LOG_1"

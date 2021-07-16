@@ -10,7 +10,7 @@ echo "$CLIENT_DIR"
 cd "$CLIENT_DIR" || exit
 
 LOG_1="${LOG_1:-$LOG_DIR/m6_demo_shielding_unshielding_1.log}"
-LOG_2="${LOG_2:-$LOG_DIR/m6_demo_shielding_unshielding_1.log}"
+LOG_2="${LOG_2:-$LOG_DIR/m6_demo_shielding_unshielding_2.log}"
 
 echo "[m6.sh] printing to logs:"
 echo "        $LOG_1"
