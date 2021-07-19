@@ -22,7 +22,7 @@ use std::slice;
 use std::str;
 use std::sync::{
     mpsc::{channel, Sender},
-    Mutex,
+    Arc, Mutex,
 };
 use std::thread;
 
@@ -33,9 +33,7 @@ use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use lazy_static::lazy_static;
 use log::*;
-use my_node_runtime::{
-    substratee_registry::ShardIdentifier, Event, Hash, Header
-};
+use my_node_runtime::{substratee_registry::ShardIdentifier, Event, Hash, Header};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::{AccountId32, Ss58Codec},
@@ -57,28 +55,31 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use std::time::{Duration, SystemTime};
 
 use substratee_api_client_extensions::{AccountApi, ChainApi};
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
-use substratee_node_primitives::SignedBlock;
 use substratee_enclave_api::{Enclave, TeeRexApi};
+use substratee_node_primitives::SignedBlock;
 use substratee_worker_api::direct_client::DirectClient;
+use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 use config::Config;
 
 use substratee_settings::files::{
-    SIGNING_KEY_FILE, SHIELDING_KEY_FILE, SHARDS_PATH, ENCRYPTED_STATE_FILE
+    ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
 };
 
-use worker::{Worker as WorkerGen};
-use crate::utils::{extract_shard, hex_encode, check_files, write_slice_and_whitespace_pad};
-use crate::worker::{WorkerT, worker_url_into_async_rpc_url};
+use crate::ocall_bridge::bridge_api::Bridge as OCallBridge;
+use crate::ocall_bridge::component_factory::OCallBridgeComponentFactoryImpl;
+use crate::utils::{check_files, extract_shard, hex_encode, write_slice_and_whitespace_pad};
+use crate::worker::{worker_url_into_async_rpc_url, WorkerT};
+use worker::Worker as WorkerGen;
 
-mod enclave;
-mod ipfs;
-mod tests;
 mod config;
+mod enclave;
+mod error;
+mod ipfs;
+mod ocall_bridge;
+mod tests;
 mod utils;
 mod worker;
-mod error;
 
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -99,6 +100,9 @@ fn main() {
     // Setup logging
     env_logger::init();
 
+    // initialize o-call bridge with a concrete factory implementation
+    OCallBridge::initialize(Arc::new(OCallBridgeComponentFactoryImpl {}));
+
     let yml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yml).get_matches();
 
@@ -112,18 +116,15 @@ fn main() {
 
         // Todo: Is this deprecated?? It is only used in remote attestation.
         config.set_ext_api_url(
-            smatches.value_of("w-server")
+            smatches
+                .value_of("w-server")
                 .map(ToString::to_string)
-                .unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port))
+                .unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port)),
         );
 
         println!("Worker Config: {:?}", config);
         let skip_ra = smatches.is_present("skip-ra");
-        worker(
-            config.clone(),
-            &shard,
-            skip_ra,
-        );
+        worker(config.clone(), &shard, skip_ra);
     } else if let Some(smatches) = matches.subcommand_matches("request-keys") {
         let shard = extract_shard(&smatches);
         let provider_url = smatches
@@ -143,17 +144,10 @@ fn main() {
         let file = File::create(SHIELDING_KEY_FILE).unwrap();
         match serde_json::to_writer(file, &pubkey) {
             Err(x) => {
-                error!(
-                    "[-] Failed to write '{}'. {}",
-                    SHIELDING_KEY_FILE,
-                    x
-                );
+                error!("[-] Failed to write '{}'. {}", SHIELDING_KEY_FILE, x);
             }
             _ => {
-                println!(
-                    "[+] File '{}' written successfully",
-                    SHIELDING_KEY_FILE
-                );
+                println!("[+] File '{}' written successfully", SHIELDING_KEY_FILE);
             }
         }
         return;
@@ -164,17 +158,10 @@ fn main() {
         debug!("[+] Signing key raw: {:?}", pubkey);
         match fs::write(SIGNING_KEY_FILE, pubkey) {
             Err(x) => {
-                error!(
-                    "[-] Failed to write '{}'. {}",
-                    SIGNING_KEY_FILE,
-                    x
-                );
+                error!("[-] Failed to write '{}'. {}", SIGNING_KEY_FILE, x);
             }
             _ => {
-                println!(
-                    "[+] File '{}' written successfully",
-                    SIGNING_KEY_FILE
-                );
+                println!("[+] File '{}' written successfully", SIGNING_KEY_FILE);
             }
         }
         return;
@@ -229,11 +216,7 @@ fn main() {
     }
 }
 
-fn worker(
-    config: Config,
-    shard: &ShardIdentifier,
-    skip_ra: bool,
-) {
+fn worker(config: Config, shard: &ShardIdentifier, skip_ra: bool) {
     println!("Encointer Worker v{}", VERSION);
     info!("starting worker on shard {}", shard.encode().to_base58());
     // ------------------------------------------------------------------------
@@ -253,14 +236,14 @@ fn worker(
 
     let rt = tokio::runtime::Runtime::new().unwrap();
     *TOKIO_HANDLE.lock().unwrap() = Some(rt.handle().clone());
-    *WORKER.write() = Some(
-        Worker::new(
-            config.clone(),
-            Api::new(config.node_url()).map(|api| api.set_signer(AccountKeyring::Alice.pair())).unwrap(),
-            Enclave::new(eid),
-            DirectClient::new(config.worker_url()),
-        )
-    );
+    *WORKER.write() = Some(Worker::new(
+        config.clone(),
+        Api::new(config.node_url())
+            .map(|api| api.set_signer(AccountKeyring::Alice.pair()))
+            .unwrap(),
+        Enclave::new(eid),
+        DirectClient::new(config.worker_url()),
+    ));
 
     // ------------------------------------------------------------------------
     // let new workers call us for key provisioning
@@ -277,8 +260,11 @@ fn worker(
 
     // ------------------------------------------------------------------------
     // start worker api direct invocation server
-    println!("rpc worker server listening on ws://{}", config.worker_url());
-    start_worker_api_direct_server( config.worker_url(), eid);
+    println!(
+        "rpc worker server listening on ws://{}",
+        config.worker_url()
+    );
+    start_worker_api_direct_server(config.worker_url(), eid);
 
     // listen for sidechain_block import request. Later the `start_worker_api_direct_server`
     // should be merged into this one.
@@ -287,10 +273,9 @@ fn worker(
 
     let handle = TOKIO_HANDLE.lock().unwrap().as_ref().unwrap().clone();
     handle.spawn(async move {
-        substratee_worker_rpc_server::run_server(
-            &url,
-            enclave,
-        ).await.unwrap()
+        substratee_worker_rpc_server::run_server(&url, enclave)
+            .await
+            .unwrap()
     });
     // ------------------------------------------------------------------------
     // start the substrate-api-client to communicate with the node
@@ -310,10 +295,20 @@ fn worker(
     info!("Enclave nonce = {:?}", nonce);
 
     let uxt = if skip_ra {
-        println!("[!] skipping remote attestation. Registering enclave without attestation report.");
-        enclave.mock_register_xt(api.genesis_hash, nonce, &config.ext_api_url.unwrap()).unwrap()
+        println!(
+            "[!] skipping remote attestation. Registering enclave without attestation report."
+        );
+        enclave
+            .mock_register_xt(api.genesis_hash, nonce, &config.ext_api_url.unwrap())
+            .unwrap()
     } else {
-        enclave_perform_ra(eid, genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec()).unwrap()
+        enclave_perform_ra(
+            eid,
+            genesis_hash,
+            nonce,
+            config.ext_api_url.unwrap().as_bytes().to_vec(),
+        )
+        .unwrap()
     };
 
     let mut xthex = hex::encode(uxt);
@@ -672,7 +667,7 @@ pub unsafe extern "C" fn ocall_worker_request(
 
     let requests: Vec<WorkerRequest> = Decode::decode(&mut req_slice).unwrap();
     if requests.is_empty() {
-        return sgx_status_t::SGX_SUCCESS
+        return sgx_status_t::SGX_SUCCESS;
     }
 
     let api = Api::<sr25519::Pair>::new(NODE_URL.lock().unwrap().clone()).unwrap();
