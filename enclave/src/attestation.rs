@@ -295,7 +295,12 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
         .sgx_error_with_log("Invalid DEV_HOSTNAME")?;
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).sgx_error()?;
+    let mut sock = TcpStream::new(fd)
+        .map_err(|e| {
+            error!("    [Enclave] failed to create TcpStream: {:?}", e);
+            e
+        })
+        .sgx_error()?;
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
     let _result = tls.write(req.as_bytes());
@@ -303,9 +308,11 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
 
     debug!("    [Enclave] tls.write complete");
 
-    tls.read_to_end(&mut plaintext).sgx_error()?;
+    tls.read_to_end(&mut plaintext)
+        .sgx_error_with_log("    [Enclave] error reading tls to end")?;
     debug!("    [Enclave] tls.read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).sgx_error()?;
+    let resp_string = String::from_utf8(plaintext.clone())
+        .sgx_error_with_log("    [Enclave] error decoding tls answer to string")?;
 
     error!("    [Enclave] resp_string = {}", resp_string);
 
@@ -434,6 +441,14 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
     // p_qe_report and report.data to confirm the QUOTE has not be modified and
     // is not a replay. It is optional.
 
+    // need to call this a second time (first time is when we get the sigrl revocation list)
+    // (has some internal state that needs to be reset)!
+    let ias_socket_result = ocall_api.ocall_get_ias_socket();
+    if ias_socket_result.0 != sgx_status_t::SGX_SUCCESS {
+        return Err(ias_socket_result.0);
+    }
+    let ias_socket = ias_socket_result.1;
+
     let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
     rhs_vec.extend(&quote_content);
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..])?;
@@ -470,7 +485,7 @@ fn get_ias_api_key() -> SgxResult<String> {
 pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
     sign_type: sgx_quote_sign_type_t,
     ocall_api: Arc<A>,
-    skip_ra: bool
+    skip_ra: bool,
 ) -> SgxResult<(Vec<u8>, Vec<u8>)> {
     let chain_signer = ed25519::unseal_pair()?;
     info!(
@@ -502,7 +517,7 @@ pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
         debug!("              cert        = {:?}", cert);
 
         // concat the information
-       attn_report + "|" + &sig + "|" + &cert
+        attn_report + "|" + &sig + "|" + &cert
     } else {
         Default::default()
     };
@@ -596,6 +611,10 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
     };
 
     if let Err(status) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+        error!(
+            "    [Enclave] failed to write RA file ({}), status: {:?}",
+            RA_DUMP_CERT_DER_FILE, status
+        );
         return status;
     }
     info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
