@@ -211,5 +211,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: logs
+          name: ${{ matrix.test }}_logs
           path: ${{ env.LOG_DIR }}
