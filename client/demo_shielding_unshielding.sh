@@ -83,6 +83,9 @@ ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
+# sometimes we get a nonce clash here, so let's wait a little bit to prevent that.
+sleep 2
+
 echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
 ${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
 echo ""
