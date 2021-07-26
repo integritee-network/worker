@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -19,7 +19,8 @@ impl Config {
 		node_port: String,
 		worker_ip: String,
 		worker_rpc_port: String,
-		worker_mu_ra_port: String) -> Self {
+		worker_mu_ra_port: String,
+	) -> Self {
 		Self {
 			node_ip,
 			node_port,
@@ -30,7 +31,7 @@ impl Config {
 		}
 	}
 
-    pub fn node_url(&self) -> String {
+	pub fn node_url(&self) -> String {
 		format!("{}:{}", self.node_ip, self.node_port)
 	}
 
@@ -52,11 +53,7 @@ impl From<&ArgMatches<'_>> for Config {
 		Self::new(
 			m.value_of("node-server").unwrap_or("ws://127.0.0.1").into(),
 			m.value_of("node-port").unwrap_or("9944").into(),
-			if m.is_present("ws-external") {
-				"0.0.0.0".into()
-			} else {
-				"127.0.0.1".into()
-			},
+			if m.is_present("ws-external") { "0.0.0.0".into() } else { "127.0.0.1".into() },
 			m.value_of("worker-rpc-port").unwrap_or("2000").into(),
 			m.value_of("mu-ra-port").unwrap_or("3443").into(),
 		)

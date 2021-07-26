@@ -1,8 +1,8 @@
+use sp_core::Pair;
 use sp_runtime::MultiSignature;
 use substrate_api_client::Api;
-use sp_core::Pair;
 
-use substratee_node_primitives::{Enclave, ShardIdentifier, IpfsHash};
+use substratee_node_primitives::{Enclave, IpfsHash, ShardIdentifier};
 
 use crate::ApiResult;
 
@@ -17,18 +17,16 @@ pub trait SubstrateeRegistryApi {
 	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<IpfsHash>>;
 }
 
-
 impl<P: Pair> SubstrateeRegistryApi for Api<P>
-	where
-		MultiSignature: From<P::Signature>
+where
+	MultiSignature: From<P::Signature>,
 {
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>> {
 		self.get_storage_map(TEEREX, "EnclaveRegistry", index, None)
 	}
 
 	fn enclave_count(&self) -> ApiResult<u64> {
-		Ok(self.get_storage_value(TEEREX, "EnclaveCount", None)?
-			.unwrap_or(0u64))
+		Ok(self.get_storage_value(TEEREX, "EnclaveCount", None)?.unwrap_or(0u64))
 	}
 
 	fn all_enclaves(&self) -> ApiResult<Vec<Enclave>> {

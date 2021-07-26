@@ -1,6 +1,6 @@
 use sp_core::crypto::Pair;
-use substrate_api_client::Api;
 use sp_runtime::MultiSignature;
+use substrate_api_client::Api;
 
 use substratee_node_primitives::AccountId;
 
@@ -13,16 +13,14 @@ pub trait AccountApi {
 }
 
 impl<P: Pair> AccountApi for Api<P>
-	where
-		MultiSignature: From<P::Signature>
+where
+	MultiSignature: From<P::Signature>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
-		Ok(self.get_account_info(who)?
-			.map_or_else(|| 0, |info| info.nonce))
+		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce))
 	}
 
 	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
-		Ok(self.get_account_data(who)?
-			.map_or_else(|| 0, |data| data.free))
+		Ok(self.get_account_data(who)?.map_or_else(|| 0, |data| data.free))
 	}
 }
