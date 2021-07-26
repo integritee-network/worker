@@ -57,9 +57,7 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 
 	let mut rand = match StdRng::new() {
 		Ok(rng) => rng,
-		Err(_) => {
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		},
+		Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
 	};
 
 	rand.fill_bytes(&mut key_iv);

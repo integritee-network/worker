@@ -58,9 +58,7 @@ pub fn create_sealed_seed() -> SgxResult<sgx_status_t> {
 	let mut seed = [0u8; 32];
 	let mut rand = match StdRng::new() {
 		Ok(rng) => rng,
-		Err(_) => {
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		},
+		Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
 	};
 	rand.fill_bytes(&mut seed);
 
