@@ -1,15 +1,20 @@
 // File replacing substrate crate sp_transaction_pool::{error, PoolStatus};
 
 extern crate alloc;
-use alloc::{boxed::Box, string::String, string::ToString, sync::Arc, vec::Vec};
+use alloc::{
+	boxed::Box,
+	string::{String, ToString},
+	sync::Arc,
+	vec::Vec,
+};
 use core::{hash::Hash, pin::Pin};
 use std::collections::HashMap;
 
 use jsonrpc_core::futures::{channel, Future, Stream};
 use sp_runtime::{
-    generic::BlockId,
-    traits::{Block as BlockT, Member, NumberFor},
-    transaction_validity::{TransactionLongevity, TransactionPriority, TransactionTag},
+	generic::BlockId,
+	traits::{Block as BlockT, Member, NumberFor},
+	transaction_validity::{TransactionLongevity, TransactionPriority, TransactionTag},
 };
 
 use codec::{Decode, Encode};
@@ -23,21 +28,21 @@ use sp_core::H256;
 /// TrustedOperation pool status.
 #[derive(Debug)]
 pub struct PoolStatus {
-    /// Number of operations in the ready queue.
-    pub ready: usize,
-    /// Sum of bytes of ready operation encodings.
-    pub ready_bytes: usize,
-    /// Number of operations in the future queue.
-    pub future: usize,
-    /// Sum of bytes of ready operation encodings.
-    pub future_bytes: usize,
+	/// Number of operations in the ready queue.
+	pub ready: usize,
+	/// Sum of bytes of ready operation encodings.
+	pub ready_bytes: usize,
+	/// Number of operations in the future queue.
+	pub future: usize,
+	/// Sum of bytes of ready operation encodings.
+	pub future_bytes: usize,
 }
 
 impl PoolStatus {
-    /// Returns true if the are no operations in the pool.
-    pub fn is_empty(&self) -> bool {
-        self.ready == 0 && self.future == 0
-    }
+	/// Returns true if the are no operations in the pool.
+	pub fn is_empty(&self) -> bool {
+		self.ready == 0 && self.future == 0
+	}
 }
 
 /// Possible operation status events.
@@ -88,33 +93,33 @@ impl PoolStatus {
 /// re-subscribe for a particular operation hash manually again.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TrustedOperationStatus<Hash, BlockHash> {
-    /// TrustedOperation is part of the future queue.
-    Future,
-    /// TrustedOperation is part of the ready queue.
-    Ready,
-    /// The operation has been broadcast to the given peers.
-    Broadcast(Vec<String>),
-    /// TrustedOperation has been included in block with given hash.
-    InBlock(BlockHash),
-    /// The block this operation was included in has been retracted.
-    Retracted(BlockHash),
-    /// Maximum number of finality watchers has been reached,
-    /// old watchers are being removed.
-    FinalityTimeout(BlockHash),
-    /// TrustedOperation has been finalized by a finality-gadget, e.g GRANDPA
-    Finalized(BlockHash),
-    /// TrustedOperation has been replaced in the pool, by another operation
-    /// that provides the same tags. (e.g. same (sender, nonce)).
-    Usurped(Hash),
-    /// TrustedOperation has been dropped from the pool because of the limit.
-    Dropped,
-    /// TrustedOperation is no longer valid in the current state.
-    Invalid,
+	/// TrustedOperation is part of the future queue.
+	Future,
+	/// TrustedOperation is part of the ready queue.
+	Ready,
+	/// The operation has been broadcast to the given peers.
+	Broadcast(Vec<String>),
+	/// TrustedOperation has been included in block with given hash.
+	InBlock(BlockHash),
+	/// The block this operation was included in has been retracted.
+	Retracted(BlockHash),
+	/// Maximum number of finality watchers has been reached,
+	/// old watchers are being removed.
+	FinalityTimeout(BlockHash),
+	/// TrustedOperation has been finalized by a finality-gadget, e.g GRANDPA
+	Finalized(BlockHash),
+	/// TrustedOperation has been replaced in the pool, by another operation
+	/// that provides the same tags. (e.g. same (sender, nonce)).
+	Usurped(Hash),
+	/// TrustedOperation has been dropped from the pool because of the limit.
+	Dropped,
+	/// TrustedOperation is no longer valid in the current state.
+	Invalid,
 }
 
 /// The stream of operation events.
 pub type TrustedOperationStatusStream<Hash, BlockHash> =
-    dyn Stream<Item = TrustedOperationStatus<Hash, BlockHash>> + Send + Unpin;
+	dyn Stream<Item = TrustedOperationStatus<Hash, BlockHash>> + Send + Unpin;
 
 /// The import notification event stream.
 pub type ImportNotificationStream<H> = channel::mpsc::Receiver<H>;
@@ -134,128 +139,128 @@ pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
 /// The pool is container of operations that are implementing this trait.
 /// See `sp_runtime::ValidTransaction` for details about every field.
 pub trait InPoolOperation {
-    /// TrustedOperation type.
-    type TrustedOperation;
-    /// TrustedOperation hash type.
-    type Hash;
+	/// TrustedOperation type.
+	type TrustedOperation;
+	/// TrustedOperation hash type.
+	type Hash;
 
-    /// Get the reference to the operation data.
-    fn data(&self) -> &Self::TrustedOperation;
-    /// Get hash of the operation.
-    fn hash(&self) -> &Self::Hash;
-    /// Get priority of the operation.
-    fn priority(&self) -> &TransactionPriority;
-    /// Get longevity of the operation.
-    fn longevity(&self) -> &TransactionLongevity;
-    /// Get operation dependencies.
-    fn requires(&self) -> &[TransactionTag];
-    /// Get tags that operation provides.
-    fn provides(&self) -> &[TransactionTag];
-    /// Return a flag indicating if the operation should be propagated to other peers.
-    fn is_propagable(&self) -> bool;
+	/// Get the reference to the operation data.
+	fn data(&self) -> &Self::TrustedOperation;
+	/// Get hash of the operation.
+	fn hash(&self) -> &Self::Hash;
+	/// Get priority of the operation.
+	fn priority(&self) -> &TransactionPriority;
+	/// Get longevity of the operation.
+	fn longevity(&self) -> &TransactionLongevity;
+	/// Get operation dependencies.
+	fn requires(&self) -> &[TransactionTag];
+	/// Get tags that operation provides.
+	fn provides(&self) -> &[TransactionTag];
+	/// Return a flag indicating if the operation should be propagated to other peers.
+	fn is_propagable(&self) -> bool;
 }
 
 /// TrustedOperation pool interface.
 pub trait TrustedOperationPool: Send + Sync {
-    /// Block type.
-    type Block: BlockT;
-    /// TrustedOperation hash type.
-    type Hash: Hash + Eq + Member;
-    /// In-pool operation type.
-    type InPoolOperation: InPoolOperation<
-        TrustedOperation = StfTrustedOperation,
-        Hash = TxHash<Self>,
-    >;
-    /// Error type.
-    type Error: From<error::Error> + error::IntoPoolError;
+	/// Block type.
+	type Block: BlockT;
+	/// TrustedOperation hash type.
+	type Hash: Hash + Eq + Member;
+	/// In-pool operation type.
+	type InPoolOperation: InPoolOperation<
+		TrustedOperation = StfTrustedOperation,
+		Hash = TxHash<Self>,
+	>;
+	/// Error type.
+	type Error: From<error::Error> + error::IntoPoolError;
 
-    // *** RPC
+	// *** RPC
 
-    /// Returns a future that imports a bunch of unverified operations to the pool.
-    // FIXME: obey clippy
-    #[allow(clippy::type_complexity)]
-    fn submit_at(
-        &self,
-        at: &BlockId<Self::Block>,
-        source: TrustedOperationSource,
-        xts: Vec<StfTrustedOperation>,
-        shard: ShardIdentifier,
-    ) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
+	/// Returns a future that imports a bunch of unverified operations to the pool.
+	// FIXME: obey clippy
+	#[allow(clippy::type_complexity)]
+	fn submit_at(
+		&self,
+		at: &BlockId<Self::Block>,
+		source: TrustedOperationSource,
+		xts: Vec<StfTrustedOperation>,
+		shard: ShardIdentifier,
+	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
 
-    /// Returns a future that imports one unverified operation to the pool.
-    fn submit_one(
-        &self,
-        at: &BlockId<Self::Block>,
-        source: TrustedOperationSource,
-        xt: StfTrustedOperation,
-        shard: ShardIdentifier,
-    ) -> PoolFuture<TxHash<Self>, Self::Error>;
+	/// Returns a future that imports one unverified operation to the pool.
+	fn submit_one(
+		&self,
+		at: &BlockId<Self::Block>,
+		source: TrustedOperationSource,
+		xt: StfTrustedOperation,
+		shard: ShardIdentifier,
+	) -> PoolFuture<TxHash<Self>, Self::Error>;
 
-    /// Returns a future that import a single operation and starts to watch their progress in the pool.
-    fn submit_and_watch(
-        &self,
-        at: &BlockId<Self::Block>,
-        source: TrustedOperationSource,
-        xt: StfTrustedOperation,
-        shard: ShardIdentifier,
-    ) -> PoolFuture<TxHash<Self>, Self::Error>;
+	/// Returns a future that import a single operation and starts to watch their progress in the pool.
+	fn submit_and_watch(
+		&self,
+		at: &BlockId<Self::Block>,
+		source: TrustedOperationSource,
+		xt: StfTrustedOperation,
+		shard: ShardIdentifier,
+	) -> PoolFuture<TxHash<Self>, Self::Error>;
 
-    // *** Block production / Networking
-    /// Get an iterator for ready operations ordered by priority.
-    ///
-    /// Guarantees to return only when operation pool got updated at `at` block.
-    /// Guarantees to return immediately when `None` is passed.
-    // FIXME: obey clippy
-    #[allow(clippy::type_complexity)]
-    fn ready_at(
-        &self,
-        at: NumberFor<Self::Block>,
-        shard: ShardIdentifier,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>> + Send,
-        >,
-    >;
+	// *** Block production / Networking
+	/// Get an iterator for ready operations ordered by priority.
+	///
+	/// Guarantees to return only when operation pool got updated at `at` block.
+	/// Guarantees to return immediately when `None` is passed.
+	// FIXME: obey clippy
+	#[allow(clippy::type_complexity)]
+	fn ready_at(
+		&self,
+		at: NumberFor<Self::Block>,
+		shard: ShardIdentifier,
+	) -> Pin<
+		Box<
+			dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>> + Send,
+		>,
+	>;
 
-    /// Get an iterator for ready operations ordered by priority.
-    fn ready(
-        &self,
-        shard: ShardIdentifier,
-    ) -> Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>;
+	/// Get an iterator for ready operations ordered by priority.
+	fn ready(
+		&self,
+		shard: ShardIdentifier,
+	) -> Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>;
 
-    /// Get an iterator over all shards.
-    fn shards(&self) -> Vec<ShardIdentifier>;
+	/// Get an iterator over all shards.
+	fn shards(&self) -> Vec<ShardIdentifier>;
 
-    // *** Block production
-    /// Remove operations identified by given hashes (and dependent operations) from the pool.
-    fn remove_invalid(
-        &self,
-        hashes: &[TxHash<Self>],
-        shard: ShardIdentifier,
-        inblock: bool,
-    ) -> Vec<Arc<Self::InPoolOperation>>;
+	// *** Block production
+	/// Remove operations identified by given hashes (and dependent operations) from the pool.
+	fn remove_invalid(
+		&self,
+		hashes: &[TxHash<Self>],
+		shard: ShardIdentifier,
+		inblock: bool,
+	) -> Vec<Arc<Self::InPoolOperation>>;
 
-    // *** logging
-    /// Returns pool status.
-    fn status(&self, shard: ShardIdentifier) -> PoolStatus;
+	// *** logging
+	/// Returns pool status.
+	fn status(&self, shard: ShardIdentifier) -> PoolStatus;
 
-    // *** logging / RPC / networking
-    /// Return an event stream of operations imported to the pool.
-    fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>>;
+	// *** logging / RPC / networking
+	/// Return an event stream of operations imported to the pool.
+	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>>;
 
-    // *** networking
-    /// Notify the pool about operations broadcast.
-    fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
+	// *** networking
+	/// Notify the pool about operations broadcast.
+	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
 
-    /// Returns operation hash
-    fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self>;
+	/// Returns operation hash
+	fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self>;
 
-    /// Return specific ready operation by hash, if there is one.
-    fn ready_transaction(
-        &self,
-        hash: &TxHash<Self>,
-        shard: ShardIdentifier,
-    ) -> Option<Arc<Self::InPoolOperation>>;
+	/// Return specific ready operation by hash, if there is one.
+	fn ready_transaction(
+		&self,
+		hash: &TxHash<Self>,
+		shard: ShardIdentifier,
+	) -> Option<Arc<Self::InPoolOperation>>;
 }
 
 /// The source of the transaction.
@@ -265,73 +270,73 @@ pub trait TrustedOperationPool: Send + Sync {
 /// by our local node (for instance off-chain workers).
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, Debug)]
 pub enum TrustedOperationSource {
-    /// Transaction is already included in block.
-    ///
-    /// This means that we can't really tell where the transaction is coming from,
-    /// since it's already in the received block. Note that the custom validation logic
-    /// using either `Local` or `External` should most likely just allow `InBlock`
-    /// transactions as well.
-    InBlock,
+	/// Transaction is already included in block.
+	///
+	/// This means that we can't really tell where the transaction is coming from,
+	/// since it's already in the received block. Note that the custom validation logic
+	/// using either `Local` or `External` should most likely just allow `InBlock`
+	/// transactions as well.
+	InBlock,
 
-    /// Transaction is coming from a local source.
-    ///
-    /// This means that the transaction was produced internally by the node
-    /// (for instance an Off-Chain Worker, or an Off-Chain Call), as opposed
-    /// to being received over the network.
-    Local,
+	/// Transaction is coming from a local source.
+	///
+	/// This means that the transaction was produced internally by the node
+	/// (for instance an Off-Chain Worker, or an Off-Chain Call), as opposed
+	/// to being received over the network.
+	Local,
 
-    /// Transaction has been received externally.
-    ///
-    /// This means the transaction has been received from (usually) "untrusted" source,
-    /// for instance received over the network or RPC.
-    External,
+	/// Transaction has been received externally.
+	///
+	/// This means the transaction has been received from (usually) "untrusted" source,
+	/// for instance received over the network or RPC.
+	External,
 }
 
 // Replacement of primitive function from_low_u64_be
 pub fn from_low_u64_to_be_h256(val: u64) -> H256 {
-    let mut buf = [0x0; 8];
-    BigEndian::write_u64(&mut buf, val);
-    let capped = core::cmp::min(H256::len_bytes(), 8);
-    let mut bytes = [0x0; core::mem::size_of::<H256>()];
-    bytes[(H256::len_bytes() - capped)..].copy_from_slice(&buf[..capped]);
-    H256::from_slice(&bytes)
+	let mut buf = [0x0; 8];
+	BigEndian::write_u64(&mut buf, val);
+	let capped = core::cmp::min(H256::len_bytes(), 8);
+	let mut bytes = [0x0; core::mem::size_of::<H256>()];
+	bytes[(H256::len_bytes() - capped)..].copy_from_slice(&buf[..capped]);
+	H256::from_slice(&bytes)
 }
 
 /// test
 pub fn test_h256() {
-    let tests = vec![
-        (
-            from_low_u64_to_be_h256(0),
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        ),
-        (
-            from_low_u64_to_be_h256(2),
-            "0x0000000000000000000000000000000000000000000000000000000000000002",
-        ),
-        (
-            from_low_u64_to_be_h256(15),
-            "0x000000000000000000000000000000000000000000000000000000000000000f",
-        ),
-        (
-            from_low_u64_to_be_h256(16),
-            "0x0000000000000000000000000000000000000000000000000000000000000010",
-        ),
-        (
-            from_low_u64_to_be_h256(1_000),
-            "0x00000000000000000000000000000000000000000000000000000000000003e8",
-        ),
-        (
-            from_low_u64_to_be_h256(100_000),
-            "0x00000000000000000000000000000000000000000000000000000000000186a0",
-        ),
-        (
-            from_low_u64_to_be_h256(u64::max_value()),
-            "0x000000000000000000000000000000000000000000000000ffffffffffffffff",
-        ),
-    ];
+	let tests = vec![
+		(
+			from_low_u64_to_be_h256(0),
+			"0x0000000000000000000000000000000000000000000000000000000000000000",
+		),
+		(
+			from_low_u64_to_be_h256(2),
+			"0x0000000000000000000000000000000000000000000000000000000000000002",
+		),
+		(
+			from_low_u64_to_be_h256(15),
+			"0x000000000000000000000000000000000000000000000000000000000000000f",
+		),
+		(
+			from_low_u64_to_be_h256(16),
+			"0x0000000000000000000000000000000000000000000000000000000000000010",
+		),
+		(
+			from_low_u64_to_be_h256(1_000),
+			"0x00000000000000000000000000000000000000000000000000000000000003e8",
+		),
+		(
+			from_low_u64_to_be_h256(100_000),
+			"0x00000000000000000000000000000000000000000000000000000000000186a0",
+		),
+		(
+			from_low_u64_to_be_h256(u64::max_value()),
+			"0x000000000000000000000000000000000000000000000000ffffffffffffffff",
+		),
+	];
 
-    for (number, expected) in tests {
-        // workaround, as H256 in no_std does not implement (de)serialize
-        assert_eq!(expected.to_string(), format!("{:?}", number));
-    }
+	for (number, expected) in tests {
+		// workaround, as H256 in no_std does not implement (de)serialize
+		assert_eq!(expected.to_string(), format!("{:?}", number));
+	}
 }

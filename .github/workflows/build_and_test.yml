@@ -81,6 +81,18 @@ jobs:
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave && cargo clippy -- -D warnings
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: init-rust
+        run: |
+          rustup component add rustfmt
+          rustup target add wasm32-unknown-unknown
+      - name: Worker & Client
+        run: cargo fmt --all -- --check
+      - name: Enclave # Enclave is separate as it's not in the workspace
+        run: cd enclave && cargo fmt --all -- --check
 
   integration-tests:
     runs-on: ubuntu-latest

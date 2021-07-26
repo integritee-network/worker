@@ -3,11 +3,11 @@
 use substrate_api_client::ApiClientError;
 
 pub mod account;
-pub mod substratee_registry;
 pub mod chain;
+pub mod substratee_registry;
 
 pub use account::*;
-pub use substratee_registry::*;
 pub use chain::*;
+pub use substratee_registry::*;
 
 pub type ApiResult<T> = Result<T, ApiClientError>;

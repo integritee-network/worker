@@ -1,4 +1,4 @@
-use sp_core::{Pair, H256, storage::StorageKey};
+use sp_core::{storage::StorageKey, Pair, H256};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::MultiSignature;
 use substrate_api_client::Api;
@@ -18,8 +18,8 @@ pub trait ChainApi {
 }
 
 impl<P: Pair> ChainApi for Api<P>
-	where
-		MultiSignature: From<P::Signature>
+where
+	MultiSignature: From<P::Signature>,
 {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		self.get_finalized_head()?
@@ -34,16 +34,15 @@ impl<P: Pair> ChainApi for Api<P>
 	}
 
 	fn grandpa_authorities(&self, at_block: Option<H256>) -> ApiResult<AuthorityList> {
-		Ok(self.get_storage_by_key_hash(
-				StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
-				at_block,
-			)?
+		Ok(self
+			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), at_block)?
 			.map(|g: VersionedAuthorityList| g.into())
 			.unwrap()) // todo: Introduce an error instead of unwrap: See: https://github.com/scs/substrate-api-client/issues/123
 	}
 
 	fn grandpa_authorities_proof(&self, at_block: Option<H256>) -> ApiResult<StorageProof> {
-		Ok(self.get_storage_proof_by_keys(
+		Ok(self
+			.get_storage_proof_by_keys(
 				vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
 				at_block,
 			)?

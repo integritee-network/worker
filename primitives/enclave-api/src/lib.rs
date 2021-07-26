@@ -29,19 +29,16 @@ pub type EnclaveResult<T> = Result<T, Error>;
 
 #[derive(Clone, Debug, Default)]
 pub struct Enclave {
-    eid: sgx_enclave_id_t,
-    sgx_enclave: SgxEnclave,
+	eid: sgx_enclave_id_t,
+	sgx_enclave: SgxEnclave,
 }
 
 impl Enclave {
-    pub fn new(sgx_enclave: SgxEnclave) -> Self {
-        Enclave {
-            eid: sgx_enclave.geteid(),
-            sgx_enclave,
-        }
-    }
+	pub fn new(sgx_enclave: SgxEnclave) -> Self {
+		Enclave { eid: sgx_enclave.geteid(), sgx_enclave }
+	}
 
-    pub fn destroy(self) {
-        self.sgx_enclave.destroy()
-    }
+	pub fn destroy(self) {
+		self.sgx_enclave.destroy()
+	}
 }

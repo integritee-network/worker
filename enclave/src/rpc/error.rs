@@ -27,8 +27,7 @@ use alloc::{boxed::Box, string::String};
 
 use core::pin::Pin;
 
-use crate::top_pool::error::Error as PoolError;
-use crate::top_pool::error::IntoPoolError;
+use crate::top_pool::error::{Error as PoolError, IntoPoolError};
 
 use crate::rpc::author::client_error::Error as ClientError;
 
@@ -39,84 +38,79 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// State RPC future Result type.
 pub type FutureResult<T, E> =
-    Pin<Box<dyn rpc::futures::Future<Output = core::result::Result<T, E>> + Send>>;
+	Pin<Box<dyn rpc::futures::Future<Output = core::result::Result<T, E>> + Send>>;
 
 /// State RPC errors.
 #[derive(Debug, Display, From)]
 pub enum Error {
-    /// Client error.
-    #[display(fmt = "Client error: {}", _0)]
-    Client(Box<dyn error::Error + Send>),
-    /// Provided block range couldn't be resolved to a list of blocks.
-    #[display(
-        fmt = "Cannot resolve a block range ['{:?}' ... '{:?}]. {}",
-        from,
-        to,
-        details
-    )]
-    InvalidBlockRange {
-        /// Beginning of the block range.
-        from: String,
-        /// End of the block range.
-        to: String,
-        /// Details of the error message.
-        details: String,
-    },
-    /// Provided count exceeds maximum value.
-    #[display(fmt = "count exceeds maximum value. value: {}, max: {}", value, max)]
-    InvalidCount {
-        /// Provided value
-        value: u32,
-        /// Maximum allowed value
-        max: u32,
-    },
+	/// Client error.
+	#[display(fmt = "Client error: {}", _0)]
+	Client(Box<dyn error::Error + Send>),
+	/// Provided block range couldn't be resolved to a list of blocks.
+	#[display(fmt = "Cannot resolve a block range ['{:?}' ... '{:?}]. {}", from, to, details)]
+	InvalidBlockRange {
+		/// Beginning of the block range.
+		from: String,
+		/// End of the block range.
+		to: String,
+		/// Details of the error message.
+		details: String,
+	},
+	/// Provided count exceeds maximum value.
+	#[display(fmt = "count exceeds maximum value. value: {}, max: {}", value, max)]
+	InvalidCount {
+		/// Provided value
+		value: u32,
+		/// Maximum allowed value
+		max: u32,
+	},
 
-    /// Wrapping of PoolError to RPC Error
-    PoolError(PoolError),
+	/// Wrapping of PoolError to RPC Error
+	PoolError(PoolError),
 
-    /// Wrapping of ClientError to RPC Error
-    ClientError(ClientError),
+	/// Wrapping of ClientError to RPC Error
+	ClientError(ClientError),
 }
 
 impl error::Error for Error {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Error::Client(ref err) => Some(&**err),
-            _ => None,
-        }
-    }
+	fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+		match self {
+			Error::Client(ref err) => Some(&**err),
+			_ => None,
+		}
+	}
 }
 
 impl IntoPoolError for Error {
-    fn into_pool_error(self) -> std::result::Result<PoolError, Self> {
-        match self {
-            Error::PoolError(e) => Ok(e),
-            e => Err(e),
-        }
-    }
+	fn into_pool_error(self) -> std::result::Result<PoolError, Self> {
+		match self {
+			Error::PoolError(e) => Ok(e),
+			e => Err(e),
+		}
+	}
 }
 
 /// Base code for all state errors.
 const BASE_ERROR: i64 = 4000;
 
 impl From<Error> for rpc::Error {
-    fn from(e: Error) -> Self {
-        match e {
-            Error::InvalidBlockRange { .. } => rpc::Error {
-                code: rpc::ErrorCode::ServerError(BASE_ERROR + 1),
-                message: format!("{}", e),
-                data: None,
-            },
-            Error::InvalidCount { .. } => rpc::Error {
-                code: rpc::ErrorCode::ServerError(BASE_ERROR + 2),
-                message: format!("{}", e),
-                data: None,
-            },
-            e => rpc::Error {
-                code: rpc::ErrorCode::ServerError(BASE_ERROR + 4),
-                message: format!("{}", e),
-                data: None,
-            },
-        }
-    }
+	fn from(e: Error) -> Self {
+		match e {
+			Error::InvalidBlockRange { .. } => rpc::Error {
+				code: rpc::ErrorCode::ServerError(BASE_ERROR + 1),
+				message: format!("{}", e),
+				data: None,
+			},
+			Error::InvalidCount { .. } => rpc::Error {
+				code: rpc::ErrorCode::ServerError(BASE_ERROR + 2),
+				message: format!("{}", e),
+				data: None,
+			},
+			e => rpc::Error {
+				code: rpc::ErrorCode::ServerError(BASE_ERROR + 4),
+				message: format!("{}", e),
+				data: None,
+			},
+		}
+	}
 }

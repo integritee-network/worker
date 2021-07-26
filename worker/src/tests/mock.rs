@@ -1,4 +1,4 @@
-use substratee_api_client_extensions::{SubstrateeRegistryApi, ApiResult};
+use substratee_api_client_extensions::{ApiResult, SubstrateeRegistryApi};
 use substratee_node_primitives::{Enclave, ShardIdentifier};
 
 pub struct TestNodeApi;
@@ -8,23 +8,12 @@ pub const W2_URL: &str = "127.0.0.1:3333";
 
 pub fn enclaves() -> Vec<Enclave> {
 	vec![
-		Enclave::new(
-			[0;32].into(),
-			[1;32],
-			1,
-			format!("ws://{}", W1_URL),
-		),
-		Enclave::new(
-			[2;32].into(),
-			[3;32],
-			2,
-			format!("ws://{}", W2_URL),
-		),
+		Enclave::new([0; 32].into(), [1; 32], 1, format!("ws://{}", W1_URL)),
+		Enclave::new([2; 32].into(), [3; 32], 2, format!("ws://{}", W2_URL)),
 	]
 }
 
 impl SubstrateeRegistryApi for TestNodeApi {
-
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>> {
 		Ok(Some(enclaves().remove(index as usize)))
 	}

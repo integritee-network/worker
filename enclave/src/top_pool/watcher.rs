@@ -35,117 +35,114 @@ use substratee_worker_primitives::{BlockHash as SidechainBlockHash, TrustedOpera
 /// Represents a stream of status updates for particular extrinsic.
 #[derive(Debug)]
 pub struct Watcher<H> {
-    //receiver: TracingUnboundedReceiver<TrustedOperationStatus<H, BH>>,
-    hash: H,
-    is_in_block: bool,
+	//receiver: TracingUnboundedReceiver<TrustedOperationStatus<H, BH>>,
+	hash: H,
+	is_in_block: bool,
 }
 
 impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
-    /// Returns the operation hash.
-    pub fn hash(&self) -> &H {
-        &self.hash
-    }
+	/// Returns the operation hash.
+	pub fn hash(&self) -> &H {
+		&self.hash
+	}
 
-    pub fn new_watcher(hash: H) -> Watcher<H> {
-        //let (sender, receiver) = tracing_unbounded("mpsc_txpool_watcher");
-        //self.receivers.push(sender);
-        Watcher {
-            hash,
-            is_in_block: false,
-        }
-    }
+	pub fn new_watcher(hash: H) -> Watcher<H> {
+		//let (sender, receiver) = tracing_unbounded("mpsc_txpool_watcher");
+		//self.receivers.push(sender);
+		Watcher { hash, is_in_block: false }
+	}
 
-    /// TrustedOperation became ready.
-    pub fn ready(&mut self) {
-        self.send(TrustedOperationStatus::Ready)
-    }
+	/// TrustedOperation became ready.
+	pub fn ready(&mut self) {
+		self.send(TrustedOperationStatus::Ready)
+	}
 
-    /// TrustedOperation was moved to future.
-    pub fn future(&mut self) {
-        self.send(TrustedOperationStatus::Future)
-    }
+	/// TrustedOperation was moved to future.
+	pub fn future(&mut self) {
+		self.send(TrustedOperationStatus::Future)
+	}
 
-    /// Some state change (perhaps another extrinsic was included) rendered this extrinsic invalid.
-    pub fn usurped(&mut self) {
-        //self.send(TrustedOperationStatus::Usurped(hash));
-        self.send(TrustedOperationStatus::Usurped);
-        self.is_in_block = true;
-    }
+	/// Some state change (perhaps another extrinsic was included) rendered this extrinsic invalid.
+	pub fn usurped(&mut self) {
+		//self.send(TrustedOperationStatus::Usurped(hash));
+		self.send(TrustedOperationStatus::Usurped);
+		self.is_in_block = true;
+	}
 
-    /// Extrinsic has been included in block with given hash.
-    pub fn in_block(&mut self, block_hash: SidechainBlockHash) {
-        self.send(TrustedOperationStatus::InSidechainBlock(block_hash));
-        self.is_in_block = true;
-    }
+	/// Extrinsic has been included in block with given hash.
+	pub fn in_block(&mut self, block_hash: SidechainBlockHash) {
+		self.send(TrustedOperationStatus::InSidechainBlock(block_hash));
+		self.is_in_block = true;
+	}
 
-    /// Extrinsic has been finalized by a finality gadget.
-    pub fn finalized(&mut self) {
-        //self.send(TrustedOperationStatus::Finalized(hash));
-        self.send(TrustedOperationStatus::Finalized);
-        self.is_in_block = true;
-    }
+	/// Extrinsic has been finalized by a finality gadget.
+	pub fn finalized(&mut self) {
+		//self.send(TrustedOperationStatus::Finalized(hash));
+		self.send(TrustedOperationStatus::Finalized);
+		self.is_in_block = true;
+	}
 
-    /// The block this extrinsic was included in has been retracted
-    pub fn finality_timeout(&mut self) {
-        //self.send(TrustedOperationStatus::FinalityTimeout(hash));
-        self.send(TrustedOperationStatus::FinalityTimeout);
-        self.is_in_block = true;
-    }
+	/// The block this extrinsic was included in has been retracted
+	pub fn finality_timeout(&mut self) {
+		//self.send(TrustedOperationStatus::FinalityTimeout(hash));
+		self.send(TrustedOperationStatus::FinalityTimeout);
+		self.is_in_block = true;
+	}
 
-    /// The block this extrinsic was included in has been retracted
-    pub fn retracted(&mut self) {
-        //self.send(TrustedOperationStatus::Retracted(hash));
-        self.send(TrustedOperationStatus::Retracted);
-    }
+	/// The block this extrinsic was included in has been retracted
+	pub fn retracted(&mut self) {
+		//self.send(TrustedOperationStatus::Retracted(hash));
+		self.send(TrustedOperationStatus::Retracted);
+	}
 
-    /// Extrinsic has been marked as invalid by the block builder.
-    pub fn invalid(&mut self) {
-        self.send(TrustedOperationStatus::Invalid);
-        // we mark as finalized as there are no more notifications
-        self.is_in_block = true;
-    }
+	/// Extrinsic has been marked as invalid by the block builder.
+	pub fn invalid(&mut self) {
+		self.send(TrustedOperationStatus::Invalid);
+		// we mark as finalized as there are no more notifications
+		self.is_in_block = true;
+	}
 
-    /// TrustedOperation has been dropped from the pool because of the limit.
-    pub fn dropped(&mut self) {
-        self.send(TrustedOperationStatus::Dropped);
-        self.is_in_block = true;
-    }
+	/// TrustedOperation has been dropped from the pool because of the limit.
+	pub fn dropped(&mut self) {
+		self.send(TrustedOperationStatus::Dropped);
+		self.is_in_block = true;
+	}
 
-    /// The extrinsic has been broadcast to the given peers.
-    pub fn broadcast(&mut self, _peers: Vec<String>) {
-        //self.send(TrustedOperationStatus::Broadcast(peers))
-        self.send(TrustedOperationStatus::Broadcast)
-    }
+	/// The extrinsic has been broadcast to the given peers.
+	pub fn broadcast(&mut self, _peers: Vec<String>) {
+		//self.send(TrustedOperationStatus::Broadcast(peers))
+		self.send(TrustedOperationStatus::Broadcast)
+	}
 
-    /// Returns true if the are no more listeners for this extrinsic or it was finalized.
-    pub fn is_done(&self) -> bool {
-        self.is_in_block // || self.receivers.is_empty()
-    }
+	/// Returns true if the are no more listeners for this extrinsic or it was finalized.
+	pub fn is_done(&self) -> bool {
+		self.is_in_block // || self.receivers.is_empty()
+	}
 
-    fn send(&mut self, status: TrustedOperationStatus) {
-        worker_api_direct::update_status_event(self.hash(), status).unwrap();
-    }
+	fn send(&mut self, status: TrustedOperationStatus) {
+		worker_api_direct::update_status_event(self.hash(), status).unwrap();
+	}
 }
 
 /*  /// Sender part of the watcher. Exposed only for testing purposes.
 #[derive(Debug)]
 pub struct Sender<H, BH> {
-    //receivers: Vec<TracingUnboundedSender<TrustedOperationStatus<H, BH>>>,
-    //receivers: Vec<H>,
-    is_in_block: bool,
+	//receivers: Vec<TracingUnboundedSender<TrustedOperationStatus<H, BH>>>,
+	//receivers: Vec<H>,
+	is_in_block: bool,
 }
  */
 /* impl<H> Default for Watcher<H> {
-    fn default() -> Self {
-        Watcher {
-            //receivers: Default::default(),
-            hash: ,
-            is_in_block: false,
-        }
-    }
+	fn default() -> Self {
+		Watcher {
+			//receivers: Default::default(),
+			hash: ,
+			is_in_block: false,
+		}
+	}
 }  */
 
 /* impl<H: Clone, BH: Clone> Sender<H, BH> {
-    /// Add a new watcher to this sender object.
+	/// Add a new watcher to this sender object.
 
 } */
