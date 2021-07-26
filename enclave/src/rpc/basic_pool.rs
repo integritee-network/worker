@@ -1,29 +1,28 @@
+pub extern crate alloc;
+
+use crate::{
+	ocall::ocall_api::EnclaveRpcOCallApi,
+	top_pool::{
+		base_pool::TrustedOperation,
+		error::IntoPoolError,
+		pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
+		primitives::{
+			ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
+			TrustedOperationSource, TxHash,
+		},
+	},
+};
+use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+use core::pin::Pin;
+use jsonrpc_core::futures::{
+	channel::oneshot,
+	future::{ready, Future, FutureExt},
+};
 use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, NumberFor, Zero},
 };
 use std::{collections::HashMap, sync::SgxMutex as Mutex};
-
-pub extern crate alloc;
-use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
-
-use core::pin::Pin;
-
-use jsonrpc_core::futures::{
-	channel::oneshot,
-	future::{ready, Future, FutureExt},
-};
-
-use crate::top_pool::{
-	base_pool::TrustedOperation,
-	error::IntoPoolError,
-	pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
-	primitives::{
-		ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
-		TrustedOperationSource, TxHash,
-	},
-};
-
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 type BoxedReadyIterator<Hash, Data> =
@@ -72,20 +71,22 @@ impl<T, Block: BlockT> ReadyPoll<T, Block> {
 }
 
 /// Basic implementation of operation pool that can be customized by providing PoolApi.
-pub struct BasicPool<PoolApi, Block>
+pub struct BasicPool<PoolApi, Block, RpcOCall>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block>,
+	RpcOCall: EnclaveRpcOCallApi,
 {
-	pool: Arc<Pool<PoolApi>>,
+	pool: Arc<Pool<PoolApi, RpcOCall>>,
 	_api: Arc<PoolApi>,
 	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
 }
 
-impl<PoolApi, Block> BasicPool<PoolApi, Block>
+impl<PoolApi, Block, RpcOCall> BasicPool<PoolApi, Block, RpcOCall>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
+	RpcOCall: EnclaveRpcOCallApi,
 {
 	/// Create new basic operation pool with provided api and custom
 	/// revalidation type.
@@ -104,18 +105,19 @@ where
 	}
 
 	/// Gets shared reference to the underlying pool.
-	pub fn pool(&self) -> &Arc<Pool<PoolApi>> {
+	pub fn pool(&self) -> &Arc<Pool<PoolApi, RpcOCall>> {
 		&self.pool
 	}
 }
 
 // FIXME: obey clippy
 #[allow(clippy::type_complexity)]
-impl<PoolApi, Block> TrustedOperationPool for BasicPool<PoolApi, Block>
+impl<PoolApi, Block, RpcOCall> TrustedOperationPool for BasicPool<PoolApi, Block, RpcOCall>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
 	<PoolApi as ChainApi>::Error: IntoPoolError,
+	RpcOCall: EnclaveRpcOCallApi + Send + Sync + 'static,
 {
 	type Block = PoolApi::Block;
 	type Hash = ExtrinsicHash<PoolApi>;

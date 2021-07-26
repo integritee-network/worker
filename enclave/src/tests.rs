@@ -14,52 +14,45 @@
 	limitations under the License.
 */
 
-use crate::{aes, attestation, ed25519, rpc, rsa3072, state, top_pool};
-
-use crate::{Timeout, WorkerRequest, WorkerResponse};
-use log::*;
-
-use sgx_tunittest::*;
-use sgx_types::{sgx_status_t, size_t};
-
-use substrate_api_client::utils::storage_key;
-
-use codec::{Decode, Encode};
-use sp_core::{crypto::Pair, hashing::blake2_256, H256};
-
-use std::{string::String, vec::Vec};
-
-use crate::ipfs::IpfsContent;
-use core::ops::Deref;
-use std::{
-	fs::File,
-	io::Read,
-	sync::Arc,
-	time::{SystemTime, UNIX_EPOCH},
-	untrusted::time::SystemTimeEx,
+use crate::{
+	aes, ed25519,
+	ocall::{
+		ocall_api::EnclaveAttestationOCallApi,
+		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
+	},
+	rpc, rsa3072, state,
+	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
+	top_pool, Timeout,
 };
-
 use chain_relay::{Block, Header};
-use sp_runtime::traits::Header as HeaderT;
-
-use sgx_externalities::SgxExternalitiesTypeTrait;
-use substratee_stf::{
-	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
-	TrustedCall, TrustedGetter, TrustedOperation,
-};
-
-use substratee_settings::{
-	enclave::GETTER_TIMEOUT,
-	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},
-};
-
+use codec::{Decode, Encode};
+use core::ops::Deref;
 use jsonrpc_core::futures::executor;
-use sp_core::ed25519 as spEd25519;
-
+use log::*;
 use rpc::{
 	api::SideChainApi,
 	author::{Author, AuthorApi},
 	basic_pool::BasicPool,
+};
+use sgx_externalities::SgxExternalitiesTypeTrait;
+use sgx_tunittest::*;
+use sgx_types::size_t;
+use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
+use sp_runtime::traits::Header as HeaderT;
+use std::{
+	string::String,
+	sync::Arc,
+	time::{SystemTime, UNIX_EPOCH},
+	untrusted::time::SystemTimeEx,
+	vec::Vec,
+};
+use substratee_settings::{
+	enclave::GETTER_TIMEOUT,
+	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},
+};
+use substratee_stf::{
+	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
+	TrustedCall, TrustedGetter, TrustedOperation,
 };
 
 #[no_mangle]
@@ -120,7 +113,13 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
-		// these unit tests (?) need an ipfs node running..
+		//
+		// mra cert tests
+		test_verify_mra_cert_should_work,
+		test_verify_wrong_cert_is_err,
+		test_given_wrong_platform_info_when_verifying_attestation_report_then_return_error,
+		//
+		// these unit test (?) need an ipfs node running..
 		//ipfs::test_creates_ipfs_content_struct_works,
 		//ipfs::test_verification_ok_for_correct_content,
 		//ipfs::test_verification_fails_for_incorrect_content,
@@ -139,62 +138,6 @@ pub fn ensure_no_empty_shard_directory_exists() {
 			state::init_shard(&shard).unwrap();
 		}
 	}
-}
-
-#[allow(unused)]
-fn test_ocall_read_write_ipfs() {
-	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
-	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-	let mut cid_buf: Vec<u8> = vec![0; 46];
-	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
-
-	let _res = unsafe {
-		crate::ocall_write_ipfs(
-			&mut rt as *mut sgx_status_t,
-			enc_state.as_ptr(),
-			enc_state.len() as u32,
-			cid_buf.as_mut_ptr(),
-			cid_buf.len() as u32,
-		)
-	};
-
-	let res = unsafe {
-		crate::ocall_read_ipfs(&mut rt as *mut sgx_status_t, cid_buf.as_ptr(), cid_buf.len() as u32)
-	};
-
-	assert_eq!(res, sgx_status_t::SGX_SUCCESS);
-
-	let cid = std::str::from_utf8(&cid_buf).unwrap();
-	let mut f = File::open(&cid).unwrap();
-	let mut content_buf = Vec::new();
-	f.read_to_end(&mut content_buf).unwrap();
-	info!("reading file {:?} of size {} bytes", f, &content_buf.len());
-
-	let mut ipfs_content = IpfsContent::new(cid, content_buf);
-	let verification = ipfs_content.verify();
-	assert!(verification.is_ok());
-}
-
-#[allow(unused)]
-fn test_ocall_worker_request() {
-	info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
-	let requests =
-		vec![WorkerRequest::ChainStorage(storage_key("Balances", "TotalIssuance").0, None)];
-
-	let mut resp: Vec<WorkerResponse<Vec<u8>>> = match crate::worker_request(requests) {
-		Ok(response) => response,
-		Err(e) => panic!("Worker response decode failed. Error: {:?}", e),
-	};
-
-	let first = resp.pop().unwrap();
-	info!("Worker response: {:?}", first);
-
-	let (total_issuance, proof) = match first {
-		WorkerResponse::ChainStorage(_storage_key, value, proof) => (value, proof),
-	};
-
-	info!("Total Issuance is: {:?}", total_issuance);
-	info!("Proof: {:?}", proof)
 }
 
 #[allow(unused)]
@@ -267,7 +210,8 @@ fn test_submit_trusted_call_to_top_pool() {
 
 	// create top pool
 	let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
-	let tx_pool = BasicPool::create(Default::default(), api);
+	let tx_pool: BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCallMock> =
+		BasicPool::create(Default::default(), api);
 	let author = Author::new(Arc::new(&tx_pool));
 
 	// create trusted call signed
@@ -318,7 +262,8 @@ fn test_submit_trusted_getter_to_top_pool() {
 
 	// create top pool
 	let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
-	let tx_pool = BasicPool::create(Default::default(), api);
+	let tx_pool: BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCallMock> =
+		BasicPool::create(Default::default(), api);
 	let author = Author::new(Arc::new(&tx_pool));
 
 	// create trusted getter signed
@@ -362,7 +307,8 @@ fn test_differentiate_getter_and_call_works() {
 
 	// create top pool
 	let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
-	let tx_pool = BasicPool::create(Default::default(), api);
+	let tx_pool: BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCallMock> =
+		BasicPool::create(Default::default(), api);
 	let author = Author::new(Arc::new(&tx_pool));
 	// create trusted getter signed
 	let shard = ShardIdentifier::default();
@@ -454,7 +400,8 @@ fn test_create_block_and_confirmation_works() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
+		let ocall_api = OCallComponentFactory::attestation_api();
+		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
 		let signer_pair = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let call = TrustedCall::balance_transfer(
 			signer_pair.public().into(),
@@ -475,9 +422,16 @@ fn test_create_block_and_confirmation_works() {
 		top_hash = executor::block_on(result).unwrap();
 	}
 
+	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
+	let on_chain_ocall = OCallComponentFactory::on_chain_api();
+
 	// when
-	let (confirm_calls, signed_blocks) =
-		crate::execute_top_pool_calls(latest_onchain_header).unwrap();
+	let (confirm_calls, signed_blocks) = crate::execute_top_pool_calls(
+		rpc_ocall.as_ref(),
+		on_chain_ocall.as_ref(),
+		latest_onchain_header,
+	)
+	.unwrap();
 
 	debug!("got {} signed block(s)", signed_blocks.len());
 
@@ -540,7 +494,8 @@ fn test_create_state_diff() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
+		let ocall_api = OCallComponentFactory::attestation_api();
+		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_transfer(
 			account_with_money.into(),
 			account_without_money.into(),
@@ -560,8 +515,16 @@ fn test_create_state_diff() {
 		executor::block_on(result).unwrap();
 	}
 
+	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
+	let on_chain_ocall = OCallComponentFactory::on_chain_api();
+
 	// when
-	let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::execute_top_pool_calls(
+		rpc_ocall.as_ref(),
+		on_chain_ocall.as_ref(),
+		latest_onchain_header,
+	)
+	.unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
 	aes::de_or_encrypt(&mut encrypted_payload).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
@@ -627,7 +590,8 @@ fn test_executing_call_updates_account_nonce() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
+		let ocall_api = OCallComponentFactory::attestation_api();
+		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_transfer(
 			account_with_money.into(),
 			account_without_money.into(),
@@ -647,8 +611,16 @@ fn test_executing_call_updates_account_nonce() {
 		executor::block_on(result).unwrap();
 	}
 
+	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
+	let on_chain_ocall = OCallComponentFactory::on_chain_api();
+
 	// when
-	let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::execute_top_pool_calls(
+		rpc_ocall.as_ref(),
+		on_chain_ocall.as_ref(),
+		latest_onchain_header,
+	)
+	.unwrap();
 
 	// then
 	let mut state = state::load(&shard).unwrap();
@@ -697,7 +669,8 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 		// create trusted call signed
 		let nonce = 10;
-		let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
+		let ocall_api = OCallComponentFactory::attestation_api();
+		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_transfer(
 			account_with_money.into(),
 			account_without_money.into(),
@@ -717,8 +690,16 @@ fn test_invalid_nonce_call_is_not_executed() {
 		executor::block_on(result).unwrap();
 	}
 
+	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
+	let on_chain_ocall = OCallComponentFactory::on_chain_api();
+
 	// when
-	let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::execute_top_pool_calls(
+		rpc_ocall.as_ref(),
+		on_chain_ocall.as_ref(),
+		latest_onchain_header,
+	)
+	.unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();
@@ -763,7 +744,8 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let mrenclave = attestation::get_mrenclave_of_self().unwrap().m;
+		let ocall_api = OCallComponentFactory::attestation_api();
+		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_shield(account.into(), account.into(), 1000);
 		let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
@@ -779,8 +761,16 @@ fn test_non_root_shielding_call_is_not_executed() {
 		executor::block_on(result).unwrap();
 	}
 
+	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
+	let on_chain_ocall = OCallComponentFactory::on_chain_api();
+
 	// when
-	let (_, signed_blocks) = crate::execute_top_pool_calls(latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::execute_top_pool_calls(
+		rpc_ocall.as_ref(),
+		on_chain_ocall.as_ref(),
+		latest_onchain_header,
+	)
+	.unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();

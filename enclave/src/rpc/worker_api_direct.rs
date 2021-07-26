@@ -58,42 +58,27 @@ use substratee_worker_primitives::{
 	block::SignedBlock, DirectRequestStatus, RpcReturnValue, TrustedOperationStatus,
 };
 
-use crate::{rsa3072, utils::write_slice_and_whitespace_pad};
+use crate::{ocall::rpc_ocall::EnclaveRpcOCall, rsa3072, utils::write_slice_and_whitespace_pad};
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
-
-extern "C" {
-	pub fn ocall_update_status_event(
-		ret_val: *mut sgx_status_t,
-		hash_encoded: *const u8,
-		hash_size: u32,
-		status_update_encoded: *const u8,
-		status_size: u32,
-	) -> sgx_status_t;
-	pub fn ocall_send_status(
-		ret_val: *mut sgx_status_t,
-		hash_encoded: *const u8,
-		hash_size: u32,
-		status_update_encoded: *const u8,
-		status_size: u32,
-	) -> sgx_status_t;
-}
 
 #[no_mangle]
 // initialise tx pool and store within static atomic pointer
 pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
 	let api = Arc::new(SideChainApi::new());
 	let tx_pool = BasicPool::create(PoolOptions::default(), api);
-	let pool_ptr = Arc::new(SgxMutex::<BasicPool<SideChainApi<Block>, Block>>::new(tx_pool));
+	let pool_ptr =
+		Arc::new(SgxMutex::<BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>>::new(tx_pool));
 	let ptr = Arc::into_raw(pool_ptr);
 	GLOBAL_TX_POOL.store(ptr as *mut (), Ordering::SeqCst);
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<SideChainApi<Block>, Block>>> {
+pub fn load_top_pool(
+) -> Option<&'static SgxMutex<BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>>> {
 	let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst)
-		as *mut SgxMutex<BasicPool<SideChainApi<Block>, Block>>;
+		as *mut SgxMutex<BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>>;
 	if ptr.is_null() {
 		None
 	} else {
@@ -398,67 +383,6 @@ pub unsafe extern "C" fn call_rpc_methods(
 	let response_slice = from_raw_parts_mut(response, response_len as usize);
 	write_slice_and_whitespace_pad(response_slice, response_string.as_bytes().to_vec());
 	sgx_status_t::SGX_SUCCESS
-}
-
-// todo: remove unit err in refactoring process
-#[allow(clippy::result_unit_err)]
-pub fn update_status_event<H: Encode>(
-	hash: H,
-	status_update: TrustedOperationStatus,
-) -> Result<(), ()> {
-	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-	let hash_encoded = hash.encode();
-	let status_update_encoded = status_update.encode();
-
-	let res = unsafe {
-		ocall_update_status_event(
-			&mut rt as *mut sgx_status_t,
-			hash_encoded.as_ptr(),
-			hash_encoded.len() as u32,
-			status_update_encoded.as_ptr(),
-			status_update_encoded.len() as u32,
-		)
-	};
-
-	if rt != sgx_status_t::SGX_SUCCESS {
-		return Err(())
-	}
-
-	if res != sgx_status_t::SGX_SUCCESS {
-		return Err(())
-	}
-
-	Ok(())
-}
-
-// todo: remove unit err in refactoring process
-#[allow(clippy::result_unit_err)]
-pub fn send_state<H: Encode>(hash: H, value_opt: Option<Vec<u8>>) -> Result<(), ()> {
-	let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-	let hash_encoded = hash.encode();
-	let value_encoded = value_opt.encode();
-
-	let res = unsafe {
-		ocall_send_status(
-			&mut rt as *mut sgx_status_t,
-			hash_encoded.as_ptr(),
-			hash_encoded.len() as u32,
-			value_encoded.as_ptr(),
-			value_encoded.len() as u32,
-		)
-	};
-
-	if rt != sgx_status_t::SGX_SUCCESS {
-		return Err(())
-	}
-
-	if res != sgx_status_t::SGX_SUCCESS {
-		return Err(())
-	}
-
-	Ok(())
 }
 
 pub mod tests {

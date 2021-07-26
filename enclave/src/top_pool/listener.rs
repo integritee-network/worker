@@ -16,36 +16,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{ocall::ocall_api::EnclaveRpcOCallApi, top_pool::watcher::Watcher};
+use codec::Encode;
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
 use sp_runtime::traits;
-use std::{collections::HashMap, fmt::Debug, hash, string::String, vec::Vec};
-
-use crate::top_pool::watcher::Watcher;
-use codec::Encode;
-
+use std::{collections::HashMap, hash, string::String, sync::Arc, vec::Vec};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Extrinsic pool default listener.
-pub struct Listener<H: hash::Hash + Eq> {
-	watchers: HashMap<H, Watcher<H>>,
+#[derive(Default)]
+pub struct Listener<H, R>
+where
+	H: hash::Hash + Eq,
+{
+	watchers: HashMap<H, Watcher<H, R>>,
 	finality_watchers: LinkedHashMap<SidechainBlockHash, Vec<H>>,
+	rpc_ocall_api: Arc<R>,
 }
 
 /// Maximum number of blocks awaiting finality at any time.
 const MAX_FINALITY_WATCHERS: usize = 512;
 
-impl<H: hash::Hash + Eq + Debug> Default for Listener<H> {
-	fn default() -> Self {
-		Listener { watchers: Default::default(), finality_watchers: Default::default() }
-	}
-}
-
-//impl<H: hash::Hash + traits::Member + Serialize, C: ChainApi> Listener<H, C> {
-impl<H: hash::Hash + traits::Member + Encode> Listener<H> {
+impl<H, R> Listener<H, R>
+where
+	H: hash::Hash + traits::Member + Encode,
+	R: EnclaveRpcOCallApi,
+{
 	fn fire<F>(&mut self, hash: &H, fun: F)
 	where
-		F: FnOnce(&mut Watcher<H>),
+		F: FnOnce(&mut Watcher<H, R>),
 	{
 		let clean = if let Some(h) = self.watchers.get_mut(hash) {
 			fun(h);
@@ -63,7 +63,7 @@ impl<H: hash::Hash + traits::Member + Encode> Listener<H> {
 	///
 	/// The watcher can be used to subscribe to life-cycle events of that extrinsic.
 	pub fn create_watcher(&mut self, hash: H) {
-		let new_watcher = Watcher::new_watcher(hash.clone());
+		let new_watcher = Watcher::new_watcher(hash.clone(), self.rpc_ocall_api.clone());
 		self.watchers.insert(hash, new_watcher);
 		//let sender = self.watchers.entry(hash.clone()).or_insert_with(Watcher::default);
 		//sender.new_watcher(hash)

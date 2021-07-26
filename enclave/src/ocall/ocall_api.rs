@@ -15,24 +15,82 @@
 
 */
 
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t,
-	sgx_status_t, sgx_target_info_t,
-};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
+use sgx_types::*;
 use std::vec::Vec;
+use substratee_worker_primitives::{
+	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus,
+};
 
-/// Trait for the enclave to make ocalls (calls out of the enclave into untrusted code)
-pub trait EnclaveAttestationOCallApi {
-	fn ocall_sgx_init_quote(&self) -> (sgx_status_t, sgx_target_info_t, sgx_epid_group_id_t);
+/// Trait for the enclave to make o-calls related to remote attestation
+pub trait EnclaveAttestationOCallApi: Clone + Debug + Send + Sync {
+	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
-	fn ocall_get_ias_socket(&self) -> (sgx_status_t, i32);
+	fn get_ias_socket(&self) -> SgxResult<i32>;
 
-	fn ocall_get_quote(
+	fn get_quote(
 		&self,
 		sig_rl: Vec<u8>,
 		report: sgx_report_t,
 		sign_type: sgx_quote_sign_type_t,
 		spid: sgx_spid_t,
 		quote_nonce: sgx_quote_nonce_t,
-	) -> (sgx_status_t, sgx_report_t, Vec<u8>);
+	) -> SgxResult<(sgx_report_t, Vec<u8>)>;
+
+	fn get_update_info(
+		&self,
+		platform_info: sgx_platform_info_t,
+		enclave_trusted: i32,
+	) -> SgxResult<sgx_update_info_bit_t>;
+
+	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t>;
+}
+
+/// trait for o-calls related to RPC
+pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
+	fn update_status_event<H: Encode>(
+		&self,
+		hash: H,
+		status_update: TrustedOperationStatus,
+	) -> SgxResult<()>;
+
+	fn send_state<H: Encode>(&self, hash: H, value_opt: Option<Vec<u8>>) -> SgxResult<()>;
+}
+
+pub type Hash = sp_core::H256;
+
+// TODO: this is redundantly defined in worker/src/main.rs
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerRequest {
+	ChainStorage(Vec<u8>, Option<Hash>), // (storage_key, at_block)
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerResponse<V: Encode + Decode> {
+	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+}
+
+/// trait for o-calls related to on-chain interactions
+pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
+	fn send_block_and_confirmation(
+		&self,
+		confirmations: Vec<Vec<u8>>,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()>;
+
+	fn worker_request<V: Encode + Decode>(
+		&self,
+		req: Vec<WorkerRequest>,
+	) -> SgxResult<Vec<WorkerResponse<V>>>;
+}
+
+/// Newtype for IPFS CID
+pub struct IpfsCid(pub [u8; 46]);
+
+/// trait for o-call related to IPFS
+pub trait EnclaveIpfsOCallApi: Clone + Debug + Send + Sync {
+	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<IpfsCid>;
+
+	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()>;
 }

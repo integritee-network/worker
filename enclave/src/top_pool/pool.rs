@@ -16,22 +16,54 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
+use core::matches;
+
+use codec::{Decode, Encode};
+use jsonrpc_core::{
+	futures,
+	futures::{channel::mpsc::Receiver, executor::block_on, future, Future},
+};
+use sp_application_crypto::ed25519;
+use sp_core::hash::H256;
 use sp_runtime::{
 	generic::BlockId,
-	traits::{self, Block as BlockT, SaturatedConversion},
-	transaction_validity::{TransactionTag as Tag, TransactionValidity, TransactionValidityError},
+	traits::{self, Block as BlockT, Extrinsic as ExtrinsicT, Hash, SaturatedConversion, Verify},
+	transaction_validity::{
+		InvalidTransaction as InvalidTrustedOperation, TransactionTag as Tag, TransactionValidity,
+		TransactionValidityError, ValidTransaction,
+	},
 };
-use std::{collections::HashMap, sync::Arc, time::Instant, untrusted::time::InstantEx, vec::Vec};
-
-use crate::top_pool::{
-	base_pool as base, error,
-	primitives::TrustedOperationSource,
-	validated_pool::{ValidatedOperation, ValidatedPool},
+/// test
+///
+/// Extrinsic for test-runtime.
+use std::collections::HashSet;
+use std::{
+	collections::HashMap,
+	sync::{Arc, SgxMutex as Mutex},
+	time::Instant,
+	untrusted::time::InstantEx,
+	vec::Vec,
 };
 
-use substratee_stf::{Index, ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use substratee_stf::{
+	Index, ShardIdentifier, TrustedCall, TrustedCallSigned,
+	TrustedOperation as StfTrustedOperation, TrustedOperation,
+};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
+
+use crate::{
+	ocall::ocall_api::EnclaveRpcOCallApi,
+	test::mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock,
+	top_pool::{
+		base_pool as base,
+		base_pool::Limit,
+		error,
+		primitives::TrustedOperationSource,
+		validated_pool::{ValidatedOperation, ValidatedPool},
+	},
+};
+
+use super::primitives::from_low_u64_to_be_h256;
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -121,14 +153,15 @@ enum CheckBannedBeforeVerify {
 }
 
 /// Extrinsics pool that performs validation.
-pub struct Pool<B: ChainApi> {
-	validated_pool: Arc<ValidatedPool<B>>,
+pub struct Pool<B: ChainApi, R: EnclaveRpcOCallApi> {
+	validated_pool: Arc<ValidatedPool<B, R>>,
 }
 
-impl<B: ChainApi> Pool<B>
+impl<B: ChainApi, R> Pool<B, R>
 where
 	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
 	<B as ChainApi>::Error: error::IntoPoolError,
+	R: EnclaveRpcOCallApi,
 {
 	/// Create a new operation pool.
 	pub fn new(options: Options, api: Arc<B>) -> Self {
@@ -450,37 +483,20 @@ where
 	}
 
 	/// get a reference to the underlying validated pool.
-	pub fn validated_pool(&self) -> &ValidatedPool<B> {
+	pub fn validated_pool(&self) -> &ValidatedPool<B, R> {
 		&self.validated_pool
 	}
 }
 
-impl<B: ChainApi> Clone for Pool<B> {
+impl<B: ChainApi, R: EnclaveRpcOCallApi> Clone for Pool<B, R> {
 	fn clone(&self) -> Self {
 		Self { validated_pool: self.validated_pool.clone() }
 	}
 }
 
-use jsonrpc_core::{futures, futures::executor::block_on};
-use sp_runtime::{
-	traits::{Extrinsic as ExtrinsicT, Hash, Verify},
-	transaction_validity::{InvalidTransaction as InvalidTrustedOperation, ValidTransaction},
-};
-/// tests
-///
-/// Extrinsic for test-runtime.
-use std::collections::HashSet;
-
-use super::primitives::from_low_u64_to_be_h256;
-use crate::top_pool::base_pool::Limit;
-use codec::{Decode, Encode};
-use core::matches;
-use sp_application_crypto::ed25519;
-use sp_core::hash::H256;
-use std::sync::SgxMutex as Mutex;
-use substratee_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
-
 pub mod test {
+	use sp_runtime::traits::BlakeTwo256;
+
 	use super::*;
 
 	#[derive(Clone, PartialEq, Eq, Encode, Decode, core::fmt::Debug)]
@@ -511,7 +527,6 @@ pub mod test {
 		}
 	}
 
-	use sp_runtime::traits::BlakeTwo256;
 	/// The signature type used by accounts/transactions.
 	pub type AccountSignature = ed25519::Signature;
 	/// An identifier for an account on this system.
@@ -637,7 +652,7 @@ fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
 	TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
 }
 
-fn test_pool() -> Pool<TestApi> {
+fn test_pool() -> Pool<TestApi, EnclaveRpcOCallMock> {
 	Pool::new(Default::default(), TestApi::default().into())
 }
 
@@ -843,7 +858,7 @@ pub fn test_should_limit_futures() {
 	// given
 	let shard = ShardIdentifier::default();
 	let limit = Limit { count: 100, total_bytes: 300 };
-	let pool = Pool::new(
+	let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
 		Options { ready: limit.clone(), future: limit, ..Default::default() },
 		TestApi::default().into(),
 	);
@@ -890,7 +905,7 @@ pub fn test_should_error_if_reject_immediately() {
 	// given
 	let shard = ShardIdentifier::default();
 	let limit = Limit { count: 100, total_bytes: 10 };
-	let pool = Pool::new(
+	let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
 		Options { ready: limit.clone(), future: limit, ..Default::default() },
 		TestApi::default().into(),
 	);
