@@ -30,62 +30,62 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
-    #[display(fmt = "Unknown trusted operation validity")]
-    UnknownTrustedOperation,
+	#[display(fmt = "Unknown trusted operation validity")]
+	UnknownTrustedOperation,
 
-    #[display(fmt = "Invalid trusted operation validity")]
-    InvalidTrustedOperation,
+	#[display(fmt = "Invalid trusted operation validity")]
+	InvalidTrustedOperation,
 
-    /// Incorrect extrinsic format.
+	/// Incorrect extrinsic format.
 
-    /// The operation validity returned no "provides" tag.
-    ///
-    /// Such operations are not accepted to the pool, since we use those tags
-    /// to define identity of operations (occupance of the same "slot").
-    #[display(fmt = "Trusted Operation does not provide any tags, so the pool can't identify it")]
-    NoTagsProvided,
+	/// The operation validity returned no "provides" tag.
+	///
+	/// Such operations are not accepted to the pool, since we use those tags
+	/// to define identity of operations (occupance of the same "slot").
+	#[display(fmt = "Trusted Operation does not provide any tags, so the pool can't identify it")]
+	NoTagsProvided,
 
-   #[display(fmt = "Trusted Operation temporarily Banned")]
-    TemporarilyBanned,
+	#[display(fmt = "Trusted Operation temporarily Banned")]
+	TemporarilyBanned,
 
-   #[display(fmt = "Already imported")]
-    AlreadyImported,
+	#[display(fmt = "Already imported")]
+	AlreadyImported,
 
-   #[display(fmt = "Too low priority")]
-    TooLowPriority(Priority),
+	#[display(fmt = "Too low priority")]
+	TooLowPriority(Priority),
 
-   #[display(fmt = "TrustedOperation with cyclic dependency")]
-    CycleDetected,
+	#[display(fmt = "TrustedOperation with cyclic dependency")]
+	CycleDetected,
 
-   #[display(fmt = "TrustedOperation couldn't enter the pool because of the limit")]
-    ImmediatelyDropped,
+	#[display(fmt = "TrustedOperation couldn't enter the pool because of the limit")]
+	ImmediatelyDropped,
 
-    #[from(ignore)]
-    #[display(fmt = "Invalid Block")]
-    InvalidBlockId(String),
+	#[from(ignore)]
+	#[display(fmt = "Invalid Block")]
+	InvalidBlockId(String),
 
-   #[display(fmt = "The pool is not accepting future trusted operations")]
-    RejectedFutureTrustedOperation,
+	#[display(fmt = "The pool is not accepting future trusted operations")]
+	RejectedFutureTrustedOperation,
 
-    #[display(fmt = "Extrinsic verification error")]
-    #[from(ignore)]
-    Verification,
+	#[display(fmt = "Extrinsic verification error")]
+	#[from(ignore)]
+	Verification,
 }
 
 /// TrustedOperation pool error conversion.
 pub trait IntoPoolError: Send + Sized {
-    /// Try to extract original `Error`
-    ///
-    /// This implementation is optional and used only to
-    /// provide more descriptive error messages for end users
-    /// of RPC API.
-    fn into_pool_error(self) -> std::result::Result<Error, Self> {
-        Err(self)
-    }
+	/// Try to extract original `Error`
+	///
+	/// This implementation is optional and used only to
+	/// provide more descriptive error messages for end users
+	/// of RPC API.
+	fn into_pool_error(self) -> std::result::Result<Error, Self> {
+		Err(self)
+	}
 }
 
 impl IntoPoolError for Error {
-    fn into_pool_error(self) -> std::result::Result<Error, Self> {
-        Ok(self)
-    }
+	fn into_pool_error(self) -> std::result::Result<Error, Self> {
+		Ok(self)
+	}
 }

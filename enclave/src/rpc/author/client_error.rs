@@ -32,52 +32,52 @@ pub type Result<T> = core::result::Result<T, Error>;
 /// Author RPC errors.
 #[derive(Debug, Display, From)]
 pub enum Error {
-    /// Client error.
-    #[display(fmt = "Client error: {}", _0)]
-    #[from(ignore)]
-    Client(Box<dyn std::error::Error + Send>),
-    /// TrustedOperation pool error,
-    #[display(fmt = "TrustedOperation pool error: {}", _0)]
-    Pool(top_pool::error::Error),
-    /// Verification error
-    #[display(fmt = "Extrinsic verification error")]
-    #[from(ignore)]
-    Verification,
-    /// Incorrect extrinsic format.
-    #[display(fmt = "Invalid trusted call format")]
-    BadFormat,
-    // Incorrect enciphered trusted call format.
-    #[display(fmt = "Invalid enciphered trusted call format")]
-    BadFormatDecipher,
-    /// Incorrect seed phrase.
-    #[display(fmt = "Invalid seed phrase/SURI")]
-    BadSeedPhrase,
-    /// Key type ID has an unknown format.
-    #[display(fmt = "Invalid key type ID format (should be of length four)")]
-    BadKeyType,
-    /// Key type ID has some unsupported crypto.
-    #[display(fmt = "The crypto of key type ID is unknown")]
-    UnsupportedKeyType,
-    /// Some random issue with the key store. Shouldn't happen.
-    #[display(fmt = "The key store is unavailable")]
-    KeyStoreUnavailable,
-    /// Invalid session keys encoding.
-    #[display(fmt = "Session keys are not encoded correctly")]
-    InvalidSessionKeys,
-    /// Shard does not exist.
-    #[display(fmt = "Shard does not exist")]
-    InvalidShard,
+	/// Client error.
+	#[display(fmt = "Client error: {}", _0)]
+	#[from(ignore)]
+	Client(Box<dyn std::error::Error + Send>),
+	/// TrustedOperation pool error,
+	#[display(fmt = "TrustedOperation pool error: {}", _0)]
+	Pool(top_pool::error::Error),
+	/// Verification error
+	#[display(fmt = "Extrinsic verification error")]
+	#[from(ignore)]
+	Verification,
+	/// Incorrect extrinsic format.
+	#[display(fmt = "Invalid trusted call format")]
+	BadFormat,
+	// Incorrect enciphered trusted call format.
+	#[display(fmt = "Invalid enciphered trusted call format")]
+	BadFormatDecipher,
+	/// Incorrect seed phrase.
+	#[display(fmt = "Invalid seed phrase/SURI")]
+	BadSeedPhrase,
+	/// Key type ID has an unknown format.
+	#[display(fmt = "Invalid key type ID format (should be of length four)")]
+	BadKeyType,
+	/// Key type ID has some unsupported crypto.
+	#[display(fmt = "The crypto of key type ID is unknown")]
+	UnsupportedKeyType,
+	/// Some random issue with the key store. Shouldn't happen.
+	#[display(fmt = "The key store is unavailable")]
+	KeyStoreUnavailable,
+	/// Invalid session keys encoding.
+	#[display(fmt = "Session keys are not encoded correctly")]
+	InvalidSessionKeys,
+	/// Shard does not exist.
+	#[display(fmt = "Shard does not exist")]
+	InvalidShard,
 }
 
 impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Error::Client(ref err) => Some(&**err),
-            //Error::Pool(ref err) => Some(err),
-            //Error::Verification(ref err) => Some(&**err),
-            _ => None,
-        }
-    }
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			Error::Client(ref err) => Some(&**err),
+			//Error::Pool(ref err) => Some(err),
+			//Error::Verification(ref err) => Some(&**err),
+			_ => None,
+		}
+	}
 }
 
 /// Base code for all authorship errors.
@@ -105,10 +105,10 @@ const POOL_IMMEDIATELY_DROPPED: i64 = POOL_INVALID_TX + 6;
 const UNSUPPORTED_KEY_TYPE: i64 = POOL_INVALID_TX + 7;
 
 impl From<Error> for rpc_core::Error {
-    fn from(e: Error) -> Self {
-        use top_pool::error::Error as PoolError;
+	fn from(e: Error) -> Self {
+		use top_pool::error::Error as PoolError;
 
-        match e {
+		match e {
 			Error::BadFormat => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
 				message: "Trusted operation has invalid format".into(),
@@ -178,5 +178,5 @@ impl From<Error> for rpc_core::Error {
 				data: Some(format!("{:?}", e).into()),
 			},
 		}
-    }
+	}
 }

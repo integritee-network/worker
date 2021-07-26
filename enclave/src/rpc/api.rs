@@ -26,15 +26,17 @@ use jsonrpc_core::futures::future::{ready, Future, Ready};
 use std::{marker::PhantomData, pin::Pin};
 
 use sp_runtime::{
-    generic::BlockId,
-    traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
-    transaction_validity::{
-        TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
-    },
+	generic::BlockId,
+	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
+	transaction_validity::{
+		TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
+	},
 };
 
-use crate::top_pool::pool::{ChainApi, ExtrinsicHash, NumberFor};
-use crate::top_pool::primitives::TrustedOperationSource;
+use crate::top_pool::{
+	pool::{ChainApi, ExtrinsicHash, NumberFor},
+	primitives::TrustedOperationSource,
+};
 
 use substratee_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
@@ -46,110 +48,101 @@ pub type Result<T> = core::result::Result<T, ()>;
 
 /// The operation pool logic for full client.
 pub struct SideChainApi<Block> {
-    _marker: PhantomData<Block>,
+	_marker: PhantomData<Block>,
 }
 
 impl<Block> SideChainApi<Block> {
-    /// Create new operation pool logic.
-    pub fn new() -> Self {
-        SideChainApi {
-            _marker: Default::default(),
-        }
-    }
+	/// Create new operation pool logic.
+	pub fn new() -> Self {
+		SideChainApi { _marker: Default::default() }
+	}
 }
 
 impl<Block> Default for SideChainApi<Block> {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl<Block> ChainApi for SideChainApi<Block>
 where
-    Block: BlockT,
+	Block: BlockT,
 {
-    type Block = Block;
-    type Error = error::Error;
-    type ValidationFuture =
-        Pin<Box<dyn Future<Output = error::Result<TransactionValidity>> + Send>>;
-    type BodyFuture = Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
+	type Block = Block;
+	type Error = error::Error;
+	type ValidationFuture =
+		Pin<Box<dyn Future<Output = error::Result<TransactionValidity>> + Send>>;
+	type BodyFuture = Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
 
-    fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
-        ready(Ok(None))
-    }
+	fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
+		ready(Ok(None))
+	}
 
-    fn validate_transaction(
-        &self,
-        _source: TrustedOperationSource,
-        uxt: StfTrustedOperation,
-        _shard: ShardIdentifier,
-    ) -> Self::ValidationFuture {
-        let operation = match uxt {
-            StfTrustedOperation::direct_call(signed_call) => {
-                let from = signed_call.call.account();
-                let requires = vec![];
-                let provides = vec![from.encode()];
+	fn validate_transaction(
+		&self,
+		_source: TrustedOperationSource,
+		uxt: StfTrustedOperation,
+		_shard: ShardIdentifier,
+	) -> Self::ValidationFuture {
+		let operation = match uxt {
+			StfTrustedOperation::direct_call(signed_call) => {
+				let from = signed_call.call.account();
+				let requires = vec![];
+				let provides = vec![from.encode()];
 
-                ValidTransaction {
-                    priority: 1 << 20,
-                    requires,
-                    provides,
-                    longevity: 64,
-                    propagate: true,
-                }
-            }
-            StfTrustedOperation::get(getter) => match getter {
-                Getter::public(_) => {
-                    return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
-                        UnknownTransaction::CannotLookup,
-                    )))))
-                }
-                Getter::trusted(trusted_getter) => ValidTransaction {
-                    priority: 1 << 20,
-                    requires: vec![],
-                    provides: vec![trusted_getter.signature.encode()],
-                    longevity: 64,
-                    propagate: true,
-                },
-            },
-            _ => {
-                return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
-                    UnknownTransaction::CannotLookup,
-                )))))
-            }
-        };
-        Box::pin(ready(Ok(Ok(operation))))
-    }
+				ValidTransaction {
+					priority: 1 << 20,
+					requires,
+					provides,
+					longevity: 64,
+					propagate: true,
+				}
+			},
+			StfTrustedOperation::get(getter) => match getter {
+				Getter::public(_) =>
+					return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
+						UnknownTransaction::CannotLookup,
+					))))),
+				Getter::trusted(trusted_getter) => ValidTransaction {
+					priority: 1 << 20,
+					requires: vec![],
+					provides: vec![trusted_getter.signature.encode()],
+					longevity: 64,
+					propagate: true,
+				},
+			},
+			_ =>
+				return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
+					UnknownTransaction::CannotLookup,
+				))))),
+		};
+		Box::pin(ready(Ok(Ok(operation))))
+	}
 
-    fn block_id_to_number(
-        &self,
-        at: &BlockId<Self::Block>,
-    ) -> error::Result<Option<NumberFor<Self>>> {
-        Ok(match at {
-            BlockId::Number(num) => Some(*num),
-            BlockId::Hash(_) => None,
-        })
-    }
+	fn block_id_to_number(
+		&self,
+		at: &BlockId<Self::Block>,
+	) -> error::Result<Option<NumberFor<Self>>> {
+		Ok(match at {
+			BlockId::Number(num) => Some(*num),
+			BlockId::Hash(_) => None,
+		})
+	}
 
-    fn block_id_to_hash(
-        &self,
-        at: &BlockId<Self::Block>,
-    ) -> error::Result<Option<SidechainBlockHash>> {
-        Ok(match at {
-            //BlockId::Hash(x) => Some(x.clone()),
-            BlockId::Hash(_x) => None,
-            // dummy
-            BlockId::Number(_num) => None,
-        })
-    }
+	fn block_id_to_hash(
+		&self,
+		at: &BlockId<Self::Block>,
+	) -> error::Result<Option<SidechainBlockHash>> {
+		Ok(match at {
+			//BlockId::Hash(x) => Some(x.clone()),
+			BlockId::Hash(_x) => None,
+			// dummy
+			BlockId::Number(_num) => None,
+		})
+	}
 
-    fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
-        debug!("[Pool] creating hash of {:?}", ex);
-        ex.using_encoded(|x| {
-            (
-                <<Block::Header as HeaderT>::Hashing as HashT>::hash(x),
-                x.len(),
-            )
-        })
-    }
+	fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
+		debug!("[Pool] creating hash of {:?}", ex);
+		ex.using_encoded(|x| (<<Block::Header as HeaderT>::Hashing as HashT>::hash(x), x.len()))
+	}
 }

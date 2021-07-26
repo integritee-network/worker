@@ -27,10 +27,10 @@ use substratee_stf::TrustedOperation;
 /// Allows to refer to trusted calls either by its raw representation or its hash.
 #[derive(Debug, Encode, Decode)]
 pub enum TrustedOperationOrHash<Hash> {
-    /// The hash of the call.
-    Hash(Hash),
-    /// Raw extrinsic bytes.
-    OperationEncoded(Vec<u8>),
-    /// Raw extrinsic
-    Operation(TrustedOperation),
+	/// The hash of the call.
+	Hash(Hash),
+	/// Raw extrinsic bytes.
+	OperationEncoded(Vec<u8>),
+	/// Raw extrinsic
+	Operation(TrustedOperation),
 }
