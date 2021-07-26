@@ -16,8 +16,8 @@
 */
 
 use sgx_types::{
-	sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t,
-	sgx_status_t, sgx_target_info_t,
+	sgx_epid_group_id_t, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t,
+	sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t,
 };
 
 extern "C" {
@@ -41,5 +41,58 @@ extern "C" {
 		p_quote: *mut u8,
 		maxlen: u32,
 		p_quote_len: *mut u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_update_status_event(
+		ret_val: *mut sgx_status_t,
+		hash_encoded: *const u8,
+		hash_size: u32,
+		status_update_encoded: *const u8,
+		status_size: u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_send_status(
+		ret_val: *mut sgx_status_t,
+		hash_encoded: *const u8,
+		hash_size: u32,
+		status_update_encoded: *const u8,
+		status_size: u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_get_update_info(
+		ret_val: *mut sgx_status_t,
+		platform_blob: *const sgx_platform_info_t,
+		enclave_trusted: i32,
+		update_info: *mut sgx_update_info_bit_t,
+	) -> sgx_status_t;
+
+	pub fn ocall_worker_request(
+		ret_val: *mut sgx_status_t,
+		request: *const u8,
+		req_size: u32,
+		response: *mut u8,
+		resp_size: u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_send_block_and_confirmation(
+		ret_val: *mut sgx_status_t,
+		confirmations: *const u8,
+		confirmations_size: u32,
+		signed_blocks: *const u8,
+		signed_blocks_size: u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_read_ipfs(
+		ret_val: *mut sgx_status_t,
+		cid: *const u8,
+		cid_size: u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_write_ipfs(
+		ret_val: *mut sgx_status_t,
+		enc_state: *const u8,
+		enc_state_size: u32,
+		cid: *mut u8,
+		cid_size: u32,
 	) -> sgx_status_t;
 }

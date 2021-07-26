@@ -1,5 +1,6 @@
 /*
 	Copyright 2019 Supercomputing Systems AG
+	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,11 +16,7 @@
 
 */
 
-pub mod ocall_api;
-pub mod ocall_component_factory;
-pub mod rpc_ocall;
-
-mod attestation_ocall;
-mod ffi;
-mod ipfs_ocall;
-mod on_chain_ocall;
+pub mod cert_tests;
+pub mod ipfs_tests;
+pub mod mocks;
+pub mod on_chain_ocall_tests;

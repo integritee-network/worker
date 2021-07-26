@@ -16,20 +16,57 @@
 */
 
 use crate::ocall::{
-	attestation_ocall::EnclaveAttestationOCallApiImpl, ocall_api::EnclaveAttestationOCallApi,
+	attestation_ocall::EnclaveAttestationOCall,
+	ipfs_ocall::EnclaveIpfsOcall,
+	ocall_api::{
+		EnclaveAttestationOCallApi, EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
+	},
+	on_chain_ocall::EnclaveOnChainOCall,
+	rpc_ocall::EnclaveRpcOCall,
 };
 use std::sync::Arc;
 
 /// Abstract factory trait for OCall components
-pub trait OCallComponentFactoryTrait<A: EnclaveAttestationOCallApi> {
-	fn get_attestation_api() -> Arc<A>;
+pub trait OCallComponentFactoryTrait<A, R, O, I>
+where
+	A: EnclaveAttestationOCallApi,
+	R: EnclaveRpcOCallApi,
+	O: EnclaveOnChainOCallApi,
+	I: EnclaveIpfsOCallApi,
+{
+	fn attestation_api() -> Arc<A>;
+
+	fn rpc_api() -> Arc<R>;
+
+	fn on_chain_api() -> Arc<O>;
+
+	fn ipfs_api() -> Arc<I>;
 }
 
 /// Concrete implementation of the factory, producing components for live system (i.e. not mocks)
 pub struct OCallComponentFactory {}
 
-impl OCallComponentFactoryTrait<EnclaveAttestationOCallApiImpl> for OCallComponentFactory {
-	fn get_attestation_api() -> Arc<EnclaveAttestationOCallApiImpl> {
-		Arc::new(EnclaveAttestationOCallApiImpl {})
+impl
+	OCallComponentFactoryTrait<
+		EnclaveAttestationOCall,
+		EnclaveRpcOCall,
+		EnclaveOnChainOCall,
+		EnclaveIpfsOcall,
+	> for OCallComponentFactory
+{
+	fn attestation_api() -> Arc<EnclaveAttestationOCall> {
+		Arc::new(EnclaveAttestationOCall {})
+	}
+
+	fn rpc_api() -> Arc<EnclaveRpcOCall> {
+		Arc::new(EnclaveRpcOCall {})
+	}
+
+	fn on_chain_api() -> Arc<EnclaveOnChainOCall> {
+		Arc::new(EnclaveOnChainOCall {})
+	}
+
+	fn ipfs_api() -> Arc<EnclaveIpfsOcall> {
+		Arc::new(EnclaveIpfsOcall {})
 	}
 }

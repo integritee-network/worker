@@ -42,8 +42,9 @@ serde_json        = { git = "https://github.com/mesalock-linux/serde-json-sgx"}
 lazy_static       = { version = "1.1.0", features = ["spin_no_std"] }
 retain_mut        = { version = "0.1.2"}
 derive_more       = { version = "0.99.5" }
-byteorder         = { version = "1.4.2", default-features = false}
-
+byteorder         = { version = "1.4.2", default-features = false }
+arrayvec          = { version = "0.7.1", default-features = false }
+hex               = { version = "0.4.3", default-features = false }
 
 # for attestation
 chrono          = { git = "https://github.com/mesalock-linux/chrono-sgx" }

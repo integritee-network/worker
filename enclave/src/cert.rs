@@ -1,28 +1,16 @@
-use std::{prelude::v1::*, ptr, str, time::*, untrusted::time::SystemTimeEx};
-
-use sgx_tcrypto::*;
-use sgx_types::*;
-
 use super::CERTEXPIRYDAYS;
+use crate::{ocall::ocall_api::EnclaveAttestationOCallApi, utils::UnwrapOrSgxErrorUnexpected};
+use arrayvec::ArrayVec;
 use bit_vec::BitVec;
 use chrono::{prelude::*, Duration, TimeZone, Utc as TzUtc};
 use itertools::Itertools;
 use log::*;
 use num_bigint::BigUint;
 use serde_json::Value;
-use std::io::BufReader;
+use sgx_tcrypto::*;
+use sgx_types::*;
+use std::{io::BufReader, prelude::v1::*, ptr, str, time::*, untrusted::time::SystemTimeEx};
 use yasna::models::ObjectIdentifier;
-
-use crate::utils::UnwrapOrSgxErrorUnexpected;
-
-extern "C" {
-	pub fn ocall_get_update_info(
-		ret_val: *mut sgx_status_t,
-		platformBlob: *const sgx_platform_info_t,
-		enclaveTrusted: i32,
-		update_info: *mut sgx_update_info_bit_t,
-	) -> sgx_status_t;
-}
 
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
 static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
@@ -198,8 +186,11 @@ pub fn percent_decode(orig: String) -> SgxResult<String> {
 }
 
 // FIXME: This code is redundant with the host call of the substraTEE-node
-pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
-	// Before we reach here, Webpki already verifed the cert is properly signed
+pub fn verify_mra_cert<A>(cert_der: &[u8], attestation_ocall: &A) -> SgxResult<()>
+where
+	A: EnclaveAttestationOCallApi,
+{
+	// Before we reach here, Webpki already verified the cert is properly signed
 
 	// Search for Public Key prime256v1 OID
 	let prime256v1_oid = &[0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07];
@@ -275,7 +266,10 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 		now_func.sgx_error()?,
 	) {
 		Ok(_) => info!("Cert is good"),
-		Err(e) => error!("Cert verification error {:?}", e),
+		Err(e) => {
+			error!("Cert verification error {:?}", e);
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		},
 	}
 
 	// Verify the signature against the signing cert
@@ -283,13 +277,21 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> Result<(), sgx_status_t> {
 		Ok(_) => info!("Signature good"),
 		Err(e) => {
 			error!("Signature verification error {:?}", e);
-			panic!();
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		},
 	}
-	verify_attn_report(attn_report_raw, pub_k)
+
+	verify_attn_report(attn_report_raw, pub_k, attestation_ocall)
 }
 
-fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_status_t> {
+pub fn verify_attn_report<A>(
+	report_raw: &[u8],
+	pub_k: Vec<u8>,
+	attestation_ocall: &A,
+) -> SgxResult<()>
+where
+	A: EnclaveAttestationOCallApi,
+{
 	// Verify attestation report
 	// 1. Check timestamp is within 24H (90day is recommended by Intel)
 	let attn_report: Value = serde_json::from_slice(report_raw).sgx_error()?;
@@ -313,40 +315,28 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
 			"GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => {
 				// Verify platformInfoBlob for further info if status not OK
 				if let Value::String(pib) = &attn_report["platformInfoBlob"] {
-					let mut buf = Vec::new();
+					let mut buf = ArrayVec::<_, SGX_PLATFORM_INFO_SIZE>::new();
 
 					// the TLV Header (4 bytes/8 hexes) should be skipped
 					let n = (pib.len() - 8) / 2;
 					for i in 0..n {
-						buf.push(
+						buf.try_push(
 							u8::from_str_radix(&pib[(i * 2 + 8)..(i * 2 + 10)], 16).sgx_error()?,
-						);
-					}
-
-					let mut update_info = sgx_update_info_bit_t::default();
-					let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-					let res = unsafe {
-						ocall_get_update_info(
-							&mut rt as *mut sgx_status_t,
-							buf.as_slice().as_ptr() as *const sgx_platform_info_t,
-							1,
-							&mut update_info as *mut sgx_update_info_bit_t,
 						)
-					};
-					if res != sgx_status_t::SGX_SUCCESS {
-						error!("ocall_get_update_info failed. res={:?}", res);
-						return Err(res)
+						.map_err(|e| {
+							error!("failed to push element to platform info blob buffer, exceeding buffer size ({})", e);
+							sgx_status_t::SGX_ERROR_UNEXPECTED
+						})?;
 					}
 
-					if rt != sgx_status_t::SGX_SUCCESS {
-						warn!("ocall_get_update_info unsuccessful. rt={:?}", rt);
-						// Curly braces to copy `unaligned_references` of packed fields into properly aligned temporary:
-						// https://github.com/rust-lang/rust/issues/82523
-						debug!("update_info.pswUpdate: {}", { update_info.pswUpdate });
-						debug!("update_info.csmeFwUpdate: {}", { update_info.csmeFwUpdate });
-						debug!("update_info.ucodeUpdate: {}", { update_info.ucodeUpdate });
-						return Err(rt)
-					}
+					// ArrayVec .into_inner() requires that all elements are occupied by a value
+					// if that's not the case, the following error will occur
+					let platform_info = buf.into_inner().map_err(|e| {
+						error!("Failed to extract platform info from InfoBlob, result does not contain enough elements (require: {}, found: {})", e.capacity(), e.len());
+						sgx_status_t::SGX_ERROR_UNEXPECTED
+					})?;
+
+					attestation_ocall.get_update_info(sgx_platform_info_t { platform_info }, 1)?;
 				} else {
 					error!("Failed to fetch platformInfoBlob from attestation report");
 					return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
@@ -366,7 +356,7 @@ fn verify_attn_report(report_raw: &[u8], pub_k: Vec<u8>) -> Result<(), sgx_statu
 		// TODO: lack security check here
 		let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
 
-		let ti = crate::attestation::get_mrenclave_of_self().sgx_error()?;
+		let ti = attestation_ocall.get_mrenclave_of_self().sgx_error()?;
 		if sgx_quote.report_body.mr_enclave.m != ti.m {
 			error!(
 				"mr_enclave is not equal to self {:?} != {:?}",

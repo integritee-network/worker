@@ -19,37 +19,38 @@
 //! Extrinsics status updates.
 
 extern crate alloc;
-use alloc::{string::String, vec::Vec};
-
+use crate::ocall::ocall_api::EnclaveRpcOCallApi;
+use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::Encode;
 use sp_runtime::traits;
-
 use std::hash;
-
-//use crate::top_pool::primitives::TrustedOperationStatus
-use crate::rpc::worker_api_direct;
 use substratee_worker_primitives::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 
 /// Extrinsic watcher.
 ///
 /// Represents a stream of status updates for particular extrinsic.
 #[derive(Debug)]
-pub struct Watcher<H> {
+pub struct Watcher<H, R> {
 	//receiver: TracingUnboundedReceiver<TrustedOperationStatus<H, BH>>,
 	hash: H,
 	is_in_block: bool,
+	rpc_ocall: Arc<R>,
 }
 
-impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
+impl<H, R> Watcher<H, R>
+where
+	H: hash::Hash + Encode + traits::Member,
+	R: EnclaveRpcOCallApi,
+{
 	/// Returns the operation hash.
 	pub fn hash(&self) -> &H {
 		&self.hash
 	}
 
-	pub fn new_watcher(hash: H) -> Watcher<H> {
+	pub fn new_watcher(hash: H, rpc_ocall: Arc<R>) -> Self {
 		//let (sender, receiver) = tracing_unbounded("mpsc_txpool_watcher");
 		//self.receivers.push(sender);
-		Watcher { hash, is_in_block: false }
+		Watcher { hash, is_in_block: false, rpc_ocall }
 	}
 
 	/// TrustedOperation became ready.
@@ -120,7 +121,7 @@ impl<H: hash::Hash + Encode + traits::Member> Watcher<H> {
 	}
 
 	fn send(&mut self, status: TrustedOperationStatus) {
-		worker_api_direct::update_status_event(self.hash(), status).unwrap();
+		self.rpc_ocall.update_status_event(self.hash(), status).unwrap();
 	}
 }
 

@@ -16,20 +16,25 @@
 */
 
 use crate::ocall::{ffi, ocall_api::EnclaveAttestationOCallApi};
+use frame_support::ensure;
+use log::*;
+use sgx_tse::rsgx_create_report;
 use sgx_types::{
-	sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t,
-	sgx_status_t, sgx_target_info_t,
+	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
+	sgx_quote_sign_type_t, sgx_report_body_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
+	sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t, SgxResult,
 };
 use std::{ptr, vec::Vec};
 
-pub struct EnclaveAttestationOCallApiImpl {}
+#[derive(Clone, Debug)]
+pub struct EnclaveAttestationOCall {}
 
-impl EnclaveAttestationOCallApiImpl {
+impl EnclaveAttestationOCall {
 	const RET_QUOTE_BUF_LEN: usize = 2048;
 }
 
-impl EnclaveAttestationOCallApi for EnclaveAttestationOCallApiImpl {
-	fn ocall_sgx_init_quote(&self) -> (sgx_status_t, sgx_target_info_t, sgx_epid_group_id_t) {
+impl EnclaveAttestationOCallApi for EnclaveAttestationOCall {
+	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
 		let mut ti: sgx_target_info_t = sgx_target_info_t::default();
 		let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -42,12 +47,13 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCallApiImpl {
 			)
 		};
 
-		let consolidated_status = consolidate_sgx_status(res, rt);
+		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 
-		(consolidated_status, ti, eg)
+		Ok((ti, eg))
 	}
 
-	fn ocall_get_ias_socket(&self) -> (sgx_status_t, i32) {
+	fn get_ias_socket(&self) -> SgxResult<i32> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let mut ias_sock: i32 = 0;
 
@@ -55,21 +61,22 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCallApiImpl {
 			ffi::ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32)
 		};
 
-		let consolidated_status = consolidate_sgx_status(res, rt);
+		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 
-		(consolidated_status, ias_sock)
+		Ok(ias_sock)
 	}
 
-	fn ocall_get_quote(
+	fn get_quote(
 		&self,
 		sig_rl: Vec<u8>,
 		report: sgx_report_t,
 		sign_type: sgx_quote_sign_type_t,
 		spid: sgx_spid_t,
 		quote_nonce: sgx_quote_nonce_t,
-	) -> (sgx_status_t, sgx_report_t, Vec<u8>) {
+	) -> SgxResult<(sgx_report_t, Vec<u8>)> {
 		let mut qe_report = sgx_report_t::default();
-		let mut return_quote_buf = [0u8; EnclaveAttestationOCallApiImpl::RET_QUOTE_BUF_LEN];
+		let mut return_quote_buf = [0u8; EnclaveAttestationOCall::RET_QUOTE_BUF_LEN];
 		let mut quote_len: u32 = 0;
 
 		let (p_sigrl, sigrl_len) = if sig_rl.is_empty() {
@@ -85,7 +92,7 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCallApiImpl {
 		let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
 		let p_qe_report = &mut qe_report as *mut sgx_report_t;
 		let p_quote = return_quote_buf.as_mut_ptr();
-		let maxlen = EnclaveAttestationOCallApiImpl::RET_QUOTE_BUF_LEN as u32;
+		let maxlen = EnclaveAttestationOCall::RET_QUOTE_BUF_LEN as u32;
 		let p_quote_len = &mut quote_len as *mut u32;
 
 		let result = unsafe {
@@ -104,22 +111,73 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCallApiImpl {
 			)
 		};
 
-		let consolidated_status = consolidate_sgx_status(result, rt);
+		ensure!(result == sgx_status_t::SGX_SUCCESS, result);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 
 		let quote_vec: Vec<u8> = Vec::from(&return_quote_buf[..quote_len as usize]);
 
-		(consolidated_status, qe_report, quote_vec)
+		Ok((qe_report, quote_vec))
+	}
+
+	fn get_update_info(
+		&self,
+		platform_info: sgx_platform_info_t,
+		enclave_trusted: i32,
+	) -> SgxResult<sgx_update_info_bit_t> {
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		let mut update_info = sgx_update_info_bit_t::default();
+
+		let result = unsafe {
+			ffi::ocall_get_update_info(
+				&mut rt as *mut sgx_status_t,
+				&platform_info as *const sgx_platform_info_t,
+				enclave_trusted,
+				&mut update_info as *mut sgx_update_info_bit_t,
+			)
+		};
+
+		// debug logging
+		if rt != sgx_status_t::SGX_SUCCESS {
+			warn!("ocall_get_update_info unsuccessful. rt={:?}", rt);
+			// Curly braces to copy `unaligned_references` of packed fields into properly aligned temporary:
+			// https://github.com/rust-lang/rust/issues/82523
+			debug!("update_info.pswUpdate: {}", { update_info.pswUpdate });
+			debug!("update_info.csmeFwUpdate: {}", { update_info.csmeFwUpdate });
+			debug!("update_info.ucodeUpdate: {}", { update_info.ucodeUpdate });
+		}
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, result);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+
+		Ok(update_info)
+	}
+
+	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
+		Ok(self.get_report_of_self()?.mr_enclave)
 	}
 }
 
-fn consolidate_sgx_status(status_1: sgx_status_t, status_2: sgx_status_t) -> sgx_status_t {
-	if status_1 != sgx_status_t::SGX_SUCCESS {
-		return status_1
-	}
+impl EnclaveAttestationOCall {
+	fn get_report_of_self(&self) -> SgxResult<sgx_report_body_t> {
+		// (1) get ti + eg
+		let init_quote_result = self.sgx_init_quote()?;
 
-	if status_2 != sgx_status_t::SGX_SUCCESS {
-		return status_2
-	}
+		let target_info = init_quote_result.0;
+		let report_data: sgx_report_data_t = sgx_report_data_t::default();
 
-	sgx_status_t::SGX_SUCCESS
+		let rep = match rsgx_create_report(&target_info, &report_data) {
+			Ok(r) => {
+				debug!(
+					"    [Enclave] Report creation successful. mr_signer.m = {:?}",
+					r.body.mr_signer.m
+				);
+				r
+			},
+			Err(e) => {
+				error!("    [Enclave] Report creation failed. {:?}", e);
+				return Err(e)
+			},
+		};
+		Ok(rep.body)
+	}
 }

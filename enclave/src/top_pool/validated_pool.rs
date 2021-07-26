@@ -48,6 +48,7 @@ use sp_runtime::{
 
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 
+use crate::ocall::ocall_api::EnclaveRpcOCallApi;
 use codec::Encode;
 use retain_mut::RetainMut;
 
@@ -91,19 +92,21 @@ impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
 /// A type of validated operation stored in the pool.
 pub type ValidatedOperationFor<B> =
 	ValidatedOperation<ExtrinsicHash<B>, StfTrustedOperation, <B as ChainApi>::Error>;
+
 /// Pool that deals with validated operations.
-pub struct ValidatedPool<B: ChainApi> {
+pub struct ValidatedPool<B: ChainApi, R: EnclaveRpcOCallApi> {
 	api: Arc<B>,
 	options: Options,
-	listener: SgxRwLock<Listener<ExtrinsicHash<B>>>,
+	listener: SgxRwLock<Listener<ExtrinsicHash<B>, R>>,
 	pool: SgxRwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
 	import_notification_sinks: SgxMutex<Vec<Sender<ExtrinsicHash<B>>>>,
 	rotator: PoolRotator<ExtrinsicHash<B>>,
 }
 
-impl<B: ChainApi> ValidatedPool<B>
+impl<B: ChainApi, R> ValidatedPool<B, R>
 where
-//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
+	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
+	R: EnclaveRpcOCallApi,
 {
 	/// Create a new operation pool.
 	pub fn new(options: Options, api: Arc<B>) -> Self {
@@ -682,9 +685,10 @@ where
 	}
 }
 
-fn fire_events<H, Ex>(listener: &mut Listener<H>, imported: &base::Imported<H, Ex>)
+fn fire_events<H, R, Ex>(listener: &mut Listener<H, R>, imported: &base::Imported<H, Ex>)
 where
 	H: hash::Hash + Eq + traits::Member + Encode, // + Serialize,
+	R: EnclaveRpcOCallApi,
 {
 	match *imported {
 		base::Imported::Ready { ref promoted, ref failed, ref removed, ref hash } => {

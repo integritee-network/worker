@@ -81,48 +81,15 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
 	let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
 
-	match get_mrenclave_of_self() {
+	let ocall_api = OCallComponentFactory::attestation_api();
+
+	match ocall_api.get_mrenclave_of_self() {
 		Ok(m) => {
 			mrenclave_slice.copy_from_slice(&m.m[..]);
 			sgx_status_t::SGX_SUCCESS
 		},
 		Err(e) => e,
 	}
-}
-
-pub fn get_mrenclave_of_self() -> SgxResult<sgx_measurement_t> {
-	let ocall_api = OCallComponentFactory::get_attestation_api();
-
-	Ok(get_report_of_self(ocall_api)?.mr_enclave)
-}
-
-fn get_report_of_self<A: EnclaveAttestationOCallApi>(
-	ocall_api: Arc<A>,
-) -> SgxResult<sgx_report_body_t> {
-	// (1) get ti + eg
-	let init_quote_result = ocall_api.ocall_sgx_init_quote();
-
-	if init_quote_result.0 != sgx_status_t::SGX_SUCCESS {
-		return Err(init_quote_result.0)
-	}
-
-	let target_info = init_quote_result.1;
-	let report_data: sgx_report_data_t = sgx_report_data_t::default();
-
-	let rep = match rsgx_create_report(&target_info, &report_data) {
-		Ok(r) => {
-			debug!(
-				"    [Enclave] Report creation successful. mr_signer.m = {:?}",
-				r.body.mr_signer.m
-			);
-			r
-		},
-		Err(e) => {
-			error!("    [Enclave] Report creation failed. {:?}", e);
-			return Err(e)
-		},
-	};
-	Ok(rep.body)
 }
 
 fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, String, String)> {
@@ -310,7 +277,7 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
 	let resp_string = String::from_utf8(plaintext.clone())
 		.sgx_error_with_log("    [Enclave] error decoding tls answer to string")?;
 
-	error!("    [Enclave] resp_string = {}", resp_string);
+	debug!("    [Enclave] resp_string = {}", resp_string);
 
 	parse_response_attn_report(&plaintext)
 }
@@ -335,27 +302,17 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 	// (3) ocall to sgx_get_quote to generate (*mut sgx-quote_t, uint32_t)
 
 	// (1) get ti + eg
-	let init_quote = ocall_api.ocall_sgx_init_quote();
+	let init_quote = ocall_api.sgx_init_quote()?;
 
-	if init_quote.0 != sgx_status_t::SGX_SUCCESS {
-		return Err(init_quote.0)
-	}
-
-	let epid_group_id: sgx_epid_group_id_t = init_quote.2;
-	let target_info: sgx_target_info_t = init_quote.1;
+	let epid_group_id: sgx_epid_group_id_t = init_quote.1;
+	let target_info: sgx_target_info_t = init_quote.0;
 
 	debug!("    [Enclave] EPID group id = {:?}", epid_group_id);
 
 	let eg_num = as_u32_le(epid_group_id);
 
 	// (1.5) get sigrl
-	let ias_socket_result = ocall_api.ocall_get_ias_socket();
-
-	if ias_socket_result.0 != sgx_status_t::SGX_SUCCESS {
-		return Err(ias_socket_result.0)
-	}
-
-	let ias_socket = ias_socket_result.1;
+	let ias_socket = ocall_api.get_ias_socket()?;
 
 	info!("    [Enclave] ias_sock = {}", ias_socket);
 
@@ -398,14 +355,10 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 
 	let spid: sgx_spid_t = load_spid(RA_SPID_FILE)?;
 
-	let quote_result = ocall_api.ocall_get_quote(sigrl_vec, report, sign_type, spid, quote_nonce);
+	let quote_result = ocall_api.get_quote(sigrl_vec, report, sign_type, spid, quote_nonce)?;
 
-	if quote_result.0 != sgx_status_t::SGX_SUCCESS {
-		return Err(quote_result.0)
-	}
-
-	let qe_report = quote_result.1;
-	let quote_content = quote_result.2;
+	let qe_report = quote_result.0;
+	let quote_content = quote_result.1;
 
 	// Added 09-28-2018
 	// Perform a check on qe_report to verify if the qe_report is valid
@@ -439,11 +392,7 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 
 	// need to call this a second time (first time is when we get the sigrl revocation list)
 	// (has some internal state that needs to be reset)!
-	let ias_socket_result = ocall_api.ocall_get_ias_socket();
-	if ias_socket_result.0 != sgx_status_t::SGX_SUCCESS {
-		return Err(ias_socket_result.0)
-	}
-	let ias_socket = ias_socket_result.1;
+	let ias_socket = ocall_api.get_ias_socket()?;
 
 	let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
 	rhs_vec.extend(&quote_content);
@@ -537,7 +486,7 @@ pub unsafe extern "C" fn perform_ra(
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let ocall_api = OCallComponentFactory::get_attestation_api();
+	let ocall_api = OCallComponentFactory::attestation_api();
 
 	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, ocall_api, false) {
 		Ok(r) => r,
@@ -590,7 +539,7 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let ocall_api = OCallComponentFactory::get_attestation_api();
+	let ocall_api = OCallComponentFactory::attestation_api();
 
 	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, ocall_api, false) {
 		Ok(r) => r,
