@@ -10,8 +10,6 @@ newline_style = "Unix"
 # Misc
 chain_width = 80
 spaces_around_ranges = false
-binop_separator = "Back"
-reorder_impl_items = false
 match_arm_leading_pipes = "Preserve"
 match_arm_blocks = false
 match_block_trailing_comma = true

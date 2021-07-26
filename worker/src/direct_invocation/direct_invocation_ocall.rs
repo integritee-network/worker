@@ -43,10 +43,10 @@ impl<W> DirectInvocationOCall<W> {
 	fn continue_watching(status: &TrustedOperationStatus) -> bool {
 		!matches!(
 			status,
-			TrustedOperationStatus::Invalid |
-				TrustedOperationStatus::InSidechainBlock(_) |
-				TrustedOperationStatus::Finalized |
-				TrustedOperationStatus::Usurped
+			TrustedOperationStatus::Invalid
+				| TrustedOperationStatus::InSidechainBlock(_)
+				| TrustedOperationStatus::Finalized
+				| TrustedOperationStatus::Usurped
 		)
 	}
 }

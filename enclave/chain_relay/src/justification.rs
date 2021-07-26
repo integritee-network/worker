@@ -107,8 +107,8 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		let justification = GrandpaJustification::<Block>::decode(&mut &*encoded)
 			.map_err(|_| ClientError::JustificationDecode)?;
 
-		if (justification.commit.target_hash, justification.commit.target_number) !=
-			finalized_target
+		if (justification.commit.target_hash, justification.commit.target_number)
+			!= finalized_target
 		{
 			let msg = "invalid commit target in grandpa justification".to_string();
 			Err(ClientError::BadJustification(msg))

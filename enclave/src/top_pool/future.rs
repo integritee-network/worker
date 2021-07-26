@@ -86,8 +86,8 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
 				// is true if the tag is already satisfied either via operation in the pool
 				// or one that was recently included.
 
-				let is_provided = recently_pruned.iter().any(|x| x.contains(&**tag)) ||
-					match provided {
+				let is_provided = recently_pruned.iter().any(|x| x.contains(&**tag))
+					|| match provided {
 						Some(tags) => tags.contains_key(&**tag),
 						None => false,
 					};

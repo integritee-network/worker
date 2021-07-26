@@ -316,10 +316,10 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
 }
 
 fn as_u32_le(array: [u8; 4]) -> u32 {
-	u32::from(array[0]) +
-		(u32::from(array[1]) << 8) +
-		(u32::from(array[2]) << 16) +
-		(u32::from(array[3]) << 24)
+	u32::from(array[0])
+		+ (u32::from(array[1]) << 8)
+		+ (u32::from(array[2]) << 16)
+		+ (u32::from(array[3]) << 24)
 }
 
 #[allow(const_err)]
@@ -418,9 +418,9 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 	}
 
 	// Check if the qe_report is produced on the same platform
-	if target_info.mr_enclave.m != qe_report.body.mr_enclave.m ||
-		target_info.attributes.flags != qe_report.body.attributes.flags ||
-		target_info.attributes.xfrm != qe_report.body.attributes.xfrm
+	if target_info.mr_enclave.m != qe_report.body.mr_enclave.m
+		|| target_info.attributes.flags != qe_report.body.attributes.flags
+		|| target_info.attributes.xfrm != qe_report.body.attributes.xfrm
 	{
 		error!("    [Enclave] qe_report does not match current target_info!");
 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)

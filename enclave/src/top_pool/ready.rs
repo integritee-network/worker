@@ -780,18 +780,18 @@ pub mod tests {
 		};
 		// higher priority = better
 		assert!(
-			OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 1 } >
-				OperationRef { operation: Arc::new(with_priority(2, 3)), insertion_id: 2 }
+			OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 1 }
+				> OperationRef { operation: Arc::new(with_priority(2, 3)), insertion_id: 2 }
 		);
 		// lower validity = better
 		assert!(
-			OperationRef { operation: Arc::new(with_priority(3, 2)), insertion_id: 1 } >
-				OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 2 }
+			OperationRef { operation: Arc::new(with_priority(3, 2)), insertion_id: 1 }
+				> OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 2 }
 		);
 		// lower insertion_id = better
 		assert!(
-			OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 1 } >
-				OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 2 }
+			OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 1 }
+				> OperationRef { operation: Arc::new(with_priority(3, 3)), insertion_id: 2 }
 		);
 	}
 }

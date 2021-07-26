@@ -200,8 +200,8 @@ impl LightValidation {
 		let mut found_xts = vec![];
 		block.extrinsics.iter().for_each(|xt| {
 			if let Some(index) = relay.verify_tx_inclusion.iter().position(|xt_opaque| {
-				<<Header as HeaderT>::Hashing>::hash_of(xt) ==
-					<<Header as HeaderT>::Hashing>::hash_of(xt_opaque)
+				<<Header as HeaderT>::Hashing>::hash_of(xt)
+					== <<Header as HeaderT>::Hashing>::hash_of(xt_opaque)
 			}) {
 				found_xts.push(index);
 			}

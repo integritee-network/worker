@@ -657,13 +657,13 @@ fn listen(matches: &ArgMatches<'_>) {
 	let mut blocks = 0u32;
 	api.subscribe_events(events_in).unwrap();
 	loop {
-		if matches.is_present("events") &&
-			count >= value_t!(matches.value_of("events"), u32).unwrap()
+		if matches.is_present("events")
+			&& count >= value_t!(matches.value_of("events"), u32).unwrap()
 		{
 			return
 		};
-		if matches.is_present("blocks") &&
-			blocks > value_t!(matches.value_of("blocks"), u32).unwrap()
+		if matches.is_present("blocks")
+			&& blocks > value_t!(matches.value_of("blocks"), u32).unwrap()
 		{
 			return
 		};

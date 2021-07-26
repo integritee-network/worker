@@ -222,8 +222,8 @@ where
 		let future_limit = &self.options.future;
 
 		log::debug!(target: "txpool", "Pool Status: {:?}", status);
-		if ready_limit.is_exceeded(status.ready, status.ready_bytes) ||
-			future_limit.is_exceeded(status.future, status.future_bytes)
+		if ready_limit.is_exceeded(status.ready, status.ready_bytes)
+			|| future_limit.is_exceeded(status.future, status.future_bytes)
 		{
 			log::debug!(
 				target: "txpool",
