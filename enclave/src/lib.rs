@@ -31,10 +31,7 @@ extern crate sgx_tstd as std;
 use crate::{
 	error::{Error, Result},
 	ocall::{
-		ocall_api::{
-			EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi, WorkerRequest,
-			WorkerResponse,
-		},
+		ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi},
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
@@ -84,7 +81,7 @@ use substratee_stf::{
 };
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash,
+	BlockHash, WorkerRequest, WorkerResponse,
 };
 use utils::write_slice_and_whitespace_pad;
 

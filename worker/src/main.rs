@@ -640,13 +640,3 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId3
 		api.signer = signer_orig;
 	}
 }
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
-pub enum WorkerRequest {
-	ChainStorage(Vec<u8>, Option<Hash>), // (storage_key, at_block)
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
-pub enum WorkerResponse<V: Encode + Decode> {
-	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
-}

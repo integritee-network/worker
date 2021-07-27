@@ -102,3 +102,13 @@ impl RpcRequest {
 		serde_json::to_string(&direct_invocation_call).unwrap()
 	}
 }
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerRequest {
+	ChainStorage(Vec<u8>, Option<BlockHash>), // (storage_key, at_block)
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum WorkerResponse<V: Encode + Decode> {
+	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+}

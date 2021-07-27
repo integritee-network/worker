@@ -20,7 +20,8 @@ use core::fmt::Debug;
 use sgx_types::*;
 use std::vec::Vec;
 use substratee_worker_primitives::{
-	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus,
+	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus, WorkerRequest,
+	WorkerResponse,
 };
 
 /// Trait for the enclave to make o-calls related to remote attestation
@@ -56,19 +57,6 @@ pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
 	) -> SgxResult<()>;
 
 	fn send_state<H: Encode>(&self, hash: H, value_opt: Option<Vec<u8>>) -> SgxResult<()>;
-}
-
-pub type Hash = sp_core::H256;
-
-// TODO: this is redundantly defined in worker/src/main.rs
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
-pub enum WorkerRequest {
-	ChainStorage(Vec<u8>, Option<Hash>), // (storage_key, at_block)
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
-pub enum WorkerResponse<V: Encode + Decode> {
-	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 }
 
 /// trait for o-calls related to on-chain interactions

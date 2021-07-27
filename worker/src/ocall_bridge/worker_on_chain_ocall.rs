@@ -21,7 +21,6 @@ use crate::{
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
 	sync_block_gossiper::GossipBlocks,
 	utils::hex_encode,
-	WorkerRequest, WorkerResponse,
 };
 use codec::{Decode, Encode};
 use log::*;
@@ -31,7 +30,9 @@ use std::{
 	vec::Vec,
 };
 use substrate_api_client::XtStatus;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_worker_primitives::{
+	block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse,
+};
 
 pub struct WorkerOnChainOCall<F, S> {
 	node_api_factory: Arc<F>,
