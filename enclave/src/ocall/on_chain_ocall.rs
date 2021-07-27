@@ -17,17 +17,16 @@
 */
 
 use crate::{
-	ocall::{
-		ffi,
-		ocall_api::{EnclaveOnChainOCallApi, WorkerRequest, WorkerResponse},
-	},
+	ocall::{ffi, ocall_api::EnclaveOnChainOCallApi},
 	rpc::author::alloc::prelude::v1::Vec,
 };
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use log::*;
 use sgx_types::*;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_worker_primitives::{
+	block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse,
+};
 
 #[derive(Clone, Debug)]
 pub struct EnclaveOnChainOCall;
