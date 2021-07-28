@@ -49,7 +49,7 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 	if matches.is_present("all") || matches.is_present("ecall") {
 		println!("Running ecall Tests");
 		println!("  testing get_state()");
-		get_state_works(&enclave);
+		get_state_works(&enclave).unwrap();
 		println!("[+] Ecall tests ended!");
 	}
 

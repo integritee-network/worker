@@ -20,16 +20,18 @@ use codec::Encode;
 use log::*;
 use sp_core::hash::H256;
 use sp_keyring::AccountKeyring;
-use substratee_enclave_api::enclave_base::EnclaveBase;
+use substratee_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
 
-/// Todo: this is broken. In the test it tries to read nonexistent `chain_relay_db.bin`
-/// Tackle in: https://github.com/scs/substraTEE-worker/issues/246
-pub fn get_state_works<E: EnclaveBase>(enclave_api: &E) {
+pub fn get_state_works<E: EnclaveBase>(enclave_api: &E) -> EnclaveResult<()> {
 	let alice = AccountKeyring::Alice;
 	let trusted_getter_signed = test_trusted_getter_signed(alice).encode();
 	let shard = H256::default();
 	init_shard(&shard);
-	let res = enclave_api.get_state(trusted_getter_signed, shard.encode()).unwrap();
+	let res = enclave_api.get_state(trusted_getter_signed, shard.encode())?;
 	debug!("got state value: {:?}", hex::encode(res.clone()));
-	println!("get_state returned {:?}", res);
+	//println!("get_state returned {:?}", res);
+
+	assert!(!res.is_empty());
+
+	Ok(())
 }
