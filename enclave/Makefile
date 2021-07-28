@@ -38,6 +38,12 @@ else
 	CARGO_TARGET := --release
 endif
 
+ifeq ($(SGX_PRODUCTION), 1)
+	ENCLAVE_FEATURES =
+else
+	ENCLAVE_FEATURES = --features=test
+endif
+
 .PHONY: all
 
 all: $(Rust_Enclave_Name)
@@ -47,6 +53,6 @@ ifeq ($(XARGO_SGX), 1)
 	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx $(CARGO_TARGET)
 	cp ./target/x86_64-unknown-linux-sgx/$(OUTPUT_PATH)/libsubstratee_worker_enclave.a ../lib/libenclave.a
 else
-	cargo build $(CARGO_TARGET)
+	cargo build $(CARGO_TARGET) $(ENCLAVE_FEATURES)
 	cp ./target/$(OUTPUT_PATH)/libsubstratee_worker_enclave.a ../lib/libenclave.a
 endif

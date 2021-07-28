@@ -16,54 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use core::matches;
-
-use codec::{Decode, Encode};
-use jsonrpc_core::{
-	futures,
-	futures::{channel::mpsc::Receiver, executor::block_on, future, Future},
-};
-use sp_application_crypto::ed25519;
-use sp_core::hash::H256;
-use sp_runtime::{
-	generic::BlockId,
-	traits::{self, Block as BlockT, Extrinsic as ExtrinsicT, Hash, SaturatedConversion, Verify},
-	transaction_validity::{
-		InvalidTransaction as InvalidTrustedOperation, TransactionTag as Tag, TransactionValidity,
-		TransactionValidityError, ValidTransaction,
-	},
-};
-/// test
-///
-/// Extrinsic for test-runtime.
-use std::collections::HashSet;
-use std::{
-	collections::HashMap,
-	sync::{Arc, SgxMutex as Mutex},
-	time::Instant,
-	untrusted::time::InstantEx,
-	vec::Vec,
-};
-
-use substratee_stf::{
-	Index, ShardIdentifier, TrustedCall, TrustedCallSigned,
-	TrustedOperation as StfTrustedOperation, TrustedOperation,
-};
-use substratee_worker_primitives::BlockHash as SidechainBlockHash;
-
 use crate::{
 	ocall::ocall_api::EnclaveRpcOCallApi,
-	test::mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock,
 	top_pool::{
-		base_pool as base,
-		base_pool::Limit,
-		error,
+		base_pool as base, error,
 		primitives::TrustedOperationSource,
 		validated_pool::{ValidatedOperation, ValidatedPool},
 	},
 };
-
-use super::primitives::from_low_u64_to_be_h256;
+use core::matches;
+use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
+use sp_runtime::{
+	generic::BlockId,
+	traits::{self, Block as BlockT, SaturatedConversion},
+	transaction_validity::{TransactionTag as Tag, TransactionValidity, TransactionValidityError},
+};
+use std::{collections::HashMap, sync::Arc, time::Instant, untrusted::time::InstantEx, vec::Vec};
+use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Modification notification event stream type;
 pub type EventStream<H> = Receiver<H>;
@@ -494,10 +464,23 @@ impl<B: ChainApi, R: EnclaveRpcOCallApi> Clone for Pool<B, R> {
 	}
 }
 
-pub mod test {
-	use sp_runtime::traits::BlakeTwo256;
-
+#[cfg(feature = "test")]
+pub mod tests {
 	use super::*;
+	use crate::{
+		test::mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock,
+		top_pool::{base_pool::Limit, primitives::from_low_u64_to_be_h256},
+	};
+	use codec::{Decode, Encode};
+	use jsonrpc_core::{futures, futures::executor::block_on};
+	use sp_application_crypto::ed25519;
+	use sp_core::hash::H256;
+	use sp_runtime::{
+		traits::{BlakeTwo256, Extrinsic as ExtrinsicT, Hash, Verify},
+		transaction_validity::{InvalidTransaction as InvalidTrustedOperation, ValidTransaction},
+	};
+	use std::{collections::HashSet, sync::SgxMutex as Mutex};
+	use substratee_stf::{Index, TrustedCall, TrustedCallSigned, TrustedOperation};
 
 	#[derive(Clone, PartialEq, Eq, Encode, Decode, core::fmt::Debug)]
 	pub enum Extrinsic {
@@ -536,7 +519,7 @@ pub mod test {
 	/// The block number type used in this runtime.
 	pub type BlockNumber = u64;
 	/// Index of a transaction.
-	pub type Index = u64;
+	//pub type Index = u64;
 	/// The item of a block digest.
 	pub type DigestItem = sp_runtime::generic::DigestItem<H256>;
 	/// The digest of a block.
@@ -545,180 +528,129 @@ pub mod test {
 	pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 	/// A test block.
 	pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
-}
 
-const INVALID_NONCE: Index = 254;
-const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
+	const INVALID_NONCE: Index = 254;
+	const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
-#[derive(Clone, Debug, Default)]
-struct TestApi {
-	delay: Arc<Mutex<Option<std::sync::mpsc::Receiver<()>>>>,
-	invalidate: Arc<Mutex<HashSet<H256>>>,
-	clear_requirements: Arc<Mutex<HashSet<H256>>>,
-	add_requirements: Arc<Mutex<HashSet<H256>>>,
-}
+	#[derive(Clone, Debug, Default)]
+	struct TestApi {
+		delay: Arc<Mutex<Option<std::sync::mpsc::Receiver<()>>>>,
+		invalidate: Arc<Mutex<HashSet<H256>>>,
+		clear_requirements: Arc<Mutex<HashSet<H256>>>,
+		add_requirements: Arc<Mutex<HashSet<H256>>>,
+	}
 
-impl ChainApi for TestApi {
-	type Block = test::Block;
-	type Error = error::Error;
-	type ValidationFuture = futures::future::Ready<error::Result<TransactionValidity>>;
-	type BodyFuture = futures::future::Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
+	impl ChainApi for TestApi {
+		type Block = tests::Block;
+		type Error = error::Error;
+		type ValidationFuture = futures::future::Ready<error::Result<TransactionValidity>>;
+		type BodyFuture = futures::future::Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
 
-	/// Verify extrinsic at given block.
-	fn validate_transaction(
-		&self,
-		_source: TrustedOperationSource,
-		uxt: StfTrustedOperation,
-		_shard: ShardIdentifier,
-	) -> Self::ValidationFuture {
-		let hash = self.hash_and_length(&uxt).0;
-		let nonce: Index = match uxt {
-			StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
-			_ => 0,
-		};
-
-		// This is used to control the test flow.
-		if nonce > 0 {
-			let opt = self.delay.lock().unwrap().take();
-			if let Some(delay) = opt {
-				if delay.recv().is_err() {
-					println!("Error waiting for delay!");
-				}
-			}
-		}
-
-		if self.invalidate.lock().unwrap().contains(&hash) {
-			return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()))
-		}
-
-		futures::future::ready(if nonce > 254 {
-			Ok(InvalidTrustedOperation::Stale.into())
-		} else {
-			let mut operation = ValidTransaction {
-				priority: 4,
-				requires: if nonce > 0 { vec![vec![nonce as u8 - 1]] } else { vec![] },
-				provides: if nonce == INVALID_NONCE { vec![] } else { vec![vec![nonce as u8]] },
-				longevity: 3,
-				propagate: true,
+		/// Verify extrinsic at given block.
+		fn validate_transaction(
+			&self,
+			_source: TrustedOperationSource,
+			uxt: StfTrustedOperation,
+			_shard: ShardIdentifier,
+		) -> Self::ValidationFuture {
+			let hash = self.hash_and_length(&uxt).0;
+			let nonce: Index = match uxt {
+				StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
+				_ => 0,
 			};
 
-			if self.clear_requirements.lock().unwrap().contains(&hash) {
-				operation.requires.clear();
+			// This is used to control the test flow.
+			if nonce > 0 {
+				let opt = self.delay.lock().unwrap().take();
+				if let Some(delay) = opt {
+					if delay.recv().is_err() {
+						println!("Error waiting for delay!");
+					}
+				}
 			}
 
-			if self.add_requirements.lock().unwrap().contains(&hash) {
-				operation.requires.push(vec![128]);
+			if self.invalidate.lock().unwrap().contains(&hash) {
+				return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()))
 			}
 
-			Ok(Ok(operation))
-		})
+			futures::future::ready(if nonce > 254 {
+				Ok(InvalidTrustedOperation::Stale.into())
+			} else {
+				let mut operation = ValidTransaction {
+					priority: 4,
+					requires: if nonce > 0 { vec![vec![nonce as u8 - 1]] } else { vec![] },
+					provides: if nonce == INVALID_NONCE { vec![] } else { vec![vec![nonce as u8]] },
+					longevity: 3,
+					propagate: true,
+				};
+
+				if self.clear_requirements.lock().unwrap().contains(&hash) {
+					operation.requires.clear();
+				}
+
+				if self.add_requirements.lock().unwrap().contains(&hash) {
+					operation.requires.push(vec![128]);
+				}
+
+				Ok(Ok(operation))
+			})
+		}
+
+		/// Returns a block number given the block id.
+		fn block_id_to_number(
+			&self,
+			at: &BlockId<Self::Block>,
+		) -> Result<Option<NumberFor<Self>>, Self::Error> {
+			Ok(match at {
+				BlockId::Number(num) => Some(*num),
+				BlockId::Hash(_) => None,
+			})
+		}
+
+		/// Returns a block hash given the block id.
+		fn block_id_to_hash(
+			&self,
+			at: &BlockId<Self::Block>,
+		) -> Result<Option<SidechainBlockHash>, Self::Error> {
+			Ok(match at {
+				BlockId::Number(num) => Some(from_low_u64_to_be_h256(*num)),
+				BlockId::Hash(_) => None,
+			})
+		}
+
+		/// Hash the extrinsic.
+		fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (BlockHash<Self>, usize) {
+			let encoded = uxt.encode();
+			let len = encoded.len();
+			(tests::Hashing::hash_of(&encoded), len)
+		}
+
+		fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
+			futures::future::ready(Ok(None))
+		}
 	}
 
-	/// Returns a block number given the block id.
-	fn block_id_to_number(
-		&self,
-		at: &BlockId<Self::Block>,
-	) -> Result<Option<NumberFor<Self>>, Self::Error> {
-		Ok(match at {
-			BlockId::Number(num) => Some(*num),
-			BlockId::Hash(_) => None,
-		})
+	fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
+		TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
 	}
 
-	/// Returns a block hash given the block id.
-	fn block_id_to_hash(
-		&self,
-		at: &BlockId<Self::Block>,
-	) -> Result<Option<SidechainBlockHash>, Self::Error> {
-		Ok(match at {
-			BlockId::Number(num) => Some(from_low_u64_to_be_h256(*num)),
-			BlockId::Hash(_) => None,
-		})
+	fn test_pool() -> Pool<TestApi, EnclaveRpcOCallMock> {
+		Pool::new(Default::default(), TestApi::default().into())
 	}
 
-	/// Hash the extrinsic.
-	fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (BlockHash<Self>, usize) {
-		let encoded = uxt.encode();
-		let len = encoded.len();
-		(test::Hashing::hash_of(&encoded), len)
-	}
-
-	fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
-		futures::future::ready(Ok(None))
-	}
-}
-
-fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
-	TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
-}
-
-fn test_pool() -> Pool<TestApi, EnclaveRpcOCallMock> {
-	Pool::new(Default::default(), TestApi::default().into())
-}
-
-pub fn test_should_validate_and_import_transaction() {
-	// given
-	let pool = test_pool();
-	let shard = ShardIdentifier::default();
-
-	// when
-	let hash = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			0,
-		),
-		shard,
-	))
-	.unwrap();
-
-	// then
-	assert_eq!(pool.validated_pool().ready(shard).map(|v| v.hash).collect::<Vec<_>>(), vec![hash]);
-}
-
-pub fn test_should_reject_if_temporarily_banned() {
-	// given
-	let pool = test_pool();
-	let shard = ShardIdentifier::default();
-	let top = to_top(
-		TrustedCall::balance_transfer(
-			test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-			test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-			5,
-		),
-		0,
-	);
-
-	// when
-	pool.validated_pool.rotator().ban(&Instant::now(), vec![pool.hash_of(&top)]);
-	let res = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, top, shard));
-	assert_eq!(pool.validated_pool().status(shard).ready, 0);
-	assert_eq!(pool.validated_pool().status(shard).future, 0);
-
-	// then
-	assert!(matches!(res.unwrap_err(), error::Error::TemporarilyBanned));
-}
-
-pub fn test_should_notify_about_pool_events() {
-	let (stream, hash0, hash1) = {
+	pub fn test_should_validate_and_import_transaction() {
 		// given
 		let pool = test_pool();
 		let shard = ShardIdentifier::default();
-		let stream = pool.validated_pool().import_notification_stream();
 
 		// when
-		let hash0 = block_on(pool.submit_one(
+		let hash = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
 				TrustedCall::balance_transfer(
-					test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
 				),
 				0,
@@ -726,13 +658,127 @@ pub fn test_should_notify_about_pool_events() {
 			shard,
 		))
 		.unwrap();
+
+		// then
+		assert_eq!(
+			pool.validated_pool().ready(shard).map(|v| v.hash).collect::<Vec<_>>(),
+			vec![hash]
+		);
+	}
+
+	pub fn test_should_reject_if_temporarily_banned() {
+		// given
+		let pool = test_pool();
+		let shard = ShardIdentifier::default();
+		let top = to_top(
+			TrustedCall::balance_transfer(
+				tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+				tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+				5,
+			),
+			0,
+		);
+
+		// when
+		pool.validated_pool.rotator().ban(&Instant::now(), vec![pool.hash_of(&top)]);
+		let res = block_on(pool.submit_one(&BlockId::Number(0), SOURCE, top, shard));
+		assert_eq!(pool.validated_pool().status(shard).ready, 0);
+		assert_eq!(pool.validated_pool().status(shard).future, 0);
+
+		// then
+		assert!(matches!(res.unwrap_err(), error::Error::TemporarilyBanned));
+	}
+
+	pub fn test_should_notify_about_pool_events() {
+		let (stream, hash0, hash1) = {
+			// given
+			let pool = test_pool();
+			let shard = ShardIdentifier::default();
+			let stream = pool.validated_pool().import_notification_stream();
+
+			// when
+			let hash0 = block_on(pool.submit_one(
+				&BlockId::Number(0),
+				SOURCE,
+				to_top(
+					TrustedCall::balance_transfer(
+						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+						5,
+					),
+					0,
+				),
+				shard,
+			))
+			.unwrap();
+			let hash1 = block_on(pool.submit_one(
+				&BlockId::Number(0),
+				SOURCE,
+				to_top(
+					TrustedCall::balance_transfer(
+						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+						5,
+					),
+					1,
+				),
+				shard,
+			))
+			.unwrap();
+			// future doesn't count
+			let _hash = block_on(pool.submit_one(
+				&BlockId::Number(0),
+				SOURCE,
+				to_top(
+					TrustedCall::balance_transfer(
+						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+						5,
+					),
+					3,
+				),
+				shard,
+			))
+			.unwrap();
+
+			assert_eq!(pool.validated_pool().status(shard).ready, 2);
+			assert_eq!(pool.validated_pool().status(shard).future, 1);
+
+			(stream, hash0, hash1)
+		};
+
+		// then
+		let mut it = futures::executor::block_on_stream(stream);
+		assert_eq!(it.next(), Some(hash0));
+		assert_eq!(it.next(), Some(hash1));
+		assert_eq!(it.next(), None);
+	}
+
+	pub fn test_should_clear_stale_transactions() {
+		// given
+		let pool = test_pool();
+		let shard = ShardIdentifier::default();
 		let hash1 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
 				TrustedCall::balance_transfer(
-					test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					5,
+				),
+				0,
+			),
+			shard,
+		))
+		.unwrap();
+		let hash2 = block_on(pool.submit_one(
+			&BlockId::Number(0),
+			SOURCE,
+			to_top(
+				TrustedCall::balance_transfer(
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
 				),
 				1,
@@ -740,14 +786,13 @@ pub fn test_should_notify_about_pool_events() {
 			shard,
 		))
 		.unwrap();
-		// future doesn't count
-		let _hash = block_on(pool.submit_one(
+		let hash3 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
 				TrustedCall::balance_transfer(
-					test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
 				),
 				3,
@@ -755,205 +800,146 @@ pub fn test_should_notify_about_pool_events() {
 			shard,
 		))
 		.unwrap();
+		// when
+		pool.validated_pool.clear_stale(&BlockId::Number(5), shard).unwrap();
 
-		assert_eq!(pool.validated_pool().status(shard).ready, 2);
+		// then
+		assert_eq!(pool.validated_pool().ready(shard).count(), 0);
+		assert_eq!(pool.validated_pool().status(shard).future, 0);
+		assert_eq!(pool.validated_pool().status(shard).ready, 0);
+		// make sure they are temporarily banned as well
+		assert!(pool.validated_pool.rotator().is_banned(&hash1));
+		assert!(pool.validated_pool.rotator().is_banned(&hash2));
+		assert!(pool.validated_pool.rotator().is_banned(&hash3));
+	}
+
+	pub fn test_should_ban_mined_transactions() {
+		// given
+		let pool = test_pool();
+		let shard = ShardIdentifier::default();
+		let hash1 = block_on(pool.submit_one(
+			&BlockId::Number(0),
+			SOURCE,
+			to_top(
+				TrustedCall::balance_transfer(
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					5,
+				),
+				0,
+			),
+			shard,
+		))
+		.unwrap();
+
+		// when
+		block_on(pool.prune_tags(&BlockId::Number(1), vec![vec![0]], vec![hash1], shard)).unwrap();
+
+		// then
+		assert!(pool.validated_pool.rotator().is_banned(&hash1));
+	}
+
+	pub fn test_should_limit_futures() {
+		// given
+		let shard = ShardIdentifier::default();
+		let limit = Limit { count: 100, total_bytes: 300 };
+		let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
+			Options { ready: limit.clone(), future: limit, ..Default::default() },
+			TestApi::default().into(),
+		);
+
+		let hash1 = block_on(pool.submit_one(
+			&BlockId::Number(0),
+			SOURCE,
+			to_top(
+				TrustedCall::balance_transfer(
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					5,
+				),
+				1,
+			),
+			shard,
+		))
+		.unwrap();
 		assert_eq!(pool.validated_pool().status(shard).future, 1);
 
-		(stream, hash0, hash1)
-	};
-
-	// then
-	let mut it = futures::executor::block_on_stream(stream);
-	assert_eq!(it.next(), Some(hash0));
-	assert_eq!(it.next(), Some(hash1));
-	assert_eq!(it.next(), None);
-}
-
-pub fn test_should_clear_stale_transactions() {
-	// given
-	let pool = test_pool();
-	let shard = ShardIdentifier::default();
-	let hash1 = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
+		// when
+		let hash2 = block_on(pool.submit_one(
+			&BlockId::Number(0),
+			SOURCE,
+			to_top(
+				TrustedCall::balance_transfer(
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					5,
+				),
+				10,
 			),
-			0,
-		),
-		shard,
-	))
-	.unwrap();
-	let hash2 = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
+			shard,
+		))
+		.unwrap();
+
+		// then
+		assert_eq!(pool.validated_pool().status(shard).future, 1);
+		assert!(pool.validated_pool.rotator().is_banned(&hash1));
+		assert!(!pool.validated_pool.rotator().is_banned(&hash2));
+	}
+
+	pub fn test_should_error_if_reject_immediately() {
+		// given
+		let shard = ShardIdentifier::default();
+		let limit = Limit { count: 100, total_bytes: 10 };
+		let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
+			Options { ready: limit.clone(), future: limit, ..Default::default() },
+			TestApi::default().into(),
+		);
+
+		// when
+		block_on(pool.submit_one(
+			&BlockId::Number(0),
+			SOURCE,
+			to_top(
+				TrustedCall::balance_transfer(
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					5,
+				),
+				1,
 			),
-			1,
-		),
-		shard,
-	))
-	.unwrap();
-	let hash3 = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
+			shard,
+		))
+		.unwrap_err();
+
+		// then
+		assert_eq!(pool.validated_pool().status(shard).ready, 0);
+		assert_eq!(pool.validated_pool().status(shard).future, 0);
+	}
+
+	pub fn test_should_reject_transactions_with_no_provides() {
+		// given
+		let pool = test_pool();
+		let shard = ShardIdentifier::default();
+
+		// when
+		let err = block_on(pool.submit_one(
+			&BlockId::Number(0),
+			SOURCE,
+			to_top(
+				TrustedCall::balance_transfer(
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
+					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
+					5,
+				),
+				INVALID_NONCE,
 			),
-			3,
-		),
-		shard,
-	))
-	.unwrap();
-	// when
-	pool.validated_pool.clear_stale(&BlockId::Number(5), shard).unwrap();
+			shard,
+		))
+		.unwrap_err();
 
-	// then
-	assert_eq!(pool.validated_pool().ready(shard).count(), 0);
-	assert_eq!(pool.validated_pool().status(shard).future, 0);
-	assert_eq!(pool.validated_pool().status(shard).ready, 0);
-	// make sure they are temporarily banned as well
-	assert!(pool.validated_pool.rotator().is_banned(&hash1));
-	assert!(pool.validated_pool.rotator().is_banned(&hash2));
-	assert!(pool.validated_pool.rotator().is_banned(&hash3));
-}
-
-pub fn test_should_ban_mined_transactions() {
-	// given
-	let pool = test_pool();
-	let shard = ShardIdentifier::default();
-	let hash1 = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			0,
-		),
-		shard,
-	))
-	.unwrap();
-
-	// when
-	block_on(pool.prune_tags(&BlockId::Number(1), vec![vec![0]], vec![hash1], shard)).unwrap();
-
-	// then
-	assert!(pool.validated_pool.rotator().is_banned(&hash1));
-}
-
-pub fn test_should_limit_futures() {
-	// given
-	let shard = ShardIdentifier::default();
-	let limit = Limit { count: 100, total_bytes: 300 };
-	let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
-		Options { ready: limit.clone(), future: limit, ..Default::default() },
-		TestApi::default().into(),
-	);
-
-	let hash1 = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			1,
-		),
-		shard,
-	))
-	.unwrap();
-	assert_eq!(pool.validated_pool().status(shard).future, 1);
-
-	// when
-	let hash2 = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			10,
-		),
-		shard,
-	))
-	.unwrap();
-
-	// then
-	assert_eq!(pool.validated_pool().status(shard).future, 1);
-	assert!(pool.validated_pool.rotator().is_banned(&hash1));
-	assert!(!pool.validated_pool.rotator().is_banned(&hash2));
-}
-
-pub fn test_should_error_if_reject_immediately() {
-	// given
-	let shard = ShardIdentifier::default();
-	let limit = Limit { count: 100, total_bytes: 10 };
-	let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
-		Options { ready: limit.clone(), future: limit, ..Default::default() },
-		TestApi::default().into(),
-	);
-
-	// when
-	block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			1,
-		),
-		shard,
-	))
-	.unwrap_err();
-
-	// then
-	assert_eq!(pool.validated_pool().status(shard).ready, 0);
-	assert_eq!(pool.validated_pool().status(shard).future, 0);
-}
-
-pub fn test_should_reject_transactions_with_no_provides() {
-	// given
-	let pool = test_pool();
-	let shard = ShardIdentifier::default();
-
-	// when
-	let err = block_on(pool.submit_one(
-		&BlockId::Number(0),
-		SOURCE,
-		to_top(
-			TrustedCall::balance_transfer(
-				test::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				test::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			INVALID_NONCE,
-		),
-		shard,
-	))
-	.unwrap_err();
-
-	// then
-	assert_eq!(pool.validated_pool().status(shard).ready, 0);
-	assert_eq!(pool.validated_pool().status(shard).future, 0);
-	assert!(matches!(err, error::Error::NoTagsProvided));
+		// then
+		assert_eq!(pool.validated_pool().status(shard).ready, 0);
+		assert_eq!(pool.validated_pool().status(shard).future, 0);
+		assert!(matches!(err, error::Error::NoTagsProvided));
+	}
 }

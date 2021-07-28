@@ -89,13 +89,19 @@ impl From<sr25519::Pair> for KeyPair {
 }
 
 #[cfg(feature = "sgx")]
-pub mod sgx;
+pub mod stf_sgx;
 
 #[cfg(feature = "sgx")]
-pub use sgx::types::*;
+pub mod stf_sgx_primitives;
+
+#[cfg(feature = "sgx")]
+pub use stf_sgx::types::*;
 
 #[cfg(feature = "std")]
 pub mod cli;
+
+#[cfg(all(feature = "test", feature = "sgx"))]
+pub mod test_genesis;
 
 #[derive(Encode, Decode, Clone, core::fmt::Debug)]
 #[allow(non_camel_case_types)]

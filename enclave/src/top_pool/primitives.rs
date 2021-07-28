@@ -1,12 +1,7 @@
 // File replacing substrate crate sp_transaction_pool::{error, PoolStatus};
 
 extern crate alloc;
-use alloc::{
-	boxed::Box,
-	string::{String, ToString},
-	sync::Arc,
-	vec::Vec,
-};
+use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::{hash::Hash, pin::Pin};
 use std::collections::HashMap;
 
@@ -303,40 +298,47 @@ pub fn from_low_u64_to_be_h256(val: u64) -> H256 {
 }
 
 /// test
-pub fn test_h256() {
-	let tests = vec![
-		(
-			from_low_u64_to_be_h256(0),
-			"0x0000000000000000000000000000000000000000000000000000000000000000",
-		),
-		(
-			from_low_u64_to_be_h256(2),
-			"0x0000000000000000000000000000000000000000000000000000000000000002",
-		),
-		(
-			from_low_u64_to_be_h256(15),
-			"0x000000000000000000000000000000000000000000000000000000000000000f",
-		),
-		(
-			from_low_u64_to_be_h256(16),
-			"0x0000000000000000000000000000000000000000000000000000000000000010",
-		),
-		(
-			from_low_u64_to_be_h256(1_000),
-			"0x00000000000000000000000000000000000000000000000000000000000003e8",
-		),
-		(
-			from_low_u64_to_be_h256(100_000),
-			"0x00000000000000000000000000000000000000000000000000000000000186a0",
-		),
-		(
-			from_low_u64_to_be_h256(u64::max_value()),
-			"0x000000000000000000000000000000000000000000000000ffffffffffffffff",
-		),
-	];
+#[cfg(feature = "test")]
+pub mod tests {
 
-	for (number, expected) in tests {
-		// workaround, as H256 in no_std does not implement (de)serialize
-		assert_eq!(expected.to_string(), format!("{:?}", number));
+	use super::*;
+	use alloc::string::ToString;
+
+	pub fn test_h256() {
+		let tests = vec![
+			(
+				from_low_u64_to_be_h256(0),
+				"0x0000000000000000000000000000000000000000000000000000000000000000",
+			),
+			(
+				from_low_u64_to_be_h256(2),
+				"0x0000000000000000000000000000000000000000000000000000000000000002",
+			),
+			(
+				from_low_u64_to_be_h256(15),
+				"0x000000000000000000000000000000000000000000000000000000000000000f",
+			),
+			(
+				from_low_u64_to_be_h256(16),
+				"0x0000000000000000000000000000000000000000000000000000000000000010",
+			),
+			(
+				from_low_u64_to_be_h256(1_000),
+				"0x00000000000000000000000000000000000000000000000000000000000003e8",
+			),
+			(
+				from_low_u64_to_be_h256(100_000),
+				"0x00000000000000000000000000000000000000000000000000000000000186a0",
+			),
+			(
+				from_low_u64_to_be_h256(u64::max_value()),
+				"0x000000000000000000000000000000000000000000000000ffffffffffffffff",
+			),
+		];
+
+		for (number, expected) in tests {
+			// workaround, as H256 in no_std does not implement (de)serialize
+			assert_eq!(expected.to_string(), format!("{:?}", number));
+		}
 	}
 }

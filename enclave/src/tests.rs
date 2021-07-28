@@ -58,30 +58,30 @@ use substratee_stf::{
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
-		top_pool::base_pool::test_should_import_transaction_to_ready,
-		top_pool::base_pool::test_should_not_import_same_transaction_twice,
-		top_pool::base_pool::test_should_import_transaction_to_future_and_promote_it_later,
-		top_pool::base_pool::test_should_promote_a_subgraph,
-		top_pool::base_pool::test_should_handle_a_cycle,
-		top_pool::base_pool::test_can_track_heap_size,
-		top_pool::base_pool::test_should_handle_a_cycle_with_low_priority,
-		top_pool::base_pool::test_should_remove_invalid_transactions,
-		top_pool::base_pool::test_should_prune_ready_transactions,
-		top_pool::base_pool::test_transaction_debug,
-		top_pool::base_pool::test_transaction_propagation,
-		top_pool::base_pool::test_should_reject_future_transactions,
-		top_pool::base_pool::test_should_clear_future_queue,
-		top_pool::base_pool::test_should_accept_future_transactions_when_explicitly_asked_to,
-		top_pool::primitives::test_h256,
-		top_pool::pool::test_should_validate_and_import_transaction,
-		top_pool::pool::test_should_reject_if_temporarily_banned,
-		top_pool::pool::test_should_notify_about_pool_events,
-		top_pool::pool::test_should_clear_stale_transactions,
-		top_pool::pool::test_should_ban_mined_transactions,
+		top_pool::base_pool::tests::test_should_import_transaction_to_ready,
+		top_pool::base_pool::tests::test_should_not_import_same_transaction_twice,
+		top_pool::base_pool::tests::test_should_import_transaction_to_future_and_promote_it_later,
+		top_pool::base_pool::tests::test_should_promote_a_subgraph,
+		top_pool::base_pool::tests::test_should_handle_a_cycle,
+		top_pool::base_pool::tests::test_can_track_heap_size,
+		top_pool::base_pool::tests::test_should_handle_a_cycle_with_low_priority,
+		top_pool::base_pool::tests::test_should_remove_invalid_transactions,
+		top_pool::base_pool::tests::test_should_prune_ready_transactions,
+		top_pool::base_pool::tests::test_transaction_debug,
+		top_pool::base_pool::tests::test_transaction_propagation,
+		top_pool::base_pool::tests::test_should_reject_future_transactions,
+		top_pool::base_pool::tests::test_should_clear_future_queue,
+		top_pool::base_pool::tests::test_should_accept_future_transactions_when_explicitly_asked_to,
+		top_pool::primitives::tests::test_h256,
+		top_pool::pool::tests::test_should_validate_and_import_transaction,
+		top_pool::pool::tests::test_should_reject_if_temporarily_banned,
+		top_pool::pool::tests::test_should_notify_about_pool_events,
+		top_pool::pool::tests::test_should_clear_stale_transactions,
+		top_pool::pool::tests::test_should_ban_mined_transactions,
 		//FIXME: This test sometimes fails, sometimes succeeds..
 		//top_pool::pool::test_should_limit_futures,
-		top_pool::pool::test_should_error_if_reject_immediately,
-		top_pool::pool::test_should_reject_transactions_with_no_provides,
+		top_pool::pool::tests::test_should_error_if_reject_immediately,
+		top_pool::pool::tests::test_should_reject_transactions_with_no_provides,
 		top_pool::ready::tests::test_should_replace_transaction_that_provides_the_same_tag,
 		top_pool::ready::tests::test_should_replace_multiple_transactions_correctly,
 		top_pool::ready::tests::test_should_return_best_transactions_in_correct_order,
@@ -91,9 +91,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		top_pool::rotator::tests::test_should_clear_banned,
 		top_pool::rotator::tests::test_should_garbage_collect,
 		top_pool::tracked_map::tests::test_basic,
-		state::test_write_and_load_state_works,
-		state::test_sgx_state_decode_encode_works,
-		state::test_encrypt_decrypt_state_type_works,
+		state::tests::test_write_and_load_state_works,
+		state::tests::test_sgx_state_decode_encode_works,
+		state::tests::test_encrypt_decrypt_state_type_works,
 		test_time_is_overdue,
 		test_time_is_not_overdue,
 		test_compose_block_and_confirmation,
@@ -107,9 +107,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_executing_call_updates_account_nonce,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
-		substratee_stf::sgx::tests::apply_state_diff_works,
-		substratee_stf::sgx::tests::apply_state_diff_returns_storage_hash_mismatch_err,
-		substratee_stf::sgx::tests::apply_state_diff_returns_invalid_storage_diff_err,
+		substratee_stf::stf_sgx::tests::apply_state_diff_works,
+		substratee_stf::stf_sgx::tests::apply_state_diff_returns_storage_hash_mismatch_err,
+		substratee_stf::stf_sgx::tests::apply_state_diff_returns_invalid_storage_diff_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
@@ -200,7 +200,7 @@ fn test_compose_block_and_confirmation() {
 	assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -252,7 +252,7 @@ fn test_submit_trusted_call_to_top_pool() {
 	assert_eq!(call_one, call_two);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -297,7 +297,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 	assert_eq!(getter_one, getter_two);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -366,7 +366,7 @@ fn test_differentiate_getter_and_call_works() {
 	assert_eq!(getter_one, getter_two);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -451,7 +451,7 @@ fn test_create_block_and_confirmation_works() {
 	assert!(stripped_opaque_call.starts_with(&block_hash_encoded));
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -480,9 +480,9 @@ fn test_create_state_diff() {
 	let account_with_money = pair_with_money.public();
 	let account_without_money = signer_without_money.public();
 	let account_with_money_key_hash =
-		substratee_stf::sgx::account_key_hash(&account_with_money.into());
+		substratee_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
 	let account_without_money_key_hash =
-		substratee_stf::sgx::account_key_hash(&account_without_money.into());
+		substratee_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
 
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
@@ -538,7 +538,8 @@ fn test_create_state_diff() {
 	let new_balance_acc_wo_money =
 		AccountInfo::decode(&mut acc_info_vec.as_slice()).unwrap().data.free;
 	// get block number
-	let block_number_key = substratee_stf::sgx::storage_value_key("System", "Number");
+	let block_number_key =
+		substratee_stf::stf_sgx_primitives::storage_value_key("System", "Number");
 	let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
 	let new_block_number =
 		substratee_worker_primitives::BlockNumber::decode(&mut new_block_number_encoded.as_slice())
@@ -549,7 +550,7 @@ fn test_create_state_diff() {
 	assert_eq!(new_block_number, 1);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -576,9 +577,9 @@ fn test_executing_call_updates_account_nonce() {
 	let account_with_money = pair_with_money.public();
 	let account_without_money = signer_without_money.public();
 	let account_with_money_key_hash =
-		substratee_stf::sgx::account_key_hash(&account_with_money.into());
+		substratee_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
 	let account_without_money_key_hash =
-		substratee_stf::sgx::account_key_hash(&account_without_money.into());
+		substratee_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
 
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
@@ -628,7 +629,7 @@ fn test_executing_call_updates_account_nonce() {
 	assert_eq!(nonce, 1);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -655,9 +656,9 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let account_with_money = pair_with_money.public();
 	let account_without_money = signer_without_money.public();
 	let account_with_money_key_hash =
-		substratee_stf::sgx::account_key_hash(&account_with_money.into());
+		substratee_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
 	let account_without_money_key_hash =
-		substratee_stf::sgx::account_key_hash(&account_without_money.into());
+		substratee_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
 
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
@@ -711,7 +712,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	assert_eq!(acc_data_with_money.free, 2000);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 #[allow(unused)]
@@ -780,7 +781,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	assert_eq!(new_acc_money, prev_acc_money);
 
 	// clean up
-	state::remove_shard_dir(&shard);
+	state::tests::remove_shard_dir(&shard);
 }
 
 fn get_current_shard_index(shard: &ShardIdentifier) -> usize {

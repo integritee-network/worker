@@ -17,6 +17,7 @@ crate-type = ["staticlib"]
 [features]
 default = []
 production = ['substratee-settings/production']
+test = ['substratee-stf/test']
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tse       = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
