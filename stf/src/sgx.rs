@@ -80,7 +80,7 @@ impl Stf {
 				&1u128.encode(),
 			);
 			sp_io::storage::set(
-				&storage_value_key("Balances", "TransfactionByteFee"),
+				&storage_value_key("Balances", "TransactionByteFee"),
 				&1u128.encode(),
 			);
 			sp_io::storage::set(
