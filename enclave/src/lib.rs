@@ -40,7 +40,7 @@ use crate::{
 use base58::ToBase58;
 use chain_relay::{
 	storage_proof::{StorageProof, StorageProofChecker},
-	Block, Header, LightValidation,
+	Block, Header, LightValidation, Validator,
 };
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;

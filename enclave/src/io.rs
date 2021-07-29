@@ -76,7 +76,7 @@ fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
 
 pub mod light_validation {
 	use crate::utils::UnwrapOrSgxErrorUnexpected;
-	use chain_relay::{storage_proof::StorageProof, Header, LightValidation};
+	use chain_relay::{storage_proof::StorageProof, Header, LightValidation, Validator};
 	use codec::{Decode, Encode};
 	use log::*;
 	use sgx_types::{sgx_status_t, SgxResult};
