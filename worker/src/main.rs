@@ -524,14 +524,56 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	debug!("Getting current head");
 	let curr_head: SignedBlock = api.last_finalized_block().unwrap().unwrap();
 
+	let blocks_to_sync = get_blocks_to_sync(api, &last_synced_head, &curr_head);
+
+	let tee_accountid = enclave_account(enclave_api);
+
+	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
+	let mut current_block_number = if curr_head.block.header.hash() == last_synced_head.hash() {
+		curr_head.block.header.number as usize
+	} else {
+		blocks_to_sync.first().map(|h| h.block.header.number as usize).unwrap_or(0)
+	};
+
+	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
+		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
+
+		// Produce blocks
+		if let Err(e) = chunk
+			.to_vec()
+			.using_encoded(|b| enclave_api.produce_blocks(b.to_vec(), tee_nonce))
+		{
+			error!("{:?}", e);
+			// enclave might not have synced
+			return last_synced_head
+		};
+
+		current_block_number += chunk.len();
+		println!(
+			"Synced {} blocks out of {} finalized blocks",
+			current_block_number,
+			blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
+		)
+	}
+
+	curr_head.block.header
+}
+
+/// gets a list of blocks that need to be synced, ordered from oldest to most recent header
+/// blocks that need to be synced are all blocks from the current header to the last synced header, iterating over parent
+fn get_blocks_to_sync(
+	api: &Api<sr25519::Pair>,
+	last_synced_head: &Header,
+	curr_head: &SignedBlock,
+) -> Vec<SignedBlock> {
 	let mut blocks_to_sync = Vec::<SignedBlock>::new();
 
 	// add blocks to sync if not already up to date
 	if curr_head.block.header.hash() != last_synced_head.hash() {
-		blocks_to_sync.push(curr_head.clone());
+		blocks_to_sync.push((*curr_head).clone());
 
 		// Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-		let mut head = curr_head.clone();
+		let mut head = (*curr_head).clone();
 		let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
 		if no_blocks_to_sync > 1 {
 			println!("Chain Relay is synced until block: {:?}", last_synced_head.number);
@@ -551,35 +593,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 		}
 		blocks_to_sync.reverse();
 	}
-
-	let tee_accountid = enclave_account(enclave_api);
-
-	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
-	let mut i = if curr_head.block.header.hash() == last_synced_head.hash() {
-		curr_head.block.header.number as usize
-	} else {
-		blocks_to_sync[0].block.header.number as usize
-	};
-	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
-		// Produce blocks
-		if let Err(e) = chunk
-			.to_vec()
-			.using_encoded(|b| enclave_api.produce_blocks(b.to_vec(), tee_nonce))
-		{
-			error!("{:?}", e);
-			// enclave might not have synced
-			return last_synced_head
-		};
-		i += chunk.len();
-		println!(
-			"Synced {} blocks out of {} finalized blocks",
-			i,
-			blocks_to_sync[0].block.header.number as usize + blocks_to_sync.len()
-		)
-	}
-
-	curr_head.block.header
+	blocks_to_sync
 }
 
 fn init_shard(shard: &ShardIdentifier) {

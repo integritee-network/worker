@@ -214,7 +214,7 @@ impl LightValidation {
 			found_xts.into_iter().map(|i| relay.verify_tx_inclusion.remove(i)).collect();
 
 		if !rm.is_empty() {
-			info!("Verfified inclusion proof of {} extrinsics.", rm.len());
+			info!("Verified inclusion proof of {} extrinsics.", rm.len());
 		}
 
 		Ok(())

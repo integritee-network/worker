@@ -401,41 +401,38 @@ pub unsafe extern "C" fn produce_blocks(
 	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
 
 	debug!("Syncing chain relay!");
-	if !blocks_to_sync.is_empty() {
-		for signed_block in blocks_to_sync.into_iter() {
-			validator.check_xt_inclusion(validator.num_relays, &signed_block.block).unwrap(); // panic can only happen if relay_id does not exist
-			if let Err(e) = validator.submit_simple_header(
-				validator.num_relays,
-				signed_block.block.header.clone(),
-				signed_block.justifications.clone(),
-			) {
-				error!("Block verification failed. Error : {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			}
-
-			if update_states(signed_block.block.header.clone(), on_chain_ocall_api.as_ref())
-				.is_err()
-			{
-				error!("Error performing state updates upon block import");
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			}
-
-			// execute indirect calls, incl. shielding and unshielding
-			match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api.as_ref()) {
-				// push shield funds to opaque calls
-				Ok(c) => calls.extend(c.into_iter()),
-				Err(_) => error!("Error executing relevant extrinsics"),
-			};
-			// compose indirect block confirmation
-			let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
-			let genesis_hash = validator.genesis_hash(validator.num_relays).unwrap();
-			let block_hash = signed_block.block.header.hash();
-			let prev_state_hash = signed_block.block.header.parent_hash();
-			calls.push(OpaqueCall(
-				(xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
-			));
+	for signed_block in blocks_to_sync.into_iter() {
+		validator.check_xt_inclusion(validator.num_relays, &signed_block.block).unwrap(); // panic can only happen if relay_id does not exist
+		if let Err(e) = validator.submit_simple_header(
+			validator.num_relays,
+			signed_block.block.header.clone(),
+			signed_block.justifications.clone(),
+		) {
+			error!("Block verification failed. Error : {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
+
+		if update_states(signed_block.block.header.clone(), on_chain_ocall_api.as_ref()).is_err() {
+			error!("Error performing state updates upon block import");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		}
+
+		// execute indirect calls, incl. shielding and unshielding
+		match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api.as_ref()) {
+			// push shield funds to opaque calls
+			Ok(c) => calls.extend(c.into_iter()),
+			Err(_) => error!("Error executing relevant extrinsics"),
+		};
+		// compose indirect block confirmation
+		let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+		let genesis_hash = validator.genesis_hash(validator.num_relays).unwrap();
+		let block_hash = signed_block.block.header.hash();
+		let prev_state_hash = signed_block.block.header.parent_hash();
+		calls.push(OpaqueCall(
+			(xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
+		));
 	}
+
 	// get header of last block
 	let latest_onchain_header: Header =
 		validator.latest_finalized_header(validator.num_relays).unwrap();
