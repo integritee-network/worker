@@ -5729,7 +5729,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-storage-keys"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec 2.1.3",
