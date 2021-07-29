@@ -1,8 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Encode;
-use frame_metadata::StorageHasher;
 use sp_std::vec::Vec;
+
+pub use frame_metadata::StorageHasher;
 
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
 	let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();

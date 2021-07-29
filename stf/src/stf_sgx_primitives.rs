@@ -21,8 +21,7 @@ use derive_more::Display;
 use log_sgx::*;
 use sgx_tstd as std;
 use std::{prelude::v1::*, vec};
-use substratee_storage_keys::storage_map_key;
-use support::metadata::StorageHasher;
+use substratee_storage_keys::{storage_map_key, StorageHasher};
 
 pub type StfResult<T> = Result<T, StfError>;
 
