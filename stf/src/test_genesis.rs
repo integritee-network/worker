@@ -15,7 +15,7 @@
 
 */
 
-use crate::stf_sgx_primitives::{get_account_info, storage_value_key, StfError};
+use crate::stf_sgx_primitives::{get_account_info, StfError};
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::{Balance, Runtime};
@@ -24,6 +24,7 @@ use sp_core::{crypto::AccountId32, Pair};
 use sp_io::SgxExternalities;
 use sp_runtime::MultiAddress;
 use std::{string::ToString, vec, vec::Vec};
+use substratee_storage_keys::storage_value_key;
 use support::traits::UnfilteredDispatchable;
 
 const ALICE_ENCODED: [u8; 32] = [
