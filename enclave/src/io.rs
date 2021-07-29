@@ -14,6 +14,8 @@
 	limitations under the License.
 
 */
+use crate::utils::UnwrapOrSgxErrorUnexpected;
+use sgx_types::*;
 use std::{
 	fs,
 	io::{Read, Write},
@@ -21,10 +23,6 @@ use std::{
 	string::String,
 	vec::Vec,
 };
-
-use sgx_types::*;
-
-use crate::utils::UnwrapOrSgxErrorUnexpected;
 
 pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
 	SgxFile::open(filepath)
@@ -110,11 +108,11 @@ pub mod light_validation {
 
 		let validator = unseal().sgx_error_with_log("Error reading validator")?;
 
-		let genesis = validator.genesis_hash(validator.num_relays).unwrap();
+		let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
 		if genesis == header.hash() {
 			info!("Found already initialized chain relay with Genesis Hash: {:?}", genesis);
 			info!("Chain Relay state: {:?}", validator);
-			Ok(validator.latest_finalized_header(validator.num_relays).unwrap())
+			Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 		} else {
 			init_validator(header, auth, proof)
 		}
@@ -130,6 +128,6 @@ pub mod light_validation {
 		validator.initialize_relay(header, auth.into(), proof).sgx_error()?;
 		super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?;
 
-		Ok(validator.latest_finalized_header(validator.num_relays).unwrap())
+		Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 	}
 }

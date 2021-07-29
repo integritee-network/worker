@@ -40,7 +40,7 @@ use crate::{
 use base58::ToBase58;
 use chain_relay::{
 	storage_proof::{StorageProof, StorageProofChecker},
-	Block, Header, LightValidation, Validator,
+	Block, Header, Validator,
 };
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
@@ -51,7 +51,7 @@ use rpc::{
 	basic_pool::BasicPool,
 };
 use sgx_externalities::SgxExternalitiesTypeTrait;
-use sgx_types::sgx_status_t;
+use sgx_types::{sgx_status_t, SgxResult};
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT, OpaqueExtrinsic};
@@ -253,11 +253,14 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_extrinsics(
-	validator: LightValidation,
+fn create_extrinsics<V>(
+	validator: &V,
 	calls_buffer: Vec<OpaqueCall>,
 	mut nonce: u32,
-) -> Result<Vec<Vec<u8>>> {
+) -> Result<Vec<Vec<u8>>>
+where
+	V: Validator,
+{
 	// get information for composing the extrinsic
 	let signer = ed25519::unseal_pair()?;
 	debug!("Restored ECC pubkey: {:?}", signer.public());
@@ -270,8 +273,8 @@ fn create_extrinsics(
 				call,
 				nonce,
 				Era::Immortal,
-				validator.genesis_hash(validator.num_relays).unwrap(),
-				validator.genesis_hash(validator.num_relays).unwrap(),
+				validator.genesis_hash(validator.num_relays()).unwrap(),
+				validator.genesis_hash(validator.num_relays()).unwrap(),
 				RUNTIME_SPEC_VERSION,
 				RUNTIME_TRANSACTION_VERSION
 			)
@@ -397,45 +400,21 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(e) => return e,
 	};
 
-	let mut calls = Vec::<OpaqueCall>::new();
 	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
 
-	debug!("Syncing chain relay!");
-	for signed_block in blocks_to_sync.into_iter() {
-		validator.check_xt_inclusion(validator.num_relays, &signed_block.block).unwrap(); // panic can only happen if relay_id does not exist
-		if let Err(e) = validator.submit_simple_header(
-			validator.num_relays,
-			signed_block.block.header.clone(),
-			signed_block.justifications.clone(),
-		) {
-			error!("Block verification failed. Error : {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-
-		if update_states(signed_block.block.header.clone(), on_chain_ocall_api.as_ref()).is_err() {
-			error!("Error performing state updates upon block import");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-
-		// execute indirect calls, incl. shielding and unshielding
-		match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api.as_ref()) {
-			// push shield funds to opaque calls
-			Ok(c) => calls.extend(c.into_iter()),
-			Err(_) => error!("Error executing relevant extrinsics"),
-		};
-		// compose indirect block confirmation
-		let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
-		let genesis_hash = validator.genesis_hash(validator.num_relays).unwrap();
-		let block_hash = signed_block.block.header.hash();
-		let prev_state_hash = signed_block.block.header.parent_hash();
-		calls.push(OpaqueCall(
-			(xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
-		));
-	}
+	let mut calls = match sync_blocks_on_chain_relay(
+		blocks_to_sync,
+		&mut validator,
+		on_chain_ocall_api.as_ref(),
+	) {
+		Ok(c) => c,
+		Err(e) => return e,
+	};
 
 	// get header of last block
 	let latest_onchain_header: Header =
-		validator.latest_finalized_header(validator.num_relays).unwrap();
+		validator.latest_finalized_header(validator.num_relays()).unwrap();
+
 	// execute pending calls from operation pool and create block
 	// (one per shard) as opaque call with block confirmation
 	let rpc_ocall_api = OCallComponentFactory::rpc_api();
@@ -451,7 +430,7 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	let extrinsics = match create_extrinsics(validator.clone(), calls, *nonce) {
+	let extrinsics = match create_extrinsics(&validator, calls, *nonce) {
 		Ok(xt) => xt,
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
@@ -460,7 +439,7 @@ pub unsafe extern "C" fn produce_blocks(
 	for xt in extrinsics.iter() {
 		validator
 			.submit_xt_to_be_included(
-				validator.num_relays,
+				validator.num_relays(),
 				OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap(),
 			)
 			.unwrap();
@@ -477,6 +456,55 @@ pub unsafe extern "C" fn produce_blocks(
 	}
 
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn sync_blocks_on_chain_relay<V, O>(
+	blocks_to_sync: Vec<SignedBlock<Block>>,
+	validator: &mut V,
+	on_chain_ocall_api: &O,
+) -> SgxResult<Vec<OpaqueCall>>
+where
+	V: Validator,
+	O: EnclaveOnChainOCallApi,
+{
+	let mut calls = Vec::<OpaqueCall>::new();
+
+	debug!("Syncing chain relay!");
+	for signed_block in blocks_to_sync.into_iter() {
+		validator
+			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
+			.unwrap(); // panic can only happen if relay_id does not exist
+		if let Err(e) = validator.submit_simple_header(
+			validator.num_relays(),
+			signed_block.block.header.clone(),
+			signed_block.justifications.clone(),
+		) {
+			error!("Block verification failed. Error : {:?}", e);
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		}
+
+		if update_states(signed_block.block.header.clone(), on_chain_ocall_api).is_err() {
+			error!("Error performing state updates upon block import");
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		}
+
+		// execute indirect calls, incl. shielding and unshielding
+		match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api) {
+			// push shield funds to opaque calls
+			Ok(c) => calls.extend(c.into_iter()),
+			Err(_) => error!("Error executing relevant extrinsics"),
+		};
+		// compose indirect block confirmation
+		let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+		let genesis_hash = validator.genesis_hash(validator.num_relays()).unwrap();
+		let block_hash = signed_block.block.header.hash();
+		let prev_state_hash = signed_block.block.header.parent_hash();
+		calls.push(OpaqueCall(
+			(xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
+		));
+	}
+
+	Ok(calls)
 }
 
 fn get_stf_state(
@@ -731,6 +759,7 @@ where
 	// global requests they are the same for every shard
 	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
 	let update_map = verify_worker_responses(responses, header.clone())?;
+
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
 		match maybe_shards {

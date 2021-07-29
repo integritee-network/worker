@@ -100,8 +100,8 @@ pub trait Validator: Encode + Decode + Clone + Default {
 
 #[derive(Encode, Decode, Clone, Default)]
 pub struct LightValidation {
-	pub num_relays: RelayId,
-	pub tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
+	num_relays: RelayId,
+	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
 }
 
 impl LightValidation {
