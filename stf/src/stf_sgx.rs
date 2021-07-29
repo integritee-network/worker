@@ -1,21 +1,25 @@
-use sgx_tstd as std;
-use std::{collections::HashMap, prelude::v1::*, vec};
-
+use crate::{
+	stf_sgx_primitives::{
+		get_account_info, increment_nonce, shards_key_hash, storage_value_key, validate_nonce,
+		StfError, StfResult,
+	},
+	AccountId, Getter, Index, PublicGetter, StatePayload, TrustedCall, TrustedCallSigned,
+	TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+};
 use codec::{Decode, Encode};
-use derive_more::Display;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
-use sgx_runtime::{Balance, BlockNumber as L1BlockNumer, Runtime};
-use sp_core::{crypto::AccountId32, Pair, H256 as Hash};
+use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
+use sgx_tstd as std;
+use sp_core::H256 as Hash;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
+use std::{collections::HashMap, prelude::v1::*};
 use substratee_worker_primitives::BlockNumber;
-use support::{ensure, metadata::StorageHasher, traits::UnfilteredDispatchable};
+use support::{ensure, traits::UnfilteredDispatchable};
 
-use crate::{
-	AccountId, Getter, Index, PublicGetter, ShardIdentifier, StatePayload, TrustedCall,
-	TrustedCallSigned, TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
-};
+#[cfg(feature = "test")]
+use crate::test_genesis::test_genesis_setup;
 
 /// Simple blob that holds a call in encoded format
 #[derive(Clone, Debug)]
@@ -46,31 +50,16 @@ pub mod types {
 
 use types::*;
 
-const ALICE_ENCODED: [u8; 32] = [
-	212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
-	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
-];
-const ALICE_FUNDS: Balance = 1000000000000000;
-
 impl Stf {
 	pub fn init_state() -> State {
 		debug!("initializing stf state");
 		let mut ext = State::new();
 		// set initial state hash
 		let state_hash: Hash = blake2_256(&ext.clone().encode()).into();
+
 		ext.execute_with(|| {
 			// do not set genesis for pallets that are meant to be on-chain
 			// use get_storage_hashes_to_update instead
-			sp_io::storage::set(&storage_value_key("Sudo", "Key"), &ALICE_ENCODED);
-			// fund root account
-			sgx_runtime::BalancesCall::<Runtime>::set_balance(
-				MultiAddress::Id(AccountId32::from(ALICE_ENCODED)),
-				ALICE_FUNDS,
-				ALICE_FUNDS,
-			)
-			.dispatch_bypass_filter(sgx_runtime::Origin::root())
-			.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
-			.unwrap();
 
 			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &11u128.encode());
 			sp_io::storage::set(&storage_value_key("Balances", "CreationFee"), &1u128.encode());
@@ -80,7 +69,7 @@ impl Stf {
 				&1u128.encode(),
 			);
 			sp_io::storage::set(
-				&storage_value_key("Balances", "TransfactionByteFee"),
+				&storage_value_key("Balances", "TransactionByteFee"),
 				&1u128.encode(),
 			);
 			sp_io::storage::set(
@@ -95,27 +84,11 @@ impl Stf {
 			);
 			// Set first parent hash to initial state hash
 			sp_io::storage::set(&storage_value_key("System", "LastHash"), &state_hash.encode());
-			//FIXME: for testing purpose only - maybe add feature?
-			// for example: feature = endowtestaccounts
-			let public = AccountId32::from(
-				sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public(),
-			);
-			sgx_runtime::BalancesCall::<Runtime>::set_balance(
-				MultiAddress::Id(public.clone()),
-				2000,
-				2000,
-			)
-			.dispatch_bypass_filter(sgx_runtime::Origin::root())
-			.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
-			.unwrap();
-
-			let print_public: [u8; 32] = public.clone().into();
-			if let Some(info) = get_account_info(&public) {
-				debug!("{:?} balance is {}", print_public, info.data.free);
-			} else {
-				debug!("{:?} balance is zero", print_public);
-			}
 		});
+
+		#[cfg(feature = "test")]
+		test_genesis_setup(&mut ext);
+
 		ext
 	}
 
@@ -290,7 +263,7 @@ impl Stf {
 		})
 	}
 
-	//FIXME: Add Test feature as this function is only used for unit testing currently
+	#[cfg(feature = "test")]
 	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
 		ext.execute_with(|| {
 			if let Some(info) = get_account_info(account) {
@@ -438,139 +411,12 @@ impl Stf {
 	}
 }
 
-pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-	Vec::new()
-}
-
-pub fn shards_key_hash() -> Vec<u8> {
-	// here you have to point to a storage value containing a Vec of ShardIdentifiers
-	// the enclave uses this to autosubscribe to no shards
-	vec![]
-}
-
-// get the AccountInfo key where the account is stored
-pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
-	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
-}
-
-fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
-	if let Some(infovec) = sp_io::storage::get(&storage_map_key(
-		"System",
-		"Account",
-		who,
-		&StorageHasher::Blake2_128Concat,
-	)) {
-		if let Ok(info) = AccountInfo::decode(&mut infovec.as_slice()) {
-			Some(info)
-		} else {
-			None
-		}
-	} else {
-		None
-	}
-}
-
-fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
-	// validate
-	let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
-	if expected_nonce == nonce {
-		return Ok(())
-	}
-	Err(StfError::InvalidNonce(nonce))
-}
-
-/// increment nonce after a successful call execution
-fn increment_nonce(account: &AccountId) {
-	//FIXME: Proper error handling - should be taken into
-	// consideration after implementing pay fee check
-	if let Some(mut acc_info) = get_account_info(account) {
-		debug!("incrementing account nonce");
-		acc_info.nonce += 1;
-		sp_io::storage::set(&account_key_hash(account), &acc_info.encode());
-		debug!(
-			"updated account {:?} nonce: {:?}",
-			account.encode(),
-			get_account_info(account).unwrap().nonce
-		);
-	} else {
-		error!("tried to increment nonce of a non-existent account")
-	}
-}
-
-pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {
-	let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
-	bytes.extend(&sp_core::twox_128(storage_prefix.as_bytes())[..]);
-	bytes
-}
-
-pub fn storage_map_key<K: Encode>(
-	module_prefix: &str,
-	storage_prefix: &str,
-	mapkey1: &K,
-	hasher1: &StorageHasher,
-) -> Vec<u8> {
-	let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
-	bytes.extend(&sp_core::twox_128(storage_prefix.as_bytes())[..]);
-	bytes.extend(key_hash(mapkey1, hasher1));
-	bytes
-}
-
-pub fn storage_double_map_key<K: Encode, Q: Encode>(
-	module_prefix: &str,
-	storage_prefix: &str,
-	mapkey1: &K,
-	hasher1: &StorageHasher,
-	mapkey2: &Q,
-	hasher2: &StorageHasher,
-) -> Vec<u8> {
-	let mut bytes = sp_core::twox_128(module_prefix.as_bytes()).to_vec();
-	bytes.extend(&sp_core::twox_128(storage_prefix.as_bytes())[..]);
-	bytes.extend(key_hash(mapkey1, hasher1));
-	bytes.extend(key_hash(mapkey2, hasher2));
-	bytes
-}
-
-/// generates the key's hash depending on the StorageHasher selected
-fn key_hash<K: Encode>(key: &K, hasher: &StorageHasher) -> Vec<u8> {
-	let encoded_key = key.encode();
-	match hasher {
-		StorageHasher::Identity => encoded_key.to_vec(),
-		StorageHasher::Blake2_128 => sp_core::blake2_128(&encoded_key).to_vec(),
-		StorageHasher::Blake2_128Concat => {
-			// copied from substrate Blake2_128Concat::hash since StorageHasher is not public
-			let x: &[u8] = encoded_key.as_slice();
-			sp_core::blake2_128(x).iter().chain(x.iter()).cloned().collect::<Vec<_>>()
-		},
-		StorageHasher::Blake2_256 => sp_core::blake2_256(&encoded_key).to_vec(),
-		StorageHasher::Twox128 => sp_core::twox_128(&encoded_key).to_vec(),
-		StorageHasher::Twox256 => sp_core::twox_256(&encoded_key).to_vec(),
-		StorageHasher::Twox64Concat => sp_core::twox_64(&encoded_key).to_vec(),
-	}
-}
-
-pub type StfResult<T> = Result<T, StfError>;
-
-#[derive(Debug, Display, PartialEq, Eq)]
-pub enum StfError {
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
-	MissingPrivileges(AccountId),
-	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
-	Dispatch(String),
-	#[display(fmt = "Not enough funds to perform operation")]
-	MissingFunds,
-	#[display(fmt = "Account does not exist {:?}", _0)]
-	InexistentAccount(AccountId),
-	#[display(fmt = "Invalid Nonce {:?}", _0)]
-	InvalidNonce(Index),
-	StorageHashMismatch,
-	InvalidStorageDiff,
-}
-
 // this must be pub to be able to test it in the enclave. In the future this should be testable
 // with cargo test. See: https://github.com/scs/substraTEE-worker/issues/272.
+#[cfg(feature = "test")]
 pub mod tests {
-	use super::{State, StateHash, StatePayload, Stf, StfTrait};
-	use crate::sgx::StfError;
+	use super::*;
+	use crate::stf_sgx::StfError;
 	use sgx_externalities::SgxExternalitiesTypeTrait;
 	use sp_core::H256;
 	use sp_runtime::traits::{BlakeTwo256, Hash};

@@ -30,6 +30,7 @@ std = [
     "substrate-client-keystore",
     "my-node-runtime",
 ]
+test = []
 
 [dependencies]
 log-sgx             = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }

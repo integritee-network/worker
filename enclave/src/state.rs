@@ -162,67 +162,71 @@ pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
 }
 
 //  tests
-use sgx_externalities::SgxExternalitiesTrait;
+#[cfg(feature = "test")]
+pub mod tests {
+	use super::*;
+	use crate::tests::ensure_no_empty_shard_directory_exists;
+	use sgx_externalities::SgxExternalitiesTrait;
 
-pub fn test_sgx_state_decode_encode_works() {
-	// given
-	let key: Vec<u8> = "hello".encode();
-	let value: Vec<u8> = "world".encode();
-	let mut state = StfState::new();
-	state.insert(key, value);
+	pub fn test_sgx_state_decode_encode_works() {
+		// given
+		let key: Vec<u8> = "hello".encode();
+		let value: Vec<u8> = "world".encode();
+		let mut state = StfState::new();
+		state.insert(key, value);
 
-	// when
-	let encoded_state = state.state.clone().encode();
-	let state2 = StfStateType::decode(encoded_state);
-	debug!("State:{:?}", state);
+		// when
+		let encoded_state = state.state.clone().encode();
+		let state2 = StfStateType::decode(encoded_state);
+		debug!("State:{:?}", state);
 
-	// then
-	assert_eq!(state.state, state2);
-}
-
-pub fn test_encrypt_decrypt_state_type_works() {
-	// given
-	let key: Vec<u8> = "hello".encode();
-	let value: Vec<u8> = "world".encode();
-	let mut state = StfState::new();
-	state.insert(key, value);
-
-	// when
-	let encrypted = encrypt(state.state.clone().encode()).unwrap();
-	debug!("State encrypted:{:?}", encrypted);
-	let decrypted = encrypt(encrypted).unwrap();
-	let decoded = StfStateType::decode(decrypted);
-
-	// then
-	assert_eq!(state.state, decoded);
-}
-
-use crate::tests::ensure_no_empty_shard_directory_exists;
-
-pub fn test_write_and_load_state_works() {
-	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let key: Vec<u8> = "hello".encode();
-	let value: Vec<u8> = "world".encode();
-	let mut state = StfState::new();
-	let shard: ShardIdentifier = [94u8; 32].into();
-	state.insert(key, value);
-
-	// when
-	if !exists(&shard) {
-		init_shard(&shard).unwrap();
+		// then
+		assert_eq!(state.state, state2);
 	}
-	let _hash = write(state.clone(), &shard).unwrap();
-	let result = load(&shard).unwrap();
 
-	// then
-	assert_eq!(state.state, result.state);
+	pub fn test_encrypt_decrypt_state_type_works() {
+		// given
+		let key: Vec<u8> = "hello".encode();
+		let value: Vec<u8> = "world".encode();
+		let mut state = StfState::new();
+		state.insert(key, value);
 
-	// clean up
-	remove_shard_dir(&shard);
-}
+		// when
+		let encrypted = encrypt(state.state.clone().encode()).unwrap();
+		debug!("State encrypted:{:?}", encrypted);
+		let decrypted = encrypt(encrypted).unwrap();
+		let decoded = StfStateType::decode(decrypted);
 
-pub fn remove_shard_dir(shard: &ShardIdentifier) {
-	std::fs::remove_dir_all(&format!("{}/{}", SHARDS_PATH, shard.encode().to_base58())).unwrap();
+		// then
+		assert_eq!(state.state, decoded);
+	}
+
+	pub fn test_write_and_load_state_works() {
+		// given
+		ensure_no_empty_shard_directory_exists();
+
+		let key: Vec<u8> = "hello".encode();
+		let value: Vec<u8> = "world".encode();
+		let mut state = StfState::new();
+		let shard: ShardIdentifier = [94u8; 32].into();
+		state.insert(key, value);
+
+		// when
+		if !exists(&shard) {
+			init_shard(&shard).unwrap();
+		}
+		let _hash = write(state.clone(), &shard).unwrap();
+		let result = load(&shard).unwrap();
+
+		// then
+		assert_eq!(state.state, result.state);
+
+		// clean up
+		remove_shard_dir(&shard);
+	}
+
+	pub fn remove_shard_dir(shard: &ShardIdentifier) {
+		std::fs::remove_dir_all(&format!("{}/{}", SHARDS_PATH, shard.encode().to_base58()))
+			.unwrap();
+	}
 }

@@ -75,7 +75,8 @@ use substratee_settings::{
 	},
 };
 use substratee_stf::{
-	sgx::{shards_key_hash, storage_hashes_to_update_per_shard, OpaqueCall},
+	stf_sgx::OpaqueCall,
+	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
 	AccountId, Getter, ShardIdentifier, State as StfState, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
@@ -102,8 +103,21 @@ pub mod rpc;
 pub mod tls_ra;
 pub mod top_pool;
 
+#[cfg(feature = "test")]
 pub mod test;
+
+#[cfg(feature = "test")]
 pub mod tests;
+
+#[cfg(not(feature = "test"))]
+use sgx_types::size_t;
+
+// this is a 'dummy' for production mode
+#[cfg(not(feature = "test"))]
+#[no_mangle]
+pub extern "C" fn test_main_entrance() -> size_t {
+	unreachable!("Tests are not available when compiled in production mode.")
+}
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
