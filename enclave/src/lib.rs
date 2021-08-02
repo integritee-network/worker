@@ -56,6 +56,7 @@ use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT, OpaqueExtrinsic};
 use std::{
+	borrow::ToOwned,
 	collections::HashMap,
 	slice,
 	sync::{Arc, SgxMutex, SgxMutexGuard},
@@ -77,7 +78,7 @@ use substratee_settings::{
 use substratee_stf::{
 	stf_sgx::OpaqueCall,
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, StatePayload, Stf, TrustedCall,
+	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
 use substratee_worker_primitives::{
@@ -450,6 +451,7 @@ pub unsafe extern "C" fn produce_blocks(
 	};
 
 	// ocall to worker to store signed block and send block confirmation
+	// send extrinsics to layer 1 block chain, gossip blocks to side-chain
 	if let Err(e) = on_chain_ocall_api.send_block_and_confirmation(extrinsics, signed_blocks) {
 		error!("Failed to send block and confirmation: {}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -474,6 +476,7 @@ where
 		validator
 			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
 			.unwrap(); // panic can only happen if relay_id does not exist
+
 		if let Err(e) = validator.submit_simple_header(
 			validator.num_relays(),
 			signed_block.block.header.clone(),
@@ -494,6 +497,7 @@ where
 			Ok(c) => calls.extend(c.into_iter()),
 			Err(_) => error!("Error executing relevant extrinsics"),
 		};
+
 		// compose indirect block confirmation
 		let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
 		let genesis_hash = validator.genesis_hash(validator.num_relays()).unwrap();
@@ -547,136 +551,186 @@ where
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("Executing pending pool operations");
+
+	// load top pool
+	let pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
+		Some(mutex) => mutex,
+		None => {
+			error!("Could not get mutex to pool");
+			return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into()
+		},
+	};
+
+	let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
+	let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
+	let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool.clone()));
+
+	// get all shards
+	let shards = state::list_shards()?;
+
+	// Handle trusted getters
+	execute_trusted_getters(rpc_ocall, &author, &shards)?;
+
+	// Handle trusted calls
+	let calls_and_blocks =
+		execute_trusted_calls(on_chain_ocall, latest_onchain_header, pool, author, shards)?;
+
+	Ok(calls_and_blocks)
+}
+
+fn execute_trusted_calls<O>(
+	on_chain_ocall: &O,
+	latest_onchain_header: Header,
+	pool: Arc<&BPool>,
+	author: Arc<Author<&BPool>>,
+	shards: Vec<H256>,
+) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)>
+where
+	O: EnclaveOnChainOCallApi,
+{
 	let mut calls = Vec::<OpaqueCall>::new();
 	let mut blocks = Vec::<SignedSidechainBlock>::new();
-	{
-		// load top pool
-		let pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
-			Some(mutex) => mutex,
-			None => {
-				error!("Could not get mutex to pool");
-				return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into()
-			},
-		};
-		let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
-		let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
-		let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool.clone()));
+	let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+	let mut is_done = false;
+	for shard in shards.into_iter() {
+		let mut call_hashes = Vec::<H256>::new();
 
-		// get all shards
-		let shards = state::list_shards()?;
+		// load state before executing any calls
+		let mut state = load_initialized_state(&shard)?;
+		// save the state hash before call executions
+		// (needed for block composition)
+		let prev_state_hash = state::hash_of(state.state.clone())?;
 
-		// Handle trusted getters
-		let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-		let mut is_done = false;
-		for shard in shards.clone().into_iter() {
-			// retrieve trusted operations from pool
-			let trusted_getters = author.get_pending_tops_separated(shard)?.1;
-			for trusted_getter_signed in trusted_getters.into_iter() {
-				// get state
-				let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
-				// get hash
-				let hash_of_getter = author.hash_of(&trusted_getter_signed.into());
-				// let client know of current state
-				if rpc_ocall.send_state(hash_of_getter, value_opt).is_err() {
-					error!("Could not get state from stf");
-				}
-				// remove getter from pool
-				if let Err(e) = author.remove_top(
-					vec![TrustedOperationOrHash::Hash(hash_of_getter)],
-					shard,
-					false,
-				) {
-					error!("Error removing trusted operation from top pool: Error: {:?}", e);
-				}
-				// Check time
-				if time_is_overdue(Timeout::Getter, start_time) {
-					is_done = true;
-					break
-				}
-			}
-			if is_done {
+		// retrieve trusted operations from pool
+		let trusted_calls = author.get_pending_tops_separated(shard)?.0;
+
+		debug!("Got following trusted calls from pool: {:?}", trusted_calls);
+		// call execution
+		for trusted_call_signed in trusted_calls.into_iter() {
+			match handle_trusted_worker_call(
+				&mut calls,
+				&mut state,
+				&trusted_call_signed,
+				latest_onchain_header.clone(),
+				shard,
+				on_chain_ocall,
+			) {
+				Ok(hashes) => {
+					let inblock = match hashes {
+						Some((_, operation_hash)) => {
+							call_hashes.push(operation_hash);
+							true
+						},
+						None => {
+							// remove call as invalid from pool
+							false
+						},
+					};
+
+					// TODO: prune instead of remove_top ? Block needs to be known
+					// TODO: move this pruning to after finalization confirmations, not here!
+					// remove calls from pool (either as valid or invalid)
+					author
+						.remove_top(
+							vec![TrustedOperationOrHash::Operation(
+								trusted_call_signed.into_trusted_operation(true),
+							)],
+							shard,
+							inblock,
+						)
+						.unwrap();
+				},
+				Err(e) =>
+					error!("Error performing worker call (will not push top hash): Error: {:?}", e),
+			};
+			// Check time
+			if time_is_overdue(Timeout::Call, start_time) {
+				is_done = true;
 				break
 			}
 		}
+		// create new block (side-chain)
+		match compose_block_and_confirmation(
+			latest_onchain_header.clone(),
+			call_hashes,
+			shard,
+			prev_state_hash,
+			&mut state,
+		) {
+			Ok((block_confirm, signed_block)) => {
+				calls.push(block_confirm);
+				blocks.push(signed_block.clone());
 
-		// Handle trusted calls
-		let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-		let mut is_done = false;
-		for shard in shards.into_iter() {
-			let mut call_hashes = Vec::<H256>::new();
+				// Notify watching clients of InSidechainBlock
+				let composed_block = signed_block.block();
+				let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
+				pool.pool()
+					.validated_pool()
+					.on_block_created(composed_block.signed_top_hashes(), block_hash);
+			},
+			Err(e) => error!("Could not compose block confirmation: {:?}", e),
+		}
+		// save updated state after call executions
+		let _new_state_hash = state::write(state.clone(), &shard)?;
 
-			// load state before executing any calls
-			let mut state = if state::exists(&shard) {
-				state::load(&shard)?
-			} else {
-				state::init_shard(&shard)?;
-				Stf::init_state()
-			};
-			// save the state hash before call executions
-			// (needed for block composition)
-			let prev_state_hash = state::hash_of(state.state.clone())?;
-
-			// retrieve trusted operations from pool
-			let trusted_calls = author.get_pending_tops_separated(shard)?.0;
-
-			debug!("Got following trusted calls from pool: {:?}", trusted_calls);
-			// call execution
-			for trusted_call_signed in trusted_calls.into_iter() {
-				match handle_trusted_worker_call(
-					&mut calls,
-					&mut state,
-					trusted_call_signed,
-					latest_onchain_header.clone(),
-					shard,
-					Some(author.clone()),
-					on_chain_ocall,
-				) {
-					Ok(hashes) =>
-						if let Some((_, operation_hash)) = hashes {
-							call_hashes.push(operation_hash)
-						},
-					Err(e) => error!(
-						"Error performing worker call (will not push top hash): Error: {:?}",
-						e
-					),
-				};
-				// Check time
-				if time_is_overdue(Timeout::Call, start_time) {
-					is_done = true;
-					break
-				}
-			}
-			// create new block
-			match compose_block_and_confirmation(
-				latest_onchain_header.clone(),
-				call_hashes,
-				shard,
-				prev_state_hash,
-				&mut state,
-			) {
-				Ok((block_confirm, signed_block)) => {
-					calls.push(block_confirm);
-					blocks.push(signed_block.clone());
-
-					// Notify watching clients of InSidechainBlock
-					let composed_block = signed_block.block();
-					let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
-					pool.pool()
-						.validated_pool()
-						.on_block_created(composed_block.signed_top_hashes(), block_hash);
-				},
-				Err(e) => error!("Could not compose block confirmation: {:?}", e),
-			}
-			// save updated state after call executions
-			let _new_state_hash = state::write(state.clone(), &shard)?;
-
-			if is_done {
-				break
-			}
+		if is_done {
+			break
 		}
 	}
 
 	Ok((calls, blocks))
+}
+
+fn load_initialized_state(shard: &H256) -> SgxResult<State> {
+	let state = if state::exists(&shard) {
+		state::load(&shard)?
+	} else {
+		state::init_shard(&shard)?;
+		Stf::init_state()
+	};
+	Ok(state)
+}
+
+fn execute_trusted_getters<R>(
+	rpc_ocall: &R,
+	author: &Arc<Author<&BPool>>,
+	shards: &[H256],
+) -> Result<()>
+where
+	R: EnclaveRpcOCallApi,
+{
+	let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+	let mut is_done = false;
+	for shard in shards.to_owned().into_iter() {
+		// retrieve trusted operations from pool
+		let trusted_getters = author.get_pending_tops_separated(shard)?.1;
+		for trusted_getter_signed in trusted_getters.into_iter() {
+			// get state
+			let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
+			// get hash
+			let hash_of_getter = author.hash_of(&trusted_getter_signed.into());
+			// let client know of current state
+			if rpc_ocall.send_state(hash_of_getter, value_opt).is_err() {
+				error!("Could not get state from stf");
+			}
+			// remove getter from pool
+			if let Err(e) =
+				author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false)
+			{
+				error!("Error removing trusted operation from top pool: Error: {:?}", e);
+			}
+			// Check time
+			if time_is_overdue(Timeout::Getter, start_time) {
+				is_done = true;
+				break
+			}
+		}
+		if is_done {
+			break
+		}
+	}
+
+	Ok(())
 }
 
 /// Checks if the time of call execution or getter is overdue
@@ -808,6 +862,7 @@ where
 	debug!("Scanning block {} for relevant xt", block.header.number());
 	let mut opaque_calls = Vec::<OpaqueCall>::new();
 	for xt_opaque in block.extrinsics.iter() {
+		// shield funds XT
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
@@ -819,26 +874,21 @@ where
 			}
 		};
 
+		// call worker XT
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
 			if xt.function.0 == [SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER] {
 				if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
 					// load state before executing any calls
-					let mut state = if state::exists(&shard) {
-						state::load(&shard)?
-					} else {
-						state::init_shard(&shard)?;
-						Stf::init_state()
-					};
+					let mut state = load_initialized_state(&shard)?;
 					// call execution
 					if let Err(e) = handle_trusted_worker_call(
 						&mut opaque_calls, // necessary for unshielding
 						&mut state,
-						decrypted_trusted_call,
+						&decrypted_trusted_call,
 						block.header.clone(),
 						shard,
-						None,
 						on_chain_ocall,
 					) {
 						error!("Error performing worker call: Error: {:?}", e);
@@ -862,12 +912,7 @@ fn handle_shield_funds_xt(
         call, account_encrypted, amount, shard.encode().to_base58(),
     );
 
-	let mut state = if state::exists(&shard) {
-		state::load(&shard)?
-	} else {
-		state::init_shard(&shard)?;
-		Stf::init_state()
-	};
+	let mut state = load_initialized_state(&shard)?;
 
 	debug!("decrypt the call");
 	let rsa_keypair = rsa3072::unseal_pair()?;
@@ -922,10 +967,9 @@ fn decrypt_unchecked_extrinsic(
 fn handle_trusted_worker_call<O>(
 	calls: &mut Vec<OpaqueCall>,
 	state: &mut StfState,
-	stf_call_signed: TrustedCallSigned,
+	stf_call_signed: &TrustedCallSigned,
 	header: Header,
 	shard: ShardIdentifier,
-	author_pointer: Option<Arc<Author<&BPool>>>,
 	on_chain_ocall_api: &O,
 ) -> Result<Option<(H256, H256)>>
 where
@@ -939,19 +983,6 @@ where
 	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
 		error!("TrustedCallSigned: bad signature");
 		// do not panic here or users will be able to shoot workers dead by supplying a bad signature
-		if let Some(author) = author_pointer {
-			// remove call as invalid from pool
-			let inblock = false;
-			author
-				.remove_top(
-					vec![TrustedOperationOrHash::Operation(
-						stf_call_signed.into_trusted_operation(true),
-					)],
-					shard,
-					inblock,
-				)
-				.unwrap();
-		}
 		return Ok(None)
 	}
 
@@ -971,41 +1002,12 @@ where
 
 	debug!("execute STF");
 	if let Err(e) = Stf::execute(state, stf_call_signed.clone(), calls) {
-		if let Some(author) = author_pointer {
-			// remove call as invalid from pool
-			let inblock = false;
-			author
-				.remove_top(
-					vec![TrustedOperationOrHash::Operation(
-						stf_call_signed.into_trusted_operation(true),
-					)],
-					shard,
-					inblock,
-				)
-				.unwrap();
-		}
 		error!("Error performing Stf::execute. Error: {:?}", e);
-
 		return Ok(None)
 	}
 
-	if let Some(author) = author_pointer {
-		// TODO: prune instead of remove_top ? Block needs to be known
-		// remove call from pool as valid
-		// TODO: move this pruning to after finalization confirmations, not here!
-		let inblock = true;
-		author
-			.remove_top(
-				vec![TrustedOperationOrHash::Operation(
-					stf_call_signed.clone().into_trusted_operation(true),
-				)],
-				shard,
-				inblock,
-			)
-			.unwrap();
-	}
 	let call_hash = blake2_256(&stf_call_signed.encode());
-	let operation = stf_call_signed.into_trusted_operation(true);
+	let operation = stf_call_signed.clone().into_trusted_operation(true);
 	let operation_hash = blake2_256(&operation.encode());
 	debug!("Operation hash 0x{}", hex::encode_hex(&operation_hash));
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
