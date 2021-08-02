@@ -2623,7 +2623,18 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "substratee-storage-keys",
  "substratee-worker-primitives",
+]
+
+[[package]]
+name = "substratee-storage-keys"
+version = "0.8.0"
+dependencies = [
+ "frame-metadata",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -2684,6 +2695,7 @@ dependencies = [
  "substratee-node-primitives",
  "substratee-settings",
  "substratee-stf",
+ "substratee-storage-keys",
  "substratee-worker-primitives",
  "webpki",
  "webpki-roots",

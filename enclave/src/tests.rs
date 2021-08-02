@@ -54,6 +54,7 @@ use substratee_stf::{
 	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
 	TrustedCall, TrustedGetter, TrustedOperation,
 };
+use substratee_storage_keys::storage_value_key;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -538,8 +539,7 @@ fn test_create_state_diff() {
 	let new_balance_acc_wo_money =
 		AccountInfo::decode(&mut acc_info_vec.as_slice()).unwrap().data.free;
 	// get block number
-	let block_number_key =
-		substratee_stf::stf_sgx_primitives::storage_value_key("System", "Number");
+	let block_number_key = storage_value_key("System", "Number");
 	let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
 	let new_block_number =
 		substratee_worker_primitives::BlockNumber::decode(&mut new_block_number_encoded.as_slice())
