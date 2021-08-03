@@ -3,6 +3,7 @@ use derive_more::{Display, From};
 use frame_support::ensure;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
+use std::collections::HashMap;
 use substratee_storage::StorageProofChecker;
 use substratee_worker_primitives::WorkerResponse;
 
@@ -78,4 +79,17 @@ impl OnchainStorage for WorkerResponse<Vec<u8>> {
 			WorkerResponse::ChainStorage(_, value, _) => value,
 		}
 	}
+}
+
+pub fn verify_worker_responses<Header: HeaderT>(
+	responses: Vec<WorkerResponse<Vec<u8>>>,
+	header: &Header,
+) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>, Error> {
+	let mut update_map = HashMap::new();
+	for response in responses.into_iter() {
+		response.verify_proof(header)?;
+		let s = response.into_opaque_storage();
+		update_map.insert(s.key, s.value);
+	}
+	Ok(update_map)
 }

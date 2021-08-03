@@ -35,7 +35,7 @@ use crate::{
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
-	onchain_storage::OnchainStorage,
+	onchain_storage::verify_worker_responses,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -55,7 +55,6 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT, OpaqueExtrinsic};
 use std::{
 	borrow::ToOwned,
-	collections::HashMap,
 	slice,
 	sync::{Arc, SgxMutex, SgxMutexGuard},
 	time::{SystemTime, UNIX_EPOCH},
@@ -1013,17 +1012,4 @@ where
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
-}
-
-fn verify_worker_responses(
-	responses: Vec<WorkerResponse<Vec<u8>>>,
-	header: &Header,
-) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
-	let mut update_map = HashMap::new();
-	for response in responses.into_iter() {
-		response.verify_proof(header)?;
-		let s = response.into_opaque_storage();
-		update_map.insert(s.key, s.value);
-	}
-	Ok(update_map)
 }
