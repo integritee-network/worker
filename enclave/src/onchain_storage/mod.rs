@@ -1,23 +1,21 @@
-use crate::ocall::ocall_api::EnclaveOnChainOCallApi;
 use codec::{Decode, Encode};
-use derive_more::From;
+use derive_more::{Display, From};
 use frame_support::ensure;
-use log::error;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
-use substratee_storage::{Error as ProofError, StorageProofChecker};
-use substratee_worker_primitives::{WorkerRequest, WorkerResponse};
+use substratee_storage::StorageProofChecker;
+use substratee_worker_primitives::WorkerResponse;
 
-#[derive(Debug, PartialEq, Eq, From)]
+#[derive(Debug, Display, PartialEq, Eq, From)]
 pub enum Error {
 	NoProofSupplied,
 	/// Supplied storage value does not match the value from the proof
 	WrongValue,
-	Proof(ProofError),
+	Proof(substratee_storage::proof::Error),
 	Codec(codec::Error),
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Encode, Decode)]
 pub struct StorageEntry<V: Decode> {
 	pub key: Vec<u8>,
 	pub value: Option<V>,
@@ -26,6 +24,7 @@ pub struct StorageEntry<V: Decode> {
 pub trait OnchainStorage {
 	fn verify_proof<Header: HeaderT>(&self, header: &Header) -> Result<(), Error>;
 	fn try_into_storage_entry<V: Decode>(self) -> Result<StorageEntry<V>, Error>;
+	fn into_opaque_storage(self) -> StorageEntry<Vec<u8>>;
 	fn key(&self) -> &[u8];
 	fn value(&self) -> &Option<Vec<u8>>;
 }
@@ -58,6 +57,13 @@ impl OnchainStorage for WorkerResponse<Vec<u8>> {
 				};
 				Ok(StorageEntry { key, value: v })
 			},
+		}
+	}
+
+	/// To get owned values of the `key` an `value` for further use without having to `clone`.
+	fn into_opaque_storage(self) -> StorageEntry<Vec<u8>> {
+		match self {
+			WorkerResponse::ChainStorage(key, value, _) => StorageEntry { key, value },
 		}
 	}
 

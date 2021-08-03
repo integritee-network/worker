@@ -35,6 +35,7 @@ use crate::{
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
+	onchain_storage::OnchainStorage,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -78,7 +79,7 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::{StorageProof, StorageProofChecker};
+use substratee_storage::StorageProof;
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 	BlockHash, WorkerRequest, WorkerResponse,
@@ -1019,27 +1020,10 @@ fn verify_worker_responses(
 	header: Header,
 ) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
 	let mut update_map = HashMap::new();
-	for response in responses.iter() {
-		match response {
-			WorkerResponse::ChainStorage(key, value, proof) => {
-				let proof = proof.as_ref().sgx_error_with_log("No Storage Proof Supplied")?;
-
-				let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
-					header.state_root,
-					key,
-					proof.to_vec(),
-				)
-				.sgx_error_with_log("Erroneous StorageProof")?;
-
-				// Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
-				if &actual != value {
-					error!("Wrong storage value supplied");
-					// todo: return another error now that we introduced our custom error
-					return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into()
-				}
-				update_map.insert(key.clone(), value.clone());
-			},
-		}
+	for response in responses.into_iter() {
+		response.verify_proof(&header)?;
+		let s = response.into_opaque_storage();
+		update_map.insert(s.key, s.value);
 	}
 	Ok(update_map)
 }
