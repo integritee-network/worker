@@ -163,7 +163,7 @@ path = "../primitives/node"
 default-features = false
 features = ["sgx"]
 
-[dependencies.substratee-storage-keys]
+[dependencies.substratee-storage]
 path = "../primitives/storage-keys"
 default-features = false
 

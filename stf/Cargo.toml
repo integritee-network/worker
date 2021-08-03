@@ -28,7 +28,7 @@ std = [
     "hex",
     "substrate-api-client",
     "substrate-client-keystore",
-    "substratee-storage-keys/std",
+    "substratee-storage/std",
     "my-node-runtime",
 ]
 test = []
@@ -45,7 +45,7 @@ hex                 = { version = "0.4.2", optional = true }
 serde               = { version = "1.0", features = ["derive"], optional = true }
 
 # local crates
-substratee-storage-keys = { path = "../primitives/storage-keys", default-features = false }
+substratee-storage = { path = "../primitives/storage-keys", default-features = false }
 
 [dependencies.sgx_tstd]
 git = "https://github.com/apache/teaclave-sgx-sdk.git"

@@ -5723,18 +5723,21 @@ dependencies = [
  "substrate-api-client",
  "substrate-client-keystore",
  "substratee-node-runtime",
- "substratee-storage-keys",
+ "substratee-storage",
  "substratee-worker-primitives",
 ]
 
 [[package]]
-name = "substratee-storage-keys"
+name = "substratee-storage"
 version = "0.8.0"
 dependencies = [
  "frame-metadata",
+ "hash-db",
  "parity-scale-codec 2.1.3",
  "sp-core",
+ "sp-state-machine",
  "sp-std",
+ "sp-trie",
 ]
 
 [[package]]

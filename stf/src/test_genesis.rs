@@ -24,7 +24,7 @@ use sp_core::{crypto::AccountId32, Pair};
 use sp_io::SgxExternalities;
 use sp_runtime::MultiAddress;
 use std::{string::ToString, vec, vec::Vec};
-use substratee_storage_keys::storage_value_key;
+use substratee_storage::storage_value_key;
 use support::traits::UnfilteredDispatchable;
 
 const ALICE_ENCODED: [u8; 32] = [

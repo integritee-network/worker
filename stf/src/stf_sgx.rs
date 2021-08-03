@@ -14,7 +14,7 @@ use sp_core::H256 as Hash;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
 use std::{collections::HashMap, prelude::v1::*};
-use substratee_storage_keys::storage_value_key;
+use substratee_storage::storage_value_key;
 use substratee_worker_primitives::BlockNumber;
 use support::{ensure, traits::UnfilteredDispatchable};
 
