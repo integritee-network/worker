@@ -91,6 +91,7 @@ mod ed25519;
 mod io;
 mod ipfs;
 mod ocall;
+mod onchain_storage;
 mod rsa3072;
 mod state;
 mod utils;
