@@ -54,6 +54,7 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT, OpaqueExtrinsic};
 use std::{
 	borrow::ToOwned,
+	collections::HashMap,
 	slice,
 	sync::{Arc, SgxMutex, SgxMutexGuard},
 	time::{SystemTime, UNIX_EPOCH},
@@ -109,7 +110,6 @@ pub mod tests;
 
 #[cfg(not(feature = "test"))]
 use sgx_types::size_t;
-use std::collections::HashMap;
 
 // this is a 'dummy' for production mode
 #[cfg(not(feature = "test"))]
