@@ -2632,6 +2632,7 @@ dependencies = [
 name = "substratee-storage"
 version = "0.8.0"
 dependencies = [
+ "derive_more",
  "frame-metadata",
  "hash-db",
  "parity-scale-codec",

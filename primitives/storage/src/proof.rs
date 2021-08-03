@@ -17,13 +17,14 @@
 
 //! Logic for checking Substrate storage proofs.
 
+use derive_more::Display;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
 use sp_std::vec::Vec;
 use sp_trie::{trie_types::TrieDB, MemoryDB, Trie};
 
 pub type StorageProof = Vec<Vec<u8>>;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Display, PartialEq, Eq)]
 pub enum Error {
 	/// InvalidStorageProof,
 	StorageRootMismatch,
