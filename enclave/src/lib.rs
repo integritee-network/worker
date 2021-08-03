@@ -78,7 +78,7 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::{into_storage_entry_iter, StorageEntry, StorageProof, Verify};
+use substratee_storage::{into_storage_entry_iter, StorageEntry, StorageProof, VerifyStorageProof};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 	BlockHash, WorkerRequest,
@@ -1023,7 +1023,7 @@ pub fn verify_storage_entries<Header: HeaderT>(
 ) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
 	let mut update_map = HashMap::new();
 	for e in entries {
-		e.verify_proof(header)?;
+		e.verify_storage_proof(header)?;
 		update_map.insert(e.key, e.value);
 	}
 	Ok(update_map)

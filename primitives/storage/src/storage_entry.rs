@@ -11,12 +11,12 @@ pub struct StorageEntry<V> {
 	pub proof: Option<Vec<Vec<u8>>>,
 }
 
-pub trait Verify {
-	fn verify_proof<Header: HeaderT>(&self, header: &Header) -> Result<(), Error>;
+pub trait VerifyStorageProof {
+	fn verify_storage_proof<Header: HeaderT>(&self, header: &Header) -> Result<(), Error>;
 }
 
-impl Verify for StorageEntry<Vec<u8>> {
-	fn verify_proof<Header: HeaderT>(&self, header: &Header) -> Result<(), Error> {
+impl VerifyStorageProof for StorageEntry<Vec<u8>> {
+	fn verify_storage_proof<Header: HeaderT>(&self, header: &Header) -> Result<(), Error> {
 		let proof = self.proof.as_ref().ok_or(Error::NoProofSupplied)?;
 		let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
 			*header.state_root(),
