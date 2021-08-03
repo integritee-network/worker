@@ -54,7 +54,7 @@ use substratee_stf::{
 	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
 	TrustedCall, TrustedGetter, TrustedOperation,
 };
-use substratee_storage_keys::storage_value_key;
+use substratee_storage::storage_value_key;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {

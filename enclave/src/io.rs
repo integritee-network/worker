@@ -74,13 +74,14 @@ fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
 
 pub mod light_validation {
 	use crate::utils::UnwrapOrSgxErrorUnexpected;
-	use chain_relay::{storage_proof::StorageProof, Header, LightValidation, Validator};
+	use chain_relay::{Header, LightValidation, Validator};
 	use codec::{Decode, Encode};
 	use log::*;
 	use sgx_types::{sgx_status_t, SgxResult};
 	use sp_finality_grandpa::VersionedAuthorityList;
 	use std::{fs, sgxfs::SgxFile};
 	use substratee_settings::files::CHAIN_RELAY_DB;
+	use substratee_storage::StorageProof;
 
 	pub fn unseal() -> SgxResult<LightValidation> {
 		let vec = super::unseal(CHAIN_RELAY_DB)?;

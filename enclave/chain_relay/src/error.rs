@@ -14,11 +14,10 @@ pub enum JustificationError {
 	BadJustification(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, From)]
 pub enum Error {
 	// InvalidStorageProof,
-	StorageRootMismatch,
-	StorageValueUnavailable,
+	Storage(substratee_storage::proof::Error),
 	// InvalidValidatorSetProof,
 	ValidatorSetMismatch,
 	InvalidAncestryProof,

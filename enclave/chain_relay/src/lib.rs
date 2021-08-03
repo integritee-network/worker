@@ -24,19 +24,15 @@ extern crate sgx_tstd as std;
 pub mod error;
 pub mod justification;
 pub mod state;
-pub mod storage_proof;
-
-use crate::std::{collections::BTreeMap, fmt, vec::Vec};
-use core::iter::Iterator;
-
-use error::Error;
-use justification::GrandpaJustification;
-use state::RelayState;
-use storage_proof::StorageProof;
-
-use crate::{state::ScheduledChangeAtBlock, storage_proof::StorageProofChecker};
+use crate::{
+	state::ScheduledChangeAtBlock,
+	std::{collections::BTreeMap, fmt, vec::Vec},
+};
 use codec::{Decode, Encode};
+use core::iter::Iterator;
+use error::Error;
 use finality_grandpa::voter_set::VoterSet;
+use justification::GrandpaJustification;
 use log::*;
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, AuthorityWeight, ConsensusLog, ScheduledChange, SetId,
@@ -47,6 +43,8 @@ use sp_runtime::{
 	traits::{BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor},
 	Justification, Justifications, OpaqueExtrinsic,
 };
+use state::RelayState;
+use substratee_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 
 type RelayId = u64;
 pub type Blocknumber = u32;
@@ -152,7 +150,7 @@ impl LightValidation {
 		encoded_validator_set.insert(0, 1); // Add AUTHORITIES_VERISON == 1
 		let actual_validator_set = checker
 			.read_value(b":grandpa_authorities")?
-			.ok_or(Error::StorageValueUnavailable)?;
+			.ok_or(StorageError::StorageValueUnavailable)?;
 
 		if encoded_validator_set == actual_validator_set {
 			Ok(())

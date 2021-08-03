@@ -1,44 +1,45 @@
-// Copyright 2017-2019 Parity Technologies (UK) Ltd.
-// This file is part of Substrate.
+/*
+	Copyright 2019 Supercomputing Systems AG
 
-// Substrate is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-// Substrate is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+		http://www.apache.org/licenses/LICENSE-2.0
 
-// You should have received a copy of the GNU General Public License
-// along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
 
 //! Logic for checking Substrate storage proofs.
 
-use crate::std::vec::Vec;
+use derive_more::Display;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
+use sp_std::vec::Vec;
 use sp_trie::{trie_types::TrieDB, MemoryDB, Trie};
 
-use super::Error;
-
 pub type StorageProof = Vec<Vec<u8>>;
+
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum Error {
+	/// InvalidStorageProof,
+	StorageRootMismatch,
+	StorageValueUnavailable,
+}
 
 /// This struct is used to read storage values from a subset of a Merklized database. The "proof"
 /// is a subset of the nodes in the Merkle structure of the database, so that it provides
 /// authentication against a known Merkle root as well as the values in the database themselves.
-pub struct StorageProofChecker<H>
-where
-	H: Hasher,
-{
+pub struct StorageProofChecker<H: Hasher> {
 	root: H::Out,
 	db: MemoryDB<H>,
 }
 
-impl<H> StorageProofChecker<H>
-where
-	H: Hasher,
-{
+impl<H: Hasher> StorageProofChecker<H> {
 	/// Constructs a new storage proof checker.
 	///
 	/// This returns an error if the given proof is invalid with respect to the given root.
@@ -81,21 +82,19 @@ where
 mod tests {
 	use super::*;
 
-	use primitives::{Blake2Hasher, H256};
-	use state_machine::{
-		backend::{Backend, InMemory},
-		prove_read,
-	};
+	use sp_core::{Blake2Hasher, H256};
+	use sp_state_machine::{backend::Backend, new_in_mem, prove_read};
 
 	#[test]
 	fn storage_proof_check() {
 		// construct storage proof
-		let backend = <InMemory<Blake2Hasher>>::from(vec![
-			(None, b"key1".to_vec(), Some(b"value1".to_vec())),
-			(None, b"key2".to_vec(), Some(b"value2".to_vec())),
-			(None, b"key3".to_vec(), Some(b"value3".to_vec())),
+		let mut backend = new_in_mem::<Blake2Hasher>();
+		backend.insert(vec![
+			(None, vec![(b"key1".to_vec(), Some(b"value1".to_vec()))]),
+			(None, vec![(b"key2".to_vec(), Some(b"value2".to_vec()))]),
+			(None, vec![(b"key3".to_vec(), Some(b"value3".to_vec()))]),
 			// Value is too big to fit in a branch node
-			(None, b"key11".to_vec(), Some(vec![0u8; 32])),
+			(None, vec![(b"key11".to_vec(), Some(vec![0u8; 32]))]),
 		]);
 		let root = backend.storage_root(std::iter::empty()).0;
 		let proof: StorageProof = prove_read(backend, &[&b"key1"[..], &b"key2"[..], &b"key22"[..]])
