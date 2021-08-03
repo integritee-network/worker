@@ -799,20 +799,14 @@ where
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("Update STF storage upon block import!");
-	let requests: Vec<WorkerRequest> = Stf::storage_hashes_to_update_on_block()
-		.into_iter()
-		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-		.collect();
+	let storage_hashes = Stf::storage_hashes_to_update_on_block();
 
-	if requests.is_empty() {
+	if storage_hashes.is_empty() {
 		return Ok(())
 	}
 
 	// global requests they are the same for every shard
-	let update_map = on_chain_ocall_api
-		.worker_request::<Vec<u8>>(requests)
-		.map(into_storage_entry_iter)
-		.map(|i| verify_storage_entries(i, &header))??;
+	let update_map = get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -827,15 +821,9 @@ where
 						state::init_shard(&s)?;
 					}
 					// per shard (cid) requests
-					let per_shard_request = storage_hashes_to_update_per_shard(&s)
-						.into_iter()
-						.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-						.collect();
-
-					let per_shard_update_map = on_chain_ocall_api
-						.worker_request::<Vec<u8>>(per_shard_request)
-						.map(into_storage_entry_iter)
-						.map(|i| verify_storage_entries(i, &header))??;
+					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
+					let per_shard_update_map =
+						get_onchain_storage_updates(per_shard_hashes, &header, on_chain_ocall_api)?;
 
 					let mut state = state::load(&s)?;
 					Stf::update_storage(&mut state, &per_shard_update_map);
@@ -990,16 +978,8 @@ where
 	// Necessary because chain relay sync may not be up to date
 	// see issue #208
 	debug!("Update STF storage!");
-	let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
-		.into_iter()
-		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-		.collect();
-
-	let update_map = on_chain_ocall_api
-		.worker_request::<Vec<u8>>(requests)
-		.map(into_storage_entry_iter)
-		.map(|i| verify_storage_entries(i, &header))??;
-
+	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
+	let update_map = get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api)?;
 	Stf::update_storage(state, &update_map);
 
 	debug!("execute STF");
@@ -1015,6 +995,24 @@ where
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
+}
+
+pub fn get_onchain_storage_updates<O: EnclaveOnChainOCallApi>(
+	storage_hashes: Vec<Vec<u8>>,
+	header: &Header,
+	on_chain_ocall_api: &O,
+) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
+	let requests = storage_hashes
+		.into_iter()
+		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+		.collect();
+
+	let update_map = on_chain_ocall_api
+		.worker_request::<Vec<u8>>(requests)
+		.map(into_storage_entry_iter)
+		.map(|i| verify_storage_entries(i, header))??;
+
+	Ok(update_map)
 }
 
 /// Verify a set of storage entries. This is defined here to keep the `substratee-storage` crate
