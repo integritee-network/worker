@@ -77,7 +77,7 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::{into_storage_entries, StorageEntry, StorageProof, Verify};
+use substratee_storage::{into_storage_entry_iter, StorageEntry, StorageProof, Verify};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 	BlockHash, WorkerRequest,
@@ -809,10 +809,10 @@ where
 	}
 
 	// global requests they are the same for every shard
-	let responses: Vec<StorageEntry<Vec<u8>>> = on_chain_ocall_api
+	let update_map = on_chain_ocall_api
 		.worker_request::<Vec<u8>>(requests)
-		.map(into_storage_entries)?;
-	let update_map = verify_worker_responses(responses, &header)?;
+		.map(into_storage_entry_iter)
+		.map(|i| verify_storage_entries(i, &header))??;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -832,11 +832,10 @@ where
 						.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
 						.collect();
 
-					let responses: Vec<StorageEntry<Vec<u8>>> = on_chain_ocall_api
+					let per_shard_update_map = on_chain_ocall_api
 						.worker_request::<Vec<u8>>(per_shard_request)
-						.map(into_storage_entries)?;
-
-					let per_shard_update_map = verify_worker_responses(responses, &header)?;
+						.map(into_storage_entry_iter)
+						.map(|i| verify_storage_entries(i, &header))??;
 
 					let mut state = state::load(&s)?;
 					Stf::update_storage(&mut state, &per_shard_update_map);
@@ -996,11 +995,10 @@ where
 		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
 		.collect();
 
-	let responses: Vec<StorageEntry<Vec<u8>>> = on_chain_ocall_api
+	let update_map = on_chain_ocall_api
 		.worker_request::<Vec<u8>>(requests)
-		.map(into_storage_entries)?;
-
-	let update_map = verify_worker_responses(responses, &header)?;
+		.map(into_storage_entry_iter)
+		.map(|i| verify_storage_entries(i, &header))??;
 
 	Stf::update_storage(state, &update_map);
 
@@ -1019,13 +1017,14 @@ where
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
 }
 
-/// Verify a set of storage entries
-pub fn verify_worker_responses<Header: HeaderT>(
-	entries: Vec<StorageEntry<Vec<u8>>>,
+/// Verify a set of storage entries. This is defined here to keep the `substratee-storage` crate
+/// `no_std` compatible. Which it would not be with the `HashMap`.
+pub fn verify_storage_entries<Header: HeaderT>(
+	entries: impl Iterator<Item = StorageEntry<Vec<u8>>>,
 	header: &Header,
 ) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
 	let mut update_map = HashMap::new();
-	for e in entries.into_iter() {
+	for e in entries {
 		e.verify_proof(header)?;
 		update_map.insert(e.key, e.value);
 	}

@@ -36,3 +36,12 @@ where
 {
 	source.into_iter().map(|s| s.into()).collect()
 }
+
+pub fn into_storage_entry_iter<'a, S>(
+	source: impl IntoIterator<Item = S> + 'a,
+) -> impl Iterator<Item = StorageEntry<Vec<u8>>> + 'a
+where
+	S: Into<StorageEntry<Vec<u8>>>,
+{
+	source.into_iter().map(|s| s.into())
+}
