@@ -25,7 +25,7 @@ impl Verify for StorageEntry<Vec<u8>> {
 		)?;
 
 		// Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
-		ensure!(&actual == &self.value, Error::WrongValue);
+		ensure!(actual == self.value, Error::WrongValue);
 		Ok(())
 	}
 }
