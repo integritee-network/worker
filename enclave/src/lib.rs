@@ -38,10 +38,7 @@ use crate::{
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
-use chain_relay::{
-	storage_proof::{StorageProof, StorageProofChecker},
-	Block, Header, Validator,
-};
+use chain_relay::{Block, Header, Validator};
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
 use log::*;
@@ -81,6 +78,7 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
+use substratee_storage::{StorageProof, StorageProofChecker};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 	BlockHash, WorkerRequest, WorkerResponse,

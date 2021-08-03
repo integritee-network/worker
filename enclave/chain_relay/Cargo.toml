@@ -16,6 +16,9 @@ hash-db         = { version = "0.15.2", default-features = false }
 log             = { git = "https://github.com/mesalock-linux/log-sgx" }
 num             = { package = "num-traits", version = "0.2", default-features = false }
 
+# local deps
+substratee-storage = { path = "../../primitives/storage", default-features = false }
+
 [dependencies.codec]
 package = "parity-scale-codec"
 features = ["derive"]

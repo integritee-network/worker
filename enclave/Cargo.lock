@@ -286,6 +286,7 @@ dependencies = [
  "sp-runtime",
  "sp-runtime-interface",
  "sp-trie",
+ "substratee-storage",
 ]
 
 [[package]]
