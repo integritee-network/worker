@@ -30,13 +30,6 @@ impl Verify for StorageEntry<Vec<u8>> {
 	}
 }
 
-pub fn into_storage_entries<S>(source: impl IntoIterator<Item = S>) -> Vec<StorageEntry<Vec<u8>>>
-where
-	S: Into<StorageEntry<Vec<u8>>>,
-{
-	source.into_iter().map(|s| s.into()).collect()
-}
-
 pub fn into_storage_entry_iter<'a, S>(
 	source: impl IntoIterator<Item = S> + 'a,
 ) -> impl Iterator<Item = StorageEntry<Vec<u8>>> + 'a
