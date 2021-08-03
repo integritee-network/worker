@@ -164,7 +164,7 @@ default-features = false
 features = ["sgx"]
 
 [dependencies.substratee-storage]
-path = "../primitives/storage-keys"
+path = "../primitives/storage"
 default-features = false
 
 [dependencies.substratee-worker-primitives]
