@@ -1,22 +1,20 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-pub mod block;
-
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use sp_core::H256;
-use std::vec::Vec;
+use std::{string::String, vec::Vec};
+use substratee_storage::storage_entry::StorageEntry;
 
 pub type BlockHash = H256;
 pub type BlockNumber = u64;
 pub type ShardIdentifier = H256;
 
-use std::string::String;
-
+pub mod block;
 //use sp_core::ed25519::Signature;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
@@ -111,4 +109,12 @@ pub enum WorkerRequest {
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<V: Encode + Decode> {
 	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
+}
+
+impl From<WorkerResponse<Vec<u8>>> for StorageEntry<Vec<u8>> {
+	fn from(response: WorkerResponse<Vec<u8>>) -> Self {
+		match response {
+			WorkerResponse::ChainStorage(key, value, proof) => StorageEntry { key, value, proof },
+		}
+	}
 }

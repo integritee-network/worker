@@ -35,7 +35,6 @@ use crate::{
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
-	onchain_storage::verify_worker_responses,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -78,10 +77,10 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::StorageProof;
+use substratee_storage::{into_storage_entries, StorageEntry, StorageProof, Verify};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash, WorkerRequest, WorkerResponse,
+	BlockHash, WorkerRequest,
 };
 use utils::write_slice_and_whitespace_pad;
 
@@ -91,7 +90,6 @@ mod ed25519;
 mod io;
 mod ipfs;
 mod ocall;
-mod onchain_storage;
 mod rsa3072;
 mod state;
 mod utils;
@@ -111,6 +109,7 @@ pub mod tests;
 
 #[cfg(not(feature = "test"))]
 use sgx_types::size_t;
+use std::collections::HashMap;
 
 // this is a 'dummy' for production mode
 #[cfg(not(feature = "test"))]
@@ -810,7 +809,9 @@ where
 	}
 
 	// global requests they are the same for every shard
-	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
+	let responses: Vec<StorageEntry<Vec<u8>>> = on_chain_ocall_api
+		.worker_request::<Vec<u8>>(requests)
+		.map(into_storage_entries)?;
 	let update_map = verify_worker_responses(responses, &header)?;
 
 	// look for new shards an initialize them
@@ -831,8 +832,10 @@ where
 						.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
 						.collect();
 
-					let responses: Vec<WorkerResponse<Vec<u8>>> =
-						on_chain_ocall_api.worker_request(per_shard_request)?;
+					let responses: Vec<StorageEntry<Vec<u8>>> = on_chain_ocall_api
+						.worker_request::<Vec<u8>>(per_shard_request)
+						.map(into_storage_entries)?;
+
 					let per_shard_update_map = verify_worker_responses(responses, &header)?;
 
 					let mut state = state::load(&s)?;
@@ -993,7 +996,9 @@ where
 		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
 		.collect();
 
-	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
+	let responses: Vec<StorageEntry<Vec<u8>>> = on_chain_ocall_api
+		.worker_request::<Vec<u8>>(requests)
+		.map(into_storage_entries)?;
 
 	let update_map = verify_worker_responses(responses, &header)?;
 
@@ -1012,4 +1017,17 @@ where
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
+}
+
+/// Verify a set of storage entries
+pub fn verify_worker_responses<Header: HeaderT>(
+	entries: Vec<StorageEntry<Vec<u8>>>,
+	header: &Header,
+) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
+	let mut update_map = HashMap::new();
+	for e in entries.into_iter() {
+		e.verify_proof(header)?;
+		update_map.insert(e.key, e.value);
+	}
+	Ok(update_map)
 }

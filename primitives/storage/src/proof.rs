@@ -17,19 +17,12 @@
 
 //! Logic for checking Substrate storage proofs.
 
-use derive_more::Display;
+use crate::error::Error;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
 use sp_std::vec::Vec;
 use sp_trie::{trie_types::TrieDB, MemoryDB, Trie};
 
 pub type StorageProof = Vec<Vec<u8>>;
-
-#[derive(Debug, Display, PartialEq, Eq)]
-pub enum Error {
-	/// InvalidStorageProof,
-	StorageRootMismatch,
-	StorageValueUnavailable,
-}
 
 /// This struct is used to read storage values from a subset of a Merklized database. The "proof"
 /// is a subset of the nodes in the Merkle structure of the database, so that it provides

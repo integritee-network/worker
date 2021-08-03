@@ -12,6 +12,8 @@ hash-db = { version = "0.15.2", default-features = false }
 
 frame-metadata = { version = "13.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-core = { version = "3.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
+frame-support = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-trie = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
@@ -25,7 +27,9 @@ std = [
     "codec/std",
     "hash-db/std",
     "frame-metadata/std",
+    "frame-support/std",
     "sp-core/std",
+    "sp-runtime/std",
     "sp-std/std",
     "sp-trie/std",
 ]

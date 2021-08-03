@@ -2634,9 +2634,11 @@ version = "0.8.0"
 dependencies = [
  "derive_more",
  "frame-metadata",
+ "frame-support",
  "hash-db",
  "parity-scale-codec",
  "sp-core",
+ "sp-runtime",
  "sp-std",
  "sp-trie",
 ]
@@ -2717,6 +2719,7 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
+ "substratee-storage",
 ]
 
 [[package]]

@@ -17,9 +17,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod keys;
-pub mod proof;
-
+pub use error::Error;
 pub use frame_metadata::StorageHasher;
 pub use keys::*;
 pub use proof::*;
+pub use storage_entry::*;
+
+pub mod error;
+pub mod keys;
+pub mod proof;
+pub mod storage_entry;

@@ -11,7 +11,7 @@ pub enum Error {
 	Rpc(rpc::error::Error),
 	Codec(codec::Error),
 	Rsa(crate::rsa3072::Error),
-	ChainStorage(crate::onchain_storage::Error),
+	ChainStorage(substratee_storage::Error),
 	Sgx(sgx_status_t),
 }
 
