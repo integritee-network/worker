@@ -812,7 +812,7 @@ where
 
 	// global requests they are the same for every shard
 	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
-	let update_map = verify_worker_responses(responses, header.clone())?;
+	let update_map = verify_worker_responses(responses, &header)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -834,7 +834,7 @@ where
 
 					let responses: Vec<WorkerResponse<Vec<u8>>> =
 						on_chain_ocall_api.worker_request(per_shard_request)?;
-					let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
+					let per_shard_update_map = verify_worker_responses(responses, &header)?;
 
 					let mut state = state::load(&s)?;
 					Stf::update_storage(&mut state, &per_shard_update_map);
@@ -996,7 +996,7 @@ where
 
 	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
 
-	let update_map = verify_worker_responses(responses, header)?;
+	let update_map = verify_worker_responses(responses, &header)?;
 
 	Stf::update_storage(state, &update_map);
 
@@ -1017,11 +1017,11 @@ where
 
 fn verify_worker_responses(
 	responses: Vec<WorkerResponse<Vec<u8>>>,
-	header: Header,
+	header: &Header,
 ) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
 	let mut update_map = HashMap::new();
 	for response in responses.into_iter() {
-		response.verify_proof(&header)?;
+		response.verify_proof(header)?;
 		let s = response.into_opaque_storage();
 		update_map.insert(s.key, s.value);
 	}
