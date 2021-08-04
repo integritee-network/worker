@@ -47,3 +47,60 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerSet for OnchainStorage {
 			.ok_or(Error::Other("Could not get validateer count from chain".into()))?)
 	}
 }
+
+#[cfg(feature = "test")]
+pub mod tests {
+	use super::*;
+	use crate::Header;
+	use codec::{Decode, Encode};
+	use std::collections::HashMap;
+	use substratee_storage::StorageEntryVerified;
+
+	type OnchainMock = HashMap<Vec<u8>, Vec<u8>>;
+
+	pub fn default_header() -> Header {
+		Header::new(
+			Default::default(),
+			Default::default(),
+			Default::default(),
+			Default::default(),
+			Default::default(),
+		)
+	}
+
+	impl GetOnchainStorage for OnchainMock {
+		fn get_onchain_storage<H: HeaderT<Hash = H256>, V: Decode>(
+			&self,
+			storage_hash: Vec<u8>,
+			_header: &H,
+		) -> Result<StorageEntryVerified<V>> {
+			Ok(StorageEntryVerified::new(
+				storage_hash.clone(),
+				self.get(&storage_hash)
+					.map(|val| Decode::decode(&mut val.as_slice()))
+					.transpose()
+					.unwrap(),
+			))
+		}
+
+		fn get_multiple_onchain_storages<H: HeaderT<Hash = H256>, V: Decode>(
+			&self,
+			_storage_hashes: Vec<Vec<u8>>,
+			_header: &H,
+		) -> Result<Vec<StorageEntryVerified<V>>> {
+			unreachable!()
+		}
+	}
+
+	pub fn current_validateer_returns_err_if_count_different_from_returned_validateers() {
+		let mut mock = OnchainMock::new();
+		mock.insert(Default::default(), 4u64.encode());
+
+		assert_eq!(mock.validateer_count(&default_header()).unwrap(), 4u64);
+
+		// assert_eq!(
+		// 	OnchainMock.current_validateers(Default::default()).unwrap_err().0,
+		// 	"Found less validateers onchain than validateer count".into()
+		// );
+	}
+}

@@ -119,6 +119,10 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_verify_mra_cert_should_work,
 		test_verify_wrong_cert_is_err,
 		test_given_wrong_platform_info_when_verifying_attestation_report_then_return_error,
+
+		// sidechain tests
+		crate::sidechain::validateer::tests::current_validateer_returns_err_if_count_different_from_returned_validateers,
+
 		//
 		// these unit test (?) need an ipfs node running..
 		//ipfs::test_creates_ipfs_content_struct_works,
