@@ -6,96 +6,40 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-env_logger = "0.7"
+env_logger = "0.9.0"
 hex = "0.4.2"
 json = "0.12.0"
 substrate-bip39 = "0.4.2"
-tiny-bip39 = "0.6.2"
+tiny-bip39 = "0.8.0"
 serde_json = "1.0"
 clap = "2.33"
-clap-nested = "0.3.1"
-primitive-types = { version = "0.6.1", default-features = false, features = ["codec"] }
+clap-nested = "0.4.0"
+primitive-types = { version = "0.10.1", default-features = false, features = ["codec"] }
 base58 			        = "0.1"
 chrono = "*"
 blake2-rfc      = { version = "0.2.18", default-features = false}
-geojson = "0.17"
-ws = { version = "0.7", features = ["ssl"] }
+geojson = "0.22.2"
+ws = { version = "0.9.1", features = ["ssl"] }
+serde = { version = "1.0", features = ["derive"] }
+codec = { version = "2.0.0", package = "parity-scale-codec", features = ["derive"] }
 sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-
-[dependencies.substrate-api-client]
-git = "https://github.com/scs/substrate-api-client"
-branch = "master"
-
-[dependencies.substrate-client-keystore]
-git = "https://github.com/scs/substrate-api-client"
-branch = "master"
-
-[dependencies.serde]
-features = ["derive"]
-version = "1.0"
-
-[dependencies.codec]
-default-features = false
-package = "parity-scale-codec"
-features = ["derive"]
-version = "2.0.0"
-
-[dependencies.sp-runtime]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
-
-[dependencies.sc-keystore]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
-
-[dependencies.pallet-balances]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
-default-features=false
-
-[dependencies.frame-system]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
-default-features=false
-
-[dependencies.my-node-runtime]
-git = "https://github.com/scs/substraTEE-node"
-branch = "master"
-package = "substratee-node-runtime"
-
-[dependencies.substratee-worker-primitives]
-path = "../primitives/worker"
-
-[dependencies.substratee-node-primitives]
-path = "../primitives/node"
-
-[dependencies.substratee-api-client-extensions]
-path = "../primitives/api-client-extensions"
-
-[dependencies.substratee-stf]
-path = "../stf"
-
-[dependencies.substratee-worker-api]
-path = "../worker/rpc/client"
-
-[dependencies.sp-keyring]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
-
-[dependencies.sp-application-crypto]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
-
-[dependencies.sp-core]
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-version = "3.0.0"
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
+my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "substratee-node-runtime" }
+# substrate dependencies
+sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sc-keystore = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-application-crypto = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+#local dependencies
+substratee-node-primitives = { path = "../primitives/node" }
+substratee-worker-primitives = { path = "../primitives/worker" }
+substratee-api-client-extensions = { path = "../primitives/api-client-extensions" }
+substratee-stf = { path = "../stf" }
+substratee-worker-api = { path = "../worker/rpc/client" }
 
 #[patch.crates-io]
 #ed25519-dalek = { git = "https://github.com/scs/ed25519-dalek.git", branch = "no_std_sgx"}
