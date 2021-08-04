@@ -809,7 +809,7 @@ where
 
 	// global requests they are the same for every shard
 	let update_map =
-		get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
+		get_onchain_storage(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -826,7 +826,7 @@ where
 					// per shard (cid) requests
 					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
 					let per_shard_update_map =
-						get_onchain_storage_updates(per_shard_hashes, &header, on_chain_ocall_api)
+						get_onchain_storage(per_shard_hashes, &header, on_chain_ocall_api)
 							.map(into_map)?;
 
 					let mut state = state::load(&s)?;
@@ -984,7 +984,7 @@ where
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
 	let update_map =
-		get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
+		get_onchain_storage(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
 	Stf::update_storage(state, &update_map);
 
 	debug!("execute STF");
@@ -1002,7 +1002,7 @@ where
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
 }
 
-pub fn get_onchain_storage_updates<O: EnclaveOnChainOCallApi>(
+pub fn get_onchain_storage<O: EnclaveOnChainOCallApi>(
 	storage_hashes: Vec<Vec<u8>>,
 	header: &Header,
 	on_chain_ocall_api: &O,
@@ -1014,7 +1014,7 @@ pub fn get_onchain_storage_updates<O: EnclaveOnChainOCallApi>(
 
 	let storage_entries = on_chain_ocall_api
 		.worker_request::<Vec<u8>>(requests)
-		.map(|i| verify_storage_entries(i, header))??;
+		.map(|storages| verify_storage_entries(storages, header))??;
 
 	Ok(storage_entries)
 }
