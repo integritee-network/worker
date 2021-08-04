@@ -78,10 +78,10 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::{StorageProof, StorageProofChecker};
+use substratee_storage::{into_storage_entry_iter, StorageEntry, StorageProof, VerifyStorageProof};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash, WorkerRequest, WorkerResponse,
+	BlockHash, WorkerRequest,
 };
 use utils::write_slice_and_whitespace_pad;
 
@@ -799,18 +799,14 @@ where
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("Update STF storage upon block import!");
-	let requests: Vec<WorkerRequest> = Stf::storage_hashes_to_update_on_block()
-		.into_iter()
-		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-		.collect();
+	let storage_hashes = Stf::storage_hashes_to_update_on_block();
 
-	if requests.is_empty() {
+	if storage_hashes.is_empty() {
 		return Ok(())
 	}
 
 	// global requests they are the same for every shard
-	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
-	let update_map = verify_worker_responses(responses, header.clone())?;
+	let update_map = get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -825,14 +821,9 @@ where
 						state::init_shard(&s)?;
 					}
 					// per shard (cid) requests
-					let per_shard_request = storage_hashes_to_update_per_shard(&s)
-						.into_iter()
-						.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-						.collect();
-
-					let responses: Vec<WorkerResponse<Vec<u8>>> =
-						on_chain_ocall_api.worker_request(per_shard_request)?;
-					let per_shard_update_map = verify_worker_responses(responses, header.clone())?;
+					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
+					let per_shard_update_map =
+						get_onchain_storage_updates(per_shard_hashes, &header, on_chain_ocall_api)?;
 
 					let mut state = state::load(&s)?;
 					Stf::update_storage(&mut state, &per_shard_update_map);
@@ -987,15 +978,8 @@ where
 	// Necessary because chain relay sync may not be up to date
 	// see issue #208
 	debug!("Update STF storage!");
-	let requests = Stf::get_storage_hashes_to_update(&stf_call_signed)
-		.into_iter()
-		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-		.collect();
-
-	let responses: Vec<WorkerResponse<Vec<u8>>> = on_chain_ocall_api.worker_request(requests)?;
-
-	let update_map = verify_worker_responses(responses, header)?;
-
+	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
+	let update_map = get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api)?;
 	Stf::update_storage(state, &update_map);
 
 	debug!("execute STF");
@@ -1013,32 +997,34 @@ where
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
 }
 
-fn verify_worker_responses(
-	responses: Vec<WorkerResponse<Vec<u8>>>,
-	header: Header,
+pub fn get_onchain_storage_updates<O: EnclaveOnChainOCallApi>(
+	storage_hashes: Vec<Vec<u8>>,
+	header: &Header,
+	on_chain_ocall_api: &O,
+) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
+	let requests = storage_hashes
+		.into_iter()
+		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+		.collect();
+
+	let update_map = on_chain_ocall_api
+		.worker_request::<Vec<u8>>(requests)
+		.map(into_storage_entry_iter)
+		.map(|i| verify_storage_entries(i, header))??;
+
+	Ok(update_map)
+}
+
+/// Verify a set of storage entries. This is defined here to keep the `substratee-storage` crate
+/// `no_std` compatible. Which it would not be with the `HashMap`.
+pub fn verify_storage_entries<Header: HeaderT>(
+	entries: impl Iterator<Item = StorageEntry<Vec<u8>>>,
+	header: &Header,
 ) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
 	let mut update_map = HashMap::new();
-	for response in responses.iter() {
-		match response {
-			WorkerResponse::ChainStorage(key, value, proof) => {
-				let proof = proof.as_ref().sgx_error_with_log("No Storage Proof Supplied")?;
-
-				let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
-					header.state_root,
-					key,
-					proof.to_vec(),
-				)
-				.sgx_error_with_log("Erroneous StorageProof")?;
-
-				// Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
-				if &actual != value {
-					error!("Wrong storage value supplied");
-					// todo: return another error now that we introduced our custom error
-					return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into()
-				}
-				update_map.insert(key.clone(), value.clone());
-			},
-		}
+	for e in entries {
+		e.verify_storage_proof(header)?;
+		update_map.insert(e.key, e.value);
 	}
 	Ok(update_map)
 }

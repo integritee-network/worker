@@ -12,6 +12,9 @@ serde_derive    = { version = "1.0", optional = true}
 serde_json      = { version = "1.0", default-features = false, features = ["alloc"] }
 chrono          = { version = "0.4.19", default-features = false, features = ["alloc"]}
 
+# local deps
+substratee-storage = { path = "../storage", default-features = false }
+
 [dependencies.sgx_tstd]
 git = "https://github.com/apache/teaclave-sgx-sdk.git"
 features = ["untrusted_fs","net","backtrace"]
@@ -41,11 +44,10 @@ std = [ 'codec/std',
         'serde_json/std',
         'sp-runtime/std',
         'sp-core/std',
-        'primitive-types/std'
+        'primitive-types/std',
+        'substratee-storage/std'
 ]
 sgx = [ 'sgx_tstd',]
-
-
 
 [dev-dependencies.sp-keyring]
 git = "https://github.com/paritytech/substrate.git"
