@@ -1382,6 +1382,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-teerex-storage"
+version = "0.8.0"
+dependencies = [
+ "sp-std",
+ "substratee-storage",
+]
+
+[[package]]
 name = "pallet-timestamp"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#df1165d7b47d43f7b5032512ad41ac8ab2ead117"
@@ -2669,6 +2677,7 @@ dependencies = [
  "multibase",
  "num-bigint",
  "ofb",
+ "pallet-teerex-storage",
  "parity-scale-codec",
  "primitive-types",
  "retain_mut",

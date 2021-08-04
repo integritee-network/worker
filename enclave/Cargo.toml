@@ -60,7 +60,9 @@ base58          = { rev = "sgx_1.1.3", package="rust-base58", git = "https://git
 cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", default-features = false }
 multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
 
+# local deps
 substratee-settings = { path = "../primitives/settings" }
+pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
 
 [dependencies.linked-hash-map]
 git              = "https://github.com/mesalock-linux/linked-hash-map-sgx"
