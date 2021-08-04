@@ -19,7 +19,7 @@ substratee-sidechain-primitives = { path = "../sidechain/primitives", default-fe
 # substrate-deps
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 # sgx deps
 sgx_tstd = { rev = "v1.1.3", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
