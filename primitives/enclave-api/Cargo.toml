@@ -14,10 +14,10 @@ sgx_types           = { rev = "v1.1.3", git = "https://github.com/apache/teaclav
 sgx_urts            = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_crypto_helper 	= { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
-frame-support       = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-core             = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-finality-grandpa = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime          = { version = "3.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+frame-support       = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core             = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-finality-grandpa = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime          = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 substratee-enclave-api-ffi  = { path = "ffi" }
 substratee-settings         = { path = "../settings" }

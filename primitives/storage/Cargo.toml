@@ -18,7 +18,7 @@ sp-std = { version = "3.0.0", default-features = false, git = "https://github.co
 sp-trie = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [dev-dependencies]
-sp-state-machine = { version = "0.9.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-state-machine = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 
 [features]
