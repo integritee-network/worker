@@ -38,17 +38,17 @@ impl<V> StorageEntryVerified<V> {
 }
 
 pub trait VerifyStorageProof {
-	fn verify_storage_proof<Header: HeaderT>(
+	fn verify_storage_proof<Header: HeaderT, V: Decode>(
 		self,
 		header: &Header,
-	) -> Result<StorageEntryVerified<Vec<u8>>, Error>;
+	) -> Result<StorageEntryVerified<V>, Error>;
 }
 
 impl VerifyStorageProof for StorageEntry<Vec<u8>> {
-	fn verify_storage_proof<Header: HeaderT>(
+	fn verify_storage_proof<Header: HeaderT, V: Decode>(
 		self,
 		header: &Header,
-	) -> Result<StorageEntryVerified<Vec<u8>>, Error> {
+	) -> Result<StorageEntryVerified<V>, Error> {
 		let proof = self.proof.as_ref().ok_or(Error::NoProofSupplied)?;
 		let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
 			*header.state_root(),
@@ -58,18 +58,23 @@ impl VerifyStorageProof for StorageEntry<Vec<u8>> {
 
 		// Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
 		ensure!(actual == self.value, Error::WrongValue);
-		Ok(StorageEntryVerified { key: self.key, value: self.value })
+
+		Ok(StorageEntryVerified {
+			key: self.key,
+			value: self.value.map(|v| Decode::decode(&mut v.as_slice())).transpose()?,
+		})
 	}
 }
 
 /// Verify a set of storage entries
-pub fn verify_storage_entries<S, Header: HeaderT>(
+pub fn verify_storage_entries<S, Header, V>(
 	entries: impl IntoIterator<Item = S>,
 	header: &Header,
-) -> Result<Vec<StorageEntryVerified<Vec<u8>>>, Error>
+) -> Result<Vec<StorageEntryVerified<V>>, Error>
 where
 	S: Into<StorageEntry<Vec<u8>>>,
 	Header: HeaderT,
+	V: Decode,
 {
 	let iter = into_storage_entry_iter(entries);
 	let mut verified_entries = Vec::with_capacity(iter.size_hint().0);
