@@ -35,6 +35,7 @@ use crate::{
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
+	onchain::storage::GetOnchainStorage,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -78,12 +79,10 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::{
-	verify_storage_entries, StorageEntryVerified, StorageProof, VerifyStorageProof,
-};
+use substratee_storage::{StorageEntryVerified, StorageProof};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash, WorkerRequest,
+	BlockHash,
 };
 use utils::write_slice_and_whitespace_pad;
 
@@ -94,12 +93,14 @@ mod io;
 mod ipfs;
 mod ocall;
 mod rsa3072;
+mod sidechain;
 mod state;
 mod utils;
 
 pub mod cert;
 pub mod error;
 pub mod hex;
+pub mod onchain;
 pub mod rpc;
 pub mod tls_ra;
 pub mod top_pool;
@@ -809,7 +810,7 @@ where
 
 	// global requests they are the same for every shard
 	let update_map =
-		get_onchain_storage(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
+		on_chain_ocall_api.get_onchain_storage(storage_hashes, &header).map(into_map)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -825,9 +826,9 @@ where
 					}
 					// per shard (cid) requests
 					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
-					let per_shard_update_map =
-						get_onchain_storage(per_shard_hashes, &header, on_chain_ocall_api)
-							.map(into_map)?;
+					let per_shard_update_map = on_chain_ocall_api
+						.get_onchain_storage(per_shard_hashes, &header)
+						.map(into_map)?;
 
 					let mut state = state::load(&s)?;
 					Stf::update_storage(&mut state, &per_shard_update_map);
@@ -984,7 +985,7 @@ where
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
 	let update_map =
-		get_onchain_storage(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
+		on_chain_ocall_api.get_onchain_storage(storage_hashes, &header).map(into_map)?;
 	Stf::update_storage(state, &update_map);
 
 	debug!("execute STF");
@@ -1000,23 +1001,6 @@ where
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
-}
-
-pub fn get_onchain_storage<O: EnclaveOnChainOCallApi>(
-	storage_hashes: Vec<Vec<u8>>,
-	header: &Header,
-	on_chain_ocall_api: &O,
-) -> Result<Vec<StorageEntryVerified<Vec<u8>>>> {
-	let requests = storage_hashes
-		.into_iter()
-		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
-		.collect();
-
-	let storage_entries = on_chain_ocall_api
-		.worker_request::<Vec<u8>>(requests)
-		.map(|storages| verify_storage_entries(storages, header))??;
-
-	Ok(storage_entries)
 }
 
 pub fn into_map(
