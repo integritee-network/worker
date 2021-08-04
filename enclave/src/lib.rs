@@ -93,7 +93,6 @@ mod io;
 mod ipfs;
 mod ocall;
 mod rsa3072;
-mod sidechain;
 mod state;
 mod utils;
 
@@ -102,6 +101,7 @@ pub mod error;
 pub mod hex;
 pub mod onchain;
 pub mod rpc;
+pub mod sidechain;
 pub mod tls_ra;
 pub mod top_pool;
 
