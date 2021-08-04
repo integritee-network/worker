@@ -92,6 +92,12 @@ pub mod tests {
 		}
 	}
 
+	pub fn get_validateer_count_works() {
+		let mut mock = OnchainMock::new();
+		mock.insert(TeeRexStorage::enclave_count(), 4u64.encode());
+		assert_eq!(mock.validateer_count(&default_header()).unwrap(), 4u64);
+	}
+
 	pub fn current_validateer_returns_err_if_count_different_from_returned_validateers() {
 		let mut mock = OnchainMock::new();
 		mock.insert(Default::default(), 4u64.encode());

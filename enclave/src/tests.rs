@@ -122,6 +122,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 		// sidechain tests
 		crate::sidechain::validateer::tests::current_validateer_returns_err_if_count_different_from_returned_validateers,
+		crate::sidechain::validateer::tests::get_validateer_count_works,
 
 		//
 		// these unit test (?) need an ipfs node running..
