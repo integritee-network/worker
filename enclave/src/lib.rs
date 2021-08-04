@@ -809,8 +809,9 @@ where
 	}
 
 	// global requests they are the same for every shard
-	let update_map =
-		on_chain_ocall_api.get_onchain_storage(storage_hashes, &header).map(into_map)?;
+	let update_map = on_chain_ocall_api
+		.get_multiple_onchain_storages(storage_hashes, &header)
+		.map(into_map)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -827,7 +828,7 @@ where
 					// per shard (cid) requests
 					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
 					let per_shard_update_map = on_chain_ocall_api
-						.get_onchain_storage(per_shard_hashes, &header)
+						.get_multiple_onchain_storages(per_shard_hashes, &header)
 						.map(into_map)?;
 
 					let mut state = state::load(&s)?;
@@ -984,8 +985,9 @@ where
 	// see issue #208
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
-	let update_map =
-		on_chain_ocall_api.get_onchain_storage(storage_hashes, &header).map(into_map)?;
+	let update_map = on_chain_ocall_api
+		.get_multiple_onchain_storages(storage_hashes, &header)
+		.map(into_map)?;
 	Stf::update_storage(state, &update_map);
 
 	debug!("execute STF");
