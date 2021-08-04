@@ -21,7 +21,7 @@ impl StoragePrefix for TeeRexStorage {
 
 pub trait TeerexStorageKeys {
 	fn enclave_count() -> Vec<u8>;
-	fn enclave(&self, index: u64) -> Vec<u8>;
+	fn enclave(index: u64) -> Vec<u8>;
 }
 
 impl<S: StoragePrefix> TeerexStorageKeys for S {
@@ -29,7 +29,7 @@ impl<S: StoragePrefix> TeerexStorageKeys for S {
 		storage_value_key(Self::prefix(), "EnclaveCount")
 	}
 
-	fn enclave(&self, index: u64) -> Vec<u8> {
+	fn enclave(index: u64) -> Vec<u8> {
 		storage_map_key(Self::prefix(), "EnclaveRegistry", &index, &StorageHasher::Blake2_128Concat)
 	}
 }
