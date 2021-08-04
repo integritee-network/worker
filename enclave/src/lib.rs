@@ -78,7 +78,9 @@ use substratee_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use substratee_storage::{into_storage_entry_iter, StorageEntry, StorageProof, VerifyStorageProof};
+use substratee_storage::{
+	verify_storage_entries, StorageEntryVerified, StorageProof, VerifyStorageProof,
+};
 use substratee_worker_primitives::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 	BlockHash, WorkerRequest,
@@ -806,7 +808,8 @@ where
 	}
 
 	// global requests they are the same for every shard
-	let update_map = get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api)?;
+	let update_map =
+		get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
 
 	// look for new shards an initialize them
 	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
@@ -823,7 +826,8 @@ where
 					// per shard (cid) requests
 					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
 					let per_shard_update_map =
-						get_onchain_storage_updates(per_shard_hashes, &header, on_chain_ocall_api)?;
+						get_onchain_storage_updates(per_shard_hashes, &header, on_chain_ocall_api)
+							.map(into_map)?;
 
 					let mut state = state::load(&s)?;
 					Stf::update_storage(&mut state, &per_shard_update_map);
@@ -979,7 +983,8 @@ where
 	// see issue #208
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
-	let update_map = get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api)?;
+	let update_map =
+		get_onchain_storage_updates(storage_hashes, &header, on_chain_ocall_api).map(into_map)?;
 	Stf::update_storage(state, &update_map);
 
 	debug!("execute STF");
@@ -1001,30 +1006,26 @@ pub fn get_onchain_storage_updates<O: EnclaveOnChainOCallApi>(
 	storage_hashes: Vec<Vec<u8>>,
 	header: &Header,
 	on_chain_ocall_api: &O,
-) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
+) -> Result<Vec<StorageEntryVerified<Vec<u8>>>> {
 	let requests = storage_hashes
 		.into_iter()
 		.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
 		.collect();
 
-	let update_map = on_chain_ocall_api
+	let storage_entries = on_chain_ocall_api
 		.worker_request::<Vec<u8>>(requests)
-		.map(into_storage_entry_iter)
 		.map(|i| verify_storage_entries(i, header))??;
 
-	Ok(update_map)
+	Ok(storage_entries)
 }
 
-/// Verify a set of storage entries. This is defined here to keep the `substratee-storage` crate
-/// `no_std` compatible. Which it would not be with the `HashMap`.
-pub fn verify_storage_entries<Header: HeaderT>(
-	entries: impl Iterator<Item = StorageEntry<Vec<u8>>>,
-	header: &Header,
-) -> Result<HashMap<Vec<u8>, Option<Vec<u8>>>> {
-	let mut update_map = HashMap::new();
-	for e in entries {
-		e.verify_storage_proof(header)?;
-		update_map.insert(e.key, e.value);
+pub fn into_map(
+	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
+) -> HashMap<Vec<u8>, Option<Vec<u8>>> {
+	let mut map = HashMap::new();
+	for e in storage_entries.into_iter() {
+		let ev = e.into_tuple();
+		map.insert(ev.0, ev.1);
 	}
-	Ok(update_map)
+	map
 }
