@@ -1,11 +1,10 @@
-use crate::{onchain::storage::GetOnchainStorage, Result};
+use crate::{error::Error, onchain::storage::GetOnchainStorage, Result};
 use frame_support::ensure;
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
 use substratee_node_primitives::Enclave;
-use substratee_storage::Error as StorageError;
 
 pub trait ValidateerSet {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
@@ -33,7 +32,10 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerSet for OnchainStorage {
 			.into_iter()
 			.filter_map(|e| e.into_tuple().1)
 			.collect();
-		ensure!(enclaves.len() == count as usize, StorageError::StorageValueUnavailable);
+		ensure!(
+			enclaves.len() == count as usize,
+			Error::Other("Found less validateers onchain than validateer count".into())
+		);
 		Ok(enclaves)
 	}
 
@@ -42,6 +44,6 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerSet for OnchainStorage {
 			.get_onchain_storage(TeeRexStorage::enclave_count(), header)?
 			.into_tuple()
 			.1
-			.ok_or(StorageError::StorageValueUnavailable)?)
+			.ok_or(Error::Other("Could not get validateer count from chain".into()))?)
 	}
 }
