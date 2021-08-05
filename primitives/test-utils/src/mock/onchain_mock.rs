@@ -1,6 +1,3 @@
-#[cfg(all(no_std, feature = "sgx"))]
-extern crate sgx_tstd as std;
-
 use codec::{Decode, Encode};
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
