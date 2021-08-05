@@ -1008,10 +1008,5 @@ where
 pub fn into_map(
 	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
 ) -> HashMap<Vec<u8>, Option<Vec<u8>>> {
-	let mut map = HashMap::new();
-	for e in storage_entries.into_iter() {
-		let ev = e.into_tuple();
-		map.insert(ev.0, ev.1);
-	}
-	map
+	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
 }
