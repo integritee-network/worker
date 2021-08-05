@@ -68,6 +68,9 @@ substratee-get-storage-verified = { path = "../primitives/get-storage-verified",
 substratee-sidechain = { path = "../primitives/sidechain", default-features = false }
 test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 
+# no used actively yet, but import it to test for sgx-compatibility
+substratee-sidechain = { path = "../primitives/sidechain", default-features = false }
+
 [dependencies.linked-hash-map]
 git              = "https://github.com/mesalock-linux/linked-hash-map-sgx"
 
