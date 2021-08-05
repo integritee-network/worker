@@ -5827,10 +5827,10 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sgx_tstd",
  "sp-core",
  "sp-keyring",
  "sp-runtime",
+ "sp-std",
  "substratee-storage",
 ]
 

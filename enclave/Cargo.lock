@@ -2725,9 +2725,9 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "serde_json 1.0.64",
- "sgx_tstd",
  "sp-core",
  "sp-runtime",
+ "sp-std",
  "substratee-storage",
 ]
 

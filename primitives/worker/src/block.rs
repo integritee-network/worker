@@ -1,18 +1,19 @@
 use crate::{BlockNumber, ShardIdentifier};
 use codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-use std::vec::Vec;
-
-//FIXME: Should use blocknumber from sgxruntime
-// Problem: sgxruntime only with sgx, no std enviornment
-// but block.rs should be available in std?
-//use sgx_runtime::BlockNumber;
 use sp_core::{
 	crypto::{AccountId32, Pair},
 	ed25519, H256,
 };
 use sp_runtime::{traits::Verify, MultiSignature};
+use sp_std::vec::Vec;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+//FIXME: Should use blocknumber from sgxruntime
+// Problem: sgxruntime only with sgx, no std enviornment
+// but block.rs should be available in std?
+//use sgx_runtime::BlockNumber;
 
 pub type Signature = MultiSignature;
 
