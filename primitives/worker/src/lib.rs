@@ -1,11 +1,8 @@
-#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
 use sp_core::H256;
 use std::{string::String, vec::Vec};
 use substratee_storage::storage_entry::StorageEntry;

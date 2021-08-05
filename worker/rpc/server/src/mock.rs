@@ -42,6 +42,7 @@ pub fn test_sidechain_block() -> SignedBlock {
 		shard.clone(),
 		signed_top_hashes.clone(),
 		encrypted_payload.clone(),
+		10000,
 	);
 	block.sign(&signer_pair)
 }

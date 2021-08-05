@@ -144,7 +144,6 @@ optional = true
 [dependencies.substratee-worker-primitives]
 path = "../primitives/worker"
 default-features = false
-features = ["sgx"]
 optional = true
 
 [dev-dependencies.sp-keyring]

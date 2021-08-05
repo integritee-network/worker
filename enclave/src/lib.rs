@@ -783,6 +783,7 @@ pub fn compose_block_and_confirmation(
 		shard,
 		top_call_hashes,
 		payload,
+		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64,
 	);
 
 	let signed_block = block.sign(&signer_pair);

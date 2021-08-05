@@ -2,8 +2,6 @@ use crate::{BlockNumber, ShardIdentifier};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
 use std::vec::Vec;
 
 //FIXME: Should use blocknumber from sgxruntime
@@ -17,12 +15,6 @@ use sp_core::{
 use sp_runtime::{traits::Verify, MultiSignature};
 
 pub type Signature = MultiSignature;
-
-use std::time::{SystemTime, UNIX_EPOCH};
-#[cfg(feature = "sgx")]
-use std::untrusted::time::SystemTimeEx;
-/* use chrono::Utc as TzUtc;
-use chrono::TimeZone; */
 
 /// signed version of block to verify block origin
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
@@ -93,15 +85,13 @@ impl Block {
 		shard: ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
+		timestamp: i64,
 	) -> Block {
-		// get timestamp for new block
-		let now: i64 = get_time();
-
 		// create block
 		Block {
 			block_number,
 			parent_hash,
-			timestamp: now,
+			timestamp,
 			layer_one_head,
 			signed_top_hashes,
 			shard_id: shard,
@@ -136,15 +126,18 @@ impl SignedBlock {
 	}
 }
 
-/// sets the timestamp of the block as seconds since unix epoch
-fn get_time() -> i64 {
-	SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::{thread, time::Duration};
+	use std::{
+		thread,
+		time::{Duration, SystemTime, UNIX_EPOCH},
+	};
+
+	/// sets the timestamp of the block as seconds since unix epoch
+	fn get_time() -> i64 {
+		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
+	}
 
 	#[test]
 	fn construct_block_works() {
@@ -167,6 +160,7 @@ mod tests {
 			shard.clone(),
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
+			get_time(),
 		);
 
 		// then
@@ -200,6 +194,7 @@ mod tests {
 			shard.clone(),
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
+			get_time(),
 		);
 		let signed_block = block.sign(&signer_pair);
 		let signature: Signature =
@@ -231,6 +226,7 @@ mod tests {
 			shard.clone(),
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
+			get_time(),
 		);
 		let signed_block = block.sign(&signer_pair);
 
@@ -259,6 +255,7 @@ mod tests {
 			shard.clone(),
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
+			get_time(),
 		);
 		let mut signed_block = block.sign(&signer_pair);
 		signed_block.block.block_number = 1;
@@ -299,6 +296,7 @@ mod tests {
 			shard.clone(),
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
+			get_time(),
 		);
 		let one_second = Duration::new(1, 0);
 		let now = block.timestamp();
