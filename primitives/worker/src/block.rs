@@ -78,6 +78,8 @@ impl Block {
 		&self.state_payload
 	}
 	/// Constructs an unsigned block
+	/// Todo: group arguments in structs.
+	#[allow(clippy::too_many_arguments)]
 	pub fn construct_block(
 		author: AccountId32,
 		block_number: u64,
