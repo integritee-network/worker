@@ -1,13 +1,8 @@
-#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
 use sp_core::H256;
-use std::{string::String, vec::Vec};
+use sp_std::vec::Vec;
 use substratee_storage::storage_entry::StorageEntry;
 
 pub type BlockHash = H256;
@@ -15,7 +10,11 @@ pub type BlockNumber = u64;
 pub type ShardIdentifier = H256;
 
 pub mod block;
-//use sp_core::ed25519::Signature;
+
+#[cfg(feature = "std")]
+pub mod rpc;
+#[cfg(feature = "std")]
+pub use rpc::*;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum DirectRequestStatus {
@@ -70,34 +69,6 @@ impl RpcReturnValue {
 			status,
 			//signature: sign,
 		}
-	}
-}
-
-#[derive(Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-// Todo: result should not be Vec<u8>, but `T: Serialize`
-pub struct RpcResponse {
-	pub jsonrpc: String,
-	pub result: Vec<u8>, // encoded RpcReturnValue
-	pub id: u32,
-}
-
-#[derive(Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-// Todo: params should not be Vec<u8>, but `T: Serialize`
-pub struct RpcRequest {
-	pub jsonrpc: String,
-	pub method: String,
-	pub params: Vec<u8>,
-	pub id: i32,
-}
-
-#[cfg(feature = "std")]
-impl RpcRequest {
-	pub fn compose_jsonrpc_call(method: String, data: Vec<u8>) -> String {
-		let direct_invocation_call =
-			RpcRequest { jsonrpc: "2.0".to_owned(), method, params: data, id: 1 };
-		serde_json::to_string(&direct_invocation_call).unwrap()
 	}
 }
 

@@ -172,7 +172,6 @@ default-features = false
 [dependencies.substratee-worker-primitives]
 path = "../primitives/worker"
 default-features = false
-features = ["sgx"]
 
 [dependencies.ipfs-unixfs]
 git = "https://github.com/whalelephant/rust-ipfs"
