@@ -50,7 +50,7 @@ impl GetOnchainStorage for OnchainMock {
 			.map(|val| Decode::decode(&mut val.as_slice()))
 			.transpose()?;
 
-		Ok(StorageEntryVerified::new(storage_hash.clone(), value))
+		Ok(StorageEntryVerified::new(storage_hash, value))
 	}
 
 	fn get_multiple_onchain_storages<H: HeaderT<Hash = H256>, V: Decode>(
