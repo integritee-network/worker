@@ -62,6 +62,7 @@ multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "
 
 # local deps
 substratee-settings = { path = "../primitives/settings" }
+substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
 pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
 
 [dependencies.linked-hash-map]

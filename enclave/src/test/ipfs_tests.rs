@@ -18,13 +18,11 @@
 
 use crate::{
 	ipfs::IpfsContent,
-	ocall::{
-		ocall_api::EnclaveIpfsOCallApi,
-		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-	},
+	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 };
 use log::*;
 use std::{fs::File, io::Read, vec::Vec};
+use substratee_ocall_api::EnclaveIpfsOCallApi;
 
 #[allow(unused)]
 fn test_ocall_read_write_ipfs() {

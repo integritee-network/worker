@@ -16,15 +16,13 @@
 */
 
 use crate::ocall::{
-	attestation_ocall::EnclaveAttestationOCall,
-	ipfs_ocall::EnclaveIpfsOcall,
-	ocall_api::{
-		EnclaveAttestationOCallApi, EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
-	},
-	on_chain_ocall::EnclaveOnChainOCall,
-	rpc_ocall::EnclaveRpcOCall,
+	attestation_ocall::EnclaveAttestationOCall, ipfs_ocall::EnclaveIpfsOcall,
+	on_chain_ocall::EnclaveOnChainOCall, rpc_ocall::EnclaveRpcOCall,
 };
 use std::sync::Arc;
+use substratee_ocall_api::{
+	EnclaveAttestationOCallApi, EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
+};
 
 /// Abstract factory trait for OCall components
 pub trait OCallComponentFactoryTrait<A, R, O, I>

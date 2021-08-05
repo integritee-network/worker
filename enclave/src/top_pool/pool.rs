@@ -16,13 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-	ocall::ocall_api::EnclaveRpcOCallApi,
-	top_pool::{
-		base_pool as base, error,
-		primitives::TrustedOperationSource,
-		validated_pool::{ValidatedOperation, ValidatedPool},
-	},
+use crate::top_pool::{
+	base_pool as base, error,
+	primitives::TrustedOperationSource,
+	validated_pool::{ValidatedOperation, ValidatedPool},
 };
 use core::matches;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
@@ -32,6 +29,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionTag as Tag, TransactionValidity, TransactionValidityError},
 };
 use std::{collections::HashMap, sync::Arc, time::Instant, untrusted::time::InstantEx, vec::Vec};
+use substratee_ocall_api::EnclaveRpcOCallApi;
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 

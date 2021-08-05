@@ -19,11 +19,11 @@
 //! Extrinsics status updates.
 
 extern crate alloc;
-use crate::ocall::ocall_api::EnclaveRpcOCallApi;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::Encode;
 use sp_runtime::traits;
 use std::hash;
+use substratee_ocall_api::EnclaveRpcOCallApi;
 use substratee_worker_primitives::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 
 /// Extrinsic watcher.

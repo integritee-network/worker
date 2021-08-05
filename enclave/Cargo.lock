@@ -2611,6 +2611,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-ocall-api"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sgx_types",
+ "sp-std",
+ "substratee-worker-primitives",
+]
+
+[[package]]
 name = "substratee-settings"
 version = "0.8.0"
 
@@ -2708,6 +2718,7 @@ dependencies = [
  "sp-version",
  "substrate-api-client",
  "substratee-node-primitives",
+ "substratee-ocall-api",
  "substratee-settings",
  "substratee-stf",
  "substratee-storage",

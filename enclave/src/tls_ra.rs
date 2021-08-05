@@ -17,13 +17,11 @@ use crate::{
 	aes,
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
-	ocall::{
-		ocall_api::EnclaveAttestationOCallApi,
-		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-	},
+	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	rsa3072,
 	utils::UnwrapOrSgxErrorUnexpected,
 };
+use substratee_ocall_api::EnclaveAttestationOCallApi;
 
 struct ClientAuth<A> {
 	outdated_ok: bool,

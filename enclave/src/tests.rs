@@ -16,10 +16,7 @@
 
 use crate::{
 	aes, ed25519,
-	ocall::{
-		ocall_api::EnclaveAttestationOCallApi,
-		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-	},
+	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	rpc, rsa3072, sidechain, state,
 	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
 	top_pool, Timeout,
@@ -46,6 +43,7 @@ use std::{
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
 };
+use substratee_ocall_api::EnclaveAttestationOCallApi;
 use substratee_settings::{
 	enclave::GETTER_TIMEOUT,
 	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},

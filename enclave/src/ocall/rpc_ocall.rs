@@ -16,11 +16,12 @@
 
 */
 
-use crate::ocall::{ffi, ocall_api::EnclaveRpcOCallApi};
+use crate::ocall::ffi;
 use codec::Encode;
 use frame_support::ensure;
 use sgx_types::{sgx_status_t, SgxResult};
 use std::vec::Vec;
+use substratee_ocall_api::EnclaveRpcOCallApi;
 use substratee_worker_primitives::TrustedOperationStatus;
 
 #[derive(Clone, Debug, Default)]

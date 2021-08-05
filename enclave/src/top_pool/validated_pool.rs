@@ -48,9 +48,9 @@ use sp_runtime::{
 
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 
-use crate::ocall::ocall_api::EnclaveRpcOCallApi;
 use codec::Encode;
 use retain_mut::RetainMut;
+use substratee_ocall_api::EnclaveRpcOCallApi;
 
 /// Pre-validated operation. Validated pool only accepts operations wrapped in this enum.
 #[derive(Debug)]

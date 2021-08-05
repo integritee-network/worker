@@ -58,12 +58,10 @@ use substratee_settings::{
 
 use crate::{
 	cert, ed25519, hex, io,
-	ocall::{
-		ocall_api::EnclaveAttestationOCallApi,
-		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-	},
+	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
 };
+use substratee_ocall_api::EnclaveAttestationOCallApi;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 

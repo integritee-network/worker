@@ -16,9 +16,10 @@
 
 */
 
-use crate::{ocall::ocall_api::EnclaveRpcOCallApi, rpc::author::alloc::prelude::v1::Vec};
+use crate::rpc::author::alloc::prelude::v1::Vec;
 use codec::Encode;
 use sgx_types::SgxResult;
+use substratee_ocall_api::EnclaveRpcOCallApi;
 use substratee_worker_primitives::TrustedOperationStatus;
 
 #[derive(Clone, Debug, Default)]
