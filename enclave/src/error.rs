@@ -1,8 +1,7 @@
 use crate::rpc;
 use derive_more::{Display, From};
 use sgx_types::sgx_status_t;
-
-use std::result::Result as StdResult;
+use std::{prelude::v1::Box, result::Result as StdResult};
 
 pub type Result<T> = StdResult<T, Error>;
 
@@ -13,6 +12,7 @@ pub enum Error {
 	Rsa(crate::rsa3072::Error),
 	ChainStorage(substratee_storage::Error),
 	Sgx(sgx_status_t),
+	Other(Box<dyn std::error::Error>),
 }
 
 impl From<Error> for sgx_status_t {

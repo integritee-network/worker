@@ -1,0 +1,19 @@
+[package]
+name = "pallet-teerex-storage"
+version = "0.8.0"
+authors = ["Supercomputing Systems AG <info@scs.ch>"]
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+#local deps
+substratee-storage = { path = "../storage", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "sp-std/std",
+    "substratee-storage/std",
+]

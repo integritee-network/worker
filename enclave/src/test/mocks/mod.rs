@@ -18,3 +18,4 @@
 
 pub mod attestation_ocall_mock;
 pub mod enclave_rpc_ocall_mock;
+pub mod onchain_ocall_mock;
