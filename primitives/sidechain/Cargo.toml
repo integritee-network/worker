@@ -1,0 +1,40 @@
+[package]
+name = "substratee-sidechain"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+derive_more = "0.99.16"
+thiserror = "1.0.26"
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+
+# substrate deps
+frame-support = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+# local deps
+pallet-teerex-storage = { path = "../pallet-teerex-storage", default-features = false }
+substratee-node-primitives = { path = "../node", default-features = false }
+substratee-storage = { path = "../storage", default-features = false }
+substratee-ocall-api = { path = "../ocall-api", default-features = false }
+substratee-onchain-storage = { path = "../onchain-storage", default-features = false }
+substratee-worker-primitives = { path = "../worker", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "substratee-node-primitives/std",
+    "substratee-storage/std",
+    "substratee-ocall-api/std",
+    "substratee-onchain-storage/std",
+    "substratee-worker-primitives/std",
+]
+
+[dev-dependencies]
+test-utils = { path = "../test-utils" }

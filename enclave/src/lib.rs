@@ -88,6 +88,10 @@ use substratee_worker_primitives::{
 };
 use utils::write_slice_and_whitespace_pad;
 
+// currently unused but import it to see that the sidechain crate is sgx-compatible
+#[allow(unused)]
+use substratee_sidechain;
+
 mod aes;
 mod attestation;
 mod ed25519;

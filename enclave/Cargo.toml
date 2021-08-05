@@ -65,6 +65,7 @@ pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-
 substratee-settings = { path = "../primitives/settings" }
 substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
 substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
+substratee-sidechain = { path = "../primitives/sidechain", default-features = false }
 test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 
 [dependencies.linked-hash-map]
