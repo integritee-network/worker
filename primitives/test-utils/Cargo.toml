@@ -1,0 +1,41 @@
+[package]
+name = "test-utils"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+derive_more = { version = "0.99.5" }
+
+# sgx deps
+sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# substrate deps
+sp-core = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+# local deps
+pallet-teerex-storage = { path = "../pallet-teerex-storage", default-features = false }
+substratee-node-primitives = { path = "../node", default-features = false }
+substratee-ocall-api = { path = "../ocall-api", default-features = false }
+substratee-onchain-storage = { path = "../onchain-storage", default-features = false }
+substratee-storage = { path = "../storage", default-features = false, features = ["test"] }
+substratee-worker-primitives = { path = "../worker", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "substratee-storage/std",
+    "pallet-teerex-storage/std",
+    "substratee-node-primitives/std",
+    "substratee-ocall-api/std",
+    "substratee-onchain-storage/std",
+    "substratee-worker-primitives/std",
+]
+sgx = ["sgx_tstd"]

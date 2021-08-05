@@ -51,12 +51,10 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerFetch for OnchainStorage {
 #[cfg(feature = "test")]
 pub mod tests {
 	use super::*;
-	use crate::{
-		test::mocks::onchain_ocall_mock::{validateer_set, OnchainMock},
-		Header,
-	};
+	use crate::Header;
 	use codec::Encode;
 	use std::string::ToString;
+	use test_utils::mock::onchain_mock::{validateer_set, OnchainMock};
 
 	pub fn default_header() -> Header {
 		Header::new(

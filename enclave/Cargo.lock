@@ -2739,6 +2739,7 @@ dependencies = [
  "substratee-stf",
  "substratee-storage",
  "substratee-worker-primitives",
+ "test-utils",
  "webpki",
  "webpki-roots",
  "yasna",
@@ -2825,6 +2826,25 @@ version = "1.0.5"
 source = "git+https://github.com/mesalock-linux/termcolor-sgx#fee5ac79b4a90197d646f3df5e1b45ac56be718b"
 dependencies = [
  "sgx_tstd",
+]
+
+[[package]]
+name = "test-utils"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "pallet-teerex-storage",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substratee-node-primitives",
+ "substratee-ocall-api",
+ "substratee-onchain-storage",
+ "substratee-storage",
+ "substratee-worker-primitives",
 ]
 
 [[package]]

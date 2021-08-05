@@ -11,6 +11,7 @@ members = [
     "primitives/pallet-teerex-storage",
     "primitives/settings",
     "primitives/storage",
+    "primitives/test-utils",
     "primitives/worker",
     "stf",
     "worker",
