@@ -6,7 +6,7 @@ use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
 use substratee_node_primitives::Enclave;
 
-pub trait ValidateerSet {
+pub trait ValidateerFetch {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
 		&self,
 		latest_header: &Header,
@@ -15,7 +15,7 @@ pub trait ValidateerSet {
 		-> Result<u64>;
 }
 
-impl<OnchainStorage: GetOnchainStorage> ValidateerSet for OnchainStorage {
+impl<OnchainStorage: GetOnchainStorage> ValidateerFetch for OnchainStorage {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
 		&self,
 		header: &Header,
