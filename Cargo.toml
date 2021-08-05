@@ -6,6 +6,7 @@ members = [
     "primitives/enclave-api",
     "primitives/enclave-api/ffi",
     "primitives/node",
+    "primitives/ocall-api",
     "primitives/pallet-teerex-storage",
     "primitives/settings",
     "primitives/storage",

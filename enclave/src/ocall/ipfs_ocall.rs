@@ -16,12 +16,10 @@
 
 */
 
-use crate::ocall::{
-	ffi,
-	ocall_api::{EnclaveIpfsOCallApi, IpfsCid},
-};
+use crate::ocall::ffi;
 use frame_support::ensure;
 use sgx_types::{sgx_status_t, SgxResult};
+use substratee_ocall_api::{EnclaveIpfsOCallApi, IpfsCid};
 
 #[derive(Clone, Debug)]
 pub struct EnclaveIpfsOcall;

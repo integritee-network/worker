@@ -15,10 +15,12 @@
 
 */
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use sgx_types::*;
-use std::vec::Vec;
+use sp_std::prelude::Vec;
 use substratee_worker_primitives::{
 	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus, WorkerRequest,
 	WorkerResponse,

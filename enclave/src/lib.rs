@@ -31,7 +31,6 @@ extern crate sgx_tstd as std;
 use crate::{
 	error::{Error, Result},
 	ocall::{
-		ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi},
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
@@ -66,6 +65,9 @@ use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
+use substratee_ocall_api::{
+	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
+};
 use substratee_settings::{
 	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
 	node::{

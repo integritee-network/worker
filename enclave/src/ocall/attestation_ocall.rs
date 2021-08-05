@@ -15,7 +15,7 @@
 
 */
 
-use crate::ocall::{ffi, ocall_api::EnclaveAttestationOCallApi};
+use crate::ocall::ffi;
 use frame_support::ensure;
 use log::*;
 use sgx_tse::rsgx_create_report;
@@ -25,6 +25,7 @@ use sgx_types::{
 	sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t, SgxResult,
 };
 use std::{ptr, vec::Vec};
+use substratee_ocall_api::EnclaveAttestationOCallApi;
 
 #[derive(Clone, Debug)]
 pub struct EnclaveAttestationOCall {}

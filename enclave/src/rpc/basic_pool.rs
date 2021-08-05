@@ -1,15 +1,12 @@
 pub extern crate alloc;
 
-use crate::{
-	ocall::ocall_api::EnclaveRpcOCallApi,
-	top_pool::{
-		base_pool::TrustedOperation,
-		error::IntoPoolError,
-		pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
-		primitives::{
-			ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
-			TrustedOperationSource, TxHash,
-		},
+use crate::top_pool::{
+	base_pool::TrustedOperation,
+	error::IntoPoolError,
+	pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
+	primitives::{
+		ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
+		TrustedOperationSource, TxHash,
 	},
 };
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
@@ -23,6 +20,7 @@ use sp_runtime::{
 	traits::{Block as BlockT, NumberFor, Zero},
 };
 use std::{collections::HashMap, sync::SgxMutex as Mutex};
+use substratee_ocall_api::EnclaveRpcOCallApi;
 use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 type BoxedReadyIterator<Hash, Data> =

@@ -1,8 +1,9 @@
-use crate::{ocall::ocall_api::EnclaveOnChainOCallApi, Result};
+use crate::Result;
 use codec::Decode;
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_std::prelude::Vec;
+use substratee_ocall_api::EnclaveOnChainOCallApi;
 use substratee_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
 use substratee_worker_primitives::WorkerRequest;
 

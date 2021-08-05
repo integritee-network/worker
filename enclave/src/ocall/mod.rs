@@ -15,7 +15,6 @@
 
 */
 
-pub mod ocall_api;
 pub mod ocall_component_factory;
 pub mod rpc_ocall;
 

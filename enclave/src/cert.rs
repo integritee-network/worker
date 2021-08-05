@@ -1,5 +1,5 @@
 use super::CERTEXPIRYDAYS;
-use crate::{ocall::ocall_api::EnclaveAttestationOCallApi, utils::UnwrapOrSgxErrorUnexpected};
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 use arrayvec::ArrayVec;
 use bit_vec::BitVec;
 use chrono::{prelude::*, Duration, TimeZone, Utc as TzUtc};
@@ -10,6 +10,7 @@ use serde_json::Value;
 use sgx_tcrypto::*;
 use sgx_types::*;
 use std::{io::BufReader, prelude::v1::*, ptr, str, time::*, untrusted::time::SystemTimeEx};
+use substratee_ocall_api::EnclaveAttestationOCallApi;
 use yasna::models::ObjectIdentifier;
 
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];

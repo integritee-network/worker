@@ -16,13 +16,11 @@
 
 */
 
-use crate::ocall::{
-	ocall_api::EnclaveOnChainOCallApi,
-	ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-};
+use crate::ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait};
 use log::*;
 use std::vec::Vec;
 use substrate_api_client::utils::storage_key;
+use substratee_ocall_api::EnclaveOnChainOCallApi;
 use substratee_worker_primitives::{WorkerRequest, WorkerResponse};
 
 #[allow(unused)]

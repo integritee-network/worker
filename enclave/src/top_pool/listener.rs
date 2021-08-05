@@ -16,12 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{ocall::ocall_api::EnclaveRpcOCallApi, top_pool::watcher::Watcher};
+use crate::top_pool::watcher::Watcher;
 use codec::Encode;
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
 use sp_runtime::traits;
 use std::{collections::HashMap, hash, string::String, sync::Arc, vec::Vec};
+use substratee_ocall_api::EnclaveRpcOCallApi;
 use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Extrinsic pool default listener.
