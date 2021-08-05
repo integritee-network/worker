@@ -5777,16 +5777,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "substratee-test-utils"
-version = "0.8.0"
-dependencies = [
- "parity-scale-codec 2.1.3",
- "sgx_types",
- "sp-std",
- "substratee-ocall-api",
-]
-
-[[package]]
 name = "substratee-worker"
 version = "0.8.0"
 dependencies = [
