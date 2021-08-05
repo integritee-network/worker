@@ -58,6 +58,15 @@ pub mod tests {
 
 	type OnchainMock = HashMap<Vec<u8>, Vec<u8>>;
 
+	pub fn validateer_set() -> Vec<StorageEntryVerified<Enclave>> {
+		vec![
+			StorageEntryVerified::new(TeeRexStorage::enclave(1), Some(Default::default())),
+			StorageEntryVerified::new(TeeRexStorage::enclave(2), Some(Default::default())),
+			StorageEntryVerified::new(TeeRexStorage::enclave(3), Some(Default::default())),
+			StorageEntryVerified::new(TeeRexStorage::enclave(4), Some(Default::default())),
+		]
+	}
+
 	pub fn default_header() -> Header {
 		Header::new(
 			Default::default(),
@@ -74,28 +83,51 @@ pub mod tests {
 			storage_hash: Vec<u8>,
 			_header: &H,
 		) -> Result<StorageEntryVerified<V>> {
-			Ok(StorageEntryVerified::new(
-				storage_hash.clone(),
-				self.get(&storage_hash)
-					.map(|val| Decode::decode(&mut val.as_slice()))
-					.transpose()
-					.unwrap(),
-			))
+			let value = self
+				.get(&storage_hash)
+				.map(|val| Decode::decode(&mut val.as_slice()))
+				.transpose()?;
+
+			Ok(StorageEntryVerified::new(storage_hash.clone(), value))
 		}
 
 		fn get_multiple_onchain_storages<H: HeaderT<Hash = H256>, V: Decode>(
 			&self,
-			_storage_hashes: Vec<Vec<u8>>,
+			storage_hashes: Vec<Vec<u8>>,
 			_header: &H,
 		) -> Result<Vec<StorageEntryVerified<V>>> {
-			unreachable!()
+			let mut entries = Vec::with_capacity(storage_hashes.len());
+			for hash in storage_hashes.into_iter() {
+				let value =
+					self.get(&hash).map(|val| Decode::decode(&mut val.as_slice())).transpose()?;
+
+				entries.push(StorageEntryVerified::new(hash, value))
+			}
+			Ok(entries)
 		}
 	}
 
 	pub fn get_validateer_count_works() {
 		let mut mock = OnchainMock::new();
 		mock.insert(TeeRexStorage::enclave_count(), 4u64.encode());
+
 		assert_eq!(mock.validateer_count(&default_header()).unwrap(), 4u64);
+	}
+
+	pub fn get_validateer_set_works() {
+		let mut mock = OnchainMock::new();
+		mock.insert(Default::default(), 4u64.encode());
+
+		for (k, v) in validateer_set().into_iter().map(|e| e.into_tuple()) {
+			mock.insert(k, v.map(|v| v.encode()).unwrap());
+		}
+
+		let validateers = validateer_set()
+			.into_iter()
+			.map(|e| e.into_tuple().1.unwrap())
+			.collect::<Vec<Enclave>>();
+
+		assert_eq!(mock.current_validateers(&default_header()).unwrap(), validateers);
 	}
 
 	pub fn current_validateer_returns_err_if_count_different_from_returned_validateers() {
