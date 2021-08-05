@@ -121,7 +121,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_given_wrong_platform_info_when_verifying_attestation_report_then_return_error,
 
 		// sidechain tests
-		sidechain::validateer::tests::if_validateer_count_smaller_than_returned_validateers_return_err,
+		sidechain::validateer::tests::if_validateer_count_bigger_than_returned_validateers_return_err,
 		sidechain::validateer::tests::get_validateer_count_works,
 		sidechain::validateer::tests::get_validateer_set_works,
 

@@ -83,7 +83,7 @@ pub mod tests {
 		assert_eq!(mock.current_validateers(&default_header()).unwrap(), validateers);
 	}
 
-	pub fn if_validateer_count_smaller_than_returned_validateers_return_err() {
+	pub fn if_validateer_count_bigger_than_returned_validateers_return_err() {
 		let mut mock = OnchainMock::default().with_validateer_set();
 		mock.insert(TeeRexStorage::enclave_count(), 5u64.encode());
 
