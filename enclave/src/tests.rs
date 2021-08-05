@@ -121,7 +121,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_given_wrong_platform_info_when_verifying_attestation_report_then_return_error,
 
 		// sidechain tests
-		crate::sidechain::validateer::tests::current_validateer_returns_err_if_count_different_from_returned_validateers,
+		crate::sidechain::validateer::tests::if_validateer_count_smaller_than_returned_validateers_return_err,
 		crate::sidechain::validateer::tests::get_validateer_count_works,
 
 		//
