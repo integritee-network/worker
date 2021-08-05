@@ -20,7 +20,7 @@ use crate::{
 		ocall_api::EnclaveAttestationOCallApi,
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	},
-	rpc, rsa3072, state,
+	rpc, rsa3072, sidechain, state,
 	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
 	top_pool, Timeout,
 };
@@ -121,8 +121,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_given_wrong_platform_info_when_verifying_attestation_report_then_return_error,
 
 		// sidechain tests
-		crate::sidechain::validateer::tests::if_validateer_count_smaller_than_returned_validateers_return_err,
-		crate::sidechain::validateer::tests::get_validateer_count_works,
+		sidechain::validateer::tests::if_validateer_count_smaller_than_returned_validateers_return_err,
+		sidechain::validateer::tests::get_validateer_count_works,
+		sidechain::validateer::tests::get_validateer_set_works,
 
 		//
 		// these unit test (?) need an ipfs node running..
