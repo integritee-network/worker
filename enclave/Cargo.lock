@@ -2621,6 +2621,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-onchain-storage"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "parity-scale-codec",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substratee-ocall-api",
+ "substratee-storage",
+ "substratee-worker-primitives",
+]
+
+[[package]]
 name = "substratee-settings"
 version = "0.8.0"
 
@@ -2719,6 +2734,7 @@ dependencies = [
  "substrate-api-client",
  "substratee-node-primitives",
  "substratee-ocall-api",
+ "substratee-onchain-storage",
  "substratee-settings",
  "substratee-stf",
  "substratee-storage",

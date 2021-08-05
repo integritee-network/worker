@@ -34,7 +34,6 @@ use crate::{
 		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 		rpc_ocall::EnclaveRpcOCall,
 	},
-	onchain::storage::GetOnchainStorage,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -68,6 +67,7 @@ use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
+use substratee_onchain_storage::GetOnchainStorage;
 use substratee_settings::{
 	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
 	node::{
@@ -101,7 +101,6 @@ mod utils;
 pub mod cert;
 pub mod error;
 pub mod hex;
-pub mod onchain;
 pub mod rpc;
 pub mod sidechain;
 pub mod tls_ra;

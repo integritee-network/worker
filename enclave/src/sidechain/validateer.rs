@@ -1,10 +1,11 @@
-use crate::{error::Error, onchain::storage::GetOnchainStorage, Result};
+use crate::{error::Error, Result};
 use frame_support::ensure;
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
 use substratee_node_primitives::Enclave;
+use substratee_onchain_storage::GetOnchainStorage;
 
 pub trait ValidateerFetch {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(

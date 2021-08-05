@@ -1,4 +1,3 @@
-use crate::{error::Result, onchain::storage::GetOnchainStorage};
 use codec::{Decode, Encode};
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
@@ -6,6 +5,7 @@ use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
 use std::collections::HashMap;
 use substratee_node_primitives::Enclave;
+use substratee_onchain_storage::{GetOnchainStorage, Result};
 use substratee_storage::StorageEntryVerified;
 
 #[derive(Default)]
