@@ -17,6 +17,8 @@ members = [
     #	 "enclave",
 ]
 
+# random
+
 #[patch."https://github.com/scs/pallet-substratee-registry.git"]
 #pallet-substratee-registry = { path = "../pallet-substratee-registry" }
 
