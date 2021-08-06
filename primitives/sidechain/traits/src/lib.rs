@@ -10,7 +10,7 @@ use codec::Encode;
 use sp_core::{crypto::AccountId32, ed25519, H256};
 use sp_std::prelude::*;
 
-/// Abstraction around a signed chain block.
+/// Abstraction around a sidechain block.
 /// Todo: Make more generic.
 pub trait Block {
 	type ShardIdentifier;
@@ -26,11 +26,11 @@ pub trait Block {
 	fn shard_id(&self) -> Self::ShardIdentifier;
 	/// get author of block
 	fn block_author(&self) -> &AccountId32;
-	/// get reference of extrinisics of block
+	/// get reference of extrinsics of block
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
 	fn state_payload(&self) -> &[u8];
-	/// Constructs an unsigned block
+	/// create a new block instance
 	/// Todo: group arguments in structs -> Header
 	#[allow(clippy::too_many_arguments)]
 	fn new(
@@ -45,8 +45,6 @@ pub trait Block {
 	) -> Self;
 }
 
-/// Abstraction around a signed chain block.
-/// Todo: Make more generic.
 pub trait SignedBlock {
 	type Block: Encode;
 	type Signature;

@@ -266,7 +266,6 @@ mod tests {
 			get_time(),
 		);
 		let mut signed_block = SignedBlock::from_unsigned(block, &signer_pair);
-		(&signer_pair);
 		signed_block.block.block_number = 1;
 
 		// then
