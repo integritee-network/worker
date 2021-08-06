@@ -6,6 +6,7 @@ use sp_core::{
 };
 use sp_runtime::{traits::Verify, MultiSignature};
 use sp_std::vec::Vec;
+use substratee_sidechain_traits::{Block as BlockT, SignedBlock as SignedBlockT};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -44,48 +45,50 @@ pub struct Block {
 	state_payload: Vec<u8>,
 }
 
-impl Block {
+impl BlockT for Block {
+	type ShardIdentifier = H256;
+
 	///get block number
-	pub fn block_number(&self) -> u64 {
+	fn block_number(&self) -> BlockNumber {
 		self.block_number
 	}
 	/// get parent hash of block
-	pub fn parent_hash(&self) -> H256 {
+	fn parent_hash(&self) -> H256 {
 		self.parent_hash
 	}
 	/// get timestamp of block
-	pub fn timestamp(&self) -> i64 {
+	fn timestamp(&self) -> i64 {
 		self.timestamp
 	}
 	/// get layer one head of block
-	pub fn layer_one_head(&self) -> H256 {
+	fn layer_one_head(&self) -> H256 {
 		self.layer_one_head
 	}
 	/// get shard id of block
-	pub fn shard_id(&self) -> ShardIdentifier {
+	fn shard_id(&self) -> Self::ShardIdentifier {
 		self.shard_id
 	}
 	/// get author of block
-	pub fn block_author(&self) -> &AccountId32 {
+	fn block_author(&self) -> &AccountId32 {
 		&self.block_author
 	}
 	/// get reference of extrinisics of block
-	pub fn signed_top_hashes(&self) -> &Vec<H256> {
+	fn signed_top_hashes(&self) -> &[H256] {
 		&self.signed_top_hashes
 	}
 	/// get encrypted payload
-	pub fn state_payload(&self) -> &Vec<u8> {
+	fn state_payload(&self) -> &[u8] {
 		&self.state_payload
 	}
 	/// Constructs an unsigned block
 	/// Todo: group arguments in structs.
 	#[allow(clippy::too_many_arguments)]
-	pub fn construct_block(
+	fn new(
 		author: AccountId32,
 		block_number: u64,
 		parent_hash: H256,
 		layer_one_head: H256,
-		shard: ShardIdentifier,
+		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
 		timestamp: i64,
@@ -102,25 +105,27 @@ impl Block {
 			state_payload: encrypted_payload,
 		}
 	}
-
-	/// Composes a signed block
-	pub fn sign(&self, pair: &ed25519::Pair) -> SignedBlock {
-		let payload = self.encode();
-		SignedBlock { block: self.clone(), signature: pair.sign(payload.as_slice()).into() }
-	}
 }
-impl SignedBlock {
+impl SignedBlockT for SignedBlock {
+	type Block = Block;
+	type Signature = Signature;
+
+	fn from_unsigned(block: Self::Block, signer: &ed25519::Pair) -> Self {
+		let signature = block.using_encoded(|b| signer.sign(b)).into();
+		Self { block, signature }
+	}
+
 	/// get block reference
-	pub fn block(&self) -> &Block {
+	fn block(&self) -> &Block {
 		&self.block
 	}
 	/// get signature reference
-	pub fn signature(&self) -> &Signature {
+	fn signature(&self) -> &Signature {
 		&self.signature
 	}
 
 	/// Verifes the signature of a Block
-	pub fn verify_signature(&self) -> bool {
+	fn verify_signature(&self) -> bool {
 		// get block payload
 		let payload = self.block.encode();
 
@@ -143,7 +148,7 @@ mod tests {
 	}
 
 	#[test]
-	fn construct_block_works() {
+	fn block_new_works() {
 		// given
 		let author: AccountId32 =
 			ed25519::Pair::from_string("//Alice", None).unwrap().public().into();
@@ -155,7 +160,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::construct_block(
+		let block = Block::new(
 			author.clone(),
 			block_number,
 			parent_hash.clone(),
@@ -189,7 +194,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::construct_block(
+		let block = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),
@@ -221,7 +226,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::construct_block(
+		let block = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),
@@ -250,7 +255,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::construct_block(
+		let block = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),
@@ -291,7 +296,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::construct_block(
+		let block = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),

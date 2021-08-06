@@ -75,6 +75,7 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
+use substratee_sidechain_traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use substratee_stf::{
 	stf_sgx::OpaqueCall,
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
@@ -775,7 +776,7 @@ pub fn compose_block_and_confirmation(
 		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state_update).encode();
 	aes::de_or_encrypt(&mut payload)?;
 
-	let block = SidechainBlock::construct_block(
+	let block = SidechainBlock::new(
 		signer_pair.public().into(),
 		block_number,
 		parent_hash,
@@ -786,9 +787,9 @@ pub fn compose_block_and_confirmation(
 		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64,
 	);
 
-	let signed_block = block.sign(&signer_pair);
-
 	let block_hash = blake2_256(&block.encode());
+	let signed_block = SignedSidechainBlock::from_unsigned(block, &signer_pair);
+
 	debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
 	Stf::update_last_block_hash(state, block_hash.into());
 

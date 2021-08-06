@@ -155,7 +155,7 @@ pub fn test_sidechain_block() -> SignedBlock {
 	let shard = ShardIdentifier::default();
 
 	// when
-	let block = Block::construct_block(
+	let block = Block::new(
 		author,
 		block_number,
 		parent_hash.clone(),

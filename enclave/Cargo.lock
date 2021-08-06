@@ -2696,6 +2696,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-sidechain-traits"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-core",
+ "sp-std",
+]
+
+[[package]]
 name = "substratee-stf"
 version = "0.8.0"
 dependencies = [
@@ -2793,6 +2802,7 @@ dependencies = [
  "substratee-ocall-api",
  "substratee-settings",
  "substratee-sidechain",
+ "substratee-sidechain-traits",
  "substratee-stf",
  "substratee-storage",
  "substratee-worker-primitives",
@@ -2813,6 +2823,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "substratee-sidechain-traits",
  "substratee-storage",
 ]
 

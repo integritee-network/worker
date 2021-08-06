@@ -66,6 +66,7 @@ substratee-settings = { path = "../primitives/settings" }
 substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
 substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
 substratee-sidechain = { path = "../primitives/sidechain", default-features = false }
+substratee-sidechain-traits = { path = "../primitives/sidechain/traits", default-features = false }
 test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 
 [dependencies.linked-hash-map]
