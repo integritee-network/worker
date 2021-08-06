@@ -124,13 +124,13 @@ impl SignedBlockT for SignedBlock {
 		&self.signature
 	}
 
-	/// Verifes the signature of a Block
+	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool {
 		// get block payload
 		let payload = self.block.encode();
 
 		// verify signature
-		self.signature.verify(payload.as_slice(), &self.block.block_author.clone())
+		self.signature.verify(payload.as_slice(), &self.block.block_author)
 	}
 }
 
@@ -204,10 +204,10 @@ mod tests {
 			encrypted_payload.clone(),
 			get_time(),
 		);
-		let signed_block = block.sign(&signer_pair);
 		let signature: Signature =
 			Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
 
+		let signed_block = SignedBlock::from_unsigned(block.clone(), &signer_pair);
 		// then
 		assert_eq!(signed_block.block(), &block);
 		assert_eq!(signed_block.signature(), &signature);
@@ -236,7 +236,7 @@ mod tests {
 			encrypted_payload.clone(),
 			get_time(),
 		);
-		let signed_block = block.sign(&signer_pair);
+		let signed_block = SignedBlock::from_unsigned(block, &signer_pair);
 
 		// then
 		assert!(signed_block.verify_signature());
@@ -265,7 +265,8 @@ mod tests {
 			encrypted_payload.clone(),
 			get_time(),
 		);
-		let mut signed_block = block.sign(&signer_pair);
+		let mut signed_block = SignedBlock::from_unsigned(block, &signer_pair);
+		(&signer_pair);
 		signed_block.block.block_number = 1;
 
 		// then
