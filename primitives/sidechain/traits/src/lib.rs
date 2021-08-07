@@ -45,27 +45,6 @@ pub trait Block: Encode + Decode {
 	) -> Self;
 }
 
-impl<B, SB> SignBlock<B, SB> for B
-where
-	B: Block,
-	SB: SignedBlock<Block = B>,
-{
-	fn sign_block<P: Pair>(self, signer: &P) -> SB
-	where
-		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
-	{
-		let signature = self.using_encoded(|b| signer.sign(b)).into();
-		SB::new(self, signature)
-	}
-}
-
-/// Provide signing logic blanket implementations for all structs satisfying the trait bounds.
-pub trait SignBlock<B: Block, SB: SignedBlock<Block = B>> {
-	fn sign_block<P: Pair>(self, signer: &P) -> SB
-	where
-		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
-}
-
 pub trait SignedBlock {
 	type Block: Block;
 	type Signature;
@@ -79,4 +58,25 @@ pub trait SignedBlock {
 	fn signature(&self) -> &Self::Signature;
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool;
+}
+
+/// Provide signing logic blanket implementations for all block types satisfying the trait bounds.
+pub trait SignBlock<B: Block, SB: SignedBlock<Block = B>> {
+	fn sign_block<P: Pair>(self, signer: &P) -> SB
+	where
+		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
+}
+
+impl<B, SB> SignBlock<B, SB> for B
+where
+	B: Block,
+	SB: SignedBlock<Block = B>,
+{
+	fn sign_block<P: Pair>(self, signer: &P) -> SB
+	where
+		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
+	{
+		let signature = self.using_encoded(|b| signer.sign(b)).into();
+		SB::new(self, signature)
+	}
 }
