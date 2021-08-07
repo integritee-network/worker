@@ -6,13 +6,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Encode;
-use sp_core::{crypto::AccountId32, ed25519, H256};
+use codec::{Decode, Encode};
+use sp_core::{crypto::AccountId32, Pair, H256};
 use sp_std::prelude::*;
 
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
-pub trait Block {
+pub trait Block: Encode + Decode {
 	type ShardIdentifier;
 	///get block number
 	fn block_number(&self) -> u64;
@@ -45,11 +45,33 @@ pub trait Block {
 	) -> Self;
 }
 
+impl<B, SB> SignBlock<B, SB> for B
+where
+	B: Block,
+	SB: SignedBlock<Block = B>,
+{
+	fn sign_block<P: Pair>(self, signer: &P) -> SB
+	where
+		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
+	{
+		let signature = self.using_encoded(|b| signer.sign(b)).into();
+		SB::new(self, signature)
+	}
+}
+
+/// Provide signing logic blanket implementations for all structs satisfying the trait bounds.
+pub trait SignBlock<B: Block, SB: SignedBlock<Block = B>> {
+	fn sign_block<P: Pair>(self, signer: &P) -> SB
+	where
+		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
+}
+
 pub trait SignedBlock {
-	type Block: Encode;
+	type Block: Block;
 	type Signature;
 
-	fn from_unsigned(block: Self::Block, signer: &ed25519::Pair) -> Self;
+	/// create a new block instance
+	fn new(block: Self::Block, signer: Self::Signature) -> Self;
 
 	/// get block reference
 	fn block(&self) -> &Self::Block;

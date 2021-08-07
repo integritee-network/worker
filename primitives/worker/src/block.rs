@@ -1,9 +1,6 @@
 use crate::{BlockNumber, ShardIdentifier};
 use codec::{Decode, Encode};
-use sp_core::{
-	crypto::{AccountId32, Pair},
-	ed25519, H256,
-};
+use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use sp_std::vec::Vec;
 use substratee_sidechain_traits::{Block as BlockT, SignedBlock as SignedBlockT};
@@ -106,12 +103,12 @@ impl BlockT for Block {
 		}
 	}
 }
+
 impl SignedBlockT for SignedBlock {
 	type Block = Block;
 	type Signature = Signature;
 
-	fn from_unsigned(block: Self::Block, signer: &ed25519::Pair) -> Self {
-		let signature = block.using_encoded(|b| signer.sign(b)).into();
+	fn new(block: Self::Block, signature: Self::Signature) -> Self {
 		Self { block, signature }
 	}
 
@@ -137,10 +134,12 @@ impl SignedBlockT for SignedBlock {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use sp_core::{ed25519, Pair};
 	use std::{
 		thread,
 		time::{Duration, SystemTime, UNIX_EPOCH},
 	};
+	use substratee_sidechain_traits::SignBlock;
 
 	/// sets the timestamp of the block as seconds since unix epoch
 	fn get_time() -> i64 {
@@ -204,10 +203,11 @@ mod tests {
 			encrypted_payload.clone(),
 			get_time(),
 		);
+
 		let signature: Signature =
 			Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
+		let signed_block: SignedBlock = block.clone().sign(&signer_pair);
 
-		let signed_block = SignedBlock::from_unsigned(block.clone(), &signer_pair);
 		// then
 		assert_eq!(signed_block.block(), &block);
 		assert_eq!(signed_block.signature(), &signature);
@@ -226,7 +226,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::new(
+		let signed_block: SignedBlock = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),
@@ -235,8 +235,8 @@ mod tests {
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
 			get_time(),
-		);
-		let signed_block = SignedBlock::from_unsigned(block, &signer_pair);
+		)
+		.sign(&signer_pair);
 
 		// then
 		assert!(signed_block.verify_signature());
@@ -255,7 +255,7 @@ mod tests {
 		let shard = ShardIdentifier::default();
 
 		// when
-		let block = Block::new(
+		let mut signed_block: SignedBlock = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),
@@ -264,8 +264,8 @@ mod tests {
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
 			get_time(),
-		);
-		let mut signed_block = SignedBlock::from_unsigned(block, &signer_pair);
+		)
+		.sign(&signer_pair);
 		signed_block.block.block_number = 1;
 
 		// then
