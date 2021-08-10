@@ -26,7 +26,7 @@ sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-
 
 # scs / integritee
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "fix-private-ws-client" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "fix-private-ws-client" }
 my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
 
 # substrate dependencies

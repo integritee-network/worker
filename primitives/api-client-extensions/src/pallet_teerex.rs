@@ -1,8 +1,7 @@
 use sp_core::Pair;
 use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, RpcClient};
-
 use substratee_node_primitives::{Enclave, IpfsHash, ShardIdentifier};
+use substrate_api_client::{Api, RpcClient};
 
 use crate::ApiResult;
 

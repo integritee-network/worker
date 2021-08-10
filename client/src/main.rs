@@ -57,7 +57,8 @@ use substrate_api_client::{
 		WsRpcClient,
 	},
 	utils::FromHexString,
-	Api, Metadata, RpcClient, XtStatus,
+	Metadata, XtStatus,
+	Api, RpcClient,
 };
 
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
@@ -286,10 +287,10 @@ fn main() {
 				.description("query enclave registry and list all workers")
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let api = get_chain_api(matches);
-					let wcount = get_enclave_count(api);
+					let wcount = api.enclave_count().unwrap();
 					println!("number of workers registered: {}", wcount);
 					for w in 1..=wcount {
-						let enclave = get_enclave(api, w);
+						let enclave = api.enclave(w).unwrap();
 						if enclave.is_none() {
 							println!("error reading enclave data");
 							continue

@@ -51,7 +51,7 @@ substratee-enclave-api = { path = "../primitives/enclave-api" }
 substratee-stf = { path = "../stf" }
 
 # scs / integritee
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "fix-private-ws-client" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
 
 # Substrate dependencies
