@@ -1,4 +1,4 @@
-use substratee_api_client_extensions::{ApiResult, SubstrateeRegistryApi};
+use substratee_api_client_extensions::{ApiResult, PalletTeerexApi};
 use substratee_node_primitives::{Enclave, ShardIdentifier};
 
 pub struct TestNodeApi;
@@ -13,7 +13,7 @@ pub fn enclaves() -> Vec<Enclave> {
 	]
 }
 
-impl SubstrateeRegistryApi for TestNodeApi {
+impl PalletTeerexApi for TestNodeApi {
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>> {
 		Ok(Some(enclaves().remove(index as usize)))
 	}

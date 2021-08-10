@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
-use substratee_api_client_extensions::SubstrateeRegistryApi;
+use substratee_api_client_extensions::PalletTeerexApi;
 
 use crate::{
 	config::Config,

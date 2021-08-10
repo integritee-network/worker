@@ -62,7 +62,7 @@ use std::{
 	thread,
 	time::{Duration, SystemTime},
 };
-use substrate_api_client::{utils::FromHexString, Api, GenericAddress, XtStatus, rpc::WsRpcClient};
+use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_enclave_api::{
 	direct_request::DirectRequest,
@@ -435,10 +435,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 			Event::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(
-						sender,
-						worker_url,
-					) => {
+					my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(sender, worker_url) => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", sender);
 						println!("    Registered URL: {:?}", str::from_utf8(&worker_url).unwrap());
@@ -449,25 +446,17 @@ fn print_events(events: Events, _sender: Sender<String>) {
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
-						sender,
-						payload,
-					) => {
+					my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(sender, payload) => {
 						info!("[+] Received CallConfirmed event");
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(
-						sender,
-						payload,
-					) => {
+					my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(sender, payload) => {
 						info!("[+] Received BlockConfirmed event");
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(
-						incognito_account,
-					) => {
+					my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(incognito_account) => {
 						info!("[+] Received ShieldFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},

@@ -25,7 +25,7 @@ use sgx_types::*;
 use sp_core::{crypto::AccountId32, sr25519};
 use sp_keyring::AccountKeyring;
 use std::{fs, str};
-use substrate_api_client::{Api, rpc::WsRpcClient};
+use substrate_api_client::{rpc::WsRpcClient, Api};
 use substratee_enclave_api::enclave_base::EnclaveBase;
 use substratee_stf::{Getter, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter};
 

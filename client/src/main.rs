@@ -51,15 +51,18 @@ use sp_runtime::{
 use std::{convert::TryFrom, result::Result as StdResult, sync::mpsc::channel, thread};
 use substrate_api_client::{
 	compose_extrinsic, compose_extrinsic_offline,
-	events::EventsDecoder,
 	extrinsic::xt_primitives::{GenericAddress, UncheckedExtrinsicV4},
-	node_metadata::Metadata,
+	rpc::{
+		ws_client::{EventsDecoder, Subscriber},
+		WsRpcClient,
+	},
 	utils::FromHexString,
-	Api, XtStatus,
+	Api, Metadata, RpcClient, XtStatus,
 };
 
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use substratee_api_client_extensions::{SubstrateeRegistryApi, TEEREX};
+use substratee_api_client_extensions::{PalletTeerexApi, TEEREX};
+use substratee_node_primitives::Enclave;
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
@@ -283,10 +286,10 @@ fn main() {
 				.description("query enclave registry and list all workers")
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let api = get_chain_api(matches);
-					let wcount = api.enclave_count().unwrap();
+					let wcount = get_enclave_count(api);
 					println!("number of workers registered: {}", wcount);
 					for w in 1..=wcount {
-						let enclave = api.enclave(w).unwrap();
+						let enclave = get_enclave(api, w);
 						if enclave.is_none() {
 							println!("error reading enclave data");
 							continue
@@ -423,14 +426,14 @@ fn main() {
 	}
 }
 
-fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
+fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair, WsRpcClient> {
 	let url = format!(
 		"{}:{}",
 		matches.value_of("node-url").unwrap(),
 		matches.value_of("node-port").unwrap()
 	);
 	info!("connecting to {}", url);
-	Api::<sr25519::Pair>::new(url).unwrap()
+	Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(&url)).unwrap()
 }
 
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
@@ -723,9 +726,7 @@ fn listen(matches: &ArgMatches<'_>) {
 										ipfs_hash
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::Forwarded(
-									shard,
-								) => {
+								my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 									println!(
 										"Forwarded request for shard {}",
 										shard.encode().to_base58()
@@ -771,9 +772,10 @@ fn listen(matches: &ArgMatches<'_>) {
 }
 
 // subscribes to he pallet_teerex events of type CallConfirmed
-pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> H256
+pub fn subscribe_to_call_confirmed<P: Pair, Client: 'static>(api: Api<P, Client>) -> H256
 where
 	MultiSignature: From<P::Signature>,
+	Client: RpcClient + Subscriber + Send,
 {
 	let (events_in, events_out) = channel();
 
@@ -840,4 +842,20 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 			_pair
 		},
 	}
+}
+
+// helper function to get enclave count
+pub fn get_enclave_count<P: Pair, Client: RpcClient>(api: Api<P, Client>) -> u64
+where
+	Api<P, Client>: PalletTeerexApi,
+{
+	api.enclave_count().unwrap()
+}
+
+// helper function to get enclave count
+pub fn get_enclave<P: Pair, Client: RpcClient>(api: Api<P, Client>, w: u64) -> Option<Enclave>
+where
+	Api<P, Client>: PalletTeerexApi,
+{
+	api.enclave(w).unwrap()
 }

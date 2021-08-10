@@ -20,7 +20,7 @@ use crate::{config::Config, worker::Worker as WorkerGen};
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard};
 use sp_core::sr25519;
-use substrate_api_client::{Api, rpc::WsRpcClient};
+use substrate_api_client::{rpc::WsRpcClient, Api};
 use substratee_enclave_api::Enclave;
 use substratee_worker_api::direct_client::DirectClient;
 
