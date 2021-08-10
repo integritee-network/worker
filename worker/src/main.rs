@@ -62,7 +62,7 @@ use std::{
 	thread,
 	time::{Duration, SystemTime},
 };
-use substrate_api_client::{utils::FromHexString, Api, GenericAddress, XtStatus};
+use substrate_api_client::{utils::FromHexString, Api, GenericAddress, XtStatus, rpc::WsRpcClient};
 use substratee_api_client_extensions::{AccountApi, ChainApi};
 use substratee_enclave_api::{
 	direct_request::DirectRequest,
@@ -224,7 +224,7 @@ fn start_worker<E, T, W>(
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
 	skip_ra: bool,
-	mut node_api: Api<sr25519::Pair>,
+	mut node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle: Arc<T>,
 	watch_list: Arc<W>,
 ) where
@@ -360,7 +360,7 @@ fn start_worker<E, T, W>(
 /// Triggers the enclave to produce a block based on a fixed time schedule
 fn start_interval_block_production<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
-	api: &Api<sr25519::Pair>,
+	api: &Api<sr25519::Pair, WsRpcClient>,
 	mut latest_head: Header,
 ) {
 	let block_production_interval = Duration::from_millis(BLOCK_PRODUCTION_INTERVAL);
@@ -490,7 +490,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 
 pub fn init_chain_relay<E: EnclaveBase + SideChain>(
-	api: &Api<sr25519::Pair>,
+	api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: &E,
 ) -> Header {
 	let genesis_hash = api.get_genesis_hash().unwrap();
@@ -517,7 +517,7 @@ pub fn init_chain_relay<E: EnclaveBase + SideChain>(
 /// Returns the last synced header of layer one
 pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
-	api: &Api<sr25519::Pair>,
+	api: &Api<sr25519::Pair, WsRpcClient>,
 	last_synced_head: Header,
 ) -> Header {
 	// obtain latest finalized block from layer one
@@ -562,7 +562,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 /// gets a list of blocks that need to be synced, ordered from oldest to most recent header
 /// blocks that need to be synced are all blocks from the current header to the last synced header, iterating over parent
 fn get_blocks_to_sync(
-	api: &Api<sr25519::Pair>,
+	api: &Api<sr25519::Pair, WsRpcClient>,
 	last_synced_head: &Header,
 	curr_head: &SignedBlock,
 ) -> Vec<SignedBlock> {
@@ -623,7 +623,7 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 }
 
 // Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(api: &mut Api<sr25519::Pair>, accountid: &AccountId32) {
+fn ensure_account_has_funds(api: &mut Api<sr25519::Pair, WsRpcClient>, accountid: &AccountId32) {
 	let alice = AccountKeyring::Alice.pair();
 	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());

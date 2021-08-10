@@ -1,6 +1,6 @@
 use sp_core::crypto::Pair;
 use sp_runtime::MultiSignature;
-use substrate_api_client::Api;
+use substrate_api_client::{Api, RpcClient};
 
 use substratee_node_primitives::AccountId;
 
@@ -12,7 +12,7 @@ pub trait AccountApi {
 	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
 }
 
-impl<P: Pair> AccountApi for Api<P>
+impl<P: Pair, Client: RpcClient> AccountApi for Api<P, Client>
 where
 	MultiSignature: From<P::Signature>,
 {

@@ -1,6 +1,6 @@
 use sp_core::Pair;
 use sp_runtime::MultiSignature;
-use substrate_api_client::Api;
+use substrate_api_client::{Api, RpcClient};
 
 use substratee_node_primitives::{Enclave, IpfsHash, ShardIdentifier};
 
@@ -17,7 +17,7 @@ pub trait SubstrateeRegistryApi {
 	fn latest_ipfs_hash(&self, shard: &ShardIdentifier) -> ApiResult<Option<IpfsHash>>;
 }
 
-impl<P: Pair> SubstrateeRegistryApi for Api<P>
+impl<P: Pair, Client: RpcClient> SubstrateeRegistryApi for Api<P, Client>
 where
 	MultiSignature: From<P::Signature>,
 {
