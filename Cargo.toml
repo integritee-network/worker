@@ -34,6 +34,3 @@ members = [
 sgx-runtime = { path = "../sgx-runtime/runtime", default-features = false}
 sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities", default-features = false}
-
-[patch."https://github.com/integritee-network/integritee-node"]
-my-node-runtime = { path = "../integritee-node/runtime", package = "integritee-node-runtime"}
