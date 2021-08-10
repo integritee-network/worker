@@ -441,7 +441,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					) => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", sender);
-						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
+						println!("    Registered URL: {:?}", str::from_utf8(&worker_url).unwrap());
 					},
 					my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 						println!(
