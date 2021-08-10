@@ -26,6 +26,14 @@ members = [
 #pallet-substratee-registry = { path = "../pallet-substratee-registry" }
 
 
-[patch."https://github.com/scs/substrate-api-client"]
-substrate-api-client = { path = "../substrate-api-client" }
-substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }
+#[patch."https://github.com/scs/substrate-api-client"]
+#substrate-api-client = { path = "../substrate-api-client" }
+#substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }
+
+[patch."https://github.com/integritee-network/sgx-runtime"]
+sgx-runtime = { path = "../sgx-runtime/runtime", default-features = false}
+sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities", default-features = false}
+
+[patch."https://github.com/integritee-network/integritee-node"]
+my-node-runtime = { path = "../integritee-node/runtime", package = "integritee-node-runtime"}
