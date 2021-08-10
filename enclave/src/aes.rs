@@ -23,7 +23,7 @@ use sgx_types::*;
 use aes::Aes128;
 use log::info;
 use ofb::{
-	stream_cipher::{NewStreamCipher, SyncStreamCipher},
+	cipher::{NewCipher, StreamCipher},
 	Ofb,
 };
 
@@ -67,7 +67,7 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 /// If AES acts on the encrypted data it decrypts and vice versa
 pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<()> {
 	read_sealed()
-		.map(|(key, iv)| AesOfb::new_var(&key, &iv))
+		.map(|(key, iv)| AesOfb::new_from_slices(&key, &iv))
 		.sgx_error_with_log("    [Enclave]  Failed to Initialize AES")?
 		.map(|mut ofb| ofb.apply_keystream(bytes))
 		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt")
