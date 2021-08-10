@@ -40,7 +40,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{
-	substratee_registry::Request, AccountId, BalancesCall, Call, Event, Hash, Signature,
+	pallet_teerex::Request, AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
 
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
@@ -691,11 +691,11 @@ fn listen(matches: &ArgMatches<'_>) {
 								}
 							}
 						},*/
-						Event::SubstrateeRegistry(ee) => {
+						Event::Teerex(ee) => {
 							println!(">>>>>>>>>> substraTEE event: {:?}", ee);
 							count += 1;
 							match &ee {
-								my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+								my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(
 									accountid,
 									url,
 								) => {
@@ -706,12 +706,12 @@ fn listen(matches: &ArgMatches<'_>) {
 											.unwrap_or_else(|_| "error".to_string())
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::RemovedEnclave(
+								my_node_runtime::pallet_teerex::RawEvent::RemovedEnclave(
 									accountid,
 								) => {
 									println!("RemovedEnclave: {:?}", accountid);
 								},
-								my_node_runtime::substratee_registry::RawEvent::UpdatedIpfsHash(
+								my_node_runtime::pallet_teerex::RawEvent::UpdatedIpfsHash(
 									shard,
 									idx,
 									ipfs_hash,
@@ -723,7 +723,7 @@ fn listen(matches: &ArgMatches<'_>) {
 										ipfs_hash
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::Forwarded(
+								my_node_runtime::pallet_teerex::RawEvent::Forwarded(
 									shard,
 								) => {
 									println!(
@@ -731,7 +731,7 @@ fn listen(matches: &ArgMatches<'_>) {
 										shard.encode().to_base58()
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
 									accountid,
 									call_hash,
 								) => {
@@ -740,7 +740,7 @@ fn listen(matches: &ArgMatches<'_>) {
 										accountid, call_hash
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::BlockConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(
 									accountid,
 									block_hash,
 								) => {
@@ -749,12 +749,12 @@ fn listen(matches: &ArgMatches<'_>) {
 										accountid, block_hash
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+								my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(
 									incognito_account,
 								) => {
 									println!("ShieldFunds for {:?}", incognito_account);
 								},
-								my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+								my_node_runtime::pallet_teerex::RawEvent::UnshieldedFunds(
 									public_account,
 								) => {
 									println!("UnshieldFunds for {:?}", public_account);
@@ -770,7 +770,7 @@ fn listen(matches: &ArgMatches<'_>) {
 	}
 }
 
-// subscribes to he substratee_registry events of type CallConfirmed
+// subscribes to he pallet_teerex events of type CallConfirmed
 pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> H256
 where
 	MultiSignature: From<P::Signature>,
@@ -794,8 +794,8 @@ where
 		if let Ok(evts) = _events {
 			for evr in &evts {
 				info!("received event {:?}", evr.event);
-				if let Event::SubstrateeRegistry(pe) = &evr.event {
-					if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+				if let Event::Teerex(pe) = &evr.event {
+					if let my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
 						sender,
 						payload,
 					) = &pe
@@ -803,7 +803,7 @@ where
 						println!("[+] Received confirm call from {}", sender);
 						return payload.clone().to_owned()
 					} else {
-						debug!("received unknown event from SubstraTeeRegistry: {:?}", evr.event)
+						debug!("received unknown event from Teerex: {:?}", evr.event)
 					}
 				}
 			}

@@ -42,7 +42,7 @@ use enclave::{
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
 use log::*;
-use my_node_runtime::{substratee_registry::ShardIdentifier, Event, Hash, Header};
+use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -432,10 +432,10 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
-			Event::SubstrateeRegistry(re) => {
+			Event::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+					my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(
 						sender,
 						worker_url,
 					) => {
@@ -443,13 +443,13 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						println!("    Sender (Worker):  {:?}", sender);
 						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 					},
-					my_node_runtime::substratee_registry::RawEvent::Forwarded(shard) => {
+					my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 						println!(
 							"[+] Received trusted call for shard {}",
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+					my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
 						sender,
 						payload,
 					) => {
@@ -457,7 +457,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},
-					my_node_runtime::substratee_registry::RawEvent::BlockConfirmed(
+					my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(
 						sender,
 						payload,
 					) => {
@@ -465,20 +465,20 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},
-					my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+					my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(
 						incognito_account,
 					) => {
 						info!("[+] Received ShieldFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},
-					my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+					my_node_runtime::pallet_teerex::RawEvent::UnshieldedFunds(
 						incognito_account,
 					) => {
 						info!("[+] Received UnshieldedFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},
 					_ => {
-						trace!("Ignoring unsupported substratee_registry event");
+						trace!("Ignoring unsupported pallet_teerex event");
 					},
 				}
 			},
