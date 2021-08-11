@@ -48,7 +48,7 @@ use substratee_settings::{
 	enclave::GETTER_TIMEOUT,
 	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},
 };
-use substratee_sidechain_traits::{Block as BlockT, SignedBlock as SignedBlockT};
+use substratee_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use substratee_stf::{
 	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
 	TrustedCall, TrustedGetter, TrustedOperation,

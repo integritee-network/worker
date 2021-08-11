@@ -4,8 +4,6 @@
 //! some generic structs.
 //!
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use codec::{Decode, Encode};
 use sp_core::{crypto::AccountId32, Pair, H256};
 use sp_std::prelude::*;

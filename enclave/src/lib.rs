@@ -75,7 +75,9 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
-use substratee_sidechain_traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
+use substratee_sidechain_primitives::traits::{
+	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
+};
 use substratee_stf::{
 	stf_sgx::OpaqueCall,
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},

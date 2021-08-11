@@ -2821,7 +2821,6 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "serde_json 1.0.64",
- "sp-core",
  "sp-runtime",
  "sp-std",
  "substratee-sidechain-primitives",

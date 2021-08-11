@@ -17,7 +17,6 @@ substratee-storage = { path = "../storage", default-features = false }
 substratee-sidechain-primitives = { path = "../sidechain/primitives", default-features = false }
 
 # substrate-deps
-sp-core = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
@@ -32,7 +31,6 @@ std = [ 'codec/std',
         'substratee-sidechain-primitives/std',
         'substratee-storage/std',
         'sp-runtime/std',
-        'sp-core/std',
 ]
 
 [dev-dependencies.sp-keyring]

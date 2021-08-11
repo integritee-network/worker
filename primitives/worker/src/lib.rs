@@ -1,14 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use sp_core::H256;
 use sp_std::vec::Vec;
 use substratee_storage::storage_entry::StorageEntry;
 
-pub use substratee_sidechain_primitives::types as block;
-
-use substratee_sidechain_primitives::types::{B}
-
+pub use substratee_sidechain_primitives::{
+	types as block,
+	types::{BlockHash, BlockNumber, ShardIdentifier},
+};
 
 #[cfg(feature = "std")]
 pub mod rpc;
