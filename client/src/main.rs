@@ -57,8 +57,7 @@ use substrate_api_client::{
 		WsRpcClient,
 	},
 	utils::FromHexString,
-	Metadata, XtStatus,
-	Api, RpcClient,
+	Api, Metadata, RpcClient, XtStatus,
 };
 
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
