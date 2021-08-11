@@ -2601,6 +2601,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-get-storage-verified"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "parity-scale-codec",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substratee-ocall-api",
+ "substratee-storage",
+ "substratee-worker-primitives",
+]
+
+[[package]]
 name = "substratee-node-primitives"
 version = "0.8.0"
 dependencies = [
@@ -2617,21 +2632,6 @@ dependencies = [
  "parity-scale-codec",
  "sgx_types",
  "sp-std",
- "substratee-worker-primitives",
-]
-
-[[package]]
-name = "substratee-onchain-storage"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "parity-scale-codec",
- "sgx_types",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "substratee-ocall-api",
- "substratee-storage",
  "substratee-worker-primitives",
 ]
 
@@ -2732,9 +2732,9 @@ dependencies = [
  "sp-utils",
  "sp-version",
  "substrate-api-client",
+ "substratee-get-storage-verified",
  "substratee-node-primitives",
  "substratee-ocall-api",
- "substratee-onchain-storage",
  "substratee-settings",
  "substratee-stf",
  "substratee-storage",
@@ -2840,9 +2840,9 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "substratee-get-storage-verified",
  "substratee-node-primitives",
  "substratee-ocall-api",
- "substratee-onchain-storage",
  "substratee-storage",
  "substratee-worker-primitives",
 ]

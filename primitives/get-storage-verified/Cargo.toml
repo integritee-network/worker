@@ -1,5 +1,5 @@
 [package]
-name = "substratee-onchain-storage"
+name = "substratee-get-storage-verified"
 version = "0.1.0"
 edition = "2018"
 

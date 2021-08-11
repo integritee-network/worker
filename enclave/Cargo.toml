@@ -64,7 +64,7 @@ multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "
 pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
 substratee-settings = { path = "../primitives/settings" }
 substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
-substratee-onchain-storage = { path = "../primitives/onchain-storage", default-features = false }
+substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
 test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 
 [dependencies.linked-hash-map]
