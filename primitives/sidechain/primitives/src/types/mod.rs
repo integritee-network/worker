@@ -1,9 +1,12 @@
-use crate::{BlockNumber, ShardIdentifier};
+use crate::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use codec::{Decode, Encode};
 use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use sp_std::vec::Vec;
-use substratee_sidechain_traits::{Block as BlockT, SignedBlock as SignedBlockT};
+
+pub type BlockHash = H256;
+pub type BlockNumber = u64;
+pub type ShardIdentifier = H256;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};

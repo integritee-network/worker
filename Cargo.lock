@@ -5749,11 +5749,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "substratee-sidechain-traits"
+name = "substratee-sidechain-primitives"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec 2.1.3",
+ "serde",
  "sp-core",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -5886,7 +5888,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
- "substratee-sidechain-traits",
+ "substratee-sidechain-primitives",
  "substratee-storage",
 ]
 

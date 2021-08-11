@@ -5,11 +5,10 @@ use sp_core::H256;
 use sp_std::vec::Vec;
 use substratee_storage::storage_entry::StorageEntry;
 
-pub type BlockHash = H256;
-pub type BlockNumber = u64;
-pub type ShardIdentifier = H256;
+pub use substratee_sidechain_primitives::types as block;
 
-pub mod block;
+use substratee_sidechain_primitives::types::{B}
+
 
 #[cfg(feature = "std")]
 pub mod rpc;
