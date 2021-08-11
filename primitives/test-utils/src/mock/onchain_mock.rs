@@ -4,8 +4,8 @@ use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::*;
 use std::collections::HashMap;
+use substratee_get_storage_verified::{GetStorageVerified, Result};
 use substratee_node_primitives::Enclave;
-use substratee_onchain_storage::{GetStorageVerified, Result};
 use substratee_storage::StorageEntryVerified;
 
 #[derive(Default)]

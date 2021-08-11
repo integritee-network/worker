@@ -63,11 +63,11 @@ use std::{
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
+use substratee_get_storage_verified::GetStorageVerified;
 use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
-use substratee_onchain_storage::GetStorageVerified;
 use substratee_settings::{
 	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
 	node::{

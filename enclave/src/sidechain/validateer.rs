@@ -4,8 +4,8 @@ use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
+use substratee_get_storage_verified::GetStorageVerified;
 use substratee_node_primitives::Enclave;
-use substratee_onchain_storage::GetStorageVerified;
 
 pub trait ValidateerFetch {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(

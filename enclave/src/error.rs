@@ -10,7 +10,7 @@ pub enum Error {
 	Rpc(rpc::error::Error),
 	Codec(codec::Error),
 	Rsa(crate::rsa3072::Error),
-	ChainStorage(substratee_onchain_storage::Error),
+	ChainStorage(substratee_get_storage_verified::Error),
 	Sgx(sgx_status_t),
 	Other(Box<dyn std::error::Error>),
 }
