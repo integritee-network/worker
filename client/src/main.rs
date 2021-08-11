@@ -62,7 +62,6 @@ use substrate_api_client::{
 
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 use substratee_api_client_extensions::{PalletTeerexApi, TEEREX};
-use substratee_node_primitives::Enclave;
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
