@@ -843,19 +843,3 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 		},
 	}
 }
-
-// helper function to get enclave count
-pub fn get_enclave_count<P: Pair, Client: RpcClient>(api: Api<P, Client>) -> u64
-where
-	Api<P, Client>: PalletTeerexApi,
-{
-	api.enclave_count().unwrap()
-}
-
-// helper function to get enclave count
-pub fn get_enclave<P: Pair, Client: RpcClient>(api: Api<P, Client>, w: u64) -> Option<Enclave>
-where
-	Api<P, Client>: PalletTeerexApi,
-{
-	api.enclave(w).unwrap()
-}
