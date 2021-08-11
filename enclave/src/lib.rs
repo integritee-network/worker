@@ -67,7 +67,7 @@ use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
 use substratee_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
-use substratee_onchain_storage::GetOnchainStorage;
+use substratee_onchain_storage::GetStorageVerified;
 use substratee_settings::{
 	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
 	node::{
@@ -812,7 +812,7 @@ where
 
 	// global requests they are the same for every shard
 	let update_map = on_chain_ocall_api
-		.get_multiple_onchain_storages(storage_hashes, &header)
+		.get_multiple_storages_verified(storage_hashes, &header)
 		.map(into_map)?;
 
 	// look for new shards an initialize them
@@ -830,7 +830,7 @@ where
 					// per shard (cid) requests
 					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
 					let per_shard_update_map = on_chain_ocall_api
-						.get_multiple_onchain_storages(per_shard_hashes, &header)
+						.get_multiple_storages_verified(per_shard_hashes, &header)
 						.map(into_map)?;
 
 					let mut state = state::load(&s)?;
@@ -988,7 +988,7 @@ where
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
 	let update_map = on_chain_ocall_api
-		.get_multiple_onchain_storages(storage_hashes, &header)
+		.get_multiple_storages_verified(storage_hashes, &header)
 		.map(into_map)?;
 	Stf::update_storage(state, &update_map);
 
