@@ -1,0 +1,3 @@
+[toolchain]
+channel = "nightly-2021-05-11"
+profile = "default" # include rustfmt, clippy
