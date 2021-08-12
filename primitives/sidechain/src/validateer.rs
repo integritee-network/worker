@@ -1,4 +1,4 @@
-use crate::{error::Error, Result};
+use crate::error::{Error, Result};
 use frame_support::ensure;
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
@@ -35,7 +35,7 @@ impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
 			.collect();
 		ensure!(
 			enclaves.len() == count as usize,
-			Error::Other("Found less validateers onchain than validateer count".into())
+			Error::Other("Found less validateers onchain than validateer count")
 		);
 		Ok(enclaves)
 	}
@@ -44,17 +44,19 @@ impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
 		self.get_storage_verified(TeeRexStorage::enclave_count(), header)?
 			.into_tuple()
 			.1
-			.ok_or_else(|| Error::Other("Could not get validateer count from chain".into()))
+			.ok_or(Error::Other("Could not get validateer count from chain"))
 	}
 }
 
-#[cfg(feature = "test")]
-pub mod tests {
+#[cfg(test)]
+mod tests {
 	use super::*;
-	use crate::Header;
 	use codec::Encode;
+	use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256};
 	use std::string::ToString;
 	use test_utils::mock::onchain_mock::{validateer_set, OnchainMock};
+
+	pub type Header = HeaderG<u64, BlakeTwo256>;
 
 	pub fn default_header() -> Header {
 		Header::new(
@@ -66,11 +68,13 @@ pub mod tests {
 		)
 	}
 
+	#[test]
 	pub fn get_validateer_count_works() {
 		let mock = OnchainMock::default().with_validateer_set();
 		assert_eq!(mock.validateer_count(&default_header()).unwrap(), 4u64);
 	}
 
+	#[test]
 	pub fn get_validateer_set_works() {
 		let mock = OnchainMock::default().with_validateer_set();
 
@@ -82,6 +86,7 @@ pub mod tests {
 		assert_eq!(mock.current_validateers(&default_header()).unwrap(), validateers);
 	}
 
+	#[test]
 	pub fn if_validateer_count_bigger_than_returned_validateers_return_err() {
 		let mut mock = OnchainMock::default().with_validateer_set();
 		mock.insert(TeeRexStorage::enclave_count(), 5u64.encode());

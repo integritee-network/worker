@@ -17,7 +17,7 @@
 use crate::{
 	aes, ed25519,
 	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-	rpc, rsa3072, sidechain, state,
+	rpc, rsa3072, state,
 	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
 	top_pool, Timeout,
 };
@@ -117,12 +117,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_verify_mra_cert_should_work,
 		test_verify_wrong_cert_is_err,
 		test_given_wrong_platform_info_when_verifying_attestation_report_then_return_error,
-
-		// sidechain tests
-		sidechain::validateer::tests::if_validateer_count_bigger_than_returned_validateers_return_err,
-		sidechain::validateer::tests::get_validateer_count_works,
-		sidechain::validateer::tests::get_validateer_set_works,
-
 		//
 		// these unit test (?) need an ipfs node running..
 		//ipfs::test_creates_ipfs_content_struct_works,

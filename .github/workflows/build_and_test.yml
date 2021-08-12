@@ -30,7 +30,7 @@ jobs:
             ~/.cargo/git
             target
             enclave/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run:  SGX_MODE=SW make
       - name: Test Worker & Client
@@ -76,11 +76,16 @@ jobs:
             ~/.cargo/git
             target
             enclave/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
       - name: Worker & Client
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave && cargo clippy -- -D warnings
+
+      - name: Fail-fast; cancel other jobs
+        if: failure()
+        uses: andymckay/cancel-action@0.2
+
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +98,10 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave && cargo fmt --all -- --check
+
+      - name: Fail-fast; cancel other jobs
+        if: failure()
+        uses: andymckay/cancel-action@0.2
 
   integration-tests:
     runs-on: ubuntu-latest

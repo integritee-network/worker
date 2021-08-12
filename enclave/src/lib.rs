@@ -102,7 +102,6 @@ pub mod cert;
 pub mod error;
 pub mod hex;
 pub mod rpc;
-pub mod sidechain;
 pub mod tls_ra;
 pub mod top_pool;
 
