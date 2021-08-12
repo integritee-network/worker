@@ -5749,6 +5749,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "substratee-sidechain-primitives"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec 2.1.3",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "substratee-stf"
 version = "0.8.0"
 dependencies = [
@@ -5873,10 +5884,10 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sp-core",
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+ "substratee-sidechain-primitives",
  "substratee-storage",
 ]
 

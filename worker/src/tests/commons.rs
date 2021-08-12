@@ -32,7 +32,10 @@ use substratee_stf::{Getter, Index, KeyPair, ShardIdentifier, TrustedCall, Trust
 #[cfg(test)]
 use crate::config::Config;
 #[cfg(test)]
-use substratee_worker_primitives::block::{Block, SignedBlock};
+use substratee_worker_primitives::{
+	block::{Block, SignedBlock},
+	traits::{Block as BlockT, SignBlock},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -155,7 +158,7 @@ pub fn test_sidechain_block() -> SignedBlock {
 	let shard = ShardIdentifier::default();
 
 	// when
-	let block = Block::construct_block(
+	let block = Block::new(
 		author,
 		block_number,
 		parent_hash.clone(),
@@ -165,7 +168,7 @@ pub fn test_sidechain_block() -> SignedBlock {
 		encrypted_payload.clone(),
 		1000,
 	);
-	block.sign(&signer_pair)
+	block.sign_block(&signer_pair)
 }
 
 /// Local Worker config. Fields are the default values except for
