@@ -137,12 +137,12 @@ impl SignedBlockT for SignedBlock {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::{Block as BlockT, SignBlock};
 	use sp_core::{ed25519, Pair};
 	use std::{
 		thread,
 		time::{Duration, SystemTime, UNIX_EPOCH},
 	};
-	use substratee_sidechain_traits::SignBlock;
 
 	/// sets the timestamp of the block as seconds since unix epoch
 	fn get_time() -> i64 {
@@ -209,7 +209,7 @@ mod tests {
 
 		let signature: Signature =
 			Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
-		let signed_block: SignedBlock = block.clone().sign(&signer_pair);
+		let signed_block: SignedBlock = block.clone().sign_block(&signer_pair);
 
 		// then
 		assert_eq!(signed_block.block(), &block);
@@ -239,7 +239,7 @@ mod tests {
 			encrypted_payload.clone(),
 			get_time(),
 		)
-		.sign(&signer_pair);
+		.sign_block(&signer_pair);
 
 		// then
 		assert!(signed_block.verify_signature());
@@ -268,7 +268,7 @@ mod tests {
 			encrypted_payload.clone(),
 			get_time(),
 		)
-		.sign(&signer_pair);
+		.sign_block(&signer_pair);
 		signed_block.block.block_number = 1;
 
 		// then

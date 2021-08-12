@@ -4,6 +4,7 @@ use sp_core::crypto::AccountId32;
 use substratee_enclave_api::{direct_request::DirectRequest, EnclaveResult};
 use substratee_worker_primitives::{
 	block::{Block, SignedBlock},
+	traits::{Block as BlockT, SignBlock},
 	RpcResponse, ShardIdentifier,
 };
 
@@ -44,5 +45,5 @@ pub fn test_sidechain_block() -> SignedBlock {
 		encrypted_payload.clone(),
 		10000,
 	);
-	block.sign(&signer_pair)
+	block.sign_block(&signer_pair)
 }

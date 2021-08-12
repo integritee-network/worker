@@ -4,9 +4,12 @@ use codec::{Decode, Encode};
 use sp_std::vec::Vec;
 use substratee_storage::storage_entry::StorageEntry;
 
-pub use substratee_sidechain_primitives::types::{
-	block,
-	block::{BlockHash, BlockNumber, ShardIdentifier},
+pub use substratee_sidechain_primitives::{
+	traits,
+	types::{
+		block,
+		block::{BlockHash, BlockNumber, ShardIdentifier},
+	},
 };
 
 #[cfg(feature = "std")]
