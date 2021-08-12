@@ -1,28 +1,38 @@
-use crate::Result;
+#![cfg_attr(not(feature = "std"), no_std)]
+
+//! Basic storage access abstraction
+
 use codec::Decode;
+use core::result::Result as StdResult;
+use derive_more::{Display, From};
 use sp_core::H256;
 use sp_runtime::traits::Header;
-use sp_std::prelude::Vec;
+use sp_std::prelude::*;
 use substratee_ocall_api::EnclaveOnChainOCallApi;
 use substratee_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
 use substratee_worker_primitives::WorkerRequest;
 
-pub trait GetOnchainStorage {
-	fn get_onchain_storage<H: Header<Hash = H256>, V: Decode>(
+/// Very basic abstraction over storage access that returns a `StorageEntryVerified`. This enforces
+/// that the implementation of this trait uses the `substratee_storage::VerifyStorageProof` trait
+/// because a `StorageEntryVerified` instance cannot be created otherwise.
+///
+/// This is very generic and most-likely one of the innermost traits.
+pub trait GetStorageVerified {
+	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
 	) -> Result<StorageEntryVerified<V>>;
 
-	fn get_multiple_onchain_storages<H: Header<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
 	) -> Result<Vec<StorageEntryVerified<V>>>;
 }
 
-impl<O: EnclaveOnChainOCallApi> GetOnchainStorage for O {
-	fn get_onchain_storage<H: Header<Hash = H256>, V: Decode>(
+impl<O: EnclaveOnChainOCallApi> GetStorageVerified for O {
+	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
@@ -30,13 +40,13 @@ impl<O: EnclaveOnChainOCallApi> GetOnchainStorage for O {
 		// the code below seems like an overkill, but it is surprisingly difficult to
 		// get an owned value from a `Vec` without cloning.
 		Ok(self
-			.get_multiple_onchain_storages(vec![storage_hash], header)?
+			.get_multiple_storages_verified(vec![storage_hash], header)?
 			.into_iter()
 			.next()
 			.ok_or(StorageError::StorageValueUnavailable)?)
 	}
 
-	fn get_multiple_onchain_storages<H: Header<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
@@ -53,3 +63,12 @@ impl<O: EnclaveOnChainOCallApi> GetOnchainStorage for O {
 		Ok(storage_entries)
 	}
 }
+
+#[derive(Debug, Display, From)]
+pub enum Error {
+	Storage(StorageError),
+	Codec(codec::Error),
+	Sgx(sgx_types::sgx_status_t),
+}
+
+pub type Result<T> = StdResult<T, Error>;

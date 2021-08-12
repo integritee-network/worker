@@ -61,9 +61,11 @@ cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", defau
 multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
 
 # local deps
+pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
 substratee-settings = { path = "../primitives/settings" }
 substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
-pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
+substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
+test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 
 [dependencies.linked-hash-map]
 git              = "https://github.com/mesalock-linux/linked-hash-map-sgx"

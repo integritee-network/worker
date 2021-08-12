@@ -1,9 +1,10 @@
-use crate::{error::Error, onchain::storage::GetOnchainStorage, Result};
+use crate::{error::Error, Result};
 use frame_support::ensure;
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
+use substratee_get_storage_verified::GetStorageVerified;
 use substratee_node_primitives::Enclave;
 
 pub trait ValidateerFetch {
@@ -15,7 +16,7 @@ pub trait ValidateerFetch {
 		-> Result<u64>;
 }
 
-impl<OnchainStorage: GetOnchainStorage> ValidateerFetch for OnchainStorage {
+impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
 		&self,
 		header: &Header,
@@ -28,7 +29,7 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerFetch for OnchainStorage {
 		}
 
 		let enclaves: Vec<Enclave> = self
-			.get_multiple_onchain_storages(hashes, header)?
+			.get_multiple_storages_verified(hashes, header)?
 			.into_iter()
 			.filter_map(|e| e.into_tuple().1)
 			.collect();
@@ -40,7 +41,7 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerFetch for OnchainStorage {
 	}
 
 	fn validateer_count<Header: HeaderT<Hash = H256>>(&self, header: &Header) -> Result<u64> {
-		self.get_onchain_storage(TeeRexStorage::enclave_count(), header)?
+		self.get_storage_verified(TeeRexStorage::enclave_count(), header)?
 			.into_tuple()
 			.1
 			.ok_or_else(|| Error::Other("Could not get validateer count from chain".into()))
@@ -50,12 +51,10 @@ impl<OnchainStorage: GetOnchainStorage> ValidateerFetch for OnchainStorage {
 #[cfg(feature = "test")]
 pub mod tests {
 	use super::*;
-	use crate::{
-		test::mocks::onchain_ocall_mock::{validateer_set, OnchainMock},
-		Header,
-	};
+	use crate::Header;
 	use codec::Encode;
 	use std::string::ToString;
+	use test_utils::mock::onchain_mock::{validateer_set, OnchainMock};
 
 	pub fn default_header() -> Header {
 		Header::new(

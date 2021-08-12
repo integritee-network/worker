@@ -1,10 +1,10 @@
-use crate::{error::Result, onchain::storage::GetOnchainStorage};
 use codec::{Decode, Encode};
 use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
-use sp_std::prelude::Vec;
+use sp_std::prelude::*;
 use std::collections::HashMap;
+use substratee_get_storage_verified::{GetStorageVerified, Result};
 use substratee_node_primitives::Enclave;
 use substratee_storage::StorageEntryVerified;
 
@@ -39,8 +39,8 @@ impl OnchainMock {
 	}
 }
 
-impl GetOnchainStorage for OnchainMock {
-	fn get_onchain_storage<H: HeaderT<Hash = H256>, V: Decode>(
+impl GetStorageVerified for OnchainMock {
+	fn get_storage_verified<H: HeaderT<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		_header: &H,
@@ -50,10 +50,10 @@ impl GetOnchainStorage for OnchainMock {
 			.map(|val| Decode::decode(&mut val.as_slice()))
 			.transpose()?;
 
-		Ok(StorageEntryVerified::new(storage_hash.clone(), value))
+		Ok(StorageEntryVerified::new(storage_hash, value))
 	}
 
-	fn get_multiple_onchain_storages<H: HeaderT<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified<H: HeaderT<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		_header: &H,
