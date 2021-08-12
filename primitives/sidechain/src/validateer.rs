@@ -35,7 +35,7 @@ impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
 			.collect();
 		ensure!(
 			enclaves.len() == count as usize,
-			Error::Other("Found less validateers onchain than validateer count".into())
+			Error::Other("Found less validateers onchain than validateer count")
 		);
 		Ok(enclaves)
 	}
@@ -44,7 +44,7 @@ impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
 		self.get_storage_verified(TeeRexStorage::enclave_count(), header)?
 			.into_tuple()
 			.1
-			.ok_or_else(|| Error::Other("Could not get validateer count from chain".into()))
+			.ok_or(Error::Other("Could not get validateer count from chain"))
 	}
 }
 
