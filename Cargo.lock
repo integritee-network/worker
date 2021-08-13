@@ -4054,7 +4054,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=version-upgrade-f651d45#fcd60c97d770cff0184763292295a3d0464824b8"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#b8e57b6ee8eff7d6e15591879509e06bb8d5ac39"
 dependencies = [
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -4067,7 +4067,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=version-upgrade-f651d45#fcd60c97d770cff0184763292295a3d0464824b8"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#b8e57b6ee8eff7d6e15591879509e06bb8d5ac39"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -4641,6 +4641,27 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#b8e57b6ee8eff7d6e15591879509e06bb8d5ac39"
+dependencies = [
+ "environmental",
+ "hash-db",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime-interface",
+ "sp-std",
+ "sp-tracing",
+ "sp-wasm-interface",
+ "tracing",
+ "tracing-core",
+]
+
+[[package]]
+name = "sp-io"
+version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#f651d45ce5742bc60fe8ae518c035d1638ae83d2"
 dependencies = [
  "futures",
@@ -4658,27 +4679,6 @@ dependencies = [
  "sp-std",
  "sp-tracing",
  "sp-trie",
- "sp-wasm-interface",
- "tracing",
- "tracing-core",
-]
-
-[[package]]
-name = "sp-io"
-version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=version-upgrade-f651d45#fcd60c97d770cff0184763292295a3d0464824b8"
-dependencies = [
- "environmental",
- "hash-db",
- "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
- "parity-scale-codec",
- "sgx-externalities",
- "sgx_tstd",
- "sgx_types",
- "sp-core",
- "sp-runtime-interface",
- "sp-std",
- "sp-tracing",
  "sp-wasm-interface",
  "tracing",
  "tracing-core",
@@ -5282,7 +5282,7 @@ dependencies = [
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io 4.0.0-dev (git+https://github.com/integritee-network/sgx-runtime?branch=version-upgrade-f651d45)",
+ "sp-io 4.0.0-dev (git+https://github.com/integritee-network/sgx-runtime?branch=master)",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
