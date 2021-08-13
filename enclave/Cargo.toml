@@ -103,6 +103,7 @@ sp-application-crypto = { version = "4.0.0-dev", default-features = false, git =
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"] }
+getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3", features = ["mesalock_sgx"] }
 
 [patch."https://github.com/paritytech/substrate"]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
