@@ -20,11 +20,11 @@ use crate::{config::Config, worker::Worker as WorkerGen};
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard};
 use sp_core::sr25519;
-use substrate_api_client::Api;
+use substrate_api_client::{rpc::WsRpcClient, Api};
 use substratee_enclave_api::Enclave;
 use substratee_worker_api::direct_client::DirectClient;
 
-pub type Worker = WorkerGen<Config, Api<sr25519::Pair>, Enclave, DirectClient>;
+pub type Worker = WorkerGen<Config, Api<sr25519::Pair, WsRpcClient>, Enclave, DirectClient>;
 
 lazy_static! {
 	static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);

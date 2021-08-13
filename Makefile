@@ -220,6 +220,16 @@ clean:
 	@echo "cargo clean in root directory"
 	@cargo clean
 
+.PHONY: update
+update:
+	@echo "Running cargo update.."
+	@cd enclave && cargo update
+	@cd enclave && cargo update -p sp-std --precise f651d45ce5742bc60fe8ae518c035d1638ae83d2
+	@cd enclave && cargo update -p sgx_tstd --precise 7c07ce0bfbacd3f4f2af53a2cdef9539018be73c
+	@cargo update
+	@cargo update -p sp-std --precise f651d45ce5742bc60fe8ae518c035d1638ae83d2
+	@cargo update -p sgx_tstd --precise 7c07ce0bfbacd3f4f2af53a2cdef9539018be73c
+
 mrenclave:
 	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity < df.out && rm df.out
 

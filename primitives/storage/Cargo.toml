@@ -10,15 +10,15 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 derive_more = { version = "0.99.5" }
 hash-db = { version = "0.15.2", default-features = false }
 
-frame-metadata = { version = "13.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-frame-support = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-core = { version = "3.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-trie = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+frame-metadata = { version = "14.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-trie = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [dev-dependencies]
-sp-state-machine = { version = "0.9.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-state-machine = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 
 [features]

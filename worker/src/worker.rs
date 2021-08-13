@@ -11,7 +11,7 @@ use jsonrpsee::{
 use log::info;
 use std::num::ParseIntError;
 
-use substratee_api_client_extensions::SubstrateeRegistryApi;
+use substratee_api_client_extensions::PalletTeerexApi;
 use substratee_node_primitives::Enclave as EnclaveMetadata;
 use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
@@ -58,7 +58,7 @@ pub trait WorkerT {
 impl<NodeApi, Enclave, WorkerApiDirect> WorkerT
 	for Worker<Config, NodeApi, Enclave, WorkerApiDirect>
 where
-	NodeApi: SubstrateeRegistryApi + Send + Sync,
+	NodeApi: PalletTeerexApi + Send + Sync,
 	Enclave: Send + Sync,
 	WorkerApiDirect: Send + Sync,
 {

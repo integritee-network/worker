@@ -19,7 +19,7 @@
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use sp_core::sr25519;
-use substrate_api_client::Api;
+use substrate_api_client::{rpc::WsRpcClient, Api};
 
 #[cfg(test)]
 use mockall::predicate::*;
@@ -34,7 +34,7 @@ lazy_static! {
 /// trait to create a node API, based on a node URL
 #[cfg_attr(test, automock)]
 pub trait CreateNodeApi {
-	fn create_api(&self) -> Api<sr25519::Pair>;
+	fn create_api(&self) -> Api<sr25519::Pair, WsRpcClient>;
 }
 
 pub struct GlobalUrlNodeApiFactory;
@@ -57,7 +57,10 @@ impl GlobalUrlNodeApiFactory {
 }
 
 impl CreateNodeApi for GlobalUrlNodeApiFactory {
-	fn create_api(&self) -> Api<sr25519::Pair> {
-		Api::<sr25519::Pair>::new(GlobalUrlNodeApiFactory::read_node_url()).unwrap()
+	fn create_api(&self) -> Api<sr25519::Pair, WsRpcClient> {
+		Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(
+			&GlobalUrlNodeApiFactory::read_node_url(),
+		))
+		.unwrap()
 	}
 }

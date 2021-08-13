@@ -40,7 +40,7 @@ use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{
-	substratee_registry::Request, AccountId, BalancesCall, Call, Event, Hash, Signature,
+	pallet_teerex::Request, AccountId, BalancesCall, Call, Event, Hash, Signature,
 };
 
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
@@ -51,15 +51,17 @@ use sp_runtime::{
 use std::{convert::TryFrom, result::Result as StdResult, sync::mpsc::channel, thread};
 use substrate_api_client::{
 	compose_extrinsic, compose_extrinsic_offline,
-	events::EventsDecoder,
 	extrinsic::xt_primitives::{GenericAddress, UncheckedExtrinsicV4},
-	node_metadata::Metadata,
+	rpc::{
+		ws_client::{EventsDecoder, Subscriber},
+		WsRpcClient,
+	},
 	utils::FromHexString,
-	Api, XtStatus,
+	Api, Metadata, RpcClient, XtStatus,
 };
 
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use substratee_api_client_extensions::{SubstrateeRegistryApi, TEEREX};
+use substratee_api_client_extensions::{PalletTeerexApi, TEEREX};
 use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use substratee_worker_api::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
@@ -423,14 +425,14 @@ fn main() {
 	}
 }
 
-fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair> {
+fn get_chain_api(matches: &ArgMatches<'_>) -> Api<sr25519::Pair, WsRpcClient> {
 	let url = format!(
 		"{}:{}",
 		matches.value_of("node-url").unwrap(),
 		matches.value_of("node-port").unwrap()
 	);
 	info!("connecting to {}", url);
-	Api::<sr25519::Pair>::new(url).unwrap()
+	Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(&url)).unwrap()
 }
 
 fn perform_trusted_operation(matches: &ArgMatches<'_>, top: &TrustedOperation) -> Option<Vec<u8>> {
@@ -691,11 +693,11 @@ fn listen(matches: &ArgMatches<'_>) {
 								}
 							}
 						},*/
-						Event::SubstrateeRegistry(ee) => {
+						Event::Teerex(ee) => {
 							println!(">>>>>>>>>> substraTEE event: {:?}", ee);
 							count += 1;
 							match &ee {
-								my_node_runtime::substratee_registry::RawEvent::AddedEnclave(
+								my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(
 									accountid,
 									url,
 								) => {
@@ -706,12 +708,12 @@ fn listen(matches: &ArgMatches<'_>) {
 											.unwrap_or_else(|_| "error".to_string())
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::RemovedEnclave(
+								my_node_runtime::pallet_teerex::RawEvent::RemovedEnclave(
 									accountid,
 								) => {
 									println!("RemovedEnclave: {:?}", accountid);
 								},
-								my_node_runtime::substratee_registry::RawEvent::UpdatedIpfsHash(
+								my_node_runtime::pallet_teerex::RawEvent::UpdatedIpfsHash(
 									shard,
 									idx,
 									ipfs_hash,
@@ -723,15 +725,13 @@ fn listen(matches: &ArgMatches<'_>) {
 										ipfs_hash
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::Forwarded(
-									shard,
-								) => {
+								my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 									println!(
 										"Forwarded request for shard {}",
 										shard.encode().to_base58()
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
 									accountid,
 									call_hash,
 								) => {
@@ -740,7 +740,7 @@ fn listen(matches: &ArgMatches<'_>) {
 										accountid, call_hash
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::BlockConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(
 									accountid,
 									block_hash,
 								) => {
@@ -749,12 +749,12 @@ fn listen(matches: &ArgMatches<'_>) {
 										accountid, block_hash
 									);
 								},
-								my_node_runtime::substratee_registry::RawEvent::ShieldFunds(
+								my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(
 									incognito_account,
 								) => {
 									println!("ShieldFunds for {:?}", incognito_account);
 								},
-								my_node_runtime::substratee_registry::RawEvent::UnshieldedFunds(
+								my_node_runtime::pallet_teerex::RawEvent::UnshieldedFunds(
 									public_account,
 								) => {
 									println!("UnshieldFunds for {:?}", public_account);
@@ -770,10 +770,11 @@ fn listen(matches: &ArgMatches<'_>) {
 	}
 }
 
-// subscribes to he substratee_registry events of type CallConfirmed
-pub fn subscribe_to_call_confirmed<P: Pair>(api: Api<P>) -> H256
+// subscribes to he pallet_teerex events of type CallConfirmed
+pub fn subscribe_to_call_confirmed<P: Pair, Client: 'static>(api: Api<P, Client>) -> H256
 where
 	MultiSignature: From<P::Signature>,
+	Client: RpcClient + Subscriber + Send,
 {
 	let (events_in, events_out) = channel();
 
@@ -794,8 +795,8 @@ where
 		if let Ok(evts) = _events {
 			for evr in &evts {
 				info!("received event {:?}", evr.event);
-				if let Event::SubstrateeRegistry(pe) = &evr.event {
-					if let my_node_runtime::substratee_registry::RawEvent::CallConfirmed(
+				if let Event::Teerex(pe) = &evr.event {
+					if let my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
 						sender,
 						payload,
 					) = &pe
@@ -803,7 +804,7 @@ where
 						println!("[+] Received confirm call from {}", sender);
 						return payload.clone().to_owned()
 					} else {
-						debug!("received unknown event from SubstraTeeRegistry: {:?}", evr.event)
+						debug!("received unknown event from Teerex: {:?}", evr.event)
 					}
 				}
 			}
