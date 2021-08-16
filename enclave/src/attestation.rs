@@ -544,12 +544,12 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 		Err(e) => return e,
 	};
 
-	if let Err(status) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
 		error!(
 			"    [Enclave] failed to write RA file ({}), status: {:?}",
-			RA_DUMP_CERT_DER_FILE, status
+			RA_DUMP_CERT_DER_FILE, err
 		);
-		return status
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 

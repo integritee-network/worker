@@ -2715,6 +2715,13 @@ name = "substratee-settings"
 version = "0.8.0"
 
 [[package]]
+name = "substratee-sgx-io"
+version = "0.1.0"
+dependencies = [
+ "sgx_tstd",
+]
+
+[[package]]
 name = "substratee-sidechain"
 version = "0.1.0"
 dependencies = [
@@ -2840,6 +2847,7 @@ dependencies = [
  "substratee-node-primitives",
  "substratee-ocall-api",
  "substratee-settings",
+ "substratee-sgx-io",
  "substratee-sidechain",
  "substratee-sidechain-primitives",
  "substratee-stf",

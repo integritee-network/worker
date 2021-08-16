@@ -15,38 +15,10 @@
 
 */
 use crate::utils::UnwrapOrSgxErrorUnexpected;
-use log::*;
 use sgx_types::*;
-use std::{
-	fs,
-	io::{Read, Write},
-	sgxfs::SgxFile,
-	string::String,
-	vec::Vec,
-};
+use std::{fs, io::Read, string::String};
 
-pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
-	trace!("Opening sgx file at path: {:?}", filepath);
-	let result = SgxFile::open(filepath)
-		.map(_read)
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
-	trace!("Sucessfully read sgx file");
-	result
-}
-
-pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {
-	fs::File::open(filepath)
-		.map(_read)
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
-}
-
-fn _read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
-	let mut read_data: Vec<u8> = Vec::new();
-	file.read_to_end(&mut read_data)
-		.sgx_error_with_log("[Enclave] Reading File failed!")?;
-
-	Ok(read_data)
-}
+pub use substratee_sgx_io::{read, seal, unseal, write};
 
 pub fn read_to_string(filepath: &str) -> SgxResult<String> {
 	let mut contents = String::new();
@@ -56,24 +28,6 @@ pub fn read_to_string(filepath: &str) -> SgxResult<String> {
 		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
 
 	Ok(contents)
-}
-
-pub fn seal(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	SgxFile::create(filepath)
-		.map(|f| _write(bytes, f))
-		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
-}
-
-pub fn write(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	fs::File::create(filepath)
-		.map(|f| _write(bytes, f))
-		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
-}
-
-fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
-	file.write_all(bytes).sgx_error_with_log("[Enclave] Writing File failed!")?;
-
-	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 pub mod light_validation {

@@ -15,24 +15,45 @@
 
 */
 
-use std::{sgxfs::SgxFile, vec::Vec};
-
-use sgx_rand::{Rng, StdRng};
-use sgx_types::*;
-
+use crate::error::{Error, Result};
 use aes::Aes128;
-use log::*;
+use log::{info, trace};
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},
 	Ofb,
 };
+use sgx_rand::{Rng, StdRng};
+use sgx_types::*;
+use std::{sgxfs::SgxFile, vec::Vec};
+use substratee_sgx_io::{seal, unseal, SealIO};
 
-use crate::{io, utils::UnwrapOrSgxErrorUnexpected};
+use crate::utils::UnwrapOrSgxErrorUnexpected;
 use substratee_settings::files::AES_KEY_FILE_AND_INIT_V;
 
 type AesOfb = Ofb<Aes128>;
 
-pub type Aes = (Vec<u8>, Vec<u8>);
+#[derive(Debug, Default, Encode, Decode)]
+pub struct Aes {
+	key: [u8; 16],
+	init_vec: [u8; 16],
+}
+
+impl Aes {
+	pub fn new(key: [u8; 16], init_vec: [u8; 16]) -> Self {
+		Self { key, init_vec }
+	}
+}
+
+impl SealIO for Aes {
+	type Error = Error;
+	fn unseal() -> Result<Self> {
+		Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
+	}
+
+	fn seal(self) -> Result<()> {
+		Ok(self.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
+	}
+}
 
 pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 	if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
@@ -42,39 +63,22 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-pub fn read_sealed() -> SgxResult<Aes> {
-	trace!("Unsealing aes key .. ");
-	let aes =
-		io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| (aes[..16].to_vec(), aes[16..].to_vec()));
-	trace!("Sucessfully read aes key: {:?}", aes.as_ref());
-	aes
-}
+pub fn create_sealed() -> Result<()> {
+	let mut key = [0u8; 16];
+	let mut iv = [0u8; 16];
 
-pub fn seal(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t> {
-	let mut key_iv = key.to_vec();
-	key_iv.extend_from_slice(&iv);
-	io::seal(&key_iv, AES_KEY_FILE_AND_INIT_V)
-}
+	let mut rand = StdRng::new()?;
 
-pub fn create_sealed() -> SgxResult<sgx_status_t> {
-	let mut key_iv = [0u8; 32];
-
-	let mut rand = match StdRng::new() {
-		Ok(rng) => rng,
-		Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-	};
-
-	rand.fill_bytes(&mut key_iv);
-	io::seal(&key_iv, AES_KEY_FILE_AND_INIT_V)
+	rand.fill_bytes(&mut key);
+	rand.fill_bytes(&mut iv);
+	Aes::new(key, iv).seal()
 }
 
 /// If AES acts on the encrypted data it decrypts and vice versa
-pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<()> {
-	let keystream = read_sealed()
-		.map(|(key, iv)| AesOfb::new_var(&key, &iv))
+pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> Result<()> {
+	Ok(Aes::unseal()
+		.map(|aes| AesOfb::new_var(&aes.key, &aes.init_vec))
 		.sgx_error_with_log("    [Enclave]  Failed to Initialize AES")?
 		.map(|mut ofb| ofb.apply_keystream(bytes))
-		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt");
-	trace!("Sucessfully de or encprypted file");
-	keystream
+		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt")?)
 }

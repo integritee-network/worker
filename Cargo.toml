@@ -10,6 +10,7 @@ members = [
     "primitives/get-storage-verified",
     "primitives/pallet-teerex-storage",
     "primitives/settings",
+    "primitives/sgx/io",
     "primitives/sidechain",
     "primitives/sidechain/primitives",
     "primitives/storage",
