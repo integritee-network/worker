@@ -182,7 +182,7 @@ fn read_files_to_send() -> SgxResult<(Vec<u8>, Aes)> {
 
 	let rsa_len = rsa_pair.as_bytes().len();
 	info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
-	info!("    [Enclave] Read AES key {:?}\nIV: {:?}\n", aes.0, aes.1);
+	info!("    [Enclave] Read AES key {:?}", aes);
 
 	Ok((rsa_pair.as_bytes().to_vec(), aes))
 }
@@ -190,12 +190,12 @@ fn read_files_to_send() -> SgxResult<(Vec<u8>, Aes)> {
 fn send_files(
 	tls: &mut Stream<ServerSession, TcpStream>,
 	rsa_pair: &[u8],
-	aes: &(Vec<u8>, Vec<u8>),
+	aes: &Aes,
 ) -> SgxResult<()> {
 	tls.write(&rsa_pair.len().to_le_bytes()).sgx_error()?;
 	tls.write(&rsa_pair).sgx_error()?;
-	tls.write(&aes.0[..]).sgx_error()?;
-	tls.write(&aes.1[..]).sgx_error()?;
+	tls.write(&aes.key[..]).sgx_error()?;
+	tls.write(&aes.init_vec[..]).sgx_error()?;
 	Ok(())
 }
 
@@ -257,7 +257,7 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
 		.map(|_| info!("    [Enclave] (MU-RA-Client) Received AES IV: {:?}", &aes_iv[..]))
 		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes iv")?;
 
-	Aes::new(aes_key.to_vec(), aes_iv.to_vec()).seal()?;
+	Aes::new(aes_key, aes_iv).seal()?;
 
 	println!("    [Enclave] (MU-RA-Client) Successfully received keys.");
 

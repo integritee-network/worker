@@ -34,8 +34,8 @@ type AesOfb = Ofb<Aes128>;
 
 #[derive(Debug, Default, Encode, Decode)]
 pub struct Aes {
-	key: [u8; 16],
-	init_vec: [u8; 16],
+	pub(crate) key: [u8; 16],
+	pub(crate) init_vec: [u8; 16],
 }
 
 impl Aes {

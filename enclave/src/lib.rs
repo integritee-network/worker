@@ -319,13 +319,13 @@ pub unsafe extern "C" fn get_state(
 	if !state::exists(&shard) {
 		info!("Initialized new shard that was queried chain: {:?}", shard);
 		if let Err(e) = state::init_shard(&shard) {
-			return e
+			return e.into()
 		}
 	}
 
 	let mut state = match state::load(&shard) {
 		Ok(s) => s,
-		Err(status) => return status,
+		Err(e) => return e.into(),
 	};
 
 	debug!("calling into STF to get state");
