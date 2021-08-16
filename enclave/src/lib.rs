@@ -381,7 +381,7 @@ pub unsafe extern "C" fn init_chain_relay(
 
 	match io::light_validation::read_or_init_validator(header, auth, proof) {
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	}
 	sgx_status_t::SGX_SUCCESS
 }
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn produce_blocks(
 
 	let mut validator = match io::light_validation::unseal() {
 		Ok(v) => v,
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();

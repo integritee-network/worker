@@ -31,7 +31,7 @@ pub fn read_to_string(filepath: &str) -> SgxResult<String> {
 }
 
 pub mod light_validation {
-	use crate::utils::UnwrapOrSgxErrorUnexpected;
+	use crate::{error::Result, utils::UnwrapOrSgxErrorUnexpected};
 	use chain_relay::{Header, LightValidation, Validator};
 	use codec::{Decode, Encode};
 	use log::*;
@@ -41,25 +41,25 @@ pub mod light_validation {
 	use substratee_settings::files::CHAIN_RELAY_DB;
 	use substratee_storage::StorageProof;
 
-	pub fn unseal() -> SgxResult<LightValidation> {
+	pub fn unseal() -> Result<LightValidation> {
 		let vec = super::unseal(CHAIN_RELAY_DB)?;
-		LightValidation::decode(&mut vec.as_slice()).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)
+		Ok(LightValidation::decode(&mut vec.as_slice())?)
 	}
 
-	pub fn seal(validator: LightValidation) -> SgxResult<sgx_status_t> {
+	pub fn seal(validator: LightValidation) -> Result<()> {
 		debug!("backup chain relay state");
 		if fs::copy(CHAIN_RELAY_DB, format!("{}.1", CHAIN_RELAY_DB)).is_err() {
 			warn!("could not backup previous chain relay state");
 		};
 		debug!("Seal Chain Relay State. Current state: {:?}", validator);
-		super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)
+		Ok(super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?)
 	}
 
 	pub fn read_or_init_validator(
 		header: Header,
 		auth: VersionedAuthorityList,
 		proof: StorageProof,
-	) -> SgxResult<Header> {
+	) -> Result<Header> {
 		if SgxFile::open(CHAIN_RELAY_DB).is_err() {
 			info!("[Enclave] ChainRelay DB not found, creating new! {}", CHAIN_RELAY_DB);
 			return init_validator(header, auth, proof)
@@ -81,7 +81,7 @@ pub mod light_validation {
 		header: Header,
 		auth: VersionedAuthorityList,
 		proof: StorageProof,
-	) -> SgxResult<Header> {
+	) -> Result<Header> {
 		let mut validator = LightValidation::new();
 
 		validator.initialize_relay(header, auth.into(), proof).sgx_error()?;
