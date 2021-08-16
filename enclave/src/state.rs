@@ -56,6 +56,7 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
 	trace!("state decoded successfully");
 	// add empty state-diff
 	let state_with_diff = StfState { state, state_diff: StfStateTypeDiff::new() };
+	trace!("New state created: {:?}", state_with_diff);
 	Ok(state_with_diff)
 }
 
@@ -90,12 +91,15 @@ pub fn exists(shard: &ShardIdentifier) -> bool {
 }
 
 pub fn hash_of(state: StfStateType) -> SgxResult<H256> {
+	trace!("encrypting state: {:?}", state);
 	let cyphertext = encrypt(state.encode())?;
+	trace!("Sucessfully encrypted..");
 
 	let state_hash = match rsgx_sha256_slice(&cyphertext) {
 		Ok(h) => h,
 		Err(status) => return Err(status),
 	};
+	trace!("Got hash: {:?}", state_hash);
 
 	Ok(state_hash.into())
 }
