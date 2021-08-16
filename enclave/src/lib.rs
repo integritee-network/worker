@@ -889,7 +889,7 @@ where
 					// load state before executing any calls
 					let mut state = load_initialized_state(&shard)?;
 					// call execution
-					trace!("Hanldling trsuted worker call of state: {:?}", state);
+					trace!("Handling trusted worker call of state: {:?}", state);
 					if let Err(e) = handle_trusted_worker_call(
 						&mut opaque_calls, // necessary for unshielding
 						&mut state,
