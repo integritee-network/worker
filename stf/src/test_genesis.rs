@@ -37,6 +37,7 @@ const ALICE_FUNDS: Balance = 1000000000000000;
 pub fn test_genesis_setup(state: &mut SgxExternalities) {
 	// set alice sudo account
 	set_sudo_account(state, &ALICE_ENCODED);
+	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
 	let generic_test_account = AccountId32::from(
 		sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public(),

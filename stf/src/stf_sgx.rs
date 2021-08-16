@@ -56,6 +56,7 @@ impl Stf {
 		let mut ext = State::new();
 		// set initial state hash
 		let state_hash: Hash = blake2_256(&ext.clone().encode()).into();
+		trace!("Created new state hash: {:?}", state_hash);
 
 		ext.execute_with(|| {
 			// do not set genesis for pallets that are meant to be on-chain
@@ -89,6 +90,7 @@ impl Stf {
 		#[cfg(feature = "test")]
 		test_genesis_setup(&mut ext);
 
+		trace!("Returning updated state: {:?}", ext);
 		ext
 	}
 
