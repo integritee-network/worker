@@ -21,9 +21,9 @@ use sgx_rand::{Rng, StdRng};
 use sgx_types::*;
 
 use aes::Aes128;
-use log::info;
+use log::*;
 use ofb::{
-	cipher::{NewCipher, StreamCipher},
+	cipher::{SyncStreamCipher, NewStreamCipher},
 	Ofb,
 };
 
@@ -43,7 +43,10 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 }
 
 pub fn read_sealed() -> SgxResult<Aes> {
-	io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| (aes[..16].to_vec(), aes[16..].to_vec()))
+	trace!("Unsealing aes key .. ");
+	let aes = io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| (aes[..16].to_vec(), aes[16..].to_vec()));
+	trace!("Sucessfully read aes key: {:?}", aes.as_ref() );
+	aes
 }
 
 pub fn seal(key: [u8; 16], iv: [u8; 16]) -> SgxResult<sgx_status_t> {
@@ -66,9 +69,11 @@ pub fn create_sealed() -> SgxResult<sgx_status_t> {
 
 /// If AES acts on the encrypted data it decrypts and vice versa
 pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> SgxResult<()> {
-	read_sealed()
-		.map(|(key, iv)| AesOfb::new_from_slices(&key, &iv))
+	let keystream = read_sealed()
+		.map(|(key, iv)| AesOfb::new_var(&key, &iv))
 		.sgx_error_with_log("    [Enclave]  Failed to Initialize AES")?
 		.map(|mut ofb| ofb.apply_keystream(bytes))
-		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt")
+		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt");
+	trace!("Sucessfully de or encprypted file");
+	keystream
 }
