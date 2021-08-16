@@ -14,30 +14,18 @@
 	limitations under the License.
 
 */
-use crate::{
-	error::{Error, Result},
-	io,
-};
-use codec::{Decode, Encode};
-use core::ops::Deref;
+use crate::error::{Error, Result};
+use codec::Encode;
+use derive_more::{Deref, From};
 use log::*;
 use sgx_rand::{Rng, StdRng};
-use sgx_types::*;
 use sp_core::{crypto::Pair, ed25519};
-use std::{path::Path, sgxfs::SgxFile, vec::Vec};
+use std::{path::Path, sgxfs::SgxFile};
 use substratee_settings::files::SEALED_SIGNER_SEED_FILE;
 use substratee_sgx_io::{seal, unseal, SealIO};
 
-#[derive(Clone)]
-pub struct Ed25519(ed25519::Pair);
-
-impl Deref for Ed25519 {
-	type Target = ed25519::Pair;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
+#[derive(Clone, From, Deref)]
+pub struct Ed25519(pub ed25519::Pair);
 
 impl SealIO for Ed25519 {
 	type Error = Error;

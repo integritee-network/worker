@@ -35,7 +35,6 @@ pub mod light_validation {
 	use chain_relay::{Header, LightValidation, Validator};
 	use codec::{Decode, Encode};
 	use log::*;
-	use sgx_types::{sgx_status_t, SgxResult};
 	use sp_finality_grandpa::VersionedAuthorityList;
 	use std::{fs, sgxfs::SgxFile};
 	use substratee_settings::files::CHAIN_RELAY_DB;

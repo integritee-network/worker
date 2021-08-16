@@ -230,7 +230,7 @@ fn test_submit_trusted_call_to_top_pool() {
 		42,
 		42,
 	);
-	let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+	let signed_call = call.sign(&signer_pair.0.into(), nonce, &mrenclave, &shard);
 	let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
 	// encrypt call
 	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
@@ -275,7 +275,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 	Stf::init_state();
 	let signer_pair = Ed25519::unseal().unwrap();
 	let getter = TrustedGetter::free_balance(signer_pair.public().into());
-	let signed_getter = getter.sign(&signer_pair.into());
+	let signed_getter = getter.sign(&signer_pair.0.into());
 	let trusted_operation: TrustedOperation = signed_getter.clone().into();
 	// encrypt call
 	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
@@ -320,7 +320,7 @@ fn test_differentiate_getter_and_call_works() {
 
 	let signer_pair = Ed25519::unseal().unwrap();
 	let getter = TrustedGetter::free_balance(signer_pair.public().into());
-	let signed_getter = getter.sign(&signer_pair.clone().into());
+	let signed_getter = getter.sign(&signer_pair.0.clone().into());
 	let trusted_operation: TrustedOperation = signed_getter.clone().into();
 	// encrypt call
 	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
@@ -338,7 +338,7 @@ fn test_differentiate_getter_and_call_works() {
 		42,
 		42,
 	);
-	let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
+	let signed_call = call.sign(&signer_pair.0.into(), nonce, &mrenclave, &shard);
 	let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
 	// encrypt call
 	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
