@@ -30,12 +30,12 @@ pub struct Ed25519(pub ed25519::Pair);
 impl SealIO for Ed25519 {
 	type Error = Error;
 	fn unseal() -> Result<Self> {
-		Ok(unseal(SEALED_SIGNER_SEED_FILE)
-			.map(|b| {
-				ed25519::Pair::from_seed_slice(&b)
-					.map_err(|e| Error::Other(format!("{:?}", e).into()))
-			})?
-			.map(|key| Ed25519(key))?)
+		let raw = unseal(SEALED_SIGNER_SEED_FILE)?;
+
+		let key = ed25519::Pair::from_seed_slice(&raw)
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+
+		Ok(key.into())
 	}
 
 	fn seal(self) -> Result<()> {
