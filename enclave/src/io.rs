@@ -15,6 +15,7 @@
 
 */
 use crate::utils::UnwrapOrSgxErrorUnexpected;
+use log::*;
 use sgx_types::*;
 use std::{
 	fs,
@@ -23,7 +24,6 @@ use std::{
 	string::String,
 	vec::Vec,
 };
-use log::*;
 
 pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
 	trace!("Opening sgx file at path: {:?}", filepath);

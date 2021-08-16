@@ -23,7 +23,7 @@ use sgx_types::*;
 use aes::Aes128;
 use log::*;
 use ofb::{
-	cipher::{SyncStreamCipher, NewStreamCipher},
+	cipher::{NewStreamCipher, SyncStreamCipher},
 	Ofb,
 };
 
@@ -44,8 +44,9 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 
 pub fn read_sealed() -> SgxResult<Aes> {
 	trace!("Unsealing aes key .. ");
-	let aes = io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| (aes[..16].to_vec(), aes[16..].to_vec()));
-	trace!("Sucessfully read aes key: {:?}", aes.as_ref() );
+	let aes =
+		io::unseal(AES_KEY_FILE_AND_INIT_V).map(|aes| (aes[..16].to_vec(), aes[16..].to_vec()));
+	trace!("Sucessfully read aes key: {:?}", aes.as_ref());
 	aes
 }
 

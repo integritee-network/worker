@@ -603,9 +603,9 @@ where
 		let mut state = load_initialized_state(&shard)?;
 		// save the state hash before call executions
 		// (needed for block composition)
-		trace!("Getting hash of previous state .." );
+		trace!("Getting hash of previous state ..");
 		let prev_state_hash = state::hash_of(state.state.clone())?;
-		trace!("Loaded hash of previous state: {:?}",  prev_state_hash);
+		trace!("Loaded hash of previous state: {:?}", prev_state_hash);
 
 		// retrieve trusted operations from pool
 		let trusted_calls = author.get_pending_tops_separated(shard)?.0;
