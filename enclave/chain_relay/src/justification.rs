@@ -25,11 +25,18 @@ use sc_client::Client;
 #[cfg(test)]
 use sc_client_api::{backend::Backend, CallExecutor};
 
+
+
 use super::error::JustificationError as ClientError;
-use codec::{Decode, Encode};
-use finality_grandpa::{voter_set::VoterSet, Error as GrandpaError};
-use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
+use grandpa::{voter_set::VoterSet, Error as GrandpaError};
+use sp_finality_grandpa::{AuthorityId, AuthorityPair, AuthoritySignature, RoundNumber, SetId,};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
+
+use codec::{Encode, Decode};
+use log::*;
+use sp_core::Pair;
+use grandpa;
+
 
 /// A GRANDPA justification for block finality, it includes a commit message and
 /// an ancestry proof including all headers routing all precommit target blocks
@@ -102,7 +109,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<GrandpaJustification<Block>, ClientError>
 	where
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+		NumberFor<Block>: grandpa::BlockNumberOps,
 	{
 		let justification = GrandpaJustification::<Block>::decode(&mut &*encoded)
 			.map_err(|_| ClientError::JustificationDecode)?;
@@ -124,13 +131,13 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<(), ClientError>
 	where
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+		NumberFor<Block>: grandpa::BlockNumberOps,
 	{
-		use finality_grandpa::Chain;
+		use grandpa::Chain;
 
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
 
-		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
+		match grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
 			Ok(ref result) if result.ghost().is_some() => {},
 			_ => {
 				let msg = "invalid commit in grandpa justification".to_string();
@@ -141,8 +148,8 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		let mut buf = Vec::new();
 		let mut visited_hashes = HashSet::new();
 		for signed in self.commit.precommits.iter() {
-			if communication::check_message_sig_with_buffer::<Block>(
-				&finality_grandpa::Message::Precommit(signed.precommit.clone()),
+			if communication::check_message_signature_with_buffer::<Block>(
+				&grandpa::Message::Precommit(signed.precommit.clone()),
 				&signed.id,
 				&signed.signature,
 				self.round,
@@ -205,9 +212,9 @@ impl<Block: BlockT> AncestryChain<Block> {
 	}
 }
 
-impl<Block: BlockT> finality_grandpa::Chain<Block::Hash, NumberFor<Block>> for AncestryChain<Block>
+impl<Block: BlockT> grandpa::Chain<Block::Hash, NumberFor<Block>> for AncestryChain<Block>
 where
-	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	NumberFor<Block>: grandpa::BlockNumberOps,
 {
 	fn ancestry(
 		&self,
@@ -234,64 +241,53 @@ where
 	}
 }
 
-// copied
 
-/// A commit message for this chain's block type.
-pub type Commit<Block> = finality_grandpa::Commit<
+/* /// A commit message for this chain's block type.
+pub type Commit<Block> = grandpa::Commit<
 	<Block as BlockT>::Hash,
 	NumberFor<Block>,
 	AuthoritySignature,
 	AuthorityId,
 >;
+ */
+/// Check a message signature by encoding the message as a localized payload and
+/// verifying the provided signature using the expected authority id.
+/// The encoding necessary to verify the signature will be done using the given
+/// buffer, the original content of the buffer will be cleared.
+pub fn check_message_signature_with_buffer<H, N>(
+	message: &grandpa::Message<H, N>,
+	id: &AuthorityId,
+	signature: &AuthoritySignature,
+	round: RoundNumber,
+	set_id: SetId,
+	buf: &mut Vec<u8>,
+) -> bool
+where
+	H: Encode,
+	N: Encode,
+{
+	use sp_application_crypto::RuntimeAppPublic;
 
-mod communication {
-	use crate::std::vec::Vec;
-	use codec::Encode;
-	use log::debug;
-	use sp_core::Pair;
-	use sp_finality_grandpa::{
-		AuthorityId, AuthorityPair, AuthoritySignature, RoundNumber, SetId as SetIdNumber,
-	};
-	use sp_runtime::traits::{Block as BlockT, NumberFor};
+	localized_payload_with_buffer(round, set_id, message, buf);
 
-	pub type Message<Block> = finality_grandpa::Message<<Block as BlockT>::Hash, NumberFor<Block>>;
+	let valid = id.verify(&buf, signature);
 
-	// Check the signature of a Grandpa message.
-	// This was originally taken from `communication/mod.rs`
-
-	/// Check a message signature by encoding the message as a localized payload and
-	/// verifying the provided signature using the expected authority id.
-	/// The encoding necessary to verify the signature will be done using the given
-	/// buffer, the original content of the buffer will be cleared.
-	pub(crate) fn check_message_sig_with_buffer<Block: BlockT>(
-		message: &Message<Block>,
-		id: &AuthorityId,
-		signature: &AuthoritySignature,
-		round: RoundNumber,
-		set_id: SetIdNumber,
-		buf: &mut Vec<u8>,
-	) -> Result<(), ()> {
-		let as_public = id.clone();
-		localized_payload_with_buffer(round, set_id, message, buf);
-
-		if AuthorityPair::verify(signature, buf, &as_public) {
-			Ok(())
-		} else {
-			debug!(target: "afg", "Bad signature on message from {:?}", id);
-			Err(())
-		}
+	if !valid {
+		debug!("Bad signature on message from {:?}", id);
 	}
 
-	/// Encode round message localized to a given round and set id using the given
-	/// buffer. The given buffer will be cleared and the resulting encoded payload
-	/// will always be written to the start of the buffer.
-	pub(crate) fn localized_payload_with_buffer<E: Encode>(
-		round: RoundNumber,
-		set_id: SetIdNumber,
-		message: &E,
-		buf: &mut Vec<u8>,
-	) {
-		buf.clear();
-		(message, round, set_id).encode_to(buf)
-	}
+	valid
+}
+
+/// Encode round message localized to a given round and set id using the given
+/// buffer. The given buffer will be cleared and the resulting encoded payload
+/// will always be written to the start of the buffer.
+pub fn localized_payload_with_buffer<E: Encode>(
+	round: RoundNumber,
+	set_id: SetId,
+	message: &E,
+	buf: &mut Vec<u8>,
+) {
+	buf.clear();
+	(message, round, set_id).encode_to(buf)
 }
