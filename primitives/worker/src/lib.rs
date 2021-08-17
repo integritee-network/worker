@@ -12,9 +12,7 @@ pub use substratee_sidechain_primitives::{
 	},
 };
 
-#[cfg(feature = "std")]
 pub mod rpc;
-#[cfg(feature = "std")]
 pub use rpc::*;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
@@ -53,24 +51,6 @@ pub enum TrustedOperationStatus {
 	Dropped,
 	/// TrustedOperation is no longer valid in the current state.
 	Invalid,
-}
-
-#[derive(Encode, Decode)]
-pub struct RpcReturnValue {
-	pub value: Vec<u8>,
-	pub do_watch: bool,
-	pub status: DirectRequestStatus,
-	//pub signature: Signature,
-}
-impl RpcReturnValue {
-	pub fn new(val: Vec<u8>, watch: bool, status: DirectRequestStatus) -> Self {
-		Self {
-			value: val,
-			do_watch: watch,
-			status,
-			//signature: sign,
-		}
-	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
