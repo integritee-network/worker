@@ -20,23 +20,25 @@ use crate::std::{
 	vec::Vec,
 };
 
-#[cfg(test)]
-use sc_client::Client;
-#[cfg(test)]
-use sc_client_api::{backend::Backend, CallExecutor};
-
-
-
 use super::error::JustificationError as ClientError;
-use grandpa::{voter_set::VoterSet, Error as GrandpaError};
-use sp_finality_grandpa::{AuthorityId, AuthorityPair, AuthoritySignature, RoundNumber, SetId,};
-use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
-
+use finality_grandpa::{voter_set::VoterSet, Error as GrandpaError};
+use sp_finality_grandpa::{AuthorityId, AuthorityPair, AuthoritySignature, RoundNumber, SetId, AuthorityList};
+use sp_runtime::{
+	generic::BlockId,
+	traits::{Block as BlockT, Header as HeaderT, NumberFor},
+};
 use codec::{Encode, Decode};
 use log::*;
 use sp_core::Pair;
-use grandpa;
 
+
+/// A commit message for this chain's block type.
+pub type Commit<Block> = finality_grandpa::Commit<
+	<Block as BlockT>::Hash,
+	NumberFor<Block>,
+	AuthoritySignature,
+	AuthorityId,
+>;
 
 /// A GRANDPA justification for block finality, it includes a commit message and
 /// an ancestry proof including all headers routing all precommit target blocks
@@ -46,7 +48,7 @@ use grandpa;
 ///
 /// This is meant to be stored in the db and passed around the network to other
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, Debug)]
 pub struct GrandpaJustification<Block: BlockT> {
 	round: u64,
 	pub(crate) commit: Commit<Block>,
@@ -54,62 +56,16 @@ pub struct GrandpaJustification<Block: BlockT> {
 }
 
 impl<Block: BlockT> GrandpaJustification<Block> {
-	/// Create a GRANDPA justification from the given commit. This method
-	/// assumes the commit is valid and well-formed.
-	#[cfg(test)]
-	pub(crate) fn from_commit<C>(
-		client: &Arc<C>,
-		round: u64,
-		commit: Commit<Block>,
-	) -> Result<GrandpaJustification<Block>, Error>
-	where
-		C: HeaderBackend<Block>,
-	{
-		let mut votes_ancestries_hashes = HashSet::new();
-		let mut votes_ancestries = Vec::new();
-
-		let error = || {
-			let msg = "invalid precommits for target commit".to_string();
-			Err(Error::Client(ClientError::BadJustification(msg)))
-		};
-
-		for signed in commit.precommits.iter() {
-			let mut current_hash = signed.precommit.target_hash.clone();
-			loop {
-				if current_hash == commit.target_hash {
-					break
-				}
-
-				match client.header(&BlockId::Hash(current_hash))? {
-					Some(current_header) => {
-						if *current_header.number() <= commit.target_number {
-							return error()
-						}
-
-						let parent_hash = current_header.parent_hash().clone();
-						if votes_ancestries_hashes.insert(current_hash) {
-							votes_ancestries.push(current_header);
-						}
-						current_hash = parent_hash;
-					},
-					_ => return error(),
-				}
-			}
-		}
-
-		Ok(GrandpaJustification { round, commit, votes_ancestries })
-	}
-
 	/// Decode a GRANDPA justification and validate the commit and the votes'
 	/// ancestry proofs finalize the given block.
-	pub(crate) fn decode_and_verify_finalizes(
+	pub fn decode_and_verify_finalizes(
 		encoded: &[u8],
 		finalized_target: (Block::Hash, NumberFor<Block>),
 		set_id: u64,
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<GrandpaJustification<Block>, ClientError>
 	where
-		NumberFor<Block>: grandpa::BlockNumberOps,
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
 		let justification = GrandpaJustification::<Block>::decode(&mut &*encoded)
 			.map_err(|_| ClientError::JustificationDecode)?;
@@ -120,24 +76,35 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 			let msg = "invalid commit target in grandpa justification".to_string();
 			Err(ClientError::BadJustification(msg))
 		} else {
-			justification.verify(set_id, voters).map(|_| justification)
+			justification.verify_with_voter_set(set_id, voters).map(|_| justification)
 		}
 	}
 
 	/// Validate the commit and the votes' ancestry proofs.
-	pub(crate) fn verify(
+	pub fn verify(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), ClientError>
+	where
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	{
+		let voters = VoterSet::new(authorities.iter().cloned())
+			.ok_or(ClientError::Consensus(sp_consensus::Error::InvalidAuthoritiesSet))?;
+
+		self.verify_with_voter_set(set_id, &voters)
+	}
+
+	/// Validate the commit and the votes' ancestry proofs.
+	pub(crate) fn verify_with_voter_set(
 		&self,
 		set_id: u64,
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<(), ClientError>
 	where
-		NumberFor<Block>: grandpa::BlockNumberOps,
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
-		use grandpa::Chain;
+		use finality_grandpa::Chain;
 
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
 
-		match grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
+		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
 			Ok(ref result) if result.ghost().is_some() => {},
 			_ => {
 				let msg = "invalid commit in grandpa justification".to_string();
@@ -148,16 +115,15 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		let mut buf = Vec::new();
 		let mut visited_hashes = HashSet::new();
 		for signed in self.commit.precommits.iter() {
-			if communication::check_message_signature_with_buffer::<Block>(
-				&grandpa::Message::Precommit(signed.precommit.clone()),
+			if !sp_finality_grandpa::check_message_signature_with_buffer(
+				&finality_grandpa::Message::Precommit(signed.precommit.clone()),
 				&signed.id,
 				&signed.signature,
 				self.round,
 				set_id,
 				&mut buf,
-			)
-			.is_err()
-			{
+			) {
+				debug!("Bad signature on message from {:?}", &signed.id);
 				return Err(ClientError::BadJustification(
 					"invalid signature for precommit in grandpa justification".to_string(),
 				))
@@ -194,6 +160,11 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 
 		Ok(())
 	}
+
+	/// The target block number and hash that this justifications proves finality for.
+	pub fn target(&self) -> (NumberFor<Block>, Block::Hash) {
+		(self.commit.target_number, self.commit.target_hash)
+	}
 }
 
 /// A utility trait implementing `finality_grandpa::Chain` using a given set of headers.
@@ -212,9 +183,9 @@ impl<Block: BlockT> AncestryChain<Block> {
 	}
 }
 
-impl<Block: BlockT> grandpa::Chain<Block::Hash, NumberFor<Block>> for AncestryChain<Block>
+impl<Block: BlockT> finality_grandpa::Chain<Block::Hash, NumberFor<Block>> for AncestryChain<Block>
 where
-	NumberFor<Block>: grandpa::BlockNumberOps,
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
 	fn ancestry(
 		&self,
@@ -239,55 +210,4 @@ where
 
 		Ok(route)
 	}
-}
-
-
-/* /// A commit message for this chain's block type.
-pub type Commit<Block> = grandpa::Commit<
-	<Block as BlockT>::Hash,
-	NumberFor<Block>,
-	AuthoritySignature,
-	AuthorityId,
->;
- */
-/// Check a message signature by encoding the message as a localized payload and
-/// verifying the provided signature using the expected authority id.
-/// The encoding necessary to verify the signature will be done using the given
-/// buffer, the original content of the buffer will be cleared.
-pub fn check_message_signature_with_buffer<H, N>(
-	message: &grandpa::Message<H, N>,
-	id: &AuthorityId,
-	signature: &AuthoritySignature,
-	round: RoundNumber,
-	set_id: SetId,
-	buf: &mut Vec<u8>,
-) -> bool
-where
-	H: Encode,
-	N: Encode,
-{
-	use sp_application_crypto::RuntimeAppPublic;
-
-	localized_payload_with_buffer(round, set_id, message, buf);
-
-	let valid = id.verify(&buf, signature);
-
-	if !valid {
-		debug!("Bad signature on message from {:?}", id);
-	}
-
-	valid
-}
-
-/// Encode round message localized to a given round and set id using the given
-/// buffer. The given buffer will be cleared and the resulting encoded payload
-/// will always be written to the start of the buffer.
-pub fn localized_payload_with_buffer<E: Encode>(
-	round: RoundNumber,
-	set_id: SetId,
-	message: &E,
-	buf: &mut Vec<u8>,
-) {
-	buf.clear();
-	(message, round, set_id).encode_to(buf)
 }
