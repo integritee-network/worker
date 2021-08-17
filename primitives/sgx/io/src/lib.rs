@@ -18,6 +18,7 @@ use std::{
 #[cfg(feature = "sgx")]
 pub use sgx::*;
 
+/// Abstraction around IO that is supposed to use the `std::io::File`
 pub trait IO: Sized {
 	type Error: From<std::io::Error>;
 
@@ -25,6 +26,8 @@ pub trait IO: Sized {
 	fn write(&self) -> Result<(), Self::Error>;
 }
 
+/// Abstraction around IO that is supposed to use `SgxFile`. We expose it also in `std` to
+/// be able to put it as trait bounds in `std` and use it in tests.
 pub trait SealedIO: Sized {
 	type Error: From<std::io::Error>;
 

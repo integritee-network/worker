@@ -24,6 +24,9 @@ use std::{path::Path, sgxfs::SgxFile};
 use substratee_settings::files::SEALED_SIGNER_SEED_FILE;
 use substratee_sgx_io::{seal, unseal, SealedIO};
 
+/// Newtype pattern to be able to implement an external trait on an external type.
+/// This will hopefully not be needed anymore after a subsequent PR extracting the crypto stuff
+/// from the enclave.
 #[derive(Clone, From, Deref)]
 pub struct Ed25519(pub ed25519::Pair);
 
