@@ -25,7 +25,7 @@ pub trait IO: Sized {
 	fn write(&self) -> Result<(), Self::Error>;
 }
 
-pub trait SealIO: Sized {
+pub trait SealedIO: Sized {
 	type Error: From<std::io::Error>;
 
 	fn unseal() -> Result<Self, Self::Error>;

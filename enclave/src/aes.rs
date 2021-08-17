@@ -25,7 +25,7 @@ use ofb::{
 };
 use sgx_rand::{Rng, StdRng};
 use std::{sgxfs::SgxFile, vec::Vec};
-use substratee_sgx_io::{seal, unseal, SealIO};
+use substratee_sgx_io::{seal, unseal, SealedIO};
 
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 use substratee_settings::files::AES_KEY_FILE_AND_INIT_V;
@@ -44,7 +44,7 @@ impl Aes {
 	}
 }
 
-impl SealIO for Aes {
+impl SealedIO for Aes {
 	type Error = Error;
 	fn unseal() -> Result<Self> {
 		Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)

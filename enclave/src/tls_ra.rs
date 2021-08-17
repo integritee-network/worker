@@ -17,7 +17,7 @@ use std::{
 	vec::Vec,
 };
 use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_sgx_io::SealIO;
+use substratee_sgx_io::SealedIO;
 use webpki::DNSName;
 
 struct ClientAuth<A> {

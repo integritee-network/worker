@@ -62,7 +62,7 @@ use crate::{
 	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
 };
 use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_sgx_io::SealIO;
+use substratee_sgx_io::SealedIO;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 

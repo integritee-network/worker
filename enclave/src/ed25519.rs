@@ -22,12 +22,12 @@ use sgx_rand::{Rng, StdRng};
 use sp_core::{crypto::Pair, ed25519};
 use std::{path::Path, sgxfs::SgxFile};
 use substratee_settings::files::SEALED_SIGNER_SEED_FILE;
-use substratee_sgx_io::{seal, unseal, SealIO};
+use substratee_sgx_io::{seal, unseal, SealedIO};
 
 #[derive(Clone, From, Deref)]
 pub struct Ed25519(pub ed25519::Pair);
 
-impl SealIO for Ed25519 {
+impl SealedIO for Ed25519 {
 	type Error = Error;
 	fn unseal() -> Result<Self> {
 		let raw = unseal(SEALED_SIGNER_SEED_FILE)?;

@@ -75,7 +75,7 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
-use substratee_sgx_io::SealIO;
+use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
 };
