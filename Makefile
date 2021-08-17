@@ -25,7 +25,7 @@ SGX_PRODUCTION ?= 0
 
 SKIP_WASM_BUILD = 1
 # include the build settings from rust-sgx-sdk
-#include rust-sgx-sdk/buildenv.mk
+include rust-sgx-sdk/buildenv.mk
 # use this manually to update sdk
 #include UpdateRustSGXSDK.mk
 
