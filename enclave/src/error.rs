@@ -9,6 +9,7 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
 	Rpc(rpc::error::Error),
 	Codec(codec::Error),
+	Crypto(substratee_sgx_crypto::Error),
 	Rsa(crate::rsa3072::Error),
 	ChainStorage(substratee_get_storage_verified::Error),
 	IO(std::io::Error),

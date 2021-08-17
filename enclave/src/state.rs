@@ -15,7 +15,7 @@
 
 */
 
-use crate::{aes, error::Result, hex, io, utils::UnwrapOrSgxErrorUnexpected};
+use crate::{error::Result, hex, io, utils::UnwrapOrSgxErrorUnexpected};
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
 use log::*;
@@ -25,6 +25,7 @@ use sgx_types::*;
 use sp_core::H256;
 use std::{fs, io::Write, path::Path, vec::Vec};
 use substratee_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
+use substratee_sgx_crypto::{Aes, StateCrypto};
 use substratee_stf::{
 	ShardIdentifier, State as StfState, StateType as StfStateType,
 	StateTypeDiff as StfStateTypeDiff, Stf,
@@ -107,7 +108,7 @@ fn read(path: &str) -> Result<Vec<u8>> {
 	let state_hash = rsgx_sha256_slice(&bytes)?;
 	debug!("read encrypted state with hash 0x{} from {}", hex::encode_hex(&state_hash), path);
 
-	aes::de_or_encrypt(&mut bytes)?;
+	Aes::decrypt(&mut bytes)?;
 	trace!("buffer decrypted = {:?}", bytes);
 
 	Ok(bytes)
@@ -117,14 +118,14 @@ fn read(path: &str) -> Result<Vec<u8>> {
 fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> Result<sgx_status_t> {
 	debug!("plaintext data to be written: {:?}", bytes);
 
-	aes::de_or_encrypt(bytes)?;
+	Aes::encrypt(bytes)?;
 
 	io::write(&bytes, path)?;
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 fn encrypt(mut state: Vec<u8>) -> Result<Vec<u8>> {
-	aes::de_or_encrypt(&mut state)?;
+	Aes::encrypt(&mut state)?;
 	Ok(state)
 }
 

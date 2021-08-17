@@ -75,6 +75,7 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
+use substratee_sgx_crypto::{aes, Aes, StateCrypto};
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
@@ -92,7 +93,6 @@ use substratee_worker_primitives::{
 };
 use utils::write_slice_and_whitespace_pad;
 
-mod aes;
 mod attestation;
 mod ed25519;
 mod io;
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 
 	// create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker
-	if let Err(e) = aes::create_sealed_if_absent() {
+	if let Err(e) = aes::create_sealed_if_absent().map_err(|e| Error::Crypto(e)) {
 		return e.into()
 	}
 
@@ -784,7 +784,7 @@ pub fn compose_block_and_confirmation(
 	// create encrypted payload
 	let mut payload: Vec<u8> =
 		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state_update).encode();
-	aes::de_or_encrypt(&mut payload)?;
+	Aes::encrypt(&mut payload)?;
 
 	let block = SidechainBlock::new(
 		signer_pair.public().into(),

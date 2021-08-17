@@ -15,7 +15,6 @@
 */
 
 use crate::{
-	aes,
 	ed25519::Ed25519,
 	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	rpc, rsa3072, state,
@@ -49,6 +48,7 @@ use substratee_settings::{
 	enclave::GETTER_TIMEOUT,
 	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},
 };
+use substratee_sgx_crypto::{Aes, StateCrypto};
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use substratee_stf::{
@@ -528,7 +528,7 @@ fn test_create_state_diff() {
 	)
 	.unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
-	aes::de_or_encrypt(&mut encrypted_payload).unwrap();
+	Aes::decrypt(&mut encrypted_payload).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
 	let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
 

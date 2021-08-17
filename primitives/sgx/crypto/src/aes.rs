@@ -62,11 +62,11 @@ impl SealedIO for Aes {
 impl StateCrypto for Aes {
 	type Error = Error;
 
-	fn encrypt(&self, data: &mut [u8]) -> Result<()> {
+	fn encrypt(data: &mut [u8]) -> Result<()> {
 		Aes::unseal().map(|aes| de_or_encrypt(&aes, data))?
 	}
 
-	fn decrypt(&self, data: &mut [u8]) -> Result<()> {
+	fn decrypt(data: &mut [u8]) -> Result<()> {
 		Aes::unseal().map(|aes| de_or_encrypt(&aes, data))?
 	}
 }
