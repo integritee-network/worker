@@ -1,6 +1,6 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 //! All the different crypto schemes that we use in sgx
+
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
