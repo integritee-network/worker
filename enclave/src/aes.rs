@@ -17,13 +17,13 @@
 
 use crate::error::{Error, Result};
 use aes::Aes128;
-use log::{info, trace};
+use codec::{Decode, Encode};
+use log::info;
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},
 	Ofb,
 };
 use sgx_rand::{Rng, StdRng};
-use sgx_types::*;
 use std::{sgxfs::SgxFile, vec::Vec};
 use substratee_sgx_io::{seal, unseal, SealIO};
 
@@ -34,8 +34,8 @@ type AesOfb = Ofb<Aes128>;
 
 #[derive(Debug, Default, Encode, Decode)]
 pub struct Aes {
-	pub(crate) key: [u8; 16],
-	pub(crate) init_vec: [u8; 16],
+	pub key: [u8; 16],
+	pub init_vec: [u8; 16],
 }
 
 impl Aes {
@@ -55,12 +55,12 @@ impl SealIO for Aes {
 	}
 }
 
-pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
+pub fn create_sealed_if_absent() -> Result<()> {
 	if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
 		info!("[Enclave] Keyfile not found, creating new! {}", AES_KEY_FILE_AND_INIT_V);
-		create_sealed()?;
+		return create_sealed()
 	}
-	Ok(sgx_status_t::SGX_SUCCESS)
+	Ok(())
 }
 
 pub fn create_sealed() -> Result<()> {
