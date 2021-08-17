@@ -15,6 +15,7 @@
 
 */
 use crate::utils::UnwrapOrSgxErrorUnexpected;
+use log::*;
 use sgx_types::*;
 use std::{
 	fs,
@@ -25,9 +26,12 @@ use std::{
 };
 
 pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
-	SgxFile::open(filepath)
+	trace!("Opening sgx file at path: {:?}", filepath);
+	let result = SgxFile::open(filepath)
 		.map(_read)
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
+		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
+	trace!("Sucessfully read sgx file");
+	result
 }
 
 pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {

@@ -603,7 +603,9 @@ where
 		let mut state = load_initialized_state(&shard)?;
 		// save the state hash before call executions
 		// (needed for block composition)
+		trace!("Getting hash of previous state ..");
 		let prev_state_hash = state::hash_of(state.state.clone())?;
+		trace!("Loaded hash of previous state: {:?}", prev_state_hash);
 
 		// retrieve trusted operations from pool
 		let trusted_calls = author.get_pending_tops_separated(shard)?.0;
@@ -686,12 +688,14 @@ where
 }
 
 fn load_initialized_state(shard: &H256) -> SgxResult<State> {
+	trace!("Loading state from shard {:?}", shard);
 	let state = if state::exists(&shard) {
 		state::load(&shard)?
 	} else {
 		state::init_shard(&shard)?;
 		Stf::init_state()
 	};
+	trace!("Sucessfully loaded or initialized state from shard {:?}", shard);
 	Ok(state)
 }
 
@@ -711,11 +715,13 @@ where
 		for trusted_getter_signed in trusted_getters.into_iter() {
 			// get state
 			let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
+			trace!("Successfully loaded stf state");
 			// get hash
 			let hash_of_getter = author.hash_of(&trusted_getter_signed.into());
 			// let client know of current state
+			trace!("Updating client");
 			if rpc_ocall.send_state(hash_of_getter, value_opt).is_err() {
-				error!("Could not get state from stf");
+				error!("Could not send state to client");
 			}
 			// remove getter from pool
 			if let Err(e) =
@@ -836,6 +842,7 @@ where
 						.map(into_map)?;
 
 					let mut state = state::load(&s)?;
+					trace!("Sucessfully loaded state, updating states ...");
 					Stf::update_storage(&mut state, &per_shard_update_map);
 					Stf::update_storage(&mut state, &update_map);
 
@@ -882,6 +889,7 @@ where
 					// load state before executing any calls
 					let mut state = load_initialized_state(&shard)?;
 					// call execution
+					trace!("Handling trusted worker call of state: {:?}", state);
 					if let Err(e) = handle_trusted_worker_call(
 						&mut opaque_calls, // necessary for unshielding
 						&mut state,
@@ -893,6 +901,7 @@ where
 						error!("Error performing worker call: Error: {:?}", e);
 					}
 					// save updated state
+					trace!("Updating state of shard {:?}", shard);
 					state::write(state, &shard)?;
 				}
 			}

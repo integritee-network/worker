@@ -6,7 +6,7 @@ build = "build.rs"
 edition = "2018"
 
 [dependencies]
-ws = "0.7"
+ws = "0.9.1"
 hex = "0.4.3"
 log = "0.4"
 env_logger = "0.7"
