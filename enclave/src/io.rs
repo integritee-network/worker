@@ -14,21 +14,8 @@
 	limitations under the License.
 
 */
-use crate::utils::UnwrapOrSgxErrorUnexpected;
-use sgx_types::*;
-use std::{fs, io::Read, string::String};
-
-pub use substratee_sgx_io::{read, seal, unseal, write};
-
-pub fn read_to_string(filepath: &str) -> SgxResult<String> {
-	let mut contents = String::new();
-	fs::File::open(filepath)
-		.map(|mut f| f.read_to_string(&mut contents))
-		.sgx_error_with_log(&format!("[Enclave] Could not read '{}'", filepath))?
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
-
-	Ok(contents)
-}
+// Todo: remove when migration complete
+pub use substratee_sgx_io::{read, read_to_string, seal, unseal, write};
 
 pub mod light_validation {
 	use crate::{error::Result, utils::UnwrapOrSgxErrorUnexpected};

@@ -11,6 +11,7 @@ extern crate sgx_tstd as std;
 use std::{
 	fs,
 	io::{Read, Result as IOResult, Write},
+	string::String,
 	vec::Vec,
 };
 
@@ -39,6 +40,12 @@ pub fn read(path: &str) -> IOResult<Vec<u8>> {
 
 pub fn write(bytes: &[u8], path: &str) -> IOResult<()> {
 	fs::File::create(path).map(|mut f| f.write_all(bytes))?
+}
+
+pub fn read_to_string(filepath: &str) -> IOResult<String> {
+	let mut contents = String::new();
+	fs::File::open(filepath).map(|mut f| f.read_to_string(&mut contents))??;
+	Ok(contents)
 }
 
 #[cfg(feature = "sgx")]

@@ -417,7 +417,10 @@ fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
-	io::read_to_string(RA_API_KEY_FILE).map(|key| key.trim_end().to_owned())
+	io::read_to_string(RA_API_KEY_FILE)
+		.map(|key| key.trim_end().to_owned())
+		.map_err(|e| error!("Error fetching ias api key: {:?}", e))
+		.sgx_error()
 }
 
 pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
