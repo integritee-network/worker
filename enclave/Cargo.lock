@@ -2806,7 +2806,6 @@ dependencies = [
 name = "substratee-worker-enclave"
 version = "0.8.0"
 dependencies = [
- "aes",
  "arrayvec 0.7.1",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=sgx_1.1.3)",
  "bit-vec",
@@ -2827,7 +2826,6 @@ dependencies = [
  "log",
  "multibase",
  "num-bigint",
- "ofb",
  "pallet-teerex-storage",
  "parity-scale-codec",
  "primitive-types",
