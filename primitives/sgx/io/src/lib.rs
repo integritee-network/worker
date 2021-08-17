@@ -22,14 +22,14 @@ pub trait IO: Sized {
 	type Error: From<std::io::Error>;
 
 	fn read() -> Result<Self, Self::Error>;
-	fn write(self) -> Result<(), Self::Error>;
+	fn write(&self) -> Result<(), Self::Error>;
 }
 
 pub trait SealIO: Sized {
 	type Error: From<std::io::Error>;
 
 	fn unseal() -> Result<Self, Self::Error>;
-	fn seal(self) -> Result<(), Self::Error>;
+	fn seal(&self) -> Result<(), Self::Error>;
 }
 
 pub fn read(path: &str) -> IOResult<Vec<u8>> {

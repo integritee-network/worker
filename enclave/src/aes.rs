@@ -50,7 +50,7 @@ impl SealIO for Aes {
 		Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
-	fn seal(self) -> Result<()> {
+	fn seal(&self) -> Result<()> {
 		Ok(self.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
 	}
 }

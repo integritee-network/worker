@@ -38,7 +38,7 @@ impl SealIO for Ed25519 {
 		Ok(key.into())
 	}
 
-	fn seal(self) -> Result<()> {
+	fn seal(&self) -> Result<()> {
 		Ok(self.seed().using_encoded(|bytes| seal(bytes, SEALED_SIGNER_SEED_FILE))?)
 	}
 }
