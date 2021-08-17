@@ -16,9 +16,9 @@ log = { version = "0.4.14", default-features = false }
 sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_rand = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
-# local settings
-substratee-settings = { path = "../settings" }
-substratee-sgx-io = { path = "../sgx/io", default-features = false }
+# local deps
+substratee-settings = { path = "../../settings" }
+substratee-sgx-io = { path = "../io", default-features = false }
 
 
 [features]

@@ -79,7 +79,7 @@ multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "
 chain-relay = { path = "chain_relay" }
 pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
 substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
-substratee-sgx-crypto = { path = "../primitives/crypto", default-features = false,  features = ["sgx"] }
+substratee-sgx-crypto = { path = "../primitives/sgx/crypto", default-features = false,  features = ["sgx"] }
 substratee-node-primitives = {path = "../primitives/node", default-features = false, features = ["sgx"] }
 substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
 substratee-settings = { path = "../primitives/settings" }
