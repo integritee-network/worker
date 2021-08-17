@@ -45,8 +45,8 @@ use crate::rpc::{
 
 use crate::top_pool::pool::Options as PoolOptions;
 
+use self::serde_json::*;
 use jsonrpc_core::{futures::executor, Error as RpcError, *};
-use serde_json::*;
 
 use substratee_stf::ShardIdentifier;
 
