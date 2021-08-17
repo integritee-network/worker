@@ -2715,6 +2715,21 @@ name = "substratee-settings"
 version = "0.8.0"
 
 [[package]]
+name = "substratee-sgx-crypto"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "derive_more",
+ "log",
+ "ofb",
+ "parity-scale-codec",
+ "sgx_rand",
+ "sgx_tstd",
+ "substratee-settings",
+ "substratee-sgx-io",
+]
+
+[[package]]
 name = "substratee-sgx-io"
 version = "0.1.0"
 dependencies = [
@@ -2847,6 +2862,7 @@ dependencies = [
  "substratee-node-primitives",
  "substratee-ocall-api",
  "substratee-settings",
+ "substratee-sgx-crypto",
  "substratee-sgx-io",
  "substratee-sidechain",
  "substratee-sidechain-primitives",

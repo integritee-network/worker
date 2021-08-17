@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "client",
     "primitives/api-client-extensions",
+    "primitives/crypto",
     "primitives/enclave-api",
     "primitives/enclave-api/ffi",
     "primitives/node",
