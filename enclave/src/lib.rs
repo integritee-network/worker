@@ -75,6 +75,7 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
+use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
 };
@@ -114,6 +115,7 @@ pub mod test;
 #[cfg(feature = "test")]
 pub mod tests;
 
+use crate::ed25519::Ed25519;
 #[cfg(not(feature = "test"))]
 use sgx_types::size_t;
 
@@ -140,13 +142,13 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	// initialize the logging environment in the enclave
 	env_logger::init();
 
-	if let Err(status) = ed25519::create_sealed_if_absent() {
-		return status
+	if let Err(e) = ed25519::create_sealed_if_absent() {
+		return e.into()
 	}
 
-	let signer = match ed25519::unseal_pair() {
+	let signer = match Ed25519::unseal() {
 		Ok(pair) => pair,
-		Err(status) => return status,
+		Err(e) => return e.into(),
 	};
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
@@ -156,8 +158,8 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 
 	// create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker
-	if let Err(status) = aes::create_sealed_if_absent() {
-		return status
+	if let Err(e) = aes::create_sealed_if_absent() {
+		return e.into()
 	}
 
 	// for debug purposes, list shards. no problem to panic if fails
@@ -197,13 +199,13 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
-	if let Err(status) = ed25519::create_sealed_if_absent() {
-		return status
+	if let Err(e) = ed25519::create_sealed_if_absent() {
+		return e.into()
 	}
 
-	let signer = match ed25519::unseal_pair() {
+	let signer = match Ed25519::unseal() {
 		Ok(pair) => pair,
-		Err(status) => return status,
+		Err(e) => return e.into(),
 	};
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
@@ -233,7 +235,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 
 	let ocall_api = OCallComponentFactory::attestation_api();
 
-	let signer = ed25519::unseal_pair().unwrap();
+	let signer = Ed25519::unseal().unwrap();
 	let call = (
 		[SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
 		ocall_api
@@ -267,7 +269,7 @@ where
 	V: Validator,
 {
 	// get information for composing the extrinsic
-	let signer = ed25519::unseal_pair()?;
+	let signer = Ed25519::unseal()?;
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
 	let extrinsics_buffer: Vec<Vec<u8>> = calls_buffer
@@ -317,13 +319,13 @@ pub unsafe extern "C" fn get_state(
 	if !state::exists(&shard) {
 		info!("Initialized new shard that was queried chain: {:?}", shard);
 		if let Err(e) = state::init_shard(&shard) {
-			return e
+			return e.into()
 		}
 	}
 
 	let mut state = match state::load(&shard) {
 		Ok(s) => s,
-		Err(status) => return status,
+		Err(e) => return e.into(),
 	};
 
 	debug!("calling into STF to get state");
@@ -379,7 +381,7 @@ pub unsafe extern "C" fn init_chain_relay(
 
 	match io::light_validation::read_or_init_validator(header, auth, proof) {
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	}
 	sgx_status_t::SGX_SUCCESS
 }
@@ -402,7 +404,7 @@ pub unsafe extern "C" fn produce_blocks(
 
 	let mut validator = match io::light_validation::unseal() {
 		Ok(v) => v,
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
@@ -762,7 +764,7 @@ pub fn compose_block_and_confirmation(
 	state_hash_apriori: H256,
 	state: &mut StfState,
 ) -> Result<(OpaqueCall, SignedSidechainBlock)> {
-	let signer_pair = ed25519::unseal_pair()?;
+	let signer_pair = Ed25519::unseal()?;
 	let layer_one_head = latest_onchain_header.hash();
 
 	let block_number = Stf::get_sidechain_block_number(state)
@@ -796,7 +798,7 @@ pub fn compose_block_and_confirmation(
 	);
 
 	let block_hash = blake2_256(&block.encode());
-	let signed_block = block.sign_block(&signer_pair);
+	let signed_block = block.sign_block(&*signer_pair);
 
 	debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
 	Stf::update_last_block_hash(state, block_hash.into());

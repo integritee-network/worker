@@ -15,27 +15,22 @@
 
 */
 
-use std::fs;
-
-use std::{io::Write, vec::Vec};
-
-use log::*;
-use sgx_tcrypto::rsgx_sha256_slice;
-use sgx_types::*;
-
-use crate::{aes, hex, io, utils::UnwrapOrSgxErrorUnexpected};
+use crate::{aes, error::Result, hex, io, utils::UnwrapOrSgxErrorUnexpected};
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
+use log::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
+use sgx_tcrypto::rsgx_sha256_slice;
+use sgx_types::*;
 use sp_core::H256;
-use std::path::Path;
+use std::{fs, io::Write, path::Path, vec::Vec};
 use substratee_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use substratee_stf::{
 	ShardIdentifier, State as StfState, StateType as StfStateType,
 	StateTypeDiff as StfStateTypeDiff, Stf,
 };
 
-pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
+pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
 	// load last state
 	let state_path =
 		format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
@@ -62,7 +57,7 @@ pub fn load(shard: &ShardIdentifier) -> SgxResult<StfState> {
 
 /// Writes the state (without the state diff) encrypted into the enclave storage
 // Returns the hash of the saved state (independent of the diff!)
-pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
+pub fn write(state: StfState, shard: &ShardIdentifier) -> Result<H256> {
 	let state_path =
 		format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
 	trace!("writing state to: {}", state_path);
@@ -70,10 +65,7 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> SgxResult<H256> {
 	// only save the state, the state diff is pruned
 	let cyphertext = encrypt(state.state.encode())?;
 
-	let state_hash = match rsgx_sha256_slice(&cyphertext) {
-		Ok(h) => h,
-		Err(status) => return Err(status),
-	};
+	let state_hash = rsgx_sha256_slice(&cyphertext)?;
 
 	debug!(
 		"new encrypted state with hash=0x{} written to {}",
@@ -90,39 +82,29 @@ pub fn exists(shard: &ShardIdentifier) -> bool {
 		.exists()
 }
 
-pub fn hash_of(state: StfStateType) -> SgxResult<H256> {
-	trace!("encrypting state: {:?}", state);
+pub fn hash_of(state: StfStateType) -> Result<H256> {
 	let cyphertext = encrypt(state.encode())?;
-	trace!("Sucessfully encrypted..");
 
-	let state_hash = match rsgx_sha256_slice(&cyphertext) {
-		Ok(h) => h,
-		Err(status) => return Err(status),
-	};
-	trace!("Got hash: {:?}", state_hash);
+	let state_hash = rsgx_sha256_slice(&cyphertext)?;
 
 	Ok(state_hash.into())
 }
 
-pub fn init_shard(shard: &ShardIdentifier) -> SgxResult<()> {
+pub fn init_shard(shard: &ShardIdentifier) -> Result<()> {
 	let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
 	fs::create_dir_all(path.clone()).sgx_error()?;
 	let mut file = fs::File::create(format!("{}/{}", path, ENCRYPTED_STATE_FILE)).sgx_error()?;
-	file.write_all(b"").sgx_error()
+	Ok(file.write_all(b"")?)
 }
 
-fn read(path: &str) -> SgxResult<Vec<u8>> {
-	let mut bytes = match io::read(path) {
-		Ok(vec) => match vec.len() {
-			0 => return Ok(vec),
-			_ => vec,
-		},
-		Err(e) => return Err(e),
-	};
-	let state_hash = match rsgx_sha256_slice(&bytes) {
-		Ok(h) => h,
-		Err(status) => return Err(status),
-	};
+fn read(path: &str) -> Result<Vec<u8>> {
+	let mut bytes = io::read(path)?;
+
+	if bytes.is_empty() {
+		return Ok(bytes)
+	}
+
+	let state_hash = rsgx_sha256_slice(&bytes)?;
 	debug!("read encrypted state with hash 0x{} from {}", hex::encode_hex(&state_hash), path);
 
 	aes::de_or_encrypt(&mut bytes)?;
@@ -132,7 +114,7 @@ fn read(path: &str) -> SgxResult<Vec<u8>> {
 }
 
 #[allow(unused)]
-fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
+fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> Result<sgx_status_t> {
 	debug!("plaintext data to be written: {:?}", bytes);
 
 	aes::de_or_encrypt(bytes)?;
@@ -141,12 +123,12 @@ fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> SgxResult<sgx_status_t> {
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-fn encrypt(mut state: Vec<u8>) -> SgxResult<Vec<u8>> {
+fn encrypt(mut state: Vec<u8>) -> Result<Vec<u8>> {
 	aes::de_or_encrypt(&mut state)?;
 	Ok(state)
 }
 
-pub fn list_shards() -> SgxResult<Vec<ShardIdentifier>> {
+pub fn list_shards() -> Result<Vec<ShardIdentifier>> {
 	let files = match fs::read_dir(SHARDS_PATH).sgx_error() {
 		Ok(f) => f,
 		Err(_) => return Ok(Vec::new()),

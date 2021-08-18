@@ -76,18 +76,19 @@ cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", defau
 multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
 
 # local deps
+chain-relay = { path = "chain_relay" }
 pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
-substratee-settings = { path = "../primitives/settings" }
-substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
 substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
+substratee-node-primitives = {path = "../primitives/node", default-features = false, features = ["sgx"] }
+substratee-ocall-api = { path = "../primitives/ocall-api", default-features = false }
+substratee-settings = { path = "../primitives/settings" }
+substratee-sgx-io = { path = "../primitives/sgx/io", default-features = false, features = ["sgx"] }
 substratee-sidechain = { path = "../primitives/sidechain", default-features = false }
 substratee-sidechain-primitives = { path = "../primitives/sidechain/primitives", default-features = false }
-test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
-chain-relay = { path = "chain_relay" }
 substratee-stf = { path = "../stf", default-features = false, features = ["sgx"] }
 substratee-storage = { path = "../primitives/storage", default-features = false }
-substratee-worker-primitives= { path = "../primitives/worker", default-features = false }
-substratee-node-primitives = { path = "../primitives/node", default-features = false, features = ["sgx"] }
+substratee-worker-primitives= {path = "../primitives/worker", default-features = false }
+test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }

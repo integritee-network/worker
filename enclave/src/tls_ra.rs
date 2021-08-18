@@ -1,3 +1,14 @@
+use crate::{
+	aes::Aes,
+	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
+	cert,
+	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
+	rsa3072,
+	utils::UnwrapOrSgxErrorUnexpected,
+};
+use log::*;
+use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
+use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
 	io::{Read, Write},
@@ -5,23 +16,9 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-
-use sgx_types::*;
-
-use log::*;
-use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
-
-use webpki::DNSName;
-
-use crate::{
-	aes,
-	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
-	cert,
-	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-	rsa3072,
-	utils::UnwrapOrSgxErrorUnexpected,
-};
 use substratee_ocall_api::EnclaveAttestationOCallApi;
+use substratee_sgx_io::SealedIO;
+use webpki::DNSName;
 
 struct ClientAuth<A> {
 	outdated_ok: bool,
@@ -178,14 +175,14 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	Ok(cfg)
 }
 
-fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes)> {
+fn read_files_to_send() -> SgxResult<(Vec<u8>, Aes)> {
 	let shielding_key = rsa3072::unseal_pair().sgx_error()?;
-	let aes = aes::read_sealed().sgx_error()?;
+	let aes = Aes::unseal().sgx_error()?;
 	let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
 
 	let rsa_len = rsa_pair.as_bytes().len();
 	info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
-	info!("    [Enclave] Read AES key {:?}\nIV: {:?}\n", aes.0, aes.1);
+	info!("    [Enclave] Read AES key {:?}", aes);
 
 	Ok((rsa_pair.as_bytes().to_vec(), aes))
 }
@@ -193,12 +190,12 @@ fn read_files_to_send() -> SgxResult<(Vec<u8>, aes::Aes)> {
 fn send_files(
 	tls: &mut Stream<ServerSession, TcpStream>,
 	rsa_pair: &[u8],
-	aes: &(Vec<u8>, Vec<u8>),
+	aes: &Aes,
 ) -> SgxResult<()> {
 	tls.write(&rsa_pair.len().to_le_bytes()).sgx_error()?;
 	tls.write(&rsa_pair).sgx_error()?;
-	tls.write(&aes.0[..]).sgx_error()?;
-	tls.write(&aes.1[..]).sgx_error()?;
+	tls.write(&aes.key[..]).sgx_error()?;
+	tls.write(&aes.init_vec[..]).sgx_error()?;
 	Ok(())
 }
 
@@ -260,7 +257,7 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
 		.map(|_| info!("    [Enclave] (MU-RA-Client) Received AES IV: {:?}", &aes_iv[..]))
 		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes iv")?;
 
-	aes::seal(aes_key, aes_iv)?;
+	Aes::new(aes_key, aes_iv).seal()?;
 
 	println!("    [Enclave] (MU-RA-Client) Successfully received keys.");
 

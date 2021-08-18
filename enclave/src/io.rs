@@ -14,98 +14,38 @@
 	limitations under the License.
 
 */
-use crate::utils::UnwrapOrSgxErrorUnexpected;
-use log::*;
-use sgx_types::*;
-use std::{
-	fs,
-	io::{Read, Write},
-	sgxfs::SgxFile,
-	string::String,
-	vec::Vec,
-};
-
-pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
-	trace!("Opening sgx file at path: {:?}", filepath);
-	let result = SgxFile::open(filepath)
-		.map(_read)
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
-	trace!("Sucessfully read sgx file");
-	result
-}
-
-pub fn read(filepath: &str) -> SgxResult<Vec<u8>> {
-	fs::File::open(filepath)
-		.map(_read)
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?
-}
-
-fn _read<F: Read>(mut file: F) -> SgxResult<Vec<u8>> {
-	let mut read_data: Vec<u8> = Vec::new();
-	file.read_to_end(&mut read_data)
-		.sgx_error_with_log("[Enclave] Reading File failed!")?;
-
-	Ok(read_data)
-}
-
-pub fn read_to_string(filepath: &str) -> SgxResult<String> {
-	let mut contents = String::new();
-	fs::File::open(filepath)
-		.map(|mut f| f.read_to_string(&mut contents))
-		.sgx_error_with_log(&format!("[Enclave] Could not read '{}'", filepath))?
-		.sgx_error_with_log(&format!("[Enclave] File '{}' not found!", filepath))?;
-
-	Ok(contents)
-}
-
-pub fn seal(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	SgxFile::create(filepath)
-		.map(|f| _write(bytes, f))
-		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
-}
-
-pub fn write(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
-	fs::File::create(filepath)
-		.map(|f| _write(bytes, f))
-		.sgx_error_with_log(&format!("[Enclave] Creating '{}' failed", filepath))?
-}
-
-fn _write<F: Write>(bytes: &[u8], mut file: F) -> SgxResult<sgx_status_t> {
-	file.write_all(bytes).sgx_error_with_log("[Enclave] Writing File failed!")?;
-
-	Ok(sgx_status_t::SGX_SUCCESS)
-}
+// Todo: remove when migration complete
+pub use substratee_sgx_io::{read, read_to_string, seal, unseal, write};
 
 pub mod light_validation {
-	use crate::utils::UnwrapOrSgxErrorUnexpected;
+	use crate::{error::Result, utils::UnwrapOrSgxErrorUnexpected};
 	use chain_relay::{Header, LightValidation, Validator};
 	use codec::{Decode, Encode};
 	use log::*;
-	use sgx_types::{sgx_status_t, SgxResult};
 	use sp_finality_grandpa::VersionedAuthorityList;
 	use std::{fs, sgxfs::SgxFile};
 	use substratee_settings::files::CHAIN_RELAY_DB;
 	use substratee_storage::StorageProof;
 
-	pub fn unseal() -> SgxResult<LightValidation> {
+	pub fn unseal() -> Result<LightValidation> {
 		let vec = super::unseal(CHAIN_RELAY_DB)?;
-		LightValidation::decode(&mut vec.as_slice()).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)
+		Ok(LightValidation::decode(&mut vec.as_slice())?)
 	}
 
-	pub fn seal(validator: LightValidation) -> SgxResult<sgx_status_t> {
+	pub fn seal(validator: LightValidation) -> Result<()> {
 		debug!("backup chain relay state");
 		if fs::copy(CHAIN_RELAY_DB, format!("{}.1", CHAIN_RELAY_DB)).is_err() {
 			warn!("could not backup previous chain relay state");
 		};
 		debug!("Seal Chain Relay State. Current state: {:?}", validator);
-		super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)
+		Ok(super::seal(validator.encode().as_slice(), CHAIN_RELAY_DB)?)
 	}
 
 	pub fn read_or_init_validator(
 		header: Header,
 		auth: VersionedAuthorityList,
 		proof: StorageProof,
-	) -> SgxResult<Header> {
+	) -> Result<Header> {
 		if SgxFile::open(CHAIN_RELAY_DB).is_err() {
 			info!("[Enclave] ChainRelay DB not found, creating new! {}", CHAIN_RELAY_DB);
 			return init_validator(header, auth, proof)
@@ -127,7 +67,7 @@ pub mod light_validation {
 		header: Header,
 		auth: VersionedAuthorityList,
 		proof: StorageProof,
-	) -> SgxResult<Header> {
+	) -> Result<Header> {
 		let mut validator = LightValidation::new();
 
 		validator.initialize_relay(header, auth.into(), proof).sgx_error()?;

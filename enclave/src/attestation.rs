@@ -26,6 +26,15 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use codec::Encode;
+use core::default::Default;
+use itertools::Itertools;
+use log::*;
+use sgx_rand::*;
+use sgx_tcrypto::*;
+use sgx_tse::*;
+use sgx_types::*;
+use sp_core::Pair;
 use std::{
 	io::{Read, Write},
 	net::TcpStream,
@@ -35,17 +44,6 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-
-use sgx_rand::*;
-use sgx_tcrypto::*;
-use sgx_tse::*;
-use sgx_types::*;
-
-use codec::Encode;
-use core::default::Default;
-use itertools::Itertools;
-use log::*;
-use sp_core::Pair;
 use substrate_api_client::compose_extrinsic_offline;
 
 use substratee_settings::{
@@ -57,11 +55,14 @@ use substratee_settings::{
 };
 
 use crate::{
-	cert, ed25519, hex, io,
+	cert,
+	ed25519::Ed25519,
+	hex, io,
 	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
 };
 use substratee_ocall_api::EnclaveAttestationOCallApi;
+use substratee_sgx_io::SealedIO;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -416,7 +417,10 @@ fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
-	io::read_to_string(RA_API_KEY_FILE).map(|key| key.trim_end().to_owned())
+	io::read_to_string(RA_API_KEY_FILE)
+		.map(|key| key.trim_end().to_owned())
+		.map_err(|e| error!("Error fetching ias api key: {:?}", e))
+		.sgx_error()
 }
 
 pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
@@ -424,7 +428,7 @@ pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
 	ocall_api: Arc<A>,
 	skip_ra: bool,
 ) -> SgxResult<(Vec<u8>, Vec<u8>)> {
-	let chain_signer = ed25519::unseal_pair()?;
+	let chain_signer = Ed25519::unseal()?;
 	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
 
 	info!("    [Enclave] Generate keypair");
@@ -497,9 +501,9 @@ pub unsafe extern "C" fn perform_ra(
 	let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let signer = match ed25519::unseal_pair() {
+	let signer = match Ed25519::unseal() {
 		Ok(pair) => pair,
-		Err(status) => return status,
+		Err(e) => return e.into(),
 	};
 	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
 
@@ -544,12 +548,12 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 		Err(e) => return e,
 	};
 
-	if let Err(status) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
 		error!(
 			"    [Enclave] failed to write RA file ({}), status: {:?}",
-			RA_DUMP_CERT_DER_FILE, status
+			RA_DUMP_CERT_DER_FILE, err
 		);
-		return status
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 

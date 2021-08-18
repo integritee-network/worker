@@ -14,28 +14,39 @@
 	limitations under the License.
 
 */
-use std::{path::Path, sgxfs::SgxFile, vec::Vec};
-
-use sgx_rand::{Rng, StdRng};
-use sgx_types::*;
-
+use crate::error::{Error, Result};
+use codec::Encode;
+use derive_more::{Deref, From};
 use log::*;
+use sgx_rand::{Rng, StdRng};
 use sp_core::{crypto::Pair, ed25519};
-
-use crate::io;
+use std::{path::Path, sgxfs::SgxFile};
 use substratee_settings::files::SEALED_SIGNER_SEED_FILE;
+use substratee_sgx_io::{seal, unseal, SealedIO};
 
-pub fn unseal_pair() -> SgxResult<ed25519::Pair> {
-	let seedvec = unseal_seed()?;
+/// Newtype pattern to be able to implement an external trait on an external type.
+/// This will hopefully not be needed anymore after a subsequent PR extracting the crypto stuff
+/// from the enclave.
+#[derive(Clone, From, Deref)]
+pub struct Ed25519(pub ed25519::Pair);
 
-	let mut seed = [0u8; 32];
-	let seedvec = &seedvec[..seed.len()];
-	// panics if not enough data
-	seed.copy_from_slice(seedvec);
-	Ok(ed25519::Pair::from_seed(&seed))
+impl SealedIO for Ed25519 {
+	type Error = Error;
+	fn unseal() -> Result<Self> {
+		let raw = unseal(SEALED_SIGNER_SEED_FILE)?;
+
+		let key = ed25519::Pair::from_seed_slice(&raw)
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+
+		Ok(key.into())
+	}
+
+	fn seal(&self) -> Result<()> {
+		Ok(self.seed().using_encoded(|bytes| seal(bytes, SEALED_SIGNER_SEED_FILE))?)
+	}
 }
 
-pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
+pub fn create_sealed_if_absent() -> Result<()> {
 	if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
 		if Path::new(SEALED_SIGNER_SEED_FILE).exists() {
 			panic!("[Enclave] Keyfile {} exists but can't be opened. has it been written by the same enclave?", SEALED_SIGNER_SEED_FILE);
@@ -43,24 +54,13 @@ pub fn create_sealed_if_absent() -> SgxResult<sgx_status_t> {
 		info!("[Enclave] Keyfile not found, creating new! {}", SEALED_SIGNER_SEED_FILE);
 		return create_sealed_seed()
 	}
-	Ok(sgx_status_t::SGX_SUCCESS)
+	Ok(())
 }
 
-fn unseal_seed() -> SgxResult<Vec<u8>> {
-	io::unseal(SEALED_SIGNER_SEED_FILE)
-}
-
-pub fn seal_seed(pair: &[u8]) -> SgxResult<sgx_status_t> {
-	io::seal(pair, SEALED_SIGNER_SEED_FILE)
-}
-
-pub fn create_sealed_seed() -> SgxResult<sgx_status_t> {
+pub fn create_sealed_seed() -> Result<()> {
 	let mut seed = [0u8; 32];
-	let mut rand = match StdRng::new() {
-		Ok(rng) => rng,
-		Err(_) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-	};
+	let mut rand = StdRng::new()?;
 	rand.fill_bytes(&mut seed);
 
-	seal_seed(&seed)
+	Ok(seal(&seed, SEALED_SIGNER_SEED_FILE)?)
 }
