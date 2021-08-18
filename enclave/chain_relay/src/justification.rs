@@ -22,15 +22,12 @@ use crate::std::{
 
 use super::error::JustificationError as ClientError;
 use finality_grandpa::{voter_set::VoterSet, Error as GrandpaError};
-use sp_finality_grandpa::{AuthorityId, AuthorityPair, AuthoritySignature, RoundNumber, SetId, AuthorityList};
+use sp_finality_grandpa::{AuthorityId, AuthoritySignature, AuthorityList};
 use sp_runtime::{
-	generic::BlockId,
 	traits::{Block as BlockT, Header as HeaderT, NumberFor},
 };
 use codec::{Encode, Decode};
 use log::*;
-use sp_core::Pair;
-
 
 /// A commit message for this chain's block type.
 pub type Commit<Block> = finality_grandpa::Commit<
@@ -48,7 +45,7 @@ pub type Commit<Block> = finality_grandpa::Commit<
 ///
 /// This is meant to be stored in the db and passed around the network to other
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
-#[derive(Clone, Encode, Decode, PartialEq, Eq, Debug)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq)]
 pub struct GrandpaJustification<Block: BlockT> {
 	round: u64,
 	pub(crate) commit: Commit<Block>,
@@ -81,12 +78,12 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 	}
 
 	/// Validate the commit and the votes' ancestry proofs.
-	pub fn verify(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), ClientError>
+	pub fn verify(&self, set_id: u64, authorities: AuthorityList) -> Result<(), ClientError>
 	where
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
 		let voters = VoterSet::new(authorities.iter().cloned())
-			.ok_or(ClientError::Consensus(sp_consensus::Error::InvalidAuthoritiesSet))?;
+			.ok_or(ClientError::InvalidAuthoritiesSet)?;
 
 		self.verify_with_voter_set(set_id, &voters)
 	}
