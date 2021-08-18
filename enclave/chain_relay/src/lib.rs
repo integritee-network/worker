@@ -170,14 +170,6 @@ impl LightValidation {
 		Block: BlockT,
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
-		if justification.0 != GRANDPA_ENGINE_ID {
-			// TODO: the import queue needs to be refactored to be able dispatch to the correct
-			// `JustificationImport` instance based on `ConsensusEngineId`, or we need to build a
-			// justification import pipeline similar to what we do for `BlockImport`. In the
-			// meantime we'll just drop the justification, since this is only used for BEEFY which
-			// is still WIP.
-			return Ok(())
-		}
 		// We don't really care about the justification, as long as it's valid
 		let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
 			&justification.1,
