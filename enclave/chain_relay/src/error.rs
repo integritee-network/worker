@@ -12,7 +12,7 @@ pub enum JustificationError {
 	#[from(ignore)]
 	BadJustification(String),
 	/// Invalid authorities set received from the runtime.
-	InvalidAuthoritiesSet
+	InvalidAuthoritiesSet,
 }
 
 #[derive(Debug, From)]

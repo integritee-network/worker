@@ -21,13 +21,11 @@ use crate::std::{
 };
 
 use super::error::JustificationError as ClientError;
+use codec::{Decode, Encode};
 use finality_grandpa::{voter_set::VoterSet, Error as GrandpaError};
-use sp_finality_grandpa::{AuthorityId, AuthoritySignature, AuthorityList};
-use sp_runtime::{
-	traits::{Block as BlockT, Header as HeaderT, NumberFor},
-};
-use codec::{Encode, Decode};
 use log::*;
+use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
+use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 
 /// A commit message for this chain's block type.
 pub type Commit<Block> = finality_grandpa::Commit<
@@ -82,8 +80,8 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 	where
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
-		let voters = VoterSet::new(authorities.iter().cloned())
-			.ok_or(ClientError::InvalidAuthoritiesSet)?;
+		let voters =
+			VoterSet::new(authorities.iter().cloned()).ok_or(ClientError::InvalidAuthoritiesSet)?;
 
 		self.verify_with_voter_set(set_id, &voters)
 	}
