@@ -69,14 +69,14 @@ pub trait Validator: Encode + Decode + Clone + Default {
 		ancestry_proof: Vec<Header>,
 		validator_set: AuthorityList,
 		validator_set_id: SetId,
-		grandpa_proofs: Option<Justifications>,
+		justifications: Option<Justifications>,
 	) -> Result<(), Error>;
 
 	fn submit_simple_header(
 		&mut self,
 		relay_id: RelayId,
 		header: Header,
-		grandpa_proofs: Option<Justifications>,
+		justifications: Option<Justifications>,
 	) -> Result<(), Error>;
 
 	fn submit_xt_to_be_included(
@@ -170,6 +170,14 @@ impl LightValidation {
 		Block: BlockT,
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
+		if justification.0 != GRANDPA_ENGINE_ID {
+			// TODO: the import queue needs to be refactored to be able dispatch to the correct
+			// `JustificationImport` instance based on `ConsensusEngineId`, or we need to build a
+			// justification import pipeline similar to what we do for `BlockImport`. In the
+			// meantime we'll just drop the justification, since this is only used for BEEFY which
+			// is still WIP.
+			return Ok(())
+		}
 		// We don't really care about the justification, as long as it's valid
 		let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
 			&justification.1,
@@ -247,7 +255,7 @@ impl Validator for LightValidation {
 		ancestry_proof: Vec<Header>,
 		validator_set: AuthorityList,
 		validator_set_id: SetId,
-		grandpa_proofs: Option<Justifications>,
+		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
 		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 
@@ -255,36 +263,43 @@ impl Validator for LightValidation {
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-		if grandpa_proofs.is_none() {
-			relay.last_finalized_block_header = header.clone();
-			relay.unjustified_headers.push(header.hash());
-			debug!(
-				"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
-				relay.unjustified_headers.len()
-			);
-			return Ok(())
-		}
-
-		let block_hash = header.hash();
-		let block_num = *header.number();
-
 		// Check that the header has been finalized
 		let voter_set =
 			VoterSet::new(validator_set.clone().into_iter()).expect("VoterSet may not be empty");
 
-		// https://github.com/paritytech/substrate/pull/7640/files
-		// multiple proofs due to multiple consensus protococol possible..
-		for grandpa_proof in grandpa_proofs.unwrap().iter() {
-			Self::verify_grandpa_proof::<Block>(
-				// https://github.com/paritytech/substrate/pull/7640/files
-				// only works for one consenus protocol. In case of multiple
-				// use .into_justification(consensusprotocol) of substrate
-				grandpa_proof.clone(),
-				block_hash,
-				block_num,
-				validator_set_id,
-				&voter_set,
-			)?;
+		// ensure justifications is a grandpa justification
+		let grandpa_justification =
+			justifications.and_then(|just| just.into_justification(GRANDPA_ENGINE_ID));
+
+		let block_hash = header.hash();
+		let block_num = *header.number();
+
+		match grandpa_justification {
+			Some(justification) => {
+				if let Err(err) = Self::verify_grandpa_proof::<Block>(
+					(GRANDPA_ENGINE_ID, justification),
+					block_hash,
+					block_num,
+					validator_set_id,
+					&voter_set,
+				) {
+					// FIXME: Printing error upon invalid justfication, but this will need a better fix
+					// see issue #353
+					error!("Block {} contained invalid justification: {:?}", block_num, err);
+					relay.unjustified_headers.push(header.hash());
+					relay.last_finalized_block_header = header;
+					return Ok(())
+				}
+			},
+			None => {
+				relay.last_finalized_block_header = header.clone();
+				relay.unjustified_headers.push(header.hash());
+				debug!(
+					"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
+					relay.unjustified_headers.len()
+				);
+				return Ok(())
+			},
 		}
 
 		relay.last_finalized_block_header = header.clone();
@@ -307,7 +322,7 @@ impl Validator for LightValidation {
 		&mut self,
 		relay_id: RelayId,
 		header: Header,
-		grandpa_proofs: Option<Justifications>,
+		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
 		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 
@@ -326,7 +341,7 @@ impl Validator for LightValidation {
 			ancestry_proof,
 			validator_set,
 			validator_set_id,
-			grandpa_proofs,
+			justifications,
 		)
 	}
 
