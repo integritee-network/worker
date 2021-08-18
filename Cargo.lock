@@ -5241,14 +5241,14 @@ dependencies = [
 
 [[package]]
 name = "substratee-enclave-api-ffi"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "substratee-get-storage-verified"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -5288,7 +5288,7 @@ version = "0.8.0"
 
 [[package]]
 name = "substratee-sgx-crypto"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "aes",
  "derive_more",
@@ -5303,14 +5303,14 @@ dependencies = [
 
 [[package]]
 name = "substratee-sgx-io"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "sgx_tstd",
 ]
 
 [[package]]
 name = "substratee-sidechain"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "frame-support",
@@ -5330,7 +5330,7 @@ dependencies = [
 
 [[package]]
 name = "substratee-sidechain-primitives"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
  "serde",
@@ -5581,7 +5581,7 @@ dependencies = [
 
 [[package]]
 name = "test-utils"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "pallet-teerex-storage",
