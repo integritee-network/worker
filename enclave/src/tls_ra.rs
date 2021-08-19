@@ -2,6 +2,7 @@ use crate::{
 	aes::Aes,
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
+	error::Result as EnclaveResult,
 	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	rsa3072,
 	utils::UnwrapOrSgxErrorUnexpected,
@@ -226,13 +227,13 @@ pub extern "C" fn request_key_provisioning(
 
 	match receive_files(&mut tls) {
 		Ok(_) => println!("    [Enclave] (MU-RA-Client) Registration procedure successful!\n"),
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> SgxResult<()> {
+fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> EnclaveResult<()> {
 	let mut key_len_arr = [0u8; 8];
 
 	let key_len = tls

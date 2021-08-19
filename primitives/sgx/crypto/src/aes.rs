@@ -15,7 +15,10 @@
 
 */
 
-use crate::error::{Error, Result};
+use crate::{
+	error::{Error, Result},
+	traits::StateCrypto,
+};
 use aes::Aes128;
 use codec::{Decode, Encode};
 use log::info;
@@ -24,11 +27,12 @@ use ofb::{
 	Ofb,
 };
 use sgx_rand::{Rng, StdRng};
-use std::{sgxfs::SgxFile, vec::Vec};
-use substratee_sgx_io::{seal, unseal, SealedIO};
-
-use crate::utils::UnwrapOrSgxErrorUnexpected;
+use std::{
+	convert::{TryFrom, TryInto},
+	sgxfs::SgxFile,
+};
 use substratee_settings::files::AES_KEY_FILE_AND_INIT_V;
+use substratee_sgx_io::{seal, unseal, SealedIO};
 
 type AesOfb = Ofb<Aes128>;
 
@@ -55,6 +59,26 @@ impl SealedIO for Aes {
 	}
 }
 
+impl StateCrypto for Aes {
+	type Error = Error;
+
+	fn encrypt(data: &mut [u8]) -> Result<()> {
+		Aes::unseal().map(|aes| de_or_encrypt(&aes, data))?
+	}
+
+	fn decrypt(data: &mut [u8]) -> Result<()> {
+		Aes::unseal().map(|aes| de_or_encrypt(&aes, data))?
+	}
+}
+
+impl TryFrom<&Aes> for AesOfb {
+	type Error = Error;
+
+	fn try_from(aes: &Aes) -> std::result::Result<Self, Self::Error> {
+		Ok(AesOfb::new_var(&aes.key, &aes.init_vec).map_err(|_| Error::InvalidNonceKeyLength)?)
+	}
+}
+
 pub fn create_sealed_if_absent() -> Result<()> {
 	if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
 		info!("[Enclave] Keyfile not found, creating new! {}", AES_KEY_FILE_AND_INIT_V);
@@ -75,10 +99,6 @@ pub fn create_sealed() -> Result<()> {
 }
 
 /// If AES acts on the encrypted data it decrypts and vice versa
-pub fn de_or_encrypt(bytes: &mut Vec<u8>) -> Result<()> {
-	Ok(Aes::unseal()
-		.map(|aes| AesOfb::new_var(&aes.key, &aes.init_vec))
-		.sgx_error_with_log("    [Enclave]  Failed to Initialize AES")?
-		.map(|mut ofb| ofb.apply_keystream(bytes))
-		.sgx_error_with_log("    [Enclave] Failed to AES en-/decrypt")?)
+pub fn de_or_encrypt(aes: &Aes, data: &mut [u8]) -> Result<()> {
+	Ok(aes.try_into().map(|mut ofb: AesOfb| ofb.apply_keystream(data))?)
 }
