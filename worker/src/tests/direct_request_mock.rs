@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 
 */
 
-use substratee_enclave_api::{direct_request::DirectRequest, EnclaveResult};
+use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
 
 pub struct DirectRequestMock;
 

@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 
 */
 
+use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
+use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header;
-use substratee_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
-use substratee_settings::worker::MR_ENCLAVE_SIZE;
 
 /// mock for EnclaveBase - use in tests
 pub struct EnclaveBaseMock;

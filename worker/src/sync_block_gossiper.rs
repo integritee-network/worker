@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +21,9 @@ use crate::{
 	globals::{tokio_handle::GetTokioHandle, worker::GetWorker},
 	worker::{WorkerResult, WorkerT},
 };
+use itp_core::block::SignedBlock as SignedSidechainBlock;
 use log::*;
 use std::sync::Arc;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 #[cfg(test)]
 use mockall::predicate::*;

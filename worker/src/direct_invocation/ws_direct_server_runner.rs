@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 */
 
 use crate::direct_invocation::ws_handler::CreateWsHandler;
+use itp_enclave_api::direct_request::DirectRequest;
 use log::*;
 use std::{sync::Arc, thread, thread::JoinHandle};
-use substratee_enclave_api::direct_request::DirectRequest;
 use ws::{listen, Handler};
 
 /// Trait for a WebSocket Server for direct invocation

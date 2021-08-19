@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 use crate::{enclave_account, ensure_account_has_funds};
 use base58::ToBase58;
 use codec::Encode;
+use ita_stf::{Getter, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter};
+use itp_enclave_api::enclave_base::EnclaveBase;
 use log::*;
 use serde_derive::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -26,13 +28,11 @@ use sp_core::{crypto::AccountId32, sr25519};
 use sp_keyring::AccountKeyring;
 use std::{fs, str};
 use substrate_api_client::{rpc::WsRpcClient, Api};
-use substratee_enclave_api::enclave_base::EnclaveBase;
-use substratee_stf::{Getter, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter};
 
 #[cfg(test)]
 use crate::config::Config;
 #[cfg(test)]
-use substratee_worker_primitives::{
+use itp_core::{
 	block::{Block, SignedBlock},
 	traits::{Block as BlockT, SignBlock},
 };

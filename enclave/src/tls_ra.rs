@@ -6,6 +6,8 @@ use crate::{
 	rsa3072,
 	utils::UnwrapOrSgxErrorUnexpected,
 };
+use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_sgx_io::SealedIO;
 use log::*;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
 use sgx_types::*;
@@ -16,9 +18,7 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_sgx_crypto::{Aes, AesSeal};
-use substratee_sgx_io::SealedIO;
+use itp-sgx-crypto::{Aes, AesSeal};
 use webpki::DNSName;
 
 struct ClientAuth<A> {

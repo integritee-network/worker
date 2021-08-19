@@ -2,7 +2,7 @@ use sp_core::crypto::Pair;
 use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, RpcClient};
 
-use substratee_node_primitives::AccountId;
+use itp_teerex::AccountId;
 
 use crate::ApiResult;
 

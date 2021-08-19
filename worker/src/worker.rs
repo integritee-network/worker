@@ -1,4 +1,4 @@
-///! Substratee worker. Inspiration for this design came from parity's substrate Client.
+///! Integritee worker. Inspiration for this design came from parity's substrate Client.
 ///
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
 /// from the main.rs should be covered by the worker struct here - hidden and split across
@@ -11,9 +11,9 @@ use jsonrpsee::{
 use log::info;
 use std::num::ParseIntError;
 
-use substratee_api_client_extensions::PalletTeerexApi;
-use substratee_node_primitives::Enclave as EnclaveMetadata;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use itp_api_client_extensions::PalletTeerexApi;
+use itp_core::block::SignedBlock as SignedSidechainBlock;
+use itp_teerex::Enclave as EnclaveMetadata;
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;
@@ -116,10 +116,10 @@ pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
 #[cfg(test)]
 mod tests {
 	use frame_support::assert_ok;
+	use itp_core::block::SignedBlock as SignedSidechainBlock;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
 	use std::net::SocketAddr;
-	use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 	use tokio::net::ToSocketAddrs;
 
 	use crate::{

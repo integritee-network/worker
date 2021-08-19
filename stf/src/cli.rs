@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ pub fn cmd<'a>(
 						.global(true)
 						.help("insert if direct invocation call is desired"),
 				)
-				.name("substratee-client")
+				.name("integritee-cli")
 				.version(VERSION)
 				.author("Supercomputing Systems AG <info@scs.ch>")
 				.about("trusted calls to worker enclave")
@@ -81,7 +81,7 @@ pub fn cmd<'a>(
 		})
 		.add_cmd(
 			Command::new("new-account")
-				.description("generates a new incognito account for the given substraTEE shard")
+				.description("generates a new incognito account for the given integritee shard")
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let store = LocalKeystore::open(get_keystore_path(matches), None).unwrap();
 					let key: sr25519::AppPair = store.generate().unwrap();
@@ -92,7 +92,7 @@ pub fn cmd<'a>(
 		)
 		.add_cmd(
 			Command::new("list-accounts")
-				.description("lists all accounts in keystore for the substraTEE chain")
+				.description("lists all accounts in keystore for the integritee chain")
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let store = LocalKeystore::open(get_keystore_path(matches), None).unwrap();
 					info!("sr25519 keys:");

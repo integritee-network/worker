@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ use crate::ocall::{
 	attestation_ocall::EnclaveAttestationOCall, ipfs_ocall::EnclaveIpfsOcall,
 	on_chain_ocall::EnclaveOnChainOCall, rpc_ocall::EnclaveRpcOCall,
 };
-use std::sync::Arc;
-use substratee_ocall_api::{
+use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
+use std::sync::Arc;
 
 /// Abstract factory trait for OCall components
 pub trait OCallComponentFactoryTrait<A, R, O, I>

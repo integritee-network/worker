@@ -46,12 +46,9 @@ use std::{
 };
 use substrate_api_client::compose_extrinsic_offline;
 
-use substratee_settings::{
+use itp_settings::{
 	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
-	node::{
-		REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION,
-		SUBSTRATEE_REGISTRY_MODULE,
-	},
+	node::{REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE},
 };
 
 use crate::{
@@ -60,9 +57,9 @@ use crate::{
 	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
 	Result as EnclaveResult,
 };
-use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_sgx_crypto::Ed25519Seal;
-use substratee_sgx_io::SealedIO;
+use itp-sgx-crypto::Ed25519Seal;
+use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_sgx_io::SealedIO;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -511,7 +508,7 @@ pub unsafe extern "C" fn perform_ra(
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
 	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-	let call = [SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE];
+	let call = [TEEREX_MODULE, REGISTER_ENCLAVE];
 
 	let xt = compose_extrinsic_offline!(
 		signer,

@@ -1,4 +1,4 @@
-# Copyright 2020 Supercomputing Systems AG
+# Copyright 2021 Integritee AG and Supercomputing Systems AG
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 ######## EDL settings ########
 Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h worker/Enclave_u.c worker/Enclave_u.h
 
-######## SubstraTEE-worker settings ########
+######## Integritee-service settings ########
 Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES)
 Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find worker/ -type f -name 'Cargo.toml')
 Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
@@ -102,7 +102,7 @@ Worker_Rust_Path := target/$(OUTPUT_PATH)
 Worker_Enclave_u_Object :=worker/libEnclave_u.a
 Worker_Name := bin/app
 
-######## SubstraTEE-client settings ########
+######## Integritee-cli settings ########
 Client_SRC_Path := client
 STF_SRC_Path := stf
 Client_Rust_Flags := $(CARGO_TARGET)
@@ -112,7 +112,7 @@ Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Client_Include_Pa
 
 Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
-Client_Binary := substratee-client
+Client_Binary := integritee-cli
 Client_Name := $(Client_Path)/$(Client_Binary)
 
 ######## Enclave settings ########
@@ -155,7 +155,7 @@ $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
 	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir worker
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
-######## SubstraTEE-worker objects ########
+######## Integritee-service objects ########
 worker/Enclave_u.o: $(Enclave_EDL_Files)
 	@$(CC) $(Worker_C_Flags) -c worker/Enclave_u.c -o $@
 	@echo "CC   <=  $<"
@@ -166,15 +166,15 @@ $(Worker_Enclave_u_Object): worker/Enclave_u.o
 
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
-	@echo "Building the substraTEE-worker"
+	@echo "Building the integritee-service"
 	@cd worker && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
-	cp $(Worker_Rust_Path)/substratee-worker ./bin
+	cp $(Worker_Rust_Path)/integritee-service ./bin
 
-######## SubstraTEE-client objects ########
+######## Integritee-client objects ########
 $(Client_Name): $(Client_SRC_Files)
 	@echo
-	@echo "Building the substraTEE-client"
+	@echo "Building the integritee-cli"
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
@@ -243,8 +243,8 @@ identity: mrenclave mrsigner
 help:
 	@echo "Available targets"
 	@echo "  all      - builds all targets (default)"
-	@echo "  worker   - builds the substraTEE-worker"
-	@echo "  client   - builds the substraTEE-client"
+	@echo "  worker   - builds the integritee-service"
+	@echo "  client   - builds the integritee-cli"
 	@echo "  githooks - installs the git hooks (copy .githooks/pre-commit to .git/hooks)"
 	@echo ""
 	@echo "  clean   - cleanup"

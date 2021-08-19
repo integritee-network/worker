@@ -1,12 +1,12 @@
 use codec::{Decode, Encode};
-use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
+use itp_storage::StorageEntryVerified;
+use itp_storage_verifier::{GetStorageVerified, Result};
+use itp_teerex::Enclave;
+use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::*;
 use std::collections::HashMap;
-use substratee_get_storage_verified::{GetStorageVerified, Result};
-use substratee_node_primitives::Enclave;
-use substratee_storage::StorageEntryVerified;
 
 #[derive(Default)]
 pub struct OnchainMock {

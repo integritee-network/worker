@@ -38,8 +38,8 @@ use crate::top_pool::{
 	primitives::TrustedOperationSource,
 };
 
-use substratee_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use substratee_worker_primitives::BlockHash as SidechainBlockHash;
+use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use itp_core::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
 

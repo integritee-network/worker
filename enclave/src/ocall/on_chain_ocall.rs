@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,12 +19,10 @@
 use crate::{ocall::ffi, rpc::author::alloc::prelude::v1::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use log::*;
 use sgx_types::*;
-use substratee_ocall_api::EnclaveOnChainOCallApi;
-use substratee_worker_primitives::{
-	block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse,
-};
 
 #[derive(Clone, Debug)]
 pub struct EnclaveOnChainOCall;

@@ -37,8 +37,8 @@ use crate::top_pool::{
 	rotator::PoolRotator,
 };
 
-use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use substratee_worker_primitives::BlockHash as SidechainBlockHash;
+use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use itp_core::BlockHash as SidechainBlockHash;
 
 use sp_runtime::{
 	generic::BlockId,
@@ -49,8 +49,8 @@ use sp_runtime::{
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 
 use codec::Encode;
+use itp_ocall_api::EnclaveRpcOCallApi;
 use retain_mut::RetainMut;
-use substratee_ocall_api::EnclaveRpcOCallApi;
 
 /// Pre-validated operation. Validated pool only accepts operations wrapped in this enum.
 #[derive(Debug)]

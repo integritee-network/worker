@@ -4,13 +4,13 @@ use arrayvec::ArrayVec;
 use bit_vec::BitVec;
 use chrono::{prelude::*, Duration, TimeZone, Utc as TzUtc};
 use itertools::Itertools;
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
 use num_bigint::BigUint;
 use serde_json::Value;
 use sgx_tcrypto::*;
 use sgx_types::*;
 use std::{io::BufReader, prelude::v1::*, ptr, str, time::*, untrusted::time::SystemTimeEx};
-use substratee_ocall_api::EnclaveAttestationOCallApi;
 use yasna::models::ObjectIdentifier;
 
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
@@ -30,8 +30,8 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 
 pub const IAS_REPORT_CA: &[u8] = include_bytes!("../AttestationReportSigningCACert.pem");
 
-const ISSUER: &str = "SubstraTEE";
-const SUBJECT: &str = "SubstraTEE ephemeral";
+const ISSUER: &str = "Integritee";
+const SUBJECT: &str = "Integritee ephemeral";
 
 pub fn gen_ecc_cert(
 	payload: String,
@@ -186,7 +186,7 @@ pub fn percent_decode(orig: String) -> SgxResult<String> {
 	Ok(ret)
 }
 
-// FIXME: This code is redundant with the host call of the substraTEE-node
+// FIXME: This code is redundant with the host call of the integritee-node
 pub fn verify_mra_cert<A>(cert_der: &[u8], attestation_ocall: &A) -> SgxResult<()>
 where
 	A: EnclaveAttestationOCallApi,

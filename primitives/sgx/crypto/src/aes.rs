@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ use crate::{
 };
 use aes::Aes128;
 use codec::{Decode, Encode};
+use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
+use itp_sgx_io::{seal, unseal, SealedIO};
 use derive_more::Display;
 use log::info;
 use ofb::{
@@ -32,8 +34,6 @@ use std::{
 	convert::{TryFrom, TryInto},
 	sgxfs::SgxFile,
 };
-use substratee_settings::files::AES_KEY_FILE_AND_INIT_V;
-use substratee_sgx_io::{seal, unseal, SealedIO};
 
 type AesOfb = Ofb<Aes128>;
 

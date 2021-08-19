@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ use crate::direct_invocation::{
 	watching_client::{CreateWatchingClient, WatchingClient, WsSend, WsSender},
 };
 use codec::{Decode, Encode};
+use itp_core::{DirectRequestStatus, RpcResponse, RpcReturnValue};
+use itp_enclave_api::direct_request::DirectRequest;
 use log::*;
 use sp_core::H256 as Hash;
 use std::sync::Arc;
-use substratee_enclave_api::direct_request::DirectRequest;
-use substratee_worker_primitives::{DirectRequestStatus, RpcResponse, RpcReturnValue};
 use ws::{CloseCode, Handler, Message, Result, Sender};
 
 /// Trait for an abstract factory to create a handler instance

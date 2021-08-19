@@ -1,5 +1,5 @@
 [package]
-name = "substratee-api-client-extensions"
+name = "itp-api-client-extensions"
 version = "0.8.0"
 authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"
@@ -15,5 +15,5 @@ sp-runtime = { version = "4.0.0-dev",  git = "https://github.com/paritytech/subs
 # scs
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
 
-# substratee
-substratee-node-primitives = { path = "../node"}
+# integritee
+itp-teerex = { path = "../node"}

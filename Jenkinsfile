@@ -33,7 +33,7 @@ pipeline {
     }
     stage('Archive build output') {
       steps {
-        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/substratee-*', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
+        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/integritee-*', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
       }
     }
     stage('Test') {

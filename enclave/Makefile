@@ -51,8 +51,8 @@ all: $(Rust_Enclave_Name)
 $(Rust_Enclave_Name): $(Rust_Enclave_Files)
 ifeq ($(XARGO_SGX), 1)
 	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx $(CARGO_TARGET)
-	cp ./target/x86_64-unknown-linux-sgx/$(OUTPUT_PATH)/libsubstratee_worker_enclave.a ../lib/libenclave.a
+	cp ./target/x86_64-unknown-linux-sgx/$(OUTPUT_PATH)/libitc_enclave.a ../lib/libenclave.a
 else
 	cargo build $(CARGO_TARGET) $(ENCLAVE_FEATURES)
-	cp ./target/$(OUTPUT_PATH)/libsubstratee_worker_enclave.a ../lib/libenclave.a
+	cp ./target/$(OUTPUT_PATH)/libitc_enclave.a ../lib/libenclave.a
 endif

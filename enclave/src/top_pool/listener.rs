@@ -18,12 +18,12 @@
 
 use crate::top_pool::watcher::Watcher;
 use codec::Encode;
+use itp_core::BlockHash as SidechainBlockHash;
+use itp_ocall_api::EnclaveRpcOCallApi;
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
 use sp_runtime::traits;
 use std::{collections::HashMap, hash, string::String, sync::Arc, vec::Vec};
-use substratee_ocall_api::EnclaveRpcOCallApi;
-use substratee_worker_primitives::BlockHash as SidechainBlockHash;
 
 /// Extrinsic pool default listener.
 #[derive(Default)]

@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 */
 use crate::error::{Error, Result};
 use codec::Encode;
+use itp_settings::files::SEALED_SIGNER_SEED_FILE;
+use itp_sgx_io::{seal, unseal, SealedIO};
 use derive_more::Display;
 use log::*;
 use sgx_rand::{Rng, StdRng};
 use sp_core::{crypto::Pair, ed25519};
 use std::{path::Path, sgxfs::SgxFile};
-use substratee_settings::files::SEALED_SIGNER_SEED_FILE;
-use substratee_sgx_io::{seal, unseal, SealedIO};
 
 #[derive(Copy, Clone, Debug, Display)]
 pub struct Ed25519Seal;

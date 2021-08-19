@@ -10,13 +10,13 @@ from .helpers import run_subprocess, setup_working_dir, mkdir_p
 
 class Worker:
     def __init__(self,
-                 worker_bin: str = './substratee-worker',
+                 worker_bin: str = './integritee-service',
                  cwd: str = './',
                  source_dir: str = './',
                  std_err: Union[None, int, IO] = STDOUT,
                  ):
         """
-        SubstraTEE-worker wrapper.
+        Integritee-service wrapper.
 
         Args:
             worker_bin: Path to the worker bin relative to `cwd` or as absolute path.

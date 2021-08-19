@@ -1,11 +1,11 @@
 use crate::error::{Error, Result};
 use frame_support::ensure;
-use pallet_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
+use itp_storage_verifier::GetStorageVerified;
+use itp_teerex::Enclave;
+use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
-use substratee_get_storage_verified::GetStorageVerified;
-use substratee_node_primitives::Enclave;
 
 pub trait ValidateerFetch {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
@@ -52,9 +52,9 @@ impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
 mod tests {
 	use super::*;
 	use codec::Encode;
+	use itp_test::mock::onchain_mock::{validateer_set, OnchainMock};
 	use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256};
 	use std::string::ToString;
-	use test_utils::mock::onchain_mock::{validateer_set, OnchainMock};
 
 	pub type Header = HeaderG<u64, BlakeTwo256>;
 

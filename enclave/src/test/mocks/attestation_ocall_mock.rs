@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	CCopyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,9 @@
 */
 
 use crate::rpc::author::alloc::prelude::v1::Vec;
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use sgx_types::*;
 use std::fmt::{Debug, Formatter, Result as FormatResult};
-use substratee_ocall_api::EnclaveAttestationOCallApi;
 
 #[derive(Clone)]
 pub struct AttestationOCallMock {

@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,8 +32,8 @@ use crate::{
 	},
 	sync_block_gossiper::GossipBlocks,
 };
+use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use std::sync::Arc;
-use substratee_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure

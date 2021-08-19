@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -18,18 +18,18 @@
 use crate::{error::Result, hex, io, utils::UnwrapOrSgxErrorUnexpected};
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
+use ita_stf::{
+	ShardIdentifier, State as StfState, StateType as StfStateType,
+	StateTypeDiff as StfStateTypeDiff, Stf,
+};
+use itp_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
+use itp_sgx_crypto::{Aes, StateCrypto};
 use log::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_types::*;
 use sp_core::H256;
 use std::{fs, io::Write, path::Path, vec::Vec};
-use substratee_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
-use substratee_sgx_crypto::{Aes, StateCrypto};
-use substratee_stf::{
-	ShardIdentifier, State as StfState, StateType as StfStateType,
-	StateTypeDiff as StfStateTypeDiff, Stf,
-};
 
 pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
 	// load last state

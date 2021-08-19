@@ -1,12 +1,12 @@
 use parity_scale_codec::Encode;
 
-use sp_core::crypto::AccountId32;
-use substratee_enclave_api::{direct_request::DirectRequest, EnclaveResult};
-use substratee_worker_primitives::{
+use itp_core::{
 	block::{Block, SignedBlock},
 	traits::{Block as BlockT, SignBlock},
 	RpcResponse, ShardIdentifier,
 };
+use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
+use sp_core::crypto::AccountId32;
 
 pub struct TestEnclave;
 
@@ -21,7 +21,7 @@ impl DirectRequest for TestEnclave {
 }
 
 // todo: this is a duplicate that is also defined in the worker. We should extract an independent
-// test-utils crate because here we don't want to depend on the worker itself.
+// itp-test crate because here we don't want to depend on the worker itself.
 pub fn test_sidechain_block() -> SignedBlock {
 	use sp_core::{Pair, H256};
 

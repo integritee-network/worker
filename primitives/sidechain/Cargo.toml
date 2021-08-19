@@ -1,5 +1,5 @@
 [package]
-name = "substratee-sidechain"
+name = "itp-sidechain"
 version = "0.8.0"
 edition = "2018"
 
@@ -15,12 +15,12 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-pallet-teerex-storage = { path = "../pallet-teerex-storage", default-features = false }
-substratee-node-primitives = { path = "../node", default-features = false }
-substratee-storage = { path = "../storage", default-features = false }
-substratee-ocall-api = { path = "../ocall-api", default-features = false }
-substratee-get-storage-verified = { path = "../get-storage-verified", default-features = false }
-substratee-worker-primitives = { path = "../worker", default-features = false }
+itp-teerex-storage = { path = "../pallet-teerex-storage", default-features = false }
+itp-teerex = { path = "../node", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
+itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-storage-verifier = { path = "../get-storage-verified", default-features = false }
+itp-core = { path = "../worker", default-features = false }
 
 [features]
 default = ["std"]
@@ -29,12 +29,12 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",
-    "substratee-node-primitives/std",
-    "substratee-storage/std",
-    "substratee-ocall-api/std",
-    "substratee-get-storage-verified/std",
-    "substratee-worker-primitives/std",
+    "itp-teerex/std",
+    "itp-storage/std",
+    "itp-ocall-api/std",
+    "itp-storage-verifier/std",
+    "itp-core/std",
 ]
 
 [dev-dependencies]
-test-utils = { path = "../test-utils" }
+itp-test = { path = "../test-utils" }

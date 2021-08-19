@@ -1,13 +1,13 @@
+use itp_teerex::{Enclave, IpfsHash, ShardIdentifier};
 use sp_core::Pair;
 use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, RpcClient};
-use substratee_node_primitives::{Enclave, IpfsHash, ShardIdentifier};
 
 use crate::ApiResult;
 
 pub const TEEREX: &str = "Teerex";
 
-/// ApiClient extension that enables communication with the `substratee-registry` pallet.
+/// ApiClient extension that enables communication with the `teerex` pallet.
 pub trait PalletTeerexApi {
 	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>>;
 	fn enclave_count(&self) -> ApiResult<u64>;

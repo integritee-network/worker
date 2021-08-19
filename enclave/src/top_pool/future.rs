@@ -28,7 +28,7 @@ use sp_runtime::transaction_validity::TransactionTag as Tag;
 
 use std::{time::Instant, untrusted::time::InstantEx};
 
-use substratee_stf::ShardIdentifier;
+use ita_stf::ShardIdentifier;
 
 use crate::top_pool::base_pool::TrustedOperation;
 

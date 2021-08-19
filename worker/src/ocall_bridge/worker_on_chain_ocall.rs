@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,7 @@ use crate::{
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
+use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
 use log::*;
 use sp_core::storage::StorageKey;
 use std::{
@@ -30,9 +31,6 @@ use std::{
 	vec::Vec,
 };
 use substrate_api_client::XtStatus;
-use substratee_worker_primitives::{
-	block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse,
-};
 
 pub struct WorkerOnChainOCall<F, S> {
 	node_api_factory: Arc<F>,

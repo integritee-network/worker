@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 use crate::{init_shard, tests::commons::test_trusted_getter_signed};
 use codec::Encode;
+use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
 use log::*;
 use sp_core::hash::H256;
 use sp_keyring::AccountKeyring;
-use substratee_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
 
 pub fn get_state_works<E: EnclaveBase>(enclave_api: &E) -> EnclaveResult<()> {
 	let alice = AccountKeyring::Alice;

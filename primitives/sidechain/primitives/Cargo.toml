@@ -1,5 +1,5 @@
 [package]
-name = "substratee-sidechain-primitives"
+name = "itp-sidechain-primitives"
 version = "0.8.0"
 edition = "2018"
 

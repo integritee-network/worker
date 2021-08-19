@@ -29,9 +29,7 @@ use core::iter::Iterator;
 use jsonrpc_core::futures::future::{ready, TryFutureExt};
 use sp_runtime::generic;
 
-use substratee_stf::{
-	Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
-};
+use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 
 use crate::{
 	rpc::error::{Error as StateRpcError, FutureResult, Result},

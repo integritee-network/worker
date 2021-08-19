@@ -20,7 +20,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
 
-use substratee_stf::TrustedOperation;
+use ita_stf::TrustedOperation;
 
 /// RPC Trusted call or hash
 ///

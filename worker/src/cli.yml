@@ -1,6 +1,6 @@
-name: "substraTEE-worker"
+name: "integritee-service"
 version: "0.8.0"
-about: Worker using Intel SGX TEE for SubstraTEE-node
+about: Worker using Intel SGX TEE for Integritee-node
 authors: "Supercomputing Systems AG <info@scs.ch>"
 
 # AppSettings can be defined as a list and are **not** ascii case sensitive
@@ -42,7 +42,7 @@ args:
     
 subcommands:
     - run:
-        about: Start the substraTEE-worker
+        about: Start the integritee-service
         args:
             - skip-ra:
                 long: skip-ra

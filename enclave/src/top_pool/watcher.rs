@@ -21,10 +21,10 @@
 extern crate alloc;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::Encode;
+use itp_core::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
+use itp_ocall_api::EnclaveRpcOCallApi;
 use sp_runtime::traits;
 use std::hash;
-use substratee_ocall_api::EnclaveRpcOCallApi;
-use substratee_worker_primitives::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 
 /// Extrinsic watcher.
 ///

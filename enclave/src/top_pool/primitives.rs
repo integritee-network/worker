@@ -14,7 +14,7 @@ use sp_runtime::{
 
 use codec::{Decode, Encode};
 
-use substratee_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 
 use crate::top_pool::error;
 use byteorder::{BigEndian, ByteOrder};

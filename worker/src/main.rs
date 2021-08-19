@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -41,6 +41,19 @@ use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
+use itc_api_client::direct_client::DirectClient;
+use itp_api_client_extensions::{AccountApi, ChainApi};
+use itp_enclave_api::{
+	direct_request::DirectRequest,
+	enclave_base::EnclaveBase,
+	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
+	side_chain::SideChain,
+	teerex_api::TeerexApi,
+};
+use itp_settings::files::{
+	ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
+};
+use itp_teerex::SignedBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
@@ -63,20 +76,6 @@ use std::{
 	time::{Duration, SystemTime},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
-use substratee_api_client_extensions::{AccountApi, ChainApi};
-use substratee_enclave_api::{
-	direct_request::DirectRequest,
-	enclave_base::EnclaveBase,
-	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
-	side_chain::SideChain,
-	teerex_api::TeerexApi,
-};
-use substratee_node_primitives::SignedBlock;
-use substratee_settings::{
-	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE},
-	worker::MIN_FUND_INCREASE_FACTOR,
-};
-use substratee_worker_api::direct_client::DirectClient;
 
 mod config;
 mod direct_invocation;
@@ -124,7 +123,7 @@ fn main() {
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
-		println!("*** Starting substraTEE-worker");
+		println!("*** Starting integritee-worker");
 		let shard = extract_shard(&smatches, enclave.as_ref());
 
 		// Todo: Is this deprecated?? It is only used in remote attestation.
@@ -282,11 +281,8 @@ fn start_worker<E, T, W>(
 
 	let handle = tokio_handle.get_handle();
 	let enclave_rpc_server = enclave.clone();
-	handle.spawn(async move {
-		substratee_worker_rpc_server::run_server(&url, enclave_rpc_server)
-			.await
-			.unwrap()
-	});
+	handle
+		.spawn(async move { itc_api_server::run_server(&url, enclave_rpc_server).await.unwrap() });
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();

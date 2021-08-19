@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,13 +19,13 @@
 use crate::ocall_bridge::bridge_api::{
 	OCallBridgeError, OCallBridgeResult, RemoteAttestationBridge,
 };
+use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use sgx_types::*;
 use std::{
 	net::{SocketAddr, TcpStream},
 	os::unix::io::IntoRawFd,
 	sync::Arc,
 };
-use substratee_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 
 pub struct RemoteAttestationOCall<E> {
 	enclave_api: Arc<E>,
@@ -43,7 +43,7 @@ where
 {
 	fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
 		self.enclave_api.init_quote().map_err(|e| match e {
-			substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::InitQuote(s),
+			itp_enclave_api::error::Error::Sgx(s) => OCallBridgeError::InitQuote(s),
 			_ => OCallBridgeError::InitQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
 		})
 	}
@@ -71,14 +71,14 @@ where
 	) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)> {
 		let real_quote_len =
 			self.enclave_api.calc_quote_size(revocation_list.clone()).map_err(|e| match e {
-				substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
+				itp_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
 				_ => OCallBridgeError::GetQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
 			})?;
 
 		self.enclave_api
 			.get_quote(revocation_list, report, quote_type, spid, quote_nonce, real_quote_len)
 			.map_err(|e| match e {
-				substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
+				itp_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
 				_ => OCallBridgeError::GetQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
 			})
 	}
@@ -91,7 +91,7 @@ where
 		self.enclave_api
 			.get_update_info(platform_blob, enclave_trusted)
 			.map_err(|e| match e {
-				substratee_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetUpdateInfo(s),
+				itp_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetUpdateInfo(s),
 				_ => OCallBridgeError::GetUpdateInfo(sgx_status_t::SGX_ERROR_UNEXPECTED),
 			})
 	}

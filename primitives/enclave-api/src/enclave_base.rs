@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,16 +19,16 @@
 use crate::{error::Error, Enclave, EnclaveResult};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use itp_enclave_api_ffi as ffi;
+use itp_settings::worker::{
+	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE, STATE_VALUE_MAX_SIZE,
+};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::ed25519;
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header;
-use substratee_enclave_api_ffi as ffi;
-use substratee_settings::worker::{
-	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE, STATE_VALUE_MAX_SIZE,
-};
 
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {

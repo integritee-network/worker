@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@
 use crate::{AccountId, AccountInfo, Index, ShardIdentifier};
 use codec::{Decode, Encode};
 use derive_more::Display;
+use itp_storage::{storage_map_key, StorageHasher};
 use log_sgx::*;
 use sgx_tstd as std;
 use std::{prelude::v1::*, vec};
-use substratee_storage::{storage_map_key, StorageHasher};
 
 pub type StfResult<T> = Result<T, StfError>;
 

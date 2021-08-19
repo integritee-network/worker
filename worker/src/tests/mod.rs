@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ use clap::ArgMatches;
 use crate::enclave::api::*;
 
 use self::{ecalls::*, integration_tests::*};
-use substratee_enclave_api::enclave_test::EnclaveTest;
+use itp_enclave_api::enclave_test::EnclaveTest;
 
 pub mod commons;
 pub mod ecalls;

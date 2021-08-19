@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -14,14 +14,12 @@
 	limitations under the License.
 
 */
+use itp_enclave_api::{error::Error, remote_attestation::TlsRemoteAttestation, EnclaveResult};
 use log::*;
 use sgx_types::*;
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
-};
-use substratee_enclave_api::{
-	error::Error, remote_attestation::TlsRemoteAttestation, EnclaveResult,
 };
 
 pub fn enclave_run_key_provisioning_server<E: TlsRemoteAttestation>(

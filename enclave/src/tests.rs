@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
@@ -22,6 +22,20 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::ops::Deref;
+use ita_stf::{
+	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
+	TrustedCall, TrustedGetter, TrustedOperation,
+};
+use itp-teerex::{Block, Header};
+use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_settings::{
+	enclave::GETTER_TIMEOUT,
+	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
+};
+use itp_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
+use itp_sgx_io::SealedIO;
+use itp_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
+use itp_storage::storage_value_key;
 use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{
@@ -41,20 +55,6 @@ use std::{
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
 };
-use substratee_node_primitives::{Block, Header};
-use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_settings::{
-	enclave::GETTER_TIMEOUT,
-	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},
-};
-use substratee_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
-use substratee_sgx_io::SealedIO;
-use substratee_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
-use substratee_stf::{
-	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
-	TrustedCall, TrustedGetter, TrustedOperation,
-};
-use substratee_storage::storage_value_key;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -108,9 +108,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_executing_call_updates_account_nonce,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
-		substratee_stf::stf_sgx::tests::apply_state_diff_works,
-		substratee_stf::stf_sgx::tests::apply_state_diff_returns_storage_hash_mismatch_err,
-		substratee_stf::stf_sgx::tests::apply_state_diff_returns_invalid_storage_diff_err,
+		ita_stf::stf_sgx::tests::apply_state_diff_works,
+		ita_stf::stf_sgx::tests::apply_state_diff_returns_storage_hash_mismatch_err,
+		ita_stf::stf_sgx::tests::apply_state_diff_returns_invalid_storage_diff_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
@@ -187,7 +187,7 @@ fn test_compose_block_and_confirmation() {
 		&mut state,
 	)
 	.unwrap();
-	let xt_block_encoded = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
+	let xt_block_encoded = [TEEREX_MODULE, BLOCK_CONFIRMED].encode();
 	let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 	let mut opaque_call_vec = opaque_call.0;
 
@@ -438,7 +438,7 @@ fn test_create_block_and_confirmation_works() {
 
 	let signed_block = signed_blocks[index].clone();
 	let mut opaque_call_vec = confirm_calls[index].0.clone();
-	let xt_block_encoded = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED].encode();
+	let xt_block_encoded = [TEEREX_MODULE, BLOCK_CONFIRMED].encode();
 	let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 
 	// then
@@ -481,9 +481,9 @@ fn test_create_state_diff() {
 	let account_with_money = pair_with_money.public();
 	let account_without_money = signer_without_money.public();
 	let account_with_money_key_hash =
-		substratee_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
+		ita_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
 	let account_without_money_key_hash =
-		substratee_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
+		ita_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
 
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
@@ -542,8 +542,7 @@ fn test_create_state_diff() {
 	let block_number_key = storage_value_key("System", "Number");
 	let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
 	let new_block_number =
-		substratee_worker_primitives::BlockNumber::decode(&mut new_block_number_encoded.as_slice())
-			.unwrap();
+		itp_core::BlockNumber::decode(&mut new_block_number_encoded.as_slice()).unwrap();
 	assert_eq!(state_diff.len(), 3);
 	assert_eq!(new_balance_acc_wo_money, 1000);
 	assert_eq!(new_balance_acc_with_money, 1000);
@@ -577,9 +576,9 @@ fn test_executing_call_updates_account_nonce() {
 	let account_with_money = pair_with_money.public();
 	let account_without_money = signer_without_money.public();
 	let account_with_money_key_hash =
-		substratee_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
+		ita_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
 	let account_without_money_key_hash =
-		substratee_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
+		ita_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
 
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
@@ -656,9 +655,9 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let account_with_money = pair_with_money.public();
 	let account_without_money = signer_without_money.public();
 	let account_with_money_key_hash =
-		substratee_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
+		ita_stf::stf_sgx_primitives::account_key_hash(&account_with_money.into());
 	let account_without_money_key_hash =
-		substratee_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
+		ita_stf::stf_sgx_primitives::account_key_hash(&account_without_money.into());
 
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool

@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,12 @@
 */
 
 use crate::{config::Config, worker::Worker as WorkerGen};
+use itc_api_client::direct_client::DirectClient;
+use itp_enclave_api::Enclave;
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard};
 use sp_core::sr25519;
 use substrate_api_client::{rpc::WsRpcClient, Api};
-use substratee_enclave_api::Enclave;
-use substratee_worker_api::direct_client::DirectClient;
 
 pub type Worker = WorkerGen<Config, Api<sr25519::Pair, WsRpcClient>, Enclave, DirectClient>;
 

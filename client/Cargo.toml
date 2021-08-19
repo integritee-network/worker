@@ -1,5 +1,5 @@
 [package]
-name = "substratee-client"
+name = "integritee-cli"
 version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
@@ -39,8 +39,8 @@ sp-application-crypto = { version = "4.0.0-dev", git = "https://github.com/parit
 sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 #local dependencies
-substratee-node-primitives = { path = "../primitives/node" }
-substratee-worker-primitives = { path = "../primitives/worker" }
-substratee-api-client-extensions = { path = "../primitives/api-client-extensions" }
-substratee-stf = { path = "../stf" }
-substratee-worker-api = { path = "../worker/rpc/client" }
+itp-teerex = { path = "../primitives/node" }
+itp-core = { path = "../primitives/worker" }
+itp-api-client-extensions = { path = "../primitives/api-client-extensions" }
+ita-stf = { path = "../stf" }
+itc-api-client = { path = "../worker/rpc/client" }

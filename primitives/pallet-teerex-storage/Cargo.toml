@@ -1,5 +1,5 @@
 [package]
-name = "pallet-teerex-storage"
+name = "itp-teerex-storage"
 version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
@@ -9,11 +9,11 @@ resolver = "2"
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 #local deps
-substratee-storage = { path = "../storage", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "sp-std/std",
-    "substratee-storage/std",
+    "itp-storage/std",
 ]

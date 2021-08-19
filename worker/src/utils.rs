@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +18,10 @@
 
 use base58::{FromBase58, ToBase58};
 use clap::ArgMatches;
+use ita_stf::ShardIdentifier;
+use itp_enclave_api::enclave_base::EnclaveBase;
 use log::{debug, info};
 use std::path::Path;
-use substratee_enclave_api::enclave_base::EnclaveBase;
-use substratee_stf::ShardIdentifier;
 
 pub fn extract_shard<E: EnclaveBase>(m: &ArgMatches<'_>, enclave_api: &E) -> ShardIdentifier {
 	match m.value_of("shard") {
@@ -56,7 +56,7 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
 }
 
 pub fn check_files() {
-	use substratee_settings::files::{
+	use itp_settings::files::{
 		ENCLAVE_FILE, RA_API_KEY_FILE, RA_SPID_FILE, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
 	};
 	debug!("*** Check files");

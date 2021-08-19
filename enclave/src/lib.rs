@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -39,7 +39,55 @@ use crate::{
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
+use ita_stf::{
+	stf_sgx::OpaqueCall,
+	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
+	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
+	TrustedCallSigned, TrustedGetterSigned,
+};
+use itc_light_client::{Block, Header, Validator};
+use itp_core::{
+	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+	BlockHash,
+};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi};
+use itp_settings::{
+	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
+	node::{
+		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
+	},
+};
+use itp_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
+use itp_sgx_io as io;
+use itp_sgx_io::SealedIO;
+use itp_sidechain_primitives::traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
+use itp_storage::{StorageEntryVerified, StorageProof};
+use itp_storage_verifier::GetStorageVerified;
+use itp_teerex::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
 use itc_light_client::{io::LightClientSeal, Validator};
+use itp-ocall-api::{
+	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
+};
+use itp-settings::{
+	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
+	node::{
+		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
+	},
+};
+use ita-stf::{
+	stf_sgx::OpaqueCall,
+	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
+	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
+	TrustedCallSigned, TrustedGetterSigned,
+};
+use itp-core::{
+	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+	BlockHash,
+};
+
+
 use log::*;
 use rpc::{
 	api::SideChainApi,
@@ -62,35 +110,6 @@ use std::{
 };
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
-};
-use substratee_get_storage_verified::GetStorageVerified;
-use substratee_node_primitives::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
-use substratee_ocall_api::{
-	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
-};
-use substratee_settings::{
-	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
-	node::{
-		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
-	},
-};
-use substratee_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
-use substratee_sgx_io as io;
-use substratee_sgx_io::SealedIO;
-use substratee_sidechain_primitives::traits::{
-	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
-};
-use substratee_stf::{
-	stf_sgx::OpaqueCall,
-	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetterSigned,
-};
-use substratee_storage::{StorageEntryVerified, StorageProof};
-use substratee_worker_primitives::{
-	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash,
 };
 use utils::write_slice_and_whitespace_pad;
 
@@ -235,7 +254,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 
 	let signer = Ed25519Seal::unseal().unwrap();
 	let call = (
-		[SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
+		[TEEREX_MODULE, REGISTER_ENCLAVE],
 		ocall_api
 			.get_mrenclave_of_self()
 			.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
@@ -503,7 +522,7 @@ where
 		};
 
 		// compose indirect block confirmation
-		let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+		let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 		let genesis_hash = validator.genesis_hash(validator.num_relays()).unwrap();
 		let block_hash = signed_block.block.header.hash();
 		let prev_state_hash = signed_block.block.header.parent_hash();
@@ -801,7 +820,7 @@ pub fn compose_block_and_confirmation(
 	debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
 	Stf::update_last_block_hash(state, block_hash.into());
 
-	let xt_block = [SUBSTRATEE_REGISTRY_MODULE, BLOCK_CONFIRMED];
+	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
 		OpaqueCall((xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode());
 	Ok((opaque_call, signed_block))
@@ -873,7 +892,7 @@ where
 			UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
 			// confirm call decodes successfully as well
-			if xt.function.0 == [SUBSTRATEE_REGISTRY_MODULE, SHIELD_FUNDS] {
+			if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
 				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt) {
 					error!("Error performing shieldfunds. Error: {:?}", e);
 				}
@@ -884,7 +903,7 @@ where
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
-			if xt.function.0 == [SUBSTRATEE_REGISTRY_MODULE, CALL_WORKER] {
+			if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
 				if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
 					// load state before executing any calls
 					let mut state = load_initialized_state(&shard)?;
@@ -945,7 +964,7 @@ fn handle_shield_funds_xt(
 
 	let state_hash = state::write(state, &shard)?;
 
-	let xt_call = [SUBSTRATEE_REGISTRY_MODULE, CALL_CONFIRMED];
+	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
 	let call_hash = blake2_256(&xt.encode());
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 

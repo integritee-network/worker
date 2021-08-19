@@ -1,5 +1,5 @@
-use substratee_api_client_extensions::{ApiResult, PalletTeerexApi};
-use substratee_node_primitives::{Enclave, ShardIdentifier};
+use itp_api_client_extensions::{ApiResult, PalletTeerexApi};
+use itp_teerex::{Enclave, ShardIdentifier};
 
 pub struct TestNodeApi;
 

@@ -9,7 +9,7 @@
 
 # binaries
 bin/*.so
-bin/substratee-*
+bin/integritee-*
 bin/*.wasm
 
 # sealed data

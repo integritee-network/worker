@@ -25,8 +25,8 @@ members = [
     #	 "enclave",
 ]
 
-#[patch."https://github.com/scs/pallet-substratee-registry.git"]
-#pallet-substratee-registry = { path = "../pallet-substratee-registry" }
+#[patch."https://github.com/integritee-network/pallet-teerex.git"]
+#pallet-teerex = { path = "../pallet-teerex" }
 
 
 #[patch."https://github.com/scs/substrate-api-client"]

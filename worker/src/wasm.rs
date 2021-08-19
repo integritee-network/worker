@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,16 +16,13 @@
 
 use sgx_types::*;
 
-extern {
-	fn sgxwasm_init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t ;
+extern "C" {
+	fn sgxwasm_init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SgxWasmAction {
-	Call {
-		module: Option<Vec<u8>>,
-		function: String,
-	},
+	Call { module: Option<Vec<u8>>, function: String },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,26 +33,24 @@ pub enum BoundaryValue {
 	F64(u64),
 }
 
-pub fn sgx_enclave_wasm_init(eid: sgx_enclave_id_t) -> Result<(),String> {
-	let mut retval:sgx_status_t = sgx_status_t::SGX_SUCCESS;
-	let result = unsafe {
-		sgxwasm_init(eid, &mut retval)
-	};
+pub fn sgx_enclave_wasm_init(eid: sgx_enclave_id_t) -> Result<(), String> {
+	let mut retval: sgx_status_t = sgx_status_t::SGX_SUCCESS;
+	let result = unsafe { sgxwasm_init(eid, &mut retval) };
 
 	match result {
 		sgx_status_t::SGX_SUCCESS => {},
 		_ => {
 			println!("[-] ECALL Enclave Failed {}!", result.as_str());
 			panic!("sgx_enclave_wasm_init's ECALL returned unknown error!");
-		}
+		},
 	}
 
 	match retval {
 		sgx_status_t::SGX_SUCCESS => {},
 		_ => {
 			println!("[-] ECALL Enclave Function return fail: {}!", retval.as_str());
-			return Err(format!("ECALL func return error: {}", retval.as_str()));
-		}
+			return Err(format!("ECALL func return error: {}", retval.as_str()))
+		},
 	}
 
 	Ok(())

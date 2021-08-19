@@ -33,7 +33,7 @@ use crate::top_pool::{
 	tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
 };
 
-use substratee_stf::ShardIdentifier;
+use ita_stf::ShardIdentifier;
 
 type TopErrorResult<Hash, Ex> = error::Result<(Vec<Arc<TrustedOperation<Hash, Ex>>>, Vec<Hash>)>;
 

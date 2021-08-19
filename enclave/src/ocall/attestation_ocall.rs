@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 use crate::ocall::ffi;
 use frame_support::ensure;
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::{
@@ -25,7 +26,6 @@ use sgx_types::{
 	sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t, SgxResult,
 };
 use std::{ptr, vec::Vec};
-use substratee_ocall_api::EnclaveAttestationOCallApi;
 
 #[derive(Clone, Debug)]
 pub struct EnclaveAttestationOCall {}

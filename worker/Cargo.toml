@@ -1,5 +1,5 @@
 [package]
-name = "substratee-worker"
+name = "integritee-service"
 version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 build = "build.rs"
@@ -41,14 +41,14 @@ sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.
 sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
-substratee-settings = { path = "../primitives/settings" }
-substratee-node-primitives = { path = "../primitives/node" }
-substratee-worker-primitives = { path = "../primitives/worker" }
-substratee-api-client-extensions = { path = "../primitives/api-client-extensions" }
-substratee-worker-api = { path = "rpc/client" }
-substratee-worker-rpc-server = { path = "rpc/server" }
-substratee-enclave-api = { path = "../primitives/enclave-api" }
-substratee-stf = { path = "../stf" }
+itp-settings = { path = "../primitives/settings" }
+itp-teerex = { path = "../primitives/node" }
+itp-core = { path = "../primitives/worker" }
+itp-api-client-extensions = { path = "../primitives/api-client-extensions" }
+itc-api-client = { path = "rpc/client" }
+itc-api-server = { path = "rpc/server" }
+itp-enclave-api = { path = "../primitives/enclave-api" }
+ita-stf = { path = "../stf" }
 
 # scs / integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
@@ -66,7 +66,7 @@ frame-support = { version = "4.0.0-dev", git = "https://github.com/paritytech/su
 
 [features]
 default = []
-production = ['substratee-settings/production']
+production = ['itp-settings/production']
 
 [dev-dependencies]
 anyhow = "1.0.40"

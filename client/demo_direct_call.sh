@@ -2,13 +2,13 @@
 
 # setup:
 # run all on localhost:
-#   substratee-node purge-chain --dev
-#   substratee-node --tmp --dev -lruntime=debug
+#   integritee-node purge-chain --dev
+#   integritee-node --tmp --dev -lruntime=debug
 #   rm light_client_db.bin
-#   substratee-worker init_shard
-#   substratee-worker shielding-key
-#   substratee-worker signing-key
-#   substratee-worker run
+#   integritee-service init_shard
+#   integritee-service shielding-key
+#   integritee-service signing-key
+#   integritee-service run
 #
 # then run this script
 
@@ -46,7 +46,7 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
 
-CLIENT="./substratee-client -p ${NPORT} -P ${RPORT}"
+CLIENT="./integritee-cli -p ${NPORT} -P ${RPORT}"
 
 if [ "$READMRENCLAVE" = "file" ]
 then

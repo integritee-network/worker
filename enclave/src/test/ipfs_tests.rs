@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,9 @@ use crate::{
 	ipfs::IpfsContent,
 	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 };
+use itp_ocall_api::EnclaveIpfsOCallApi;
 use log::*;
 use std::{fs::File, io::Read, vec::Vec};
-use substratee_ocall_api::EnclaveIpfsOCallApi;
 
 #[allow(unused)]
 fn test_ocall_read_write_ipfs() {

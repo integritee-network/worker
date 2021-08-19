@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -48,14 +48,14 @@ use crate::top_pool::pool::Options as PoolOptions;
 use self::serde_json::*;
 use jsonrpc_core::{futures::executor, Error as RpcError, *};
 
-use substratee_stf::ShardIdentifier;
+use ita_stf::ShardIdentifier;
 
 use base58::FromBase58;
 
-use substratee_node_primitives::{Block, Request};
-use substratee_worker_primitives::{
+use itp_core::{
 	block::SignedBlock, DirectRequestStatus, RpcReturnValue, TrustedOperationStatus,
 };
+use itp_teerex::{Block, Request};
 
 use crate::{ocall::rpc_ocall::EnclaveRpcOCall, rsa3072, utils::write_slice_and_whitespace_pad};
 

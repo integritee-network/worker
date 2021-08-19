@@ -35,7 +35,7 @@ use sp_runtime::transaction_validity::{
 	TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
 };
 
-use substratee_stf::ShardIdentifier;
+use ita_stf::ShardIdentifier;
 
 use crate::top_pool::{
 	error,

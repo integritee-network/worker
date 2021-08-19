@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
+use itp_storage::storage_entry::StorageEntry;
 use sp_std::vec::Vec;
-use substratee_storage::storage_entry::StorageEntry;
 
-pub use substratee_sidechain_primitives::{
+pub use itp_sidechain_primitives::{
 	traits,
 	types::{
 		block,

@@ -29,7 +29,7 @@ pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
 
-// Note in the substratee-pallet-registry this is a struct. But for the codec this does not matter.
+// Note in the pallet teerex this is a struct. But for the codec this does not matter.
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
 pub struct Request {
 	pub shard: ShardIdentifier,
@@ -38,11 +38,11 @@ pub struct Request {
 
 pub type IpfsHash = [u8; 46];
 
-pub type SubstrateeConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
+pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
 
-// Todo: move this improved enclave definition into a primitives crate in the substratee-registry repo.
+// Todo: move this improved enclave definition into a primitives crate in the pallet_teerex repo.
 #[derive(Encode, Decode, Default, Clone, PartialEq, sp_core::RuntimeDebug)]
 pub struct EnclaveGen<AccountId> {
 	pub pubkey: AccountId,

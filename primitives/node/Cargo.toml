@@ -1,5 +1,5 @@
 [package]
-name = "substratee-node-primitives"
+name = "itp-teerex"
 version = "0.8.0"
 authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"

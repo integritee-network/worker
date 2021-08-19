@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ use log::debug;
 use parity_scale_codec::Encode;
 use tokio::net::ToSocketAddrs;
 
+use itp_core::{block::SignedBlock, RpcRequest};
+use itp_enclave_api::direct_request::DirectRequest;
 use std::sync::Arc;
-use substratee_enclave_api::direct_request::DirectRequest;
-use substratee_worker_primitives::{block::SignedBlock, RpcRequest};
 
 #[cfg(test)]
 mod mock;

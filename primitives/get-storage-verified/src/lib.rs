@@ -5,15 +5,15 @@
 use codec::Decode;
 use core::result::Result as StdResult;
 use derive_more::{Display, From};
+use itp_core::WorkerRequest;
+use itp_ocall_api::EnclaveOnChainOCallApi;
+use itp_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;
-use substratee_ocall_api::EnclaveOnChainOCallApi;
-use substratee_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
-use substratee_worker_primitives::WorkerRequest;
 
 /// Very basic abstraction over storage access that returns a `StorageEntryVerified`. This enforces
-/// that the implementation of this trait uses the `substratee_storage::VerifyStorageProof` trait
+/// that the implementation of this trait uses the `itp_storage::VerifyStorageProof` trait
 /// because a `StorageEntryVerified` instance cannot be created otherwise.
 ///
 /// This is very generic and most-likely one of the innermost traits.

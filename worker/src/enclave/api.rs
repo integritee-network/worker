@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,16 +15,16 @@
 
 */
 
+use itp_enclave_api::{
+	enclave_base::EnclaveBase, error::Error as EnclaveApiError, Enclave, EnclaveResult,
+};
+use itp_settings::files::{ENCLAVE_FILE, ENCLAVE_TOKEN};
 use log::*;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 /// keep this api free from chain-specific types!
 use std::io::{Read, Write};
 use std::{fs::File, path::PathBuf};
-use substratee_enclave_api::{
-	enclave_base::EnclaveBase, error::Error as EnclaveApiError, Enclave, EnclaveResult,
-};
-use substratee_settings::files::{ENCLAVE_FILE, ENCLAVE_TOKEN};
 
 pub fn enclave_init() -> EnclaveResult<Enclave> {
 	const LEN: usize = 1024;

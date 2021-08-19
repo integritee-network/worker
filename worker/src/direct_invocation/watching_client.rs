@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 
 */
 
-use substratee_worker_primitives::RpcResponse;
+use itp_core::RpcResponse;
 use ws::{CloseCode, Message, Result, Sender};
 
 /// trait to create a watching client instance

@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
 use sp_std::prelude::Vec;
-use substratee_storage::{storage_map_key, storage_value_key, StorageHasher};
 
 pub struct TeeRexStorage;
 
@@ -15,7 +15,7 @@ pub trait StoragePrefix {
 
 impl StoragePrefix for TeeRexStorage {
 	fn prefix() -> &'static str {
-		"SubstrateeRegistry"
+		"Teerex"
 	}
 }
 

@@ -1,5 +1,5 @@
 [package]
-name = "substratee-get-storage-verified"
+name = "itp-storage-verifier"
 version = "0.8.0"
 edition = "2018"
 
@@ -16,9 +16,9 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-substratee-storage = { path = "../storage", default-features = false }
-substratee-ocall-api = { path = "../ocall-api", default-features = false }
-substratee-worker-primitives = { path = "../worker", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
+itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-core = { path = "../worker", default-features = false }
 
 [features]
 default = ["std"]
@@ -27,7 +27,7 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",
-    "substratee-storage/std",
-    "substratee-ocall-api/std",
-    "substratee-worker-primitives/std",
+    "itp-storage/std",
+    "itp-ocall-api/std",
+    "itp-core/std",
 ]

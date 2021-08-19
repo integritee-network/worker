@@ -7,8 +7,8 @@ use jsonrpsee::{
 };
 use parity_scale_codec::Decode;
 
+use itp_core::RpcResponse;
 use mock::{test_sidechain_block, TestEnclave};
-use substratee_worker_primitives::RpcResponse;
 
 fn init() {
 	let _ = env_logger::builder().is_test(true).try_init();

@@ -13,7 +13,7 @@ use codec::Decode;
 
 use ws::{connect, CloseCode, Handler, Handshake, Message, Result as ClientResult, Sender};
 
-use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
+use itp_core::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 

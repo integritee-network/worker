@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ use codec::{Decode, Encode};
 use core::iter::Iterator;
 use error::Error;
 use finality_grandpa::voter_set::VoterSet;
+use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use justification::GrandpaJustification;
 use log::*;
 use sp_finality_grandpa::{
@@ -44,7 +45,6 @@ use sp_runtime::{
 };
 use state::RelayState;
 use std::{collections::BTreeMap, fmt, vec::Vec};
-use substratee_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 
 pub mod error;
 pub mod justification;

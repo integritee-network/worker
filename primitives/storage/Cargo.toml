@@ -1,5 +1,5 @@
 [package]
-name = "substratee-storage"
+name = "itp-storage"
 version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"

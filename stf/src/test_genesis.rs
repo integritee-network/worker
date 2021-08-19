@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 */
 
 use crate::stf_sgx_primitives::{get_account_info, StfError};
+use itp_storage::storage_value_key;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::{Balance, Runtime};
@@ -24,7 +25,6 @@ use sp_core::{crypto::AccountId32, Pair};
 use sp_io::SgxExternalities;
 use sp_runtime::MultiAddress;
 use std::{string::ToString, vec, vec::Vec};
-use substratee_storage::storage_value_key;
 use support::traits::UnfilteredDispatchable;
 
 const ALICE_ENCODED: [u8; 32] = [

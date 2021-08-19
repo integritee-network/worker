@@ -9,8 +9,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  WORKER_BIN: substratee-worker
-  CLIENT_BIN: substratee-client
+  WORKER_BIN: integritee-service
+  CLIENT_BIN: integritee-cli
   ENCLAVE_BIN: enclave.signed.so
   LOG_DIR: log
 
@@ -30,7 +30,7 @@ jobs:
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: |
           cd bin
-          ./substratee-worker test -u -e
+          ./integritee-service test -u -e
 
       # Todo: #REBRAND path names
       - name: Upload worker
@@ -208,7 +208,7 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           cd client
-          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
+          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} integritee-cli
           cd ..
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 

@@ -6,6 +6,8 @@ use crate::{
 	TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
 };
 use codec::{Decode, Encode};
+use itp_core::BlockNumber;
+use itp_storage::storage_value_key;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
@@ -14,8 +16,6 @@ use sp_core::H256 as Hash;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
 use std::{collections::HashMap, prelude::v1::*};
-use substratee_storage::storage_value_key;
-use substratee_worker_primitives::BlockNumber;
 use support::{ensure, traits::UnfilteredDispatchable};
 
 #[cfg(feature = "test")]
@@ -414,7 +414,7 @@ impl Stf {
 }
 
 // this must be pub to be able to test it in the enclave. In the future this should be testable
-// with cargo test. See: https://github.com/scs/substraTEE-worker/issues/272.
+// with cargo test. See: https://github.com/integritee-network/worker/issues/272.
 #[cfg(feature = "test")]
 pub mod tests {
 	use super::*;

@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,15 @@
 */
 
 use crate::ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait};
+use itp_core::{WorkerRequest, WorkerResponse};
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use log::*;
 use std::vec::Vec;
 use substrate_api_client::utils::storage_key;
-use substratee_ocall_api::EnclaveOnChainOCallApi;
-use substratee_worker_primitives::{WorkerRequest, WorkerResponse};
 
 #[allow(unused)]
 fn test_ocall_worker_request() {
-	info!("testing ocall_worker_request. Hopefully substraTEE-node is running...");
+	info!("testing ocall_worker_request. Hopefully integritee-node is running...");
 	let requests =
 		vec![WorkerRequest::ChainStorage(storage_key("Balances", "TotalIssuance").0, None)];
 
