@@ -5297,6 +5297,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx_rand",
  "sgx_tstd",
+ "sp-core",
  "substratee-settings",
  "substratee-sgx-io",
 ]
