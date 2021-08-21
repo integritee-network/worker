@@ -12,13 +12,13 @@ extern crate sgx_tstd as std;
 #[cfg(feature = "sgx")]
 pub mod aes;
 #[cfg(feature = "sgx")]
-pub mod ed25591;
+pub mod ed25519;
 pub mod error;
 pub mod traits;
 
 #[cfg(feature = "sgx")]
 pub use self::aes::*;
 #[cfg(feature = "sgx")]
-pub use self::ed25591::*;
+pub use self::ed25519::*;
 pub use error::*;
 pub use traits::*;

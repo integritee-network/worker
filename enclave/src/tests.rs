@@ -15,7 +15,6 @@
 */
 
 use crate::{
-	ed25519::Ed25519,
 	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
 	rpc, rsa3072, state,
 	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
@@ -48,7 +47,7 @@ use substratee_settings::{
 	enclave::GETTER_TIMEOUT,
 	node::{BLOCK_CONFIRMED, SUBSTRATEE_REGISTRY_MODULE},
 };
-use substratee_sgx_crypto::{Aes, StateCrypto};
+use substratee_sgx_crypto::{Aes, Ed25519, StateCrypto};
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use substratee_stf::{

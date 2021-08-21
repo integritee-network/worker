@@ -75,7 +75,7 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
-use substratee_sgx_crypto::{aes, Aes, StateCrypto};
+use substratee_sgx_crypto::{aes, ed25519, Aes, Ed25519, StateCrypto};
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
@@ -94,7 +94,6 @@ use substratee_worker_primitives::{
 use utils::write_slice_and_whitespace_pad;
 
 mod attestation;
-mod ed25519;
 mod io;
 mod ipfs;
 mod ocall;
@@ -115,7 +114,6 @@ pub mod test;
 #[cfg(feature = "test")]
 pub mod tests;
 
-use crate::ed25519::Ed25519;
 #[cfg(not(feature = "test"))]
 use sgx_types::size_t;
 
@@ -142,11 +140,11 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	// initialize the logging environment in the enclave
 	env_logger::init();
 
-	if let Err(e) = ed25519::create_sealed_if_absent() {
+	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
 		return e.into()
 	}
 
-	let signer = match Ed25519::unseal() {
+	let signer = match Ed25519::unseal().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};
@@ -199,11 +197,11 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
-	if let Err(e) = ed25519::create_sealed_if_absent() {
+	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
 		return e.into()
 	}
 
-	let signer = match Ed25519::unseal() {
+	let signer = match Ed25519::unseal().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};
