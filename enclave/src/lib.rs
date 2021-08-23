@@ -75,7 +75,7 @@ use substratee_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
 	},
 };
-use substratee_sgx_crypto::{aes, ed25519, Aes, Ed25519, StateCrypto};
+use substratee_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
@@ -144,7 +144,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 		return e.into()
 	}
 
-	let signer = match Ed25519::unseal().map_err(Error::Crypto) {
+	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 		return e.into()
 	}
 
-	let signer = match Ed25519::unseal().map_err(Error::Crypto) {
+	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 
 	let ocall_api = OCallComponentFactory::attestation_api();
 
-	let signer = Ed25519::unseal().unwrap();
+	let signer = Ed25519Seal::unseal().unwrap();
 	let call = (
 		[SUBSTRATEE_REGISTRY_MODULE, REGISTER_ENCLAVE],
 		ocall_api
@@ -267,7 +267,7 @@ where
 	V: Validator,
 {
 	// get information for composing the extrinsic
-	let signer = Ed25519::unseal()?;
+	let signer = Ed25519Seal::unseal()?;
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
 	let extrinsics_buffer: Vec<Vec<u8>> = calls_buffer
@@ -762,7 +762,7 @@ pub fn compose_block_and_confirmation(
 	state_hash_apriori: H256,
 	state: &mut StfState,
 ) -> Result<(OpaqueCall, SignedSidechainBlock)> {
-	let signer_pair = Ed25519::unseal()?;
+	let signer_pair = Ed25519Seal::unseal()?;
 	let layer_one_head = latest_onchain_header.hash();
 
 	let block_number = Stf::get_sidechain_block_number(state)
@@ -796,7 +796,7 @@ pub fn compose_block_and_confirmation(
 	);
 
 	let block_hash = blake2_256(&block.encode());
-	let signed_block = block.sign_block(&*signer_pair);
+	let signed_block = block.sign_block(&signer_pair);
 
 	debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
 	Stf::update_last_block_hash(state, block_hash.into());

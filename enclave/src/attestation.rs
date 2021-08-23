@@ -61,7 +61,7 @@ use crate::{
 	Result as EnclaveResult,
 };
 use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_sgx_crypto::Ed25519;
+use substratee_sgx_crypto::Ed25519Seal;
 use substratee_sgx_io::SealedIO;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
@@ -428,7 +428,7 @@ pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
 	ocall_api: Arc<A>,
 	skip_ra: bool,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-	let chain_signer = Ed25519::unseal()?;
+	let chain_signer = Ed25519Seal::unseal()?;
 	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
 
 	info!("    [Enclave] Generate keypair");
@@ -501,7 +501,7 @@ pub unsafe extern "C" fn perform_ra(
 	let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let signer = match Ed25519::unseal() {
+	let signer = match Ed25519Seal::unseal() {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};

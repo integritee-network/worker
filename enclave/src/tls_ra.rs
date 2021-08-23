@@ -18,6 +18,7 @@ use std::{
 	vec::Vec,
 };
 use substratee_ocall_api::EnclaveAttestationOCallApi;
+use substratee_sgx_crypto::AesSeal;
 use substratee_sgx_io::SealedIO;
 use webpki::DNSName;
 
@@ -178,7 +179,7 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 
 fn read_files_to_send() -> SgxResult<(Vec<u8>, Aes)> {
 	let shielding_key = rsa3072::unseal_pair().sgx_error()?;
-	let aes = Aes::unseal().sgx_error()?;
+	let aes = AesSeal::unseal().sgx_error()?;
 	let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
 
 	let rsa_len = rsa_pair.as_bytes().len();
@@ -258,7 +259,7 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> EnclaveResult<()
 		.map(|_| info!("    [Enclave] (MU-RA-Client) Received AES IV: {:?}", &aes_iv[..]))
 		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes iv")?;
 
-	Aes::new(aes_key, aes_iv).seal()?;
+	AesSeal::seal(Aes::new(aes_key, aes_iv))?;
 
 	println!("    [Enclave] (MU-RA-Client) Successfully received keys.");
 
