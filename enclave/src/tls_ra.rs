@@ -1,5 +1,4 @@
 use crate::{
-	aes::Aes,
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
 	error::Result as EnclaveResult,
@@ -18,7 +17,7 @@ use std::{
 	vec::Vec,
 };
 use substratee_ocall_api::EnclaveAttestationOCallApi;
-use substratee_sgx_crypto::AesSeal;
+use substratee_sgx_crypto::{Aes, AesSeal};
 use substratee_sgx_io::SealedIO;
 use webpki::DNSName;
 
