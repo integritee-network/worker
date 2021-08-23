@@ -21,6 +21,7 @@ use crate::{
 };
 use aes::Aes128;
 use codec::{Decode, Encode};
+use derive_more::Display;
 use log::info;
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},
@@ -48,14 +49,19 @@ impl Aes {
 	}
 }
 
-impl SealedIO for Aes {
+#[derive(Copy, Clone, Debug, Display)]
+pub struct AesSeal;
+
+impl SealedIO for AesSeal {
 	type Error = Error;
-	fn unseal() -> Result<Self> {
+	type Unsealed = Aes;
+
+	fn unseal() -> Result<Self::Unsealed> {
 		Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
-	fn seal(&self) -> Result<()> {
-		Ok(self.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
+	fn seal(unsealed: Self::Unsealed) -> Result<()> {
+		Ok(unsealed.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
 	}
 }
 
@@ -63,11 +69,11 @@ impl StateCrypto for Aes {
 	type Error = Error;
 
 	fn encrypt(data: &mut [u8]) -> Result<()> {
-		Aes::unseal().map(|aes| de_or_encrypt(&aes, data))?
+		AesSeal::unseal().map(|aes| de_or_encrypt(&aes, data))?
 	}
 
 	fn decrypt(data: &mut [u8]) -> Result<()> {
-		Aes::unseal().map(|aes| de_or_encrypt(&aes, data))?
+		AesSeal::unseal().map(|aes| de_or_encrypt(&aes, data))?
 	}
 }
 
@@ -95,7 +101,7 @@ pub fn create_sealed() -> Result<()> {
 
 	rand.fill_bytes(&mut key);
 	rand.fill_bytes(&mut iv);
-	Aes::new(key, iv).seal()
+	AesSeal::seal(Aes::new(key, iv))
 }
 
 /// If AES acts on the encrypted data it decrypts and vice versa
