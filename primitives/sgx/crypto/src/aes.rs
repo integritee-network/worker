@@ -21,6 +21,7 @@ use crate::{
 };
 use aes::Aes128;
 use codec::{Decode, Encode};
+use derive_more::Display;
 use log::info;
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},
@@ -48,6 +49,7 @@ impl Aes {
 	}
 }
 
+#[derive(Copy, Clone, Debug, Display)]
 pub struct AesSeal;
 
 impl SealedIO for AesSeal {
