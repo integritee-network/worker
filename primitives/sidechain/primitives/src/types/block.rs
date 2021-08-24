@@ -33,7 +33,7 @@ pub struct SignedBlock {
 pub struct Block {
 	block_number: BlockNumber,
 	parent_hash: H256,
-	timestamp: i64,
+	timestamp: u64,
 	/// hash of the last header of block in layer one
 	/// needed in case extrinsics depend on layer one state
 	layer_one_head: H256,
@@ -57,7 +57,7 @@ impl BlockT for Block {
 		self.parent_hash
 	}
 	/// get timestamp of block
-	fn timestamp(&self) -> i64 {
+	fn timestamp(&self) -> u64 {
 		self.timestamp
 	}
 	/// get layer one head of block
@@ -91,7 +91,7 @@ impl BlockT for Block {
 		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
-		timestamp: i64,
+		timestamp: u64,
 	) -> Block {
 		// create block
 		Block {
@@ -145,7 +145,7 @@ mod tests {
 	};
 
 	/// sets the timestamp of the block as seconds since unix epoch
-	fn get_time() -> i64 {
+	fn get_time() -> u64 {
 		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
 	}
 

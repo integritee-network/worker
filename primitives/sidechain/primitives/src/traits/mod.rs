@@ -17,7 +17,7 @@ pub trait Block: Encode + Decode {
 	/// get parent hash of block
 	fn parent_hash(&self) -> H256;
 	/// get timestamp of block
-	fn timestamp(&self) -> i64;
+	fn timestamp(&self) -> u64;
 	/// get layer one head of block
 	fn layer_one_head(&self) -> H256;
 	/// get shard id of block
@@ -39,7 +39,7 @@ pub trait Block: Encode + Decode {
 		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
-		timestamp: i64,
+		timestamp: u64,
 	) -> Self;
 }
 
