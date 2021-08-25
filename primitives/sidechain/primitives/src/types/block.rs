@@ -33,7 +33,7 @@ pub struct SignedBlock {
 pub struct Block {
 	block_number: BlockNumber,
 	parent_hash: H256,
-	timestamp: i64,
+	timestamp: u64,
 	/// hash of the last header of block in layer one
 	/// needed in case extrinsics depend on layer one state
 	layer_one_head: H256,
@@ -57,7 +57,7 @@ impl BlockT for Block {
 		self.parent_hash
 	}
 	/// get timestamp of block
-	fn timestamp(&self) -> i64 {
+	fn timestamp(&self) -> u64 {
 		self.timestamp
 	}
 	/// get layer one head of block
@@ -91,7 +91,7 @@ impl BlockT for Block {
 		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
-		timestamp: i64,
+		timestamp: u64,
 	) -> Block {
 		// create block
 		Block {
@@ -139,181 +139,47 @@ mod tests {
 	use super::*;
 	use crate::traits::{Block as BlockT, SignBlock};
 	use sp_core::{ed25519, Pair};
-	use std::{
-		thread,
-		time::{Duration, SystemTime, UNIX_EPOCH},
-	};
+	use std::time::{SystemTime, UNIX_EPOCH};
 
-	/// sets the timestamp of the block as seconds since unix epoch
-	fn get_time() -> i64 {
-		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
+	/// gets the timestamp of the block as seconds since unix epoch
+	fn timestamp_now() -> u64 {
+		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
 	}
 
-	#[test]
-	fn block_new_works() {
-		// given
-		let author: AccountId32 =
-			ed25519::Pair::from_string("//Alice", None).unwrap().public().into();
-		let block_number: u64 = 0;
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-		let shard = ShardIdentifier::default();
-
-		// when
-		let block = Block::new(
-			author.clone(),
-			block_number,
-			parent_hash.clone(),
-			layer_one_head.clone(),
-			shard.clone(),
-			signed_top_hashes.clone(),
-			encrypted_payload.clone(),
-			get_time(),
-		);
-
-		// then
-		assert_eq!(block_number, block.block_number());
-		assert_eq!(parent_hash, block.parent_hash());
-		assert_eq!(layer_one_head, block.layer_one_head());
-		assert_eq!(shard, block.shard_id());
-		assert_eq!(&author, block.block_author());
-		assert_eq!(signed_top_hashes, *block.signed_top_hashes());
-		assert_eq!(encrypted_payload, *block.state_payload());
+	fn test_block() -> Block {
+		Block::new(
+			ed25519::Pair::from_string("//Alice", None).unwrap().public().into(),
+			0,
+			H256::random(),
+			H256::random(),
+			H256::random(),
+			Default::default(),
+			Default::default(),
+			timestamp_now(),
+		)
 	}
 
 	#[test]
 	fn signing_works() {
-		// given
-		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author: AccountId32 = signer_pair.public().into();
-		let block_number: u64 = 0;
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-		let shard = ShardIdentifier::default();
-
-		// when
-		let block = Block::new(
-			author,
-			block_number,
-			parent_hash.clone(),
-			layer_one_head.clone(),
-			shard.clone(),
-			signed_top_hashes.clone(),
-			encrypted_payload.clone(),
-			get_time(),
-		);
+		let block = test_block();
+		let signer = ed25519::Pair::from_string("//Alice", None).unwrap();
 
 		let signature: Signature =
-			Signature::Ed25519(signer_pair.sign(block.encode().as_slice().into()));
-		let signed_block: SignedBlock = block.clone().sign_block(&signer_pair);
+			Signature::Ed25519(signer.sign(block.encode().as_slice().into()));
+		let signed_block: SignedBlock = block.clone().sign_block(&signer);
 
-		// then
 		assert_eq!(signed_block.block(), &block);
 		assert_eq!(signed_block.signature(), &signature);
-	}
-
-	#[test]
-	fn verify_signature_works() {
-		// given
-		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author: AccountId32 = signer_pair.public().into();
-		let block_number: u64 = 0;
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-		let shard = ShardIdentifier::default();
-
-		// when
-		let signed_block: SignedBlock = Block::new(
-			author,
-			block_number,
-			parent_hash.clone(),
-			layer_one_head.clone(),
-			shard.clone(),
-			signed_top_hashes.clone(),
-			encrypted_payload.clone(),
-			get_time(),
-		)
-		.sign_block(&signer_pair);
-
-		// then
 		assert!(signed_block.verify_signature());
 	}
 
 	#[test]
 	fn tampered_block_verify_signature_fails() {
-		// given
-		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author: AccountId32 = signer_pair.public().into();
-		let block_number: u64 = 0;
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-		let shard = ShardIdentifier::default();
+		let signer = ed25519::Pair::from_string("//Alice", None).unwrap();
 
-		// when
-		let mut signed_block: SignedBlock = Block::new(
-			author,
-			block_number,
-			parent_hash.clone(),
-			layer_one_head.clone(),
-			shard.clone(),
-			signed_top_hashes.clone(),
-			encrypted_payload.clone(),
-			get_time(),
-		)
-		.sign_block(&signer_pair);
+		let mut signed_block: SignedBlock = test_block().sign_block(&signer);
 		signed_block.block.block_number = 1;
 
-		// then
-		assert_eq!(signed_block.verify_signature(), false);
-	}
-
-	#[test]
-	fn get_time_works() {
-		// given
-		let two_seconds = Duration::new(2, 0);
-		let now = get_time();
-		// when
-		thread::sleep(two_seconds);
-		// then
-		assert_eq!(now + two_seconds.as_secs() as i64, get_time());
-	}
-
-	#[test]
-	fn setting_timestamp_works() {
-		// given
-		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author: AccountId32 = signer_pair.public().into();
-		let block_number: u64 = 0;
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-		let shard = ShardIdentifier::default();
-
-		// when
-		let block = Block::new(
-			author,
-			block_number,
-			parent_hash.clone(),
-			layer_one_head.clone(),
-			shard.clone(),
-			signed_top_hashes.clone(),
-			encrypted_payload.clone(),
-			get_time(),
-		);
-		let one_second = Duration::new(1, 0);
-		let now = block.timestamp();
-		thread::sleep(one_second);
-
-		// then
-		assert_eq!(now + one_second.as_secs() as i64, get_time());
+		assert!(!signed_block.verify_signature());
 	}
 }

@@ -792,7 +792,7 @@ pub fn compose_block_and_confirmation(
 		shard,
 		top_call_hashes,
 		payload,
-		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64,
+		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
 	);
 
 	let block_hash = blake2_256(&block.encode());
