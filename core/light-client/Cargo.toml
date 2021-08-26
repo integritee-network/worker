@@ -1,5 +1,5 @@
 [package]
-name = "chain-relay"
+name = "itc-light-client"
 version = "0.8.0"
 authors = ["Supercomputing Systems AG <info@scs.ch>"]
 edition = "2018"
