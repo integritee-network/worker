@@ -83,7 +83,7 @@ substratee-sgx-io = { path = "../primitives/sgx/io", default-features = false, f
 substratee-sidechain = { path = "../primitives/sidechain", default-features = false }
 substratee-sidechain-primitives = { path = "../primitives/sidechain/primitives", default-features = false }
 substratee-stf = { path = "../stf", default-features = false, features = ["sgx"] }
-substratee-storage = { path = "../primitives/storage", default-features = false }
+substratee-storage = { path = "../primitives/storage", default-features = false, features = ["sgx"] }
 substratee-worker-primitives= {path = "../primitives/worker", default-features = false }
 test-utils = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }
 

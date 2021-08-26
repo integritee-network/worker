@@ -1,29 +1,49 @@
 use derive_more::{Display, From};
-use std::string::String;
+use std::{boxed::Box, string::String};
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use thiserror_sgx as thiserror;
+
+pub type Result<T> = core::result::Result<T, Error>;
 
 /// Substrate Client error
-#[derive(Debug, Display, From)]
+#[derive(Debug, thiserror::Error)]
 pub enum JustificationError {
-	/// Error decoding header justification.
-	#[display(fmt = "error decoding justification for header")]
+	#[error("Error decoding justification")]
 	JustificationDecode,
 	/// Justification for header is correctly encoded, but invalid.
-	#[display(fmt = "bad justification for header: {}", _0)]
-	#[from(ignore)]
+	#[error("bad justification for header: {0}")]
 	BadJustification(String),
-	/// Invalid authorities set received from the runtime.
+	#[error("Invalid authorities set")]
 	InvalidAuthoritiesSet,
 }
 
-#[derive(Debug, From)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-	// InvalidStorageProof,
-	Storage(substratee_storage::Error),
-	// InvalidValidatorSetProof,
+	#[error(transparent)]
+	Storage(#[from] substratee_storage::Error),
+	#[error("Validator set mismatch")]
 	ValidatorSetMismatch,
+	#[error("Invalid ancestry proof")]
 	InvalidAncestryProof,
+	#[error("No such relay exists")]
 	NoSuchRelayExists,
-	InvalidFinalityProof(JustificationError),
-	// UnknownClientError,
+	#[error("Invalid Finality Proof: {0}")]
+	InvalidFinalityProof(#[from] JustificationError),
+	#[error("Header ancestry mismatch")]
 	HeaderAncestryMismatch,
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<std::io::Error> for Error {
+	fn from(e: std::io::Error) -> Self {
+		Self::Other(e.into())
+	}
+}
+
+impl From<codec::Error> for Error {
+	fn from(e: codec::Error) -> Self {
+		Self::Other(format!("{:?}", e).into())
+	}
 }

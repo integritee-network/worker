@@ -47,6 +47,9 @@ pub mod error;
 pub mod justification;
 pub mod state;
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod io;
+
 type RelayId = u64;
 pub type Blocknumber = u32;
 pub type Header = HeaderG<Blocknumber, BlakeTwo256>;
