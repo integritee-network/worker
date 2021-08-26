@@ -14,20 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(target_env = "sgx"), no_std)]
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(not(target_env = "sgx"))]
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
 
-pub mod error;
-pub mod justification;
-pub mod state;
-use crate::{
-	state::ScheduledChangeAtBlock,
-	std::{collections::BTreeMap, fmt, vec::Vec},
-};
+use crate::state::ScheduledChangeAtBlock;
 use codec::{Decode, Encode};
 use core::iter::Iterator;
 use error::Error;
@@ -44,7 +40,12 @@ use sp_runtime::{
 	Justification, Justifications, OpaqueExtrinsic,
 };
 use state::RelayState;
+use std::{collections::BTreeMap, fmt, vec::Vec};
 use substratee_storage::{Error as StorageError, StorageProof, StorageProofChecker};
+
+pub mod error;
+pub mod justification;
+pub mod state;
 
 type RelayId = u64;
 pub type Blocknumber = u32;
