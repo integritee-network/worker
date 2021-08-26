@@ -50,7 +50,7 @@ use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_types::{sgx_status_t, SgxResult};
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
-use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT, OpaqueExtrinsic};
+use sp_runtime::{traits::Header as HeaderT, OpaqueExtrinsic};
 use std::{
 	borrow::ToOwned,
 	collections::HashMap,
@@ -64,7 +64,7 @@ use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
 use substratee_get_storage_verified::GetStorageVerified;
-use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
+use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn, SignedBlock};
 use substratee_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
@@ -392,7 +392,7 @@ pub unsafe extern "C" fn produce_blocks(
 ) -> sgx_status_t {
 	let mut blocks_to_sync_slice = slice::from_raw_parts(blocks_to_sync, blocks_to_sync_size);
 
-	let blocks_to_sync: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_to_sync_slice) {
+	let blocks_to_sync: Vec<SignedBlock> = match Decode::decode(&mut blocks_to_sync_slice) {
 		Ok(b) => b,
 		Err(e) => {
 			error!("Decoding signed blocks failed. Error: {:?}", e);

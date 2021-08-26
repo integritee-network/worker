@@ -51,20 +51,18 @@ pub mod state;
 pub mod io;
 
 type RelayId = u64;
-pub type Blocknumber = u32;
-pub type Header = HeaderG<Blocknumber, BlakeTwo256>;
-pub type Block = BlockG<Header, OpaqueExtrinsic>;
-pub type Digest = DigestG<<BlakeTwo256 as HashT>::Output>;
 
 pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
 // disambiguate associated types
-// pub type HashOf<Block> = <Block as BlockT>::Hash;
 pub type NumberOf<Block> = <<Block as BlockT>::Header as HeaderT>::Number;
 pub type HashOf<Block> = <<Block as BlockT>::Header as HeaderT>::Hash;
 pub type HashingOf<Block> = <<Block as BlockT>::Header as HeaderT>::Hashing;
 
-pub trait Validator<Block: BlockT> {
+pub trait Validator<Block: BlockT>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+{
 	fn initialize_relay(
 		&mut self,
 		block_header: Block::Header,
@@ -276,7 +274,7 @@ where
 				) {
 					// FIXME: Printing error upon invalid justfication, but this will need a better fix
 					// see issue #353
-					error!("Block {} contained invalid justification: {:?}", block_num, err);
+					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
 					relay.unjustified_headers.push(header.hash());
 					relay.last_finalized_block_header = header;
 					return Ok(())
@@ -356,8 +354,7 @@ where
 		let mut found_xts = vec![];
 		block.extrinsics().iter().for_each(|xt| {
 			if let Some(index) = relay.verify_tx_inclusion.iter().position(|xt_opaque| {
-				<<Header as HeaderT>::Hashing>::hash_of(xt)
-					== <<Header as HeaderT>::Hashing>::hash_of(xt_opaque)
+				<HashingOf<Block>>::hash_of(xt) == <HashingOf<Block>>::hash_of(xt_opaque)
 			}) {
 				found_xts.push(index);
 			}
