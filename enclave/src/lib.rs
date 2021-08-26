@@ -39,7 +39,7 @@ use crate::{
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
-use itc_light_client::{Block, Header, Validator};
+use itc_light_client::{io::LightClientSeal, Block, Header, Validator};
 use log::*;
 use rpc::{
 	api::SideChainApi,
@@ -76,6 +76,7 @@ use substratee_settings::{
 	},
 };
 use substratee_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
+use substratee_sgx_io as io;
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
@@ -94,7 +95,6 @@ use substratee_worker_primitives::{
 use utils::write_slice_and_whitespace_pad;
 
 mod attestation;
-mod io;
 mod ipfs;
 mod ocall;
 mod rsa3072;
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn init_chain_relay(
 		},
 	};
 
-	match io::light_validation::read_or_init_validator(header, auth, proof) {
+	match itc_light_client::io::read_or_init_validator(header, auth, proof) {
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
 		Err(e) => return e.into(),
 	}
@@ -400,7 +400,7 @@ pub unsafe extern "C" fn produce_blocks(
 		},
 	};
 
-	let mut validator = match io::light_validation::unseal() {
+	let mut validator = match LightClientSeal::unseal() {
 		Ok(v) => v,
 		Err(e) => return e.into(),
 	};
@@ -450,7 +450,7 @@ pub unsafe extern "C" fn produce_blocks(
 			.unwrap();
 	}
 
-	if io::light_validation::seal(validator).is_err() {
+	if LightClientSeal::seal(validator).is_err() {
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	};
 

@@ -1,6 +1,6 @@
-use derive_more::{Display, From};
 use std::{boxed::Box, string::String};
 
+use sgx_types::sgx_status_t;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use thiserror_sgx as thiserror;
 
@@ -45,5 +45,13 @@ impl From<std::io::Error> for Error {
 impl From<codec::Error> for Error {
 	fn from(e: codec::Error) -> Self {
 		Self::Other(format!("{:?}", e).into())
+	}
+}
+
+impl From<Error> for sgx_status_t {
+	/// return sgx_status for top level enclave functions
+	fn from(error: Error) -> sgx_status_t {
+		log::warn!("Tried extracting sgx_status from non-sgx error: {:?}", error);
+		sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 }
