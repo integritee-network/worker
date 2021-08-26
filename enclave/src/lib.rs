@@ -37,9 +37,9 @@ use crate::{
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
-use chain_relay::{Block, Header, Validator};
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
+use itc_light_client::{Block, Header, Validator};
 use log::*;
 use rpc::{
 	api::SideChainApi,

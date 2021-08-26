@@ -19,8 +19,8 @@ pub use substratee_sgx_io::{read, read_to_string, seal, unseal, write};
 
 pub mod light_validation {
 	use crate::{error::Result, utils::UnwrapOrSgxErrorUnexpected};
-	use chain_relay::{Header, LightValidation, Validator};
 	use codec::{Decode, Encode};
+	use itc_light_client::{Header, LightValidation, Validator};
 	use log::*;
 	use sp_finality_grandpa::VersionedAuthorityList;
 	use std::{fs, sgxfs::SgxFile};

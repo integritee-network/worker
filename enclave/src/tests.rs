@@ -20,9 +20,9 @@ use crate::{
 	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
 	top_pool, Timeout,
 };
-use chain_relay::{Block, Header};
 use codec::{Decode, Encode};
 use core::ops::Deref;
+use itc_light_client::{Block, Header};
 use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{

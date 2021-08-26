@@ -6,9 +6,7 @@ edition = "2018"
 resolver = "2"
 
 [workspace]
-members = [
-    "chain_relay"
-]
+members = []
 
 [lib]
 name = "substratee_worker_enclave"
@@ -74,7 +72,7 @@ cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", defau
 multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
 
 # local deps
-chain-relay = { path = "chain_relay" }
+itc-light-client = { path = "../core/light-client", default-features = false, features = ["sgx"] }
 pallet-teerex-storage = { path = "../primitives/pallet-teerex-storage", default-features = false }
 substratee-get-storage-verified = { path = "../primitives/get-storage-verified", default-features = false }
 substratee-sgx-crypto = { path = "../primitives/sgx/crypto", default-features = false,  features = ["sgx"] }
