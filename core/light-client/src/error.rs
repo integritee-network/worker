@@ -7,7 +7,7 @@ use thiserror_sgx as thiserror;
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Substrate Client error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum JustificationError {
 	#[error("Error decoding justification")]
 	JustificationDecode,

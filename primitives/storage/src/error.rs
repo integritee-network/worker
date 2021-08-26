@@ -2,7 +2,7 @@
 use thiserror_sgx as thiserror;
 
 // error with std::error::Error implemented for std and sgx
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 #[cfg(any(feature = "std", feature = "sgx"))]
 pub enum Error {
 	#[error("No storage proof supplied")]
@@ -30,7 +30,7 @@ pub enum Error {
 use derive_more::From;
 
 // Simple error enum for no_std without std::error::Error implemented
-#[derive(Debug, From)]
+#[derive(Debug, Debug, PartialEq, Eq From)]
 #[cfg(all(not(feature = "std"), not(feature = "sgx")))]
 pub enum Error {
 	NoProofSupplied,
