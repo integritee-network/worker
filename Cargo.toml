@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "client",
-    "core/chain_relay",
+    "core/light-client",
     "primitives/api-client-extensions",
     "primitives/enclave-api",
     "primitives/enclave-api/ffi",
