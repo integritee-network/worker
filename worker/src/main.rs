@@ -72,8 +72,9 @@ use substratee_enclave_api::{
 	teerex_api::TeerexApi,
 };
 use substratee_node_primitives::SignedBlock;
-use substratee_settings::files::{
-	ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
+use substratee_settings::{
+	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE},
+	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use substratee_worker_api::direct_client::DirectClient;
 
@@ -618,8 +619,8 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair, WsRpcClient>, accountid
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-	let free = api.get_free_balance(&alice_acc);
-	info!("    Alice's free balance = {:?}", free);
+	let alice_free = api.get_free_balance(&alice_acc);
+	info!("    Alice's free balance = {:?}", alice_free);
 	let nonce = api.get_nonce_of(&alice_acc).unwrap();
 	info!("    Alice's Account Nonce is {}", nonce);
 
@@ -627,12 +628,23 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair, WsRpcClient>, accountid
 	let free = api.get_free_balance(&accountid).unwrap();
 	info!("TEE's free balance = {:?}", free);
 
-	if free < 1_000_000_000_000 {
+	let existential_deposit = api.get_existential_deposit().unwrap();
+	info!("Existential deposit is = {:?}", existential_deposit);
+	let funding_amount = existential_deposit * MIN_FUND_INCREASE_FACTOR - free;
+	info!("Funding amount is = {:?}", funding_amount);
+	if funding_amount > alice_free.unwrap() {
+		error!(
+			"funding amount is to high: please change MIN_FUND_INCREASE_FACTOR ({:?})",
+			funding_amount
+		);
+	}
+
+	if free < funding_amount {
 		let signer_orig = api.signer.clone();
 		api.signer = Some(alice);
 
 		println!("[+] bootstrap funding Enclave form Alice's funds");
-		let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), 1_000_000_000_000);
+		let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
 		let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
 		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
