@@ -16,12 +16,15 @@ pub enum Error {
 	#[error(transparent)]
 	#[cfg(feature = "std")]
 	Codec(#[from] codec::Error),
+
+	// as `codec::Error` does not implement `std::error::Error` in `no-std`,
+	// we can't use the `#[from]` attribute.
 	#[error("Codec: {0}")]
 	#[cfg(not(feature = "std"))]
 	Codec(codec::Error),
 }
 
-// error for bare `no_std` below.
+// error for bare `no_std`, which does not implement `std::error::Error`
 
 #[cfg(all(not(feature = "std"), not(feature = "sgx")))]
 use derive_more::From;

@@ -25,7 +25,6 @@ std = [
     # local deps
     "substratee-storage/std",
     "substratee-sgx-io/std",
-
 ]
 sgx = [
     "sgx_tstd",
@@ -35,7 +34,7 @@ sgx = [
 ]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "chain-error"] }
 derive_more = { version = "0.99.5" }
 finality-grandpa = { version = "0.14.3", default-features = false, features = ["derive-codec"] }
 hash-db = { version = "0.15.2", default-features = false }

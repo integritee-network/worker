@@ -43,6 +43,12 @@ impl From<std::io::Error> for Error {
 }
 
 impl From<codec::Error> for Error {
+	#[cfg(feature = "std")]
+	fn from(e: codec::Error) -> Self {
+		Self::Other(e.into())
+	}
+
+	#[cfg(not(feature = "std"))]
 	fn from(e: codec::Error) -> Self {
 		Self::Other(format!("{:?}", e).into())
 	}
@@ -51,7 +57,7 @@ impl From<codec::Error> for Error {
 impl From<Error> for sgx_status_t {
 	/// return sgx_status for top level enclave functions
 	fn from(error: Error) -> sgx_status_t {
-		log::warn!("Tried extracting sgx_status from non-sgx error: {:?}", error);
+		log::warn!("LightClientError into sgx_status_t: {:?}", error);
 		sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 }
