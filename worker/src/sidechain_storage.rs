@@ -258,9 +258,41 @@ mod tests {
 	use substratee_worker_primitives::{block::Block, traits::SignBlock};
 
 	#[test]
-	fn sidechain_db_struct_works() {
+	fn store_block_works() {
 		// given
-		let path = PathBuf::from("../bin/_sidechain_db_struct_works");
+		let path = PathBuf::from("store_block_works");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block = create_signed_block(20, shard);
+		let signed_block_vector: Vec<SignedSidechainBlock> = vec![signed_block.clone()];
+
+		// when
+		{
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// db needs to start empty
+			assert_eq!(sidechain_db.shards, vec![]);
+			sidechain_db.store_blocks(signed_block_vector).unwrap();
+		}
+
+		// then
+		{
+			// open new DB of same path:
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// ensure DB contains previously stored data:
+			assert_eq!(updated_sidechain_db.shards[0], shard);
+			let last_block: &LastSidechainBlock =
+				updated_sidechain_db.last_blocks.get(&shard).unwrap();
+			assert_eq!(last_block.number, 20);
+			assert_eq!(last_block.hash, signed_block.hash().into());
+		}
+
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn store_blocks_on_multi_sharding_works() {
+		// given
+		let path = PathBuf::from("store_blocks_on_multi_sharding_works");
 		let shard_one = H256::from_low_u64_be(1);
 		let shard_two = H256::from_low_u64_be(2);
 		let signed_block_one = create_signed_block(20, shard_one);
@@ -289,8 +321,8 @@ mod tests {
 				updated_sidechain_db.last_blocks.get(&shard_two).unwrap();
 			assert_eq!(last_block_one.number, 20);
 			assert_eq!(last_block_two.number, 1);
-			assert_eq!(last_block_one.hash, signed_block_one.hash().into());
-			assert_eq!(last_block_two.hash, signed_block_two.hash().into());
+			assert_eq!(last_block_one.hash, signed_block_one.hash());
+			assert_eq!(last_block_two.hash, signed_block_two.hash());
 		}
 
 		// clean up
@@ -298,123 +330,133 @@ mod tests {
 	}
 
 	#[test]
-	fn block_succession_check_works() {
+	fn store_mulitple_block_on_one_shard_works() {
 		// given
-		let path = PathBuf::from("../bin/_block_succession_check_works");
-		let shard_one = H256::from_low_u64_be(1);
-		let shard_two = H256::from_low_u64_be(2);
-		let signed_block_one_one = create_signed_block(20, shard_one);
-		let signed_block_one_two = create_signed_block(21, shard_one);
-		let signed_block_two_one = create_signed_block(1, shard_two);
-		let signed_block_two_two = create_signed_block(3, shard_two);
-
-		let mut signed_block_vector: Vec<SignedSidechainBlock> = vec![];
-		signed_block_vector.push(signed_block_one_one.clone());
-		signed_block_vector.push(signed_block_two_one.clone());
-
-		let mut signed_block_vector_second: Vec<SignedSidechainBlock> = vec![];
-		signed_block_vector_second.push(signed_block_one_two.clone());
-		signed_block_vector_second.push(signed_block_two_two.clone());
+		let path = PathBuf::from("store_mulitple_block_on_one_shard_works");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block_one = create_signed_block(20, shard);
+		let signed_block_two = create_signed_block(21, shard);
+		let signed_block_vector_one = vec![signed_block_one.clone()];
+		let signed_block_vector_two = vec![signed_block_two.clone()];
 
 		// when
 		{
 			// first iteration
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-			sidechain_db.store_blocks(signed_block_vector).unwrap();
+			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
 		}
 		{
 			// second iteration
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-			sidechain_db.store_blocks(signed_block_vector_second).unwrap();
+			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
 		}
 
 		// then
 		{
 			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-			// shards
-			assert_eq!(updated_sidechain_db.shards[0], shard_one);
-			assert_eq!(updated_sidechain_db.shards[1], shard_two);
-			// last blocks
-			let last_block_one: &LastSidechainBlock =
-				updated_sidechain_db.last_blocks.get(&shard_one).unwrap();
-			let last_block_two: &LastSidechainBlock =
-				updated_sidechain_db.last_blocks.get(&shard_two).unwrap();
-			assert_eq!(last_block_one.number, 21);
-			assert_eq!(last_block_two.number, 1);
-			assert_eq!(last_block_one.hash, signed_block_one_two.hash().into());
-			assert_eq!(last_block_two.hash, signed_block_two_one.hash().into());
+			// last block is really equal to second block:
+			let last_block: &LastSidechainBlock =
+				updated_sidechain_db.last_blocks.get(&shard).unwrap();
+			assert_eq!(last_block.number, 21);
+			// storage contains both blocks:
 			// (shard,blocknumber) -> blockhash
-			let db_block_hash_one_one = H256::decode(
+			let db_block_hash_one = H256::decode(
 				&mut updated_sidechain_db
 					.db
-					.get((shard_one, 20 as SidechainBlockNumber).encode())
+					.get((shard, 20 as SidechainBlockNumber).encode())
 					.unwrap()
 					.unwrap()
 					.as_slice(),
 			)
 			.unwrap();
-			let db_block_hash_one_two = H256::decode(
+			let db_block_hash_two = H256::decode(
 				&mut updated_sidechain_db
 					.db
-					.get((shard_one, 21 as SidechainBlockNumber).encode())
+					.get((shard, 21 as SidechainBlockNumber).encode())
 					.unwrap()
 					.unwrap()
 					.as_slice(),
 			)
 			.unwrap();
-			let db_block_hash_two_one = H256::decode(
+			assert_eq!(db_block_hash_one, signed_block_one.hash());
+			assert_eq!(db_block_hash_two, signed_block_two.hash());
+
+			// block hash -> signed block
+			let db_block_one = SignedSidechainBlock::decode(
 				&mut updated_sidechain_db
 					.db
-					.get((shard_two, 1 as SidechainBlockNumber).encode())
+					.get(&signed_block_one.hash().encode())
 					.unwrap()
 					.unwrap()
 					.as_slice(),
 			)
 			.unwrap();
-			assert_eq!(db_block_hash_one_one, signed_block_one_one.hash().into());
-			assert_eq!(db_block_hash_two_one, signed_block_two_one.hash().into());
-			assert_eq!(db_block_hash_one_two, signed_block_one_two.hash().into());
+			let db_block_two = SignedSidechainBlock::decode(
+				&mut updated_sidechain_db
+					.db
+					.get(&signed_block_two.hash().encode())
+					.unwrap()
+					.unwrap()
+					.as_slice(),
+			)
+			.unwrap();
+			assert_eq!(db_block_one, signed_block_one);
+			assert_eq!(db_block_two, signed_block_two);
+		}
+
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn wrong_succession_order_does_not_get_through() {
+		// given
+		let path = PathBuf::from("wrong_succession_order_does_not_get_through");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block_one = create_signed_block(7, shard);
+		let signed_block_two = create_signed_block(21, shard);
+		let signed_block_vector_one = vec![signed_block_one.clone()];
+		let signed_block_vector_two = vec![signed_block_two.clone()];
+
+		// when
+		{
+			// first iteration
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
+		}
+		{
+			// second iteration
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
+		}
+
+		// then
+		{
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// last block is equal to first block:
+			let last_block: &LastSidechainBlock =
+				updated_sidechain_db.last_blocks.get(&shard).unwrap();
+			assert_eq!(last_block.number, 7);
+
+			// storage contains only one blocks:
+			// (shard,blocknumber) -> blockhash
+			let db_block_hash_one = H256::decode(
+				&mut updated_sidechain_db
+					.db
+					.get((shard, 7 as SidechainBlockNumber).encode())
+					.unwrap()
+					.unwrap()
+					.as_slice(),
+			)
+			.unwrap();
 			// ensure block number 3 is empty
 			let db_block_hash_empty = updated_sidechain_db
 				.db
-				.get((shard_two, 3 as SidechainBlockNumber).encode())
+				.get((shard, 21 as SidechainBlockNumber).encode())
 				.unwrap();
+
 			assert_eq!(db_block_hash_empty, None);
-			// block hash -> signed block
-			let db_block_one_one = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&signed_block_one_one.hash().encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			let db_block_one_two = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&signed_block_one_two.hash().encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			let db_block_two_one = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&signed_block_two_one.hash().encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			assert_eq!(db_block_one_one, signed_block_one_one);
-			assert_eq!(db_block_one_two, signed_block_one_two);
-			assert_eq!(db_block_two_one, signed_block_two_one);
-			// ensure block number 3 was not included
-			let db_block_empty =
-				updated_sidechain_db.db.get(&signed_block_two_two.hash().encode()).unwrap();
-			assert_eq!(db_block_empty, None);
+			assert_eq!(db_block_hash_one, signed_block_one.hash());
 		}
 
 		// clean up
