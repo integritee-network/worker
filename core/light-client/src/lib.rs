@@ -188,7 +188,7 @@ impl<Block: BlockT> LightValidation<Block> {
 		Ok(())
 	}
 
-	// A naive way to check whether a `child` header is a decendent
+	// A naive way to check whether a `child` header is a descendant
 	// of an `ancestor` header. For this it requires a proof which
 	// is a chain of headers between (but not including) the `child`
 	// and `ancestor`. This could be updated to use something like
@@ -278,7 +278,7 @@ where
 					validator_set_id,
 					&voter_set,
 				) {
-					// FIXME: Printing error upon invalid justfication, but this will need a better fix
+					// FIXME: Printing error upon invalid justification, but this will need a better fix
 					// see issue #353
 					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
 					relay.unjustified_headers.push(header.hash());
@@ -416,7 +416,7 @@ impl<B: BlockT> fmt::Debug for LightValidation<B> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
-			"LightValidationTest {{ num_relays: {}, tracked_relays: {:?} }}",
+			"LightValidation {{ num_relays: {}, tracked_relays: {:?} }}",
 			self.num_relays, self.tracked_relays
 		)
 	}
