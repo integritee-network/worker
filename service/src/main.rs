@@ -58,7 +58,7 @@ use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
-use sidechain_storage::SidechainStorage;
+use sidechain_storage::SidechainStorageLock;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519, Pair,
@@ -131,7 +131,7 @@ fn main() {
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
 	let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
 	let sidechain_blockstorage =
-		Arc::new(SidechainStorage::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH)).unwrap());
+		Arc::new(SidechainStorageLock::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH)).unwrap());
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
 	let direct_invocation_watch_list = Arc::new(WatchListService::<WsWatchingClient>::new());
 	let enclave = Arc::new(enclave_init().unwrap());

@@ -14,6 +14,7 @@
 use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{Event, Hash, Header, UncheckedExtrinsic};
+use parking_lot::RwLock;
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -51,12 +52,6 @@ const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 /// key value of the stored shards vector
 const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
-/// Allows to store blocks
-#[cfg_attr(test, automock)]
-pub trait BlockStorage {
-	fn store_blocks(&mut self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
-}
-
 /// DB errors.
 #[derive(Debug)]
 pub enum Error {
@@ -91,54 +86,29 @@ pub struct SidechainStorage {
 	pub last_blocks: HashMap<ShardIdentifier, LastSidechainBlock>,
 }
 
+/// Lock wrapper around sidechain storage
+pub struct SidechainStorageLock {
+	storage: RwLock<SidechainStorage>,
+}
+
+/// Allows to store blocks
+#[cfg_attr(test, automock)]
+pub trait BlockStorage {
+	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
+}
+
+impl BlockStorage for SidechainStorageLock {
+	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()> {
+		self.storage.write().store_blocks(blocks)
+	}
+}
+
 //FIXME: create key functions, such that blocknumer is always in the same format & nothing can get mixed up!
 //TODO: create purge_old_blocks function
 //TODO: create unit tests for shard purge & purge_oldBlocks function
-impl BlockStorage for SidechainStorage {
-	/// update sidechain storage
-	fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
-		println! {"Received blocks: {:?}", blocks_to_store};
-		let mut batch = WriteBatch::default();
-		let mut new_shard = false;
-		for signed_block in blocks_to_store.clone().into_iter() {
-			// check if current block is the next in line
-			let current_block_shard = signed_block.block().shard_id();
-			let current_block_nr = signed_block.block().block_number();
-			if self.shards.contains(&current_block_shard) {
-				let last_block: &LastSidechainBlock =
-					self.last_blocks.get(&current_block_shard).unwrap();
-				if last_block.number != current_block_nr - 1 {
-					error!("The to be included sidechainblock number {:?} is not a succession of the previous sidechain block in the db: {:?}",
-                    current_block_nr, last_block.number);
-					break
-				}
-			} else {
-				self.shards.push(current_block_shard);
-				new_shard = true;
-			}
-
-			// Block hash -> Signed Block
-			let current_block_hash = signed_block.hash();
-			batch.put(&current_block_hash.encode(), &signed_block.encode().as_slice());
-			// (Shard, Block number) -> Blockhash (for block pruning)
-			batch.put(
-				&(current_block_shard, current_block_nr).encode().as_slice(),
-				&current_block_hash.encode(),
-			);
-			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
-			let current_last_block =
-				LastSidechainBlock { hash: current_block_hash.into(), number: current_block_nr };
-			batch.put((LAST_BLOCK_KEY, current_block_shard).encode(), current_last_block.encode());
-		}
-		// update stored_shards_key -> vec<shard> only when a new shard was included
-		if new_shard {
-			batch.put(STORED_SHARDS_KEY.encode(), self.shards.encode());
-		}
-		if let Err(e) = self.db.write(batch) {
-			error!("Could not write batch to sidechain db due to {}", e);
-			return Err(Error::OperationalError(e))
-		};
-		Ok(())
+impl SidechainStorageLock {
+	pub fn new(path: PathBuf) -> Result<SidechainStorageLock> {
+		Ok(SidechainStorageLock { storage: RwLock::new(SidechainStorage::new(path)?) })
 	}
 }
 
@@ -192,6 +162,52 @@ impl SidechainStorage {
 		self.store_blocks(signed_blocks)
 	}
 
+	/// update sidechain storage
+	fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
+		println! {"Received blocks: {:?}", blocks_to_store};
+		let mut batch = WriteBatch::default();
+		let mut new_shard = false;
+		for signed_block in blocks_to_store.clone().into_iter() {
+			// check if current block is the next in line
+			let current_block_shard = signed_block.block().shard_id();
+			let current_block_nr = signed_block.block().block_number();
+			if self.shards.contains(&current_block_shard) {
+				let last_block: &LastSidechainBlock =
+					self.last_blocks.get(&current_block_shard).unwrap();
+				if last_block.number != current_block_nr - 1 {
+					error!("The to be included sidechainblock number {:?} is not a succession of the previous sidechain block in the db: {:?}",
+                    current_block_nr, last_block.number);
+					break
+				}
+			} else {
+				self.shards.push(current_block_shard);
+				new_shard = true;
+			}
+
+			// Block hash -> Signed Block
+			let current_block_hash = signed_block.hash();
+			batch.put(&current_block_hash.encode(), &signed_block.encode().as_slice());
+			// (Shard, Block number) -> Blockhash (for block pruning)
+			batch.put(
+				&(current_block_shard, current_block_nr).encode().as_slice(),
+				&current_block_hash.encode(),
+			);
+			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
+			let current_last_block =
+				LastSidechainBlock { hash: current_block_hash.into(), number: current_block_nr };
+			batch.put((LAST_BLOCK_KEY, current_block_shard).encode(), current_last_block.encode());
+		}
+		// update stored_shards_key -> vec<shard> only when a new shard was included
+		if new_shard {
+			batch.put(STORED_SHARDS_KEY.encode(), self.shards.encode());
+		}
+		if let Err(e) = self.db.write(batch) {
+			error!("Could not write batch to sidechain db due to {}", e);
+			return Err(Error::OperationalError(e))
+		};
+		Ok(())
+	}
+
 	/// purges a shard and its block from the db storage
 	pub fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
 		// get all shards
@@ -212,7 +228,7 @@ impl SidechainStorage {
 			self.db.delete((LAST_BLOCK_KEY, shard).encode()).unwrap();
 
 			//FIXME: Check -> does this make sense? Unit test!
-			while (true) {
+			loop {
 				match self.get_previous_block(shard, last_block.number) {
 					Some(previous_block) => {
 						last_block = previous_block;
@@ -251,12 +267,13 @@ mod tests {
 		crypto::{AccountId32, Pair},
 		ed25519, H256,
 	};
-	use substratee_worker_primitives::block::Block;
+	use std::time::{SystemTime, UNIX_EPOCH};
+	use substratee_worker_primitives::{block::Block, traits::SignBlock};
 
 	#[test]
 	fn sidechain_db_struct_works() {
 		// given
-		let path = "../bin/_sidechain_db_struct_works";
+		let path = PathBuf::from("../bin/_sidechain_db_struct_works");
 		let shard_one = H256::from_low_u64_be(1);
 		let shard_two = H256::from_low_u64_be(2);
 		let signed_block_one = create_signed_block(20, shard_one);
@@ -271,7 +288,7 @@ mod tests {
 			let mut sidechain_db = SidechainStorage::new(path).unwrap();
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
-			sidechain_db.update_db(signed_block_vector).unwrap();
+			sidechain_db.store_blocks(signed_block_vector).unwrap();
 		}
 
 		// then
@@ -296,7 +313,7 @@ mod tests {
 	#[test]
 	fn update_db_from_encoded_works() {
 		// given
-		let path = "../bin/_update_db_from_encoded_works";
+		let path = PathBuf::from("../bin/_update_db_from_encoded_works");
 		let shard_one = H256::from_low_u64_be(1);
 		let shard_two = H256::from_low_u64_be(2);
 		let signed_block_one = create_signed_block(20, shard_one);
@@ -384,7 +401,7 @@ mod tests {
 	#[test]
 	fn block_succession_check_works() {
 		// given
-		let path = "../bin/_block_succession_check_works";
+		let path = PathBuf::from("../bin/_block_succession_check_works");
 		let shard_one = H256::from_low_u64_be(1);
 		let shard_two = H256::from_low_u64_be(2);
 		let signed_block_one_one = create_signed_block(20, shard_one);
@@ -404,12 +421,12 @@ mod tests {
 		{
 			// first iteration
 			let mut sidechain_db = SidechainStorage::new(path).unwrap();
-			sidechain_db.update_db(signed_block_vector).unwrap();
+			sidechain_db.store_blocks(signed_block_vector).unwrap();
 		}
 		{
 			// second iteration
 			let mut sidechain_db = SidechainStorage::new(path).unwrap();
-			sidechain_db.update_db(signed_block_vector_second).unwrap();
+			sidechain_db.store_blocks(signed_block_vector_second).unwrap();
 		}
 
 		// then
@@ -513,7 +530,7 @@ mod tests {
 		let signed_top_hashes = vec![];
 		let encrypted_payload: Vec<u8> = vec![];
 
-		let block = Block::construct_block(
+		let block = Block::new(
 			author,
 			block_number,
 			parent_hash.clone(),
@@ -521,7 +538,8 @@ mod tests {
 			shard.clone(),
 			signed_top_hashes.clone(),
 			encrypted_payload.clone(),
+			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
 		);
-		block.sign(&signer_pair)
+		block.sign_block(&signer_pair)
 	}
 }

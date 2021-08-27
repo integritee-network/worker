@@ -82,7 +82,7 @@ where
 	}
 
 	fn send_block_and_confirmation(
-		&mut self,
+		&self,
 		confirmations: Vec<u8>,
 		signed_blocks: Vec<u8>,
 	) -> OCallBridgeResult<()> {
@@ -130,15 +130,14 @@ where
 
 		println! {"Received blocks: {:?}", signed_blocks};
 
-		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
+		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks.clone()) {
 			error!("Error gossiping blocks: {:?}", e);
 			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 
 		// Store blocks
-		let block_storage = Pin::new(&mut self.block_storage).get_mut();
-		if let Err(e) = block_storage.store_blocks(signed_blocks) {
+		if let Err(e) = self.block_storage.store_blocks(signed_blocks) {
 			error!("Error storing blocks: {:?}", e);
 		}
 		status
