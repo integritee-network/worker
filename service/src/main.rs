@@ -58,6 +58,7 @@ use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
+use sidechain_storage::SidechainStorage;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519, Pair,
@@ -67,7 +68,7 @@ use sp_keyring::AccountKeyring;
 use std::{
 	fs::{self, File},
 	io::{stdin, Write},
-	path::Path,
+	path::{Path, PathBuf},
 	str,
 	sync::{
 		mpsc::{channel, Sender},
@@ -77,6 +78,23 @@ use std::{
 	time::{Duration, SystemTime},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
+use substratee_api_client_extensions::{AccountApi, ChainApi};
+use substratee_enclave_api::{
+	direct_request::DirectRequest,
+	enclave_base::EnclaveBase,
+	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
+	side_chain::SideChain,
+	teerex_api::TeerexApi,
+};
+use substratee_node_primitives::SignedBlock;
+use substratee_settings::{
+	files::{
+		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH,
+		SIGNING_KEY_FILE,
+	},
+	worker::MIN_FUND_INCREASE_FACTOR,
+};
+use substratee_worker_api::direct_client::DirectClient;
 
 mod config;
 mod direct_invocation;
@@ -112,6 +130,8 @@ fn main() {
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
 	let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
+	let sidechain_blockstorage =
+		Arc::new(SidechainStorage::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH)).unwrap());
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
 	let direct_invocation_watch_list = Arc::new(WatchListService::<WsWatchingClient>::new());
 	let enclave = Arc::new(enclave_init().unwrap());
@@ -122,6 +142,7 @@ fn main() {
 		sync_block_gossiper,
 		direct_invocation_watch_list.clone(),
 		enclave.clone(),
+		sidechain_blockstorage.clone(),
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {

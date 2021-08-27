@@ -30,6 +30,7 @@ use crate::{
 		remote_attestation_ocall::RemoteAttestationOCall,
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
+	sidechain_storage::BlockStorage,
 	sync_block_gossiper::GossipBlocks,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
@@ -38,30 +39,39 @@ use std::sync::Arc;
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
 /// our dependency graph is worker -> ocall bridge
-pub struct OCallBridgeComponentFactory<N, B, W, E> {
+pub struct OCallBridgeComponentFactory<N, B, W, E, D> {
 	node_api_factory: Arc<N>,
 	block_gossiper: Arc<B>,
 	watch_list: Arc<W>,
 	enclave_api: Arc<E>,
+	block_storage: Arc<D>,
 }
 
-impl<N, B, W, E> OCallBridgeComponentFactory<N, B, W, E> {
+impl<N, B, W, E, D> OCallBridgeComponentFactory<N, B, W, E, D> {
 	pub fn new(
 		node_api_factory: Arc<N>,
 		block_gossiper: Arc<B>,
 		watch_list: Arc<W>,
 		enclave_api: Arc<E>,
+		block_storage: Arc<D>,
 	) -> Self {
-		OCallBridgeComponentFactory { node_api_factory, block_gossiper, watch_list, enclave_api }
+		OCallBridgeComponentFactory {
+			node_api_factory,
+			block_gossiper,
+			watch_list,
+			enclave_api,
+			block_storage,
+		}
 	}
 }
 
-impl<N, B, W, E> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B, W, E>
+impl<N, B, W, E, D> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B, W, E, D>
 where
 	N: CreateNodeApi + 'static,
 	B: GossipBlocks + 'static,
 	W: WatchList + 'static,
 	E: RemoteAttestationCallBacks + 'static,
+	D: BlockStorage + 'static,
 {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))
@@ -71,6 +81,7 @@ where
 		Arc::new(WorkerOnChainOCall::new(
 			self.node_api_factory.clone(),
 			self.block_gossiper.clone(),
+			self.block_storage.clone(),
 		))
 	}
 

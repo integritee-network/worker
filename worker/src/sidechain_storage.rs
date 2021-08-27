@@ -39,6 +39,7 @@ use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
 use rocksdb::{WriteBatch, DB};
+use std::path::PathBuf;
 use substratee_worker_primitives::{
 	block::{BlockNumber as SidechainBlockNumber, SignedBlock as SignedSidechainBlock},
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
@@ -53,7 +54,7 @@ const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 /// Allows to store blocks
 #[cfg_attr(test, automock)]
 pub trait BlockStorage {
-	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
+	fn store_blocks(&mut self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
 }
 
 /// DB errors.
@@ -81,7 +82,7 @@ pub struct LastSidechainBlock {
 
 /// Struct used to insert newly produced sidechainblocks
 /// into the database
-pub struct SidechainDB {
+pub struct SidechainStorage {
 	/// database
 	pub db: DB,
 	/// shards in database
@@ -93,59 +94,9 @@ pub struct SidechainDB {
 //FIXME: create key functions, such that blocknumer is always in the same format & nothing can get mixed up!
 //TODO: create purge_old_blocks function
 //TODO: create unit tests for shard purge & purge_oldBlocks function
-
-impl SidechainDB {
-	pub fn new(path: &str) -> Result<SidechainDB> {
-		let db = DB::open_default(path).unwrap();
-		// get shards in db
-		let shards: Vec<ShardIdentifier> = match db.get(STORED_SHARDS_KEY.encode()) {
-			Ok(Some(shards)) => Decode::decode(&mut shards.as_slice()).unwrap(),
-			Ok(None) => vec![],
-			Err(e) => {
-				error!("Could not read shards from db: {}", e);
-				return Err(Error::OperationalError(e))
-			},
-		};
-		// get last block of each shard
-		let mut last_blocks = HashMap::new();
-		for shard in shards.iter() {
-			match db.get((LAST_BLOCK_KEY, shard).encode()) {
-				Ok(Some(last_block_encoded)) => {
-					match LastSidechainBlock::decode(&mut last_block_encoded.as_slice()) {
-						Ok(last_block) => {
-							last_blocks.insert(shard.clone(), last_block);
-						},
-						Err(e) => {
-							error!("Could not decode signed block: {:?}", e);
-							return Err(Error::DecodeError)
-						},
-					}
-				},
-				Ok(None) => {},
-				Err(e) => {
-					error!("Could not read shards from db: {}", e);
-					return Err(Error::OperationalError(e))
-				},
-			}
-		}
-		Ok(SidechainDB { db, shards, last_blocks })
-	}
-
-	/// update sidechain storage from decoded signed blocks
-	pub fn update_db_from_encoded(&mut self, mut encoded_signed_blocks: &[u8]) -> Result<()> {
-		let signed_blocks: Vec<SignedSidechainBlock> =
-			match Decode::decode(&mut encoded_signed_blocks) {
-				Ok(blocks) => blocks,
-				Err(e) => {
-					error!("Could not decode signed blocks: {:?}", e);
-					return Err(Error::DecodeError)
-				},
-			};
-		self.update_db(signed_blocks)
-	}
-
+impl BlockStorage for SidechainStorage {
 	/// update sidechain storage
-	pub fn update_db(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
+	fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
 		println! {"Received blocks: {:?}", blocks_to_store};
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
@@ -188,6 +139,57 @@ impl SidechainDB {
 			return Err(Error::OperationalError(e))
 		};
 		Ok(())
+	}
+}
+
+impl SidechainStorage {
+	pub fn new(path: PathBuf) -> Result<SidechainStorage> {
+		let db = DB::open_default(path).unwrap();
+		// get shards in db
+		let shards: Vec<ShardIdentifier> = match db.get(STORED_SHARDS_KEY.encode()) {
+			Ok(Some(shards)) => Decode::decode(&mut shards.as_slice()).unwrap(),
+			Ok(None) => vec![],
+			Err(e) => {
+				error!("Could not read shards from db: {}", e);
+				return Err(Error::OperationalError(e))
+			},
+		};
+		// get last block of each shard
+		let mut last_blocks = HashMap::new();
+		for shard in shards.iter() {
+			match db.get((LAST_BLOCK_KEY, shard).encode()) {
+				Ok(Some(last_block_encoded)) => {
+					match LastSidechainBlock::decode(&mut last_block_encoded.as_slice()) {
+						Ok(last_block) => {
+							last_blocks.insert(shard.clone(), last_block);
+						},
+						Err(e) => {
+							error!("Could not decode signed block: {:?}", e);
+							return Err(Error::DecodeError)
+						},
+					}
+				},
+				Ok(None) => {},
+				Err(e) => {
+					error!("Could not read shards from db: {}", e);
+					return Err(Error::OperationalError(e))
+				},
+			}
+		}
+		Ok(SidechainStorage { db, shards, last_blocks })
+	}
+
+	/// update sidechain storage from decoded signed blocks
+	pub fn update_db_from_encoded(&mut self, mut encoded_signed_blocks: &[u8]) -> Result<()> {
+		let signed_blocks: Vec<SignedSidechainBlock> =
+			match Decode::decode(&mut encoded_signed_blocks) {
+				Ok(blocks) => blocks,
+				Err(e) => {
+					error!("Could not decode signed blocks: {:?}", e);
+					return Err(Error::DecodeError)
+				},
+			};
+		self.store_blocks(signed_blocks)
 	}
 
 	/// purges a shard and its block from the db storage
@@ -266,7 +268,7 @@ mod tests {
 
 		// when
 		{
-			let mut sidechain_db = SidechainDB::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path).unwrap();
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
 			sidechain_db.update_db(signed_block_vector).unwrap();
@@ -274,7 +276,7 @@ mod tests {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainDB::new(path).unwrap();
+			let updated_sidechain_db = SidechainStorage::new(path).unwrap();
 			assert_eq!(updated_sidechain_db.shards[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards[1], shard_two);
 			let last_block_one: &LastSidechainBlock =
@@ -312,13 +314,13 @@ mod tests {
 
 		// when
 		{
-			let mut sidechain_db = SidechainDB::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path).unwrap();
 			sidechain_db.update_db_from_encoded(signed_blocks_slice).unwrap();
 		}
 
 		// then
 		{
-			let updated_sidechain_db = SidechainDB::new(path).unwrap();
+			let updated_sidechain_db = SidechainStorage::new(path).unwrap();
 			// shards
 			assert_eq!(updated_sidechain_db.shards[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards[1], shard_two);
@@ -401,18 +403,18 @@ mod tests {
 		// when
 		{
 			// first iteration
-			let mut sidechain_db = SidechainDB::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path).unwrap();
 			sidechain_db.update_db(signed_block_vector).unwrap();
 		}
 		{
 			// second iteration
-			let mut sidechain_db = SidechainDB::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path).unwrap();
 			sidechain_db.update_db(signed_block_vector_second).unwrap();
 		}
 
 		// then
 		{
-			let updated_sidechain_db = SidechainDB::new(path).unwrap();
+			let updated_sidechain_db = SidechainStorage::new(path).unwrap();
 			// shards
 			assert_eq!(updated_sidechain_db.shards[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards[1], shard_two);

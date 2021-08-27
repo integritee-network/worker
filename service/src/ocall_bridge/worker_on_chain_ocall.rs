@@ -19,6 +19,7 @@
 use crate::{
 	node_api_factory::CreateNodeApi,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
+	sidechain_storage::BlockStorage,
 	sync_block_gossiper::GossipBlocks,
 	utils::hex_encode,
 };
@@ -27,26 +28,29 @@ use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, Worker
 use log::*;
 use sp_core::storage::StorageKey;
 use std::{
+	pin::Pin,
 	sync::{mpsc::channel, Arc},
 	vec::Vec,
 };
 use substrate_api_client::XtStatus;
 
-pub struct WorkerOnChainOCall<F, S> {
+pub struct WorkerOnChainOCall<F, S, D> {
 	node_api_factory: Arc<F>,
 	block_gossiper: Arc<S>,
+	block_storage: Arc<D>,
 }
 
-impl<F, S> WorkerOnChainOCall<F, S> {
-	pub fn new(node_api_factory: Arc<F>, block_gossiper: Arc<S>) -> Self {
-		WorkerOnChainOCall { node_api_factory, block_gossiper }
+impl<F, S, D> WorkerOnChainOCall<F, S, D> {
+	pub fn new(node_api_factory: Arc<F>, block_gossiper: Arc<S>, block_storage: Arc<D>) -> Self {
+		WorkerOnChainOCall { node_api_factory, block_gossiper, block_storage }
 	}
 }
 
-impl<F, S> WorkerOnChainBridge for WorkerOnChainOCall<F, S>
+impl<F, S, D> WorkerOnChainBridge for WorkerOnChainOCall<F, S, D>
 where
 	F: CreateNodeApi,
 	S: GossipBlocks,
+	D: BlockStorage,
 {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>> {
 		debug!("    Entering ocall_worker_request");
@@ -78,7 +82,7 @@ where
 	}
 
 	fn send_block_and_confirmation(
-		&self,
+		&mut self,
 		confirmations: Vec<u8>,
 		signed_blocks: Vec<u8>,
 	) -> OCallBridgeResult<()> {
@@ -131,8 +135,12 @@ where
 			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
-		// TODO: M8.3: Store blocks
 
+		// Store blocks
+		let block_storage = Pin::new(&mut self.block_storage).get_mut();
+		if let Err(e) = block_storage.store_blocks(signed_blocks) {
+			error!("Error storing blocks: {:?}", e);
+		}
 		status
 	}
 }
@@ -141,14 +149,19 @@ where
 mod tests {
 
 	use super::*;
-	use crate::{node_api_factory::MockCreateNodeApi, sync_block_gossiper::MockGossipBlocks};
+	use crate::{
+		node_api_factory::MockCreateNodeApi, sidechain_storage::MockBlockStorage,
+		sync_block_gossiper::MockGossipBlocks,
+	};
 
 	#[test]
 	fn given_empty_worker_request_when_submitting_then_return_empty_response() {
 		let mock_node_api_factory = Arc::new(MockCreateNodeApi::new());
 		let mock_block_gossiper = Arc::new(MockGossipBlocks::new());
+		let mock_block_storage = Arc::new(MockBlockStorage::new());
 
-		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, mock_block_gossiper);
+		let on_chain_ocall =
+			WorkerOnChainOCall::new(mock_node_api_factory, mock_block_gossiper, mock_block_storage);
 
 		let response = on_chain_ocall.worker_request(Vec::<u8>::new().encode()).unwrap();
 
