@@ -766,9 +766,6 @@ pub fn compose_block_and_confirmation(
 		.map(|n| n + 1)
 		.ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
 
-	Stf::update_sidechain_block_number(state, block_number);
-
-	let block_number: u64 = block_number; //FIXME! Should be either u64 or u32! Not both..
 	let parent_hash =
 		Stf::get_last_block_hash(state).ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
 
@@ -797,6 +794,7 @@ pub fn compose_block_and_confirmation(
 
 	debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
 	Stf::update_last_block_hash(state, block_hash.into());
+	Stf::update_sidechain_block_number(state, block_number);
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
