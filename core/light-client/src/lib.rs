@@ -39,7 +39,7 @@ use sp_finality_grandpa::{
 };
 use sp_runtime::{
 	generic::{Digest as DigestG, OpaqueDigestItemId},
-	traits::{Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor},
+	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
 	Justification, Justifications, OpaqueExtrinsic,
 };
 use state::RelayState;
@@ -53,17 +53,20 @@ pub mod state;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod io;
 
+// reexport this one as we need the trait bound in dependant crates
+pub use finality_grandpa::BlockNumberOps;
+
 type RelayId = u64;
 
 pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
 // disambiguate associated types
 /// Block number type
-pub type NumberOf<Block> = <<Block as BlockT>::Header as HeaderT>::Number;
+pub type NumberFor<Block> = <<Block as BlockT>::Header as HeaderT>::Number;
 /// Hash type of Block
-pub type HashOf<Block> = <<Block as BlockT>::Header as HeaderT>::Hash;
+pub type HashFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hash;
 /// Hashing function used to produce `HashOf<Block>`
-pub type HashingOf<Block> = <<Block as BlockT>::Header as HeaderT>::Hashing;
+pub type HashingFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hashing;
 
 pub trait Validator<Block: BlockT>
 where
@@ -103,7 +106,7 @@ where
 
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error>;
 
-	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashOf<Block>, Error>;
+	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
 
 	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error>;
 
@@ -146,11 +149,11 @@ impl<Block: BlockT> LightValidation<Block> {
 	}
 
 	fn check_validator_set_proof(
-		state_root: &HashOf<Block>,
+		state_root: &HashFor<Block>,
 		proof: StorageProof,
 		validator_set: AuthorityListRef,
 	) -> Result<(), Error> {
-		let checker = StorageProofChecker::<HashingOf<Block>>::new(*state_root, proof)?;
+		let checker = StorageProofChecker::<HashingFor<Block>>::new(*state_root, proof)?;
 
 		// By encoding the given set we should have an easy way to compare
 		// with the stuff we get out of storage via `read_value`
@@ -195,7 +198,7 @@ impl<Block: BlockT> LightValidation<Block> {
 	// Log2 Ancestors (#2053) in the future.
 	fn verify_ancestry(
 		proof: Vec<Block::Header>,
-		ancestor_hash: HashOf<Block>,
+		ancestor_hash: HashFor<Block>,
 		child: &Block::Header,
 	) -> Result<(), Error> {
 		let mut parent_hash = child.parent_hash();
@@ -360,7 +363,7 @@ where
 		let mut found_xts = vec![];
 		block.extrinsics().iter().for_each(|xt| {
 			if let Some(index) = relay.verify_tx_inclusion.iter().position(|xt_opaque| {
-				<HashingOf<Block>>::hash_of(xt) == <HashingOf<Block>>::hash_of(xt_opaque)
+				<HashingFor<Block>>::hash_of(xt) == <HashingFor<Block>>::hash_of(xt_opaque)
 			}) {
 				found_xts.push(index);
 			}
@@ -384,7 +387,7 @@ where
 		Ok(relay.verify_tx_inclusion.len())
 	}
 
-	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashOf<Block>, Error> {
+	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.header_hashes[0])
 	}
@@ -400,15 +403,15 @@ where
 }
 
 pub fn grandpa_log<Block: BlockT>(
-	digest: &DigestG<HashOf<Block>>,
-) -> Option<ConsensusLog<NumberOf<Block>>> {
+	digest: &DigestG<HashFor<Block>>,
+) -> Option<ConsensusLog<NumberFor<Block>>> {
 	let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
-	digest.convert_first(|l| l.try_to::<ConsensusLog<NumberOf<Block>>>(id))
+	digest.convert_first(|l| l.try_to::<ConsensusLog<NumberFor<Block>>>(id))
 }
 
 pub fn pending_change<Block: BlockT>(
-	digest: &DigestG<HashOf<Block>>,
-) -> Option<ScheduledChange<NumberOf<Block>>> {
+	digest: &DigestG<HashFor<Block>>,
+) -> Option<ScheduledChange<NumberFor<Block>>> {
 	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }
 
