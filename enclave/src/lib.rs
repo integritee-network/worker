@@ -450,8 +450,8 @@ pub unsafe extern "C" fn produce_blocks(
 			.unwrap();
 	}
 
-	if LightClientSeal::seal(validator).is_err() {
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	if let Err(e) = LightClientSeal::seal(validator) {
+		return e.into()
 	};
 
 	// ocall to worker to store signed block and send block confirmation
