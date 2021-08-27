@@ -25,6 +25,8 @@ pub mod files {
 	pub static ENCLAVE_FILE: &str = "enclave.signed.so";
 	pub static SHIELDING_KEY_FILE: &str = "enclave-shielding-pubkey.json";
 	pub static SIGNING_KEY_FILE: &str = "enclave-signing-pubkey.bin";
+	/// sidechain database path
+	pub static SIDECHAIN_DB_PATH: &str = "sidechainblock_db.bin";
 
 	// used by enclave
 	pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
