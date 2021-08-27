@@ -40,11 +40,11 @@ impl<B: Block> SealedIO for LightClientSeal<B> {
 	}
 
 	fn seal(unsealed: Self::Unsealed) -> Result<()> {
-		debug!("backup chain relay state");
+		debug!("backup light client state");
 		if fs::copy(LIGHT_CLIENT_DB, format!("{}.1", LIGHT_CLIENT_DB)).is_err() {
-			warn!("could not backup previous chain relay state");
+			warn!("could not backup previous light client state");
 		};
-		debug!("Seal Chain Relay State. Current state: {:?}", unsealed);
+		debug!("Seal light client State. Current state: {:?}", unsealed);
 
 		Ok(unsealed.using_encoded(|bytes| seal(bytes, LIGHT_CLIENT_DB))?)
 	}
@@ -67,8 +67,8 @@ where
 
 	let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
 	if genesis == header.hash() {
-		info!("Found already initialized chain relay with Genesis Hash: {:?}", genesis);
-		info!("Chain Relay state: {:?}", validator);
+		info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
+		info!("light client state: {:?}", validator);
 		Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 	} else {
 		init_validator::<B>(header, auth, proof)

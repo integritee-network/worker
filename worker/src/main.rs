@@ -322,7 +322,7 @@ fn start_worker<E, T, W>(
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
 	let latest_head = init_light_client(&node_api, enclave.as_ref());
-	println!("*** [+] Finished syncing chain relay\n");
+	println!("*** [+] Finished syncing light client\n");
 
 	// ------------------------------------------------------------------------
 	// start interval block production
@@ -496,7 +496,7 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 		.init_light_client(genesis_header, authority_list, grandpa_proof)
 		.unwrap();
 
-	info!("Finished initializing chain relay, syncing....");
+	info!("Finished initializing light client, syncing....");
 
 	produce_blocks(enclave_api, api, latest)
 }
@@ -565,7 +565,7 @@ fn get_blocks_to_sync(
 		let mut head = (*curr_head).clone();
 		let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
 		if no_blocks_to_sync > 1 {
-			println!("Chain Relay is synced until block: {:?}", last_synced_head.number);
+			println!("light client is synced until block: {:?}", last_synced_head.number);
 			println!("Last finalized block number: {:?}\n", head.block.header.number);
 		}
 		while head.block.header.parent_hash != last_synced_head.hash() {

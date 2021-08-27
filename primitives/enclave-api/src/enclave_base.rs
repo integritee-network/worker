@@ -35,7 +35,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	/// initialize the enclave (needs to be called once at application startup)
 	fn init(&self) -> EnclaveResult<()>;
 
-	/// initialize the chain relay (needs to be called once at application startup)
+	/// initialize the light client (needs to be called once at application startup)
 	fn init_light_client<SpHeader: Header>(
 		&self,
 		genesis_header: SpHeader,

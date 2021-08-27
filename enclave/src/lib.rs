@@ -346,7 +346,7 @@ pub unsafe extern "C" fn init_light_client(
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
-	info!("Initializing Chain Relay!");
+	info!("Initializing light client!");
 
 	let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
@@ -440,7 +440,7 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	// store extrinsics in chain relay for finalization check
+	// store extrinsics in light client for finalization check
 	for xt in extrinsics.iter() {
 		validator
 			.submit_xt_to_be_included(
@@ -475,7 +475,7 @@ where
 {
 	let mut calls = Vec::<OpaqueCall>::new();
 
-	debug!("Syncing chain relay!");
+	debug!("Syncing light client!");
 	for signed_block in blocks_to_sync.into_iter() {
 		validator
 			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
@@ -994,7 +994,7 @@ where
 		return Ok(None)
 	}
 
-	// Necessary because chain relay sync may not be up to date
+	// Necessary because light client sync may not be up to date
 	// see issue #208
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);

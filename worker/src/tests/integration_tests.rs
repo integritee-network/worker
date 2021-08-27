@@ -70,7 +70,7 @@ pub fn call_worker_encrypted_set_balance_works<E: EnclaveBase + SideChain>(
 
 	println!("Sleeping until block with shield funds is finalized...");
 	sleep(Duration::new(10, 0));
-	println!("Syncing Chain Relay to look for shield_funds extrinsic");
+	println!("Syncing light client to look for shield_funds extrinsic");
 	crate::produce_blocks(enclave_api, &api, last_synced_head)
 }
 
@@ -92,7 +92,7 @@ pub fn forward_encrypted_unshield_works<E: EnclaveBase + SideChain>(
 
 	println!("Sleeping until block with shield funds is finalized...");
 	sleep(Duration::new(10, 0));
-	println!("Syncing Chain Relay to look for CallWorker with TrustedCall::unshield extrinsic");
+	println!("Syncing light client to look for CallWorker with TrustedCall::unshield extrinsic");
 	crate::produce_blocks(enclave_api, &api, last_synced_head)
 }
 
@@ -121,6 +121,6 @@ pub fn shield_funds_workds<E: EnclaveBase + SideChain>(
 
 	println!("Sleeping until block with shield funds is finalized...");
 	sleep(Duration::new(10, 0));
-	println!("Syncing Chain Relay to look for shield_funds extrinsic");
+	println!("Syncing light client to look for shield_funds extrinsic");
 	crate::produce_blocks(enclave_api, &api, last_synced_head)
 }
