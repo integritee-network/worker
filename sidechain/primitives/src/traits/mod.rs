@@ -54,6 +54,8 @@ pub trait SignedBlock {
 	fn block(&self) -> &Self::Block;
 	/// get signature reference
 	fn signature(&self) -> &Self::Signature;
+	/// get blake2_256 hash of block
+	fn hash(&self) -> H256;
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool;
 }

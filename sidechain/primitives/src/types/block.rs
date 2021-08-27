@@ -1,6 +1,6 @@
 use crate::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use codec::{Decode, Encode};
-use sp_core::{crypto::AccountId32, H256};
+use sp_core::{crypto::AccountId32, hashing, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use sp_std::vec::Vec;
 
@@ -114,7 +114,6 @@ impl SignedBlockT for SignedBlock {
 	fn new(block: Self::Block, signature: Self::Signature) -> Self {
 		Self { block, signature }
 	}
-
 	/// get block reference
 	fn block(&self) -> &Block {
 		&self.block
@@ -123,7 +122,10 @@ impl SignedBlockT for SignedBlock {
 	fn signature(&self) -> &Signature {
 		&self.signature
 	}
-
+	/// get blake2_256 hash of block
+	fn hash(&self) -> H256 {
+		hashing::blake2_256(&mut self.block.encode().as_slice()).into()
+	}
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool {
 		// get block payload
