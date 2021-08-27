@@ -4,7 +4,7 @@
 # run all on localhost:
 #   substratee-node purge-chain --dev
 #   substratee-node --dev -lruntime=debug
-#   rm chain_relay_db.bin
+#   rm light_client_db.bin
 #   substratee-worker init_shard
 #   substratee-worker shielding-key
 #   substratee-worker signing-key
