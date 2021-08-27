@@ -149,19 +149,6 @@ impl SidechainStorage {
 		Ok(SidechainStorage { db, shards, last_blocks })
 	}
 
-	/// update sidechain storage from decoded signed blocks
-	pub fn update_db_from_encoded(&mut self, mut encoded_signed_blocks: &[u8]) -> Result<()> {
-		let signed_blocks: Vec<SignedSidechainBlock> =
-			match Decode::decode(&mut encoded_signed_blocks) {
-				Ok(blocks) => blocks,
-				Err(e) => {
-					error!("Could not decode signed blocks: {:?}", e);
-					return Err(Error::DecodeError)
-				},
-			};
-		self.store_blocks(signed_blocks)
-	}
-
 	/// update sidechain storage
 	fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
 		println! {"Received blocks: {:?}", blocks_to_store};
@@ -285,7 +272,7 @@ mod tests {
 
 		// when
 		{
-			let mut sidechain_db = SidechainStorage::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
 			sidechain_db.store_blocks(signed_block_vector).unwrap();
@@ -293,7 +280,7 @@ mod tests {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path).unwrap();
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			assert_eq!(updated_sidechain_db.shards[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards[1], shard_two);
 			let last_block_one: &LastSidechainBlock =
@@ -304,94 +291,6 @@ mod tests {
 			assert_eq!(last_block_two.number, 1);
 			assert_eq!(last_block_one.hash, signed_block_one.hash().into());
 			assert_eq!(last_block_two.hash, signed_block_two.hash().into());
-		}
-
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
-	}
-
-	#[test]
-	fn update_db_from_encoded_works() {
-		// given
-		let path = PathBuf::from("../bin/_update_db_from_encoded_works");
-		let shard_one = H256::from_low_u64_be(1);
-		let shard_two = H256::from_low_u64_be(2);
-		let signed_block_one = create_signed_block(20, shard_one);
-		let signed_block_two = create_signed_block(1, shard_two);
-
-		let mut signed_block_vector: Vec<SignedSidechainBlock> = vec![];
-		signed_block_vector.push(signed_block_one.clone());
-		signed_block_vector.push(signed_block_two.clone());
-
-		// encode blocks to slice [u8]
-		let encoded_blocks = signed_block_vector.encode();
-		let signed_blocks_slice = unsafe {
-			slice::from_raw_parts(encoded_blocks.as_ptr(), encoded_blocks.len() as usize)
-		};
-
-		// when
-		{
-			let mut sidechain_db = SidechainStorage::new(path).unwrap();
-			sidechain_db.update_db_from_encoded(signed_blocks_slice).unwrap();
-		}
-
-		// then
-		{
-			let updated_sidechain_db = SidechainStorage::new(path).unwrap();
-			// shards
-			assert_eq!(updated_sidechain_db.shards[0], shard_one);
-			assert_eq!(updated_sidechain_db.shards[1], shard_two);
-			// last blocks
-			let last_block_one: &LastSidechainBlock =
-				updated_sidechain_db.last_blocks.get(&shard_one).unwrap();
-			let last_block_two: &LastSidechainBlock =
-				updated_sidechain_db.last_blocks.get(&shard_two).unwrap();
-			assert_eq!(last_block_one.number, 20);
-			assert_eq!(last_block_two.number, 1);
-			assert_eq!(last_block_one.hash, signed_block_one.hash().into());
-			assert_eq!(last_block_two.hash, signed_block_two.hash().into());
-			// (shard,blocknumber) -> blockhash
-			let db_block_hash_one = H256::decode(
-				&mut updated_sidechain_db
-					.db
-					.get((shard_one, 20 as SidechainBlockNumber).encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			let db_block_hash_two = H256::decode(
-				&mut updated_sidechain_db
-					.db
-					.get((shard_two, 1 as SidechainBlockNumber).encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			assert_eq!(db_block_hash_one, signed_block_one.hash().into());
-			assert_eq!(db_block_hash_two, signed_block_two.hash().into());
-			// block hash -> signed block
-			let db_block_one = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&last_block_one.hash.encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			let db_block_two = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&last_block_two.hash.encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			assert_eq!(db_block_one, signed_block_one);
-			assert_eq!(db_block_two, signed_block_two);
 		}
 
 		// clean up
@@ -420,18 +319,18 @@ mod tests {
 		// when
 		{
 			// first iteration
-			let mut sidechain_db = SidechainStorage::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector).unwrap();
 		}
 		{
 			// second iteration
-			let mut sidechain_db = SidechainStorage::new(path).unwrap();
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_second).unwrap();
 		}
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path).unwrap();
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			// shards
 			assert_eq!(updated_sidechain_db.shards[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards[1], shard_two);
