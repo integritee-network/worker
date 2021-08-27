@@ -37,9 +37,9 @@ use crate::{
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
-use chain_relay::{Block, Header, Validator};
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
+use itc_light_client::{io::LightClientSeal, Validator};
 use log::*;
 use rpc::{
 	api::SideChainApi,
@@ -50,7 +50,7 @@ use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_types::{sgx_status_t, SgxResult};
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
-use sp_runtime::{generic::SignedBlock, traits::Header as HeaderT, OpaqueExtrinsic};
+use sp_runtime::{traits::Header as HeaderT, OpaqueExtrinsic};
 use std::{
 	borrow::ToOwned,
 	collections::HashMap,
@@ -64,7 +64,7 @@ use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
 use substratee_get_storage_verified::GetStorageVerified;
-use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn};
+use substratee_node_primitives::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
 use substratee_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
@@ -76,6 +76,7 @@ use substratee_settings::{
 	},
 };
 use substratee_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
+use substratee_sgx_io as io;
 use substratee_sgx_io::SealedIO;
 use substratee_sidechain_primitives::traits::{
 	Block as BlockT, SignBlock, SignedBlock as SignedBlockT,
@@ -94,7 +95,6 @@ use substratee_worker_primitives::{
 use utils::write_slice_and_whitespace_pad;
 
 mod attestation;
-mod io;
 mod ipfs;
 mod ocall;
 mod rsa3072;
@@ -264,7 +264,7 @@ fn create_extrinsics<V>(
 	mut nonce: u32,
 ) -> Result<Vec<Vec<u8>>>
 where
-	V: Validator,
+	V: Validator<Block>,
 {
 	// get information for composing the extrinsic
 	let signer = Ed25519Seal::unseal()?;
@@ -336,7 +336,7 @@ pub unsafe extern "C" fn get_state(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn init_chain_relay(
+pub unsafe extern "C" fn init_light_client(
 	genesis_header: *const u8,
 	genesis_header_size: usize,
 	authority_list: *const u8,
@@ -346,7 +346,7 @@ pub unsafe extern "C" fn init_chain_relay(
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
-	info!("Initializing Chain Relay!");
+	info!("Initializing light client!");
 
 	let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn init_chain_relay(
 		},
 	};
 
-	match io::light_validation::read_or_init_validator(header, auth, proof) {
+	match itc_light_client::io::read_or_init_validator::<Block>(header, auth, proof) {
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
 		Err(e) => return e.into(),
 	}
@@ -392,7 +392,7 @@ pub unsafe extern "C" fn produce_blocks(
 ) -> sgx_status_t {
 	let mut blocks_to_sync_slice = slice::from_raw_parts(blocks_to_sync, blocks_to_sync_size);
 
-	let blocks_to_sync: Vec<SignedBlock<Block>> = match Decode::decode(&mut blocks_to_sync_slice) {
+	let blocks_to_sync: Vec<SignedBlock> = match Decode::decode(&mut blocks_to_sync_slice) {
 		Ok(b) => b,
 		Err(e) => {
 			error!("Decoding signed blocks failed. Error: {:?}", e);
@@ -400,14 +400,14 @@ pub unsafe extern "C" fn produce_blocks(
 		},
 	};
 
-	let mut validator = match io::light_validation::unseal() {
+	let mut validator = match LightClientSeal::unseal() {
 		Ok(v) => v,
 		Err(e) => return e.into(),
 	};
 
 	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
 
-	let mut calls = match sync_blocks_on_chain_relay(
+	let mut calls = match sync_blocks_on_light_client(
 		blocks_to_sync,
 		&mut validator,
 		on_chain_ocall_api.as_ref(),
@@ -440,7 +440,7 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	// store extrinsics in chain relay for finalization check
+	// store extrinsics in light client for finalization check
 	for xt in extrinsics.iter() {
 		validator
 			.submit_xt_to_be_included(
@@ -450,8 +450,8 @@ pub unsafe extern "C" fn produce_blocks(
 			.unwrap();
 	}
 
-	if io::light_validation::seal(validator).is_err() {
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	if let Err(e) = LightClientSeal::seal(validator) {
+		return e.into()
 	};
 
 	// ocall to worker to store signed block and send block confirmation
@@ -464,18 +464,18 @@ pub unsafe extern "C" fn produce_blocks(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn sync_blocks_on_chain_relay<V, O>(
-	blocks_to_sync: Vec<SignedBlock<Block>>,
+fn sync_blocks_on_light_client<V, O>(
+	blocks_to_sync: Vec<SignedBlock>,
 	validator: &mut V,
 	on_chain_ocall_api: &O,
 ) -> SgxResult<Vec<OpaqueCall>>
 where
-	V: Validator,
+	V: Validator<Block>,
 	O: EnclaveOnChainOCallApi,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
 
-	debug!("Syncing chain relay!");
+	debug!("Syncing light client!");
 	for signed_block in blocks_to_sync.into_iter() {
 		validator
 			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
@@ -994,7 +994,7 @@ where
 		return Ok(None)
 	}
 
-	// Necessary because chain relay sync may not be up to date
+	// Necessary because light client sync may not be up to date
 	// see issue #208
 	debug!("Update STF storage!");
 	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);

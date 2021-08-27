@@ -101,9 +101,9 @@ class Worker:
             return False
 
     def purge(self):
-        """ Deletes the mrenclave shard and the chain_relay_db.bin. """
+        """ Deletes the mrenclave shard and the light_client_db.bin. """
         self.purge_shard()
-        self.purge_chain_relay_db()
+        self.purge_light_client_db()
         return self
 
     def purge_shard(self, shard=None):
@@ -117,9 +117,9 @@ class Worker:
         else:
             shutil.rmtree(self._shard_path(shard))
 
-    def purge_chain_relay_db(self):
-        print(f'purging chain_relay_db')
-        for db in pathlib.Path(self.cwd).glob('chain_relay_db.bin*'):
+    def purge_light_client_db(self):
+        print(f'purging light_client_db')
+        for db in pathlib.Path(self.cwd).glob('light_client_db.bin*'):
             print(f'remove: {db}')
             db.unlink()
 

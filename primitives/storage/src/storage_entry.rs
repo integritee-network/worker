@@ -68,7 +68,11 @@ impl VerifyStorageProof for StorageEntry<Vec<u8>> {
 
 		Ok(StorageEntryVerified {
 			key: self.key,
-			value: self.value.map(|v| Decode::decode(&mut v.as_slice())).transpose()?,
+			value: self
+				.value
+				.map(|v| Decode::decode(&mut v.as_slice()))
+				.transpose()
+				.map_err(Error::Codec)?,
 		})
 	}
 }

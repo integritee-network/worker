@@ -46,8 +46,8 @@ run node
 run worker
 
 ```
-export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,substratee_worker=info,substratee_worker_enclave=info,sp_io::misc=debug,runtime=debug,substratee_worker_enclave::state=warn,substratee_stf::sgx=info,chain_relay=warn,rustls=warn
-rm -rf shards/ chain_relay_db.bin
+export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,substratee_worker=info,substratee_worker_enclave=info,sp_io::misc=debug,runtime=debug,substratee_worker_enclave::state=warn,substratee_stf::sgx=info,light_client=warn,rustls=warn
+rm -rf shards/ light_client_db.bin
 ./substratee-worker -r 2002 -p 9979 -w 2001 run 2>&1 | tee worker.log
 ```
 

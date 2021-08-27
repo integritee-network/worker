@@ -30,7 +30,7 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(())
 	}
 
-	fn init_chain_relay<SpHeader: Header>(
+	fn init_light_client<SpHeader: Header>(
 		&self,
 		genesis_header: SpHeader,
 		_authority_list: VersionedAuthorityList,

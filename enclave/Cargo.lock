@@ -256,29 +256,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chain-relay"
-version = "0.8.0"
-dependencies = [
- "derive_more",
- "finality-grandpa",
- "frame-system",
- "hash-db",
- "log",
- "num-traits 0.2.14",
- "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
- "sp-application-crypto",
- "sp-core",
- "sp-finality-grandpa",
- "sp-io",
- "sp-runtime",
- "sp-runtime-interface",
- "sp-trie",
- "substratee-storage",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.11"
 source = "git+https://github.com/mesalock-linux/chrono-sgx#f964ae7f5f65bd2c9cd6f44a067e7980afc08ca0"
@@ -968,6 +945,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "itc-light-client"
+version = "0.8.0"
+dependencies = [
+ "derive_more",
+ "finality-grandpa",
+ "frame-system",
+ "hash-db",
+ "log",
+ "num-traits 0.2.14",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-finality-grandpa",
+ "sp-runtime",
+ "sp-trie",
+ "substratee-settings",
+ "substratee-sgx-io",
+ "substratee-storage",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1550,7 +1551,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41fdbd1df62156fbc5945f4762632564d7d038153091c3fcf1067f6aef7cff92"
 dependencies = [
- "thiserror",
+ "thiserror 1.0.26",
  "toml",
 ]
 
@@ -1586,7 +1587,7 @@ dependencies = [
  "lazy_static",
  "parking_lot",
  "regex 1.5.4",
- "thiserror",
+ "thiserror 1.0.26",
 ]
 
 [[package]]
@@ -2754,7 +2755,7 @@ dependencies = [
  "substratee-ocall-api",
  "substratee-storage",
  "substratee-worker-primitives",
- "thiserror",
+ "thiserror 1.0.26",
 ]
 
 [[package]]
@@ -2798,10 +2799,12 @@ dependencies = [
  "frame-support",
  "hash-db",
  "parity-scale-codec",
+ "sgx_tstd",
  "sp-core",
  "sp-runtime",
  "sp-std",
  "sp-trie",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2812,7 +2815,6 @@ dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=sgx_1.1.3)",
  "bit-vec",
  "byteorder",
- "chain-relay",
  "chrono 0.4.11",
  "cid",
  "derive_more",
@@ -2821,6 +2823,7 @@ dependencies = [
  "hex",
  "httparse",
  "ipfs-unixfs",
+ "itc-light-client",
  "itertools",
  "jsonrpc-core",
  "lazy_static",
@@ -2981,11 +2984,30 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
+version = "1.0.9"
+source = "git+https://github.com/mesalock-linux/thiserror-sgx?tag=sgx_1.1.3#c2f806b88616e06aab0af770366a76885d974fdc"
+dependencies = [
+ "sgx_tstd",
+ "thiserror-impl 1.0.9",
+]
+
+[[package]]
+name = "thiserror"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93119e4feac1cbe6c798c34d3a53ea0026b0b1de6a120deef895137c0529bfe2"
 dependencies = [
- "thiserror-impl",
+ "thiserror-impl 1.0.26",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.9"
+source = "git+https://github.com/mesalock-linux/thiserror-sgx?tag=sgx_1.1.3#c2f806b88616e06aab0af770366a76885d974fdc"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.9",
+ "syn 1.0.74",
 ]
 
 [[package]]

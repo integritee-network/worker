@@ -56,4 +56,4 @@ bin/enclave-shielding-pubkey.json
 # client
 client/my_keystore
 client/my_trusted_keystore
-bin/chain_relay_db.bin.1
+bin/light_client_db.bin.1

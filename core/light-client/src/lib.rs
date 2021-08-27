@@ -1,33 +1,32 @@
-// Copyright 2017-2019 Parity Technologies (UK) Ltd.
-// This file is part of Substrate.
+/*
+	Copyright 2019 Supercomputing Systems AG
 
-// Substrate is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-// Substrate is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+		http://www.apache.org/licenses/LICENSE-2.0
 
-// You should have received a copy of the GNU General Public License
-// along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 
-#![cfg_attr(not(target_env = "sgx"), no_std)]
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+*/
 
-#[cfg(not(target_env = "sgx"))]
+//! Light-client crate that imports and verifies parentchain blocks.
+
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
 
-pub mod error;
-pub mod justification;
-pub mod state;
-use crate::{
-	state::ScheduledChangeAtBlock,
-	std::{collections::BTreeMap, fmt, vec::Vec},
-};
+use crate::state::ScheduledChangeAtBlock;
 use codec::{Decode, Encode};
 use core::iter::Iterator;
 use error::Error;
@@ -39,25 +38,43 @@ use sp_finality_grandpa::{
 	GRANDPA_ENGINE_ID,
 };
 use sp_runtime::{
-	generic::{Block as BlockG, Digest as DigestG, Header as HeaderG, OpaqueDigestItemId},
-	traits::{BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor},
+	generic::{Digest as DigestG, OpaqueDigestItemId},
+	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
 	Justification, Justifications, OpaqueExtrinsic,
 };
 use state::RelayState;
+use std::{collections::BTreeMap, fmt, vec::Vec};
 use substratee_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 
+pub mod error;
+pub mod justification;
+pub mod state;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod io;
+
+// reexport this one as we need the trait bound in dependant crates
+pub use finality_grandpa::BlockNumberOps;
+
 type RelayId = u64;
-pub type Blocknumber = u32;
-pub type Header = HeaderG<Blocknumber, BlakeTwo256>;
-pub type Block = BlockG<Header, OpaqueExtrinsic>;
-pub type Digest = DigestG<<BlakeTwo256 as HashT>::Output>;
 
 pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
-pub trait Validator: Encode + Decode + Clone + Default {
+// disambiguate associated types
+/// Block number type
+pub type NumberFor<Block> = <<Block as BlockT>::Header as HeaderT>::Number;
+/// Hash type of Block
+pub type HashFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hash;
+/// Hashing function used to produce `HashOf<Block>`
+pub type HashingFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hashing;
+
+pub trait Validator<Block: BlockT>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+{
 	fn initialize_relay(
 		&mut self,
-		block_header: Header,
+		block_header: Block::Header,
 		validator_set: AuthorityList,
 		validator_set_proof: StorageProof,
 	) -> Result<RelayId, Error>;
@@ -65,8 +82,8 @@ pub trait Validator: Encode + Decode + Clone + Default {
 	fn submit_finalized_headers(
 		&mut self,
 		relay_id: RelayId,
-		header: Header,
-		ancestry_proof: Vec<Header>,
+		header: Block::Header,
+		ancestry_proof: Vec<Block::Header>,
 		validator_set: AuthorityList,
 		validator_set_id: SetId,
 		justifications: Option<Justifications>,
@@ -75,7 +92,7 @@ pub trait Validator: Encode + Decode + Clone + Default {
 	fn submit_simple_header(
 		&mut self,
 		relay_id: RelayId,
-		header: Header,
+		header: Block::Header,
 		justifications: Option<Justifications>,
 	) -> Result<(), Error>;
 
@@ -89,28 +106,25 @@ pub trait Validator: Encode + Decode + Clone + Default {
 
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error>;
 
-	fn genesis_hash(&self, relay_id: RelayId) -> Result<<Header as HeaderT>::Hash, Error>;
+	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
 
-	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Header, Error>;
+	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error>;
 
 	fn num_relays(&self) -> RelayId;
 }
 
 #[derive(Encode, Decode, Clone, Default)]
-pub struct LightValidation {
+pub struct LightValidation<Block: BlockT> {
 	num_relays: RelayId,
 	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
 }
 
-impl LightValidation {
+impl<Block: BlockT> LightValidation<Block> {
 	pub fn new() -> Self {
-		LightValidation::default()
+		Self { num_relays: Default::default(), tracked_relays: Default::default() }
 	}
 
-	fn apply_validator_set_change<Block: BlockT>(
-		relay: &mut RelayState<Block>,
-		header: &Block::Header,
-	) {
+	fn apply_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
 		if let Some(change) = relay.scheduled_change.take() {
 			if &change.at_block == header.number() {
 				relay.current_validator_set = change.next_authority_list;
@@ -119,11 +133,8 @@ impl LightValidation {
 		}
 	}
 
-	fn schedule_validator_set_change<Block: BlockT>(
-		relay: &mut RelayState<Block>,
-		header: &Block::Header,
-	) {
-		if let Some(log) = pending_change::<Block::Header>(&header.digest()) {
+	fn schedule_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
+		if let Some(log) = pending_change::<Block>(&header.digest()) {
 			if relay.scheduled_change.is_some() {
 				error!(
 					"Tried to scheduled authorities change even though one is already scheduled!!"
@@ -137,12 +148,12 @@ impl LightValidation {
 		}
 	}
 
-	fn check_validator_set_proof<Hash: HashT>(
-		state_root: &Hash::Out,
+	fn check_validator_set_proof(
+		state_root: &HashFor<Block>,
 		proof: StorageProof,
 		validator_set: AuthorityListRef,
 	) -> Result<(), Error> {
-		let checker = StorageProofChecker::<Hash>::new(*state_root, proof)?;
+		let checker = StorageProofChecker::<HashingFor<Block>>::new(*state_root, proof)?;
 
 		// By encoding the given set we should have an easy way to compare
 		// with the stuff we get out of storage via `read_value`
@@ -159,7 +170,7 @@ impl LightValidation {
 		}
 	}
 
-	fn verify_grandpa_proof<Block>(
+	fn verify_grandpa_proof(
 		justification: Justification,
 		hash: Block::Hash,
 		number: NumberFor<Block>,
@@ -167,7 +178,6 @@ impl LightValidation {
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<(), Error>
 	where
-		Block: BlockT,
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
 		// We don't really care about the justification, as long as it's valid
@@ -181,19 +191,16 @@ impl LightValidation {
 		Ok(())
 	}
 
-	// A naive way to check whether a `child` header is a decendent
+	// A naive way to check whether a `child` header is a descendant
 	// of an `ancestor` header. For this it requires a proof which
 	// is a chain of headers between (but not including) the `child`
 	// and `ancestor`. This could be updated to use something like
 	// Log2 Ancestors (#2053) in the future.
-	fn verify_ancestry<Header>(
-		proof: Vec<Header>,
-		ancestor_hash: Header::Hash,
-		child: &Header,
-	) -> Result<(), Error>
-	where
-		Header: HeaderT,
-	{
+	fn verify_ancestry(
+		proof: Vec<Block::Header>,
+		ancestor_hash: HashFor<Block>,
+		child: &Block::Header,
+	) -> Result<(), Error> {
 		let mut parent_hash = child.parent_hash();
 		if *parent_hash == ancestor_hash {
 			return Ok(())
@@ -216,19 +223,18 @@ impl LightValidation {
 	}
 }
 
-impl Validator for LightValidation {
+impl<Block: BlockT> Validator<Block> for LightValidation<Block>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+{
 	fn initialize_relay(
 		&mut self,
-		block_header: Header,
+		block_header: Block::Header,
 		validator_set: AuthorityList,
 		validator_set_proof: StorageProof,
 	) -> Result<RelayId, Error> {
 		let state_root = block_header.state_root();
-		Self::check_validator_set_proof::<<Header as HeaderT>::Hashing>(
-			state_root,
-			validator_set_proof,
-			&validator_set,
-		)?;
+		Self::check_validator_set_proof(state_root, validator_set_proof, &validator_set)?;
 
 		let relay_info = RelayState::new(block_header, validator_set);
 
@@ -243,8 +249,8 @@ impl Validator for LightValidation {
 	fn submit_finalized_headers(
 		&mut self,
 		relay_id: RelayId,
-		header: Header,
-		ancestry_proof: Vec<Header>,
+		header: Block::Header,
+		ancestry_proof: Vec<Block::Header>,
 		validator_set: AuthorityList,
 		validator_set_id: SetId,
 		justifications: Option<Justifications>,
@@ -268,16 +274,16 @@ impl Validator for LightValidation {
 
 		match grandpa_justification {
 			Some(justification) => {
-				if let Err(err) = Self::verify_grandpa_proof::<Block>(
+				if let Err(err) = Self::verify_grandpa_proof(
 					(GRANDPA_ENGINE_ID, justification),
 					block_hash,
 					block_num,
 					validator_set_id,
 					&voter_set,
 				) {
-					// FIXME: Printing error upon invalid justfication, but this will need a better fix
+					// FIXME: Printing error upon invalid justification, but this will need a better fix
 					// see issue #353
-					error!("Block {} contained invalid justification: {:?}", block_num, err);
+					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
 					relay.unjustified_headers.push(header.hash());
 					relay.last_finalized_block_header = header;
 					return Ok(())
@@ -313,7 +319,7 @@ impl Validator for LightValidation {
 	fn submit_simple_header(
 		&mut self,
 		relay_id: RelayId,
-		header: Header,
+		header: Block::Header,
 		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
 		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
@@ -355,10 +361,9 @@ impl Validator for LightValidation {
 		}
 
 		let mut found_xts = vec![];
-		block.extrinsics.iter().for_each(|xt| {
+		block.extrinsics().iter().for_each(|xt| {
 			if let Some(index) = relay.verify_tx_inclusion.iter().position(|xt_opaque| {
-				<<Header as HeaderT>::Hashing>::hash_of(xt)
-					== <<Header as HeaderT>::Hashing>::hash_of(xt_opaque)
+				<HashingFor<Block>>::hash_of(xt) == <HashingFor<Block>>::hash_of(xt_opaque)
 			}) {
 				found_xts.push(index);
 			}
@@ -382,12 +387,12 @@ impl Validator for LightValidation {
 		Ok(relay.verify_tx_inclusion.len())
 	}
 
-	fn genesis_hash(&self, relay_id: RelayId) -> Result<<Header as HeaderT>::Hash, Error> {
+	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.header_hashes[0])
 	}
 
-	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Header, Error> {
+	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.last_finalized_block_header.clone())
 	}
@@ -397,20 +402,24 @@ impl Validator for LightValidation {
 	}
 }
 
-pub fn grandpa_log<H: HeaderT>(digest: &DigestG<H::Hash>) -> Option<ConsensusLog<H::Number>> {
+pub fn grandpa_log<Block: BlockT>(
+	digest: &DigestG<HashFor<Block>>,
+) -> Option<ConsensusLog<NumberFor<Block>>> {
 	let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
-	digest.convert_first(|l| l.try_to::<ConsensusLog<H::Number>>(id))
+	digest.convert_first(|l| l.try_to::<ConsensusLog<NumberFor<Block>>>(id))
 }
 
-pub fn pending_change<H: HeaderT>(digest: &DigestG<H::Hash>) -> Option<ScheduledChange<H::Number>> {
-	grandpa_log::<H>(digest).and_then(|log| log.try_into_change())
+pub fn pending_change<Block: BlockT>(
+	digest: &DigestG<HashFor<Block>>,
+) -> Option<ScheduledChange<NumberFor<Block>>> {
+	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }
 
-impl fmt::Debug for LightValidation {
+impl<B: BlockT> fmt::Debug for LightValidation<B> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
-			"LightValidationTest {{ num_relays: {}, tracked_relays: {:?} }}",
+			"LightValidation {{ num_relays: {}, tracked_relays: {:?} }}",
 			self.num_relays, self.tracked_relays
 		)
 	}

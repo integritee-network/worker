@@ -20,7 +20,6 @@ use crate::{
 	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
 	top_pool, Timeout,
 };
-use chain_relay::{Block, Header};
 use codec::{Decode, Encode};
 use core::ops::Deref;
 use jsonrpc_core::futures::executor;
@@ -42,6 +41,7 @@ use std::{
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
 };
+use substratee_node_primitives::{Block, Header};
 use substratee_ocall_api::EnclaveAttestationOCallApi;
 use substratee_settings::{
 	enclave::GETTER_TIMEOUT,

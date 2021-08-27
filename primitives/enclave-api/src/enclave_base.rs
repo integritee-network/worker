@@ -35,8 +35,8 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	/// initialize the enclave (needs to be called once at application startup)
 	fn init(&self) -> EnclaveResult<()>;
 
-	/// initialize the chain relay (needs to be called once at application startup)
-	fn init_chain_relay<SpHeader: Header>(
+	/// initialize the light client (needs to be called once at application startup)
+	fn init_light_client<SpHeader: Header>(
 		&self,
 		genesis_header: SpHeader,
 		authority_list: VersionedAuthorityList,
@@ -65,7 +65,7 @@ impl EnclaveBase for Enclave {
 		Ok(())
 	}
 
-	fn init_chain_relay<SpHeader: Header>(
+	fn init_light_client<SpHeader: Header>(
 		&self,
 		genesis_header: SpHeader,
 		authority_list: VersionedAuthorityList,
@@ -76,7 +76,7 @@ impl EnclaveBase for Enclave {
 
 		// Todo: this is a bit ugly but the common `encode()` is not implemented for authority list
 		let latest_header_encoded = authority_list.using_encoded(|authorities| {
-			init_chain_relay_ffi(
+			init_light_client_ffi(
 				self.eid,
 				authorities.to_vec(),
 				encoded_genesis_header,
@@ -177,7 +177,7 @@ impl EnclaveBase for Enclave {
 	}
 }
 
-fn init_chain_relay_ffi(
+fn init_light_client_ffi(
 	enclave_id: sgx_enclave_id_t,
 	authorities_vec: Vec<u8>,
 	encoded_genesis_header: Vec<u8>,
@@ -189,7 +189,7 @@ fn init_chain_relay_ffi(
 	let mut latest_header = vec![0u8; latest_header_size as usize];
 
 	let result = unsafe {
-		ffi::init_chain_relay(
+		ffi::init_light_client(
 			enclave_id,
 			&mut retval,
 			encoded_genesis_header.as_ptr(),

@@ -5,6 +5,11 @@ use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use sp_core::H256;
+use sp_runtime::{
+	generic::{Block as BlockG, Header as HeaderG, SignedBlock as SignedBlockG},
+	traits::BlakeTwo256,
+	OpaqueExtrinsic,
+};
 use std::vec::Vec;
 
 /// Substrate runtimes provide no string type. Hence, for arbitrary data of varying length the
@@ -16,13 +21,13 @@ pub type PalletString = Vec<u8>;
 #[cfg(feature = "std")]
 pub type PalletString = String;
 
-#[cfg(feature = "std")]
-pub type SignedBlock = sp_runtime::generic::SignedBlock<my_node_runtime::Block>;
-
 pub use sp_core::crypto::AccountId32 as AccountId;
 
 pub type ShardIdentifier = H256;
 pub type BlockNumber = u32;
+pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
+pub type Block = BlockG<Header, OpaqueExtrinsic>;
+pub type SignedBlock = SignedBlockG<Block>;
 
 // Note in the substratee-pallet-registry this is a struct. But for the codec this does not matter.
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
