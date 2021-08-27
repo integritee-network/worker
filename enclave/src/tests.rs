@@ -22,7 +22,6 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::ops::Deref;
-use itc_light_client::{Block, Header};
 use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{
@@ -42,6 +41,7 @@ use std::{
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
 };
+use substratee_node_primitives::{Block, Header};
 use substratee_ocall_api::EnclaveAttestationOCallApi;
 use substratee_settings::{
 	enclave::GETTER_TIMEOUT,

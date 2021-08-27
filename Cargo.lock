@@ -5290,7 +5290,6 @@ dependencies = [
 name = "substratee-node-primitives"
 version = "0.8.0"
 dependencies = [
- "integritee-node-runtime",
  "parity-scale-codec",
  "sgx_tstd",
  "sp-core",

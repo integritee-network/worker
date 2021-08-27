@@ -39,7 +39,7 @@ use crate::{
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
-use itc_light_client::{io::LightClientSeal, Block, Header, Validator};
+use itc_light_client::{io::LightClientSeal, Validator};
 use log::*;
 use rpc::{
 	api::SideChainApi,
@@ -64,7 +64,7 @@ use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
 use substratee_get_storage_verified::GetStorageVerified;
-use substratee_node_primitives::{CallWorkerFn, ShieldFundsFn, SignedBlock};
+use substratee_node_primitives::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
 use substratee_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
 };
@@ -264,7 +264,7 @@ fn create_extrinsics<V>(
 	mut nonce: u32,
 ) -> Result<Vec<Vec<u8>>>
 where
-	V: Validator,
+	V: Validator<Block>,
 {
 	// get information for composing the extrinsic
 	let signer = Ed25519Seal::unseal()?;
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn init_chain_relay(
 		},
 	};
 
-	match itc_light_client::io::read_or_init_validator(header, auth, proof) {
+	match itc_light_client::io::read_or_init_validator::<Block>(header, auth, proof) {
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
 		Err(e) => return e.into(),
 	}
@@ -465,12 +465,12 @@ pub unsafe extern "C" fn produce_blocks(
 }
 
 fn sync_blocks_on_chain_relay<V, O>(
-	blocks_to_sync: Vec<SignedBlock<Block>>,
+	blocks_to_sync: Vec<SignedBlock>,
 	validator: &mut V,
 	on_chain_ocall_api: &O,
 ) -> SgxResult<Vec<OpaqueCall>>
 where
-	V: Validator,
+	V: Validator<Block>,
 	O: EnclaveOnChainOCallApi,
 {
 	let mut calls = Vec::<OpaqueCall>::new();

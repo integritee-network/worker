@@ -35,8 +35,8 @@ use sp_finality_grandpa::{
 	GRANDPA_ENGINE_ID,
 };
 use sp_runtime::{
-	generic::{Block as BlockG, Digest as DigestG, Header as HeaderG, OpaqueDigestItemId},
-	traits::{BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor},
+	generic::{Digest as DigestG, OpaqueDigestItemId},
+	traits::{Block as BlockT, Hash as HashT, Header as HeaderT, NumberFor},
 	Justification, Justifications, OpaqueExtrinsic,
 };
 use state::RelayState;

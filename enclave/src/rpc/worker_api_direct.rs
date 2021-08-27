@@ -51,9 +51,8 @@ use jsonrpc_core::{futures::executor, Error as RpcError, *};
 use substratee_stf::ShardIdentifier;
 
 use base58::FromBase58;
-use itc_light_client::Block;
 
-use substratee_node_primitives::Request;
+use substratee_node_primitives::{Block, Request};
 use substratee_worker_primitives::{
 	block::SignedBlock, DirectRequestStatus, RpcReturnValue, TrustedOperationStatus,
 };
