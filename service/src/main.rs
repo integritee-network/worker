@@ -85,6 +85,7 @@ mod error;
 mod globals;
 mod node_api_factory;
 mod ocall_bridge;
+mod sidechain_storage;
 mod sync_block_gossiper;
 mod tests;
 mod utils;

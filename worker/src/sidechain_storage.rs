@@ -11,8 +11,15 @@
 	limitations under the License.
 */
 
-use my_node_runtime::{
-	substratee_registry::ShardIdentifier, Event, Hash, Header, SignedBlock, UncheckedExtrinsic,
+use codec::{Decode, Encode};
+use log::*;
+use my_node_runtime::{Event, Hash, Header, UncheckedExtrinsic};
+use sgx_types::*;
+use sp_core::{
+	crypto::{AccountId32, Ss58Codec},
+	sr25519,
+	storage::StorageKey,
+	Pair, H256,
 };
 use std::{
 	collections::HashMap,
@@ -25,31 +32,33 @@ use std::{
 		Mutex,
 	},
 };
+use substratee_node_primitives::{ShardIdentifier, SignedBlock};
 
-use codec::{Decode, Encode};
-use log::*;
-use sgx_types::*;
-use sp_core::{
-	crypto::{AccountId32, Ss58Codec},
-	sr25519,
-	storage::StorageKey,
-	Pair, H256,
-};
-
-use substratee_worker_primitives::block::{
-	SidechainBlockNumber, SignedBlock as SignedSidechainBlock,
-};
-
+#[cfg(test)]
+use mockall::predicate::*;
+#[cfg(test)]
+use mockall::*;
 use rocksdb::{WriteBatch, DB};
+use substratee_worker_primitives::{
+	block::{BlockNumber as SidechainBlockNumber, SignedBlock as SignedSidechainBlock},
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
+};
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// key value of sidechain db of last block
 const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 /// key value of the stored shards vector
 const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
+/// Allows to store blocks
+#[cfg_attr(test, automock)]
+pub trait BlockStorage {
+	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
+}
+
 /// DB errors.
 #[derive(Debug)]
-pub enum DBError {
+pub enum Error {
 	/// RocksDB Error
 	OperationalError(rocksdb::Error),
 	/// Blocknumber Succession error
@@ -86,7 +95,7 @@ pub struct SidechainDB {
 //TODO: create unit tests for shard purge & purge_oldBlocks function
 
 impl SidechainDB {
-	pub fn new(path: &str) -> Result<SidechainDB, DBError> {
+	pub fn new(path: &str) -> Result<SidechainDB> {
 		let db = DB::open_default(path).unwrap();
 		// get shards in db
 		let shards: Vec<ShardIdentifier> = match db.get(STORED_SHARDS_KEY.encode()) {
@@ -94,7 +103,7 @@ impl SidechainDB {
 			Ok(None) => vec![],
 			Err(e) => {
 				error!("Could not read shards from db: {}", e);
-				return Err(DBError::OperationalError(e))
+				return Err(Error::OperationalError(e))
 			},
 		};
 		// get last block of each shard
@@ -108,14 +117,14 @@ impl SidechainDB {
 						},
 						Err(e) => {
 							error!("Could not decode signed block: {:?}", e);
-							return Err(DBError::DecodeError)
+							return Err(Error::DecodeError)
 						},
 					}
 				},
 				Ok(None) => {},
 				Err(e) => {
 					error!("Could not read shards from db: {}", e);
-					return Err(DBError::OperationalError(e))
+					return Err(Error::OperationalError(e))
 				},
 			}
 		}
@@ -123,23 +132,20 @@ impl SidechainDB {
 	}
 
 	/// update sidechain storage from decoded signed blocks
-	pub fn update_db_from_encoded(
-		&mut self,
-		mut encoded_signed_blocks: &[u8],
-	) -> Result<(), DBError> {
+	pub fn update_db_from_encoded(&mut self, mut encoded_signed_blocks: &[u8]) -> Result<()> {
 		let signed_blocks: Vec<SignedSidechainBlock> =
 			match Decode::decode(&mut encoded_signed_blocks) {
 				Ok(blocks) => blocks,
 				Err(e) => {
 					error!("Could not decode signed blocks: {:?}", e);
-					return Err(DBError::DecodeError)
+					return Err(Error::DecodeError)
 				},
 			};
 		self.update_db(signed_blocks)
 	}
 
 	/// update sidechain storage
-	pub fn update_db(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<(), DBError> {
+	pub fn update_db(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
 		println! {"Received blocks: {:?}", blocks_to_store};
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
@@ -179,13 +185,13 @@ impl SidechainDB {
 		}
 		if let Err(e) = self.db.write(batch) {
 			error!("Could not write batch to sidechain db due to {}", e);
-			return Err(DBError::OperationalError(e))
+			return Err(Error::OperationalError(e))
 		};
 		Ok(())
 	}
 
 	/// purges a shard and its block from the db storage
-	pub fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<(), DBError> {
+	pub fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
 		// get all shards
 		if self.shards.contains(&shard) {
 			// remove shard from list
@@ -195,7 +201,7 @@ impl SidechainDB {
 			// get last block of shard
 			let mut last_block: &LastSidechainBlock = match self.last_blocks.get(&shard) {
 				Some(last_block) => last_block,
-				None => return Err(DBError::LastBlockNotFound(shard)),
+				None => return Err(Error::LastBlockNotFound(shard)),
 			};
 			// remove last block from storage
 			// FIXME: Errorhandling
