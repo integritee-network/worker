@@ -39,7 +39,7 @@ enclave {
 			[out, size=value_size] uint8_t* value, uint32_t value_size
 		);
 
-		public sgx_status_t init_chain_relay(
+		public sgx_status_t init_light_client(
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,
             [in, size=authority_list_size] uint8_t* authority_list, size_t authority_list_size,
             [in, size=authority_proof_size] uint8_t* authority_proof, size_t authority_proof_size,

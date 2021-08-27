@@ -336,7 +336,7 @@ pub unsafe extern "C" fn get_state(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn init_chain_relay(
+pub unsafe extern "C" fn init_light_client(
 	genesis_header: *const u8,
 	genesis_header_size: usize,
 	authority_list: *const u8,
@@ -407,7 +407,7 @@ pub unsafe extern "C" fn produce_blocks(
 
 	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
 
-	let mut calls = match sync_blocks_on_chain_relay(
+	let mut calls = match sync_blocks_on_light_client(
 		blocks_to_sync,
 		&mut validator,
 		on_chain_ocall_api.as_ref(),
@@ -464,7 +464,7 @@ pub unsafe extern "C" fn produce_blocks(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn sync_blocks_on_chain_relay<V, O>(
+fn sync_blocks_on_light_client<V, O>(
 	blocks_to_sync: Vec<SignedBlock>,
 	validator: &mut V,
 	on_chain_ocall_api: &O,

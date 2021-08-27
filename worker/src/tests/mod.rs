@@ -59,8 +59,8 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 		println!("Running integration Tests");
 		println!("  testing perform_ra()");
 		perform_ra_works(&enclave, port);
-		println!("  init chain_relay");
-		let mut head = init_chain_relay(port, &enclave);
+		println!("  init light_client");
+		let mut head = init_light_client(port, &enclave);
 		println!("  testing process_forwarded_payload()");
 		head = call_worker_encrypted_set_balance_works(&enclave, port, head);
 		println!("  testing execute_stf_unshield_balance()");

@@ -17,7 +17,7 @@ extern "C" {
 		value_size: u32,
 	) -> sgx_status_t;
 
-	pub fn init_chain_relay(
+	pub fn init_light_client(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		genesis_hash: *const u8,

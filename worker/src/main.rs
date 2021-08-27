@@ -321,7 +321,7 @@ fn start_worker<E, T, W>(
 	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-	let latest_head = init_chain_relay(&node_api, enclave.as_ref());
+	let latest_head = init_light_client(&node_api, enclave.as_ref());
 	println!("*** [+] Finished syncing chain relay\n");
 
 	// ------------------------------------------------------------------------
@@ -478,7 +478,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
-pub fn init_chain_relay<E: EnclaveBase + SideChain>(
+pub fn init_light_client<E: EnclaveBase + SideChain>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: &E,
 ) -> Header {
@@ -493,7 +493,7 @@ pub fn init_chain_relay<E: EnclaveBase + SideChain>(
 	let authority_list = VersionedAuthorityList::from(grandpas);
 
 	let latest = enclave_api
-		.init_chain_relay(genesis_header, authority_list, grandpa_proof)
+		.init_light_client(genesis_header, authority_list, grandpa_proof)
 		.unwrap();
 
 	info!("Finished initializing chain relay, syncing....");

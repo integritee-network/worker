@@ -96,9 +96,9 @@ pub fn forward_encrypted_unshield_works<E: EnclaveBase + SideChain>(
 	crate::produce_blocks(enclave_api, &api, last_synced_head)
 }
 
-pub fn init_chain_relay<E: EnclaveBase + SideChain>(port: &str, enclave_api: &E) -> Header {
+pub fn init_light_client<E: EnclaveBase + SideChain>(port: &str, enclave_api: &E) -> Header {
 	let (api, _, _) = setup(enclave_api, None, port);
-	crate::init_chain_relay(&api, enclave_api)
+	crate::init_light_client(&api, enclave_api)
 }
 
 pub fn shield_funds_workds<E: EnclaveBase + SideChain>(
