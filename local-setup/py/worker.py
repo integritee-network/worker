@@ -119,7 +119,7 @@ class Worker:
 
     def purge_chain_relay_db(self):
         print(f'purging chain_relay_db')
-        for db in pathlib.Path(self.cwd).glob('chain_relay_db.bin*'):
+        for db in pathlib.Path(self.cwd).glob('light_client_db.bin*'):
             print(f'remove: {db}')
             db.unlink()
 

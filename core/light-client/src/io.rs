@@ -22,7 +22,7 @@ use log::*;
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::{Block, Header};
 use std::{fs, sgxfs::SgxFile};
-use substratee_settings::files::CHAIN_RELAY_DB;
+use substratee_settings::files::LIGHT_CLIENT_DB;
 use substratee_sgx_io::{seal, unseal, SealedIO};
 use substratee_storage::StorageProof;
 
@@ -36,17 +36,17 @@ impl<B: Block> SealedIO for LightClientSeal<B> {
 	type Unsealed = LightValidation<B>;
 
 	fn unseal() -> Result<Self::Unsealed> {
-		Ok(unseal(CHAIN_RELAY_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
+		Ok(unseal(LIGHT_CLIENT_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
 	fn seal(unsealed: Self::Unsealed) -> Result<()> {
 		debug!("backup chain relay state");
-		if fs::copy(CHAIN_RELAY_DB, format!("{}.1", CHAIN_RELAY_DB)).is_err() {
+		if fs::copy(LIGHT_CLIENT_DB, format!("{}.1", LIGHT_CLIENT_DB)).is_err() {
 			warn!("could not backup previous chain relay state");
 		};
 		debug!("Seal Chain Relay State. Current state: {:?}", unsealed);
 
-		Ok(unsealed.using_encoded(|bytes| seal(bytes, CHAIN_RELAY_DB))?)
+		Ok(unsealed.using_encoded(|bytes| seal(bytes, LIGHT_CLIENT_DB))?)
 	}
 }
 
@@ -58,8 +58,8 @@ pub fn read_or_init_validator<B: Block>(
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-	if SgxFile::open(CHAIN_RELAY_DB).is_err() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", CHAIN_RELAY_DB);
+	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
 		return init_validator::<B>(header, auth, proof)
 	}
 
