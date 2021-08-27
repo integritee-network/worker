@@ -52,7 +52,7 @@ bin/attestation_report.json
 bin/shards
 bin/*.der
 bin/enclave-shielding-pubkey.json
-bin/sidechainblock_db.bin
+bin/sidechain_db.bin
 
 # client
 client/my_keystore
