@@ -246,6 +246,9 @@ impl SidechainStorage {
 	}
 }
 
+// TODO: unit test purge & get previous block
+// TODO: Add getter functions. The .get like beloew is horrible
+
 #[cfg(test)]
 mod tests {
 	use super::*;
