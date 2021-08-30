@@ -157,6 +157,7 @@ impl SidechainStorage {
 		}
 	}
 
+	/// gets the block of the given blockhash, if there is such a block
 	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedSidechainBlock>> {
 		match self.db.get(block_hash.encode()).map_err(Error::OperationalError)? {
 			None => Ok(None),
@@ -177,12 +178,18 @@ impl SidechainStorage {
 			let current_block_shard = signed_block.block().shard_id();
 			let current_block_nr = signed_block.block().block_number();
 			if self.shards.contains(&current_block_shard) {
-				let last_block: &LastSidechainBlock =
-					self.last_blocks.get(&current_block_shard).unwrap();
-				if last_block.number != current_block_nr - 1 {
-					error!("The to be included sidechainblock number {:?} is not a succession of the previous sidechain block in the db: {:?}",
-                    current_block_nr, last_block.number);
-					break
+				if let Some(last_block) = self.last_block_of_shard(&current_block_shard) {
+					if last_block.number != current_block_nr - 1 {
+						error!("The to be included sidechainblock number {:?} is not a succession of the previous sidechain block in the db: {:?}",
+						current_block_nr, last_block.number);
+						continue
+					}
+				} else {
+					error!(
+						"A shard without a last block is existing. Skipping shard: {:?}",
+						current_block_shard
+					);
+					continue
 				}
 			} else {
 				self.shards.push(current_block_shard);
@@ -200,6 +207,7 @@ impl SidechainStorage {
 			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
 			let current_last_block =
 				LastSidechainBlock { hash: current_block_hash, number: current_block_nr };
+			self.last_blocks.insert(current_block_shard, current_last_block.clone());
 			batch.put((LAST_BLOCK_KEY, current_block_shard).encode(), current_last_block.encode());
 		}
 		// update stored_shards_key -> vec<shard> only when a new shard was included
@@ -216,29 +224,42 @@ impl SidechainStorage {
 	/// purges a shard and its block from the db storage
 	fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
 		// get all shards
+		let mut result: Result<()> = Ok(());
 		if self.shards.contains(&shard) {
 			// get last block of shard
 			let mut last_block = match self.last_blocks.get(&shard) {
 				Some(last_block) => last_block.clone(),
 				None => return Err(Error::LastBlockNotFound(shard)),
 			};
-			// remove last block from storage
-			// FIXME: Errorhandling
-			self.db.delete(last_block.hash.encode()).unwrap();
-			self.db.delete((shard, last_block.number).encode()).unwrap();
-			self.db.delete((LAST_BLOCK_KEY, shard).encode()).unwrap();
+			// remove last block from db storage
+			// Blockhash -> Signed Block
+			self.db.delete(last_block.hash.encode()).map_err(Error::OperationalError)?;
+			// (Shard , Block number) -> Blockhash
+			self.db
+				.delete((shard, last_block.number).encode())
+				.map_err(Error::OperationalError)?;
+			// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
+			self.db
+				.delete((LAST_BLOCK_KEY, shard).encode())
+				.map_err(Error::OperationalError)?;
+			self.last_blocks.remove(&shard); // delete from local memory
 
-			// Remove all blocks
+			// Remove all blocks from db
 			while let Some(previous_block) = self.get_previous_block(shard, last_block.number) {
 				last_block = previous_block;
-				// FIXME: Errorhandling
-				self.db.delete(last_block.hash.encode()).unwrap();
-				self.db.delete((shard, last_block.number).encode()).unwrap();
+				// Blockhash -> Signed Block
+				self.db.delete(last_block.hash.encode()).map_err(Error::OperationalError)?;
+				// (Shard, Block number) -> Blockhash
+				self.db
+					.delete((shard, last_block.number).encode())
+					.map_err(Error::OperationalError)?;
 			}
 			// remove shard from list
+			// STORED_SHARDS_KEY -> Vec<(Shard)>
 			self.shards.retain(|&x| x != shard);
-			//FIXME: Errorhandling
-			self.db.put(STORED_SHARDS_KEY.encode(), self.shards.encode()).unwrap();
+			self.db
+				.put(STORED_SHARDS_KEY.encode(), self.shards.encode())
+				.map_err(Error::OperationalError)?
 		}
 		Ok(())
 	}
@@ -261,7 +282,6 @@ impl SidechainStorage {
 			None
 		}
 	}
-
 	/// reads shards from DB
 	fn load_shards_from_db(db: &DB) -> Result<Vec<ShardIdentifier>> {
 		match db.get(STORED_SHARDS_KEY.encode()).map_err(Error::OperationalError)? {
@@ -287,7 +307,6 @@ impl SidechainStorage {
 }
 
 // TODO: unit test purge
-// TODO: Add getter functions. The .get like beloew is horrible
 
 #[cfg(test)]
 mod tests {
@@ -299,6 +318,113 @@ mod tests {
 	};
 	use std::time::{SystemTime, UNIX_EPOCH};
 	use substratee_worker_primitives::{block::Block, traits::SignBlock};
+
+	#[test]
+	fn load_shards_from_db_works() {
+		// given
+		let path = PathBuf::from("load_shards_from_db_works");
+		let shard_one = H256::from_low_u64_be(1);
+		let shard_two = H256::from_low_u64_be(2);
+		// when
+		{
+			let sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// ensure db starts empty
+			assert_eq!(SidechainStorage::load_shards_from_db(&sidechain_db.db).unwrap(), vec![]);
+			// write signed_block to db
+			sidechain_db
+				.db
+				.put(STORED_SHARDS_KEY.encode(), vec![shard_one, shard_two].encode())
+				.unwrap();
+		}
+
+		// then
+		{
+			// open new DB of same path:
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let loaded_shards =
+				SidechainStorage::load_shards_from_db(&updated_sidechain_db.db).unwrap();
+			assert!(loaded_shards.contains(&shard_one));
+			assert!(loaded_shards.contains(&shard_two));
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn load_last_block_from_db_works() {
+		// given
+		let path = PathBuf::from("load_last_block_from_db_works");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block = create_signed_block(20, shard);
+		let signed_last_block = LastSidechainBlock {
+			hash: signed_block.hash(),
+			number: signed_block.block().block_number(),
+		};
+		// when
+		{
+			let sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// ensure db starts empty
+			assert!(SidechainStorage::load_last_block_from_db(&sidechain_db.db, &shard)
+				.unwrap()
+				.is_none());
+			// write signed_block to db
+			sidechain_db
+				.db
+				.put((LAST_BLOCK_KEY, shard).encode(), signed_last_block.encode())
+				.unwrap();
+		}
+
+		// then
+		{
+			// open new DB of same path:
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let loaded_block =
+				SidechainStorage::load_last_block_from_db(&updated_sidechain_db.db, &shard)
+					.unwrap()
+					.unwrap();
+			assert_eq!(loaded_block, signed_last_block);
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn create_new_sidechain_storage_works() {
+		// given
+		let path = PathBuf::from("create_new_sidechain_storage_works");
+		let shard = H256::from_low_u64_be(1);
+		let shard_vector = vec![shard];
+		let signed_block = create_signed_block(20, shard);
+		let signed_last_block = LastSidechainBlock {
+			hash: signed_block.hash(),
+			number: signed_block.block().block_number(),
+		};
+		// when
+		{
+			let sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// ensure db starts empty
+			assert!(SidechainStorage::load_last_block_from_db(&sidechain_db.db, &shard)
+				.unwrap()
+				.is_none());
+			// write shards to db
+			sidechain_db
+				.db
+				.put((LAST_BLOCK_KEY, shard).encode(), signed_last_block.encode())
+				.unwrap();
+			// write shards to db
+			sidechain_db.db.put(STORED_SHARDS_KEY.encode(), shard_vector.encode()).unwrap();
+		}
+
+		// then
+		{
+			// open new DB of same path:
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			assert_eq!(updated_sidechain_db.shards, shard_vector);
+			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), signed_last_block);
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
 
 	#[test]
 	fn store_block_works() {
@@ -321,11 +447,17 @@ mod tests {
 			// open new DB of same path:
 			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			// ensure DB contains previously stored data:
-			assert_eq!(updated_sidechain_db.shards[0], shard);
-			let last_block: &LastSidechainBlock =
-				updated_sidechain_db.last_blocks.get(&shard).unwrap();
-			assert_eq!(last_block.number, 20);
+			assert_eq!(*updated_sidechain_db.shards(), vec![shard]);
+			let last_block = updated_sidechain_db.last_block_of_shard(&shard).unwrap();
+			assert_eq!(last_block.number, signed_block.block().block_number());
 			assert_eq!(last_block.hash, signed_block.hash());
+			let stored_block_hash =
+				updated_sidechain_db.get_block_hash(&shard, last_block.number).unwrap().unwrap();
+			assert_eq!(stored_block_hash, signed_block.hash());
+			assert_eq!(
+				updated_sidechain_db.get_block(&stored_block_hash).unwrap().unwrap(),
+				signed_block
+			);
 		}
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
@@ -544,21 +676,39 @@ mod tests {
 		// given
 		let path = PathBuf::from("purge_shard_works");
 		let shard = H256::from_low_u64_be(1);
-
+		let block_one = create_signed_block(1, shard);
+		let block_two = create_signed_block(2, shard);
+		let block_three = create_signed_block(3, shard);
 		{
 			// create sidechain_db
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
-			sidechain_db.store_blocks(vec![create_signed_block(2, shard)]).unwrap();
-			sidechain_db.store_blocks(vec![create_signed_block(3, shard)]).unwrap();
-
-			// then
-			sidechain_db.purge_shard(shard).unwrap();
+			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
 			// when
-			assert_eq!(some_block, last_block);
+			sidechain_db.purge_shard(shard).unwrap();
+
+			// test if local storage has been cleansed
+			assert!(!sidechain_db.shards.contains(&shard));
+			assert!(sidechain_db.last_blocks.get(&shard).is_none());
 		}
 
+		// then
+		{
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// test if local storage is still clean
+			assert!(!updated_sidechain_db.shards.contains(&shard));
+			assert!(updated_sidechain_db.last_blocks.get(&shard).is_none());
+			// test if db is clean
+			assert!(updated_sidechain_db.last_block_of_shard(&shard).is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 3).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 2).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 1).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_three.hash()).unwrap().is_none());
+		}
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
