@@ -204,8 +204,8 @@ impl SidechainStorage {
 			//FIXME: Errorhandling
 			self.db.put(STORED_SHARDS_KEY.encode(), self.shards.encode()).unwrap();
 			// get last block of shard
-			let mut last_block: &LastSidechainBlock = match self.last_blocks.get(&shard) {
-				Some(last_block) => last_block,
+			let mut last_block = match self.last_blocks.get(&shard) {
+				Some(last_block) => last_block.clone(),
 				None => return Err(Error::LastBlockNotFound(shard)),
 			};
 			// remove last block from storage
@@ -230,14 +230,15 @@ impl SidechainStorage {
 		&self,
 		shard: ShardIdentifier,
 		current_block_number: SidechainBlockNumber,
-	) -> Option<&LastSidechainBlock> {
+	) -> Option<LastSidechainBlock> {
 		if let Some(block_hash_encoded) =
 			self.db.get((shard, current_block_number).encode()).unwrap()
 		{
 			let block_hash = H256::decode(&mut block_hash_encoded.as_slice()).unwrap();
-			&LastSidechainBlock { hash: block_hash, number: current_block_number - 1 };
+			Some(LastSidechainBlock { hash: block_hash, number: current_block_number - 1 })
+		} else {
+			None
 		}
-		None
 	}
 }
 
