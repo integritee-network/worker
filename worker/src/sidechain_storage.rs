@@ -196,7 +196,7 @@ impl SidechainStorage {
 	}
 
 	/// purges a shard and its block from the db storage
-	pub fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
+	fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
 		// get all shards
 		if self.shards.contains(&shard) {
 			// remove shard from list
@@ -234,11 +234,11 @@ impl SidechainStorage {
 		shard: ShardIdentifier,
 		current_block_number: SidechainBlockNumber,
 	) -> Option<LastSidechainBlock> {
-		if let Some(block_hash_encoded) =
-			self.db.get((shard, current_block_number).encode()).unwrap()
+		let prev_block_number = current_block_number - 1;
+		if let Some(block_hash_encoded) = self.db.get((shard, prev_block_number).encode()).unwrap()
 		{
 			let block_hash = H256::decode(&mut block_hash_encoded.as_slice()).unwrap();
-			Some(LastSidechainBlock { hash: block_hash, number: current_block_number - 1 })
+			Some(LastSidechainBlock { hash: block_hash, number: prev_block_number })
 		} else {
 			None
 		}
@@ -286,7 +286,6 @@ mod tests {
 			assert_eq!(last_block.number, 20);
 			assert_eq!(last_block.hash, signed_block.hash());
 		}
-
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
@@ -325,7 +324,6 @@ mod tests {
 			assert_eq!(last_block_one.hash, signed_block_one.hash());
 			assert_eq!(last_block_two.hash, signed_block_two.hash());
 		}
-
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
@@ -394,7 +392,6 @@ mod tests {
 			assert_eq!(db_block_one, signed_block_one);
 			assert_eq!(db_block_two, signed_block_two);
 		}
-
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
@@ -407,41 +404,46 @@ mod tests {
 		let signed_block_one = create_signed_block(7, shard);
 		let signed_block_two = create_signed_block(21, shard);
 		let signed_block_vector_one = vec![signed_block_one.clone()];
-		let signed_block_vector_two = vec![signed_block_two];
+		let signed_block_vector_two = vec![signed_block_two.clone()];
 
 		// when
 		{
 			// first iteration
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
-		}
-		{
+
 			// second iteration
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
 		}
-
 		// then
 		{
 			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			// last block is equal to first block:
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
-			assert_eq!(last_block.number, 7);
+			assert_eq!(last_block.number, signed_block_one.block().block_number());
 
 			// storage contains only one blocks:
 			// (shard,blocknumber) -> blockhash
 			let db_block_hash_one = H256::decode(
-				&mut updated_sidechain_db.db.get((shard, 7).encode()).unwrap().unwrap().as_slice(),
+				&mut updated_sidechain_db
+					.db
+					.get((shard, signed_block_one.block().block_number()).encode())
+					.unwrap()
+					.unwrap()
+					.as_slice(),
 			)
 			.unwrap();
-			// ensure block number 3 is empty
-			let db_block_hash_empty = updated_sidechain_db.db.get((shard, 21).encode()).unwrap();
+			// ensure block number two is empty
+			let db_block_hash_empty = updated_sidechain_db
+				.db
+				.get((shard, signed_block_two.block().block_number()).encode())
+				.unwrap();
 
 			assert_eq!(db_block_hash_empty, None);
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
 		}
-
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
@@ -453,19 +455,23 @@ mod tests {
 		let shard = H256::from_low_u64_be(1);
 		let signed_block_one = create_signed_block(1, shard);
 		// create sidechain_db
-		let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-		sidechain_db.store_blocks(vec![signed_block_one.clone()]).unwrap();
-		// create last block one for comparison
-		let last_block = LastSidechainBlock {
-			hash: signed_block_one.hash(),
-			number: signed_block_one.block().block_number(),
-		};
+		{
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(vec![signed_block_one.clone()]).unwrap();
+			// create last block one for comparison
+			let last_block = LastSidechainBlock {
+				hash: signed_block_one.hash(),
+				number: signed_block_one.block().block_number(),
+			};
 
-		// then
-		let some_block = sidechain_db.get_previous_block(shard, 2).unwrap();
+			// then
+			let some_block = sidechain_db
+				.get_previous_block(shard, signed_block_one.block().block_number() + 1)
+				.unwrap();
 
-		// when
-		assert_eq!(some_block, last_block);
+			// when
+			assert_eq!(some_block, last_block);
+		}
 
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
@@ -477,14 +483,16 @@ mod tests {
 		let path = PathBuf::from("get_previous_block_returns_none_when_no_block");
 		let shard = H256::from_low_u64_be(1);
 		// create sidechain_db
-		let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-		sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
+		{
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
 
-		// then
-		let no_block = sidechain_db.get_previous_block(shard, 1);
+			// then
+			let no_block = sidechain_db.get_previous_block(shard, 1);
 
-		// when
-		assert!(no_block.is_none());
+			// when
+			assert!(no_block.is_none());
+		}
 
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
