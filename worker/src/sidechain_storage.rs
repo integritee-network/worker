@@ -131,7 +131,7 @@ impl SidechainStorage {
 				Ok(Some(last_block_encoded)) => {
 					match LastSidechainBlock::decode(&mut last_block_encoded.as_slice()) {
 						Ok(last_block) => {
-							last_blocks.insert(shard.clone(), last_block);
+							last_blocks.insert(*shard, last_block);
 						},
 						Err(e) => {
 							error!("Could not decode signed block: {:?}", e);
@@ -154,7 +154,7 @@ impl SidechainStorage {
 		println! {"Received blocks: {:?}", blocks_to_store};
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
-		for signed_block in blocks_to_store.clone().into_iter() {
+		for signed_block in blocks_to_store.into_iter() {
 			// check if current block is the next in line
 			let current_block_shard = signed_block.block().shard_id();
 			let current_block_nr = signed_block.block().block_number();
@@ -181,7 +181,7 @@ impl SidechainStorage {
 			);
 			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
 			let current_last_block =
-				LastSidechainBlock { hash: current_block_hash.into(), number: current_block_nr };
+				LastSidechainBlock { hash: current_block_hash, number: current_block_nr };
 			batch.put((LAST_BLOCK_KEY, current_block_shard).encode(), current_last_block.encode());
 		}
 		// update stored_shards_key -> vec<shard> only when a new shard was included
@@ -215,16 +215,11 @@ impl SidechainStorage {
 			self.db.delete((LAST_BLOCK_KEY, shard).encode()).unwrap();
 
 			//FIXME: Check -> does this make sense? Unit test!
-			loop {
-				match self.get_previous_block(shard, last_block.number) {
-					Some(previous_block) => {
-						last_block = previous_block;
-						// FIXME: Errorhandling
-						self.db.delete(last_block.hash.encode()).unwrap();
-						self.db.delete((shard, last_block.number).encode()).unwrap();
-					},
-					None => break,
-				}
+			while let Some(previous_block) = self.get_previous_block(shard, last_block.number) {
+				last_block = previous_block;
+				// FIXME: Errorhandling
+				self.db.delete(last_block.hash.encode()).unwrap();
+				self.db.delete((shard, last_block.number).encode()).unwrap();
 			}
 		}
 		Ok(())
@@ -240,7 +235,7 @@ impl SidechainStorage {
 			self.db.get((shard, current_block_number).encode()).unwrap()
 		{
 			let block_hash = H256::decode(&mut block_hash_encoded.as_slice()).unwrap();
-			&LastSidechainBlock { hash: block_hash.into(), number: current_block_number - 1 };
+			&LastSidechainBlock { hash: block_hash, number: current_block_number - 1 };
 		}
 		None
 	}
@@ -285,7 +280,7 @@ mod tests {
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
 			assert_eq!(last_block.number, 20);
-			assert_eq!(last_block.hash, signed_block.hash().into());
+			assert_eq!(last_block.hash, signed_block.hash());
 		}
 
 		// clean up
@@ -301,9 +296,8 @@ mod tests {
 		let signed_block_one = create_signed_block(20, shard_one);
 		let signed_block_two = create_signed_block(1, shard_two);
 
-		let mut signed_block_vector: Vec<SignedSidechainBlock> = vec![];
-		signed_block_vector.push(signed_block_one.clone());
-		signed_block_vector.push(signed_block_two.clone());
+		let signed_block_vector: Vec<SignedSidechainBlock> =
+			vec![signed_block_one.clone(), signed_block_two.clone()];
 
 		// when
 		{
@@ -364,21 +358,11 @@ mod tests {
 			// storage contains both blocks:
 			// (shard,blocknumber) -> blockhash
 			let db_block_hash_one = H256::decode(
-				&mut updated_sidechain_db
-					.db
-					.get((shard, 20 as SidechainBlockNumber).encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
+				&mut updated_sidechain_db.db.get((shard, 20).encode()).unwrap().unwrap().as_slice(),
 			)
 			.unwrap();
 			let db_block_hash_two = H256::decode(
-				&mut updated_sidechain_db
-					.db
-					.get((shard, 21 as SidechainBlockNumber).encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
+				&mut updated_sidechain_db.db.get((shard, 21).encode()).unwrap().unwrap().as_slice(),
 			)
 			.unwrap();
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
@@ -412,14 +396,14 @@ mod tests {
 	}
 
 	#[test]
-	fn wrong_succession_order_does_not_get_through() {
+	fn wrong_succession_order_does_not_get_accepted() {
 		// given
-		let path = PathBuf::from("wrong_succession_order_does_not_get_through");
+		let path = PathBuf::from("wrong_succession_order_does_not_get_accepted");
 		let shard = H256::from_low_u64_be(1);
 		let signed_block_one = create_signed_block(7, shard);
 		let signed_block_two = create_signed_block(21, shard);
 		let signed_block_vector_one = vec![signed_block_one.clone()];
-		let signed_block_vector_two = vec![signed_block_two.clone()];
+		let signed_block_vector_two = vec![signed_block_two];
 
 		// when
 		{
@@ -444,19 +428,11 @@ mod tests {
 			// storage contains only one blocks:
 			// (shard,blocknumber) -> blockhash
 			let db_block_hash_one = H256::decode(
-				&mut updated_sidechain_db
-					.db
-					.get((shard, 7 as SidechainBlockNumber).encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
+				&mut updated_sidechain_db.db.get((shard, 7).encode()).unwrap().unwrap().as_slice(),
 			)
 			.unwrap();
 			// ensure block number 3 is empty
-			let db_block_hash_empty = updated_sidechain_db
-				.db
-				.get((shard, 21 as SidechainBlockNumber).encode())
-				.unwrap();
+			let db_block_hash_empty = updated_sidechain_db.db.get((shard, 21).encode()).unwrap();
 
 			assert_eq!(db_block_hash_empty, None);
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
@@ -477,11 +453,11 @@ mod tests {
 		let block = Block::new(
 			author,
 			block_number,
-			parent_hash.clone(),
-			layer_one_head.clone(),
-			shard.clone(),
-			signed_top_hashes.clone(),
-			encrypted_payload.clone(),
+			parent_hash,
+			layer_one_head,
+			shard,
+			signed_top_hashes,
+			encrypted_payload,
 			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
 		);
 		block.sign_block(&signer_pair)
