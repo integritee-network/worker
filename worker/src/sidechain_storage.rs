@@ -42,9 +42,10 @@ use mockall::*;
 use rocksdb::{WriteBatch, DB};
 use std::path::PathBuf;
 use substratee_worker_primitives::{
-	block::{BlockNumber as SidechainBlockNumber, SignedBlock as SignedSidechainBlock},
+	block::{BlockHash, BlockNumber, SignedBlock as SignedSidechainBlock},
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 };
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// key value of sidechain db of last block
@@ -62,7 +63,7 @@ pub enum Error {
 	/// Last block of shard not found
 	LastBlockNotFound(ShardIdentifier),
 	/// Decoding Error
-	DecodeError,
+	DecodeError(codec::Error),
 }
 
 /// Contains the blocknumber and blokhash of the
@@ -72,18 +73,18 @@ pub struct LastSidechainBlock {
 	/// hash of the last sidechain block
 	hash: H256,
 	/// block number of the last sidechain block
-	number: SidechainBlockNumber,
+	number: BlockNumber,
 }
 
 /// Struct used to insert newly produced sidechainblocks
 /// into the database
 pub struct SidechainStorage {
 	/// database
-	pub db: DB,
+	db: DB,
 	/// shards in database
-	pub shards: Vec<ShardIdentifier>,
+	shards: Vec<ShardIdentifier>,
 	/// map to last sidechain block of every shard
-	pub last_blocks: HashMap<ShardIdentifier, LastSidechainBlock>,
+	last_blocks: HashMap<ShardIdentifier, LastSidechainBlock>,
 }
 
 /// Lock wrapper around sidechain storage
@@ -113,40 +114,57 @@ impl SidechainStorageLock {
 }
 
 impl SidechainStorage {
+	/// loads the DB from the given paths and stores the listed shard
+	/// and their last blocks in memory for better performance
 	pub fn new(path: PathBuf) -> Result<SidechainStorage> {
+		// load db
 		let db = DB::open_default(path).unwrap();
-		// get shards in db
-		let shards: Vec<ShardIdentifier> = match db.get(STORED_SHARDS_KEY.encode()) {
-			Ok(Some(shards)) => Decode::decode(&mut shards.as_slice()).unwrap(),
-			Ok(None) => vec![],
-			Err(e) => {
-				error!("Could not read shards from db: {}", e);
-				return Err(Error::OperationalError(e))
-			},
-		};
+		let shards = Self::load_shards_from_db(&db)?;
 		// get last block of each shard
 		let mut last_blocks = HashMap::new();
 		for shard in shards.iter() {
-			match db.get((LAST_BLOCK_KEY, shard).encode()) {
-				Ok(Some(last_block_encoded)) => {
-					match LastSidechainBlock::decode(&mut last_block_encoded.as_slice()) {
-						Ok(last_block) => {
-							last_blocks.insert(*shard, last_block);
-						},
-						Err(e) => {
-							error!("Could not decode signed block: {:?}", e);
-							return Err(Error::DecodeError)
-						},
-					}
-				},
-				Ok(None) => {},
-				Err(e) => {
-					error!("Could not read shards from db: {}", e);
-					return Err(Error::OperationalError(e))
-				},
+			if let Some(last_block) = Self::load_last_block_from_db(&db, shard)? {
+				last_blocks.insert(*shard, last_block);
+			} else {
+				// an empty shard sidechain storage should not exist. Consider deleting this shard from the shards list.
+				error!("Sidechain storage of shard {:?} is empty", shard);
 			}
 		}
 		Ok(SidechainStorage { db, shards, last_blocks })
+	}
+
+	/// gets all shards of currently loaded sidechain db
+	pub fn shards(&self) -> &Vec<ShardIdentifier> {
+		&self.shards
+	}
+
+	/// gets the last block of the current sidechain DB and the given shard
+	pub fn last_block_of_shard(&self, shard: &ShardIdentifier) -> Option<&LastSidechainBlock> {
+		self.last_blocks.get(shard)
+	}
+
+	/// gets the block hash of the sidechain block of the given shard and block number, if there is such a block
+	pub fn get_block_hash(
+		&self,
+		shard: &ShardIdentifier,
+		block_number: BlockNumber,
+	) -> Result<Option<BlockHash>> {
+		match self.db.get((*shard, block_number).encode()).map_err(Error::OperationalError)? {
+			None => Ok(None),
+			Some(enocded_hash) => Ok(Some(
+				BlockHash::decode(&mut enocded_hash.as_slice()).map_err(Error::DecodeError)?,
+			)),
+		}
+	}
+
+	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedSidechainBlock>> {
+		match self.db.get(block_hash.encode()).map_err(Error::OperationalError)? {
+			None => Ok(None),
+			Some(enocded_hash) => Ok(Some(
+				SignedSidechainBlock::decode(&mut enocded_hash.as_slice())
+					.map_err(Error::DecodeError)?,
+			)),
+		}
 	}
 
 	/// update sidechain storage
@@ -199,10 +217,6 @@ impl SidechainStorage {
 	fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
 		// get all shards
 		if self.shards.contains(&shard) {
-			// remove shard from list
-			self.shards.retain(|&x| x != shard);
-			//FIXME: Errorhandling
-			self.db.put(STORED_SHARDS_KEY.encode(), self.shards.encode()).unwrap();
 			// get last block of shard
 			let mut last_block = match self.last_blocks.get(&shard) {
 				Some(last_block) => last_block.clone(),
@@ -214,13 +228,17 @@ impl SidechainStorage {
 			self.db.delete((shard, last_block.number).encode()).unwrap();
 			self.db.delete((LAST_BLOCK_KEY, shard).encode()).unwrap();
 
-			//FIXME: Check -> does this make sense? Unit test!
+			// Remove all blocks
 			while let Some(previous_block) = self.get_previous_block(shard, last_block.number) {
 				last_block = previous_block;
 				// FIXME: Errorhandling
 				self.db.delete(last_block.hash.encode()).unwrap();
 				self.db.delete((shard, last_block.number).encode()).unwrap();
 			}
+			// remove shard from list
+			self.shards.retain(|&x| x != shard);
+			//FIXME: Errorhandling
+			self.db.put(STORED_SHARDS_KEY.encode(), self.shards.encode()).unwrap();
 		}
 		Ok(())
 	}
@@ -232,7 +250,7 @@ impl SidechainStorage {
 	fn get_previous_block(
 		&self,
 		shard: ShardIdentifier,
-		current_block_number: SidechainBlockNumber,
+		current_block_number: BlockNumber,
 	) -> Option<LastSidechainBlock> {
 		let prev_block_number = current_block_number - 1;
 		if let Some(block_hash_encoded) = self.db.get((shard, prev_block_number).encode()).unwrap()
@@ -243,9 +261,32 @@ impl SidechainStorage {
 			None
 		}
 	}
+
+	/// reads shards from DB
+	fn load_shards_from_db(db: &DB) -> Result<Vec<ShardIdentifier>> {
+		match db.get(STORED_SHARDS_KEY.encode()).map_err(Error::OperationalError)? {
+			Some(shards) => Ok(Vec::<ShardIdentifier>::decode(&mut shards.as_slice())
+				.map_err(Error::DecodeError)?),
+			None => Ok(vec![]),
+		}
+	}
+
+	/// reads last block from DB
+	fn load_last_block_from_db(
+		db: &DB,
+		shard: &ShardIdentifier,
+	) -> Result<Option<LastSidechainBlock>> {
+		match db.get((LAST_BLOCK_KEY, *shard).encode()).map_err(Error::OperationalError)? {
+			Some(last_block_encoded) => Ok(Some(
+				LastSidechainBlock::decode(&mut last_block_encoded.as_slice())
+					.map_err(Error::DecodeError)?,
+			)),
+			None => Ok(None),
+		}
+	}
 }
 
-// TODO: unit test purge & get previous block
+// TODO: unit test purge
 // TODO: Add getter functions. The .get like beloew is horrible
 
 #[cfg(test)]
@@ -492,6 +533,30 @@ mod tests {
 
 			// when
 			assert!(no_block.is_none());
+		}
+
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn purge_shard_works() {
+		// given
+		let path = PathBuf::from("purge_shard_works");
+		let shard = H256::from_low_u64_be(1);
+
+		{
+			// create sidechain_db
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
+			sidechain_db.store_blocks(vec![create_signed_block(2, shard)]).unwrap();
+			sidechain_db.store_blocks(vec![create_signed_block(3, shard)]).unwrap();
+
+			// then
+			sidechain_db.purge_shard(shard).unwrap();
+
+			// when
+			assert_eq!(some_block, last_block);
 		}
 
 		// clean up
