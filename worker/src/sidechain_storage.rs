@@ -224,8 +224,11 @@ impl SidechainStorage {
 		}
 		Ok(())
 	}
+}
 
-	// gets the previous block in chain of current block
+/// implementations of helper functions, not meant for pub use
+impl SidechainStorage {
+	/// gets the previous block of given shard and block number, if there is one
 	fn get_previous_block(
 		&self,
 		shard: ShardIdentifier,
@@ -438,6 +441,50 @@ mod tests {
 			assert_eq!(db_block_hash_empty, None);
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
 		}
+
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn get_previous_block_returns_correct_block() {
+		// given
+		let path = PathBuf::from("get_previous_block_returns_correct_block");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block_one = create_signed_block(1, shard);
+		// create sidechain_db
+		let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+		sidechain_db.store_blocks(vec![signed_block_one.clone()]).unwrap();
+		// create last block one for comparison
+		let last_block = LastSidechainBlock {
+			hash: signed_block_one.hash(),
+			number: signed_block_one.block().block_number(),
+		};
+
+		// then
+		let some_block = sidechain_db.get_previous_block(shard, 2).unwrap();
+
+		// when
+		assert_eq!(some_block, last_block);
+
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn get_previous_block_returns_none_when_no_block() {
+		// given
+		let path = PathBuf::from("get_previous_block_returns_none_when_no_block");
+		let shard = H256::from_low_u64_be(1);
+		// create sidechain_db
+		let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+		sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
+
+		// then
+		let no_block = sidechain_db.get_previous_block(shard, 1);
+
+		// when
+		assert!(no_block.is_none());
 
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
