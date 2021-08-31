@@ -206,7 +206,7 @@ impl SidechainStorage {
 	}
 
 	/// purges a shard and its block from the db storage
-	pub fn purge_shard_from_block_number(
+	pub fn prune_shard_from_block_number(
 		&mut self,
 		shard: &ShardIdentifier,
 		block_number: BlockNumber,
@@ -237,6 +237,19 @@ impl SidechainStorage {
 			}
 		}
 		Ok(())
+	}
+
+	/// prunes all shards except for the newest blocks (according to blocknumber)
+	pub fn prune_shards(&mut self, blocks_to_keep: BlockNumber) {
+		for shard in self.shards().clone() {
+			// get last block:
+			if let Some(last_block) = self.last_block_of_shard(&shard) {
+				let threshold_block = last_block.number - blocks_to_keep;
+				if let Err(e) = self.prune_shard_from_block_number(&shard, threshold_block) {
+					error!("Could not purge shard {:?} due to {:?}", shard, e);
+				}
+			}
+		}
 	}
 }
 
@@ -691,7 +704,7 @@ mod test {
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
 			// when
-			sidechain_db.purge_shard_from_block_number(&shard, 2).unwrap();
+			sidechain_db.prune_shard_from_block_number(&shard, 2).unwrap();
 		}
 
 		// then
@@ -736,7 +749,7 @@ mod test {
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
 			// when
-			sidechain_db.purge_shard_from_block_number(&shard, 3).unwrap();
+			sidechain_db.prune_shard_from_block_number(&shard, 3).unwrap();
 
 			// test if local storage has been cleansed
 			assert!(!sidechain_db.shards.contains(&shard));

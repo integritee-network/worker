@@ -11,7 +11,6 @@
 	limitations under the License.
 */
 use super::{storage::SidechainStorage, Result};
-use log::*;
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
@@ -45,16 +44,6 @@ impl BlockStorage for SidechainStorageLock {
 	}
 
 	fn prune_blocks_except(&self, blocks_to_keep: BlockNumber) {
-		let mut storage = self.storage.write();
-		// prune all shards:
-		for shard in storage.shards().clone() {
-			// get last block:
-			if let Some(last_block) = storage.last_block_of_shard(&shard) {
-				let threshold_block = last_block.number - blocks_to_keep;
-				if let Err(e) = storage.purge_shard_from_block_number(&shard, threshold_block) {
-					error!("Could not purge shard {:?} due to {:?}", shard, e);
-				}
-			}
-		}
+		self.storage.write().prune_shards(blocks_to_keep);
 	}
 }
