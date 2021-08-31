@@ -13,17 +13,21 @@
 
 use codec::{Decode, Encode};
 use log::*;
-use parking_lot::RwLock;
-use sp_core::H256;
-use std::collections::HashMap;
-use substratee_node_primitives::ShardIdentifier;
-
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
+use parking_lot::RwLock;
 use rocksdb::{WriteBatch, DB};
-use std::path::PathBuf;
+use sp_core::H256;
+use std::{
+	collections::HashMap,
+	path::PathBuf,
+	sync::Arc,
+	thread,
+	time::{Duration, SystemTime},
+};
+use substratee_node_primitives::ShardIdentifier;
 use substratee_worker_primitives::{
 	block::{BlockHash, BlockNumber, SignedBlock as SignedSidechainBlock},
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
@@ -63,6 +67,30 @@ pub struct LastSidechainBlock {
 	number: BlockNumber,
 }
 
+pub fn start_sidechain_pruning_loop<D>(
+	storage: &Arc<D>,
+	purge_interval: u64,
+	purge_limit: BlockNumber,
+) where
+	D: BlockStorage,
+{
+	let interval_time = Duration::from_secs(purge_interval);
+	let mut interval_start = SystemTime::now();
+	loop {
+		if let Ok(elapsed) = interval_start.elapsed() {
+			if elapsed >= interval_time {
+				// update interval time
+				interval_start = SystemTime::now();
+				storage.prune_blocks_except(purge_limit);
+			} else {
+				// sleep for the rest of the interval
+				let sleep_time = interval_time - elapsed;
+				thread::sleep(sleep_time);
+			}
+		}
+	}
+}
+
 /// Struct used to insert newly produced sidechainblocks
 /// into the database
 pub struct SidechainStorage {
@@ -83,11 +111,26 @@ pub struct SidechainStorageLock {
 #[cfg_attr(test, automock)]
 pub trait BlockStorage {
 	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
+	fn prune_blocks_except(&self, blocks_to_keep: u64);
 }
 
 impl BlockStorage for SidechainStorageLock {
 	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()> {
 		self.storage.write().store_blocks(blocks)
+	}
+
+	fn prune_blocks_except(&self, blocks_to_keep: BlockNumber) {
+		let mut storage = self.storage.write();
+		// prune all shards:
+		for shard in storage.shards().clone() {
+			// get last block:
+			if let Some(last_block) = storage.last_block_of_shard(&shard) {
+				let threshold_block = last_block.number - blocks_to_keep;
+				if let Err(e) = storage.purge_shard_from_block_number(&shard, threshold_block) {
+					error!("Could not purge shard {:?} due to {:?}", shard, e);
+				}
+			}
+		}
 	}
 }
 
@@ -206,12 +249,12 @@ impl SidechainStorage {
 	}
 
 	/// purges a shard and its block from the db storage
-	fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
-		if self.shards.contains(&shard) {
+	fn purge_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
+		if self.shards.contains(shard) {
 			// get last block of shard
-			let mut last_block = match self.last_blocks.get(&shard) {
+			let mut last_block = match self.last_blocks.get(shard) {
 				Some(last_block) => last_block.clone(),
-				None => return Err(Error::LastBlockNotFound(shard)),
+				None => return Err(Error::LastBlockNotFound(*shard)),
 			};
 			// remove last block from db storage
 			// Blockhash -> Signed Block
@@ -238,7 +281,7 @@ impl SidechainStorage {
 			}
 			// remove shard from list
 			// STORED_SHARDS_KEY -> Vec<(Shard)>
-			self.shards.retain(|&x| x != shard);
+			self.shards.retain(|&x| x != *shard);
 			self.db
 				.put(STORED_SHARDS_KEY.encode(), self.shards.encode())
 				.map_err(Error::OperationalError)?
@@ -249,14 +292,14 @@ impl SidechainStorage {
 	/// purges a shard and its block from the db storage
 	fn purge_shard_from_block_number(
 		&mut self,
-		shard: ShardIdentifier,
+		shard: &ShardIdentifier,
 		block_number: BlockNumber,
 	) -> Result<()> {
 		if self.shards.contains(&shard) {
 			// get last block of shard
-			let last_block = match self.last_blocks.get(&shard) {
+			let last_block = match self.last_blocks.get(shard) {
 				Some(last_block) => last_block.clone(),
-				None => return Err(Error::LastBlockNotFound(shard)),
+				None => return Err(Error::LastBlockNotFound(shard.clone())),
 			};
 			if last_block.number == block_number {
 				// given block number is last block of chain - purge whole shard
@@ -286,7 +329,7 @@ impl SidechainStorage {
 	/// gets the previous block of given shard and block number, if there is one
 	fn get_previous_block(
 		&self,
-		shard: ShardIdentifier,
+		shard: &ShardIdentifier,
 		current_block_number: BlockNumber,
 	) -> Option<LastSidechainBlock> {
 		let prev_block_number = current_block_number - 1;
@@ -628,7 +671,7 @@ mod tests {
 
 			// then
 			let some_block = sidechain_db
-				.get_previous_block(shard, signed_block_one.block().block_number() + 1)
+				.get_previous_block(&shard, signed_block_one.block().block_number() + 1)
 				.unwrap();
 
 			// when
@@ -650,7 +693,7 @@ mod tests {
 			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
 
 			// then
-			let no_block = sidechain_db.get_previous_block(shard, 1);
+			let no_block = sidechain_db.get_previous_block(&shard, 1);
 
 			// when
 			assert!(no_block.is_none());
@@ -676,7 +719,7 @@ mod tests {
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
 			// when
-			sidechain_db.purge_shard(shard).unwrap();
+			sidechain_db.purge_shard(&shard).unwrap();
 
 			// test if local storage has been cleansed
 			assert!(!sidechain_db.shards.contains(&shard));
@@ -723,7 +766,7 @@ mod tests {
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
 			// when
-			sidechain_db.purge_shard_from_block_number(shard, 2).unwrap();
+			sidechain_db.purge_shard_from_block_number(&shard, 2).unwrap();
 		}
 
 		// then
@@ -768,7 +811,7 @@ mod tests {
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
 			// when
-			sidechain_db.purge_shard_from_block_number(shard, 3).unwrap();
+			sidechain_db.purge_shard_from_block_number(&shard, 3).unwrap();
 
 			// test if local storage has been cleansed
 			assert!(!sidechain_db.shards.contains(&shard));

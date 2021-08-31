@@ -58,7 +58,7 @@ use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
-use sidechain_storage::SidechainStorageLock;
+use sidechain_storage::{BlockStorage, SidechainStorageLock};
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519, Pair,
@@ -89,8 +89,8 @@ use substratee_enclave_api::{
 use substratee_node_primitives::SignedBlock;
 use substratee_settings::{
 	files::{
-		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH,
-		SIGNING_KEY_FILE,
+		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
+		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
@@ -142,7 +142,7 @@ fn main() {
 		sync_block_gossiper,
 		direct_invocation_watch_list.clone(),
 		enclave.clone(),
-		sidechain_blockstorage,
+		sidechain_blockstorage.clone(),
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
@@ -173,6 +173,7 @@ fn main() {
 			config,
 			&shard,
 			enclave,
+			sidechain_blockstorage,
 			skip_ra,
 			node_api,
 			tokio_handle,
@@ -242,10 +243,11 @@ fn main() {
 	}
 }
 
-fn start_worker<E, T, W>(
+fn start_worker<E, T, W, D>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
+	sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	mut node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle: Arc<T>,
@@ -260,6 +262,7 @@ fn start_worker<E, T, W>(
 		+ TlsRemoteAttestation
 		+ TeerexApi
 		+ Clone,
+	D: BlockStorage + Sync + Send + 'static,
 {
 	println!("IntegriTEE Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
@@ -351,6 +354,20 @@ fn start_worker<E, T, W>(
 		.name("interval_block_production_timer".to_owned())
 		.spawn(move || {
 			start_interval_block_production(enclave.clone().as_ref(), &api4, latest_head)
+		})
+		.unwrap();
+
+	// ------------------------------------------------------------------------
+	// start sidechain pruning loop$
+	let storage = sidechain_storage.clone();
+	thread::Builder::new()
+		.name("sidechain_pruning_loop".to_owned())
+		.spawn(move || {
+			sidechain_storage::start_sidechain_pruning_loop(
+				&storage,
+				SIDECHAIN_PURGE_INTERVAL,
+				SIDECHAIN_PURGE_LIMIT,
+			);
 		})
 		.unwrap();
 
