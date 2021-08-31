@@ -248,6 +248,8 @@ impl SidechainStorage {
 				if let Err(e) = self.prune_shard_from_block_number(&shard, threshold_block) {
 					error!("Could not purge shard {:?} due to {:?}", shard, e);
 				}
+			} else {
+				error!("Last block not found in shard {:?}", shard);
 			}
 		}
 	}
@@ -770,6 +772,99 @@ mod test {
 			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_three.hash()).unwrap().is_none());
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn prune_shards_works_for_multiple_shards() {
+		// given
+		let path = PathBuf::from("prune_shards_works_for_multiple_shards");
+		// shard one
+		let shard_one = H256::from_low_u64_be(1);
+		let block_one = create_signed_block(1, shard_one);
+		let block_two = create_signed_block(2, shard_one);
+		let block_three = create_signed_block(3, shard_one);
+		let last_block_one = LastSidechainBlock {
+			hash: block_three.hash(),
+			number: block_three.block().block_number(),
+		};
+		// shard two
+		let shard_two = H256::from_low_u64_be(2);
+		let block_one_s = create_signed_block(1, shard_two);
+		let block_two_s = create_signed_block(2, shard_two);
+		let block_three_s = create_signed_block(3, shard_two);
+		let block_four_s = create_signed_block(4, shard_two);
+		let last_block_two = LastSidechainBlock {
+			hash: block_four_s.hash(),
+			number: block_four_s.block().block_number(),
+		};
+		{
+			// create sidechain_db
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(vec![block_one.clone(), block_one_s.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_two.clone(), block_two_s.clone()]).unwrap();
+			sidechain_db
+				.store_blocks(vec![block_three.clone(), block_three_s.clone()])
+				.unwrap();
+			sidechain_db.store_blocks(vec![block_four_s.clone()]).unwrap();
+
+			// when
+			sidechain_db.prune_shards(2);
+		}
+
+		// then
+		{
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// test if shard one has been cleansed of block 1, with 2 and 3 still beeing there:
+			assert_eq!(
+				*updated_sidechain_db.last_block_of_shard(&shard_one).unwrap(),
+				last_block_one
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block_hash(&shard_one, 3).unwrap().unwrap(),
+				block_three.hash()
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block(&block_three.hash()).unwrap().unwrap(),
+				block_three
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block_hash(&shard_one, 2).unwrap().unwrap(),
+				block_two.hash()
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block(&block_two.hash()).unwrap().unwrap(),
+				block_two
+			);
+			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard_one, 1).unwrap().is_none());
+			// test if shard two has been cleansed of block 1 and 2, with 3 and 4 still beeing there:
+			assert_eq!(
+				*updated_sidechain_db.last_block_of_shard(&shard_two).unwrap(),
+				last_block_two
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block_hash(&shard_two, 4).unwrap().unwrap(),
+				block_four_s.hash()
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block(&block_four_s.hash()).unwrap().unwrap(),
+				block_four_s
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block_hash(&shard_two, 3).unwrap().unwrap(),
+				block_three_s.hash()
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block(&block_three_s.hash()).unwrap().unwrap(),
+				block_three_s
+			);
+			assert!(updated_sidechain_db.get_block_hash(&shard_two, 2).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard_two, 1).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_one_s.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_two_s.hash()).unwrap().is_none());
 		}
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
