@@ -117,50 +117,45 @@ impl SidechainStorage {
 		let mut new_shard = false;
 		for signed_block in blocks_to_store.into_iter() {
 			// check if current block is the next in line
-			let current_block_shard = signed_block.block().shard_id();
+			let current_shard = signed_block.block().shard_id();
 			let current_block_nr = signed_block.block().block_number();
-			if self.shards.contains(&current_block_shard) {
-				if let Some(last_block) = self.last_block_of_shard(&current_block_shard) {
+			if self.shards.contains(&current_shard) {
+				if let Some(last_block) = self.last_block_of_shard(&current_shard) {
 					if last_block.number != current_block_nr - 1 {
-						error!("The to be included sidechainblock number {:?} is not a succession of the previous sidechain block in the db: {:?}",
-						current_block_nr, last_block.number);
+						error!("[Sidechain DB] Sidechainblock (nr: {:?}) is not a succession of the previous block (nr: {:?}) in shard: {:?}",
+						current_block_nr, last_block.number, current_shard);
 						continue
 					}
 				} else {
 					error!(
-						"A shard without a last block is existing. Skipping shard: {:?}",
-						current_block_shard
+						"Shard {:?} does not have a last block. Skipping block (nr: {:?}) inclusion",
+						current_shard, current_block_nr
 					);
 					continue
 				}
 			} else {
-				self.shards.push(current_block_shard);
+				self.shards.push(current_shard);
 				new_shard = true;
 			}
-
 			// Block hash -> Signed Block
 			let current_block_hash = signed_block.hash();
 			batch.put(&current_block_hash.encode(), &signed_block.encode().as_slice());
 			// (Shard, Block number) -> Blockhash (for block pruning)
 			batch.put(
-				&(current_block_shard, current_block_nr).encode().as_slice(),
+				&(current_shard, current_block_nr).encode().as_slice(),
 				&current_block_hash.encode(),
 			);
 			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
 			let current_last_block =
 				LastSidechainBlock { hash: current_block_hash, number: current_block_nr };
-			self.last_blocks.insert(current_block_shard, current_last_block.clone());
-			batch.put((LAST_BLOCK_KEY, current_block_shard).encode(), current_last_block.encode());
+			self.last_blocks.insert(current_shard, current_last_block.clone());
+			batch.put((LAST_BLOCK_KEY, current_shard).encode(), current_last_block.encode());
 		}
-		// update stored_shards_key -> vec<shard> only when a new shard was included
+		// update stored_shards_key -> vec<shard> only if a new shard was included
 		if new_shard {
 			batch.put(STORED_SHARDS_KEY.encode(), self.shards.encode());
 		}
-		if let Err(e) = self.db.write(batch) {
-			error!("Could not write batch to sidechain db due to {}", e);
-			return Err(Error::OperationalError(e))
-		};
-		Ok(())
+		self.db.write(batch).map_err(Error::OperationalError)
 	}
 
 	/// purges a shard and its block from the db storage
