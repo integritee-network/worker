@@ -148,7 +148,7 @@ mod tests {
 
 	use super::*;
 	use crate::{
-		node_api_factory::MockCreateNodeApi, sidechain_storage::MockBlockStorage,
+		node_api_factory::MockCreateNodeApi, sidechain_storage::interface::MockBlockStorage,
 		sync_block_gossiper::MockGossipBlocks,
 	};
 
