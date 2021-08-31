@@ -1,7 +1,7 @@
 name: "integritee-service"
 version: "0.8.0"
 about: Worker using Intel SGX TEE for Integritee-node
-authors: "Supercomputing Systems AG <info@scs.ch>"
+authors: "Integritee AG <hello@integritee.network>"
 
 # AppSettings can be defined as a list and are **not** ascii case sensitive
 settings:

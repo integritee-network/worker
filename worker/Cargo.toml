@@ -1,7 +1,7 @@
 [package]
 name = "integritee-service"
 version = "0.8.0"
-authors = ["Supercomputing Systems AG <info@scs.ch>"]
+authors = ["Integritee AG <hello@integritee.network>"]
 build = "build.rs"
 edition = "2018"
 

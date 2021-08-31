@@ -75,7 +75,7 @@ pub fn cmd<'a>(
 				)
 				.name("integritee-cli")
 				.version(VERSION)
-				.author("Supercomputing Systems AG <info@scs.ch>")
+				.author("Integritee AG <hello@integritee.network>")
 				.about("trusted calls to worker enclave")
 				.after_help("stf subcommands depend on the stf crate this has been built against")
 		})
