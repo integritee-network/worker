@@ -771,6 +771,48 @@ mod tests {
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
+	#[test]
+	fn purge_shard_from_block_works_for_last_block() {
+		// given
+		let path = PathBuf::from("purge_shard_from_block_works_for_last_block");
+		let shard = H256::from_low_u64_be(1);
+		let block_one = create_signed_block(1, shard);
+		let block_two = create_signed_block(2, shard);
+		let block_three = create_signed_block(3, shard);
+		{
+			// create sidechain_db
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
+
+			// when
+			sidechain_db.purge_shard_from_block_number(shard, 3).unwrap();
+
+			// test if local storage has been cleansed
+			assert!(!sidechain_db.shards.contains(&shard));
+			assert!(sidechain_db.last_blocks.get(&shard).is_none());
+		}
+
+		// then
+		{
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// test if local storage is still clean
+			assert!(!updated_sidechain_db.shards.contains(&shard));
+			assert!(updated_sidechain_db.last_blocks.get(&shard).is_none());
+			// test if db is clean
+			assert!(updated_sidechain_db.last_block_of_shard(&shard).is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 3).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 2).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 1).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_three.hash()).unwrap().is_none());
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
 	fn create_signed_block(block_number: u64, shard: ShardIdentifier) -> SignedSidechainBlock {
 		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
 		let author: AccountId32 = signer_pair.public().into();
