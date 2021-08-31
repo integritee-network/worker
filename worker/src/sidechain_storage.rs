@@ -53,6 +53,12 @@ const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 /// key value of the stored shards vector
 const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
+/// Sidechain DB Storage structure:
+/// STORED_SHARDS_KEY -> Vec<(Shard)>
+/// (LAST_BLOCK_KEY, Shard) -> (Blockhash, BlockNr) (look up current blockchain state)
+/// (Shard , Block number) -> Blockhash (needed for block pruning)
+/// Blockhash -> Signed Block (actual block storage)
+
 /// DB errors.
 #[derive(Debug)]
 pub enum Error {
@@ -104,7 +110,6 @@ impl BlockStorage for SidechainStorageLock {
 	}
 }
 
-//FIXME: create key functions, such that blocknumer is always in the same format & nothing can get mixed up!
 //TODO: create purge_old_blocks function
 //TODO: create unit tests for shard purge & purge_oldBlocks function
 impl SidechainStorageLock {
@@ -223,7 +228,6 @@ impl SidechainStorage {
 
 	/// purges a shard and its block from the db storage
 	fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
-		// get all shards
 		let mut result: Result<()> = Ok(());
 		if self.shards.contains(&shard) {
 			// get last block of shard
@@ -260,6 +264,40 @@ impl SidechainStorage {
 			self.db
 				.put(STORED_SHARDS_KEY.encode(), self.shards.encode())
 				.map_err(Error::OperationalError)?
+		}
+		Ok(())
+	}
+
+	/// purges a shard and its block from the db storage
+	fn purge_shard_from_block_number(
+		&mut self,
+		shard: ShardIdentifier,
+		block_number: BlockNumber,
+	) -> Result<()> {
+		if self.shards.contains(&shard) {
+			// get last block of shard
+			let last_block = match self.last_blocks.get(&shard) {
+				Some(last_block) => last_block.clone(),
+				None => return Err(Error::LastBlockNotFound(shard)),
+			};
+			if last_block.number == block_number {
+				// given block number is last block of chain - purge whole shard
+				self.purge_shard(shard)?;
+			} else {
+				// remove given block from db storage
+				let mut current_block_number = block_number;
+
+				// Remove blocks from db until no block anymore
+				while let Some(block_hash) = self.get_block_hash(&shard, current_block_number)? {
+					// Blockhash -> Signed Block
+					self.db.delete(block_hash.encode()).map_err(Error::OperationalError)?;
+					// (Shard, Block number) -> Blockhash
+					self.db
+						.delete((shard, current_block_number).encode())
+						.map_err(Error::OperationalError)?;
+					current_block_number -= 1;
+				}
+			}
 		}
 		Ok(())
 	}
@@ -305,8 +343,6 @@ impl SidechainStorage {
 		}
 	}
 }
-
-// TODO: unit test purge
 
 #[cfg(test)]
 mod tests {
@@ -708,6 +744,56 @@ mod tests {
 			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_three.hash()).unwrap().is_none());
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn purge_shard_from_block_works() {
+		// given
+		let path = PathBuf::from("purge_shard_from_block_works");
+		let shard = H256::from_low_u64_be(1);
+		let block_one = create_signed_block(1, shard);
+		let block_two = create_signed_block(2, shard);
+		let block_three = create_signed_block(3, shard);
+		let last_block = LastSidechainBlock {
+			hash: block_three.hash(),
+			number: block_three.block().block_number(),
+		};
+
+		{
+			// create sidechain_db
+			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
+			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
+
+			// when
+			sidechain_db.purge_shard_from_block_number(shard, 2).unwrap();
+		}
+
+		// then
+		{
+			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			// test local memory
+			assert!(updated_sidechain_db.shards.contains(&shard));
+			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), last_block);
+			// assert block three is still there
+			assert_eq!(*updated_sidechain_db.last_block_of_shard(&shard).unwrap(), last_block);
+			assert_eq!(
+				updated_sidechain_db.get_block_hash(&shard, 3).unwrap().unwrap(),
+				block_three.hash()
+			);
+			assert_eq!(
+				updated_sidechain_db.get_block(&block_three.hash()).unwrap().unwrap(),
+				block_three
+			);
+			// assert the lower blocks have been purged
+			assert!(updated_sidechain_db.get_block_hash(&shard, 2).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block_hash(&shard, 1).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
+			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
 		}
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
