@@ -110,8 +110,6 @@ impl BlockStorage for SidechainStorageLock {
 	}
 }
 
-//TODO: create purge_old_blocks function
-//TODO: create unit tests for shard purge & purge_oldBlocks function
 impl SidechainStorageLock {
 	pub fn new(path: PathBuf) -> Result<SidechainStorageLock> {
 		Ok(SidechainStorageLock { storage: RwLock::new(SidechainStorage::new(path)?) })
@@ -228,7 +226,6 @@ impl SidechainStorage {
 
 	/// purges a shard and its block from the db storage
 	fn purge_shard(&mut self, shard: ShardIdentifier) -> Result<()> {
-		let mut result: Result<()> = Ok(());
 		if self.shards.contains(&shard) {
 			// get last block of shard
 			let mut last_block = match self.last_blocks.get(&shard) {
@@ -568,36 +565,18 @@ mod tests {
 			assert_eq!(last_block.number, 21);
 			// storage contains both blocks:
 			// (shard,blocknumber) -> blockhash
-			let db_block_hash_one = H256::decode(
-				&mut updated_sidechain_db.db.get((shard, 20).encode()).unwrap().unwrap().as_slice(),
-			)
-			.unwrap();
-			let db_block_hash_two = H256::decode(
-				&mut updated_sidechain_db.db.get((shard, 21).encode()).unwrap().unwrap().as_slice(),
-			)
-			.unwrap();
+			let db_block_hash_one =
+				updated_sidechain_db.get_block_hash(&shard, 20).unwrap().unwrap();
+			let db_block_hash_two =
+				updated_sidechain_db.get_block_hash(&shard, 21).unwrap().unwrap();
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
 			assert_eq!(db_block_hash_two, signed_block_two.hash());
 
 			// block hash -> signed block
-			let db_block_one = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&signed_block_one.hash().encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			let db_block_two = SignedSidechainBlock::decode(
-				&mut updated_sidechain_db
-					.db
-					.get(&signed_block_two.hash().encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
+			let db_block_one =
+				updated_sidechain_db.get_block(&signed_block_one.hash()).unwrap().unwrap();
+			let db_block_two =
+				updated_sidechain_db.get_block(&signed_block_two.hash()).unwrap().unwrap();
 			assert_eq!(db_block_one, signed_block_one);
 			assert_eq!(db_block_two, signed_block_two);
 		}
@@ -620,7 +599,8 @@ mod tests {
 			// first iteration
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
-
+		}
+		{
 			// second iteration
 			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
@@ -635,22 +615,14 @@ mod tests {
 
 			// storage contains only one blocks:
 			// (shard,blocknumber) -> blockhash
-			let db_block_hash_one = H256::decode(
-				&mut updated_sidechain_db
-					.db
-					.get((shard, signed_block_one.block().block_number()).encode())
-					.unwrap()
-					.unwrap()
-					.as_slice(),
-			)
-			.unwrap();
-			// ensure block number two is empty
-			let db_block_hash_empty = updated_sidechain_db
-				.db
-				.get((shard, signed_block_two.block().block_number()).encode())
+			let db_block_hash_one = updated_sidechain_db
+				.get_block_hash(&shard, signed_block_one.block().block_number())
+				.unwrap()
 				.unwrap();
-
-			assert_eq!(db_block_hash_empty, None);
+			let db_block_hash_empty = updated_sidechain_db
+				.get_block_hash(&shard, signed_block_two.block().block_number())
+				.unwrap();
+			assert!(db_block_hash_empty.is_none());
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
 		}
 		// clean up
