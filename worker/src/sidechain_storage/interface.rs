@@ -10,7 +10,7 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
-use super::{sidechain_storage::SidechainStorage, Result};
+use super::{storage::SidechainStorage, Result};
 use log::*;
 #[cfg(test)]
 use mockall::predicate::*;

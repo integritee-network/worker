@@ -10,24 +10,16 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
-use log::*;
-#[cfg(test)]
-use mockall::predicate::*;
-#[cfg(test)]
-use mockall::*;
 use std::{
 	sync::Arc,
 	thread,
 	time::{Duration, SystemTime},
 };
-use substratee_worker_primitives::{
-	block::{BlockHash, BlockNumber, SignedBlock as SignedSidechainBlock},
-	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
-};
+use substratee_worker_primitives::block::BlockNumber;
 
 mod error;
 pub mod interface;
-mod sidechain_storage;
+mod storage;
 
 pub use error::{Error, Result};
 pub use interface::{BlockStorage, SidechainStorageLock};

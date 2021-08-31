@@ -243,6 +243,8 @@ fn main() {
 	}
 }
 
+/// FIXME: needs some discussion (restructuring?)
+#[allow(clippy::too_many_arguments)]
 fn start_worker<E, T, W, D>(
 	config: Config,
 	shard: &ShardIdentifier,

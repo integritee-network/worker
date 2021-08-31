@@ -124,7 +124,7 @@ impl SignedBlockT for SignedBlock {
 	}
 	/// get blake2_256 hash of block
 	fn hash(&self) -> H256 {
-		hashing::blake2_256(&mut self.block.encode().as_slice()).into()
+		hashing::blake2_256(&self.block.encode().as_slice()).into()
 	}
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool {
