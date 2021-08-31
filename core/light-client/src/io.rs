@@ -18,13 +18,13 @@
 use crate::{error::Result, Error, LightValidation, NumberFor, Validator};
 use codec::{Decode, Encode};
 use derive_more::Display;
+use itp_settings::files::LIGHT_CLIENT_DB;
+use itp_sgx_io::{seal, unseal, SealedIO};
+use itp_storage::StorageProof;
 use log::*;
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::{Block, Header};
 use std::{fs, sgxfs::SgxFile};
-use substratee_settings::files::LIGHT_CLIENT_DB;
-use substratee_sgx_io::{seal, unseal, SealedIO};
-use substratee_storage::StorageProof;
 
 #[derive(Copy, Clone, Debug, Display)]
 pub struct LightClientSeal<B> {

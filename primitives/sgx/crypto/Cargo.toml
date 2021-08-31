@@ -30,7 +30,7 @@ default = ["std"]
 std = [
     "codec/std",
     "log/std",
-    "substratee-sgx-io/std",
+    "itp-sgx-io/std",
     "sp-core/std",
 ]
 sgx = [

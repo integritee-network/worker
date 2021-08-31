@@ -38,7 +38,7 @@ pub enum JustificationError {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error(transparent)]
-	Storage(#[from] substratee_storage::Error),
+	Storage(#[from] itp_storage::Error),
 	#[error("Validator set mismatch")]
 	ValidatorSetMismatch,
 	#[error("Invalid ancestry proof")]

@@ -57,8 +57,8 @@ use crate::{
 	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
 	Result as EnclaveResult,
 };
-use itp-sgx-crypto::Ed25519Seal;
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::SealedIO;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";

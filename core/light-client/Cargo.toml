@@ -24,7 +24,7 @@ std = [
 
     # local deps
     "itp-storage/std",
-    "itp-sgx-io/sgx/std",
+    "itp-sgx-io/std",
 ]
 sgx = [
     "sgx_tstd",
@@ -50,7 +50,6 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 # local deps
 itp-sgx-io = { path = "../../primitives/sgx/io", default-features = false }
 itp-settings = { path = "../../primitives/settings", default-features = false }
-itp-storage = { path = "../../primitives/storage", default-features = false }
 itp-storage = { path = "../../primitives/storage", default-features = false }
 
 # substrate deps

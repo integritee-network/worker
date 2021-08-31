@@ -26,7 +26,6 @@ use ita_stf::{
 	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
 	TrustedCall, TrustedGetter, TrustedOperation,
 };
-use itp-teerex::{Block, Header};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	enclave::GETTER_TIMEOUT,
@@ -36,6 +35,7 @@ use itp_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use itp_storage::storage_value_key;
+use itp_teerex::{Block, Header};
 use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{

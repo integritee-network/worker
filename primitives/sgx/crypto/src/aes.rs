@@ -21,9 +21,9 @@ use crate::{
 };
 use aes::Aes128;
 use codec::{Decode, Encode};
+use derive_more::Display;
 use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
 use itp_sgx_io::{seal, unseal, SealedIO};
-use derive_more::Display;
 use log::info;
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},

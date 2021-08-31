@@ -16,9 +16,9 @@
 */
 use crate::error::{Error, Result};
 use codec::Encode;
+use derive_more::Display;
 use itp_settings::files::SEALED_SIGNER_SEED_FILE;
 use itp_sgx_io::{seal, unseal, SealedIO};
-use derive_more::Display;
 use log::*;
 use sgx_rand::{Rng, StdRng};
 use sp_core::{crypto::Pair, ed25519};

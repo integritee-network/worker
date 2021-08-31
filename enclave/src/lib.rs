@@ -18,7 +18,7 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
-#![crate_name = "substratee_worker_enclave"]
+#![crate_name = "itc_enclave"]
 #![crate_type = "staticlib"]
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
@@ -45,7 +45,7 @@ use ita_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use itc_light_client::{Block, Header, Validator};
+use itc_light_client::{io::LightClientSeal, Validator};
 use itp_core::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 	BlockHash,
@@ -65,28 +65,6 @@ use itp_sidechain_primitives::traits::{Block as BlockT, SignBlock, SignedBlock a
 use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
 use itp_teerex::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
-use itc_light_client::{io::LightClientSeal, Validator};
-use itp-ocall-api::{
-	EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi,
-};
-use itp-settings::{
-	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
-	node::{
-		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, SUBSTRATEE_REGISTRY_MODULE,
-	},
-};
-use ita-stf::{
-	stf_sgx::OpaqueCall,
-	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetterSigned,
-};
-use itp-core::{
-	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash,
-};
-
 
 use log::*;
 use rpc::{
