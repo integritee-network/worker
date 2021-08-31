@@ -11,29 +11,17 @@
 	limitations under the License.
 */
 
+use super::{Error, Result};
 use codec::{Decode, Encode};
 use log::*;
-#[cfg(test)]
-use mockall::predicate::*;
-#[cfg(test)]
-use mockall::*;
-use parking_lot::RwLock;
 use rocksdb::{WriteBatch, DB};
 use sp_core::H256;
-use std::{
-	collections::HashMap,
-	path::PathBuf,
-	sync::Arc,
-	thread,
-	time::{Duration, SystemTime},
-};
+use std::{collections::HashMap, path::PathBuf};
 use substratee_node_primitives::ShardIdentifier;
 use substratee_worker_primitives::{
 	block::{BlockHash, BlockNumber, SignedBlock as SignedSidechainBlock},
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 };
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 /// key value of sidechain db of last block
 const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
@@ -46,49 +34,14 @@ const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 /// (Shard , Block number) -> Blockhash (needed for block pruning)
 /// Blockhash -> Signed Block (actual block storage)
 
-/// DB errors.
-#[derive(Debug)]
-pub enum Error {
-	/// RocksDB Error
-	OperationalError(rocksdb::Error),
-	/// Last block of shard not found
-	LastBlockNotFound(ShardIdentifier),
-	/// Decoding Error
-	DecodeError(codec::Error),
-}
-
-/// Contains the blocknumber and blokhash of the
-/// last sidechain block
+/// Helper struct, contains the blocknumber
+/// and blockhash of the last sidechain block
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Default)]
 pub struct LastSidechainBlock {
 	/// hash of the last sidechain block
-	hash: H256,
+	pub hash: H256,
 	/// block number of the last sidechain block
-	number: BlockNumber,
-}
-
-pub fn start_sidechain_pruning_loop<D>(
-	storage: &Arc<D>,
-	purge_interval: u64,
-	purge_limit: BlockNumber,
-) where
-	D: BlockStorage,
-{
-	let interval_time = Duration::from_secs(purge_interval);
-	let mut interval_start = SystemTime::now();
-	loop {
-		if let Ok(elapsed) = interval_start.elapsed() {
-			if elapsed >= interval_time {
-				// update interval time
-				interval_start = SystemTime::now();
-				storage.prune_blocks_except(purge_limit);
-			} else {
-				// sleep for the rest of the interval
-				let sleep_time = interval_time - elapsed;
-				thread::sleep(sleep_time);
-			}
-		}
-	}
+	pub number: BlockNumber,
 }
 
 /// Struct used to insert newly produced sidechainblocks
@@ -100,44 +53,6 @@ pub struct SidechainStorage {
 	shards: Vec<ShardIdentifier>,
 	/// map to last sidechain block of every shard
 	last_blocks: HashMap<ShardIdentifier, LastSidechainBlock>,
-}
-
-/// Lock wrapper around sidechain storage
-pub struct SidechainStorageLock {
-	storage: RwLock<SidechainStorage>,
-}
-
-/// Allows to store blocks
-#[cfg_attr(test, automock)]
-pub trait BlockStorage {
-	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
-	fn prune_blocks_except(&self, blocks_to_keep: u64);
-}
-
-impl BlockStorage for SidechainStorageLock {
-	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()> {
-		self.storage.write().store_blocks(blocks)
-	}
-
-	fn prune_blocks_except(&self, blocks_to_keep: BlockNumber) {
-		let mut storage = self.storage.write();
-		// prune all shards:
-		for shard in storage.shards().clone() {
-			// get last block:
-			if let Some(last_block) = storage.last_block_of_shard(&shard) {
-				let threshold_block = last_block.number - blocks_to_keep;
-				if let Err(e) = storage.purge_shard_from_block_number(&shard, threshold_block) {
-					error!("Could not purge shard {:?} due to {:?}", shard, e);
-				}
-			}
-		}
-	}
-}
-
-impl SidechainStorageLock {
-	pub fn new(path: PathBuf) -> Result<SidechainStorageLock> {
-		Ok(SidechainStorageLock { storage: RwLock::new(SidechainStorage::new(path)?) })
-	}
 }
 
 impl SidechainStorage {
@@ -196,7 +111,7 @@ impl SidechainStorage {
 	}
 
 	/// update sidechain storage
-	fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
+	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
 		println! {"Received blocks: {:?}", blocks_to_store};
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
@@ -249,7 +164,7 @@ impl SidechainStorage {
 	}
 
 	/// purges a shard and its block from the db storage
-	fn purge_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
+	pub fn purge_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
 		if self.shards.contains(shard) {
 			// get last block of shard
 			let mut last_block = match self.last_blocks.get(shard) {
@@ -290,7 +205,7 @@ impl SidechainStorage {
 	}
 
 	/// purges a shard and its block from the db storage
-	fn purge_shard_from_block_number(
+	pub fn purge_shard_from_block_number(
 		&mut self,
 		shard: &ShardIdentifier,
 		block_number: BlockNumber,
@@ -366,15 +281,24 @@ impl SidechainStorage {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
 	use super::*;
-	use rocksdb::Options;
+	use rocksdb::{Options, DB};
 	use sp_core::{
 		crypto::{AccountId32, Pair},
 		ed25519, H256,
 	};
-	use std::time::{SystemTime, UNIX_EPOCH};
-	use substratee_worker_primitives::{block::Block, traits::SignBlock};
+	use std::{
+		path::PathBuf,
+		time::{SystemTime, UNIX_EPOCH},
+	};
+	use substratee_node_primitives::ShardIdentifier;
+	use substratee_worker_primitives::{
+		block::{Block, SignedBlock as SignedSidechainBlock},
+		traits::{
+			Block as SidechainBlockTrait, SignBlock, SignedBlock as SignedSidechainBlockTrait,
+		},
+	};
 
 	#[test]
 	fn load_shards_from_db_works() {
@@ -543,8 +467,8 @@ mod tests {
 		// then
 		{
 			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-			assert_eq!(updated_sidechain_db.shards[0], shard_one);
-			assert_eq!(updated_sidechain_db.shards[1], shard_two);
+			assert_eq!(updated_sidechain_db.shards()[0], shard_one);
+			assert_eq!(updated_sidechain_db.shards()[1], shard_two);
 			let last_block_one: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard_one).unwrap();
 			let last_block_two: &LastSidechainBlock =

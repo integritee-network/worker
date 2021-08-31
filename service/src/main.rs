@@ -358,13 +358,12 @@ fn start_worker<E, T, W, D>(
 		.unwrap();
 
 	// ------------------------------------------------------------------------
-	// start sidechain pruning loop$
-	let storage = sidechain_storage.clone();
+	// start sidechain pruning loop
 	thread::Builder::new()
 		.name("sidechain_pruning_loop".to_owned())
 		.spawn(move || {
 			sidechain_storage::start_sidechain_pruning_loop(
-				&storage,
+				&sidechain_storage,
 				SIDECHAIN_PURGE_INTERVAL,
 				SIDECHAIN_PURGE_LIMIT,
 			);
