@@ -142,7 +142,7 @@ fn main() {
 		sync_block_gossiper,
 		direct_invocation_watch_list.clone(),
 		enclave.clone(),
-		sidechain_blockstorage.clone(),
+		sidechain_blockstorage,
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {

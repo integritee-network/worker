@@ -28,7 +28,6 @@ use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, Worker
 use log::*;
 use sp_core::storage::StorageKey;
 use std::{
-	pin::Pin,
 	sync::{mpsc::channel, Arc},
 	vec::Vec,
 };

@@ -13,27 +13,10 @@
 
 use codec::{Decode, Encode};
 use log::*;
-use my_node_runtime::{Event, Hash, Header, UncheckedExtrinsic};
 use parking_lot::RwLock;
-use sgx_types::*;
-use sp_core::{
-	crypto::{AccountId32, Ss58Codec},
-	sr25519,
-	storage::StorageKey,
-	Pair, H256,
-};
-use std::{
-	collections::HashMap,
-	fs::{self, File},
-	io::{stdin, Write},
-	path::Path,
-	slice, str,
-	sync::{
-		mpsc::{channel, Sender},
-		Mutex,
-	},
-};
-use substratee_node_primitives::{ShardIdentifier, SignedBlock};
+use sp_core::H256;
+use std::collections::HashMap;
+use substratee_node_primitives::ShardIdentifier;
 
 #[cfg(test)]
 use mockall::predicate::*;
@@ -64,8 +47,6 @@ const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 pub enum Error {
 	/// RocksDB Error
 	OperationalError(rocksdb::Error),
-	/// Blocknumber Succession error
-	InvalidBlockNumberSuccession(SignedSidechainBlock),
 	/// Last block of shard not found
 	LastBlockNotFound(ShardIdentifier),
 	/// Decoding Error
