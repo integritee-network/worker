@@ -113,7 +113,6 @@ impl SidechainStorage {
 
 	/// update sidechain storage
 	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
-		println! {"Received blocks: {:?}", blocks_to_store};
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
 		for signed_block in blocks_to_store.into_iter() {
