@@ -128,7 +128,7 @@ impl SidechainStorage {
 					}
 				} else {
 					error!(
-						"Shard {:?} does not have a last block. Skipping block (nr: {:?}) inclusion",
+						"[Sidechain DB] Shard {:?} does not have a last block. Skipping block (nr: {:?}) inclusion",
 						current_shard, current_block_nr
 					);
 					continue
