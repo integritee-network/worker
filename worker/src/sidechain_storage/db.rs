@@ -13,14 +13,8 @@
 
 use super::{Error, Result};
 use codec::{Decode, Encode};
-use log::*;
 use rocksdb::{WriteBatch, DB};
-use sp_core::H256;
-use std::{collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf};
-use substratee_worker_primitives::{
-	block::{BlockHash, BlockNumber},
-	traits::{Block as BlockT, SignedBlock as SignedBlockT},
-};
+use std::path::PathBuf;
 
 /// Sidechain DB Storage structure:
 /// STORED_SHARDS_KEY -> Vec<(Shard)>
@@ -29,39 +23,39 @@ use substratee_worker_primitives::{
 /// Blockhash -> Signed Block (actual block storage)
 
 /// Interface struct to rocks DB
-struct SidechainDB {
+pub struct SidechainDB {
 	db: DB,
 }
 
 impl SidechainDB {
-	fn open_default(path: PathBuf) -> Result<SidechainDB> {
+	pub fn open_default(path: PathBuf) -> Result<SidechainDB> {
 		Ok(SidechainDB { db: DB::open_default(path)? })
 	}
 
 	/// returns the decoded value of the DB entry, if there is one
-	fn get<V: Decode>(&self, key: Vec<u8>) -> Result<Option<V>> {
+	pub fn get<V: Decode>(&self, key: Vec<u8>) -> Result<Option<V>> {
 		match self.db.get(key)? {
 			None => Ok(None),
 			Some(encoded_hash) => Ok(Some(V::decode(&mut encoded_hash.as_slice())?)),
 		}
 	}
 
-	fn put<K: Encode, V: Encode>(&mut self, key: K, value: V) -> Result<()> {
+	pub fn put<K: Encode, V: Encode>(&mut self, key: K, value: V) -> Result<()> {
 		self.db.put(&key.encode(), &value.encode()).map_err(Error::OperationalError)
 	}
 
 	/// writes a batch to the DB
-	fn write(&mut self, batch: WriteBatch) -> Result<()> {
+	pub fn write(&mut self, batch: WriteBatch) -> Result<()> {
 		self.db.write(batch).map_err(Error::OperationalError)
 	}
 
 	/// deletes an entry from the DB
-	fn delete<K: Encode>(&mut self, key: K) -> Result<()> {
+	pub fn delete<K: Encode>(&mut self, key: K) -> Result<()> {
 		self.db.delete(key.encode()).map_err(Error::OperationalError)
 	}
 
 	/// adds a given key value pair to the batch
-	fn add_to_batch<K: Encode, V: Encode>(batch: &mut WriteBatch, key: K, value: V) {
+	pub fn add_to_batch<K: Encode, V: Encode>(batch: &mut WriteBatch, key: K, value: V) {
 		batch.put(&key.encode(), &value.encode())
 	}
 }
