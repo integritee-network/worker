@@ -11,38 +11,57 @@
 	limitations under the License.
 */
 use super::{storage::SidechainStorage, Result};
+use codec::{Decode, Encode};
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
 use parking_lot::RwLock;
-
 use std::path::PathBuf;
-use substratee_worker_primitives::block::{BlockNumber, SignedBlock as SignedSidechainBlock};
+use substratee_worker_primitives::{
+	block::{BlockNumber, SignedBlock as SignedSidechainBlock},
+	traits::SignedBlock as SignedBlockT,
+};
 
 /// Lock wrapper around sidechain storage
-pub struct SidechainStorageLock {
-	storage: RwLock<SidechainStorage>,
+pub struct SidechainStorageLock<SignedBlock: SignedBlockT + Encode + Decode> {
+	storage: RwLock<SidechainStorage<SignedBlock>>,
 }
 
-impl SidechainStorageLock {
-	pub fn new(path: PathBuf) -> Result<SidechainStorageLock> {
-		Ok(SidechainStorageLock { storage: RwLock::new(SidechainStorage::new(path)?) })
+impl<SignedBlock: SignedBlockT + Encode + Decode> SidechainStorageLock<SignedBlock> {
+	pub fn new(path: PathBuf) -> Result<SidechainStorageLock<SignedBlock>> {
+		Ok(SidechainStorageLock {
+			storage: RwLock::new(SidechainStorage::<SignedBlock>::new(path)?),
+		})
 	}
 }
 
-/// Interface Trait
+/// Storage interface Trait¨
+/// FIXME: Clean up these traits (generic? non generic? type?)
 #[cfg_attr(test, automock)]
-pub trait BlockStorage {
-	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()>;
+pub trait BlockStorage<SignedBlock: SignedBlockT + Encode + Decode> {
+	// type not working because gossiper needs to work with the same block type,
+	// so it needs to be defined somewhere more global.
+	// type SignedBlock: SignedBlockT + Encode + Decode;
+	fn store_blocks(&self, blocks: Vec<SignedBlock>) -> Result<()>;
+}
+
+/// FIXME: Remove Helper trait (not generic) as soon as sidechain struct have been cleaned up some
+pub trait BlockPruner {
 	fn prune_blocks_except(&self, blocks_to_keep: u64);
 }
 
-impl BlockStorage for SidechainStorageLock {
-	fn store_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> Result<()> {
+impl<SignedBlock: SignedBlockT + Encode + Decode> BlockStorage<SignedBlock>
+	for SidechainStorageLock<SignedBlock>
+{
+	fn store_blocks(&self, blocks: Vec<SignedBlock>) -> Result<()> {
 		self.storage.write().store_blocks(blocks)
 	}
+}
 
+impl<SignedBlock: SignedBlockT + Encode + Decode> BlockPruner
+	for SidechainStorageLock<SignedBlock>
+{
 	fn prune_blocks_except(&self, blocks_to_keep: BlockNumber) {
 		self.storage.write().prune_shards(blocks_to_keep);
 	}

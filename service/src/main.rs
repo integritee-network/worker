@@ -58,7 +58,7 @@ use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
-use sidechain_storage::{BlockStorage, SidechainStorageLock};
+use sidechain_storage::{BlockPruner, SidechainStorageLock};
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519, Pair,
@@ -95,6 +95,7 @@ use substratee_settings::{
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use substratee_worker_api::direct_client::DirectClient;
+use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 mod config;
 mod direct_invocation;
@@ -130,8 +131,10 @@ fn main() {
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
 	let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
-	let sidechain_blockstorage =
-		Arc::new(SidechainStorageLock::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH)).unwrap());
+	let sidechain_blockstorage = Arc::new(
+		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
+			.unwrap(),
+	);
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
 	let direct_invocation_watch_list = Arc::new(WatchListService::<WsWatchingClient>::new());
 	let enclave = Arc::new(enclave_init().unwrap());
@@ -264,7 +267,7 @@ fn start_worker<E, T, W, D>(
 		+ TlsRemoteAttestation
 		+ TeerexApi
 		+ Clone,
-	D: BlockStorage + Sync + Send + 'static,
+	D: BlockPruner + Sync + Send + 'static,
 {
 	println!("IntegriTEE Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());

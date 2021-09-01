@@ -5,13 +5,14 @@
 //!
 
 use codec::{Decode, Encode};
+use core::{fmt::Debug, hash::Hash};
 use sp_core::{crypto::AccountId32, Pair, H256};
 use sp_std::prelude::*;
 
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
 pub trait Block: Encode + Decode {
-	type ShardIdentifier;
+	type ShardIdentifier: Encode + Decode + Debug + Hash + Eq + Copy;
 	///get block number
 	fn block_number(&self) -> u64;
 	/// get parent hash of block

@@ -10,7 +10,6 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
-use substratee_node_primitives::ShardIdentifier;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -21,8 +20,8 @@ pub enum Error {
 	#[error("Could not interact with file storage: {0:?}")]
 	OperationalError(#[from] rocksdb::Error),
 	/// Last block of shard not found
-	#[error("Last Block of shard: {0:?} not found")]
-	LastBlockNotFound(ShardIdentifier),
+	#[error("Last Block of shard: {0} not found")]
+	LastBlockNotFound(String),
 	/// Decoding Error
 	#[error("Could not decode: {0:?}")]
 	DecodeError(#[from] codec::Error),

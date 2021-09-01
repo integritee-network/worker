@@ -16,18 +16,18 @@ use codec::{Decode, Encode};
 use log::*;
 use rocksdb::{WriteBatch, DB};
 use sp_core::H256;
-use std::{collections::HashMap, path::PathBuf};
-use substratee_node_primitives::ShardIdentifier;
+use std::{collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf};
 use substratee_worker_primitives::{
-	block::{BlockHash, BlockNumber, SignedBlock as SignedSidechainBlock},
-	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
+	block::{BlockHash, BlockNumber},
+	traits::{Block as BlockT, SignedBlock as SignedBlockT},
 };
-
 /// key value of sidechain db of last block
 const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 /// key value of the stored shards vector
 const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
+/// ShardIdentifier type
+type ShardIdentifier<A> = <<A as SignedBlockT>::Block as BlockT>::ShardIdentifier;
 /// Sidechain DB Storage structure:
 /// STORED_SHARDS_KEY -> Vec<(Shard)>
 /// (LAST_BLOCK_KEY, Shard) -> (Blockhash, BlockNr) (look up current blockchain state)
@@ -46,19 +46,28 @@ pub struct LastSidechainBlock {
 
 /// Struct used to insert newly produced sidechainblocks
 /// into the database
-pub struct SidechainStorage {
+pub struct SidechainStorage<SignedBlock: SignedBlockT>
+where
+	SignedBlock: Encode + Decode,
+	<<SignedBlock as SignedBlockT>::Block as BlockT>::ShardIdentifier:
+		Hash + Eq + Debug + Encode + Decode + Copy,
+{
 	/// database
 	db: DB,
 	/// shards in database
-	shards: Vec<ShardIdentifier>,
+	shards: Vec<ShardIdentifier<SignedBlock>>,
 	/// map to last sidechain block of every shard
-	last_blocks: HashMap<ShardIdentifier, LastSidechainBlock>,
+	last_blocks: HashMap<ShardIdentifier<SignedBlock>, LastSidechainBlock>,
 }
 
-impl SidechainStorage {
+impl<SignedBlock: SignedBlockT + Encode + Decode> SidechainStorage<SignedBlock>
+where
+	<<SignedBlock as SignedBlockT>::Block as BlockT>::ShardIdentifier:
+		Hash + Eq + Debug + Encode + Decode,
+{
 	/// loads the DB from the given paths and stores the listed shard
 	/// and their last blocks in memory for better performance
-	pub fn new(path: PathBuf) -> Result<SidechainStorage> {
+	pub fn new(path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
 		// load db
 		let db = DB::open_default(path).unwrap();
 		let shards = Self::load_shards_from_db(&db)?;
@@ -76,61 +85,63 @@ impl SidechainStorage {
 	}
 
 	/// gets all shards of currently loaded sidechain db
-	pub fn shards(&self) -> &Vec<ShardIdentifier> {
+	pub fn shards(&self) -> &Vec<ShardIdentifier<SignedBlock>> {
 		&self.shards
 	}
 
 	/// gets the last block of the current sidechain DB and the given shard
-	pub fn last_block_of_shard(&self, shard: &ShardIdentifier) -> Option<&LastSidechainBlock> {
+	pub fn last_block_of_shard(
+		&self,
+		shard: &ShardIdentifier<SignedBlock>,
+	) -> Option<&LastSidechainBlock> {
 		self.last_blocks.get(shard)
 	}
 
 	/// gets the block hash of the sidechain block of the given shard and block number, if there is such a block
 	pub fn get_block_hash(
 		&self,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifier<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<Option<BlockHash>> {
 		match self.db.get((*shard, block_number).encode())? {
 			None => Ok(None),
-			Some(enocded_hash) => Ok(Some(BlockHash::decode(&mut enocded_hash.as_slice())?)),
+			Some(encoded_hash) => Ok(Some(BlockHash::decode(&mut encoded_hash.as_slice())?)),
 		}
 	}
 
 	/// gets the block of the given blockhash, if there is such a block
 	#[allow(unused)]
-	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedSidechainBlock>> {
+	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedBlock>> {
 		match self.db.get(block_hash.encode())? {
 			None => Ok(None),
-			Some(enocded_hash) =>
-				Ok(Some(SignedSidechainBlock::decode(&mut enocded_hash.as_slice())?)),
+			Some(encoded_hash) => Ok(Some(SignedBlock::decode(&mut encoded_hash.as_slice())?)),
 		}
 	}
 
 	/// update sidechain storage
-	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedSidechainBlock>) -> Result<()> {
+	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedBlock>) -> Result<()> {
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
 		for signed_block in blocks_to_store.into_iter() {
 			// check if current block is the next in line
-			let current_shard = signed_block.block().shard_id();
+			let current_shard = &signed_block.block().shard_id();
 			let current_block_nr = signed_block.block().block_number();
-			if self.shards.contains(&current_shard) {
-				if let Some(last_block) = self.last_block_of_shard(&current_shard) {
+			if self.shards.contains(current_shard) {
+				if let Some(last_block) = self.last_block_of_shard(current_shard) {
 					if last_block.number != current_block_nr - 1 {
 						error!("[Sidechain DB] Sidechainblock (nr: {:?}) is not a succession of the previous block (nr: {:?}) in shard: {:?}",
-						current_block_nr, last_block.number, current_shard);
+						current_block_nr, last_block.number, *current_shard);
 						continue
 					}
 				} else {
 					error!(
 						"[Sidechain DB] Shard {:?} does not have a last block. Skipping block (nr: {:?}) inclusion",
-						current_shard, current_block_nr
+						*current_shard, current_block_nr
 					);
 					continue
 				}
 			} else {
-				self.shards.push(current_shard);
+				self.shards.push(*current_shard);
 				new_shard = true;
 			}
 			// Block hash -> Signed Block
@@ -138,14 +149,14 @@ impl SidechainStorage {
 			batch.put(&current_block_hash.encode(), &signed_block.encode().as_slice());
 			// (Shard, Block number) -> Blockhash (for block pruning)
 			batch.put(
-				&(current_shard, current_block_nr).encode().as_slice(),
+				&(*current_shard, current_block_nr).encode().as_slice(),
 				&current_block_hash.encode(),
 			);
 			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
 			let current_last_block =
 				LastSidechainBlock { hash: current_block_hash, number: current_block_nr };
-			self.last_blocks.insert(current_shard, current_last_block.clone());
-			batch.put((LAST_BLOCK_KEY, current_shard).encode(), current_last_block.encode());
+			self.last_blocks.insert(*current_shard, current_last_block.clone());
+			batch.put((LAST_BLOCK_KEY, *current_shard).encode(), current_last_block.encode());
 		}
 		// update stored_shards_key -> vec<shard> only if a new shard was included
 		if new_shard {
@@ -155,12 +166,12 @@ impl SidechainStorage {
 	}
 
 	/// purges a shard and its block from the db storage
-	pub fn purge_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
+	pub fn purge_shard(&mut self, shard: &ShardIdentifier<SignedBlock>) -> Result<()> {
 		if self.shards.contains(shard) {
 			// get last block of shard
 			let mut last_block = match self.last_blocks.get(shard) {
 				Some(last_block) => last_block.clone(),
-				None => return Err(Error::LastBlockNotFound(*shard)),
+				None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
 			};
 			// remove last block from db storage
 			// Blockhash -> Signed Block
@@ -190,14 +201,14 @@ impl SidechainStorage {
 	/// purges a shard and its block from the db storage
 	pub fn prune_shard_from_block_number(
 		&mut self,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifier<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<()> {
 		if self.shards.contains(&shard) {
 			// get last block of shard
 			let last_block = match self.last_blocks.get(shard) {
 				Some(last_block) => last_block.clone(),
-				None => return Err(Error::LastBlockNotFound(*shard)),
+				None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
 			};
 			if last_block.number == block_number {
 				// given block number is last block of chain - purge whole shard
@@ -233,14 +244,12 @@ impl SidechainStorage {
 			}
 		}
 	}
-}
 
-/// implementations of helper functions, not meant for pub use
-impl SidechainStorage {
+	/// implementations of helper functions, not meant for pub use
 	/// gets the previous block of given shard and block number, if there is one
 	fn get_previous_block(
 		&self,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifier<SignedBlock>,
 		current_block_number: BlockNumber,
 	) -> Option<LastSidechainBlock> {
 		let prev_block_number = current_block_number - 1;
@@ -253,9 +262,10 @@ impl SidechainStorage {
 		}
 	}
 	/// reads shards from DB
-	fn load_shards_from_db(db: &DB) -> Result<Vec<ShardIdentifier>> {
+	fn load_shards_from_db(db: &DB) -> Result<Vec<ShardIdentifier<SignedBlock>>> {
 		match db.get(STORED_SHARDS_KEY.encode())? {
-			Some(shards) => Ok(Vec::<ShardIdentifier>::decode(&mut shards.as_slice())?),
+			Some(shards) =>
+				Ok(Vec::<ShardIdentifier<SignedBlock>>::decode(&mut shards.as_slice())?),
 			None => Ok(vec![]),
 		}
 	}
@@ -263,7 +273,7 @@ impl SidechainStorage {
 	/// reads last block from DB
 	fn load_last_block_from_db(
 		db: &DB,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifier<SignedBlock>,
 	) -> Result<Option<LastSidechainBlock>> {
 		match db.get((LAST_BLOCK_KEY, *shard).encode())? {
 			Some(last_block_encoded) =>
@@ -287,10 +297,8 @@ mod test {
 	};
 	use substratee_node_primitives::ShardIdentifier;
 	use substratee_worker_primitives::{
-		block::{Block, SignedBlock as SignedSidechainBlock},
-		traits::{
-			Block as SidechainBlockTrait, SignBlock, SignedBlock as SignedSidechainBlockTrait,
-		},
+		block::{Block, SignedBlock},
+		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
 	};
 
 	#[test]
@@ -406,7 +414,7 @@ mod test {
 		let path = PathBuf::from("store_block_works");
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(20, shard);
-		let signed_block_vector: Vec<SignedSidechainBlock> = vec![signed_block.clone()];
+		let signed_block_vector: Vec<SignedBlock> = vec![signed_block.clone()];
 
 		// when
 		{
@@ -446,7 +454,7 @@ mod test {
 		let signed_block_one = create_signed_block(20, shard_one);
 		let signed_block_two = create_signed_block(1, shard_two);
 
-		let signed_block_vector: Vec<SignedSidechainBlock> =
+		let signed_block_vector: Vec<SignedBlock> =
 			vec![signed_block_one.clone(), signed_block_two.clone()];
 
 		// when
@@ -847,7 +855,7 @@ mod test {
 		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
-	fn create_signed_block(block_number: u64, shard: ShardIdentifier) -> SignedSidechainBlock {
+	fn create_signed_block(block_number: u64, shard: ShardIdentifier) -> SignedBlock {
 		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
 		let author: AccountId32 = signer_pair.public().into();
 		let parent_hash = H256::random();

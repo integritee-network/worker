@@ -16,6 +16,7 @@
 
 */
 
+use super::worker_on_chain_ocall::SignedSidechainBlock;
 use crate::{
 	direct_invocation::{
 		direct_invocation_ocall::DirectInvocationOCall, watch_list_service::WatchList,
@@ -71,7 +72,7 @@ where
 	B: GossipBlocks + 'static,
 	W: WatchList + 'static,
 	E: RemoteAttestationCallBacks + 'static,
-	D: BlockStorage + 'static,
+	D: BlockStorage<SignedSidechainBlock> + 'static,
 {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))

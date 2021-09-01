@@ -22,14 +22,14 @@ pub mod interface;
 mod storage;
 
 pub use error::{Error, Result};
-pub use interface::{BlockStorage, SidechainStorageLock};
+pub use interface::{BlockPruner, BlockStorage, SidechainStorageLock};
 
 pub fn start_sidechain_pruning_loop<D>(
 	storage: &Arc<D>,
 	purge_interval: u64,
 	purge_limit: BlockNumber,
 ) where
-	D: BlockStorage,
+	D: BlockPruner,
 {
 	let interval_time = Duration::from_secs(purge_interval);
 	let mut interval_start = SystemTime::now();

@@ -24,6 +24,9 @@ use crate::{
 use itp_core::block::SignedBlock as SignedSidechainBlock;
 use log::*;
 use std::sync::Arc;
+use substratee_worker_primitives::{
+	block::SignedBlock as SignedSidechainBlock, traits::SignedBlock as SignedBlockT,
+};
 
 #[cfg(test)]
 use mockall::predicate::*;
@@ -33,6 +36,8 @@ use mockall::*;
 /// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner
 #[cfg_attr(test, automock)]
 pub trait GossipBlocks {
+	//type SignedBlock: SignedBlockT;
+
 	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
 
@@ -52,6 +57,8 @@ where
 	T: GetTokioHandle,
 	W: GetWorker,
 {
+	//type SignedBlock = SignedBlock;
+
 	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		match self.worker.get_worker().as_ref() {
 			Some(w) => {

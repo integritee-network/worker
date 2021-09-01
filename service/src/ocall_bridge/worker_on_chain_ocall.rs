@@ -32,6 +32,10 @@ use std::{
 	vec::Vec,
 };
 use substrate_api_client::XtStatus;
+pub use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use substratee_worker_primitives::{
+	traits::SignedBlock as SignedBlockT, WorkerRequest, WorkerResponse,
+};
 
 pub struct WorkerOnChainOCall<F, S, D> {
 	node_api_factory: Arc<F>,
@@ -49,7 +53,7 @@ impl<F, S, D> WorkerOnChainBridge for WorkerOnChainOCall<F, S, D>
 where
 	F: CreateNodeApi,
 	S: GossipBlocks,
-	D: BlockStorage,
+	D: BlockStorage<SignedSidechainBlock>,
 {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>> {
 		debug!("    Entering ocall_worker_request");
@@ -83,7 +87,7 @@ where
 	fn send_block_and_confirmation(
 		&self,
 		confirmations: Vec<u8>,
-		signed_blocks: Vec<u8>,
+		signed_blocks_encoded: Vec<u8>,
 	) -> OCallBridgeResult<()> {
 		debug!("    Entering ocall_send_block_and_confirmation");
 
@@ -117,7 +121,7 @@ where
 
 		// handle blocks
 		let signed_blocks: Vec<SignedSidechainBlock> =
-			match Decode::decode(&mut signed_blocks.as_slice()) {
+			match Decode::decode(&mut signed_blocks_encoded.as_slice()) {
 				Ok(blocks) => blocks,
 				Err(_) => {
 					status = Err(OCallBridgeError::SendBlockAndConfirmation(
@@ -135,7 +139,6 @@ where
 			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 
-		// Store blocks
 		if let Err(e) = self.block_storage.store_blocks(signed_blocks) {
 			error!("Error storing blocks: {:?}", e);
 		}
