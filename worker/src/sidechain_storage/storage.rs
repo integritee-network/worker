@@ -91,23 +91,19 @@ impl SidechainStorage {
 		shard: &ShardIdentifier,
 		block_number: BlockNumber,
 	) -> Result<Option<BlockHash>> {
-		match self.db.get((*shard, block_number).encode()).map_err(Error::OperationalError)? {
+		match self.db.get((*shard, block_number).encode())? {
 			None => Ok(None),
-			Some(enocded_hash) => Ok(Some(
-				BlockHash::decode(&mut enocded_hash.as_slice()).map_err(Error::DecodeError)?,
-			)),
+			Some(enocded_hash) => Ok(Some(BlockHash::decode(&mut enocded_hash.as_slice())?)),
 		}
 	}
 
 	/// gets the block of the given blockhash, if there is such a block
 	#[allow(unused)]
 	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedSidechainBlock>> {
-		match self.db.get(block_hash.encode()).map_err(Error::OperationalError)? {
+		match self.db.get(block_hash.encode())? {
 			None => Ok(None),
-			Some(enocded_hash) => Ok(Some(
-				SignedSidechainBlock::decode(&mut enocded_hash.as_slice())
-					.map_err(Error::DecodeError)?,
-			)),
+			Some(enocded_hash) =>
+				Ok(Some(SignedSidechainBlock::decode(&mut enocded_hash.as_slice())?)),
 		}
 	}
 
@@ -168,33 +164,25 @@ impl SidechainStorage {
 			};
 			// remove last block from db storage
 			// Blockhash -> Signed Block
-			self.db.delete(last_block.hash.encode()).map_err(Error::OperationalError)?;
+			self.db.delete(last_block.hash.encode())?;
 			// (Shard , Block number) -> Blockhash
-			self.db
-				.delete((shard, last_block.number).encode())
-				.map_err(Error::OperationalError)?;
+			self.db.delete((shard, last_block.number).encode())?;
 			// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
-			self.db
-				.delete((LAST_BLOCK_KEY, shard).encode())
-				.map_err(Error::OperationalError)?;
+			self.db.delete((LAST_BLOCK_KEY, shard).encode())?;
 			self.last_blocks.remove(&shard); // delete from local memory
 
 			// Remove all blocks from db
 			while let Some(previous_block) = self.get_previous_block(shard, last_block.number) {
 				last_block = previous_block;
 				// Blockhash -> Signed Block
-				self.db.delete(last_block.hash.encode()).map_err(Error::OperationalError)?;
+				self.db.delete(last_block.hash.encode())?;
 				// (Shard, Block number) -> Blockhash
-				self.db
-					.delete((shard, last_block.number).encode())
-					.map_err(Error::OperationalError)?;
+				self.db.delete((shard, last_block.number).encode())?;
 			}
 			// remove shard from list
 			// STORED_SHARDS_KEY -> Vec<(Shard)>
 			self.shards.retain(|&x| x != *shard);
-			self.db
-				.put(STORED_SHARDS_KEY.encode(), self.shards.encode())
-				.map_err(Error::OperationalError)?
+			self.db.put(STORED_SHARDS_KEY.encode(), self.shards.encode())?
 		}
 		Ok(())
 	}
@@ -221,11 +209,9 @@ impl SidechainStorage {
 				// Remove blocks from db until no block anymore
 				while let Some(block_hash) = self.get_block_hash(&shard, current_block_number)? {
 					// Blockhash -> Signed Block
-					self.db.delete(block_hash.encode()).map_err(Error::OperationalError)?;
+					self.db.delete(block_hash.encode())?;
 					// (Shard, Block number) -> Blockhash
-					self.db
-						.delete((shard, current_block_number).encode())
-						.map_err(Error::OperationalError)?;
+					self.db.delete((shard, current_block_number).encode())?;
 					current_block_number -= 1;
 				}
 			}
@@ -268,9 +254,8 @@ impl SidechainStorage {
 	}
 	/// reads shards from DB
 	fn load_shards_from_db(db: &DB) -> Result<Vec<ShardIdentifier>> {
-		match db.get(STORED_SHARDS_KEY.encode()).map_err(Error::OperationalError)? {
-			Some(shards) => Ok(Vec::<ShardIdentifier>::decode(&mut shards.as_slice())
-				.map_err(Error::DecodeError)?),
+		match db.get(STORED_SHARDS_KEY.encode())? {
+			Some(shards) => Ok(Vec::<ShardIdentifier>::decode(&mut shards.as_slice())?),
 			None => Ok(vec![]),
 		}
 	}
@@ -280,11 +265,9 @@ impl SidechainStorage {
 		db: &DB,
 		shard: &ShardIdentifier,
 	) -> Result<Option<LastSidechainBlock>> {
-		match db.get((LAST_BLOCK_KEY, *shard).encode()).map_err(Error::OperationalError)? {
-			Some(last_block_encoded) => Ok(Some(
-				LastSidechainBlock::decode(&mut last_block_encoded.as_slice())
-					.map_err(Error::DecodeError)?,
-			)),
+		match db.get((LAST_BLOCK_KEY, *shard).encode())? {
+			Some(last_block_encoded) =>
+				Ok(Some(LastSidechainBlock::decode(&mut last_block_encoded.as_slice())?)),
 			None => Ok(None),
 		}
 	}
