@@ -41,7 +41,7 @@ impl SidechainDB {
 	}
 
 	pub fn put<K: Encode, V: Encode>(&mut self, key: K, value: V) -> Result<()> {
-		self.db.put(&key.encode(), &value.encode()).map_err(Error::OperationalError)
+		self.db.put(key.encode(), value.encode()).map_err(Error::OperationalError)
 	}
 
 	/// writes a batch to the DB

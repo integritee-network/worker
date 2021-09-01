@@ -11,10 +11,10 @@
 	limitations under the License.
 */
 
-use super::{Error, Result};
+use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
 use log::*;
-use rocksdb::{WriteBatch, DB};
+use rocksdb::WriteBatch;
 use sp_core::H256;
 use std::{collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf};
 use substratee_worker_primitives::{
@@ -28,12 +28,6 @@ const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
 /// ShardIdentifier type
 type ShardIdentifier<A> = <<A as SignedBlockT>::Block as BlockT>::ShardIdentifier;
-/// Sidechain DB Storage structure:
-/// STORED_SHARDS_KEY -> Vec<(Shard)>
-/// (LAST_BLOCK_KEY, Shard) -> (Blockhash, BlockNr) (look up current blockchain state)
-/// (Shard , Block number) -> Blockhash (needed for block pruning)
-/// Blockhash -> Signed Block (actual block storage)
-
 /// Helper struct, contains the blocknumber
 /// and blockhash of the last sidechain block
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Default)]
@@ -53,7 +47,7 @@ where
 		Hash + Eq + Debug + Encode + Decode + Copy,
 {
 	/// database
-	db: DB,
+	db: SidechainDB,
 	/// shards in database
 	shards: Vec<ShardIdentifier<SignedBlock>>,
 	/// map to last sidechain block of every shard
@@ -69,7 +63,7 @@ where
 	/// and their last blocks in memory for better performance
 	pub fn new(path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
 		// load db
-		let db = DB::open_default(path).unwrap();
+		let db = SidechainDB::open_default(path)?;
 		let shards = Self::load_shards_from_db(&db)?;
 		// get last block of each shard
 		let mut last_blocks = HashMap::new();
@@ -103,19 +97,13 @@ where
 		shard: &ShardIdentifier<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<Option<BlockHash>> {
-		match self.db.get((*shard, block_number).encode())? {
-			None => Ok(None),
-			Some(encoded_hash) => Ok(Some(BlockHash::decode(&mut encoded_hash.as_slice())?)),
-		}
+		self.db.get((*shard, block_number).encode())
 	}
 
 	/// gets the block of the given blockhash, if there is such a block
 	#[allow(unused)]
 	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedBlock>> {
-		match self.db.get(block_hash.encode())? {
-			None => Ok(None),
-			Some(encoded_hash) => Ok(Some(SignedBlock::decode(&mut encoded_hash.as_slice())?)),
-		}
+		self.db.get(block_hash.encode())
 	}
 
 	/// update sidechain storage
@@ -144,25 +132,15 @@ where
 				self.shards.push(*current_shard);
 				new_shard = true;
 			}
-			// Block hash -> Signed Block
-			let current_block_hash = signed_block.hash();
-			batch.put(&current_block_hash.encode(), &signed_block.encode().as_slice());
-			// (Shard, Block number) -> Blockhash (for block pruning)
-			batch.put(
-				&(*current_shard, current_block_nr).encode().as_slice(),
-				&current_block_hash.encode(),
-			);
-			// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
-			let current_last_block =
-				LastSidechainBlock { hash: current_block_hash, number: current_block_nr };
-			self.last_blocks.insert(*current_shard, current_last_block.clone());
-			batch.put((LAST_BLOCK_KEY, *current_shard).encode(), current_last_block.encode());
+			// add block to DB batch
+			self.add_block(&mut batch, &signed_block);
 		}
 		// update stored_shards_key -> vec<shard> only if a new shard was included
 		if new_shard {
-			batch.put(STORED_SHARDS_KEY.encode(), self.shards.encode());
+			SidechainDB::add_to_batch(&mut batch, STORED_SHARDS_KEY, self.shards().clone());
 		}
-		self.db.write(batch).map_err(Error::OperationalError)
+		// store everything in DB
+		self.db.write(batch)
 	}
 
 	/// purges a shard and its block from the db storage
@@ -175,30 +153,31 @@ where
 			};
 			// remove last block from db storage
 			// Blockhash -> Signed Block
-			self.db.delete(last_block.hash.encode())?;
+			self.db.delete(last_block.hash)?;
 			// (Shard , Block number) -> Blockhash
-			self.db.delete((shard, last_block.number).encode())?;
+			self.db.delete((shard, last_block.number))?;
 			// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
-			self.db.delete((LAST_BLOCK_KEY, shard).encode())?;
+			self.db.delete((LAST_BLOCK_KEY, shard))?;
 			self.last_blocks.remove(&shard); // delete from local memory
 
 			// Remove all blocks from db
-			while let Some(previous_block) = self.get_previous_block(shard, last_block.number) {
+			while let Some(previous_block) = self.get_previous_block(shard, last_block.number)? {
 				last_block = previous_block;
 				// Blockhash -> Signed Block
-				self.db.delete(last_block.hash.encode())?;
+				self.db.delete(last_block.hash)?;
 				// (Shard, Block number) -> Blockhash
-				self.db.delete((shard, last_block.number).encode())?;
+				self.db.delete((shard, last_block.number))?;
 			}
 			// remove shard from list
 			// STORED_SHARDS_KEY -> Vec<(Shard)>
 			self.shards.retain(|&x| x != *shard);
-			self.db.put(STORED_SHARDS_KEY.encode(), self.shards.encode())?
+			self.db.put(STORED_SHARDS_KEY, &self.shards)?
 		}
 		Ok(())
 	}
 
 	/// purges a shard and its block from the db storage
+	/// FIXME: Add delete functions?
 	pub fn prune_shard_from_block_number(
 		&mut self,
 		shard: &ShardIdentifier<SignedBlock>,
@@ -220,9 +199,9 @@ where
 				// Remove blocks from db until no block anymore
 				while let Some(block_hash) = self.get_block_hash(&shard, current_block_number)? {
 					// Blockhash -> Signed Block
-					self.db.delete(block_hash.encode())?;
+					self.db.delete(block_hash)?;
 					// (Shard, Block number) -> Blockhash
-					self.db.delete((shard, current_block_number).encode())?;
+					self.db.delete((shard, current_block_number))?;
 					current_block_number -= 1;
 				}
 			}
@@ -251,35 +230,48 @@ where
 		&self,
 		shard: &ShardIdentifier<SignedBlock>,
 		current_block_number: BlockNumber,
-	) -> Option<LastSidechainBlock> {
+	) -> Result<Option<LastSidechainBlock>> {
 		let prev_block_number = current_block_number - 1;
-		if let Some(block_hash_encoded) = self.db.get((shard, prev_block_number).encode()).unwrap()
-		{
-			let block_hash = H256::decode(&mut block_hash_encoded.as_slice()).unwrap();
-			Some(LastSidechainBlock { hash: block_hash, number: prev_block_number })
+		if let Some(block_hash) = self.get_block_hash(shard, prev_block_number)? {
+			Ok(Some(LastSidechainBlock { hash: block_hash, number: prev_block_number }))
 		} else {
-			None
+			Ok(None)
 		}
 	}
 	/// reads shards from DB
-	fn load_shards_from_db(db: &DB) -> Result<Vec<ShardIdentifier<SignedBlock>>> {
-		match db.get(STORED_SHARDS_KEY.encode())? {
-			Some(shards) =>
-				Ok(Vec::<ShardIdentifier<SignedBlock>>::decode(&mut shards.as_slice())?),
+	fn load_shards_from_db(db: &SidechainDB) -> Result<Vec<ShardIdentifier<SignedBlock>>> {
+		match db.get::<Vec<ShardIdentifier<SignedBlock>>>(STORED_SHARDS_KEY.encode())? {
+			Some(shards) => Ok(shards),
 			None => Ok(vec![]),
 		}
 	}
 
 	/// reads last block from DB
 	fn load_last_block_from_db(
-		db: &DB,
+		db: &SidechainDB,
 		shard: &ShardIdentifier<SignedBlock>,
 	) -> Result<Option<LastSidechainBlock>> {
-		match db.get((LAST_BLOCK_KEY, *shard).encode())? {
-			Some(last_block_encoded) =>
-				Ok(Some(LastSidechainBlock::decode(&mut last_block_encoded.as_slice())?)),
-			None => Ok(None),
-		}
+		db.get((LAST_BLOCK_KEY, *shard).encode())
+	}
+
+	/// adds the block to the WriteBatch
+	fn add_block(&mut self, batch: &mut WriteBatch, block: &SignedBlock) {
+		let hash = block.hash();
+		let block_number = block.block().block_number();
+		let shard = block.block().shard_id();
+		// Block hash -> Signed Block
+		SidechainDB::add_to_batch(batch, hash, block);
+
+		// (Shard, Block number) -> Blockhash (for block pruning)
+		SidechainDB::add_to_batch(batch, (shard, block_number), hash);
+
+		// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
+		let last_block = LastSidechainBlock { hash, number: block_number };
+		self.last_blocks.insert(shard, last_block.clone()); // add in memory
+		SidechainDB::add_to_batch(batch, (LAST_BLOCK_KEY, shard), last_block);
+
+		// STORED_SHARDS_KEY
+		SidechainDB::add_to_batch(batch, STORED_SHARDS_KEY, self.shards());
 	}
 }
 
@@ -309,17 +301,14 @@ mod test {
 		let shard_two = H256::from_low_u64_be(2);
 		// when
 		{
-			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
 			assert_eq!(
 				SidechainStorage::<SignedBlock>::load_shards_from_db(&sidechain_db.db).unwrap(),
 				vec![]
 			);
 			// write signed_block to db
-			sidechain_db
-				.db
-				.put(STORED_SHARDS_KEY.encode(), vec![shard_one, shard_two].encode())
-				.unwrap();
+			sidechain_db.db.put(STORED_SHARDS_KEY, vec![shard_one, shard_two]).unwrap();
 		}
 
 		// then
@@ -348,7 +337,7 @@ mod test {
 		};
 		// when
 		{
-			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
 			assert!(SidechainStorage::<SignedBlock>::load_last_block_from_db(
 				&sidechain_db.db,
@@ -357,10 +346,7 @@ mod test {
 			.unwrap()
 			.is_none());
 			// write signed_block to db
-			sidechain_db
-				.db
-				.put((LAST_BLOCK_KEY, shard).encode(), signed_last_block.encode())
-				.unwrap();
+			sidechain_db.db.put((LAST_BLOCK_KEY, shard), signed_last_block.clone()).unwrap();
 		}
 
 		// then
@@ -392,7 +378,7 @@ mod test {
 		};
 		// when
 		{
-			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
 			assert!(SidechainStorage::<SignedBlock>::load_last_block_from_db(
 				&sidechain_db.db,
@@ -401,12 +387,9 @@ mod test {
 			.unwrap()
 			.is_none());
 			// write shards to db
-			sidechain_db
-				.db
-				.put((LAST_BLOCK_KEY, shard).encode(), signed_last_block.encode())
-				.unwrap();
+			sidechain_db.db.put((LAST_BLOCK_KEY, shard), signed_last_block.clone()).unwrap();
 			// write shards to db
-			sidechain_db.db.put(STORED_SHARDS_KEY.encode(), shard_vector.encode()).unwrap();
+			sidechain_db.db.put(STORED_SHARDS_KEY, shard_vector.clone()).unwrap();
 		}
 
 		// then
@@ -609,6 +592,7 @@ mod test {
 			// then
 			let some_block = sidechain_db
 				.get_previous_block(&shard, signed_block_one.block().block_number() + 1)
+				.unwrap()
 				.unwrap();
 
 			// when
@@ -630,7 +614,7 @@ mod test {
 			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
 
 			// then
-			let no_block = sidechain_db.get_previous_block(&shard, 1);
+			let no_block = sidechain_db.get_previous_block(&shard, 1).unwrap();
 
 			// when
 			assert!(no_block.is_none());
