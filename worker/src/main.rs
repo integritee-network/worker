@@ -50,8 +50,9 @@ use itp_enclave_api::{
 	side_chain::SideChain,
 	teerex_api::TeerexApi,
 };
-use itp_settings::files::{
-	ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
+use itp_settings::{
+	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE},
+	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use itp_teerex::SignedBlock;
 use log::*;
