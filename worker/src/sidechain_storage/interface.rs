@@ -18,10 +18,7 @@ use mockall::predicate::*;
 use mockall::*;
 use parking_lot::RwLock;
 use std::path::PathBuf;
-use substratee_worker_primitives::{
-	block::{BlockNumber, SignedBlock as SignedSidechainBlock},
-	traits::SignedBlock as SignedBlockT,
-};
+use substratee_worker_primitives::{block::BlockNumber, traits::SignedBlock as SignedBlockT};
 
 /// Lock wrapper around sidechain storage
 pub struct SidechainStorageLock<SignedBlock: SignedBlockT + Encode + Decode> {

@@ -33,9 +33,7 @@ use std::{
 };
 use substrate_api_client::XtStatus;
 pub use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
-use substratee_worker_primitives::{
-	traits::SignedBlock as SignedBlockT, WorkerRequest, WorkerResponse,
-};
+use substratee_worker_primitives::{WorkerRequest, WorkerResponse};
 
 pub struct WorkerOnChainOCall<F, S, D> {
 	node_api_factory: Arc<F>,
