@@ -63,6 +63,8 @@ pub mod worker {
 	pub const SIGNING_KEY_SIZE: usize = 32;
 	// size of the MR enclave
 	pub const MR_ENCLAVE_SIZE: usize = 32;
+	// factor to tune the amount of enclave funding: funding_amount = MIN_FUND_INCREASE_FACTOR*existential_deposit - balance.free
+	pub const MIN_FUND_INCREASE_FACTOR: u128 = 1_000;
 }
 
 /// Settings concerning the enclave
@@ -83,7 +85,6 @@ pub mod node {
 	pub static CALL_CONFIRMED: u8 = 3u8;
 	pub static BLOCK_CONFIRMED: u8 = 4u8;
 	pub static SHIELD_FUNDS: u8 = 5u8;
-
 	// bump this to be consistent with SubstraTEE-node runtime
 	pub static RUNTIME_SPEC_VERSION: u32 = 1;
 	pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;
