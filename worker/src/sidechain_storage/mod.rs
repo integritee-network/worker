@@ -17,6 +17,7 @@ use std::{
 };
 use substratee_worker_primitives::block::BlockNumber;
 
+mod db;
 mod error;
 pub mod interface;
 mod storage;
