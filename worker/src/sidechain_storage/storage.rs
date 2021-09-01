@@ -309,9 +309,12 @@ mod test {
 		let shard_two = H256::from_low_u64_be(2);
 		// when
 		{
-			let sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
-			assert_eq!(SidechainStorage::load_shards_from_db(&sidechain_db.db).unwrap(), vec![]);
+			assert_eq!(
+				SidechainStorage::<SignedBlock>::load_shards_from_db(&sidechain_db.db).unwrap(),
+				vec![]
+			);
 			// write signed_block to db
 			sidechain_db
 				.db
@@ -322,9 +325,10 @@ mod test {
 		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			let loaded_shards =
-				SidechainStorage::load_shards_from_db(&updated_sidechain_db.db).unwrap();
+				SidechainStorage::<SignedBlock>::load_shards_from_db(&updated_sidechain_db.db)
+					.unwrap();
 			assert!(loaded_shards.contains(&shard_one));
 			assert!(loaded_shards.contains(&shard_two));
 		}
@@ -344,11 +348,14 @@ mod test {
 		};
 		// when
 		{
-			let sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
-			assert!(SidechainStorage::load_last_block_from_db(&sidechain_db.db, &shard)
-				.unwrap()
-				.is_none());
+			assert!(SidechainStorage::<SignedBlock>::load_last_block_from_db(
+				&sidechain_db.db,
+				&shard
+			)
+			.unwrap()
+			.is_none());
 			// write signed_block to db
 			sidechain_db
 				.db
@@ -359,11 +366,13 @@ mod test {
 		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
-			let loaded_block =
-				SidechainStorage::load_last_block_from_db(&updated_sidechain_db.db, &shard)
-					.unwrap()
-					.unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let loaded_block = SidechainStorage::<SignedBlock>::load_last_block_from_db(
+				&updated_sidechain_db.db,
+				&shard,
+			)
+			.unwrap()
+			.unwrap();
 			assert_eq!(loaded_block, signed_last_block);
 		}
 		// clean up
@@ -383,11 +392,14 @@ mod test {
 		};
 		// when
 		{
-			let sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
-			assert!(SidechainStorage::load_last_block_from_db(&sidechain_db.db, &shard)
-				.unwrap()
-				.is_none());
+			assert!(SidechainStorage::<SignedBlock>::load_last_block_from_db(
+				&sidechain_db.db,
+				&shard
+			)
+			.unwrap()
+			.is_none());
 			// write shards to db
 			sidechain_db
 				.db
@@ -400,7 +412,7 @@ mod test {
 		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			assert_eq!(updated_sidechain_db.shards, shard_vector);
 			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), signed_last_block);
 		}
@@ -418,7 +430,7 @@ mod test {
 
 		// when
 		{
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
 			sidechain_db.store_blocks(signed_block_vector).unwrap();
@@ -427,7 +439,7 @@ mod test {
 		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure DB contains previously stored data:
 			assert_eq!(*updated_sidechain_db.shards(), vec![shard]);
 			let last_block = updated_sidechain_db.last_block_of_shard(&shard).unwrap();
@@ -459,7 +471,7 @@ mod test {
 
 		// when
 		{
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
 			sidechain_db.store_blocks(signed_block_vector).unwrap();
@@ -467,7 +479,7 @@ mod test {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			assert_eq!(updated_sidechain_db.shards()[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards()[1], shard_two);
 			let last_block_one: &LastSidechainBlock =
@@ -496,18 +508,18 @@ mod test {
 		// when
 		{
 			// first iteration
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
 		}
 		{
 			// second iteration
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
 		}
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// last block is really equal to second block:
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
@@ -546,17 +558,17 @@ mod test {
 		// when
 		{
 			// first iteration
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
 		}
 		{
 			// second iteration
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
 		}
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// last block is equal to first block:
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
@@ -586,7 +598,7 @@ mod test {
 		let signed_block_one = create_signed_block(1, shard);
 		// create sidechain_db
 		{
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(vec![signed_block_one.clone()]).unwrap();
 			// create last block one for comparison
 			let last_block = LastSidechainBlock {
@@ -614,7 +626,7 @@ mod test {
 		let shard = H256::from_low_u64_be(1);
 		// create sidechain_db
 		{
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
 
 			// then
@@ -638,7 +650,7 @@ mod test {
 		let block_three = create_signed_block(3, shard);
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
@@ -653,7 +665,7 @@ mod test {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// test if local storage is still clean
 			assert!(!updated_sidechain_db.shards.contains(&shard));
 			assert!(updated_sidechain_db.last_blocks.get(&shard).is_none());
@@ -685,7 +697,7 @@ mod test {
 
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
@@ -696,7 +708,7 @@ mod test {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// test local memory
 			assert!(updated_sidechain_db.shards.contains(&shard));
 			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), last_block);
@@ -730,7 +742,7 @@ mod test {
 		let block_three = create_signed_block(3, shard);
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
@@ -745,7 +757,7 @@ mod test {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// test if local storage is still clean
 			assert!(!updated_sidechain_db.shards.contains(&shard));
 			assert!(updated_sidechain_db.last_blocks.get(&shard).is_none());
@@ -787,7 +799,7 @@ mod test {
 		};
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			sidechain_db.store_blocks(vec![block_one.clone(), block_one_s.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone(), block_two_s.clone()]).unwrap();
 			sidechain_db
@@ -801,7 +813,7 @@ mod test {
 
 		// then
 		{
-			let updated_sidechain_db = SidechainStorage::new(path.clone()).unwrap();
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// test if shard one has been cleansed of block 1, with 2 and 3 still beeing there:
 			assert_eq!(
 				*updated_sidechain_db.last_block_of_shard(&shard_one).unwrap(),
