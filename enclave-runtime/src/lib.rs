@@ -413,9 +413,8 @@ pub unsafe extern "C" fn produce_blocks(
 
 	// execute pending calls from operation pool and create block
 	// (one per shard) as opaque call with block confirmation
-	let rpc_ocall_api = OcallApi;
 	let signed_blocks: Vec<SignedSidechainBlock> =
-		match execute_top_pool_calls(&rpc_ocall_api, &on_chain_ocall_api, latest_onchain_header) {
+		match execute_top_pool_calls(&OcallApi, latest_onchain_header) {
 			Ok((confirm_calls, signed_blocks)) => {
 				calls.extend(confirm_calls.into_iter());
 				signed_blocks
@@ -533,14 +532,12 @@ fn get_stf_state(
 	Stf::get_state(&mut state, trusted_getter_signed.into())
 }
 
-fn execute_top_pool_calls<R, O>(
-	rpc_ocall: &R,
-	on_chain_ocall: &O,
+fn execute_top_pool_calls<O>(
+	ocall_api: &O,
 	latest_onchain_header: Header,
 ) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)>
 where
-	R: EnclaveRpcOCallApi,
-	O: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi + EnclaveRpcOCallApi,
 {
 	debug!("Executing pending pool operations");
 
@@ -561,11 +558,11 @@ where
 	let shards = state::list_shards()?;
 
 	// Handle trusted getters
-	execute_trusted_getters(rpc_ocall, &author, &shards)?;
+	execute_trusted_getters(ocall_api, &author, &shards)?;
 
 	// Handle trusted calls
 	let calls_and_blocks =
-		execute_trusted_calls(on_chain_ocall, latest_onchain_header, pool, author, shards)?;
+		execute_trusted_calls(ocall_api, latest_onchain_header, pool, author, shards)?;
 
 	Ok(calls_and_blocks)
 }

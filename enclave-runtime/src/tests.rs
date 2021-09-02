@@ -423,13 +423,9 @@ fn test_create_block_and_confirmation_works() {
 		top_hash = executor::block_on(result).unwrap();
 	}
 
-	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
-	let on_chain_ocall = OcallApi;
-
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::execute_top_pool_calls(rpc_ocall.as_ref(), &on_chain_ocall, latest_onchain_header)
-			.unwrap();
+		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
 
 	debug!("got {} signed block(s)", signed_blocks.len());
 
@@ -513,13 +509,9 @@ fn test_create_state_diff() {
 		executor::block_on(result).unwrap();
 	}
 
-	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
-	let on_chain_ocall = OcallApi;
-
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(rpc_ocall.as_ref(), &on_chain_ocall, latest_onchain_header)
-			.unwrap();
+		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
 	Aes::decrypt(&mut encrypted_payload).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
@@ -605,13 +597,9 @@ fn test_executing_call_updates_account_nonce() {
 		executor::block_on(result).unwrap();
 	}
 
-	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
-	let on_chain_ocall = OcallApi;
-
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(rpc_ocall.as_ref(), &on_chain_ocall, latest_onchain_header)
-			.unwrap();
+		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
 
 	// then
 	let mut state = state::load(&shard).unwrap();
@@ -681,13 +669,9 @@ fn test_invalid_nonce_call_is_not_executed() {
 		executor::block_on(result).unwrap();
 	}
 
-	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
-	let on_chain_ocall = OcallApi;
-
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(rpc_ocall.as_ref(), &on_chain_ocall, latest_onchain_header)
-			.unwrap();
+		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();
@@ -749,13 +733,9 @@ fn test_non_root_shielding_call_is_not_executed() {
 		executor::block_on(result).unwrap();
 	}
 
-	let rpc_ocall = Arc::new(EnclaveRpcOCallMock {});
-	let on_chain_ocall = OcallApi;
-
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(rpc_ocall.as_ref(), &on_chain_ocall, latest_onchain_header)
-			.unwrap();
+		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();
