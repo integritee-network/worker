@@ -27,7 +27,7 @@ const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
 /// ShardIdentifier type
-type ShardIdentifier<A> = <<A as SignedBlockT>::Block as BlockT>::ShardIdentifier;
+type ShardIdentifierFor<B> = <<B as SignedBlockT>::Block as BlockT>::ShardIdentifier;
 /// Helper struct, contains the blocknumber
 /// and blockhash of the last sidechain block
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Default)]
@@ -42,22 +42,19 @@ pub struct LastSidechainBlock {
 /// into the database
 pub struct SidechainStorage<SignedBlock: SignedBlockT>
 where
-	SignedBlock: Encode + Decode,
-	<<SignedBlock as SignedBlockT>::Block as BlockT>::ShardIdentifier:
-		Hash + Eq + Debug + Encode + Decode + Copy,
+	ShardIdentifierFor<SignedBlock>: Hash + Eq + Debug + Encode + Decode + Copy,
 {
 	/// database
 	db: SidechainDB,
 	/// shards in database
-	shards: Vec<ShardIdentifier<SignedBlock>>,
+	shards: Vec<ShardIdentifierFor<SignedBlock>>,
 	/// map to last sidechain block of every shard
-	last_blocks: HashMap<ShardIdentifier<SignedBlock>, LastSidechainBlock>,
+	last_blocks: HashMap<ShardIdentifierFor<SignedBlock>, LastSidechainBlock>,
 }
 
 impl<SignedBlock: SignedBlockT + Encode + Decode> SidechainStorage<SignedBlock>
 where
-	<<SignedBlock as SignedBlockT>::Block as BlockT>::ShardIdentifier:
-		Hash + Eq + Debug + Encode + Decode,
+	ShardIdentifierFor<SignedBlock>: Hash + Eq + Debug + Encode + Decode,
 {
 	/// loads the DB from the given paths and stores the listed shard
 	/// and their last blocks in memory for better performance
@@ -79,14 +76,14 @@ where
 	}
 
 	/// gets all shards of currently loaded sidechain db
-	pub fn shards(&self) -> &Vec<ShardIdentifier<SignedBlock>> {
+	pub fn shards(&self) -> &Vec<ShardIdentifierFor<SignedBlock>> {
 		&self.shards
 	}
 
 	/// gets the last block of the current sidechain DB and the given shard
 	pub fn last_block_of_shard(
 		&self,
-		shard: &ShardIdentifier<SignedBlock>,
+		shard: &ShardIdentifierFor<SignedBlock>,
 	) -> Option<&LastSidechainBlock> {
 		self.last_blocks.get(shard)
 	}
@@ -94,7 +91,7 @@ where
 	/// gets the block hash of the sidechain block of the given shard and block number, if there is such a block
 	pub fn get_block_hash(
 		&self,
-		shard: &ShardIdentifier<SignedBlock>,
+		shard: &ShardIdentifierFor<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<Option<BlockHash>> {
 		self.db.get((*shard, block_number).encode())
@@ -144,7 +141,7 @@ where
 	}
 
 	/// purges a shard and its block from the db storage
-	pub fn purge_shard(&mut self, shard: &ShardIdentifier<SignedBlock>) -> Result<()> {
+	pub fn purge_shard(&mut self, shard: &ShardIdentifierFor<SignedBlock>) -> Result<()> {
 		if self.shards.contains(shard) {
 			// get last block of shard
 			let mut last_block = match self.last_blocks.get(shard) {
@@ -180,7 +177,7 @@ where
 	/// FIXME: Add delete functions?
 	pub fn prune_shard_from_block_number(
 		&mut self,
-		shard: &ShardIdentifier<SignedBlock>,
+		shard: &ShardIdentifierFor<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<()> {
 		if self.shards.contains(&shard) {
@@ -228,7 +225,7 @@ where
 	/// gets the previous block of given shard and block number, if there is one
 	fn get_previous_block(
 		&self,
-		shard: &ShardIdentifier<SignedBlock>,
+		shard: &ShardIdentifierFor<SignedBlock>,
 		current_block_number: BlockNumber,
 	) -> Result<Option<LastSidechainBlock>> {
 		let prev_block_number = current_block_number - 1;
@@ -239,8 +236,8 @@ where
 		}
 	}
 	/// reads shards from DB
-	fn load_shards_from_db(db: &SidechainDB) -> Result<Vec<ShardIdentifier<SignedBlock>>> {
-		match db.get::<Vec<ShardIdentifier<SignedBlock>>>(STORED_SHARDS_KEY.encode())? {
+	fn load_shards_from_db(db: &SidechainDB) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
+		match db.get::<Vec<ShardIdentifierFor<SignedBlock>>>(STORED_SHARDS_KEY.encode())? {
 			Some(shards) => Ok(shards),
 			None => Ok(vec![]),
 		}
@@ -249,7 +246,7 @@ where
 	/// reads last block from DB
 	fn load_last_block_from_db(
 		db: &SidechainDB,
-		shard: &ShardIdentifier<SignedBlock>,
+		shard: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Option<LastSidechainBlock>> {
 		db.get((LAST_BLOCK_KEY, *shard).encode())
 	}
