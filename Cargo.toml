@@ -18,10 +18,10 @@ members = [
     "primitives/storage",
     "primitives/test-utils",
     "primitives/worker",
-    "stf",
-    "worker",
-    "worker/rpc/client",
-    "worker/rpc/server",
+    "app-libs/stf",
+    "service",
+    "core/rpc-client",
+    "core/rpc-server",
     #	 "enclave",
 ]
 

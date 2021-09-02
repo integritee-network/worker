@@ -1943,7 +1943,7 @@ dependencies = [
  "hex",
  "integritee-node-runtime",
  "ita-stf",
- "itc-api-client",
+ "itc-rpc-client",
  "itp-api-client-extensions",
  "itp-core",
  "itp-teerex",
@@ -2019,8 +2019,8 @@ dependencies = [
  "integritee-node-runtime",
  "ipfs-api",
  "ita-stf",
- "itc-api-client",
- "itc-api-server",
+ "itc-rpc-client",
+ "itc-rpc-server",
  "itp-api-client-extensions",
  "itp-core",
  "itp-enclave-api",
@@ -2121,35 +2121,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itc-api-client"
-version = "0.8.0"
-dependencies = [
- "itp-core",
- "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec",
- "serde_derive",
- "serde_json",
- "sgx_crypto_helper",
- "ws 0.7.9",
-]
-
-[[package]]
-name = "itc-api-server"
-version = "0.8.0"
-dependencies = [
- "anyhow",
- "env_logger 0.9.0",
- "itp-core",
- "itp-enclave-api",
- "jsonrpsee",
- "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec",
- "serde_json",
- "sp-core",
- "tokio 1.11.0",
-]
-
-[[package]]
 name = "itc-light-client"
 version = "0.8.0"
 dependencies = [
@@ -2172,6 +2143,35 @@ dependencies = [
  "sp-trie",
  "thiserror 1.0.28",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-rpc-client"
+version = "0.8.0"
+dependencies = [
+ "itp-core",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "serde_derive",
+ "serde_json",
+ "sgx_crypto_helper",
+ "ws 0.7.9",
+]
+
+[[package]]
+name = "itc-rpc-server"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "env_logger 0.9.0",
+ "itp-core",
+ "itp-enclave-api",
+ "jsonrpsee",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "serde_json",
+ "sp-core",
+ "tokio 1.11.0",
 ]
 
 [[package]]

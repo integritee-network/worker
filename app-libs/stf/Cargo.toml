@@ -47,8 +47,8 @@ codec = { version = "2.0.0", default-features = false, features = ["derive"], pa
 sgx_tstd = { rev = "v1.1.3", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local crates
-itp-storage = { path = "../primitives/storage", default-features = false }
-itp-core = { default-features = false, path = "../primitives/worker", optional = true }
+itp-storage = { path = "../../primitives/storage", default-features = false }
+itp-core = { default-features = false, path = "../../primitives/worker", optional = true }
 
 # Substrate dependencies
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = ["full_crypto"] }

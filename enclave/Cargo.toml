@@ -82,7 +82,7 @@ itp-settings = { path = "../primitives/settings" }
 itp-sgx-io = { path = "../primitives/sgx/io", default-features = false, features = ["sgx"] }
 itp-sidechain = { path = "../primitives/sidechain", default-features = false }
 itp-sidechain-primitives = { path = "../primitives/sidechain/primitives", default-features = false }
-ita-stf = { path = "../stf", default-features = false, features = ["sgx"] }
+ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../primitives/storage", default-features = false, features = ["sgx"] }
 itp-core= {path = "../primitives/worker", default-features = false }
 itp-test = { path = "../primitives/test-utils", default-features = false, features = ["sgx"] }

@@ -42,5 +42,5 @@ sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrat
 itp-teerex = { path = "../primitives/node" }
 itp-core = { path = "../primitives/worker" }
 itp-api-client-extensions = { path = "../primitives/api-client-extensions" }
-ita-stf = { path = "../stf" }
-itc-api-client = { path = "../worker/rpc/client" }
+ita-stf = { path = "../app-libs/stf" }
+itc-rpc-client = { path = "../core/rpc-client" }

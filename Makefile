@@ -90,16 +90,16 @@ CUSTOM_EDL_PATH := ./rust-sgx-sdk/edl
 CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 
 ######## EDL settings ########
-Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h worker/Enclave_u.c worker/Enclave_u.h
+Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h service/Enclave_u.c service/Enclave_u.h
 
 ######## Integritee-service settings ########
 Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES)
-Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find worker/ -type f -name 'Cargo.toml')
-Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
+Worker_SRC_Files := $(shell find service/ -type f -name '*.rs') $(shell find service/ -type f -name 'Cargo.toml')
+Worker_Include_Paths := -I ./service -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
 Worker_Rust_Path := target/$(OUTPUT_PATH)
-Worker_Enclave_u_Object :=worker/libEnclave_u.a
+Worker_Enclave_u_Object :=service/libEnclave_u.a
 Worker_Name := bin/app
 
 ######## Integritee-cli settings ########
@@ -145,29 +145,29 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 ######## Targets ########
 .PHONY: all
 all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
-worker: $(Worker_Name)
+service: $(Worker_Name)
 client: $(Client_Name)
 githooks: .git/hooks/pre-commit
 
 ######## EDL objects ########
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
 	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir enclave
-	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir worker
+	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir service
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
 ######## Integritee-service objects ########
-worker/Enclave_u.o: $(Enclave_EDL_Files)
-	@$(CC) $(Worker_C_Flags) -c worker/Enclave_u.c -o $@
+service/Enclave_u.o: $(Enclave_EDL_Files)
+	@$(CC) $(Worker_C_Flags) -c service/Enclave_u.c -o $@
 	@echo "CC   <=  $<"
 
-$(Worker_Enclave_u_Object): worker/Enclave_u.o
+$(Worker_Enclave_u_Object): service/Enclave_u.o
 	$(AR) rcsD $@ $^
 	cp $(Worker_Enclave_u_Object) ./lib
 
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
 	@echo "Building the integritee-service"
-	@cd worker && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
+	@cd service && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/integritee-service ./bin
 
@@ -212,7 +212,7 @@ clean:
 	@echo "Removing the compiled files"
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) \
  			enclave/*_t.* \
- 			worker/*_u.* \
+ 			service/*_u.* \
  			lib/*.a \
  			bin/*.bin
 	@echo "cargo clean in enclave directory"
@@ -243,7 +243,7 @@ identity: mrenclave mrsigner
 help:
 	@echo "Available targets"
 	@echo "  all      - builds all targets (default)"
-	@echo "  worker   - builds the integritee-service"
+	@echo "  service   - builds the integritee-service"
 	@echo "  client   - builds the integritee-cli"
 	@echo "  githooks - installs the git hooks (copy .githooks/pre-commit to .git/hooks)"
 	@echo ""

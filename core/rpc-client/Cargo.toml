@@ -1,5 +1,5 @@
 [package]
-name = "itc-api-client"
+name = "itc-rpc-client"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
@@ -13,4 +13,4 @@ sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 
 [dependencies.itp-core]
-path = "../../../primitives/worker"
+path = "../../primitives/worker"

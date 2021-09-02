@@ -17,7 +17,7 @@
 */
 
 use crate::{config::Config, worker::Worker as WorkerGen};
-use itc_api_client::direct_client::DirectClient;
+use itc_rpc_client::direct_client::DirectClient;
 use itp_enclave_api::Enclave;
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard};

@@ -41,7 +41,7 @@ use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
-use itc_api_client::direct_client::DirectClient;
+use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
@@ -283,7 +283,7 @@ fn start_worker<E, T, W>(
 	let handle = tokio_handle.get_handle();
 	let enclave_rpc_server = enclave.clone();
 	handle
-		.spawn(async move { itc_api_server::run_server(&url, enclave_rpc_server).await.unwrap() });
+		.spawn(async move { itc_rpc_server::run_server(&url, enclave_rpc_server).await.unwrap() });
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();

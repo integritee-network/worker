@@ -45,10 +45,10 @@ itp-settings = { path = "../primitives/settings" }
 itp-teerex = { path = "../primitives/node" }
 itp-core = { path = "../primitives/worker" }
 itp-api-client-extensions = { path = "../primitives/api-client-extensions" }
-itc-api-client = { path = "rpc/client" }
-itc-api-server = { path = "rpc/server" }
+itc-rpc-client = { path = "../core/rpc-client" }
+itc-rpc-server = { path = "../core/rpc-server" }
 itp-enclave-api = { path = "../primitives/enclave-api" }
-ita-stf = { path = "../stf" }
+ita-stf = { path = "../app-libs/stf" }
 
 # scs / integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
