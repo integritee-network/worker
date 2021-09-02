@@ -1,5 +1,5 @@
 [package]
-name = "substratee-sgx-io"
+name = "itp-sgx-io"
 version = "0.8.0"
 edition = "2018"
 

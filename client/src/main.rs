@@ -12,10 +12,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-//! an RPC client to substraTEE using websockets
+//! an RPC client to Integritee using websockets
 //!
 //! examples
-//! substratee_client 127.0.0.1:9944 transfer //Alice 5G9RtsTbiYJYQYMHbWfyPoeuuxNaCbC16tZ2JGrZ4gRKwz14 1000
+//! integritee_cli 127.0.0.1:9944 transfer //Alice 5G9RtsTbiYJYQYMHbWfyPoeuuxNaCbC16tZ2JGrZ4gRKwz14 1000
 //!
 #![feature(rustc_private)]
 #[macro_use]
@@ -60,11 +60,11 @@ use substrate_api_client::{
 	Api, Metadata, RpcClient, XtStatus,
 };
 
+use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
+use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
+use itp_api_client_extensions::{PalletTeerexApi, TEEREX};
+use itp_core::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use substratee_api_client_extensions::{PalletTeerexApi, TEEREX};
-use substratee_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
-use substratee_worker_api::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use substratee_worker_primitives::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
 type AccountPublic = <Signature as Verify>::Signer;
 const KEYSTORE_PATH: &str = "my_keystore";
@@ -117,16 +117,16 @@ fn main() {
 						.default_value("2000")
 						.help("worker direct invocation port"),
 				)
-				.name("substratee-client")
+				.name("integritee-cli")
 				.version(VERSION)
-				.author("Supercomputing Systems AG <info@scs.ch>")
-				.about("interact with substratee-node and workers")
+				.author("Integritee AG <hello@integritee.network>")
+				.about("interact with integritee-node and workers")
 				.after_help("stf subcommands depend on the stf crate this has been built against")
 		})
 		.args(|_args, matches| matches.value_of("environment").unwrap_or("dev"))
 		.add_cmd(
 			Command::new("new-account")
-				.description("generates a new account for the substraTEE chain")
+				.description("generates a new account for the integritee chain")
 				.runner(|_args: &str, _matches: &ArgMatches<'_>| {
 					let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
 					let key: sr25519::AppPair = store.generate().unwrap();
@@ -137,7 +137,7 @@ fn main() {
 		)
 		.add_cmd(
 			Command::new("list-accounts")
-				.description("lists all accounts in keystore for the substraTEE chain")
+				.description("lists all accounts in keystore for the integritee chain")
 				.runner(|_args: &str, _matches: &ArgMatches<'_>| {
 					let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
 					println!("sr25519 keys:");
@@ -316,7 +316,7 @@ fn main() {
 								.short("e")
 								.long("exit-after")
 								.takes_value(true)
-								.help("exit after given number of SubstraTEE events"),
+								.help("exit after given number of Integritee events"),
 						)
 						.arg(
 							Arg::with_name("blocks")
@@ -414,7 +414,7 @@ fn main() {
 					Ok(())
 				}),
 		)
-		.add_cmd(substratee_stf::cli::cmd(&perform_trusted_operation))
+		.add_cmd(ita_stf::cli::cmd(&perform_trusted_operation))
 		.no_cmd(|_args, _matches| {
 			println!("No subcommand matched");
 			Ok(())
@@ -564,7 +564,7 @@ fn get_worker_api_direct(matches: &ArgMatches<'_>) -> DirectWorkerApi {
 		matches.value_of("worker-url").unwrap(),
 		matches.value_of("worker-rpc-port").unwrap()
 	);
-	info!("Connecting to substraTEE-worker-direct-port on '{}'", url);
+	info!("Connecting to integritee-service-direct-port on '{}'", url);
 	DirectWorkerApi::new(url)
 }
 
@@ -694,7 +694,7 @@ fn listen(matches: &ArgMatches<'_>) {
 							}
 						},*/
 						Event::Teerex(ee) => {
-							println!(">>>>>>>>>> substraTEE event: {:?}", ee);
+							println!(">>>>>>>>>> integritee event: {:?}", ee);
 							count += 1;
 							match &ee {
 								my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(

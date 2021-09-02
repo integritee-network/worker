@@ -13,20 +13,20 @@
 #################################################################################
 
 
-if tmux has-session -t substratee_logger ; then
+if tmux has-session -t integritee_logger ; then
   echo "detected existing polkadot logger session, attaching..."
 else
   # or start it up freshly
-  tmux new-session -d -s substratee_logger \; \
+  tmux new-session -d -s integritee_logger \; \
     split-window -v \; \
     split-window -v \; \
     select-layout even-vertical \; \
-    send-keys -t substratee_logger:0.0 'tail -f ../log/node.log' C-m \; \
-    send-keys -t substratee_logger:0.1 'tail -f ../log/worker1.log' C-m \; \
-    send-keys -t substratee_logger:0.2 'tail -f ../log/worker2.log' C-m
+    send-keys -t integritee_logger:0.0 'tail -f ../log/node.log' C-m \; \
+    send-keys -t integritee_logger:0.1 'tail -f ../log/worker1.log' C-m \; \
+    send-keys -t integritee_logger:0.2 'tail -f ../log/worker2.log' C-m
 
     # Attention: Depending on your tmux conf, indexes may start at 1
 
     tmux setw -g mouse on
 fi
-tmux attach-session -d -t substratee_logger
+tmux attach-session -d -t integritee_logger

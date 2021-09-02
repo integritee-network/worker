@@ -9,8 +9,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  WORKER_BIN: substratee-worker
-  CLIENT_BIN: substratee-client
+  WORKER_BIN: integritee-service
+  CLIENT_BIN: integritee-cli
   ENCLAVE_BIN: enclave.signed.so
   LOG_DIR: log
 
@@ -25,12 +25,12 @@ jobs:
 
       - name: Build
         run:  SGX_MODE=SW make
-      - name: Test Worker & Client
+      - name: Test Service & Client
         run: cargo test
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: |
           cd bin
-          ./substratee-worker test -u -e
+          ./integritee-service test -u -e
 
       # Todo: #REBRAND path names
       - name: Upload worker
@@ -64,7 +64,7 @@ jobs:
       - name: Worker & Client
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave && cargo clippy -- -D warnings
+        run: cd enclave-runtime && cargo clippy -- -D warnings
 
       - name: Fail-fast; cancel other jobs
         if: failure()
@@ -81,7 +81,7 @@ jobs:
       - name: Worker & Client
         run: cargo fmt --all -- --check
       - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave && cargo fmt --all -- --check
+        run: cd enclave-runtime && cargo fmt --all -- --check
 
       - name: Fail-fast; cancel other jobs
         if: failure()
@@ -208,7 +208,7 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           cd client
-          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} substratee-client
+          ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} integritee-cli
           cd ..
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 

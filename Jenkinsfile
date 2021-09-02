@@ -33,14 +33,14 @@ pipeline {
     }
     stage('Archive build output') {
       steps {
-        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/substratee-*', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
+        archiveArtifacts artifacts: 'bin/enclave.signed.so, bin/integritee-*', caseSensitive: false, fingerprint: true, onlyIfSuccessful: true
       }
     }
     stage('Test') {
       steps {
         sh 'cd client  && cargo test 2>&1 | tee ${WORKSPACE}/test_client.log'
-        sh 'cd worker  && cargo test 2>&1 | tee ${WORKSPACE}/test_worker.log'
-        sh 'cd enclave && cargo test 2>&1 | tee ${WORKSPACE}/test_enclave.log'
+        sh 'cd service  && cargo test 2>&1 | tee ${WORKSPACE}/test_server.log'
+        sh 'cd enclave-runtime && cargo test 2>&1 | tee ${WORKSPACE}/test_enclave.log'
       }
     }
     stage('Clippy') {

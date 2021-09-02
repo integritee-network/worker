@@ -3,7 +3,7 @@ use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORI
 use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, RpcClient};
 
-use substratee_node_primitives::SignedBlock;
+use itp_types::SignedBlock;
 
 use crate::ApiResult;
 

@@ -1,5 +1,5 @@
 [package]
-name = "substratee-enclave-api-ffi"
+name = "itp-enclave-api-ffi"
 version = "0.8.0"
 edition = "2018"
 

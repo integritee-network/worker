@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,9 @@
 
 use crate::{error::Error, utils, Enclave, EnclaveResult};
 use frame_support::ensure;
+use itp_enclave_api_ffi as ffi;
+use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use sgx_types::*;
-use substratee_enclave_api_ffi as ffi;
-use substratee_settings::worker::EXTRINSIC_MAX_SIZE;
 
 /// general remote attestation methods
 pub trait RemoteAttestation {

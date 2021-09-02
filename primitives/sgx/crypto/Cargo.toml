@@ -1,5 +1,5 @@
 [package]
-name = "substratee-sgx-crypto"
+name = "itp-sgx-crypto"
 version = "0.8.0"
 edition = "2018"
 
@@ -21,8 +21,8 @@ sgx_rand = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.g
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-substratee-settings = { path = "../../settings" }
-substratee-sgx-io = { path = "../io", default-features = false }
+itp-settings = { path = "../../settings" }
+itp-sgx-io = { path = "../io", default-features = false }
 
 
 [features]
@@ -30,11 +30,11 @@ default = ["std"]
 std = [
     "codec/std",
     "log/std",
-    "substratee-sgx-io/std",
+    "itp-sgx-io/std",
     "sp-core/std",
 ]
 sgx = [
     "sgx_tstd",
     "sgx_rand",
-    "substratee-sgx-io/sgx"
+    "itp-sgx-io/sgx"
 ]

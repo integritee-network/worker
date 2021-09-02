@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use sgx_types::*;
-use sp_std::prelude::Vec;
-use substratee_worker_primitives::{
+use itp_core::{
 	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus, WorkerRequest,
 	WorkerResponse,
 };
+use sgx_types::*;
+use sp_std::prelude::Vec;
 
 /// Trait for the enclave to make o-calls related to remote attestation
 pub trait EnclaveAttestationOCallApi: Clone + Debug + Send + Sync {

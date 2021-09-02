@@ -1,0 +1,40 @@
+[package]
+name = "its-sidechain"
+version = "0.8.0"
+edition = "2018"
+
+[dependencies]
+derive_more = "0.99.16"
+thiserror = "1.0.26"
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "chain-error"] }
+
+# substrate deps
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+# local deps
+itp-teerex-storage = { path = "../primitives/teerex-storage", default-features = false }
+itp-types = { path = "../primitives/types", default-features = false }
+itp-storage = { path = "../primitives/storage", default-features = false }
+itp-ocall-api = { path = "../primitives/ocall-api", default-features = false }
+itp-storage-verifier = { path = "../primitives/storage-verified", default-features = false }
+itp-core = { path = "../primitives/core", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "itp-types/std",
+    "itp-storage/std",
+    "itp-ocall-api/std",
+    "itp-storage-verifier/std",
+    "itp-core/std",
+]
+
+[dev-dependencies]
+itp-test = { path = "../primitives/test" }

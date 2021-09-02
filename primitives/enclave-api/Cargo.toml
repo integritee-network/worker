@@ -1,5 +1,5 @@
 [package]
-name = "substratee-enclave-api"
+name = "itp-enclave-api"
 version = "0.8.0"
 authors = ["clangenbacher <christian.langenbacher@scs.ch>"]
 edition = "2018"
@@ -19,8 +19,8 @@ sp-core             = { version = "4.0.0-dev", git = "https://github.com/parityt
 sp-finality-grandpa = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-runtime          = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
-substratee-enclave-api-ffi  = { path = "ffi" }
-substratee-settings         = { path = "../settings" }
+itp-enclave-api-ffi  = { path = "ffi" }
+itp-settings         = { path = "../settings" }
 
 
 [dev-dependencies]

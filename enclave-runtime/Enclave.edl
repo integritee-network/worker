@@ -1,0 +1,142 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+*/
+
+enclave {
+	from "sgx_backtrace.edl" import *;
+	from "sgx_tstd.edl" import *;
+	from "sgx_stdio.edl" import *;
+	from "sgx_backtrace.edl" import *;
+	from "sgx_tstdc.edl" import *;
+	from "sgx_tprotected_fs.edl" import *;
+	from "sgx_fs.edl" import *;
+	from "sgx_net.edl" import *;
+	from "sgx_time.edl" import *;
+	from "sgx_env.edl" import *;
+	from "sgx_thread.edl" import *;
+
+	include "sgx_quote.h"
+
+	trusted {
+		/* define ECALLs here. */
+		public sgx_status_t init();
+
+		public sgx_status_t get_state(
+			[in, size=cyphertext_size] uint8_t* cyphertext, uint32_t cyphertext_size,
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
+			[out, size=value_size] uint8_t* value, uint32_t value_size
+		);
+
+		public sgx_status_t init_light_client(
+			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,
+            [in, size=authority_list_size] uint8_t* authority_list, size_t authority_list_size,
+            [in, size=authority_proof_size] uint8_t* authority_proof, size_t authority_proof_size,
+            [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
+        );
+
+        public sgx_status_t produce_blocks(
+            [in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
+            [in] uint32_t* nonce
+        );
+
+		public sgx_status_t get_rsa_encryption_pubkey(
+			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
+
+		public sgx_status_t get_ecc_signing_pubkey(
+			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
+
+		public sgx_status_t get_mrenclave(
+			[out, size=mrenclave_size] uint8_t* mrenclave, uint32_t mrenclave_size);
+
+		public sgx_status_t perform_ra(
+			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
+			[in] uint32_t* nonce,
+			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
+		public sgx_status_t mock_register_enclave_xt(
+            [in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
+            [in] uint32_t* nonce,
+            [in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
+            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
+		public sgx_status_t dump_ra_to_disk();
+
+		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
+        public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
+
+		public sgx_status_t initialize_pool();
+
+		public sgx_status_t call_rpc_methods(
+			[in, size=request_len] uint8_t* request, uint32_t request_len,
+			[out, size=response_len] uint8_t* response, uint32_t response_len
+		);
+
+		public size_t test_main_entrance();
+	};
+
+	untrusted {
+		sgx_status_t ocall_sgx_init_quote(
+			[out] sgx_target_info_t *ret_ti,
+			[out] sgx_epid_group_id_t *ret_gid
+		);
+
+		sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+
+		sgx_status_t ocall_get_quote(
+			[in, size = sigrl_len] uint8_t * p_sigrl, uint32_t sigrl_len,
+			[in] sgx_report_t *report, sgx_quote_sign_type_t quote_type,
+			[in] sgx_spid_t *p_spid, [in] sgx_quote_nonce_t *p_nonce,
+			[out] sgx_report_t *p_qe_report,
+			[out, size = maxlen] sgx_quote_t *p_quote, uint32_t maxlen,
+			[out] uint32_t* p_quote_len
+		);
+
+		sgx_status_t ocall_get_update_info(
+			[in] sgx_platform_info_t * platformBlob, int32_t enclaveTrusted,
+			[out] sgx_update_info_bit_t * update_info
+		);
+
+		sgx_status_t ocall_read_ipfs(
+        	[in, size = cid_size] uint8_t * cid, uint32_t cid_size
+        );
+
+		sgx_status_t ocall_write_ipfs(
+			[in, size = state_size] uint8_t * enc_state, uint32_t state_size,
+			[out, size = cid_size] uint8_t * cid, uint32_t cid_size
+		);
+
+		sgx_status_t ocall_worker_request(
+	        [in, size = req_size] uint8_t * request, uint32_t req_size,
+	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
+	    );
+
+		sgx_status_t ocall_send_block_and_confirmation(
+	        [in, size = confirmations_size] uint8_t * confirmations, uint32_t confirmations_size,
+	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
+	    );
+
+		sgx_status_t ocall_update_status_event(
+	        [in, size = hash_size] uint8_t * hash_encoded, uint32_t hash_size,
+			[in, size = status_size] uint8_t * status_update_encoded, uint32_t status_size
+	    );
+		sgx_status_t ocall_send_status(
+			[in, size = hash_size] uint8_t * hash_encoded, uint32_t hash_size,
+			[in, size = status_size] uint8_t * status_encoded, uint32_t status_size
+	    );
+	};
+};

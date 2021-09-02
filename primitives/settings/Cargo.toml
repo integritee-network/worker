@@ -1,7 +1,7 @@
 [package]
-name = "substratee-settings"
+name = "itp-settings"
 version = "0.8.0"
-authors = ["Supercomputing Systems AG <info@scs.ch>"]
+authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]

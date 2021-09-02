@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Launch handily a local dev setup consisting of one substraTEE-node and some workers.
+Launch handily a local dev setup consisting of one integritee-node and some workers.
 
 Example usage: `./local-setup/launch.py /local-setup/simple-config.py`
 
@@ -60,7 +60,7 @@ def run_worker(config, i: int, provider_addr):
 
 
 def main(processes, config_path):
-    print('Starting substraTee-node-process in background')
+    print('Starting integritee-node-process in background')
 
     with open(config_path) as config_file:
         config = json.load(config_file)

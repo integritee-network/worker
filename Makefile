@@ -1,4 +1,4 @@
-# Copyright 2020 Supercomputing Systems AG
+# Copyright 2021 Integritee AG and Supercomputing Systems AG
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,13 +68,13 @@ endif
 
 ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
-	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.production.xml"
+	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.production.xml"
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
 	WORKER_FEATURES = --features=production
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
-	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
-	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
+	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.xml"
+	SGX_SIGN_KEY = "enclave-runtime/Enclave_private.pem"
 	WORKER_FEATURES = --features=default
 endif
 
@@ -90,21 +90,21 @@ CUSTOM_EDL_PATH := ./rust-sgx-sdk/edl
 CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 
 ######## EDL settings ########
-Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h worker/Enclave_u.c worker/Enclave_u.h
+Enclave_EDL_Files := enclave-runtime/Enclave_t.c enclave-runtime/Enclave_t.h service/Enclave_u.c service/Enclave_u.h
 
-######## SubstraTEE-worker settings ########
+######## Integritee-service settings ########
 Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES)
-Worker_SRC_Files := $(shell find worker/ -type f -name '*.rs') $(shell find worker/ -type f -name 'Cargo.toml')
-Worker_Include_Paths := -I ./worker -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
+Worker_SRC_Files := $(shell find service/ -type f -name '*.rs') $(shell find service/ -type f -name 'Cargo.toml')
+Worker_Include_Paths := -I ./service -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
 Worker_Rust_Path := target/$(OUTPUT_PATH)
-Worker_Enclave_u_Object :=worker/libEnclave_u.a
+Worker_Enclave_u_Object :=service/libEnclave_u.a
 Worker_Name := bin/app
 
-######## SubstraTEE-client settings ########
+######## Integritee-cli settings ########
 Client_SRC_Path := client
-STF_SRC_Path := stf
+STF_SRC_Path := app-libs/stf
 Client_Rust_Flags := $(CARGO_TARGET)
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(STF_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
@@ -112,7 +112,7 @@ Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Client_Include_Pa
 
 Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
-Client_Binary := substratee-client
+Client_Binary := integritee-cli
 Client_Name := $(Client_Path)/$(Client_Binary)
 
 ######## Enclave settings ########
@@ -127,66 +127,66 @@ Crypto_Library_Name := sgx_tcrypto
 KeyExchange_Library_Name := sgx_tkey_exchange
 ProtectedFs_Library_Name := sgx_tprotected_fs
 
-RustEnclave_C_Files := $(wildcard ./enclave/*.c)
+RustEnclave_C_Files := $(wildcard ./enclave-runtime/*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
-RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
+RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave-runtime -I./include
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
 RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
-	-Wl,--version-script=enclave/Enclave.lds \
+	-Wl,--version-script=enclave-runtime/Enclave.lds \
 	$(ENCLAVE_LDFLAGS)
 
-RustEnclave_Name := enclave/enclave.so
+RustEnclave_Name := enclave-runtime/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Targets ########
 .PHONY: all
 all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
-worker: $(Worker_Name)
+service: $(Worker_Name)
 client: $(Client_Name)
 githooks: .git/hooks/pre-commit
 
 ######## EDL objects ########
-$(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
-	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir enclave
-	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir worker
+$(Enclave_EDL_Files): $(SGX_EDGER8R) enclave-runtime/Enclave.edl
+	$(SGX_EDGER8R) --trusted enclave-runtime/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir enclave-runtime
+	$(SGX_EDGER8R) --untrusted enclave-runtime/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir service
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
-######## SubstraTEE-worker objects ########
-worker/Enclave_u.o: $(Enclave_EDL_Files)
-	@$(CC) $(Worker_C_Flags) -c worker/Enclave_u.c -o $@
+######## Integritee-service objects ########
+service/Enclave_u.o: $(Enclave_EDL_Files)
+	@$(CC) $(Worker_C_Flags) -c service/Enclave_u.c -o $@
 	@echo "CC   <=  $<"
 
-$(Worker_Enclave_u_Object): worker/Enclave_u.o
+$(Worker_Enclave_u_Object): service/Enclave_u.o
 	$(AR) rcsD $@ $^
 	cp $(Worker_Enclave_u_Object) ./lib
 
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
-	@echo "Building the substraTEE-worker"
-	@cd worker && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
+	@echo "Building the integritee-service"
+	@cd service && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
-	cp $(Worker_Rust_Path)/substratee-worker ./bin
+	cp $(Worker_Rust_Path)/integritee-service ./bin
 
-######## SubstraTEE-client objects ########
+######## Integritee-client objects ########
 $(Client_Name): $(Client_SRC_Files)
 	@echo
-	@echo "Building the substraTEE-client"
+	@echo "Building the integritee-cli"
 	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 
 ######## Enclave objects ########
-enclave/Enclave_t.o: $(Enclave_EDL_Files)
-	@$(CC) $(RustEnclave_Compile_Flags) -c enclave/Enclave_t.c -o $@
+enclave-runtime/Enclave_t.o: $(Enclave_EDL_Files)
+	@$(CC) $(RustEnclave_Compile_Flags) -c enclave-runtime/Enclave_t.c -o $@
 	@echo "CC   <=  $<"
 
-$(RustEnclave_Name): enclave enclave/Enclave_t.o
+$(RustEnclave_Name): enclave enclave-runtime/Enclave_t.o
 	@echo Compiling $(RustEnclave_Name)
-	@$(CXX) enclave/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
+	@$(CXX) enclave-runtime/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
@@ -201,7 +201,7 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 enclave:
 	@echo
 	@echo "Building the enclave"
-	$(MAKE) -C ./enclave/
+	$(MAKE) -C ./enclave-runtime/
 
 .git/hooks/pre-commit: .githooks/pre-commit
 	@echo "Installing git hooks"
@@ -211,21 +211,21 @@ enclave:
 clean:
 	@echo "Removing the compiled files"
 	@rm -f $(Client_Name) $(Worker_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) \
- 			enclave/*_t.* \
- 			worker/*_u.* \
+ 			enclave-runtime/*_t.* \
+ 			service/*_u.* \
  			lib/*.a \
  			bin/*.bin
 	@echo "cargo clean in enclave directory"
-	@cd enclave && cargo clean
+	@cd enclave-runtime && cargo clean
 	@echo "cargo clean in root directory"
 	@cargo clean
 
 .PHONY: update
 update:
 	@echo "Running cargo update.."
-	@cd enclave && cargo update
-	@cd enclave && cargo update -p sp-std --precise f651d45ce5742bc60fe8ae518c035d1638ae83d2
-	@cd enclave && cargo update -p sgx_tstd --precise 7c07ce0bfbacd3f4f2af53a2cdef9539018be73c
+	@cd enclave-runtime && cargo update
+	@cd enclave-runtime && cargo update -p sp-std --precise f651d45ce5742bc60fe8ae518c035d1638ae83d2
+	@cd enclave-runtime && cargo update -p sgx_tstd --precise 7c07ce0bfbacd3f4f2af53a2cdef9539018be73c
 	@cargo update
 	@cargo update -p sp-std --precise f651d45ce5742bc60fe8ae518c035d1638ae83d2
 	@cargo update -p sgx_tstd --precise 7c07ce0bfbacd3f4f2af53a2cdef9539018be73c
@@ -243,8 +243,8 @@ identity: mrenclave mrsigner
 help:
 	@echo "Available targets"
 	@echo "  all      - builds all targets (default)"
-	@echo "  worker   - builds the substraTEE-worker"
-	@echo "  client   - builds the substraTEE-client"
+	@echo "  service   - builds the integritee-service"
+	@echo "  client   - builds the integritee-cli"
 	@echo "  githooks - installs the git hooks (copy .githooks/pre-commit to .git/hooks)"
 	@echo ""
 	@echo "  clean   - cleanup"

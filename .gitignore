@@ -9,7 +9,7 @@
 
 # binaries
 bin/*.so
-bin/substratee-*
+bin/integritee-*
 bin/*.wasm
 
 # sealed data
@@ -33,10 +33,10 @@ my_keystore/*
 my_trusted_keystore/*
 
 # generated enclave files
-worker/Enclave_u.*
-worker/libEnclave_u.*
-enclave/Enclave_t.*
-enclave/enclave.so
+service/Enclave_u.*
+service/libEnclave_u.*
+enclave-runtime/Enclave_t.*
+enclave-runtime/enclave.so
 lib/libEnclave_u.*
 lib/libcompiler-rt-patch.a
 lib/libenclave.a

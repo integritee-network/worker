@@ -6,27 +6,27 @@ members = [
     "primitives/api-client-extensions",
     "primitives/enclave-api",
     "primitives/enclave-api/ffi",
-    "primitives/node",
+    "primitives/types",
     "primitives/ocall-api",
-    "primitives/get-storage-verified",
-    "primitives/pallet-teerex-storage",
+    "primitives/storage-verified",
+    "primitives/teerex-storage",
     "primitives/settings",
     "primitives/sgx/crypto",
     "primitives/sgx/io",
-    "primitives/sidechain",
-    "primitives/sidechain/primitives",
+    "sidechain",
+    "sidechain/primitives",
     "primitives/storage",
-    "primitives/test-utils",
-    "primitives/worker",
-    "stf",
-    "worker",
-    "worker/rpc/client",
-    "worker/rpc/server",
+    "primitives/test",
+    "primitives/core",
+    "app-libs/stf",
+    "service",
+    "core/rpc-client",
+    "core/rpc-server",
     #	 "enclave",
 ]
 
-#[patch."https://github.com/scs/pallet-substratee-registry.git"]
-#pallet-substratee-registry = { path = "../pallet-substratee-registry" }
+#[patch."https://github.com/integritee-network/pallet-teerex.git"]
+#pallet-teerex = { path = "../pallet-teerex" }
 
 
 #[patch."https://github.com/scs/substrate-api-client"]

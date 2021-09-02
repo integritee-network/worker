@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,8 @@
 
 use crate::{error::Error, Enclave, EnclaveResult};
 use frame_support::ensure;
+use itp_enclave_api_ffi as ffi;
 use sgx_types::sgx_status_t;
-use substratee_enclave_api_ffi as ffi;
 
 pub trait DirectRequest: Send + Sync + 'static {
 	// Todo: Vec<u8> shall be replaced by D: Decode, E: Encode but this is currently

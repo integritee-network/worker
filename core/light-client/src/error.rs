@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Supercomputing Systems AG
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ pub enum JustificationError {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error(transparent)]
-	Storage(#[from] substratee_storage::Error),
+	Storage(#[from] itp_storage::Error),
 	#[error("Validator set mismatch")]
 	ValidatorSetMismatch,
 	#[error("Invalid ancestry proof")]
