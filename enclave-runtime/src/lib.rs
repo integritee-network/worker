@@ -225,16 +225,12 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let ocall_api = OcallApi;
+	let mre = OcallApi
+		.get_mrenclave_of_self()
+		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
 
 	let signer = Ed25519Seal::unseal().unwrap();
-	let call = (
-		[TEEREX_MODULE, REGISTER_ENCLAVE],
-		ocall_api
-			.get_mrenclave_of_self()
-			.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
-		url,
-	);
+	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
 
 	let xt = compose_extrinsic_offline!(
 		signer,
@@ -399,13 +395,10 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(e) => return e.into(),
 	};
 
-	let on_chain_ocall_api = OcallApi;
-
-	let mut calls =
-		match sync_blocks_on_light_client(blocks_to_sync, &mut validator, &on_chain_ocall_api) {
-			Ok(c) => c,
-			Err(e) => return e,
-		};
+	let mut calls = match sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi) {
+		Ok(c) => c,
+		Err(e) => return e,
+	};
 
 	// get header of last block
 	let latest_onchain_header: Header =
@@ -968,8 +961,7 @@ where
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("query mrenclave of self");
-	let ocall_api = OcallApi;
-	let mrenclave = ocall_api.get_mrenclave_of_self()?;
+	let mrenclave = OcallApi.get_mrenclave_of_self()?;
 	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 
 	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {

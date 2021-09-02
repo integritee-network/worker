@@ -153,11 +153,11 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	}
 }
 
-trait GetReport {
+trait GetSgxReport {
 	fn get_report_of_self(&self) -> SgxResult<sgx_report_body_t>;
 }
 
-impl<T: EnclaveAttestationOCallApi> GetReport for T {
+impl<T: EnclaveAttestationOCallApi> GetSgxReport for T {
 	fn get_report_of_self(&self) -> SgxResult<sgx_report_body_t> {
 		// (1) get ti + eg
 		let init_quote_result = self.sgx_init_quote()?;

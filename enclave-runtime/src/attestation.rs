@@ -485,9 +485,7 @@ pub unsafe extern "C" fn perform_ra(
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let ocall_api = OcallApi;
-
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &ocall_api, false) {
+	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &OcallApi, false) {
 		Ok(r) => r,
 		Err(e) => return e.into(),
 	};
@@ -538,9 +536,7 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let ocall_api = OcallApi;
-
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &ocall_api, false) {
+	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &OcallApi, false) {
 		Ok(r) => r,
 		Err(e) => return e.into(),
 	};
