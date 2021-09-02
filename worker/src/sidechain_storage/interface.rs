@@ -32,8 +32,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorageLock<SignedBlock> {
 	}
 }
 
-/// Storage interface Trait¨
-/// FIXME: Clean up these traits (generic? non generic? type?)
+/// Storage interface Trait
 #[cfg_attr(test, automock)]
 pub trait BlockStorage<SignedBlock: SignedBlockT> {
 	// type not working because gossiper needs to work with the same block type,
@@ -42,7 +41,6 @@ pub trait BlockStorage<SignedBlock: SignedBlockT> {
 	fn store_blocks(&self, blocks: Vec<SignedBlock>) -> Result<()>;
 }
 
-/// FIXME: Remove Helper trait (not generic) as soon as sidechain struct have been cleaned up some
 pub trait BlockPruner {
 	fn prune_blocks_except(&self, blocks_to_keep: u64);
 }
