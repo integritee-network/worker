@@ -40,6 +40,8 @@ impl SidechainDB {
 		}
 	}
 
+	/// add an entry to the DB
+	#[allow(unused)]
 	pub fn put<K: Encode, V: Encode>(&mut self, key: K, value: V) -> Result<()> {
 		self.db.put(key.encode(), value.encode()).map_err(Error::OperationalError)
 	}
@@ -50,12 +52,18 @@ impl SidechainDB {
 	}
 
 	/// deletes an entry from the DB
+	#[allow(unused)]
 	pub fn delete<K: Encode>(&mut self, key: K) -> Result<()> {
 		self.db.delete(key.encode()).map_err(Error::OperationalError)
 	}
 
 	/// adds a given key value pair to the batch
 	pub fn add_to_batch<K: Encode, V: Encode>(batch: &mut WriteBatch, key: K, value: V) {
-		batch.put(&key.encode(), &value.encode())
+		batch.put(key.encode(), &value.encode())
+	}
+
+	/// adds a delte key command to the batch
+	pub fn delete_to_batch<K: Encode>(batch: &mut WriteBatch, key: K) {
+		batch.delete(key.encode())
 	}
 }

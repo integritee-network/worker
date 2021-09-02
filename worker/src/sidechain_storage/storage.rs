@@ -30,7 +30,7 @@ const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 type ShardIdentifierFor<B> = <<B as SignedBlockT>::Block as BlockT>::ShardIdentifier;
 /// Helper struct, contains the blocknumber
 /// and blockhash of the last sidechain block
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Debug, Default)]
 pub struct LastSidechainBlock {
 	/// hash of the last sidechain block
 	pub hash: H256,
@@ -55,18 +55,18 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	pub fn new(path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
 		// load db
 		let db = SidechainDB::open_default(path)?;
-		let shards = Self::load_shards_from_db(&db)?;
+		let mut storage = SidechainStorage { db, shards: vec![], last_blocks: HashMap::new() };
+		storage.shards = storage.load_shards_from_db()?;
 		// get last block of each shard
-		let mut last_blocks = HashMap::new();
-		for shard in shards.iter() {
-			if let Some(last_block) = Self::load_last_block_from_db(&db, shard)? {
-				last_blocks.insert(*shard, last_block);
+		for shard in storage.shards.iter() {
+			if let Some(last_block) = storage.load_last_block_from_db(shard)? {
+				storage.last_blocks.insert(*shard, last_block);
 			} else {
 				// an empty shard sidechain storage should not exist. Consider deleting this shard from the shards list.
 				error!("Sidechain storage of shard {:?} is empty", shard);
 			}
 		}
-		Ok(SidechainStorage { db, shards, last_blocks })
+		Ok(storage)
 	}
 
 	/// gets all shards of currently loaded sidechain db
@@ -136,35 +136,46 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 
 	/// purges a shard and its block from the db storage
 	pub fn purge_shard(&mut self, shard: &ShardIdentifierFor<SignedBlock>) -> Result<()> {
-		if self.shards.contains(shard) {
-			// get last block of shard
-			let mut last_block = match self.last_blocks.get(shard) {
-				Some(last_block) => last_block.clone(),
-				None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
-			};
-			// remove last block from db storage
-			// Blockhash -> Signed Block
-			self.db.delete(last_block.hash)?;
-			// (Shard , Block number) -> Blockhash
-			self.db.delete((shard, last_block.number))?;
-			// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
-			self.db.delete((LAST_BLOCK_KEY, shard))?;
-			self.last_blocks.remove(&shard); // delete from local memory
-
-			// Remove all blocks from db
-			while let Some(previous_block) = self.get_previous_block(shard, last_block.number)? {
-				last_block = previous_block;
-				// Blockhash -> Signed Block
-				self.db.delete(last_block.hash)?;
-				// (Shard, Block number) -> Blockhash
-				self.db.delete((shard, last_block.number))?;
+		// Early return if shard is inexistent
+		if !self.shards.contains(shard) {
+			// check if DB is also empty
+			let db_shards = self.load_shards_from_db()?;
+			if !db_shards.contains(shard) {
+				warn!("Tried to purge already empty shard: {:?}", shard);
+				return Ok(())
 			}
-			// remove shard from list
-			// STORED_SHARDS_KEY -> Vec<(Shard)>
-			self.shards.retain(|&x| x != *shard);
-			self.db.put(STORED_SHARDS_KEY, &self.shards)?
+			warn!(
+				"Mismatch detected between inmemory shards and db shards, maybe try to reload DB? Guilty shard: {:?}", shard
+			);
 		}
-		Ok(())
+		let mut batch = WriteBatch::default();
+		// get last block of shard
+		let last_block = match self.last_blocks.get(shard) {
+			Some(last_block) => *last_block,
+			None => {
+				// Try to read from db:
+				match self.load_last_block_from_db(shard)? {
+					Some(last_block) => last_block,
+					None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
+				}
+			},
+		};
+		// remove last block from db storage
+		self.delete_last_block(&mut batch, &last_block, shard);
+
+		// Remove the rest of the blocks from the db
+		let mut current_block_number = last_block.number;
+		while let Some(previous_block) = self.get_previous_block(shard, current_block_number)? {
+			current_block_number = previous_block.number;
+			self.delete_block(&mut batch, &previous_block.hash, &current_block_number, shard);
+		}
+		// remove shard from list
+		// STORED_SHARDS_KEY -> Vec<(Shard)>
+		self.shards.retain(|&x| x != *shard);
+		// add updated shards to Batch DB
+		SidechainDB::add_to_batch(&mut batch, STORED_SHARDS_KEY, &self.shards);
+		// Update DB
+		self.db.write(batch)
 	}
 
 	/// purges a shard and its block from the db storage
@@ -174,30 +185,44 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		shard: &ShardIdentifierFor<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<()> {
-		if self.shards.contains(&shard) {
-			// get last block of shard
-			let last_block = match self.last_blocks.get(shard) {
-				Some(last_block) => last_block.clone(),
-				None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
-			};
-			if last_block.number == block_number {
-				// given block number is last block of chain - purge whole shard
-				self.purge_shard(shard)?;
-			} else {
-				// remove given block from db storage
-				let mut current_block_number = block_number;
-
-				// Remove blocks from db until no block anymore
-				while let Some(block_hash) = self.get_block_hash(&shard, current_block_number)? {
-					// Blockhash -> Signed Block
-					self.db.delete(block_hash)?;
-					// (Shard, Block number) -> Blockhash
-					self.db.delete((shard, current_block_number))?;
-					current_block_number -= 1;
-				}
+		// Early return if shard is inexistent
+		if !self.shards.contains(shard) {
+			// check if DB is also empty
+			let db_shards = self.load_shards_from_db()?;
+			if !db_shards.contains(shard) {
+				warn!("Tried to prune already empty shard: {:?}", shard);
+				return Ok(())
 			}
+			warn!(
+				"Mismatch detected between inmemory shards and db shards, maybe try to reload DB? Guilty shard: {:?}", shard
+			);
 		}
-		Ok(())
+		// get last block of shard
+		let last_block = match self.last_blocks.get(shard) {
+			Some(last_block) => *last_block,
+			None => {
+				// Try to read from db:
+				match self.load_last_block_from_db(shard)? {
+					Some(last_block) => last_block,
+					None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
+				}
+			},
+		};
+		if last_block.number == block_number {
+			// given block number is last block of chain - purge whole shard
+			self.purge_shard(shard)
+		} else {
+			// iterate through chain and add all blocks to WriteBatch (delete cmd)
+			let mut batch = WriteBatch::default();
+			let mut current_block_number = block_number;
+			// Remove blocks from db until no block anymore
+			while let Some(block_hash) = self.get_block_hash(&shard, current_block_number)? {
+				self.delete_block(&mut batch, &block_hash, &current_block_number, shard);
+				current_block_number -= 1;
+			}
+			// Update DB
+			self.db.write(batch)
+		}
 	}
 
 	/// prunes all shards except for the newest blocks (according to blocknumber)
@@ -230,8 +255,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		}
 	}
 	/// reads shards from DB
-	fn load_shards_from_db(db: &SidechainDB) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
-		match db.get(STORED_SHARDS_KEY)? {
+	fn load_shards_from_db(&self) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
+		match self.db.get(STORED_SHARDS_KEY)? {
 			Some(shards) => Ok(shards),
 			None => Ok(vec![]),
 		}
@@ -239,10 +264,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 
 	/// reads last block from DB
 	fn load_last_block_from_db(
-		db: &SidechainDB,
+		&self,
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Option<LastSidechainBlock>> {
-		db.get((LAST_BLOCK_KEY, *shard))
+		self.db.get((LAST_BLOCK_KEY, *shard))
 	}
 
 	/// adds the block to the WriteBatch
@@ -258,11 +283,44 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 
 		// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
 		let last_block = LastSidechainBlock { hash, number: block_number };
-		self.last_blocks.insert(shard, last_block.clone()); // add in memory
+		self.last_blocks.insert(shard, last_block); // add in memory
 		SidechainDB::add_to_batch(batch, (LAST_BLOCK_KEY, shard), last_block);
 
 		// STORED_SHARDS_KEY
 		SidechainDB::add_to_batch(batch, STORED_SHARDS_KEY, self.shards());
+	}
+
+	/// delete block to the WriteBach
+	fn delete_block(
+		&self,
+		batch: &mut WriteBatch,
+		block_hash: &H256,
+		block_number: &BlockNumber,
+		shard: &ShardIdentifierFor<SignedBlock>,
+	) {
+		// Block hash -> Signed Block
+		SidechainDB::delete_to_batch(batch, block_hash);
+		// (Shard, Block number) -> Blockhash (for block pruning)
+		SidechainDB::delete_to_batch(batch, (shard, block_number));
+	}
+
+	/// delete last block & add to the last block (write batch only)
+	fn delete_last_block(
+		&mut self,
+		batch: &mut WriteBatch,
+		last_block: &LastSidechainBlock,
+		shard: &ShardIdentifierFor<SignedBlock>,
+	) {
+		// add block to delete batch
+		// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
+		SidechainDB::delete_to_batch(batch, (LAST_BLOCK_KEY, *shard));
+		self.delete_block(batch, &last_block.hash, &last_block.number, shard);
+
+		// delete last block from local memory
+		// careful here: This deletes the local memory before db has been actually pruned
+		// (it's been only added to the write batch).
+		// But this can be fixed upon reloading the db / restarting the worker
+		self.last_blocks.remove(shard);
 	}
 }
 
@@ -294,10 +352,7 @@ mod test {
 		{
 			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
-			assert_eq!(
-				SidechainStorage::<SignedBlock>::load_shards_from_db(&sidechain_db.db).unwrap(),
-				vec![]
-			);
+			assert_eq!(sidechain_db.load_shards_from_db().unwrap(), vec![]);
 			// write signed_block to db
 			sidechain_db.db.put(STORED_SHARDS_KEY, vec![shard_one, shard_two]).unwrap();
 		}
@@ -306,9 +361,7 @@ mod test {
 		{
 			// open new DB of same path:
 			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
-			let loaded_shards =
-				SidechainStorage::<SignedBlock>::load_shards_from_db(&updated_sidechain_db.db)
-					.unwrap();
+			let loaded_shards = updated_sidechain_db.load_shards_from_db().unwrap();
 			assert!(loaded_shards.contains(&shard_one));
 			assert!(loaded_shards.contains(&shard_two));
 		}
@@ -330,12 +383,7 @@ mod test {
 		{
 			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
-			assert!(SidechainStorage::<SignedBlock>::load_last_block_from_db(
-				&sidechain_db.db,
-				&shard
-			)
-			.unwrap()
-			.is_none());
+			assert!(sidechain_db.load_last_block_from_db(&shard).unwrap().is_none());
 			// write signed_block to db
 			sidechain_db.db.put((LAST_BLOCK_KEY, shard), signed_last_block.clone()).unwrap();
 		}
@@ -344,12 +392,8 @@ mod test {
 		{
 			// open new DB of same path:
 			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
-			let loaded_block = SidechainStorage::<SignedBlock>::load_last_block_from_db(
-				&updated_sidechain_db.db,
-				&shard,
-			)
-			.unwrap()
-			.unwrap();
+			let loaded_block =
+				updated_sidechain_db.load_last_block_from_db(&shard).unwrap().unwrap();
 			assert_eq!(loaded_block, signed_last_block);
 		}
 		// clean up
@@ -371,12 +415,7 @@ mod test {
 		{
 			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			// ensure db starts empty
-			assert!(SidechainStorage::<SignedBlock>::load_last_block_from_db(
-				&sidechain_db.db,
-				&shard
-			)
-			.unwrap()
-			.is_none());
+			assert!(sidechain_db.load_last_block_from_db(&shard).unwrap().is_none());
 			// write shards to db
 			sidechain_db.db.put((LAST_BLOCK_KEY, shard), signed_last_block.clone()).unwrap();
 			// write shards to db
