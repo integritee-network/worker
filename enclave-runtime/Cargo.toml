@@ -1,5 +1,5 @@
 [package]
-name = "itc-enclave"
+name = "enclave-runtime"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
@@ -9,7 +9,7 @@ resolver = "2"
 members = []
 
 [lib]
-name = "itc_enclave"
+name = "enclave_runtime"
 crate-type = ["staticlib"]
 
 [features]

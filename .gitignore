@@ -35,8 +35,8 @@ my_trusted_keystore/*
 # generated enclave files
 service/Enclave_u.*
 service/libEnclave_u.*
-enclave/Enclave_t.*
-enclave/enclave.so
+enclave-runtime/Enclave_t.*
+enclave-runtime/enclave.so
 lib/libEnclave_u.*
 lib/libcompiler-rt-patch.a
 lib/libenclave.a

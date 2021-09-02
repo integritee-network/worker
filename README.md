@@ -44,7 +44,7 @@ run node
 run worker
 
 ```
-export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,integritee_service=info,itc_enclave=info,sp_io::misc=debug,runtime=debug,itc_enclave::state=warn,ita_stf::sgx=info,light_client=warn,rustls=warn
+export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,integritee_service=info,enclave_runtime=info,sp_io::misc=debug,runtime=debug,enclave_runtime::state=warn,ita_stf::sgx=info,light_client=warn,rustls=warn
 rm -rf shards/ light_client_db.bin
 ./integritee-service -r 2002 -p 9979 -w 2001 run 2>&1 | tee worker.log
 ```

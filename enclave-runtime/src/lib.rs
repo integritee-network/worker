@@ -18,7 +18,7 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
-#![crate_name = "itc_enclave"]
+#![crate_name = "enclave_runtime"]
 #![crate_type = "staticlib"]
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
