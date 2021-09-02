@@ -154,10 +154,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			Some(last_block) => *last_block,
 			None => {
 				// Try to read from db:
-				match self.load_last_block_from_db(shard)? {
-					Some(last_block) => last_block,
-					None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
-				}
+				self.load_last_block_from_db(shard)?
+					.ok_or_else(|| Error::LastBlockNotFound(format!("{:?}", *shard)))?
 			},
 		};
 		// remove last block from db storage
@@ -202,10 +200,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			Some(last_block) => *last_block,
 			None => {
 				// Try to read from db:
-				match self.load_last_block_from_db(shard)? {
-					Some(last_block) => last_block,
-					None => return Err(Error::LastBlockNotFound(format!("{:?}", *shard))),
-				}
+				self.load_last_block_from_db(shard)?
+					.ok_or_else(|| Error::LastBlockNotFound(format!("{:?}", *shard)))?
 			},
 		};
 		if last_block.number == block_number {
