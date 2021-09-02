@@ -88,13 +88,13 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		shard: &ShardIdentifierFor<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<Option<BlockHash>> {
-		self.db.get((*shard, block_number).encode())
+		self.db.get((*shard, block_number))
 	}
 
 	/// gets the block of the given blockhash, if there is such a block
 	#[allow(unused)]
 	pub fn get_block(&self, block_hash: &BlockHash) -> Result<Option<SignedBlock>> {
-		self.db.get(block_hash.encode())
+		self.db.get(block_hash)
 	}
 
 	/// update sidechain storage
@@ -231,7 +231,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	}
 	/// reads shards from DB
 	fn load_shards_from_db(db: &SidechainDB) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
-		match db.get::<Vec<ShardIdentifierFor<SignedBlock>>>(STORED_SHARDS_KEY.encode())? {
+		match db.get(STORED_SHARDS_KEY)? {
 			Some(shards) => Ok(shards),
 			None => Ok(vec![]),
 		}
@@ -242,7 +242,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		db: &SidechainDB,
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Option<LastSidechainBlock>> {
-		db.get((LAST_BLOCK_KEY, *shard).encode())
+		db.get((LAST_BLOCK_KEY, *shard))
 	}
 
 	/// adds the block to the WriteBatch

@@ -33,8 +33,8 @@ impl SidechainDB {
 	}
 
 	/// returns the decoded value of the DB entry, if there is one
-	pub fn get<V: Decode>(&self, key: Vec<u8>) -> Result<Option<V>> {
-		match self.db.get(key)? {
+	pub fn get<V: Decode, K: Encode>(&self, key: K) -> Result<Option<V>> {
+		match self.db.get(key.encode())? {
 			None => Ok(None),
 			Some(encoded_hash) => Ok(Some(V::decode(&mut encoded_hash.as_slice())?)),
 		}
