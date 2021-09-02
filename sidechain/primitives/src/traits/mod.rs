@@ -44,7 +44,7 @@ pub trait Block: Encode + Decode {
 	) -> Self;
 }
 
-pub trait SignedBlock {
+pub trait SignedBlock: Encode + Decode {
 	type Block: Block;
 	type Signature;
 

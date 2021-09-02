@@ -16,7 +16,7 @@ use codec::{Decode, Encode};
 use log::*;
 use rocksdb::WriteBatch;
 use sp_core::H256;
-use std::{collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf};
+use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use substratee_worker_primitives::{
 	block::{BlockHash, BlockNumber},
 	traits::{Block as BlockT, SignedBlock as SignedBlockT},
@@ -40,10 +40,7 @@ pub struct LastSidechainBlock {
 
 /// Struct used to insert newly produced sidechainblocks
 /// into the database
-pub struct SidechainStorage<SignedBlock: SignedBlockT>
-where
-	ShardIdentifierFor<SignedBlock>: Hash + Eq + Debug + Encode + Decode + Copy,
-{
+pub struct SidechainStorage<SignedBlock: SignedBlockT> {
 	/// database
 	db: SidechainDB,
 	/// shards in database
@@ -52,10 +49,7 @@ where
 	last_blocks: HashMap<ShardIdentifierFor<SignedBlock>, LastSidechainBlock>,
 }
 
-impl<SignedBlock: SignedBlockT + Encode + Decode> SidechainStorage<SignedBlock>
-where
-	ShardIdentifierFor<SignedBlock>: Hash + Eq + Debug + Encode + Decode,
-{
+impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	/// loads the DB from the given paths and stores the listed shard
 	/// and their last blocks in memory for better performance
 	pub fn new(path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
