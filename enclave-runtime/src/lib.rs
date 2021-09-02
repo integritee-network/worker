@@ -436,7 +436,7 @@ pub unsafe extern "C" fn produce_blocks(
 
 	// ocall to worker to store signed block and send block confirmation
 	// send extrinsics to layer 1 block chain, gossip blocks to side-chain
-	if let Err(e) = on_chain_ocall_api.send_block_and_confirmation(extrinsics, signed_blocks) {
+	if let Err(e) = OcallApi.send_block_and_confirmation(extrinsics, signed_blocks) {
 		error!("Failed to send block and confirmation: {}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}

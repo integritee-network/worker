@@ -401,8 +401,7 @@ fn test_create_block_and_confirmation_works() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let ocall_api = OcallApi;
-		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+		let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 		let signer_pair = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let call = TrustedCall::balance_transfer(
 			signer_pair.public().into(),
@@ -488,8 +487,7 @@ fn test_create_state_diff() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let ocall_api = OcallApi;
-		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+		let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_transfer(
 			account_with_money.into(),
 			account_without_money.into(),
@@ -576,8 +574,7 @@ fn test_executing_call_updates_account_nonce() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let ocall_api = OcallApi;
-		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+		let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_transfer(
 			account_with_money.into(),
 			account_without_money.into(),
@@ -648,8 +645,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 		// create trusted call signed
 		let nonce = 10;
-		let ocall_api = OcallApi;
-		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+		let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_transfer(
 			account_with_money.into(),
 			account_without_money.into(),
@@ -716,8 +712,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 		// create trusted call signed
 		let nonce = 0;
-		let ocall_api = OcallApi;
-		let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+		let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 		let call = TrustedCall::balance_shield(account.into(), account.into(), 1000);
 		let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);

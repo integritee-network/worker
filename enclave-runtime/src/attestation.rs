@@ -77,9 +77,7 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
 	let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
 
-	let ocall_api = OcallApi;
-
-	match ocall_api.get_mrenclave_of_self() {
+	match OcallApi.get_mrenclave_of_self() {
 		Ok(m) => {
 			mrenclave_slice.copy_from_slice(&m.m[..]);
 			sgx_status_t::SGX_SUCCESS

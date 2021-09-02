@@ -123,9 +123,7 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let ocall_api = OcallApi;
-
-	let cfg = match tls_server_config(sign_type, ocall_api, skip_ra == 1) {
+	let cfg = match tls_server_config(sign_type, OcallApi, skip_ra == 1) {
 		Ok(cfg) => cfg,
 		Err(e) => return e,
 	};
@@ -208,9 +206,7 @@ pub extern "C" fn request_key_provisioning(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let ocall_api = OcallApi;
-
-	let cfg = match tls_client_config(sign_type, ocall_api, skip_ra == 1) {
+	let cfg = match tls_client_config(sign_type, OcallApi, skip_ra == 1) {
 		Ok(cfg) => cfg,
 		Err(e) => return e,
 	};
