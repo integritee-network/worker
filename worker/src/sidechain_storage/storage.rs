@@ -124,7 +124,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 				new_shard = true;
 			}
 			// add block to DB batch
-			self.add_block(&mut batch, &signed_block);
+			self.add_last_block(&mut batch, &signed_block);
 		}
 		// update stored_shards_key -> vec<shard> only if a new shard was included
 		if new_shard {
@@ -267,7 +267,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	}
 
 	/// adds the block to the WriteBatch
-	fn add_block(&mut self, batch: &mut WriteBatch, block: &SignedBlock) {
+	fn add_last_block(&mut self, batch: &mut WriteBatch, block: &SignedBlock) {
 		let hash = block.hash();
 		let block_number = block.block().block_number();
 		let shard = block.block().shard_id();
@@ -281,9 +281,6 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		let last_block = LastSidechainBlock { hash, number: block_number };
 		self.last_blocks.insert(shard, last_block); // add in memory
 		SidechainDB::add_to_batch(batch, (LAST_BLOCK_KEY, shard), last_block);
-
-		// STORED_SHARDS_KEY
-		SidechainDB::add_to_batch(batch, STORED_SHARDS_KEY, self.shards());
 	}
 
 	/// delete block to the WriteBach
@@ -424,6 +421,171 @@ mod test {
 			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
 			assert_eq!(updated_sidechain_db.shards, shard_vector);
 			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), signed_last_block);
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn add_last_block_works() {
+		// given
+		let path = PathBuf::from("add_last_block_works");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block = create_signed_block(8, shard);
+
+		// when
+		{
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut batch = WriteBatch::default();
+			sidechain_db.add_last_block(&mut batch, &signed_block);
+			sidechain_db.db.write(batch).unwrap();
+
+			// then
+			// ensure DB contains previously stored data:
+			let last_block = sidechain_db.last_block_of_shard(&shard).unwrap();
+			assert_eq!(last_block.number, signed_block.block().block_number());
+			assert_eq!(last_block.hash, signed_block.hash());
+			let stored_block_hash =
+				sidechain_db.get_block_hash(&shard, last_block.number).unwrap().unwrap();
+			assert_eq!(stored_block_hash, signed_block.hash());
+			assert_eq!(sidechain_db.get_block(&stored_block_hash).unwrap().unwrap(), signed_block);
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn delete_block_works() {
+		// given
+		let path = PathBuf::from("delete_block_works");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block = create_signed_block(8, shard);
+		{
+			// fill db
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			sidechain_db.db.put(signed_block.hash(), signed_block.clone()).unwrap();
+			sidechain_db
+				.db
+				.put((shard, signed_block.block().block_number()), signed_block.hash())
+				.unwrap();
+			assert_eq!(
+				sidechain_db
+					.db
+					.get::<(ShardIdentifier, BlockNumber), H256>((
+						shard,
+						signed_block.block().block_number()
+					))
+					.unwrap()
+					.unwrap(),
+				signed_block.hash()
+			);
+			assert_eq!(
+				sidechain_db.db.get::<H256, SignedBlock>(signed_block.hash()).unwrap().unwrap(),
+				signed_block
+			);
+
+			// when
+			let mut batch = WriteBatch::default();
+			sidechain_db.delete_block(
+				&mut batch,
+				&signed_block.hash(),
+				&signed_block.block().block_number(),
+				&shard,
+			);
+			sidechain_db.db.write(batch).unwrap();
+		}
+
+		// then
+		{
+			// open new DB of same path:
+			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			// ensure DB does not contain block anymore:
+			assert!(updated_sidechain_db
+				.db
+				.get::<(ShardIdentifier, BlockNumber), H256>((
+					shard,
+					signed_block.block().block_number()
+				))
+				.unwrap()
+				.is_none());
+			assert!(updated_sidechain_db
+				.db
+				.get::<H256, SignedBlock>(signed_block.hash())
+				.unwrap()
+				.is_none());
+		}
+		// clean up
+		let _ = DB::destroy(&Options::default(), path).unwrap();
+	}
+
+	#[test]
+	fn delete_last_block_works() {
+		// given
+		let path = PathBuf::from("delete_last_block_works");
+		let shard = H256::from_low_u64_be(1);
+		let signed_block = create_signed_block(8, shard);
+		let last_block = LastSidechainBlock {
+			hash: signed_block.hash(),
+			number: signed_block.block().block_number(),
+		};
+		{
+			// fill db
+			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			sidechain_db.db.put(signed_block.hash(), signed_block.clone()).unwrap();
+			sidechain_db
+				.db
+				.put((shard, signed_block.block().block_number()), signed_block.hash())
+				.unwrap();
+			sidechain_db.db.put((LAST_BLOCK_KEY, shard), last_block.clone()).unwrap();
+			assert_eq!(
+				sidechain_db
+					.db
+					.get::<(ShardIdentifier, BlockNumber), H256>((
+						shard,
+						signed_block.block().block_number()
+					))
+					.unwrap()
+					.unwrap(),
+				signed_block.hash()
+			);
+			assert_eq!(
+				sidechain_db.db.get::<H256, SignedBlock>(signed_block.hash()).unwrap().unwrap(),
+				signed_block
+			);
+			assert_eq!(
+				sidechain_db
+					.db
+					.get::<(&[u8], ShardIdentifier), LastSidechainBlock>((LAST_BLOCK_KEY, shard))
+					.unwrap()
+					.unwrap(),
+				last_block
+			);
+
+			// when
+			let mut batch = WriteBatch::default();
+			sidechain_db.delete_last_block(&mut batch, &last_block, &shard);
+			sidechain_db.db.write(batch).unwrap();
+
+			// then
+			assert!(sidechain_db.last_blocks.get(&shard).is_none());
+			assert!(sidechain_db
+				.db
+				.get::<(ShardIdentifier, BlockNumber), H256>((
+					shard,
+					signed_block.block().block_number()
+				))
+				.unwrap()
+				.is_none());
+			assert!(sidechain_db
+				.db
+				.get::<H256, SignedBlock>(signed_block.hash())
+				.unwrap()
+				.is_none());
+			assert!(sidechain_db
+				.db
+				.get::<(&[u8], ShardIdentifier), LastSidechainBlock>((LAST_BLOCK_KEY, shard))
+				.unwrap()
+				.is_none());
 		}
 		// clean up
 		let _ = DB::destroy(&Options::default(), path).unwrap();
