@@ -148,17 +148,12 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 				"Mismatch detected between inmemory shards and db shards, maybe try to reload DB? Guilty shard: {:?}", shard
 			);
 		}
-		let mut batch = WriteBatch::default();
+
 		// get last block of shard
-		let last_block = match self.last_blocks.get(shard) {
-			Some(last_block) => *last_block,
-			None => {
-				// Try to read from db:
-				self.load_last_block_from_db(shard)?
-					.ok_or_else(|| Error::LastBlockNotFound(format!("{:?}", *shard)))?
-			},
-		};
+		let last_block = self.get_last_block_of_shard(shard)?;
+
 		// remove last block from db storage
+		let mut batch = WriteBatch::default();
 		self.delete_last_block(&mut batch, &last_block, shard);
 
 		// Remove the rest of the blocks from the db
@@ -183,27 +178,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		shard: &ShardIdentifierFor<SignedBlock>,
 		block_number: BlockNumber,
 	) -> Result<()> {
-		// Early return if shard is inexistent
-		if !self.shards.contains(shard) {
-			// check if DB is also empty
-			let db_shards = self.load_shards_from_db()?;
-			if !db_shards.contains(shard) {
-				warn!("Tried to prune already empty shard: {:?}", shard);
-				return Ok(())
-			}
-			warn!(
-				"Mismatch detected between inmemory shards and db shards, maybe try to reload DB? Guilty shard: {:?}", shard
-			);
-		}
-		// get last block of shard
-		let last_block = match self.last_blocks.get(shard) {
-			Some(last_block) => *last_block,
-			None => {
-				// Try to read from db:
-				self.load_last_block_from_db(shard)?
-					.ok_or_else(|| Error::LastBlockNotFound(format!("{:?}", *shard)))?
-			},
-		};
+		let last_block = self.get_last_block_of_shard(shard)?;
 		if last_block.number == block_number {
 			// given block number is last block of chain - purge whole shard
 			self.purge_shard(shard)
@@ -244,18 +219,13 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		current_block_number: BlockNumber,
 	) -> Result<Option<LastSidechainBlock>> {
 		let prev_block_number = current_block_number - 1;
-		if let Some(block_hash) = self.get_block_hash(shard, prev_block_number)? {
-			Ok(Some(LastSidechainBlock { hash: block_hash, number: prev_block_number }))
-		} else {
-			Ok(None)
-		}
+		Ok(self
+			.get_block_hash(shard, prev_block_number)?
+			.map(|block_hash| LastSidechainBlock { hash: block_hash, number: prev_block_number }))
 	}
 	/// reads shards from DB
 	fn load_shards_from_db(&self) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
-		match self.db.get(STORED_SHARDS_KEY)? {
-			Some(shards) => Ok(shards),
-			None => Ok(vec![]),
-		}
+		Ok(self.db.get(STORED_SHARDS_KEY)?.unwrap_or_default())
 	}
 
 	/// reads last block from DB
@@ -264,6 +234,20 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Option<LastSidechainBlock>> {
 		self.db.get((LAST_BLOCK_KEY, *shard))
+	}
+
+	fn get_last_block_of_shard(
+		&self,
+		shard: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<LastSidechainBlock> {
+		match self.last_blocks.get(shard) {
+			Some(last_block) => Ok(*last_block),
+			None => {
+				// Try to read from db:
+				self.load_last_block_from_db(shard)?
+					.ok_or_else(|| Error::LastBlockNotFound(format!("{:?}", *shard)))
+			},
+		}
 	}
 
 	/// adds the block to the WriteBatch
