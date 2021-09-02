@@ -136,19 +136,6 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 
 	/// purges a shard and its block from the db storage
 	pub fn purge_shard(&mut self, shard: &ShardIdentifierFor<SignedBlock>) -> Result<()> {
-		// Early return if shard is inexistent
-		if !self.shards.contains(shard) {
-			// check if DB is also empty
-			let db_shards = self.load_shards_from_db()?;
-			if !db_shards.contains(shard) {
-				warn!("Tried to purge already empty shard: {:?}", shard);
-				return Ok(())
-			}
-			warn!(
-				"Mismatch detected between inmemory shards and db shards, maybe try to reload DB? Guilty shard: {:?}", shard
-			);
-		}
-
 		// get last block of shard
 		let last_block = self.get_last_block_of_shard(shard)?;
 
