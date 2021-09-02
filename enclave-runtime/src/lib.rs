@@ -30,10 +30,7 @@ extern crate sgx_tstd as std;
 
 use crate::{
 	error::{Error, Result},
-	ocall::{
-		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-		rpc_ocall::EnclaveRpcOCall,
-	},
+	ocall::OcallApi,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -130,7 +127,7 @@ pub enum Timeout {
 }
 
 pub type Hash = sp_core::H256;
-type BPool = BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>;
+type BPool = BasicPool<SideChainApi<Block>, Block, OcallApi>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -228,7 +225,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 
 	let signer = Ed25519Seal::unseal().unwrap();
 	let call = (
@@ -402,16 +399,13 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(e) => return e.into(),
 	};
 
-	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
+	let on_chain_ocall_api = OcallApi;
 
-	let mut calls = match sync_blocks_on_light_client(
-		blocks_to_sync,
-		&mut validator,
-		on_chain_ocall_api.as_ref(),
-	) {
-		Ok(c) => c,
-		Err(e) => return e,
-	};
+	let mut calls =
+		match sync_blocks_on_light_client(blocks_to_sync, &mut validator, &on_chain_ocall_api) {
+			Ok(c) => c,
+			Err(e) => return e,
+		};
 
 	// get header of last block
 	let latest_onchain_header: Header =
@@ -419,18 +413,15 @@ pub unsafe extern "C" fn produce_blocks(
 
 	// execute pending calls from operation pool and create block
 	// (one per shard) as opaque call with block confirmation
-	let rpc_ocall_api = OCallComponentFactory::rpc_api();
-	let signed_blocks: Vec<SignedSidechainBlock> = match execute_top_pool_calls(
-		rpc_ocall_api.as_ref(),
-		on_chain_ocall_api.as_ref(),
-		latest_onchain_header,
-	) {
-		Ok((confirm_calls, signed_blocks)) => {
-			calls.extend(confirm_calls.into_iter());
-			signed_blocks
-		},
-		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-	};
+	let rpc_ocall_api = OcallApi;
+	let signed_blocks: Vec<SignedSidechainBlock> =
+		match execute_top_pool_calls(&rpc_ocall_api, &on_chain_ocall_api, latest_onchain_header) {
+			Ok((confirm_calls, signed_blocks)) => {
+				calls.extend(confirm_calls.into_iter());
+				signed_blocks
+			},
+			Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+		};
 
 	let extrinsics = match create_extrinsics(&validator, calls, *nonce) {
 		Ok(xt) => xt,
@@ -980,7 +971,7 @@ where
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("query mrenclave of self");
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 	let mrenclave = ocall_api.get_mrenclave_of_self()?;
 	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 

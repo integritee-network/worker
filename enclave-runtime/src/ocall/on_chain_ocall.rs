@@ -16,7 +16,10 @@
 
 */
 
-use crate::{ocall::ffi, rpc::author::alloc::prelude::v1::Vec};
+use crate::{
+	ocall::{ffi, OcallApi},
+	rpc::author::alloc::prelude::v1::Vec,
+};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
@@ -24,10 +27,7 @@ use itp_ocall_api::EnclaveOnChainOCallApi;
 use log::*;
 use sgx_types::*;
 
-#[derive(Clone, Debug)]
-pub struct EnclaveOnChainOCall;
-
-impl EnclaveOnChainOCallApi for EnclaveOnChainOCall {
+impl EnclaveOnChainOCallApi for OcallApi {
 	fn send_block_and_confirmation(
 		&self,
 		confirmations: Vec<Vec<u8>>,

@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall::ffi;
+use crate::ocall::{ffi, OcallApi};
 use codec::Encode;
 use frame_support::ensure;
 use itp_core::TrustedOperationStatus;
@@ -24,10 +24,7 @@ use itp_ocall_api::EnclaveRpcOCallApi;
 use sgx_types::{sgx_status_t, SgxResult};
 use std::vec::Vec;
 
-#[derive(Clone, Debug, Default)]
-pub struct EnclaveRpcOCall;
-
-impl EnclaveRpcOCallApi for EnclaveRpcOCall {
+impl EnclaveRpcOCallApi for OcallApi {
 	fn update_status_event<H: Encode>(
 		&self,
 		hash: H,

@@ -15,7 +15,7 @@
 
 */
 
-use crate::ocall::ffi;
+use crate::ocall::{ffi, OcallApi};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
@@ -27,14 +27,9 @@ use sgx_types::{
 };
 use std::{ptr, vec::Vec};
 
-#[derive(Clone, Debug)]
-pub struct EnclaveAttestationOCall {}
+const RET_QUOTE_BUF_LEN: usize = 2048;
 
-impl EnclaveAttestationOCall {
-	const RET_QUOTE_BUF_LEN: usize = 2048;
-}
-
-impl EnclaveAttestationOCallApi for EnclaveAttestationOCall {
+impl EnclaveAttestationOCallApi for OcallApi {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
 		let mut ti: sgx_target_info_t = sgx_target_info_t::default();
 		let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
@@ -77,7 +72,7 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCall {
 		quote_nonce: sgx_quote_nonce_t,
 	) -> SgxResult<(sgx_report_t, Vec<u8>)> {
 		let mut qe_report = sgx_report_t::default();
-		let mut return_quote_buf = [0u8; EnclaveAttestationOCall::RET_QUOTE_BUF_LEN];
+		let mut return_quote_buf = [0u8; RET_QUOTE_BUF_LEN];
 		let mut quote_len: u32 = 0;
 
 		let (p_sigrl, sigrl_len) = if sig_rl.is_empty() {
@@ -93,7 +88,7 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCall {
 		let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
 		let p_qe_report = &mut qe_report as *mut sgx_report_t;
 		let p_quote = return_quote_buf.as_mut_ptr();
-		let maxlen = EnclaveAttestationOCall::RET_QUOTE_BUF_LEN as u32;
+		let maxlen = RET_QUOTE_BUF_LEN as u32;
 		let p_quote_len = &mut quote_len as *mut u32;
 
 		let result = unsafe {
@@ -158,7 +153,11 @@ impl EnclaveAttestationOCallApi for EnclaveAttestationOCall {
 	}
 }
 
-impl EnclaveAttestationOCall {
+trait GetReport {
+	fn get_report_of_self(&self) -> SgxResult<sgx_report_body_t>;
+}
+
+impl<T: EnclaveAttestationOCallApi> GetReport for T {
 	fn get_report_of_self(&self) -> SgxResult<sgx_report_body_t> {
 		// (1) get ti + eg
 		let init_quote_result = self.sgx_init_quote()?;

@@ -16,15 +16,12 @@
 
 */
 
-use crate::ocall::ffi;
+use crate::ocall::{ffi, OcallApi};
 use frame_support::ensure;
 use itp_ocall_api::{EnclaveIpfsOCallApi, IpfsCid};
 use sgx_types::{sgx_status_t, SgxResult};
 
-#[derive(Clone, Debug)]
-pub struct EnclaveIpfsOcall;
-
-impl EnclaveIpfsOCallApi for EnclaveIpfsOcall {
+impl EnclaveIpfsOCallApi for OcallApi {
 	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<IpfsCid> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let mut cid_buf = IpfsCid([0u8; 46]);

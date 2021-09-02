@@ -53,7 +53,7 @@ use itp_settings::{
 
 use crate::{
 	cert, hex, io,
-	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
+	ocall::OcallApi,
 	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
 	Result as EnclaveResult,
 };
@@ -77,7 +77,7 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
 	let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 
 	match ocall_api.get_mrenclave_of_self() {
 		Ok(m) => {
@@ -289,7 +289,7 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
 pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 	pub_k: &[u8; 32],
 	sign_type: sgx_quote_sign_type_t,
-	ocall_api: Arc<A>,
+	ocall_api: &A,
 ) -> SgxResult<(String, String, String)> {
 	// Workflow:
 	// (1) ocall to get the target_info structure (ti) and epid group id (eg)
@@ -422,7 +422,7 @@ fn get_ias_api_key() -> SgxResult<String> {
 
 pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
 	sign_type: sgx_quote_sign_type_t,
-	ocall_api: Arc<A>,
+	ocall_api: &A,
 	skip_ra: bool,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
 	let chain_signer = Ed25519Seal::unseal()?;
@@ -485,9 +485,9 @@ pub unsafe extern "C" fn perform_ra(
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, ocall_api, false) {
+	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &ocall_api, false) {
 		Ok(r) => r,
 		Err(e) => return e.into(),
 	};
@@ -538,9 +538,9 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 	// our certificate is unlinkable
 	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, ocall_api, false) {
+	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &ocall_api, false) {
 		Ok(r) => r,
 		Err(e) => return e.into(),
 	};

@@ -55,7 +55,7 @@ use base58::FromBase58;
 use itp_core::{block::SignedBlock, DirectRequestStatus, RpcReturnValue, TrustedOperationStatus};
 use itp_types::{Block, Request};
 
-use crate::{ocall::rpc_ocall::EnclaveRpcOCall, rsa3072, utils::write_slice_and_whitespace_pad};
+use crate::{rsa3072, utils::write_slice_and_whitespace_pad, OcallApi};
 
 static GLOBAL_TX_POOL: AtomicPtr<()> = AtomicPtr::new(0 as *mut ());
 
@@ -65,17 +65,17 @@ pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
 	let api = Arc::new(SideChainApi::new());
 	let tx_pool = BasicPool::create(PoolOptions::default(), api);
 	let pool_ptr =
-		Arc::new(SgxMutex::<BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>>::new(tx_pool));
+		Arc::new(SgxMutex::<BasicPool<SideChainApi<Block>, Block, OcallApi>>::new(tx_pool));
 	let ptr = Arc::into_raw(pool_ptr);
 	GLOBAL_TX_POOL.store(ptr as *mut (), Ordering::SeqCst);
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-pub fn load_top_pool(
-) -> Option<&'static SgxMutex<BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>>> {
+pub fn load_top_pool() -> Option<&'static SgxMutex<BasicPool<SideChainApi<Block>, Block, OcallApi>>>
+{
 	let ptr = GLOBAL_TX_POOL.load(Ordering::SeqCst)
-		as *mut SgxMutex<BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>>;
+		as *mut SgxMutex<BasicPool<SideChainApi<Block>, Block, OcallApi>>;
 	if ptr.is_null() {
 		None
 	} else {

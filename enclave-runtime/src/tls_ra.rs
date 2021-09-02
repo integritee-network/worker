@@ -2,7 +2,7 @@ use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
 	error::Result as EnclaveResult,
-	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
+	ocall::OcallApi,
 	rsa3072,
 	utils::UnwrapOrSgxErrorUnexpected,
 };
@@ -24,11 +24,11 @@ use webpki::DNSName;
 struct ClientAuth<A> {
 	outdated_ok: bool,
 	skip_ra: bool,
-	attestation_ocall: Arc<A>,
+	attestation_ocall: A,
 }
 
 impl<A> ClientAuth<A> {
-	fn new(outdated_ok: bool, skip_ra: bool, attestation_ocall: Arc<A>) -> Self {
+	fn new(outdated_ok: bool, skip_ra: bool, attestation_ocall: A) -> Self {
 		ClientAuth { outdated_ok, skip_ra, attestation_ocall }
 	}
 }
@@ -56,7 +56,7 @@ where
 			return Ok(rustls::ClientCertVerified::assertion())
 		}
 
-		match cert::verify_mra_cert(&_certs[0].0, self.attestation_ocall.as_ref()) {
+		match cert::verify_mra_cert(&_certs[0].0, &self.attestation_ocall) {
 			Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
 				if self.outdated_ok {
@@ -73,11 +73,11 @@ where
 struct ServerAuth<A> {
 	outdated_ok: bool,
 	skip_ra: bool,
-	attestation_ocall: Arc<A>,
+	attestation_ocall: A,
 }
 
 impl<A> ServerAuth<A> {
-	fn new(outdated_ok: bool, skip_ra: bool, attestation_ocall: Arc<A>) -> Self {
+	fn new(outdated_ok: bool, skip_ra: bool, attestation_ocall: A) -> Self {
 		ServerAuth { outdated_ok, skip_ra, attestation_ocall }
 	}
 }
@@ -101,7 +101,7 @@ where
 		}
 
 		// This call will automatically verify cert is properly signed
-		match cert::verify_mra_cert(&_certs[0].0, self.attestation_ocall.as_ref()) {
+		match cert::verify_mra_cert(&_certs[0].0, &self.attestation_ocall) {
 			Ok(()) => Ok(rustls::ServerCertVerified::assertion()),
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
 				if self.outdated_ok {
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 
 	let cfg = match tls_server_config(sign_type, ocall_api, skip_ra == 1) {
 		Ok(cfg) => cfg,
@@ -162,11 +162,11 @@ fn tls_server_sesssion_stream(
 
 fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
-	ocall_api: Arc<A>,
+	ocall_api: A,
 	skip_ra: bool,
 ) -> SgxResult<ServerConfig> {
 	let (key_der, cert_der) =
-		create_ra_report_and_signature(sign_type, ocall_api.clone(), skip_ra).sgx_error()?;
+		create_ra_report_and_signature(sign_type, &ocall_api, skip_ra).sgx_error()?;
 
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];
@@ -208,7 +208,7 @@ pub extern "C" fn request_key_provisioning(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let ocall_api = OcallApi;
 
 	let cfg = match tls_client_config(sign_type, ocall_api, skip_ra == 1) {
 		Ok(cfg) => cfg,
@@ -277,11 +277,11 @@ fn tls_client_session_stream(
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
-	ocall_api: Arc<A>,
+	ocall_api: A,
 	skip_ra: bool,
 ) -> SgxResult<ClientConfig> {
 	let (key_der, cert_der) =
-		create_ra_report_and_signature(sign_type, ocall_api.clone(), skip_ra).sgx_error()?;
+		create_ra_report_and_signature(sign_type, &ocall_api, skip_ra).sgx_error()?;
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];
