@@ -42,8 +42,8 @@ sgx_crypto_helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-
 
 # local
 itp-settings = { path = "../primitives/settings" }
-itp-teerex = { path = "../primitives/node" }
-itp-core = { path = "../primitives/worker" }
+itp-types = { path = "../primitives/types" }
+itp-core = { path = "../primitives/core" }
 itp-api-client-extensions = { path = "../primitives/api-client-extensions" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }

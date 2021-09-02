@@ -13,7 +13,7 @@ use std::num::ParseIntError;
 
 use itp_api_client_extensions::PalletTeerexApi;
 use itp_core::block::SignedBlock as SignedSidechainBlock;
-use itp_teerex::Enclave as EnclaveMetadata;
+use itp_types::Enclave as EnclaveMetadata;
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;

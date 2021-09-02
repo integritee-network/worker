@@ -104,7 +104,7 @@ Worker_Name := bin/app
 
 ######## Integritee-cli settings ########
 Client_SRC_Path := client
-STF_SRC_Path := stf
+STF_SRC_Path := app-libs/stf
 Client_Rust_Flags := $(CARGO_TARGET)
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(STF_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)

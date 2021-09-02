@@ -33,9 +33,9 @@ use itp_settings::{
 };
 use itp_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
 use itp_sgx_io::SealedIO;
-use itp_sidechain_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use itp_storage::storage_value_key;
-use itp_teerex::{Block, Header};
+use itp_types::{Block, Header};
+use its_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{

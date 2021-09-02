@@ -1,5 +1,5 @@
 use itp_api_client_extensions::{ApiResult, PalletTeerexApi};
-use itp_teerex::{Enclave, ShardIdentifier};
+use itp_types::{Enclave, ShardIdentifier};
 
 pub struct TestNodeApi;
 

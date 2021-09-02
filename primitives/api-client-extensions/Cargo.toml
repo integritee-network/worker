@@ -16,4 +16,4 @@ sp-runtime = { version = "4.0.0-dev",  git = "https://github.com/paritytech/subs
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
 
 # integritee
-itp-teerex = { path = "../node"}
+itp-types = { path = "../types" }

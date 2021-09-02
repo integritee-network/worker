@@ -990,11 +990,11 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-io",
- "itp-sidechain",
- "itp-sidechain-primitives",
+ "its-sidechain",
+ "its-primitives",
  "itp-storage",
  "itp-storage-verifier",
- "itp-teerex",
+ "itp-types",
  "itp-teerex-storage",
  "itp-test",
  "jsonrpc-core",
@@ -1089,7 +1089,7 @@ name = "itp-core"
 version = "0.8.0"
 dependencies = [
  "chrono 0.4.19",
- "itp-sidechain-primitives",
+ "its-primitives",
  "itp-storage",
  "parity-scale-codec",
  "primitive-types",
@@ -1139,7 +1139,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-sidechain"
+name = "its-sidechain"
 version = "0.8.0"
 dependencies = [
  "derive_more",
@@ -1148,7 +1148,7 @@ dependencies = [
  "itp-ocall-api",
  "itp-storage",
  "itp-storage-verifier",
- "itp-teerex",
+ "itp-types",
  "itp-teerex-storage",
  "parity-scale-codec",
  "sp-core",
@@ -1158,7 +1158,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-sidechain-primitives"
+name = "its-primitives"
 version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
@@ -1200,7 +1200,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-teerex"
+name = "itp-types"
 version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
@@ -1226,7 +1226,7 @@ dependencies = [
  "itp-ocall-api",
  "itp-storage",
  "itp-storage-verifier",
- "itp-teerex",
+ "itp-types",
  "itp-teerex-storage",
  "parity-scale-codec",
  "sgx_tstd",

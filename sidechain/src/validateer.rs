@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 use frame_support::ensure;
 use itp_storage_verifier::GetStorageVerified;
-use itp_teerex::Enclave;
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
+use itp_types::Enclave;
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;

@@ -1,8 +1,8 @@
 use codec::{Decode, Encode};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::{GetStorageVerified, Result};
-use itp_teerex::Enclave;
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
+use itp_types::Enclave;
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::*;

@@ -53,7 +53,7 @@ use ita_stf::ShardIdentifier;
 use base58::FromBase58;
 
 use itp_core::{block::SignedBlock, DirectRequestStatus, RpcReturnValue, TrustedOperationStatus};
-use itp_teerex::{Block, Request};
+use itp_types::{Block, Request};
 
 use crate::{ocall::rpc_ocall::EnclaveRpcOCall, rsa3072, utils::write_slice_and_whitespace_pad};
 

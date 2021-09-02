@@ -54,7 +54,7 @@ use itp_settings::{
 	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
-use itp_teerex::SignedBlock;
+use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;

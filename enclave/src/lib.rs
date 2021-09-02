@@ -61,10 +61,10 @@ use itp_settings::{
 use itp_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
-use itp_sidechain_primitives::traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
 use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
-use itp_teerex::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
+use itp_types::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
+use its_primitives::traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
 
 use log::*;
 use rpc::{

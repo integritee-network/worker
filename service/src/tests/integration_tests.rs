@@ -22,7 +22,7 @@ use sp_keyring::AccountKeyring;
 use std::fs;
 use substrate_api_client::XtStatus;
 
-use itp_teerex::{CallWorkerFn, Request, ShieldFundsFn};
+use itp_types::{CallWorkerFn, Request, ShieldFundsFn};
 use my_node_runtime::Header;
 use std::{thread::sleep, time::Duration};
 use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};

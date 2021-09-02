@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use itp_storage::storage_entry::StorageEntry;
 use sp_std::vec::Vec;
 
-pub use itp_sidechain_primitives::{
+pub use its_primitives::{
 	traits,
 	types::{
 		block,

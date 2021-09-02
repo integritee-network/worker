@@ -1,4 +1,4 @@
-use itp_teerex::{Enclave, IpfsHash, ShardIdentifier};
+use itp_types::{Enclave, IpfsHash, ShardIdentifier};
 use sp_core::Pair;
 use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, RpcClient};

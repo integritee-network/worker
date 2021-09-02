@@ -13,7 +13,7 @@ serde_json      = { version = "1.0", default-features = false, features = ["allo
 
 # local deps
 itp-storage = { path = "../storage", default-features = false }
-itp-sidechain-primitives = { path = "../sidechain/primitives", default-features = false }
+its-primitives = { path = "../../sidechain/primitives", default-features = false }
 
 # substrate-deps
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
@@ -27,7 +27,7 @@ std = [ 'codec/std',
         'serde/std',
         'serde_json/std',
         'primitive-types/std',
-        'itp-sidechain-primitives/std',
+        'its-primitives/std',
         'itp-storage/std',
         'sp-runtime/std',
 ]

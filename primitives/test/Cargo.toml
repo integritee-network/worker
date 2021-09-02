@@ -17,12 +17,12 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-itp-teerex-storage = { path = "../pallet-teerex-storage", default-features = false }
-itp-teerex = { path = "../node", default-features = false }
+itp-teerex-storage = { path = "../teerex-storage", default-features = false }
+itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-storage-verifier = { path = "../get-storage-verified", default-features = false }
+itp-storage-verifier = { path = "../storage-verified", default-features = false }
 itp-storage = { path = "../storage", default-features = false, features = ["test"] }
-itp-core = { path = "../worker", default-features = false }
+itp-core = { path = "../core", default-features = false }
 
 [features]
 default = ["std"]
@@ -33,7 +33,7 @@ std = [
     "sp-std/std",
     "itp-storage/std",
     "itp-teerex-storage/std",
-    "itp-teerex/std",
+    "itp-types/std",
     "itp-ocall-api/std",
     "itp-storage-verifier/std",
     "itp-core/std",
