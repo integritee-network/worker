@@ -34,8 +34,6 @@ use mockall::*;
 /// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner
 #[cfg_attr(test, automock)]
 pub trait GossipBlocks {
-	//type SignedBlock: SignedBlockT;
-
 	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
 
@@ -55,8 +53,6 @@ where
 	T: GetTokioHandle,
 	W: GetWorker,
 {
-	//type SignedBlock = SignedBlock;
-
 	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		match self.worker.get_worker().as_ref() {
 			Some(w) => {
