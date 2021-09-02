@@ -25,7 +25,7 @@ jobs:
 
       - name: Build
         run:  SGX_MODE=SW make
-      - name: Test Worker & Client
+      - name: Test Service & Client
         run: cargo test
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: |
@@ -64,7 +64,7 @@ jobs:
       - name: Worker & Client
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave && cargo clippy -- -D warnings
+        run: cd enclave-runtime && cargo clippy -- -D warnings
 
       - name: Fail-fast; cancel other jobs
         if: failure()
@@ -81,7 +81,7 @@ jobs:
       - name: Worker & Client
         run: cargo fmt --all -- --check
       - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave && cargo fmt --all -- --check
+        run: cd enclave-runtime && cargo fmt --all -- --check
 
       - name: Fail-fast; cancel other jobs
         if: failure()
