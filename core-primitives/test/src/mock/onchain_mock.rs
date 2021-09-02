@@ -14,20 +14,17 @@ pub struct OnchainMock {
 }
 
 impl OnchainMock {
-	pub fn with_storage_entries<V: Encode>(
-		mut self,
-		entries: Vec<StorageEntryVerified<V>>,
-	) -> Self {
-		for (k, v) in entries.into_iter().map(|e| e.into_tuple()) {
-			self.inner.insert(k, v.map(|v| v.encode()).unwrap());
+	pub fn with_storage_entries<V: Encode>(mut self, entries: Vec<(Vec<u8>, V)>) -> Self {
+		for (k, v) in entries.into_iter() {
+			self.inner.insert(k, v.encode());
 		}
 		self
 	}
 
-	pub fn with_validateer_set(mut self) -> Self {
-		let set = validateer_set();
+	pub fn with_validateer_set(mut self, set: Option<Vec<Enclave>>) -> Self {
+		let set = set.unwrap_or_else(validateer_set);
 		self.inner.insert(TeeRexStorage::enclave_count(), (set.len() as u64).encode());
-		self.with_storage_entries(set)
+		self.with_storage_entries(into_key_value_storage(set))
 	}
 
 	pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) {
@@ -69,11 +66,14 @@ impl GetStorageVerified for OnchainMock {
 	}
 }
 
-pub fn validateer_set() -> Vec<StorageEntryVerified<Enclave>> {
-	vec![
-		StorageEntryVerified::new(TeeRexStorage::enclave(1), Some(Default::default())),
-		StorageEntryVerified::new(TeeRexStorage::enclave(2), Some(Default::default())),
-		StorageEntryVerified::new(TeeRexStorage::enclave(3), Some(Default::default())),
-		StorageEntryVerified::new(TeeRexStorage::enclave(4), Some(Default::default())),
-	]
+pub fn validateer_set() -> Vec<Enclave> {
+	vec![Default::default(), Default::default(), Default::default(), Default::default()]
+}
+
+fn into_key_value_storage(validateers: Vec<Enclave>) -> Vec<(Vec<u8>, Enclave)> {
+	validateers
+		.into_iter()
+		.enumerate()
+		.map(|(i, e)| (TeeRexStorage::enclave(i as u64 + 1), e))
+		.collect()
 }

@@ -106,6 +106,10 @@ impl<P> Author<P> {
 	pub fn new(pool: Arc<P>) -> Self {
 		Author { pool }
 	}
+
+	pub fn pool(&self) -> &Arc<P> {
+		&self.pool
+	}
 }
 
 /// Currently we treat all RPC operations as externals.
