@@ -11,13 +11,13 @@
 	limitations under the License.
 */
 use super::{storage::SidechainStorage, Result};
+use itp_core::{block::BlockNumber, traits::SignedBlock as SignedBlockT};
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
 use parking_lot::RwLock;
 use std::path::PathBuf;
-use substratee_worker_primitives::{block::BlockNumber, traits::SignedBlock as SignedBlockT};
 
 /// Lock wrapper around sidechain storage
 pub struct SidechainStorageLock<SignedBlock: SignedBlockT> {

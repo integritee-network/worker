@@ -51,7 +51,8 @@ use itp_enclave_api::{
 	teerex_api::TeerexApi,
 };
 use itp_settings::{
-	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE},
+	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
+		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use itp_types::SignedBlock;
@@ -78,24 +79,7 @@ use std::{
 	time::{Duration, SystemTime},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
-use substratee_api_client_extensions::{AccountApi, ChainApi};
-use substratee_enclave_api::{
-	direct_request::DirectRequest,
-	enclave_base::EnclaveBase,
-	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
-	side_chain::SideChain,
-	teerex_api::TeerexApi,
-};
-use substratee_node_primitives::SignedBlock;
-use substratee_settings::{
-	files::{
-		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
-		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
-	},
-	worker::MIN_FUND_INCREASE_FACTOR,
-};
-use substratee_worker_api::direct_client::DirectClient;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
+use itp_core::block::SignedBlock as SignedSidechainBlock;
 
 mod config;
 mod direct_invocation;

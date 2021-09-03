@@ -24,7 +24,8 @@ use crate::{
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
-use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
+pub use itp_core::block::SignedBlock as SignedSidechainBlock;
+use itp_core::{WorkerRequest, WorkerResponse};
 use log::*;
 use sp_core::storage::StorageKey;
 use std::{
@@ -32,8 +33,6 @@ use std::{
 	vec::Vec,
 };
 use substrate_api_client::XtStatus;
-pub use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
-use substratee_worker_primitives::{WorkerRequest, WorkerResponse};
 
 pub struct WorkerOnChainOCall<F, S, D> {
 	node_api_factory: Arc<F>,

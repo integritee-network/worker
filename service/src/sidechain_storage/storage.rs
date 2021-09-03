@@ -13,14 +13,14 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
+use itp_core::{
+	block::{BlockHash, BlockNumber},
+	traits::{Block as BlockT, SignedBlock as SignedBlockT},
+};
 use log::*;
 use rocksdb::WriteBatch;
 use sp_core::H256;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
-use substratee_worker_primitives::{
-	block::{BlockHash, BlockNumber},
-	traits::{Block as BlockT, SignedBlock as SignedBlockT},
-};
 /// key value of sidechain db of last block
 const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 /// key value of the stored shards vector
@@ -308,6 +308,11 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use itp_core::{
+		block::{Block, SignedBlock},
+		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
+		ShardIdentifier,
+	};
 	use rocksdb::{Options, DB};
 	use sp_core::{
 		crypto::{AccountId32, Pair},
@@ -316,11 +321,6 @@ mod test {
 	use std::{
 		path::PathBuf,
 		time::{SystemTime, UNIX_EPOCH},
-	};
-	use substratee_node_primitives::ShardIdentifier;
-	use substratee_worker_primitives::{
-		block::{Block, SignedBlock},
-		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
 	};
 
 	#[test]

@@ -24,7 +24,6 @@ use crate::{
 use itp_core::block::SignedBlock as SignedSidechainBlock;
 use log::*;
 use std::sync::Arc;
-use substratee_worker_primitives::block::SignedBlock as SignedSidechainBlock;
 
 #[cfg(test)]
 use mockall::predicate::*;

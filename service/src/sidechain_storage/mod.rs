@@ -10,12 +10,12 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
+use itp_core::block::BlockNumber;
 use std::{
 	sync::Arc,
 	thread,
 	time::{Duration, SystemTime},
 };
-use substratee_worker_primitives::block::BlockNumber;
 
 mod db;
 mod error;
