@@ -17,6 +17,7 @@
 */
 
 use crate::{ipfs::IpfsContent, ocall::OcallApi};
+use itp_ocall_api::EnclaveIpfsOCallApi;
 use log::*;
 use std::{fs::File, io::Read, vec::Vec};
 
