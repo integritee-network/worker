@@ -43,6 +43,7 @@ use enclave::{
 };
 use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi};
+use itp_core::block::SignedBlock as SignedSidechainBlock;
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -51,8 +52,10 @@ use itp_enclave_api::{
 	teerex_api::TeerexApi,
 };
 use itp_settings::{
-	files::{ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIGNING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
-		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
+	files::{
+		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
+		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
+	},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use itp_types::SignedBlock;
@@ -79,7 +82,6 @@ use std::{
 	time::{Duration, SystemTime},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
-use itp_core::block::SignedBlock as SignedSidechainBlock;
 
 mod config;
 mod direct_invocation;
