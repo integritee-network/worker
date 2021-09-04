@@ -768,7 +768,6 @@ pub fn compose_block_and_confirmation(
 
 	Stf::update_sidechain_block_number(state, block_number);
 
-	let block_number: u64 = block_number; //FIXME! Should be either u64 or u32! Not both..
 	let parent_hash =
 		Stf::get_last_block_hash(state).ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
 
