@@ -89,9 +89,9 @@ class Worker:
 
         """
         if self.shard_exists(shard):
-            should_purge = input('Do you want to purge existing the shards? [y, n]')
+            should_purge = input('Do you want to purge existing the shards and sidechain db? [y, n]')
             if should_purge == 'y':
-                self.purge_shards()
+                self.purge_shards_and_sidechain_db()
                 print(f'Deleted shard {shard}.')
                 return False
             else:
@@ -104,10 +104,10 @@ class Worker:
         """ Deletes the light_client_db.bin, the shards and the sidechain_db.bin
         """
         self.purge_light_client_db()
-        self.purge_shards()
+        self.purge_shards_and_sidechain_db()
         return self
 
-    def purge_shards(self):
+    def purge_shards_and_sidechain_db(self):
         print(f'Purging shards')
         shutil.rmtree(pathlib.Path(f'{self.cwd}/shards'))
         print(f'purging sidechain_db')
