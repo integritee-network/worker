@@ -104,6 +104,8 @@ class Worker:
         """ Deletes the mrenclave shard and the light_client_db.bin. """
         self.purge_shard()
         self.purge_light_client_db()
+        print(f'purging sidechain_db')
+        shutil.rmtree(pathlib.Path(f'{self.cwd}/sidechain_db.bin'))
         return self
 
     def purge_shard(self, shard=None):
