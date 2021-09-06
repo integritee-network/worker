@@ -108,10 +108,13 @@ class Worker:
         return self
 
     def purge_shards_and_sidechain_db(self):
-        print(f'Purging shards')
-        shutil.rmtree(pathlib.Path(f'{self.cwd}/shards'))
-        print(f'purging sidechain_db')
-        shutil.rmtree(pathlib.Path(f'{self.cwd}/sidechain_db.bin'))
+        if pathlib.Path(f'{self.cwd}/shards').exists():
+            print(f'Purging shards')
+            shutil.rmtree(pathlib.Path(f'{self.cwd}/shards'))
+
+        if pathlib.Path(f'{self.cwd}/sidechain_db.bin').exists():
+            print(f'purging sidechain_db')
+            shutil.rmtree(pathlib.Path(f'{self.cwd}/sidechain_db.bin'))
 
     def purge_light_client_db(self):
         print(f'purging light_client_db')
