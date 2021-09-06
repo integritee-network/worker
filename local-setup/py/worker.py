@@ -89,9 +89,9 @@ class Worker:
 
         """
         if self.shard_exists(shard):
-            should_purge = input('Do you want to purge existing the shard? [y, n]')
+            should_purge = input('Do you want to purge existing the shards and sidechain db? [y, n]')
             if should_purge == 'y':
-                self.purge_shard(shard)
+                self.purge_shards_and_sidechain_db()
                 print(f'Deleted shard {shard}.')
                 return False
             else:
@@ -101,21 +101,20 @@ class Worker:
             return False
 
     def purge(self):
-        """ Deletes the mrenclave shard and the light_client_db.bin. """
-        self.purge_shard()
+        """ Deletes the light_client_db.bin, the shards and the sidechain_db.bin
+        """
         self.purge_light_client_db()
+        self.purge_shards_and_sidechain_db()
         return self
 
-    def purge_shard(self, shard=None):
-        if not shard:
-            shard = self.mrenclave()
+    def purge_shards_and_sidechain_db(self):
+        if pathlib.Path(f'{self.cwd}/shards').exists():
+            print(f'Purging shards')
+            shutil.rmtree(pathlib.Path(f'{self.cwd}/shards'))
 
-        print(f'Purging shard: {shard}')
-
-        if not self.shard_exists(shard):
-            print('The shard to be purged does not exist.')
-        else:
-            shutil.rmtree(self._shard_path(shard))
+        if pathlib.Path(f'{self.cwd}/sidechain_db.bin').exists():
+            print(f'purging sidechain_db')
+            shutil.rmtree(pathlib.Path(f'{self.cwd}/sidechain_db.bin'))
 
     def purge_light_client_db(self):
         print(f'purging light_client_db')
