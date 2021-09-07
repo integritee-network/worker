@@ -3,7 +3,7 @@ use crate::{
 		get_account_info, increment_nonce, shards_key_hash, validate_nonce, StfError, StfResult,
 	},
 	AccountId, Getter, Index, PublicGetter, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+	TrustedGetter, TEEREX_MODULE, UNSHIELD,
 };
 use codec::{Decode, Encode};
 use itp_core::BlockNumber;
@@ -231,14 +231,7 @@ impl Stf {
 
 					Self::unshield_funds(account_incognito, value)?;
 					calls.push(OpaqueCall(
-						(
-							[SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-							beneficiary,
-							value,
-							shard,
-							call_hash,
-						)
-							.encode(),
+						([TEEREX_MODULE, UNSHIELD], beneficiary, value, shard, call_hash).encode(),
 					));
 					Ok(())
 				},
