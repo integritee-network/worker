@@ -30,10 +30,7 @@ extern crate sgx_tstd as std;
 
 use crate::{
 	error::{Error, Result},
-	ocall::{
-		ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-		rpc_ocall::EnclaveRpcOCall,
-	},
+	ocall::OcallApi,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -130,7 +127,7 @@ pub enum Timeout {
 }
 
 pub type Hash = sp_core::H256;
-type BPool = BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCall>;
+type BPool = BasicPool<SideChainApi<Block>, Block, OcallApi>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -228,16 +225,12 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let ocall_api = OCallComponentFactory::attestation_api();
+	let mre = OcallApi
+		.get_mrenclave_of_self()
+		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
 
 	let signer = Ed25519Seal::unseal().unwrap();
-	let call = (
-		[TEEREX_MODULE, REGISTER_ENCLAVE],
-		ocall_api
-			.get_mrenclave_of_self()
-			.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode()),
-		url,
-	);
+	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
 
 	let xt = compose_extrinsic_offline!(
 		signer,
@@ -402,13 +395,7 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(e) => return e.into(),
 	};
 
-	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
-
-	let mut calls = match sync_blocks_on_light_client(
-		blocks_to_sync,
-		&mut validator,
-		on_chain_ocall_api.as_ref(),
-	) {
+	let mut calls = match sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi) {
 		Ok(c) => c,
 		Err(e) => return e,
 	};
@@ -419,18 +406,14 @@ pub unsafe extern "C" fn produce_blocks(
 
 	// execute pending calls from operation pool and create block
 	// (one per shard) as opaque call with block confirmation
-	let rpc_ocall_api = OCallComponentFactory::rpc_api();
-	let signed_blocks: Vec<SignedSidechainBlock> = match execute_top_pool_calls(
-		rpc_ocall_api.as_ref(),
-		on_chain_ocall_api.as_ref(),
-		latest_onchain_header,
-	) {
-		Ok((confirm_calls, signed_blocks)) => {
-			calls.extend(confirm_calls.into_iter());
-			signed_blocks
-		},
-		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-	};
+	let signed_blocks: Vec<SignedSidechainBlock> =
+		match execute_top_pool_calls(&OcallApi, latest_onchain_header) {
+			Ok((confirm_calls, signed_blocks)) => {
+				calls.extend(confirm_calls.into_iter());
+				signed_blocks
+			},
+			Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+		};
 
 	let extrinsics = match create_extrinsics(&validator, calls, *nonce) {
 		Ok(xt) => xt,
@@ -453,7 +436,7 @@ pub unsafe extern "C" fn produce_blocks(
 
 	// ocall to worker to store signed block and send block confirmation
 	// send extrinsics to layer 1 block chain, gossip blocks to side-chain
-	if let Err(e) = on_chain_ocall_api.send_block_and_confirmation(extrinsics, signed_blocks) {
+	if let Err(e) = OcallApi.send_block_and_confirmation(extrinsics, signed_blocks) {
 		error!("Failed to send block and confirmation: {}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
@@ -542,14 +525,12 @@ fn get_stf_state(
 	Stf::get_state(&mut state, trusted_getter_signed.into())
 }
 
-fn execute_top_pool_calls<R, O>(
-	rpc_ocall: &R,
-	on_chain_ocall: &O,
+fn execute_top_pool_calls<O>(
+	ocall_api: &O,
 	latest_onchain_header: Header,
 ) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)>
 where
-	R: EnclaveRpcOCallApi,
-	O: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi + EnclaveRpcOCallApi,
 {
 	debug!("Executing pending pool operations");
 
@@ -570,11 +551,11 @@ where
 	let shards = state::list_shards()?;
 
 	// Handle trusted getters
-	execute_trusted_getters(rpc_ocall, &author, &shards)?;
+	execute_trusted_getters(ocall_api, &author, &shards)?;
 
 	// Handle trusted calls
 	let calls_and_blocks =
-		execute_trusted_calls(on_chain_ocall, latest_onchain_header, pool, author, shards)?;
+		execute_trusted_calls(ocall_api, latest_onchain_header, pool, author, shards)?;
 
 	Ok(calls_and_blocks)
 }
@@ -980,8 +961,7 @@ where
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("query mrenclave of self");
-	let ocall_api = OCallComponentFactory::attestation_api();
-	let mrenclave = ocall_api.get_mrenclave_of_self()?;
+	let mrenclave = OcallApi.get_mrenclave_of_self()?;
 	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 
 	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {

@@ -15,10 +15,12 @@
 
 */
 
-pub mod ocall_component_factory;
 pub mod rpc_ocall;
 
 mod attestation_ocall;
 mod ffi;
 mod ipfs_ocall;
 mod on_chain_ocall;
+
+#[derive(Clone, Debug, Default)]
+pub struct OcallApi;

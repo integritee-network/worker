@@ -16,10 +16,7 @@
 
 */
 
-use crate::{
-	ipfs::IpfsContent,
-	ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait},
-};
+use crate::{ipfs::IpfsContent, ocall::OcallApi};
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use log::*;
 use std::{fs::File, io::Read, vec::Vec};
@@ -29,11 +26,9 @@ fn test_ocall_read_write_ipfs() {
 	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
 	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
 
-	let ipfs_api = OCallComponentFactory::ipfs_api();
+	let cid = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
 
-	let cid = ipfs_api.write_ipfs(enc_state.as_slice()).unwrap();
-
-	ipfs_api.read_ipfs(&cid).unwrap();
+	OcallApi.read_ipfs(&cid).unwrap();
 
 	let cid_str = std::str::from_utf8(&cid.0).unwrap();
 	let mut f = File::open(&cid_str).unwrap();

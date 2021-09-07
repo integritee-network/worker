@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall::ocall_component_factory::{OCallComponentFactory, OCallComponentFactoryTrait};
+use crate::ocall::OcallApi;
 use itp_core::{WorkerRequest, WorkerResponse};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use log::*;
@@ -29,9 +29,7 @@ fn test_ocall_worker_request() {
 	let requests =
 		vec![WorkerRequest::ChainStorage(storage_key("Balances", "TotalIssuance").0, None)];
 
-	let on_chain_ocall_api = OCallComponentFactory::on_chain_api();
-
-	let mut resp: Vec<WorkerResponse<Vec<u8>>> = match on_chain_ocall_api.worker_request(requests) {
+	let mut resp: Vec<WorkerResponse<Vec<u8>>> = match OcallApi.worker_request(requests) {
 		Ok(response) => response,
 		Err(e) => panic!("Worker response decode failed. Error: {:?}", e),
 	};
