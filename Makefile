@@ -103,7 +103,7 @@ Worker_Enclave_u_Object :=service/libEnclave_u.a
 Worker_Name := bin/app
 
 ######## Integritee-cli settings ########
-Client_SRC_Path := client
+Client_SRC_Path := cli
 STF_SRC_Path := app-libs/stf
 Client_Rust_Flags := $(CARGO_TARGET)
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(STF_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')

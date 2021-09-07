@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "client",
+    "cli",
     "core/light-client",
     "primitives/api-client-extensions",
     "primitives/enclave-api",
