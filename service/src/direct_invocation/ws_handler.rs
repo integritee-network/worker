@@ -20,8 +20,8 @@ use crate::direct_invocation::{
 	watching_client::{CreateWatchingClient, WatchingClient, WsSend, WsSender},
 };
 use codec::{Decode, Encode};
-use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue};
 use itp_enclave_api::direct_request::DirectRequest;
+use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue};
 use log::*;
 use sp_core::H256 as Hash;
 use std::sync::Arc;

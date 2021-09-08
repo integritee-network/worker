@@ -18,8 +18,8 @@
 
 use crate::rpc::author::alloc::prelude::v1::Vec;
 use codec::Encode;
-use itp_types::TrustedOperationStatus;
 use itp_ocall_api::EnclaveRpcOCallApi;
+use itp_types::TrustedOperationStatus;
 use sgx_types::SgxResult;
 
 #[derive(Clone, Debug, Default)]

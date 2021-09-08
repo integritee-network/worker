@@ -6,8 +6,8 @@ use crate::{
 	TrustedGetter, TEEREX_MODULE, UNSHIELD,
 };
 use codec::{Decode, Encode};
-use itp_types::SidechainBlockNumber;
 use itp_storage::storage_value_key;
+use itp_types::SidechainBlockNumber;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
