@@ -207,7 +207,7 @@ jobs:
         # * need overwrite default shell to bash to get access to the `source` cmd.
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
-          cd client
+          cd cli
           ln -sf ../${{ env.BIN_DIR }}/${{ env.CLIENT_BIN }} integritee-cli
           cd ..
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
