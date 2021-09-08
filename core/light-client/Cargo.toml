@@ -48,9 +48,9 @@ sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
 # local deps
-itp-sgx-io = { path = "../../primitives/sgx/io", default-features = false }
-itp-settings = { path = "../../primitives/settings", default-features = false }
-itp-storage = { path = "../../primitives/storage", default-features = false }
+itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
+itp-settings = { path = "../../core-primitives/settings", default-features = false }
+itp-storage = { path = "../../core-primitives/storage", default-features = false }
 
 # substrate deps
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
