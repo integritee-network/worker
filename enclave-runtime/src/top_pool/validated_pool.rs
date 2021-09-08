@@ -38,7 +38,7 @@ use crate::top_pool::{
 };
 
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_core::BlockHash as SidechainBlockHash;
+use itp_types::BlockHash as SidechainBlockHash;
 
 use sp_runtime::{
 	generic::BlockId,

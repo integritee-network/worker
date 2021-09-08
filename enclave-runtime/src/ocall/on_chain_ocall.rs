@@ -19,8 +19,8 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_core::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
 use itp_ocall_api::EnclaveOnChainOCallApi;
+use itp_types::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
 use log::*;
 use sgx_types::*;
 use std::vec::Vec;

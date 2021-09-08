@@ -84,7 +84,6 @@ its-sidechain = { path = "../sidechain", default-features = false }
 its-primitives = { path = "../sidechain/primitives", default-features = false }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../primitives/storage", default-features = false, features = ["sgx"] }
-itp-core= {path = "../primitives/core", default-features = false }
 itp-test = { path = "../primitives/test", default-features = false, features = ["sgx"] }
 
 # substrate deps

@@ -13,7 +13,7 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
-use itp_core::{
+use itp_types::{
 	block::{BlockHash, BlockNumber},
 	traits::{Block as BlockT, SignedBlock as SignedBlockT},
 };
@@ -308,7 +308,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use itp_core::{
+	use itp_types::{
 		block::{Block, SignedBlock},
 		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
 		ShardIdentifier,

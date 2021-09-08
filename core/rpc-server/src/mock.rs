@@ -1,11 +1,11 @@
 use parity_scale_codec::Encode;
 
-use itp_core::{
+use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
+use itp_types::{
 	block::{Block, SignedBlock},
 	traits::{Block as BlockT, SignBlock},
 	RpcResponse, ShardIdentifier,
 };
-use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
 use sp_core::crypto::AccountId32;
 
 pub struct TestEnclave;

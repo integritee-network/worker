@@ -20,7 +20,6 @@ itp-types = { path = "../primitives/types", default-features = false }
 itp-storage = { path = "../primitives/storage", default-features = false }
 itp-ocall-api = { path = "../primitives/ocall-api", default-features = false }
 itp-storage-verifier = { path = "../primitives/storage-verified", default-features = false }
-itp-core = { path = "../primitives/core", default-features = false }
 
 [features]
 default = ["std"]
@@ -33,7 +32,6 @@ std = [
     "itp-storage/std",
     "itp-ocall-api/std",
     "itp-storage-verifier/std",
-    "itp-core/std",
 ]
 
 [dev-dependencies]

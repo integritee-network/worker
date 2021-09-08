@@ -526,7 +526,7 @@ fn test_create_state_diff() {
 	let block_number_key = storage_value_key("System", "Number");
 	let new_block_number_encoded = state_diff.get(&block_number_key).unwrap().as_ref().unwrap();
 	let new_block_number =
-		itp_core::BlockNumber::decode(&mut new_block_number_encoded.as_slice()).unwrap();
+		itp_types::SidechainBlockNumber::decode(&mut new_block_number_encoded.as_slice()).unwrap();
 	assert_eq!(state_diff.len(), 3);
 	assert_eq!(new_balance_acc_wo_money, 1000);
 	assert_eq!(new_balance_acc_with_money, 1000);

@@ -18,7 +18,7 @@
 
 use crate::rpc::author::alloc::prelude::v1::Vec;
 use codec::Encode;
-use itp_core::TrustedOperationStatus;
+use itp_types::TrustedOperationStatus;
 use itp_ocall_api::EnclaveRpcOCallApi;
 use sgx_types::SgxResult;
 

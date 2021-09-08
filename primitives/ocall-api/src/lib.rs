@@ -19,7 +19,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_core::{
+use itp_types::{
 	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus, WorkerRequest,
 	WorkerResponse,
 };

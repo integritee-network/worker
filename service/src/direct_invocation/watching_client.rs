@@ -15,7 +15,7 @@
 
 */
 
-use itp_core::RpcResponse;
+use itp_types::RpcResponse;
 use ws::{CloseCode, Message, Result, Sender};
 
 /// trait to create a watching client instance

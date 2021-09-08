@@ -18,8 +18,8 @@
 
 use crate::top_pool::watcher::Watcher;
 use codec::Encode;
-use itp_core::BlockHash as SidechainBlockHash;
 use itp_ocall_api::EnclaveRpcOCallApi;
+use itp_types::BlockHash as SidechainBlockHash;
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
 use sp_runtime::traits;

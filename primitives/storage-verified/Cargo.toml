@@ -18,7 +18,7 @@ sp-std = { version = "4.0.0-dev", default-features = false, git = "https://githu
 # local deps
 itp-storage = { path = "../storage", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-core = { path = "../core", default-features = false }
+itp-types = { path = "../types", default-features = false }
 
 [features]
 default = ["std"]
@@ -29,5 +29,5 @@ std = [
     "sp-std/std",
     "itp-storage/std",
     "itp-ocall-api/std",
-    "itp-core/std",
+    "itp-types/std",
 ]

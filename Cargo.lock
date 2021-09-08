@@ -2002,7 +2002,6 @@ dependencies = [
  "ita-stf",
  "itc-rpc-client",
  "itp-api-client-extensions",
- "itp-core",
  "itp-types",
  "json",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2079,7 +2078,6 @@ dependencies = [
  "itc-rpc-client",
  "itc-rpc-server",
  "itp-api-client-extensions",
- "itp-core",
  "itp-enclave-api",
  "itp-settings",
  "itp-types",
@@ -2158,8 +2156,8 @@ dependencies = [
  "frame-system",
  "hex",
  "integritee-node-runtime",
- "itp-core",
  "itp-storage",
+ "itp-types",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",
@@ -2207,7 +2205,7 @@ dependencies = [
 name = "itc-rpc-client"
 version = "0.8.0"
 dependencies = [
- "itp-core",
+ "itp-types",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "serde_derive",
@@ -2222,8 +2220,8 @@ version = "0.8.0"
 dependencies = [
  "anyhow",
  "env_logger 0.9.0",
- "itp-core",
  "itp-enclave-api",
+ "itp-types",
  "jsonrpsee",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -2260,23 +2258,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-core"
-version = "0.8.0"
-dependencies = [
- "chrono",
- "itp-storage",
- "its-primitives",
- "parity-scale-codec",
- "primitive-types",
- "serde",
- "serde_json",
- "sp-core",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "itp-enclave-api"
 version = "0.8.0"
 dependencies = [
@@ -2307,7 +2288,7 @@ dependencies = [
 name = "itp-ocall-api"
 version = "0.8.0"
 dependencies = [
- "itp-core",
+ "itp-types",
  "parity-scale-codec",
  "sgx_types",
  "sp-std",
@@ -2365,9 +2346,9 @@ name = "itp-storage-verifier"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "itp-core",
  "itp-ocall-api",
  "itp-storage",
+ "itp-types",
  "parity-scale-codec",
  "sgx_types",
  "sp-core",
@@ -2388,7 +2369,6 @@ name = "itp-test"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "itp-core",
  "itp-ocall-api",
  "itp-storage",
  "itp-storage-verifier",
@@ -2406,10 +2386,18 @@ dependencies = [
 name = "itp-types"
 version = "0.8.0"
 dependencies = [
+ "chrono",
+ "itp-storage",
+ "its-primitives",
  "parity-scale-codec",
+ "primitive-types",
+ "serde",
+ "serde_json",
  "sgx_tstd",
  "sp-core",
+ "sp-keyring",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -2429,7 +2417,6 @@ version = "0.8.0"
 dependencies = [
  "derive_more",
  "frame-support",
- "itp-core",
  "itp-ocall-api",
  "itp-storage",
  "itp-storage-verifier",

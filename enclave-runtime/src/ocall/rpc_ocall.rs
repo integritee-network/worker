@@ -19,7 +19,7 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::Encode;
 use frame_support::ensure;
-use itp_core::TrustedOperationStatus;
+use itp_types::TrustedOperationStatus;
 use itp_ocall_api::EnclaveRpcOCallApi;
 use sgx_types::{sgx_status_t, SgxResult};
 use std::vec::Vec;

@@ -20,7 +20,7 @@ use crate::direct_invocation::{
 	watching_client::{CreateWatchingClient, WatchingClient, WsSend, WsSender},
 };
 use codec::{Decode, Encode};
-use itp_core::{DirectRequestStatus, RpcResponse, RpcReturnValue};
+use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue};
 use itp_enclave_api::direct_request::DirectRequest;
 use log::*;
 use sp_core::H256 as Hash;

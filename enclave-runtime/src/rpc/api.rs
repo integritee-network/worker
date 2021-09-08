@@ -39,7 +39,7 @@ use crate::top_pool::{
 };
 
 use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_core::BlockHash as SidechainBlockHash;
+use itp_types::BlockHash as SidechainBlockHash;
 
 use crate::rpc::error;
 

@@ -24,7 +24,7 @@ use crate::{
 	ocall_bridge::bridge_api::{DirectInvocationBridge, OCallBridgeError, OCallBridgeResult},
 };
 use codec::{Decode, Encode};
-use itp_core::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
+use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
 use sp_core::H256 as Hash;
 use std::sync::Arc;
 

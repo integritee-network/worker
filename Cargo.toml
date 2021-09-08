@@ -17,7 +17,7 @@ members = [
     "sidechain/primitives",
     "primitives/storage",
     "primitives/test",
-    "primitives/core",
+    "primitives/types",
     "app-libs/stf",
     "service",
     "core/rpc-client",

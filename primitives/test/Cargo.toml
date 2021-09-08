@@ -22,7 +22,6 @@ itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-storage-verifier = { path = "../storage-verified", default-features = false }
 itp-storage = { path = "../storage", default-features = false, features = ["test"] }
-itp-core = { path = "../core", default-features = false }
 
 [features]
 default = ["std"]
@@ -36,6 +35,5 @@ std = [
     "itp-types/std",
     "itp-ocall-api/std",
     "itp-storage-verifier/std",
-    "itp-core/std",
 ]
 sgx = ["sgx_tstd"]

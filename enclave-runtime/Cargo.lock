@@ -441,7 +441,6 @@ dependencies = [
  "ita-stf",
  "itc-light-client",
  "itertools",
- "itp-core",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
@@ -1023,8 +1022,8 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
- "itp-core",
  "itp-storage",
+ "itp-types",
  "log",
  "pallet-balances",
  "parity-scale-codec",
@@ -1085,26 +1084,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
 
 [[package]]
-name = "itp-core"
-version = "0.8.0"
-dependencies = [
- "chrono 0.4.19",
- "itp-storage",
- "its-primitives",
- "parity-scale-codec",
- "primitive-types",
- "serde 1.0.130",
- "serde_json 1.0.67",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "itp-ocall-api"
 version = "0.8.0"
 dependencies = [
- "itp-core",
+ "itp-types",
  "parity-scale-codec",
  "sgx_types",
  "sp-std",
@@ -1160,9 +1143,9 @@ name = "itp-storage-verifier"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "itp-core",
  "itp-ocall-api",
  "itp-storage",
+ "itp-types",
  "parity-scale-codec",
  "sgx_types",
  "sp-core",
@@ -1183,7 +1166,6 @@ name = "itp-test"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "itp-core",
  "itp-ocall-api",
  "itp-storage",
  "itp-storage-verifier",
@@ -1201,10 +1183,17 @@ dependencies = [
 name = "itp-types"
 version = "0.8.0"
 dependencies = [
+ "chrono 0.4.19",
+ "itp-storage",
+ "its-primitives",
  "parity-scale-codec",
+ "primitive-types",
+ "serde 1.0.130",
+ "serde_json 1.0.67",
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -1223,7 +1212,6 @@ version = "0.8.0"
 dependencies = [
  "derive_more",
  "frame-support",
- "itp-core",
  "itp-ocall-api",
  "itp-storage",
  "itp-storage-verifier",
