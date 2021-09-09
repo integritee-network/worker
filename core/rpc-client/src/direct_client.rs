@@ -3,15 +3,18 @@
 /// This should be replaced with the `jsonrpsee::WsClient`. It is async an removes a lot of
 /// boilerplate code. Example usage in worker/worker.rs.
 ///
+use codec::Decode;
 use log::*;
+use openssl::ssl::{SslConnector, SslMethod, SslStream, SslVerifyMode};
 use std::{
 	sync::mpsc::{channel, Sender as MpscSender},
 	thread,
 };
-
-use codec::Decode;
-
-use ws::{connect, CloseCode, Handler, Handshake, Message, Result as ClientResult, Sender};
+use url;
+use ws::{
+	connect, util::TcpStream, CloseCode, Handler, Handshake, Message, Result as ClientResult,
+	Sender,
+};
 
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 
@@ -32,14 +35,45 @@ impl Handler for WsClient {
 			Err(e) => Err(e),
 		}
 	}
+
 	fn on_message(&mut self, msg: Message) -> ClientResult<()> {
 		info!("got message");
 		debug!("{}", msg);
+		info!("sending result to MpscSender..");
 		self.result.send(msg.to_string()).unwrap();
 		if !self.do_watch {
+			info!("do_watch is false, closing connection");
 			self.out.close(CloseCode::Normal).unwrap();
+			info!("connection is closed");
 		}
+		info!("on_message successful, returning");
 		Ok(())
+	}
+
+	/// we are overriding the `upgrade_ssl_client` method in order to disable hostname verification
+	/// this is taken from https://github.com/housleyjk/ws-rs/blob/master/examples/unsafe-ssl-client.rs
+	/// TODO: hostname verification should probably be enabled again for production?
+	fn upgrade_ssl_client(
+		&mut self,
+		sock: TcpStream,
+		_: &url::Url,
+	) -> ws::Result<SslStream<TcpStream>> {
+		let mut builder = SslConnector::builder(SslMethod::tls_client()).map_err(|e| {
+			ws::Error::new(
+				ws::ErrorKind::Internal,
+				format!("Failed to upgrade client to SSL: {}", e),
+			)
+		})?;
+		builder.set_verify(SslVerifyMode::empty());
+
+		let connector = builder.build();
+		connector
+			.configure()
+			.unwrap()
+			.use_server_name_indication(false)
+			.verify_hostname(false)
+			.connect("", sock)
+			.map_err(From::from)
 	}
 }
 
@@ -66,7 +100,7 @@ impl DirectClient {
 		let url = self.url.clone();
 		let (port_in, port_out) = channel();
 
-		info!("[WorkerApi Direct]: Sending request: {:?}", request);
+		info!("[WorkerApi Direct]: (get) Sending request: {:?}", request);
 		let client = thread::spawn(move || {
 			match connect(url, |out| WsClient {
 				out,
@@ -76,7 +110,7 @@ impl DirectClient {
 			}) {
 				Ok(c) => c,
 				Err(_) => {
-					error!("Could not connect to direct invoation server");
+					error!("Could not connect to direct invocation server");
 				},
 			}
 		});
@@ -98,17 +132,21 @@ impl DirectApi for DirectClient {
 	fn watch(&self, request: String, sender: MpscSender<String>) -> Result<(), ()> {
 		let url = self.url.clone();
 
-		info!("[WorkerApi Direct]: Sending request: {:?}", request);
+		info!("[WorkerApi Direct]: (watch) Sending request: {:?}", request);
 		thread::spawn(move || {
+			info!("attempting to connect to RPC");
 			match connect(url, |out| WsClient {
 				out,
 				request: request.clone(),
 				result: sender.clone(),
 				do_watch: true,
 			}) {
-				Ok(c) => c,
+				Ok(c) => {
+					info!("connect was successful");
+					c
+				},
 				Err(_) => {
-					error!("Could not connect to direct invoation server");
+					error!("Could not connect to direct invocation server");
 				},
 			}
 		});

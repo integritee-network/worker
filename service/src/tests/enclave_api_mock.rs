@@ -30,6 +30,10 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(())
 	}
 
+	fn init_direct_invocation_server(&self, _rpc_server_addr: String) -> EnclaveResult<()> {
+		unreachable!()
+	}
+
 	fn init_light_client<SpHeader: Header>(
 		&self,
 		genesis_header: SpHeader,

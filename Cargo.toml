@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "cli",
     "core/light-client",
+    "core/direct-rpc-server",
+    "core/tls-websocket-server",
     "core-primitives/api-client-extensions",
     "core-primitives/enclave-api",
     "core-primitives/enclave-api/ffi",

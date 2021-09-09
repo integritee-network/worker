@@ -104,7 +104,7 @@ fn main() {
 						.global(true)
 						.takes_value(true)
 						.value_name("STRING")
-						.default_value("ws://127.0.0.1")
+						.default_value("wss://127.0.0.1")
 						.help("worker url"),
 				)
 				.arg(
@@ -608,38 +608,53 @@ fn send_direct_request(
 	};
 	let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
 
+	debug!("get direct api");
 	let direct_api = get_worker_api_direct(matches);
+
+	debug!("setup sender and receiver");
 	let (sender, receiver) = channel();
 	match direct_api.watch(jsonrpc_call, sender) {
 		Ok(_) => {},
 		Err(_) => panic!("Error when sending direct invocation call"),
 	}
 
+	debug!("waiting for rpc response");
 	loop {
 		match receiver.recv() {
 			Ok(response) => {
+				debug!("received response");
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
 				if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+					debug!("successfully decoded rpc response");
 					match return_value.status {
 						DirectRequestStatus::Error => {
+							debug!("request status is error");
 							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
 								println!("[Error] {}", value);
 							}
 							return None
 						},
 						DirectRequestStatus::TrustedOperationStatus(status) => {
+							debug!("request status is: {:?}", status);
 							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
 								println!("Trusted call {:?} is {:?}", value, status);
 							}
 						},
-						_ => return None,
+						_ => {
+							debug!("request status is ignored");
+							return None
+						},
 					}
 					if !return_value.do_watch {
+						debug!("do watch is false, closing connection");
 						return None
 					}
 				};
 			},
-			Err(_) => return None,
+			Err(e) => {
+				error!("failed to receive rpc response: {:?}", e);
+				return None
+			},
 		};
 	}
 }

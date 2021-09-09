@@ -35,6 +35,9 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	/// initialize the enclave (needs to be called once at application startup)
 	fn init(&self) -> EnclaveResult<()>;
 
+	/// initialize the direct invocation RPC server
+	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
+
 	/// initialize the light client (needs to be called once at application startup)
 	fn init_light_client<SpHeader: Header>(
 		&self,
@@ -58,6 +61,26 @@ impl EnclaveBase for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe { ffi::init(self.eid, &mut retval) };
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
+	}
+
+	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let encoded_rpc_server_addr = rpc_server_addr.encode();
+
+		let result = unsafe {
+			ffi::init_direct_invocation_server(
+				self.eid,
+				&mut retval,
+				encoded_rpc_server_addr.as_ptr(),
+				encoded_rpc_server_addr.len() as u32,
+			)
+		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
