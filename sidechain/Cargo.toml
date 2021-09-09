@@ -15,12 +15,11 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-itp-teerex-storage = { path = "../primitives/teerex-storage", default-features = false }
-itp-types = { path = "../primitives/types", default-features = false }
-itp-storage = { path = "../primitives/storage", default-features = false }
-itp-ocall-api = { path = "../primitives/ocall-api", default-features = false }
-itp-storage-verifier = { path = "../primitives/storage-verified", default-features = false }
-itp-core = { path = "../primitives/core", default-features = false }
+itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
+itp-types = { path = "../core-primitives/types", default-features = false }
+itp-storage = { path = "../core-primitives/storage", default-features = false }
+itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
+itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
 
 [features]
 default = ["std"]
@@ -33,8 +32,7 @@ std = [
     "itp-storage/std",
     "itp-ocall-api/std",
     "itp-storage-verifier/std",
-    "itp-core/std",
 ]
 
 [dev-dependencies]
-itp-test = { path = "../primitives/test" }
+itp-test = { path = "../core-primitives/test" }

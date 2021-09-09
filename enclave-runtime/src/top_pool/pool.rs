@@ -23,8 +23,8 @@ use crate::top_pool::{
 };
 use core::matches;
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_core::BlockHash as SidechainBlockHash;
 use itp_ocall_api::EnclaveRpcOCallApi;
+use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
 use sp_runtime::{
 	generic::BlockId,

@@ -5,9 +5,9 @@
 use codec::Decode;
 use core::result::Result as StdResult;
 use derive_more::{Display, From};
-use itp_core::WorkerRequest;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
+use itp_types::WorkerRequest;
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;

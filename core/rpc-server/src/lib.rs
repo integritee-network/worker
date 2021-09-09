@@ -25,8 +25,8 @@ use log::debug;
 use parity_scale_codec::Encode;
 use tokio::net::ToSocketAddrs;
 
-use itp_core::{block::SignedBlock, RpcRequest};
 use itp_enclave_api::direct_request::DirectRequest;
+use itp_types::{block::SignedBlock, RpcRequest};
 use std::sync::Arc;
 
 #[cfg(test)]

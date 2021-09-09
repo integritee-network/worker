@@ -1,5 +1,5 @@
 [package]
-name = "itp-storage-verifier"
+name = "itp-test"
 version = "0.8.0"
 edition = "2018"
 
@@ -9,6 +9,7 @@ derive_more = { version = "0.99.5" }
 
 # sgx deps
 sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # substrate deps
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
@@ -16,9 +17,11 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-itp-storage = { path = "../storage", default-features = false }
+itp-teerex-storage = { path = "../teerex-storage", default-features = false }
+itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-core = { path = "../core", default-features = false }
+itp-storage-verifier = { path = "../storage-verified", default-features = false }
+itp-storage = { path = "../storage", default-features = false, features = ["test"] }
 
 [features]
 default = ["std"]
@@ -28,6 +31,9 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "itp-storage/std",
+    "itp-teerex-storage/std",
+    "itp-types/std",
     "itp-ocall-api/std",
-    "itp-core/std",
+    "itp-storage-verifier/std",
 ]
+sgx = ["sgx_tstd"]

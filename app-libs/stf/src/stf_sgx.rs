@@ -3,11 +3,11 @@ use crate::{
 		get_account_info, increment_nonce, shards_key_hash, validate_nonce, StfError, StfResult,
 	},
 	AccountId, Getter, Index, PublicGetter, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedGetter, SUBSRATEE_REGISTRY_MODULE, UNSHIELD,
+	TrustedGetter, TEEREX_MODULE, UNSHIELD,
 };
 use codec::{Decode, Encode};
-use itp_core::BlockNumber;
 use itp_storage::storage_value_key;
+use itp_types::SidechainBlockNumber;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
@@ -78,7 +78,7 @@ impl Stf {
 				&1u128.encode(),
 			);
 			// Set first sidechainblock number to 0
-			let init_block_number: BlockNumber = 0;
+			let init_block_number: SidechainBlockNumber = 0;
 			sp_io::storage::set(
 				&storage_value_key("System", "Number"),
 				&init_block_number.encode(),
@@ -132,18 +132,18 @@ impl Stf {
 		})
 	}
 
-	pub fn update_sidechain_block_number(ext: &mut State, number: BlockNumber) {
+	pub fn update_sidechain_block_number(ext: &mut State, number: SidechainBlockNumber) {
 		ext.execute_with(|| {
 			let key = storage_value_key("System", "Number");
 			sp_io::storage::set(&key, &number.encode());
 		});
 	}
 
-	pub fn get_sidechain_block_number(ext: &mut State) -> Option<BlockNumber> {
+	pub fn get_sidechain_block_number(ext: &mut State) -> Option<SidechainBlockNumber> {
 		ext.execute_with(|| {
 			let key = storage_value_key("System", "Number");
 			if let Some(infovec) = sp_io::storage::get(&key) {
-				if let Ok(number) = BlockNumber::decode(&mut infovec.as_slice()) {
+				if let Ok(number) = SidechainBlockNumber::decode(&mut infovec.as_slice()) {
 					Some(number)
 				} else {
 					error!("Sidechain blocknumber decode error");
@@ -231,14 +231,7 @@ impl Stf {
 
 					Self::unshield_funds(account_incognito, value)?;
 					calls.push(OpaqueCall(
-						(
-							[SUBSRATEE_REGISTRY_MODULE, UNSHIELD],
-							beneficiary,
-							value,
-							shard,
-							call_hash,
-						)
-							.encode(),
+						([TEEREX_MODULE, UNSHIELD], beneficiary, value, shard, call_hash).encode(),
 					));
 					Ok(())
 				},

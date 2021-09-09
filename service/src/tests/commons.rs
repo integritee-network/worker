@@ -32,7 +32,7 @@ use substrate_api_client::{rpc::WsRpcClient, Api};
 #[cfg(test)]
 use crate::config::Config;
 #[cfg(test)]
-use itp_core::{
+use itp_types::{
 	block::{Block, SignedBlock},
 	traits::{Block as BlockT, SignBlock},
 };

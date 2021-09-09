@@ -43,10 +43,6 @@ use ita_stf::{
 	TrustedCallSigned, TrustedGetterSigned,
 };
 use itc_light_client::{io::LightClientSeal, Validator};
-use itp_core::{
-	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	BlockHash,
-};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi};
 use itp_settings::{
 	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
@@ -60,7 +56,10 @@ use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
-use itp_types::{Block, CallWorkerFn, Header, ShieldFundsFn, SignedBlock};
+use itp_types::{
+	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+	Block, BlockHash, CallWorkerFn, Header, ShieldFundsFn, SignedBlock,
+};
 use its_primitives::traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
 
 use log::*;

@@ -43,7 +43,6 @@ use enclave::{
 };
 use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi};
-use itp_core::block::SignedBlock as SignedSidechainBlock;
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -58,7 +57,7 @@ use itp_settings::{
 	},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
-use itp_types::SignedBlock;
+use itp_types::{block::SignedBlock as SignedSidechainBlock, SignedBlock};
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;

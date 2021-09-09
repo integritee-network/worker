@@ -7,7 +7,7 @@ use jsonrpsee::{
 };
 use parity_scale_codec::Decode;
 
-use itp_core::RpcResponse;
+use itp_types::RpcResponse;
 use mock::{test_sidechain_block, TestEnclave};
 
 fn init() {

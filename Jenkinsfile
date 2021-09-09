@@ -38,7 +38,7 @@ pipeline {
     }
     stage('Test') {
       steps {
-        sh 'cd client  && cargo test 2>&1 | tee ${WORKSPACE}/test_client.log'
+        sh 'cd cli  && cargo test 2>&1 | tee ${WORKSPACE}/test_client.log'
         sh 'cd service  && cargo test 2>&1 | tee ${WORKSPACE}/test_server.log'
         sh 'cd enclave-runtime && cargo test 2>&1 | tee ${WORKSPACE}/test_enclave.log'
       }
@@ -47,7 +47,7 @@ pipeline {
       steps {
         sh 'cargo clean'
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-          sh 'cd client  && cargo clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
+          sh 'cd cli  && cargo clippy 2>&1 | tee ${WORKSPACE}/clippy_client.log'
         }
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
           sh 'cd worker  && cargo clippy 2>&1 | tee ${WORKSPACE}/clippy_worker.log'

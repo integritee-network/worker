@@ -54,7 +54,7 @@ pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 //FIXME: Is this really necessary to define all variables three times?
 //pub static BALANCE_MODULE: u8 = 4u8;
 //pub static BALANCE_TRANSFER: u8 = 0u8;
-pub static SUBSRATEE_REGISTRY_MODULE: u8 = 8u8;
+pub static TEEREX_MODULE: u8 = 8u8;
 pub static UNSHIELD: u8 = 6u8;
 //pub static CALL_CONFIRMED: u8 = 3u8;
 

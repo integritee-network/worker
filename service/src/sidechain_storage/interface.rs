@@ -11,7 +11,7 @@
 	limitations under the License.
 */
 use super::{storage::SidechainStorage, Result};
-use itp_core::{block::BlockNumber, traits::SignedBlock as SignedBlockT};
+use itp_types::{block::BlockNumber, traits::SignedBlock as SignedBlockT};
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
