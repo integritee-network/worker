@@ -37,7 +37,6 @@ use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
 use ita_stf::{
-	stf_sgx::OpaqueCall,
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
@@ -58,7 +57,7 @@ use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::{
 	block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	Block, BlockHash, CallWorkerFn, Header, ShieldFundsFn, SignedBlock,
+	Block, BlockHash, CallWorkerFn, Header, OpaqueCall, ShieldFundsFn, SignedBlock,
 };
 use its_primitives::traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
 
@@ -249,9 +248,9 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 
 fn create_extrinsics<V>(
 	validator: &V,
-	calls_buffer: Vec<OpaqueCall>,
+	calls: Vec<OpaqueCall>,
 	mut nonce: u32,
-) -> Result<Vec<Vec<u8>>>
+) -> Result<Vec<OpaqueExtrinsic>>
 where
 	V: Validator<Block>,
 {
@@ -259,7 +258,7 @@ where
 	let signer = Ed25519Seal::unseal()?;
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
-	let extrinsics_buffer: Vec<Vec<u8>> = calls_buffer
+	let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 		.into_iter()
 		.map(|call| {
 			let xt = compose_extrinsic_offline!(
@@ -275,6 +274,10 @@ where
 			.encode();
 			nonce += 1;
 			xt
+		})
+		.map(|xt| {
+			OpaqueExtrinsic::from_bytes(&xt)
+				.expect("A previously encoded extrinsic has valid codec; qed.")
 		})
 		.collect();
 
@@ -421,12 +424,7 @@ pub unsafe extern "C" fn produce_blocks(
 
 	// store extrinsics in light client for finalization check
 	for xt in extrinsics.iter() {
-		validator
-			.submit_xt_to_be_included(
-				validator.num_relays(),
-				OpaqueExtrinsic::from_bytes(xt.as_slice()).unwrap(),
-			)
-			.unwrap();
+		validator.submit_xt_to_be_included(validator.num_relays(), xt.clone()).unwrap();
 	}
 
 	if let Err(e) = LightClientSeal::seal(validator) {
@@ -486,9 +484,12 @@ where
 		let genesis_hash = validator.genesis_hash(validator.num_relays()).unwrap();
 		let block_hash = signed_block.block.header.hash();
 		let prev_state_hash = signed_block.block.header.parent_hash();
-		calls.push(OpaqueCall(
-			(xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
-		));
+		calls.push(OpaqueCall::from_tuple(&(
+			xt_block,
+			genesis_hash,
+			block_hash,
+			prev_state_hash.encode(),
+		)));
 	}
 
 	Ok(calls)
@@ -779,7 +780,7 @@ pub fn compose_block_and_confirmation(
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
-		OpaqueCall((xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode());
+		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_aposteriori.encode()));
 	Ok((opaque_call, signed_block))
 }
 
@@ -925,7 +926,7 @@ fn handle_shield_funds_xt(
 	let call_hash = blake2_256(&xt.encode());
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-	calls.push(OpaqueCall((xt_call, shard, call_hash, state_hash.encode()).encode()));
+	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, call_hash, state_hash.encode())));
 
 	Ok(())
 }

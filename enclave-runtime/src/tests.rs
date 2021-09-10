@@ -189,7 +189,7 @@ fn test_compose_block_and_confirmation() {
 	.unwrap();
 	let xt_block_encoded = [TEEREX_MODULE, BLOCK_CONFIRMED].encode();
 	let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
-	let mut opaque_call_vec = opaque_call.0;
+	let mut opaque_call_vec = opaque_call.encode();
 
 	// then
 	assert!(signed_block.verify_signature());
@@ -429,7 +429,7 @@ fn test_create_block_and_confirmation_works() {
 	debug!("got {} signed block(s)", signed_blocks.len());
 
 	let signed_block = signed_blocks[index].clone();
-	let mut opaque_call_vec = confirm_calls[index].0.clone();
+	let mut opaque_call_vec = confirm_calls[index].encode();
 	let xt_block_encoded = [TEEREX_MODULE, BLOCK_CONFIRMED].encode();
 	let block_hash_encoded = blake2_256(&signed_block.block().encode()).encode();
 
