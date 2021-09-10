@@ -28,6 +28,7 @@ pub use itp_types::block::SignedBlock as SignedSidechainBlock;
 use itp_types::{WorkerRequest, WorkerResponse};
 use log::*;
 use sp_core::storage::StorageKey;
+use sp_runtime::OpaqueExtrinsic;
 use std::{
 	sync::{mpsc::channel, Arc},
 	vec::Vec,
@@ -93,20 +94,21 @@ where
 		let api = self.node_api_factory.create_api();
 
 		// send confirmations to layer one
-		let confirmation_calls: Vec<Vec<u8>> = match Decode::decode(&mut confirmations.as_slice()) {
-			Ok(calls) => calls,
-			Err(_) => {
-				status = Err(OCallBridgeError::SendBlockAndConfirmation(
-					"Could not decode confirmation calls".to_string(),
-				));
-				vec![vec![]]
-			},
-		};
+		let confirmation_calls: Vec<OpaqueExtrinsic> =
+			match Decode::decode(&mut confirmations.as_slice()) {
+				Ok(calls) => calls,
+				Err(_) => {
+					status = Err(OCallBridgeError::SendBlockAndConfirmation(
+						"Could not decode confirmation calls".to_string(),
+					));
+					Default::default()
+				},
+			};
 
 		if !confirmation_calls.is_empty() {
 			println!("Enclave wants to send {} extrinsics", confirmation_calls.len());
 			for call in confirmation_calls.into_iter() {
-				api.send_extrinsic(hex_encode(call), XtStatus::Ready).unwrap();
+				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
 			}
 			// await next block to avoid #37
 			let (events_in, events_out) = channel();

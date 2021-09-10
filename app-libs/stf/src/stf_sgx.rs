@@ -7,7 +7,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use itp_storage::storage_value_key;
-use itp_types::SidechainBlockNumber;
+use itp_types::{OpaqueCall, SidechainBlockNumber};
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
@@ -20,16 +20,6 @@ use support::{ensure, traits::UnfilteredDispatchable};
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-
-/// Simple blob that holds a call in encoded format
-#[derive(Clone, Debug)]
-pub struct OpaqueCall(pub Vec<u8>);
-
-impl Encode for OpaqueCall {
-	fn encode(&self) -> Vec<u8> {
-		self.0.clone()
-	}
-}
 
 pub trait StfTrait = SgxExternalitiesTrait + StateHash + Clone + Send + Sync;
 

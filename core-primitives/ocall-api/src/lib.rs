@@ -24,6 +24,7 @@ use itp_types::{
 	WorkerResponse,
 };
 use sgx_types::*;
+use sp_runtime::OpaqueExtrinsic;
 use sp_std::prelude::Vec;
 
 /// Trait for the enclave to make o-calls related to remote attestation
@@ -65,7 +66,7 @@ pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
 pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
 	fn send_block_and_confirmation(
 		&self,
-		confirmations: Vec<Vec<u8>>,
+		confirmations: Vec<OpaqueExtrinsic>,
 		signed_blocks: Vec<SignedSidechainBlock>,
 	) -> SgxResult<()>;
 

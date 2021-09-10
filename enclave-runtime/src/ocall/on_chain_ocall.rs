@@ -23,12 +23,13 @@ use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
 use log::*;
 use sgx_types::*;
+use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
 impl EnclaveOnChainOCallApi for OcallApi {
 	fn send_block_and_confirmation(
 		&self,
-		confirmations: Vec<Vec<u8>>,
+		confirmations: Vec<OpaqueExtrinsic>,
 		signed_blocks: Vec<SignedSidechainBlock>,
 	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;

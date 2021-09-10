@@ -42,6 +42,16 @@ pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
 
+/// Simple blob that holds a call in encoded format
+#[derive(Clone, Debug)]
+pub struct OpaqueCall(pub Vec<u8>);
+
+impl Encode for OpaqueCall {
+	fn encode(&self) -> Vec<u8> {
+		self.0.clone()
+	}
+}
+
 // Note in the pallet teerex this is a struct. But for the codec this does not matter.
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
 pub struct Request {
