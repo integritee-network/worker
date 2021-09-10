@@ -5,14 +5,17 @@
 //!
 
 use codec::{Decode, Encode};
-use core::{fmt::Debug, hash::Hash};
-use sp_core::{crypto::AccountId32, Pair, H256};
-use sp_std::prelude::*;
+use core::hash::Hash;
+use sp_core::{blake2_256, Pair, Public, H256};
+use sp_std::{fmt::Debug, prelude::*};
 
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
-pub trait Block: Encode + Decode {
-	type ShardIdentifier: Encode + Decode + Debug + Hash + Eq + Copy;
+pub trait Block: Encode + Decode + Send + Sync {
+	type ShardIdentifier: Encode + Decode + Send + 'static + Debug + Clone + Hash + Eq + Copy;
+
+	type Public: Public;
+
 	///get block number
 	fn block_number(&self) -> u64;
 	/// get parent hash of block
@@ -24,16 +27,19 @@ pub trait Block: Encode + Decode {
 	/// get shard id of block
 	fn shard_id(&self) -> Self::ShardIdentifier;
 	/// get author of block
-	fn block_author(&self) -> &AccountId32;
+	fn block_author(&self) -> &Self::Public;
 	/// get reference of extrinsics of block
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
 	fn state_payload(&self) -> &[u8];
 	/// create a new block instance
+	fn hash(&self) -> H256 {
+		self.using_encoded(blake2_256).into()
+	}
 	/// Todo: group arguments in structs -> Header
 	#[allow(clippy::too_many_arguments)]
 	fn new(
-		author: AccountId32,
+		author: Self::Public,
 		block_number: u64,
 		parent_hash: H256,
 		layer_one_head: H256,
@@ -44,8 +50,12 @@ pub trait Block: Encode + Decode {
 	) -> Self;
 }
 
-pub trait SignedBlock: Encode + Decode {
-	type Block: Block;
+/// ShardIdentifier for a `SignedBlock`
+pub type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as Block>::ShardIdentifier;
+
+pub trait SignedBlock: Encode + Decode + Send + Sync {
+	type Block: Block<Public = Self::Public>;
+	type Public: Public;
 	type Signature;
 
 	/// create a new block instance

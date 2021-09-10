@@ -1,6 +1,6 @@
 use crate::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use codec::{Decode, Encode};
-use sp_core::{crypto::AccountId32, hashing, H256};
+use sp_core::{ed25519, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use sp_std::vec::Vec;
 
@@ -39,7 +39,7 @@ pub struct Block {
 	layer_one_head: H256,
 	shard_id: ShardIdentifier,
 	///  must be registered on layer one as an enclave for the respective shard
-	block_author: AccountId32,
+	block_author: ed25519::Public,
 	signed_top_hashes: Vec<H256>,
 	// encrypted state payload
 	state_payload: Vec<u8>,
@@ -47,6 +47,8 @@ pub struct Block {
 
 impl BlockT for Block {
 	type ShardIdentifier = H256;
+
+	type Public = ed25519::Public;
 
 	///get block number
 	fn block_number(&self) -> BlockNumber {
@@ -69,7 +71,7 @@ impl BlockT for Block {
 		self.shard_id
 	}
 	/// get author of block
-	fn block_author(&self) -> &AccountId32 {
+	fn block_author(&self) -> &Self::Public {
 		&self.block_author
 	}
 	/// get reference of extrinisics of block
@@ -84,7 +86,7 @@ impl BlockT for Block {
 	/// Todo: group arguments in structs.
 	#[allow(clippy::too_many_arguments)]
 	fn new(
-		author: AccountId32,
+		author: Self::Public,
 		block_number: u64,
 		parent_hash: H256,
 		layer_one_head: H256,
@@ -109,11 +111,15 @@ impl BlockT for Block {
 
 impl SignedBlockT for SignedBlock {
 	type Block = Block;
+
+	type Public = ed25519::Public;
+
 	type Signature = Signature;
 
 	fn new(block: Self::Block, signature: Self::Signature) -> Self {
 		Self { block, signature }
 	}
+
 	/// get block reference
 	fn block(&self) -> &Block {
 		&self.block
@@ -124,7 +130,7 @@ impl SignedBlockT for SignedBlock {
 	}
 	/// get blake2_256 hash of block
 	fn hash(&self) -> H256 {
-		hashing::blake2_256(&self.block.encode().as_slice()).into()
+		self.block.hash()
 	}
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool {
@@ -132,7 +138,7 @@ impl SignedBlockT for SignedBlock {
 		let payload = self.block.encode();
 
 		// verify signature
-		self.signature.verify(payload.as_slice(), &self.block.block_author)
+		self.signature.verify(payload.as_slice(), &self.block.block_author.into())
 	}
 }
 
@@ -140,7 +146,7 @@ impl SignedBlockT for SignedBlock {
 mod tests {
 	use super::*;
 	use crate::traits::{Block as BlockT, SignBlock};
-	use sp_core::{ed25519, Pair};
+	use sp_core::Pair;
 	use std::time::{SystemTime, UNIX_EPOCH};
 
 	/// gets the timestamp of the block as seconds since unix epoch

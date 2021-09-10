@@ -314,10 +314,7 @@ mod test {
 		ShardIdentifier,
 	};
 	use rocksdb::{Options, DB};
-	use sp_core::{
-		crypto::{AccountId32, Pair},
-		ed25519, H256,
-	};
+	use sp_core::{crypto::Pair, ed25519, H256};
 	use std::{
 		path::PathBuf,
 		time::{SystemTime, UNIX_EPOCH},
@@ -1198,7 +1195,7 @@ mod test {
 
 	fn create_signed_block(block_number: u64, shard: ShardIdentifier) -> SignedBlock {
 		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author: AccountId32 = signer_pair.public().into();
+		let author = signer_pair.public();
 		let parent_hash = H256::random();
 		let layer_one_head = H256::random();
 		let signed_top_hashes = vec![];
