@@ -46,7 +46,7 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
 
-CLIENT="./integritee-cli -p ${NPORT} -P ${RPORT}"
+CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
 if [ "$READMRENCLAVE" = "file" ]
 then
