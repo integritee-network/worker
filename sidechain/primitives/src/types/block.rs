@@ -124,21 +124,16 @@ impl SignedBlockT for SignedBlock {
 	fn block(&self) -> &Block {
 		&self.block
 	}
+
 	/// get signature reference
 	fn signature(&self) -> &Signature {
 		&self.signature
 	}
-	/// get blake2_256 hash of block
-	fn hash(&self) -> H256 {
-		self.block.hash()
-	}
+
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool {
-		// get block payload
-		let payload = self.block.encode();
-
-		// verify signature
-		self.signature.verify(payload.as_slice(), &self.block.block_author.into())
+		self.block
+			.using_encoded(|p| self.signature.verify(p, &self.block.block_author.into()))
 	}
 }
 

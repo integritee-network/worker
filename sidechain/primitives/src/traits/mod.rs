@@ -7,16 +7,19 @@
 use codec::{Decode, Encode};
 use core::hash::Hash;
 use sp_core::{blake2_256, Pair, Public, H256};
-use sp_std::{fmt::Debug, prelude::*};
+use sp_runtime::traits::Member;
+use sp_std::prelude::*;
 
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
 pub trait Block: Encode + Decode + Send + Sync {
-	type ShardIdentifier: Encode + Decode + Send + 'static + Debug + Clone + Hash + Eq + Copy;
+	/// Identifier for the shards
+	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
 
+	/// Public key type of the block author
 	type Public: Public;
 
-	///get block number
+	/// get the block number
 	fn block_number(&self) -> u64;
 	/// get parent hash of block
 	fn parent_hash(&self) -> H256;
@@ -50,12 +53,18 @@ pub trait Block: Encode + Decode + Send + Sync {
 	) -> Self;
 }
 
-/// ShardIdentifier for a `SignedBlock`
+/// ShardIdentifier for a [`SignedBlock`]
 pub type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as Block>::ShardIdentifier;
 
+/// A block and it's corresponding signature by the [`Block`] author.
 pub trait SignedBlock: Encode + Decode + Send + Sync {
+	/// The block type of the signed block
 	type Block: Block<Public = Self::Public>;
+
+	/// Public key type of the signer and the block author
 	type Public: Public;
+
+	/// Signature type of the [`SignedBlock`]'s signature
 	type Signature;
 
 	/// create a new block instance
@@ -63,10 +72,15 @@ pub trait SignedBlock: Encode + Decode + Send + Sync {
 
 	/// get block reference
 	fn block(&self) -> &Self::Block;
+
 	/// get signature reference
 	fn signature(&self) -> &Self::Signature;
+
 	/// get blake2_256 hash of block
-	fn hash(&self) -> H256;
+	fn hash(&self) -> H256 {
+		self.block().hash()
+	}
+
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool;
 }
