@@ -35,7 +35,7 @@ pub trait Block: Encode + Decode + Send + Sync {
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
 	fn state_payload(&self) -> &[u8];
-	/// create a new block instance
+	/// get the `blake2_256` hash of the block
 	fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
 	}
@@ -58,7 +58,7 @@ pub type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as Block>::ShardId
 
 /// A block and it's corresponding signature by the [`Block`] author.
 pub trait SignedBlock: Encode + Decode + Send + Sync {
-	/// The block type of the signed block
+	/// The block type of the [`SignedBlock`]
 	type Block: Block<Public = Self::Public>;
 
 	/// Public key type of the signer and the block author
@@ -76,12 +76,12 @@ pub trait SignedBlock: Encode + Decode + Send + Sync {
 	/// get signature reference
 	fn signature(&self) -> &Self::Signature;
 
-	/// get blake2_256 hash of block
+	/// get `blake2_256` hash of block
 	fn hash(&self) -> H256 {
 		self.block().hash()
 	}
 
-	/// Verifies the signature of a Block
+	/// Verify the signature of a [`Block`]
 	fn verify_signature(&self) -> bool;
 }
 
