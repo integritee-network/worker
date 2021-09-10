@@ -42,13 +42,21 @@ pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
 
-/// Simple blob that holds a call in encoded format
-#[derive(Clone, Debug)]
-pub struct OpaqueCall(pub Vec<u8>);
+/// Simple blob to hold an call without committing to its format and ensure it is serialized
+/// correctly.
+#[derive(Debug, PartialEq, Eq, Clone, Default, Encode, Decode)]
+pub struct OpaqueCall(Vec<u8>);
 
-impl Encode for OpaqueCall {
-	fn encode(&self) -> Vec<u8> {
-		self.0.clone()
+impl OpaqueCall {
+	/// Convert an encoded call to an `OpaqueCall`.
+	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, codec::Error> {
+		Self::decode(&mut bytes)
+	}
+
+	pub fn from_tuple<C: Encode>(call: &C) -> Self {
+		call.using_encoded(|mut c| {
+			Self::decode(&mut c).expect("A previously encoded call has valid codec; qed.")
+		})
 	}
 }
 

@@ -484,9 +484,12 @@ where
 		let genesis_hash = validator.genesis_hash(validator.num_relays()).unwrap();
 		let block_hash = signed_block.block.header.hash();
 		let prev_state_hash = signed_block.block.header.parent_hash();
-		calls.push(OpaqueCall(
-			(xt_block, genesis_hash, block_hash, prev_state_hash.encode()).encode(),
-		));
+		calls.push(OpaqueCall::from_tuple(&(
+			xt_block,
+			genesis_hash,
+			block_hash,
+			prev_state_hash.encode(),
+		)));
 	}
 
 	Ok(calls)
@@ -777,7 +780,7 @@ pub fn compose_block_and_confirmation(
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
-		OpaqueCall((xt_block, shard, block_hash, state_hash_aposteriori.encode()).encode());
+		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_aposteriori.encode()));
 	Ok((opaque_call, signed_block))
 }
 
@@ -923,7 +926,7 @@ fn handle_shield_funds_xt(
 	let call_hash = blake2_256(&xt.encode());
 	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
 
-	calls.push(OpaqueCall((xt_call, shard, call_hash, state_hash.encode()).encode()));
+	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, call_hash, state_hash.encode())));
 
 	Ok(())
 }

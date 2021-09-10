@@ -220,9 +220,13 @@ impl Stf {
 					);
 
 					Self::unshield_funds(account_incognito, value)?;
-					calls.push(OpaqueCall(
-						([TEEREX_MODULE, UNSHIELD], beneficiary, value, shard, call_hash).encode(),
-					));
+					calls.push(OpaqueCall::from_tuple(&(
+						[TEEREX_MODULE, UNSHIELD],
+						beneficiary,
+						value,
+						shard,
+						call_hash,
+					)));
 					Ok(())
 				},
 				TrustedCall::balance_shield(root, who, value) => {
