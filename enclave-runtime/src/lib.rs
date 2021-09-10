@@ -762,7 +762,7 @@ pub fn compose_block_and_confirmation(
 	Aes::encrypt(&mut payload)?;
 
 	let block = SidechainBlock::new(
-		signer_pair.public().into(),
+		signer_pair.public(),
 		block_number,
 		parent_hash,
 		layer_one_head,

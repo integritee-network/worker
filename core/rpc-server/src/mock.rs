@@ -26,7 +26,7 @@ pub fn test_sidechain_block() -> SignedBlock {
 	use sp_core::{Pair, H256};
 
 	let signer_pair = sp_core::ed25519::Pair::from_string("//Alice", None).unwrap();
-	let author: AccountId32 = signer_pair.public().into();
+	let author = signer_pair.public();
 	let block_number: u64 = 0;
 	let parent_hash = H256::random();
 	let layer_one_head = H256::random();

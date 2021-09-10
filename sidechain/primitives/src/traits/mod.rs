@@ -5,15 +5,21 @@
 //!
 
 use codec::{Decode, Encode};
-use core::{fmt::Debug, hash::Hash};
-use sp_core::{crypto::AccountId32, Pair, H256};
+use core::hash::Hash;
+use sp_core::{blake2_256, Pair, Public, H256};
+use sp_runtime::traits::Member;
 use sp_std::prelude::*;
 
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
-pub trait Block: Encode + Decode {
-	type ShardIdentifier: Encode + Decode + Debug + Hash + Eq + Copy;
-	///get block number
+pub trait Block: Encode + Decode + Send + Sync {
+	/// Identifier for the shards
+	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
+
+	/// Public key type of the block author
+	type Public: Public;
+
+	/// get the block number
 	fn block_number(&self) -> u64;
 	/// get parent hash of block
 	fn parent_hash(&self) -> H256;
@@ -24,16 +30,19 @@ pub trait Block: Encode + Decode {
 	/// get shard id of block
 	fn shard_id(&self) -> Self::ShardIdentifier;
 	/// get author of block
-	fn block_author(&self) -> &AccountId32;
+	fn block_author(&self) -> &Self::Public;
 	/// get reference of extrinsics of block
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
 	fn state_payload(&self) -> &[u8];
-	/// create a new block instance
+	/// get the `blake2_256` hash of the block
+	fn hash(&self) -> H256 {
+		self.using_encoded(blake2_256).into()
+	}
 	/// Todo: group arguments in structs -> Header
 	#[allow(clippy::too_many_arguments)]
 	fn new(
-		author: AccountId32,
+		author: Self::Public,
 		block_number: u64,
 		parent_hash: H256,
 		layer_one_head: H256,
@@ -44,8 +53,18 @@ pub trait Block: Encode + Decode {
 	) -> Self;
 }
 
-pub trait SignedBlock: Encode + Decode {
-	type Block: Block;
+/// ShardIdentifier for a [`SignedBlock`]
+pub type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as Block>::ShardIdentifier;
+
+/// A block and it's corresponding signature by the [`Block`] author.
+pub trait SignedBlock: Encode + Decode + Send + Sync {
+	/// The block type of the [`SignedBlock`]
+	type Block: Block<Public = Self::Public>;
+
+	/// Public key type of the signer and the block author
+	type Public: Public;
+
+	/// Signature type of the [`SignedBlock`]'s signature
 	type Signature;
 
 	/// create a new block instance
@@ -53,11 +72,16 @@ pub trait SignedBlock: Encode + Decode {
 
 	/// get block reference
 	fn block(&self) -> &Self::Block;
+
 	/// get signature reference
 	fn signature(&self) -> &Self::Signature;
-	/// get blake2_256 hash of block
-	fn hash(&self) -> H256;
-	/// Verifies the signature of a Block
+
+	/// get `blake2_256` hash of block
+	fn hash(&self) -> H256 {
+		self.block().hash()
+	}
+
+	/// Verify the signature of a [`Block`]
 	fn verify_signature(&self) -> bool;
 }
 
