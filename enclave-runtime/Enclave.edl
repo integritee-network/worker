@@ -26,6 +26,7 @@ enclave {
 	from "sgx_time.edl" import *;
 	from "sgx_env.edl" import *;
 	from "sgx_thread.edl" import *;
+	from "sgx_pipe.edl" import *;
 
 	include "sgx_quote.h"
 
@@ -38,6 +39,10 @@ enclave {
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[out, size=value_size] uint8_t* value, uint32_t value_size
 		);
+
+        public sgx_status_t init_direct_invocation_server(
+            [in, size=server_addr_size] uint8_t* server_addr, uint32_t server_addr_size
+        );
 
 		public sgx_status_t init_light_client(
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,

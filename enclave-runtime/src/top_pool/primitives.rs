@@ -1,24 +1,21 @@
 // File replacing substrate crate sp_transaction_pool::{error, PoolStatus};
 
 extern crate alloc;
+use crate::top_pool::error;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+use byteorder::{BigEndian, ByteOrder};
+use codec::{Decode, Encode};
 use core::{hash::Hash, pin::Pin};
-use std::collections::HashMap;
-
+use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel, Future, Stream};
+use sp_core::H256;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Member, NumberFor},
 	transaction_validity::{TransactionLongevity, TransactionPriority, TransactionTag},
 };
-
-use codec::{Decode, Encode};
-
-use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-
-use crate::top_pool::error;
-use byteorder::{BigEndian, ByteOrder};
-use sp_core::H256;
+use std::collections::HashMap;
 
 /// TrustedOperation pool status.
 #[derive(Debug)]
@@ -256,6 +253,12 @@ pub trait TrustedOperationPool: Send + Sync {
 		hash: &TxHash<Self>,
 		shard: ShardIdentifier,
 	) -> Option<Arc<Self::InPoolOperation>>;
+
+	/// Notify the listener of top inclusion in sidechain block
+	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+
+	/// Notify the RPC client of a state update
+	fn rpc_send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<(), error::Error>;
 }
 
 /// The source of the transaction.

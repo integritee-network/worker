@@ -28,9 +28,13 @@
 #[macro_use]
 extern crate sgx_tstd as std;
 
+#[cfg(not(feature = "test"))]
+use sgx_types::size_t;
+
 use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
+	rpc::worker_api_direct::public_api_rpc_handler,
 	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
 };
 use base58::ToBase58;
@@ -41,8 +45,13 @@ use ita_stf::{
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
+use itc_direct_rpc_server::{
+	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
+	rpc_responder::RpcResponder, rpc_ws_handler::RpcWsHandler,
+};
 use itc_light_client::{io::LightClientSeal, Validator};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveRpcOCallApi};
+use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::{
 	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
 	node::{
@@ -61,11 +70,16 @@ use itp_types::{
 };
 use its_primitives::traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT};
 
+use crate::top_pool::{
+	pool::Options as PoolOptions,
+	pool_types::BPool,
+	primitives::TrustedOperationPool,
+	top_pool_container::{GetTopPool, GlobalTopPoolContainer},
+};
 use log::*;
 use rpc::{
 	api::SideChainApi,
 	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
-	basic_pool::BasicPool,
 };
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_types::{sgx_status_t, SgxResult};
@@ -76,7 +90,8 @@ use std::{
 	borrow::ToOwned,
 	collections::HashMap,
 	slice,
-	sync::{Arc, SgxMutex, SgxMutexGuard},
+	string::ToString,
+	sync::Arc,
 	time::{SystemTime, UNIX_EPOCH},
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
@@ -106,9 +121,6 @@ pub mod test;
 #[cfg(feature = "test")]
 pub mod tests;
 
-#[cfg(not(feature = "test"))]
-use sgx_types::size_t;
-
 // this is a 'dummy' for production mode
 #[cfg(not(feature = "test"))]
 #[no_mangle]
@@ -125,7 +137,6 @@ pub enum Timeout {
 }
 
 pub type Hash = sp_core::H256;
-type BPool = BasicPool<SideChainApi<Block>, Block, OcallApi>;
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -327,6 +338,43 @@ pub unsafe extern "C" fn get_state(
 	sgx_status_t::SGX_SUCCESS
 }
 
+/// Call this once at worker startup to initialize the TOP pool and direct invocation RPC server
+///
+/// This function will run the RPC server on the same thread as it is called and will loop there.
+/// That means that this function will not return as long as the RPC server is running. The calling
+/// code should therefore spawn a new thread when calling this function.
+#[no_mangle]
+pub unsafe extern "C" fn init_direct_invocation_server(
+	server_addr: *const u8,
+	server_addr_size: usize,
+) -> sgx_status_t {
+	let mut server_addr_encoded = slice::from_raw_parts(server_addr, server_addr_size);
+
+	let server_addr = match String::decode(&mut server_addr_encoded) {
+		Ok(s) => s,
+		Err(e) => {
+			error!("Decoding RPC server address failed. Error: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
+	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
+	let rpc_responder = Arc::new(RpcResponder::new(connection_registry.clone()));
+
+	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let top_pool = BPool::create(PoolOptions::default(), side_chain_api, rpc_responder);
+
+	GlobalTopPoolContainer::initialize(top_pool);
+
+	let io_handler = public_api_rpc_handler(Arc::new(GlobalTopPoolContainer));
+	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
+
+	run_ws_server(server_addr.as_str(), rpc_handler);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn init_light_client(
 	genesis_header: *const u8,
@@ -409,7 +457,7 @@ pub unsafe extern "C" fn produce_blocks(
 	// execute pending calls from operation pool and create block
 	// (one per shard) as opaque call with block confirmation
 	let signed_blocks: Vec<SignedSidechainBlock> =
-		match execute_top_pool_calls(&OcallApi, latest_onchain_header) {
+		match execute_top_pool_calls(&OcallApi, &GlobalTopPoolContainer, latest_onchain_header) {
 			Ok((confirm_calls, signed_blocks)) => {
 				calls.extend(confirm_calls.into_iter());
 				signed_blocks
@@ -498,44 +546,47 @@ where
 fn get_stf_state(
 	trusted_getter_signed: TrustedGetterSigned,
 	shard: ShardIdentifier,
-) -> Option<Vec<u8>> {
+) -> Result<Option<Vec<u8>>> {
 	debug!("verifying signature of TrustedGetterSigned");
 	if let false = trusted_getter_signed.verify_signature() {
-		error!("bad signature");
-		return None
+		return Err(Error::Stf("bad signature".to_string()))
 	}
 
 	if !state::exists(&shard) {
 		info!("Initialized new shard that was queried chain: {:?}", shard);
 		if let Err(e) = state::init_shard(&shard) {
-			error!("Error initialising shard {:?} state: Error: {:?}", shard, e);
-			return None
+			return Err(Error::Stf(format!(
+				"Error initialising shard {:?} state: Error: {:?}",
+				shard, e
+			)))
 		}
 	}
 
 	let mut state = match state::load(&shard) {
 		Ok(s) => s,
-		Err(e) => {
-			error!("Error loading shard {:?}: Error: {:?}", shard, e);
-			return None
-		},
+		Err(e) =>
+			return Err(Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e))),
 	};
 
 	debug!("calling into STF to get state");
-	Stf::get_state(&mut state, trusted_getter_signed.into())
+	Ok(Stf::get_state(&mut state, trusted_getter_signed.into()))
 }
 
-fn execute_top_pool_calls<O>(
+fn execute_top_pool_calls<O, T>(
 	ocall_api: &O,
+	top_pool_getter: &T,
 	latest_onchain_header: Header,
 ) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)>
 where
-	O: EnclaveOnChainOCallApi + EnclaveRpcOCallApi,
+	O: EnclaveOnChainOCallApi,
+	T: GetTopPool,
 {
 	debug!("Executing pending pool operations");
 
-	// load top pool
-	let pool_mutex: &SgxMutex<BPool> = match rpc::worker_api_direct::load_top_pool() {
+	// get all shards
+	let shards = state::list_shards()?;
+
+	let pool_mutex = match top_pool_getter.get() {
 		Some(mutex) => mutex,
 		None => {
 			error!("Could not get mutex to pool");
@@ -543,33 +594,31 @@ where
 		},
 	};
 
-	let pool_guard: SgxMutexGuard<BPool> = pool_mutex.lock().unwrap();
-	let pool: Arc<&BPool> = Arc::new(pool_guard.deref());
-	let author: Arc<Author<&BPool>> = Arc::new(Author::new(pool.clone()));
-
-	// get all shards
-	let shards = state::list_shards()?;
+	let tx_pool_guard = pool_mutex.lock().unwrap();
+	let tx_pool = tx_pool_guard.deref();
 
 	// Handle trusted getters
-	execute_trusted_getters(ocall_api, &author, &shards)?;
+	execute_trusted_getters(tx_pool, &shards)?;
 
 	// Handle trusted calls
 	let calls_and_blocks =
-		execute_trusted_calls(ocall_api, latest_onchain_header, pool, author, shards)?;
+		execute_trusted_calls(ocall_api, tx_pool, latest_onchain_header, shards)?;
 
 	Ok(calls_and_blocks)
 }
 
-fn execute_trusted_calls<O>(
+fn execute_trusted_calls<O, P>(
 	on_chain_ocall: &O,
+	top_pool: &P,
 	latest_onchain_header: Header,
-	pool: Arc<&BPool>,
-	author: Arc<Author<&BPool>>,
 	shards: Vec<H256>,
 ) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)>
 where
 	O: EnclaveOnChainOCallApi,
+	P: TrustedOperationPool<Hash = H256> + 'static,
 {
+	let author = Author::new(Arc::new(top_pool));
+
 	let mut calls = Vec::<OpaqueCall>::new();
 	let mut blocks = Vec::<SignedSidechainBlock>::new();
 	let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
@@ -648,9 +697,7 @@ where
 				// Notify watching clients of InSidechainBlock
 				let composed_block = signed_block.block();
 				let block_hash: BlockHash = blake2_256(&composed_block.encode()).into();
-				pool.pool()
-					.validated_pool()
-					.on_block_created(composed_block.signed_top_hashes(), block_hash);
+				top_pool.on_block_created(composed_block.signed_top_hashes(), block_hash);
 			},
 			Err(e) => error!("Could not compose block confirmation: {:?}", e),
 		}
@@ -677,30 +724,37 @@ fn load_initialized_state(shard: &H256) -> SgxResult<State> {
 	Ok(state)
 }
 
-fn execute_trusted_getters<R>(
-	rpc_ocall: &R,
-	author: &Arc<Author<&BPool>>,
-	shards: &[H256],
-) -> Result<()>
+fn execute_trusted_getters<P>(top_pool: &P, shards: &[H256]) -> Result<()>
 where
-	R: EnclaveRpcOCallApi,
+	P: TrustedOperationPool<Hash = H256> + 'static,
 {
+	let author = Author::new(Arc::new(top_pool));
+
 	let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
 	let mut is_done = false;
 	for shard in shards.to_owned().into_iter() {
 		// retrieve trusted operations from pool
 		let trusted_getters = author.get_pending_tops_separated(shard)?.1;
 		for trusted_getter_signed in trusted_getters.into_iter() {
-			// get state
-			let value_opt = get_stf_state(trusted_getter_signed.clone(), shard);
-			trace!("Successfully loaded stf state");
 			// get hash
-			let hash_of_getter = author.hash_of(&trusted_getter_signed.into());
-			// let client know of current state
-			trace!("Updating client");
-			if rpc_ocall.send_state(hash_of_getter, value_opt).is_err() {
-				error!("Could not send state to client");
-			}
+			let hash_of_getter = author.hash_of(&trusted_getter_signed.clone().into());
+
+			// get state
+			match get_stf_state(trusted_getter_signed, shard) {
+				Ok(r) => {
+					trace!("Successfully loaded stf state");
+					// let client know of current state
+					trace!("Updating client");
+					match top_pool.rpc_send_state(hash_of_getter, r.encode()) {
+						Ok(_) => trace!("Successfully updated client"),
+						Err(e) => error!("Could not send state to client {:?}", e),
+					}
+				},
+				Err(e) => {
+					error!("failed to get stf state, skipping trusted getter ({:?})", e);
+				},
+			};
+
 			// remove getter from pool
 			if let Err(e) =
 				author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false)

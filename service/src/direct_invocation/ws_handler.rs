@@ -50,6 +50,7 @@ where
 	Enclave: DirectRequest + Clone,
 	Watch: WatchList<Client = <WsSender as CreateWatchingClient>::Client>,
 {
+	#[allow(unused)]
 	pub fn new(enclave_api: Arc<Enclave>, watch_list: Arc<Watch>) -> Self {
 		WsHandlerFactory { enclave_api, watch_list }
 	}

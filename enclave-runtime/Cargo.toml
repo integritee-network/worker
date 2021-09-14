@@ -73,6 +73,8 @@ multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "
 
 # local deps
 itc-light-client = { path = "../core/light-client", default-features = false, features = ["sgx"] }
+itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
+itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"]  }
 itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
 itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
 itp-sgx-crypto= { path = "../core-primitives/sgx/crypto", default-features = false,  features = ["sgx"] }
@@ -95,7 +97,6 @@ sp-std = { version = "4.0.0-dev", default-features = false, git = "https://githu
 sp-utils = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-version = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-application-crypto = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-
 
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }

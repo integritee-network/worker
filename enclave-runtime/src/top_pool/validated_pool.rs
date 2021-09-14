@@ -16,17 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{
-	collections::{HashMap, HashSet},
-	string::String,
-	sync::{Arc, SgxMutex, SgxRwLock},
-	time::Instant,
-	untrusted::time::InstantEx,
-	vec::Vec,
-};
-
-use core::{hash, result::Result};
-
 use crate::top_pool::{
 	base_pool as base,
 	base_pool::PruneStatus,
@@ -36,21 +25,26 @@ use crate::top_pool::{
 	primitives::{PoolStatus, TrustedOperationSource},
 	rotator::PoolRotator,
 };
-
+use codec::Encode;
+use core::{hash, result::Result};
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
-
+use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
+use retain_mut::RetainMut;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion},
 	transaction_validity::{TransactionTag as Tag, ValidTransaction},
 };
-
-use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
-
-use codec::Encode;
-use itp_ocall_api::EnclaveRpcOCallApi;
-use retain_mut::RetainMut;
+use std::{
+	collections::{HashMap, HashSet},
+	string::String,
+	sync::{Arc, SgxMutex, SgxRwLock},
+	time::Instant,
+	untrusted::time::InstantEx,
+	vec::Vec,
+};
 
 /// Pre-validated operation. Validated pool only accepts operations wrapped in this enum.
 #[derive(Debug)]
@@ -94,7 +88,10 @@ pub type ValidatedOperationFor<B> =
 	ValidatedOperation<ExtrinsicHash<B>, StfTrustedOperation, <B as ChainApi>::Error>;
 
 /// Pool that deals with validated operations.
-pub struct ValidatedPool<B: ChainApi, R: EnclaveRpcOCallApi> {
+pub struct ValidatedPool<B: ChainApi, R: SendRpcResponse>
+where
+	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+{
 	api: Arc<B>,
 	options: Options,
 	listener: SgxRwLock<Listener<ExtrinsicHash<B>, R>>,
@@ -106,14 +103,14 @@ pub struct ValidatedPool<B: ChainApi, R: EnclaveRpcOCallApi> {
 impl<B: ChainApi, R> ValidatedPool<B, R>
 where
 	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
-	R: EnclaveRpcOCallApi,
+	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
 {
 	/// Create a new operation pool.
-	pub fn new(options: Options, api: Arc<B>) -> Self {
+	pub fn new(options: Options, api: Arc<B>, rpc_response_sender: Arc<R>) -> Self {
 		let base_pool = base::BasePool::new(options.reject_future_operations);
 		ValidatedPool {
 			options,
-			listener: Default::default(),
+			listener: SgxRwLock::new(Listener::new(rpc_response_sender)),
 			api,
 			pool: SgxRwLock::new(base_pool),
 			import_notification_sinks: Default::default(),
@@ -688,7 +685,7 @@ where
 fn fire_events<H, R, Ex>(listener: &mut Listener<H, R>, imported: &base::Imported<H, Ex>)
 where
 	H: hash::Hash + Eq + traits::Member + Encode, // + Serialize,
-	R: EnclaveRpcOCallApi,
+	R: SendRpcResponse<Hash = H>,
 {
 	match *imported {
 		base::Imported::Ready { ref promoted, ref failed, ref removed, ref hash } => {

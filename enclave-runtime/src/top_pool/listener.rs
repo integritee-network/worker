@@ -18,7 +18,7 @@
 
 use crate::top_pool::watcher::Watcher;
 use codec::Encode;
-use itp_ocall_api::EnclaveRpcOCallApi;
+use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
@@ -30,10 +30,11 @@ use std::{collections::HashMap, hash, string::String, sync::Arc, vec::Vec};
 pub struct Listener<H, R>
 where
 	H: hash::Hash + Eq,
+	R: SendRpcResponse,
 {
 	watchers: HashMap<H, Watcher<H, R>>,
 	finality_watchers: LinkedHashMap<SidechainBlockHash, Vec<H>>,
-	rpc_ocall_api: Arc<R>,
+	rpc_response_sender: Arc<R>,
 }
 
 /// Maximum number of blocks awaiting finality at any time.
@@ -42,8 +43,16 @@ const MAX_FINALITY_WATCHERS: usize = 512;
 impl<H, R> Listener<H, R>
 where
 	H: hash::Hash + traits::Member + Encode,
-	R: EnclaveRpcOCallApi,
+	R: SendRpcResponse<Hash = H>,
 {
+	pub fn new(rpc_response_sender: Arc<R>) -> Self {
+		Listener {
+			watchers: Default::default(),
+			finality_watchers: Default::default(),
+			rpc_response_sender,
+		}
+	}
+
 	fn fire<F>(&mut self, hash: &H, fun: F)
 	where
 		F: FnOnce(&mut Watcher<H, R>),
@@ -64,10 +73,8 @@ where
 	///
 	/// The watcher can be used to subscribe to life-cycle events of that extrinsic.
 	pub fn create_watcher(&mut self, hash: H) {
-		let new_watcher = Watcher::new_watcher(hash.clone(), self.rpc_ocall_api.clone());
+		let new_watcher = Watcher::new_watcher(hash.clone(), self.rpc_response_sender.clone());
 		self.watchers.insert(hash, new_watcher);
-		//let sender = self.watchers.entry(hash.clone()).or_insert_with(Watcher::default);
-		//sender.new_watcher(hash)
 	}
 
 	/// Notify the listeners about extrinsic broadcast.

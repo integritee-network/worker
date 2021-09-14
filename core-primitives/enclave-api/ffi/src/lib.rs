@@ -17,6 +17,13 @@ extern "C" {
 		value_size: u32,
 	) -> sgx_status_t;
 
+	pub fn init_direct_invocation_server(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		server_addr: *const u8,
+		server_addr_size: u32,
+	) -> sgx_status_t;
+
 	pub fn init_light_client(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

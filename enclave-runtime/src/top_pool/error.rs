@@ -70,6 +70,9 @@ pub enum Error {
 	#[display(fmt = "Extrinsic verification error")]
 	#[from(ignore)]
 	Verification,
+
+	#[display(fmt = "Failed to send result of trusted operation to RPC client")]
+	FailedToSendUpdateToRpcClient(String),
 }
 
 /// TrustedOperation pool error conversion.

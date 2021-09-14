@@ -17,8 +17,13 @@
 use crate::{
 	ocall::OcallApi,
 	rpc, rsa3072, state,
-	test::{cert_tests::*, mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock},
-	top_pool, Timeout,
+	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
+	top_pool,
+	top_pool::{
+		pool::ExtrinsicHash,
+		top_pool_container::{GetTopPool, TopPoolContainer},
+	},
+	Timeout,
 };
 use codec::{Decode, Encode};
 use core::ops::Deref;
@@ -55,6 +60,8 @@ use std::{
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
 };
+
+type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -211,8 +218,7 @@ fn test_submit_trusted_call_to_top_pool() {
 
 	// create top pool
 	let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
-	let tx_pool: BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCallMock> =
-		BasicPool::create(Default::default(), api);
+	let tx_pool = BasicPool::create(Default::default(), api, Arc::new(TestRpcResponder::new()));
 	let author = Author::new(Arc::new(&tx_pool));
 
 	// create trusted call signed
@@ -263,8 +269,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 
 	// create top pool
 	let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
-	let tx_pool: BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCallMock> =
-		BasicPool::create(Default::default(), api);
+	let tx_pool = BasicPool::create(Default::default(), api, Arc::new(TestRpcResponder::new()));
 	let author = Author::new(Arc::new(&tx_pool));
 
 	// create trusted getter signed
@@ -308,8 +313,7 @@ fn test_differentiate_getter_and_call_works() {
 
 	// create top pool
 	let api: Arc<SideChainApi<Block>> = Arc::new(SideChainApi::new());
-	let tx_pool: BasicPool<SideChainApi<Block>, Block, EnclaveRpcOCallMock> =
-		BasicPool::create(Default::default(), api);
+	let tx_pool = BasicPool::create(Default::default(), api, Arc::new(TestRpcResponder::new()));
 	let author = Author::new(Arc::new(&tx_pool));
 	// create trusted getter signed
 	let shard = ShardIdentifier::default();
@@ -377,7 +381,12 @@ fn test_create_block_and_confirmation_works() {
 	ensure_no_empty_shard_directory_exists();
 
 	// create top pool
-	unsafe { rpc::worker_api_direct::initialize_pool() };
+	let chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let top_pool = TopPoolContainer::new(BasicPool::create(
+		Default::default(),
+		chain_api,
+		Arc::new(TestRpcResponder::new()),
+	));
 	let shard = ShardIdentifier::default();
 	// ensure state starts empty
 	state::init_shard(&shard).unwrap();
@@ -394,7 +403,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// load top pool
 	{
-		let pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+		let pool_mutex = top_pool.get().unwrap();
 		let pool_guard = pool_mutex.lock().unwrap();
 		let pool = Arc::new(pool_guard.deref());
 		let author = Arc::new(Author::new(pool));
@@ -424,7 +433,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
+		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
 
 	debug!("got {} signed block(s)", signed_blocks.len());
 
@@ -453,7 +462,12 @@ fn test_create_state_diff() {
 	ensure_no_empty_shard_directory_exists();
 
 	// create top pool
-	unsafe { rpc::worker_api_direct::initialize_pool() };
+	let chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let top_pool = TopPoolContainer::new(BasicPool::create(
+		Default::default(),
+		chain_api,
+		Arc::new(TestRpcResponder::new()),
+	));
 	let shard = ShardIdentifier::default();
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
@@ -480,7 +494,7 @@ fn test_create_state_diff() {
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
 	{
-		let pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+		let pool_mutex = top_pool.get().unwrap();
 		let pool_guard = pool_mutex.lock().unwrap();
 		let pool = Arc::new(pool_guard.deref());
 		let author = Arc::new(Author::new(pool));
@@ -509,7 +523,7 @@ fn test_create_state_diff() {
 
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
+		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
 	Aes::decrypt(&mut encrypted_payload).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
@@ -543,7 +557,12 @@ fn test_executing_call_updates_account_nonce() {
 	ensure_no_empty_shard_directory_exists();
 
 	// create top pool
-	unsafe { rpc::worker_api_direct::initialize_pool() };
+	let chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let top_pool = TopPoolContainer::new(BasicPool::create(
+		Default::default(),
+		chain_api,
+		Arc::new(TestRpcResponder::new()),
+	));
 	let shard = ShardIdentifier::default();
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
@@ -567,7 +586,7 @@ fn test_executing_call_updates_account_nonce() {
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
 	{
-		let pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+		let pool_mutex = top_pool.get().unwrap();
 		let pool_guard = pool_mutex.lock().unwrap();
 		let pool = Arc::new(pool_guard.deref());
 		let author = Arc::new(Author::new(pool.clone()));
@@ -596,7 +615,7 @@ fn test_executing_call_updates_account_nonce() {
 
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
+		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
 
 	// then
 	let mut state = state::load(&shard).unwrap();
@@ -614,7 +633,12 @@ fn test_invalid_nonce_call_is_not_executed() {
 	ensure_no_empty_shard_directory_exists();
 
 	// create top pool
-	unsafe { rpc::worker_api_direct::initialize_pool() };
+	let chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let top_pool = TopPoolContainer::new(BasicPool::create(
+		Default::default(),
+		chain_api,
+		Arc::new(TestRpcResponder::new()),
+	));
 	let shard = ShardIdentifier::default();
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
@@ -638,7 +662,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let _prev_state_hash = state::write(state, &shard).unwrap();
 	// load top pool
 	{
-		let pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+		let pool_mutex = top_pool.get().unwrap();
 		let pool_guard = pool_mutex.lock().unwrap();
 		let pool = Arc::new(pool_guard.deref());
 		let author = Arc::new(Author::new(pool.clone()));
@@ -667,7 +691,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
+		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();
@@ -688,7 +712,12 @@ fn test_non_root_shielding_call_is_not_executed() {
 	ensure_no_empty_shard_directory_exists();
 
 	// create top pool
-	unsafe { rpc::worker_api_direct::initialize_pool() };
+	let chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let top_pool = TopPoolContainer::new(BasicPool::create(
+		Default::default(),
+		chain_api,
+		Arc::new(TestRpcResponder::new()),
+	));
 	let shard = ShardIdentifier::default();
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
@@ -705,7 +734,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let prev_acc_money = Stf::account_data(&mut state, &account.into()).unwrap().free;
 	// load top pool
 	{
-		let pool_mutex = rpc::worker_api_direct::load_top_pool().unwrap();
+		let pool_mutex = top_pool.get().unwrap();
 		let pool_guard = pool_mutex.lock().unwrap();
 		let pool = Arc::new(pool_guard.deref());
 		let author = Arc::new(Author::new(pool.clone()));
@@ -730,7 +759,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, latest_onchain_header).unwrap();
+		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();

@@ -2,7 +2,7 @@ pub extern crate alloc;
 
 use crate::top_pool::{
 	base_pool::TrustedOperation,
-	error::IntoPoolError,
+	error::{Error, IntoPoolError},
 	pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
 	primitives::{
 		ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
@@ -12,7 +12,8 @@ use crate::top_pool::{
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::pin::Pin;
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_ocall_api::EnclaveRpcOCallApi;
+use itc_direct_rpc_server::SendRpcResponse;
+use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
 	channel::oneshot,
 	future::{ready, Future, FutureExt},
@@ -69,28 +70,30 @@ impl<T, Block: BlockT> ReadyPoll<T, Block> {
 }
 
 /// Basic implementation of operation pool that can be customized by providing PoolApi.
-pub struct BasicPool<PoolApi, Block, RpcOCall>
-where
-	Block: BlockT,
-	PoolApi: ChainApi<Block = Block>,
-	RpcOCall: EnclaveRpcOCallApi,
-{
-	pool: Arc<Pool<PoolApi, RpcOCall>>,
-	_api: Arc<PoolApi>,
-	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
-}
-
-impl<PoolApi, Block, RpcOCall> BasicPool<PoolApi, Block, RpcOCall>
+pub struct BasicPool<PoolApi, Block, RpcResponse>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
-	RpcOCall: EnclaveRpcOCallApi,
+	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>>,
+{
+	pool: Arc<Pool<PoolApi, RpcResponse>>,
+	_api: Arc<PoolApi>,
+	rpc_responder: Arc<RpcResponse>,
+	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
+}
+
+impl<PoolApi, Block, RpcResponse> BasicPool<PoolApi, Block, RpcResponse>
+where
+	Block: BlockT,
+	PoolApi: ChainApi<Block = Block> + 'static,
+	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>>,
 {
 	/// Create new basic operation pool with provided api and custom
 	/// revalidation type.
 	pub fn create(
 		options: PoolOptions,
 		pool_api: Arc<PoolApi>,
+		rpc_response_sender: Arc<RpcResponse>,
 		//prometheus: Option<&PrometheusRegistry>,
 		//revalidation_type: RevalidationType,
 		//spawner: impl SpawnNamed,
@@ -98,24 +101,24 @@ where
 	where
 		<PoolApi as ChainApi>::Error: IntoPoolError,
 	{
-		let pool = Arc::new(Pool::new(options, pool_api.clone()));
-		BasicPool { _api: pool_api, pool, ready_poll: Default::default() }
-	}
-
-	/// Gets shared reference to the underlying pool.
-	pub fn pool(&self) -> &Arc<Pool<PoolApi, RpcOCall>> {
-		&self.pool
+		let pool = Arc::new(Pool::new(options, pool_api.clone(), rpc_response_sender.clone()));
+		BasicPool {
+			_api: pool_api,
+			pool,
+			rpc_responder: rpc_response_sender,
+			ready_poll: Default::default(),
+		}
 	}
 }
 
 // FIXME: obey clippy
 #[allow(clippy::type_complexity)]
-impl<PoolApi, Block, RpcOCall> TrustedOperationPool for BasicPool<PoolApi, Block, RpcOCall>
+impl<PoolApi, Block, RpcResponse> TrustedOperationPool for BasicPool<PoolApi, Block, RpcResponse>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
 	<PoolApi as ChainApi>::Error: IntoPoolError,
-	RpcOCall: EnclaveRpcOCallApi + Send + Sync + 'static,
+	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>> + 'static,
 {
 	type Block = PoolApi::Block;
 	type Hash = ExtrinsicHash<PoolApi>;
@@ -158,39 +161,6 @@ where
 		async move { pool.submit_and_watch(&at, source, xt, shard).await }.boxed()
 	}
 
-	fn remove_invalid(
-		&self,
-		hashes: &[TxHash<Self>],
-		shard: ShardIdentifier,
-		inblock: bool,
-	) -> Vec<Arc<Self::InPoolOperation>> {
-		self.pool.validated_pool().remove_invalid(hashes, shard, inblock)
-	}
-
-	fn status(&self, shard: ShardIdentifier) -> PoolStatus {
-		self.pool.validated_pool().status(shard)
-	}
-
-	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
-		self.pool.validated_pool().import_notification_stream()
-	}
-
-	fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self> {
-		self.pool.hash_of(xt)
-	}
-
-	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>) {
-		self.pool.validated_pool().on_broadcasted(propagations)
-	}
-
-	fn ready_transaction(
-		&self,
-		hash: &TxHash<Self>,
-		shard: ShardIdentifier,
-	) -> Option<Arc<Self::InPoolOperation>> {
-		self.pool.validated_pool().ready_by_hash(hash, shard)
-	}
-
 	fn ready_at(
 		&self,
 		at: NumberFor<Self::Block>,
@@ -216,5 +186,48 @@ where
 
 	fn shards(&self) -> Vec<ShardIdentifier> {
 		self.pool.validated_pool().shards()
+	}
+
+	fn remove_invalid(
+		&self,
+		hashes: &[TxHash<Self>],
+		shard: ShardIdentifier,
+		inblock: bool,
+	) -> Vec<Arc<Self::InPoolOperation>> {
+		self.pool.validated_pool().remove_invalid(hashes, shard, inblock)
+	}
+
+	fn status(&self, shard: ShardIdentifier) -> PoolStatus {
+		self.pool.validated_pool().status(shard)
+	}
+
+	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
+		self.pool.validated_pool().import_notification_stream()
+	}
+
+	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>) {
+		self.pool.validated_pool().on_broadcasted(propagations)
+	}
+
+	fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self> {
+		self.pool.hash_of(xt)
+	}
+
+	fn ready_transaction(
+		&self,
+		hash: &TxHash<Self>,
+		shard: ShardIdentifier,
+	) -> Option<Arc<Self::InPoolOperation>> {
+		self.pool.validated_pool().ready_by_hash(hash, shard)
+	}
+
+	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
+		self.pool.validated_pool().on_block_created(hashes, block_hash);
+	}
+
+	fn rpc_send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<(), Error> {
+		self.rpc_responder
+			.send_state(hash, state_encoded)
+			.map_err(|e| Error::FailedToSendUpdateToRpcClient(format!("{:?}", e)))
 	}
 }

@@ -59,6 +59,7 @@ where
 	HF: CreateWsHandler<Handler = H> + Sync + Send + 'static,
 	E: DirectRequest,
 {
+	#[allow(unused)]
 	pub fn new(handler_factory: Arc<HF>, enclave_api: Arc<E>) -> Self {
 		WsDirectServerRunner { handler_factory, enclave_api }
 	}

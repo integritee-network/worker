@@ -262,7 +262,7 @@ pub fn cmd<'a>(
 				})
 				.runner(move |_args: &str, matches: &ArgMatches<'_>| {
 					let arg_who = matches.value_of("accountid").unwrap();
-					info!("arg_who = {:?}", arg_who);
+					debug!("arg_who = {:?}", arg_who);
 					let who = get_pair_from_str(matches, arg_who);
 					let key_pair = sr25519_core::Pair::from(who.clone());
 					let top: TrustedOperation = TrustedGetter::free_balance(
@@ -271,6 +271,7 @@ pub fn cmd<'a>(
 					.sign(&KeyPair::Sr25519(key_pair))
 					.into();
 					let res = perform_operation(matches, &top);
+					debug!("received result for balance");
 					let bal = if let Some(v) = res {
 						if let Ok(vd) = crate::Balance::decode(&mut v.as_slice()) {
 							vd
