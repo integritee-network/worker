@@ -71,12 +71,14 @@ use itp_types::{
 use its_primitives::traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT};
 use utils::{duration_now, time_until_next_slot};
 
-use crate::utils::DecodeRaw;
-use crate::top_pool::{
-	pool::Options as PoolOptions,
-	pool_types::BPool,
-	primitives::TrustedOperationPool,
-	top_pool_container::{GetTopPool, GlobalTopPoolContainer},
+use crate::{
+	top_pool::{
+		pool::Options as PoolOptions,
+		pool_types::BPool,
+		primitives::TrustedOperationPool,
+		top_pool_container::{GetTopPool, GlobalTopPoolContainer},
+	},
+	utils::DecodeRaw,
 };
 use log::*;
 use rpc::{
@@ -457,9 +459,9 @@ where
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
 	// execute pending calls from operation pool and create block
-	let signed_blocks = exec_tops_for_all_shards::<B, _>(
+	let signed_blocks = exec_tops_for_all_shards::<B, _, _>(
 		&OcallApi,
-		&GlobalTopPoolContainer
+		&GlobalTopPoolContainer,
 		&latest_onchain_header,
 		GETTER_TIMEOUT + CALL_TIMEOUT,
 	)
@@ -606,8 +608,7 @@ where
 			return Ok(Default::default())
 		}
 
-		match exec_tops::<B, _>(ocall_api, tx_pool, &latest_onchain_header, shard, slot_end)
-		{
+		match exec_tops::<B, _, _>(ocall_api, tx_pool, &latest_onchain_header, shard, slot_end) {
 			Ok((confirm_calls, sb)) => {
 				calls.extend(confirm_calls);
 				sb.map(|sb| signed_blocks.push(sb));
@@ -629,6 +630,7 @@ fn exec_tops<B: BlockT<Hash = H256>, OcallApi, P>(
 ) -> Result<(Vec<OpaqueCall>, Option<SignedSidechainBlock>)>
 where
 	OcallApi: EnclaveOnChainOCallApi,
+	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	let remaining_getter_time = time_until_next_slot(slot_end).checked_div(2).unwrap_or_default();
 
@@ -646,9 +648,9 @@ where
 		return Ok(Default::default())
 	}
 
-	let (calls, blocks) = exec_trusted_calls::<B, SignedSidechainBlock, _>(
+	let (calls, blocks) = exec_trusted_calls::<B, SignedSidechainBlock, _, _>(
 		ocall_api,
-		top_pool
+		top_pool,
 		latest_onchain_header,
 		shard,
 		duration_now() + remaining_call_time,
@@ -661,7 +663,7 @@ where
 	Ok((calls, blocks))
 }
 
-fn exec_trusted_calls<PB, SB, OcallApi,P>(
+fn exec_trusted_calls<PB, SB, OcallApi, P>(
 	on_chain_ocall: &OcallApi,
 	top_pool: &P,
 	latest_onchain_header: &PB::Header,
@@ -728,11 +730,7 @@ where
 
 			// Notify watching clients of InSidechainBlock
 			let block = signed_block.block();
-			author
-				.pool()
-				.pool()
-				.validated_pool()
-				.on_block_created(block.signed_top_hashes(), block.hash());
+			top_pool.on_block_created(block.signed_top_hashes(), block.hash());
 
 			Some(signed_block)
 		},
@@ -759,11 +757,7 @@ fn load_initialized_state(shard: &H256) -> SgxResult<State> {
 	Ok(state)
 }
 
-fn exec_trusted_getters<P, R>(
-	top_pool: &P,
-	shard: H256,
-	ends_at: Duration,
-) -> Result<()>
+fn exec_trusted_getters<P>(top_pool: &P, shard: H256, ends_at: Duration) -> Result<()>
 where
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
@@ -772,6 +766,8 @@ where
 	// retrieve trusted operations from pool
 	let trusted_getters = author.get_pending_tops_separated(shard)?.1;
 	for trusted_getter_signed in trusted_getters.into_iter() {
+		let hash_of_getter = author.hash_of(&trusted_getter_signed.clone().into());
+
 		// get state
 		match get_stf_state(trusted_getter_signed, shard) {
 			Ok(r) => {
