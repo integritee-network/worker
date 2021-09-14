@@ -189,10 +189,17 @@ jobs:
         env:
           KEY: ${{ secrets.IAS_PRIMARY_KEY }}
           SPID: ${{ secrets.IAS_SPID }}
+          TLS_CERTIFICATE: ${{ secrets.TLS_WS_SERVER_CERTIFICATE }}
+          TLS_PRIVATE_KEY: ${{ secrets.TLS_WS_SERVER_PRIVATE_KEY }}
         run: |
           cd ${{ env.BIN_DIR }}
           echo "${{ env.KEY }}" > key.txt
-          echo "$$ {{ env.SPID }}" > spid.txt
+          echo "${{ env.SPID }}" > spid.txt
+          echo "${{ env.TLS_CERTIFICATE }}" > end.fullchain
+          echo "${{ env.TLS_PRIVATE_KEY }}" > end.rsa
+          chmod 644 end.fullchain
+          chmod 644 end.rsa
+          ls -al .
 
       - name: Run local setup
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.

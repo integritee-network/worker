@@ -87,11 +87,14 @@ pub trait AuthorApi<Hash, BlockHash> {
 
 /// Authoring API
 //pub struct Author<P, Client> {
-pub struct Author<P> {
+pub struct Author<'a, P>
+where
+	P: TrustedOperationPool + Sync + Send + 'static,
+{
 	/// Substrate client
 	//client: Arc<Client>,
 	/// Trusted Operation pool
-	pool: Arc<P>,
+	pool: Arc<&'a P>,
 	/*/// Subscriptions manager
 	subscriptions: SubscriptionManager,*/
 	/*/// The key store.
@@ -101,9 +104,12 @@ pub struct Author<P> {
 }
 
 //impl<P, Client> Author<P, Client> {
-impl<P> Author<P> {
+impl<'a, P> Author<'a, P>
+where
+	P: TrustedOperationPool + Sync + Send + 'static,
+{
 	/// Create new instance of Authoring API.
-	pub fn new(pool: Arc<P>) -> Self {
+	pub fn new(pool: Arc<&'a P>) -> Self {
 		Author { pool }
 	}
 
@@ -120,15 +126,10 @@ impl<P> Author<P> {
 const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
 //impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
-impl<P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<&P>
+impl<'a, P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<'a, P>
 where
 	P: TrustedOperationPool + Sync + Send + 'static,
 {
-	/// Get hash of TrustedOperation
-	fn hash_of(&self, xt: &TrustedOperation) -> TxHash<P> {
-		self.pool.hash_of(xt)
-	}
-
 	fn submit_top(
 		&self,
 		ext: Vec<u8>,
@@ -170,6 +171,11 @@ where
 					.into()
 				}),
 		)
+	}
+
+	/// Get hash of TrustedOperation
+	fn hash_of(&self, xt: &TrustedOperation) -> TxHash<P> {
+		self.pool.hash_of(xt)
 	}
 
 	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {

@@ -15,12 +15,7 @@
 
 */
 use crate::{
-	direct_invocation::{
-		watch_list_service::{WatchList, WatchListService},
-		watching_client::WsWatchingClient,
-		ws_direct_server_runner::{RunWsServer, WsDirectServerRunner},
-		ws_handler::WsHandlerFactory,
-	},
+	direct_invocation::{watch_list_service::WatchListService, watching_client::WsWatchingClient},
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 		worker::{GlobalWorker, Worker},
@@ -128,7 +123,7 @@ fn main() {
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
 		sync_block_gossiper,
-		direct_invocation_watch_list.clone(),
+		direct_invocation_watch_list,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
 	)));
@@ -165,7 +160,6 @@ fn main() {
 			skip_ra,
 			node_api,
 			tokio_handle,
-			direct_invocation_watch_list,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
 		let shard = extract_shard(&smatches, enclave.as_ref());
@@ -233,7 +227,7 @@ fn main() {
 
 /// FIXME: needs some discussion (restructuring?)
 #[allow(clippy::too_many_arguments)]
-fn start_worker<E, T, W, D>(
+fn start_worker<E, T, D>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
@@ -241,10 +235,8 @@ fn start_worker<E, T, W, D>(
 	skip_ra: bool,
 	mut node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle: Arc<T>,
-	watch_list: Arc<W>,
 ) where
 	T: GetTokioHandle,
-	W: WatchList<Client = WsWatchingClient>,
 	E: EnclaveBase
 		+ DirectRequest
 		+ SideChain
@@ -285,20 +277,30 @@ fn start_worker<E, T, W, D>(
 
 	// ------------------------------------------------------------------------
 	// start worker api direct invocation server
-	println!("rpc worker server listening on ws://{}", config.worker_url());
-
-	let ws_handler_factory = Arc::new(WsHandlerFactory::new(enclave.clone(), watch_list));
-	let ws_direct_server = WsDirectServerRunner::new(ws_handler_factory, enclave.clone());
-	ws_direct_server.run(config.worker_url());
+	let direct_invocation_server_addr = config.worker_url();
+	let enclave_for_direct_invocation = enclave.clone();
+	thread::spawn(move || {
+		println!(
+			"[+] RPC direction invocation server listening on wss://{}",
+			direct_invocation_server_addr
+		);
+		enclave_for_direct_invocation
+			.init_direct_invocation_server(direct_invocation_server_addr)
+			.unwrap();
+		println!("[+] RPC direction invocation server shut down");
+	});
 
 	// listen for sidechain_block import request. Later the `start_worker_api_direct_server`
 	// should be merged into this one.
 	let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
 
 	let handle = tokio_handle.get_handle();
-	let enclave_rpc_server = enclave.clone();
-	handle
-		.spawn(async move { itc_rpc_server::run_server(&url, enclave_rpc_server).await.unwrap() });
+	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	handle.spawn(async move {
+		itc_rpc_server::run_server(&url, enclave_for_block_gossip_rpc_server)
+			.await
+			.unwrap()
+	});
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();

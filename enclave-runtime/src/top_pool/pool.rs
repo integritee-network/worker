@@ -23,7 +23,7 @@ use crate::top_pool::{
 };
 use core::matches;
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_ocall_api::EnclaveRpcOCallApi;
+use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
 use sp_runtime::{
@@ -121,7 +121,10 @@ enum CheckBannedBeforeVerify {
 }
 
 /// Extrinsics pool that performs validation.
-pub struct Pool<B: ChainApi, R: EnclaveRpcOCallApi> {
+pub struct Pool<B: ChainApi, R>
+where
+	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+{
 	validated_pool: Arc<ValidatedPool<B, R>>,
 }
 
@@ -129,11 +132,11 @@ impl<B: ChainApi, R> Pool<B, R>
 where
 	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
 	<B as ChainApi>::Error: error::IntoPoolError,
-	R: EnclaveRpcOCallApi,
+	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
 {
 	/// Create a new operation pool.
-	pub fn new(options: Options, api: Arc<B>) -> Self {
-		Pool { validated_pool: Arc::new(ValidatedPool::new(options, api)) }
+	pub fn new(options: Options, api: Arc<B>, rpc_response_sender: Arc<R>) -> Self {
+		Pool { validated_pool: Arc::new(ValidatedPool::new(options, api, rpc_response_sender)) }
 	}
 
 	/// Imports a bunch of unverified extrinsics to the pool
@@ -456,7 +459,11 @@ where
 	}
 }
 
-impl<B: ChainApi, R: EnclaveRpcOCallApi> Clone for Pool<B, R> {
+impl<B: ChainApi, R> Clone for Pool<B, R>
+where
+	<B as ChainApi>::Error: error::IntoPoolError,
+	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+{
 	fn clone(&self) -> Self {
 		Self { validated_pool: self.validated_pool.clone() }
 	}
@@ -466,7 +473,7 @@ impl<B: ChainApi, R: EnclaveRpcOCallApi> Clone for Pool<B, R> {
 pub mod tests {
 	use super::*;
 	use crate::{
-		test::mocks::enclave_rpc_ocall_mock::EnclaveRpcOCallMock,
+		test::mocks::rpc_responder_mock::RpcResponderMock,
 		top_pool::{base_pool::Limit, primitives::from_low_u64_to_be_h256},
 	};
 	use codec::{Decode, Encode};
@@ -526,6 +533,8 @@ pub mod tests {
 	pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 	/// A test block.
 	pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
+	/// Test RPC responder
+	pub type TestRpcResponder = RpcResponderMock<H256>;
 
 	const INVALID_NONCE: Index = 254;
 	const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
@@ -632,8 +641,12 @@ pub mod tests {
 		TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
 	}
 
-	fn test_pool() -> Pool<TestApi, EnclaveRpcOCallMock> {
-		Pool::new(Default::default(), TestApi::default().into())
+	fn test_pool() -> Pool<TestApi, RpcResponderMock<H256>> {
+		Pool::new(
+			Default::default(),
+			TestApi::default().into(),
+			Arc::new(RpcResponderMock::<H256>::new()),
+		)
 	}
 
 	pub fn test_should_validate_and_import_transaction() {
@@ -841,9 +854,10 @@ pub mod tests {
 		// given
 		let shard = ShardIdentifier::default();
 		let limit = Limit { count: 100, total_bytes: 300 };
-		let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
+		let pool = Pool::new(
 			Options { ready: limit.clone(), future: limit, ..Default::default() },
 			TestApi::default().into(),
+			Arc::new(TestRpcResponder::new()),
 		);
 
 		let hash1 = block_on(pool.submit_one(
@@ -888,9 +902,10 @@ pub mod tests {
 		// given
 		let shard = ShardIdentifier::default();
 		let limit = Limit { count: 100, total_bytes: 10 };
-		let pool: Pool<TestApi, EnclaveRpcOCallMock> = Pool::new(
+		let pool = Pool::new(
 			Options { ready: limit.clone(), future: limit, ..Default::default() },
 			TestApi::default().into(),
+			Arc::new(TestRpcResponder::new()),
 		);
 
 		// when

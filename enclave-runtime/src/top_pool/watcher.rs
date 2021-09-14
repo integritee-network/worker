@@ -21,8 +21,9 @@
 extern crate alloc;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::Encode;
-use itp_ocall_api::EnclaveRpcOCallApi;
+use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
+use log::*;
 use sp_runtime::traits;
 use std::hash;
 
@@ -30,27 +31,25 @@ use std::hash;
 ///
 /// Represents a stream of status updates for particular extrinsic.
 #[derive(Debug)]
-pub struct Watcher<H, R> {
+pub struct Watcher<H, S> {
 	//receiver: TracingUnboundedReceiver<TrustedOperationStatus<H, BH>>,
 	hash: H,
 	is_in_block: bool,
-	rpc_ocall: Arc<R>,
+	rpc_response_sender: Arc<S>,
 }
 
-impl<H, R> Watcher<H, R>
+impl<H, S> Watcher<H, S>
 where
 	H: hash::Hash + Encode + traits::Member,
-	R: EnclaveRpcOCallApi,
+	S: SendRpcResponse<Hash = H>,
 {
 	/// Returns the operation hash.
 	pub fn hash(&self) -> &H {
 		&self.hash
 	}
 
-	pub fn new_watcher(hash: H, rpc_ocall: Arc<R>) -> Self {
-		//let (sender, receiver) = tracing_unbounded("mpsc_txpool_watcher");
-		//self.receivers.push(sender);
-		Watcher { hash, is_in_block: false, rpc_ocall }
+	pub fn new_watcher(hash: H, rpc_response_sender: Arc<S>) -> Self {
+		Watcher { hash, is_in_block: false, rpc_response_sender }
 	}
 
 	/// TrustedOperation became ready.
@@ -121,7 +120,9 @@ where
 	}
 
 	fn send(&mut self, status: TrustedOperationStatus) {
-		self.rpc_ocall.update_status_event(self.hash(), status).unwrap();
+		if let Err(e) = self.rpc_response_sender.update_status_event(self.hash().clone(), status) {
+			error!("failed to send status update to rpc client: {:?}", e);
+		}
 	}
 }
 
