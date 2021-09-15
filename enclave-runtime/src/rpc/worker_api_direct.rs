@@ -36,6 +36,7 @@ use base58::FromBase58;
 use codec::{Decode, Encode};
 use core::{ops::Deref, result::Result};
 use ita_stf::ShardIdentifier;
+use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{
 	block::SignedBlock, DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus,
 };
@@ -44,7 +45,6 @@ use log::*;
 use sgx_types::*;
 use sp_core::H256 as Hash;
 use std::sync::Arc;
-use itp_sgx_crypto::Rsa3072Seal;
 
 // TODO: remove this e-call - includes EDL file and e-call bridge on untrusted worker side
 #[no_mangle]
