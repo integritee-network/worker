@@ -693,9 +693,9 @@ where
 /// Execute pending trusted calls for the `shard` until `max_exec_duration` is reached.
 ///
 /// This function returns:
-/// * 	The parentchain calls to be wrapped in an extrinsic and sent to the parentchain
-/// 	including the `confirm_block` call for the produced sidechain block.
-/// * 	The produced sidechain block.
+/// *   The parentchain calls to be wrapped in an extrinsic and sent to the parentchain
+///     including the `confirm_block` call for the produced sidechain block.
+/// *   The produced sidechain block.
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
