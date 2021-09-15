@@ -20,7 +20,6 @@ pub extern crate alloc;
 use self::serde_json::*;
 use crate::{
 	rpc::author::{Author, AuthorApi},
-	rsa3072,
 	top_pool::top_pool_container::GetTopPool,
 	utils::write_slice_and_whitespace_pad,
 };
