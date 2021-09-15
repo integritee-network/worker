@@ -44,6 +44,7 @@ use log::*;
 use sgx_types::*;
 use sp_core::H256 as Hash;
 use std::sync::Arc;
+use itp_sgx_crypto::Rsa3072Seal;
 
 // TODO: remove this e-call - includes EDL file and e-call bridge on untrusted worker side
 #[no_mangle]
@@ -218,7 +219,7 @@ pub fn public_api_rpc_handler<T: GetTopPool>(tx_pool_getter: Arc<T>) -> IoHandle
 	let rsa_pubkey_name: &str = "author_getShieldingKey";
 	rpc_methods_vec.push(rsa_pubkey_name);
 	io.add_sync_method(rsa_pubkey_name, move |_: Params| {
-		let rsa_pubkey = match rsa3072::unseal_pubkey() {
+		let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
 			Ok(key) => key,
 			Err(status) => {
 				let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);

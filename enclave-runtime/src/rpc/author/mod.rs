@@ -45,7 +45,8 @@ pub mod client_error;
 use client_error::Error as ClientError;
 pub mod hash;
 
-use crate::{rsa3072, state};
+use crate::state;
+use itp_sgx_crypto::{Rsa3072Seal, ShieldingCrypto};
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -137,8 +138,7 @@ where
 			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
 		}
 		// decrypt call
-		let rsa_keypair = rsa3072::unseal_pair().unwrap();
-		let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
+		let request_vec: Vec<u8> = match Rsa3072Seal::decrypt(&ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
@@ -237,8 +237,7 @@ where
 			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
 		}
 		// decrypt call
-		let rsa_keypair = rsa3072::unseal_pair().unwrap();
-		let request_vec: Vec<u8> = match rsa3072::decrypt(&ext.as_slice(), &rsa_keypair) {
+		let request_vec: Vec<u8> = match Rsa3072Seal::decrypt(&ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};

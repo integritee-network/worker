@@ -9,16 +9,27 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[macro_use]
 extern crate sgx_tstd as std;
 
+// re-export module to properly feature gate sgx and regular std environment
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use serde_json_sgx as serde_json;
+	pub use serde_sgx as serde;
+}
+
 #[cfg(feature = "sgx")]
 pub mod aes;
 #[cfg(feature = "sgx")]
 pub mod ed25519;
 pub mod error;
+#[cfg(feature = "sgx")]
+pub mod rsa3072;
 pub mod traits;
 
 #[cfg(feature = "sgx")]
 pub use self::aes::*;
 #[cfg(feature = "sgx")]
 pub use self::ed25519::*;
+#[cfg(feature = "sgx")]
+pub use self::rsa3072::*;
 pub use error::*;
 pub use traits::*;

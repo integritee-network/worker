@@ -3,14 +3,14 @@ use crate::{
 	cert,
 	error::Result as EnclaveResult,
 	ocall::OcallApi,
-	rsa3072,
 	utils::UnwrapOrSgxErrorUnexpected,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::{Aes, AesSeal};
+use itp_sgx_crypto::{Aes, AesSeal, Rsa3072Seal};
 use itp_sgx_io::SealedIO;
 use log::*;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
@@ -175,15 +175,15 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 }
 
 fn read_files_to_send() -> SgxResult<(Vec<u8>, Aes)> {
-	let shielding_key = rsa3072::unseal_pair().sgx_error()?;
+	let shielding_key = Rsa3072Seal::unseal().sgx_error()?;
 	let aes = AesSeal::unseal().sgx_error()?;
-	let rsa_pair = serde_json::to_string(&shielding_key).sgx_error()?;
+	let rsa_pair = serde_json::to_vec(&shielding_key).sgx_error()?;
 
-	let rsa_len = rsa_pair.as_bytes().len();
+	let rsa_len = rsa_pair.len();
 	info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
 	info!("    [Enclave] Read AES key {:?}", aes);
 
-	Ok((rsa_pair.as_bytes().to_vec(), aes))
+	Ok((rsa_pair, aes))
 }
 
 fn send_files(
@@ -242,7 +242,11 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> EnclaveResult<()
 		.map(|_| info!("    [Enclave] Received Shielding key"))
 		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving shielding key")?;
 
-	rsa3072::seal(&rsa_pair)?;
+	//let key_json_str = std::str::from_utf8(&rsa_pair).unwrap();
+	let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair)
+		.sgx_error_with_log("    [Enclave] Received Invalid RSA key")?;
+	//let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair).unwrap();
+	Rsa3072Seal::seal(key)?;
 
 	let mut aes_key = [0u8; 16];
 	tls.read(&mut aes_key)
