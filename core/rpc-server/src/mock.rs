@@ -6,7 +6,6 @@ use itp_types::{
 	traits::{Block as BlockT, SignBlock},
 	RpcResponse, ShardIdentifier,
 };
-use sp_core::crypto::AccountId32;
 
 pub struct TestEnclave;
 
