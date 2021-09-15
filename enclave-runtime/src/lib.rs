@@ -572,8 +572,8 @@ fn get_stf_state(
 
 /// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
 ///
-/// For fairness, the [`max_exec_duration`] is split equally among all shards evenly distributing
-/// leftover time from the previous shard to all remaining shards.
+/// For fairness, the [`max_exec_duration`] is split equally among all shards. Leftover time from
+/// the previous shard is evenly distributed to all remaining shards.
 fn exec_tops_for_all_shards<PB, SB, O, T>(
 	ocall_api: &O,
 	top_pool_getter: &T,
@@ -638,9 +638,9 @@ where
 	Ok((calls, signed_blocks))
 }
 
-/// Execute pending trusted operations for the [`shard`] until the [`max_exec_duration`] is reached.
+/// Execute pending trusted operations for the `shard` until the `max_exec_duration` is reached.
 ///
-/// The first half of the [`max_exec_duration`] is dedicated to the trusted getters, the second half
+/// The first half of the `max_exec_duration` is dedicated to the trusted getters, the second half
 /// (plus leftover time from the getters) to the trusted calls.
 ///
 /// Todo: The getters should be handled individually: #400
@@ -688,12 +688,12 @@ where
 	Ok((calls, blocks))
 }
 
-/// Execute pending trusted calls for the [`shard`] until [`max_exec_duration`] is reached.
+/// Execute pending trusted calls for the `shard` until `max_exec_duration` is reached.
 ///
 /// This function returns:
-/// * 	the parentchain calls that should wrapped in an extrinsic and sent to the parentchain
-/// 	including the block_confirmation call for the produced sidechain block.
-/// * The produced sidechain block.
+/// * 	The parentchain calls to be wrapped in an extrinsic and sent to the parentchain
+/// 	including the `confirm_block` call for the produced sidechain block.
+/// * 	The produced sidechain block.
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
@@ -797,7 +797,7 @@ fn load_initialized_state(shard: &H256) -> SgxResult<State> {
 	Ok(state)
 }
 
-/// Execute pending trusted getters for the [`shard`] until [`max_exec_duration`] is reached.
+/// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
 fn exec_trusted_getters<P>(top_pool: &P, shard: H256, max_exec_duration: Duration) -> Result<()>
 where
 	P: TrustedOperationPool<Hash = H256> + 'static,
