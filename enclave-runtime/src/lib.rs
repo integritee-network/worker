@@ -255,15 +255,15 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_extrinsics<B, V>(
+fn create_extrinsics<PB, V>(
 	validator: &V,
 	calls: Vec<OpaqueCall>,
 	mut nonce: u32,
 ) -> Result<Vec<OpaqueExtrinsic>>
 where
-	B: BlockT<Hash = H256>,
-	NumberFor<B>: BlockNumberOps,
-	V: Validator<B>,
+	PB: BlockT<Hash = H256>,
+	NumberFor<PB>: BlockNumberOps,
+	V: Validator<PB>,
 {
 	// get information for composing the extrinsic
 	let signer = Ed25519Seal::unseal()?;
@@ -442,19 +442,19 @@ pub unsafe extern "C" fn produce_blocks(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn produce_blocks_int<B>(blocks_to_sync: Vec<SignedBlockG<B>>, nonce: u32) -> Result<()>
+fn produce_blocks_int<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, nonce: u32) -> Result<()>
 where
-	B: BlockT<Hash = H256>,
-	NumberFor<B>: BlockNumberOps,
+	PB: BlockT<Hash = H256>,
+	NumberFor<PB>: BlockNumberOps,
 {
-	let mut validator = LightClientSeal::<B>::unseal()?;
+	let mut validator = LightClientSeal::<PB>::unseal()?;
 
 	let mut calls = sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi)?;
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
 	// execute pending calls from operation pool and create block
-	let signed_blocks = exec_tops_for_all_shards::<B, SignedSidechainBlock, _, _>(
+	let signed_blocks = exec_tops_for_all_shards::<PB, SignedSidechainBlock, _, _>(
 		&OcallApi,
 		&GlobalTopPoolContainer,
 		&latest_onchain_header,
@@ -481,15 +481,15 @@ where
 		.map_err(|e| Error::Other(format!("Failed to send block and confirmation: {}", e).into()))
 }
 
-fn sync_blocks_on_light_client<B, V, O>(
-	blocks_to_sync: Vec<SignedBlockG<B>>,
+fn sync_blocks_on_light_client<PB, V, O>(
+	blocks_to_sync: Vec<SignedBlockG<PB>>,
 	validator: &mut V,
 	on_chain_ocall_api: &O,
 ) -> Result<Vec<OpaqueCall>>
 where
-	B: BlockT<Hash = H256>,
-	NumberFor<B>: BlockNumberOps,
-	V: Validator<B>,
+	PB: BlockT<Hash = H256>,
+	NumberFor<PB>: BlockNumberOps,
+	V: Validator<PB>,
 	O: EnclaveOnChainOCallApi,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
@@ -510,7 +510,7 @@ where
 		}
 
 		if let Err(e) =
-			update_states::<B, _>(signed_block.block.header().clone(), on_chain_ocall_api)
+			update_states::<PB, _>(signed_block.block.header().clone(), on_chain_ocall_api)
 		{
 			error!("Error performing state updates upon block import");
 			return Err(e)
@@ -568,17 +568,17 @@ fn get_stf_state(
 	Ok(Stf::get_state(&mut state, trusted_getter_signed.into()))
 }
 
-fn exec_tops_for_all_shards<B, SB, OcallApi, T>(
-	ocall_api: &OcallApi,
+fn exec_tops_for_all_shards<PB, SB, O, T>(
+	ocall_api: &O,
 	top_pool_getter: &T,
-	latest_onchain_header: &B::Header,
+	latest_onchain_header: &PB::Header,
 	max_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
 where
-	B: BlockT<Hash = H256>,
+	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi,
 	T: GetTopPool,
 {
 	let shards = state::list_shards()?;
@@ -608,7 +608,7 @@ where
 			return Ok(Default::default())
 		}
 
-		match exec_tops::<B, SB, _, _>(
+		match exec_tops::<PB, SB, _, _>(
 			ocall_api,
 			tx_pool,
 			&latest_onchain_header,
@@ -628,18 +628,18 @@ where
 	}
 	Ok((calls, signed_blocks))
 }
-fn exec_tops<B, SB, OcallApi, P>(
-	ocall_api: &OcallApi,
+fn exec_tops<PB, SB, O, P>(
+	ocall_api: &O,
 	top_pool: &P,
-	latest_onchain_header: &B::Header,
+	latest_onchain_header: &PB::Header,
 	shard: ShardIdentifier,
 	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Option<SB>)>
 where
-	B: BlockT<Hash = H256>,
+	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi,
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	// Todo: make getter execution independent of slot.
@@ -660,7 +660,7 @@ where
 		return Ok(Default::default())
 	}
 
-	let (calls, blocks) = exec_trusted_calls::<B, SB, _, _>(
+	let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _>(
 		ocall_api,
 		top_pool,
 		latest_onchain_header,
@@ -675,8 +675,8 @@ where
 	Ok((calls, blocks))
 }
 
-fn exec_trusted_calls<PB, SB, OcallApi, P>(
-	on_chain_ocall: &OcallApi,
+fn exec_trusted_calls<PB, SB, O, P>(
+	on_chain_ocall: &O,
 	top_pool: &P,
 	latest_onchain_header: &PB::Header,
 	shard: H256,
@@ -686,7 +686,7 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi,
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	let author = Author::new(Arc::new(top_pool));
@@ -873,9 +873,9 @@ where
 	Ok((opaque_call, signed_block))
 }
 
-pub fn update_states<B, O>(header: B::Header, on_chain_ocall_api: &O) -> Result<()>
+pub fn update_states<PB, O>(header: PB::Header, on_chain_ocall_api: &O) -> Result<()>
 where
-	B: BlockT<Hash = H256>,
+	PB: BlockT<Hash = H256>,
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("Update STF storage upon block import!");
@@ -932,11 +932,9 @@ where
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, as well as shielding and unshielding calls
 /// Returns all unshielding call confirmations as opaque calls
-pub fn scan_block_for_relevant_xt<B: BlockT<Hash = H256>, O>(
-	block: &B,
-	on_chain_ocall: &O,
-) -> Result<Vec<OpaqueCall>>
+pub fn scan_block_for_relevant_xt<PB, O>(block: &PB, on_chain_ocall: &O) -> Result<Vec<OpaqueCall>>
 where
+	PB: BlockT<Hash = H256>,
 	O: EnclaveOnChainOCallApi,
 {
 	debug!("Scanning block {:?} for relevant xt", block.header().number());
@@ -964,7 +962,7 @@ where
 					let mut state = load_initialized_state(&shard)?;
 					// call execution
 					trace!("Handling trusted worker call of state: {:?}", state);
-					if let Err(e) = handle_trusted_worker_call::<B, _>(
+					if let Err(e) = handle_trusted_worker_call::<PB, _>(
 						&mut opaque_calls, // necessary for unshielding
 						&mut state,
 						&decrypted_trusted_call,
@@ -1046,17 +1044,17 @@ fn decrypt_unchecked_extrinsic(
 	Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
 }
 
-fn handle_trusted_worker_call<B, OcallApi>(
+fn handle_trusted_worker_call<PB, O>(
 	calls: &mut Vec<OpaqueCall>,
 	state: &mut StfState,
 	stf_call_signed: &TrustedCallSigned,
-	header: &B::Header,
+	header: &PB::Header,
 	shard: ShardIdentifier,
-	on_chain_ocall_api: &OcallApi,
+	on_chain_ocall_api: &O,
 ) -> Result<Option<(H256, H256)>>
 where
-	B: BlockT<Hash = H256>,
-	OcallApi: EnclaveOnChainOCallApi,
+	PB: BlockT<Hash = H256>,
+	O: EnclaveOnChainOCallApi,
 {
 	debug!("query mrenclave of self");
 	let mrenclave = OcallApi.get_mrenclave_of_self()?;
