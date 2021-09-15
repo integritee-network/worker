@@ -80,6 +80,10 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 	Duration::from_millis(remaining_millis as u64)
 }
 
+pub fn remaining_time(until: Duration) -> Option<Duration> {
+	until.checked_sub(duration_now())
+}
+
 pub trait UnwrapOrSgxErrorUnexpected {
 	type ReturnType;
 	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t>;

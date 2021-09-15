@@ -42,7 +42,8 @@ use crate::{
 		top_pool_container::{GetTopPool, GlobalTopPoolContainer},
 	},
 	utils::{
-		hash_from_slice, write_slice_and_whitespace_pad, DecodeRaw, UnwrapOrSgxErrorUnexpected,
+		hash_from_slice, remaining_time, write_slice_and_whitespace_pad, DecodeRaw,
+		UnwrapOrSgxErrorUnexpected,
 	},
 };
 use base58::ToBase58;
@@ -571,8 +572,8 @@ fn get_stf_state(
 
 /// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
 ///
-/// For fairness, the [`max_exec_duration`] is split equally among all shards distributing left-over
-/// time from the previous shard evenly to all remaining shards.
+/// For fairness, the [`max_exec_duration`] is split equally among all shards evenly distributing
+/// leftover time from the previous shard to all remaining shards.
 fn exec_tops_for_all_shards<PB, SB, O, T>(
 	ocall_api: &O,
 	top_pool_getter: &T,
@@ -605,13 +606,16 @@ where
 
 	// execute pending calls from operation pool and create block
 	for shard in shards.into_iter() {
-		let shard_exec_time =
-			time_until_next_slot(ends_at).checked_div(remaining_shards).unwrap_or_default();
-
-		if shard_exec_time == Default::default() {
-			info!("[Enclave] Could not execute trusted operations for all shards. Remaining shards: {}.", remaining_shards);
-			return Ok(Default::default())
-		}
+		let shard_exec_time = match remaining_time(ends_at)
+			.map(|r| r.checked_div(remaining_shards))
+			.flatten()
+		{
+			Some(t) => t,
+			None => {
+				info!("[Enclave] Could not execute trusted operations for all shards. Remaining shards: {}.", remaining_shards);
+				break
+			},
+		};
 
 		match exec_tops::<PB, SB, _, _>(
 			ocall_api,
@@ -655,21 +659,19 @@ where
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	// first half of the slot is dedicated to getters.
-	let remaining_getter_time = max_exec_duration.checked_div(2).unwrap_or_default();
-
-	if remaining_getter_time == Default::default() {
-		info!("[Enclave] not executed trusted getters; no time left.");
-		return Ok(Default::default())
-	}
+	let ends_at = time_until_next_slot(max_exec_duration);
+	let remaining_getter_time =
+		max_exec_duration.checked_div(2).expect("checked_div yields some if rhs != 0");
 
 	exec_trusted_getters(top_pool, shard, remaining_getter_time)?;
 
-	let remaining_call_time = time_until_next_slot(max_exec_duration);
-
-	if remaining_call_time == Default::default() {
-		info!("[Enclave] not executed trusted calls; no time left.");
-		return Ok(Default::default())
-	}
+	let remaining_call_time = match remaining_time(ends_at) {
+		Some(t) => t,
+		None => {
+			info!("[Enclave] not executed trusted calls; no time left.");
+			return Ok(Default::default())
+		},
+	};
 
 	let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _>(
 		ocall_api,
