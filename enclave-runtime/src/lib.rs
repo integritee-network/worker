@@ -442,6 +442,7 @@ pub unsafe extern "C" fn produce_blocks(
 	sgx_status_t::SGX_SUCCESS
 }
 
+/// Internal [`produce_blocks`] function to be able to use the handy `?` operator.
 fn produce_blocks_int<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, nonce: u32) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
@@ -568,11 +569,15 @@ fn get_stf_state(
 	Ok(Stf::get_state(&mut state, trusted_getter_signed.into()))
 }
 
+/// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
+///
+/// For fairness, the [`max_exec_duration`] is split equally among all shards distributing left-over
+/// time from the previous shard evenly to all remaining shards.
 fn exec_tops_for_all_shards<PB, SB, O, T>(
 	ocall_api: &O,
 	top_pool_getter: &T,
 	latest_onchain_header: &PB::Header,
-	max_duration: Duration,
+	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
 where
 	PB: BlockT<Hash = H256>,
@@ -585,7 +590,7 @@ where
 	let mut calls: Vec<OpaqueCall> = Vec::new();
 	let mut signed_blocks: Vec<SB> = Vec::with_capacity(shards.len());
 	let mut remaining_shards = shards.len() as u32;
-	let ends_at = duration_now() + max_duration;
+	let ends_at = duration_now() + max_exec_duration;
 
 	let pool_mutex = match top_pool_getter.get() {
 		Some(mutex) => mutex,
@@ -628,6 +633,13 @@ where
 	}
 	Ok((calls, signed_blocks))
 }
+
+/// Execute pending trusted operations for the [`shard`] until the [`max_exec_duration`] is reached.
+///
+/// The first half of the [`max_exec_duration`] is dedicated to the trusted getters, the second half
+/// (plus leftover time from the getters) to the trusted calls.
+///
+/// Todo: The getters should be handled individually: #400
 fn exec_tops<PB, SB, O, P>(
 	ocall_api: &O,
 	top_pool: &P,
@@ -642,7 +654,6 @@ where
 	O: EnclaveOnChainOCallApi,
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
-	// Todo: make getter execution independent of slot.
 	// first half of the slot is dedicated to getters.
 	let remaining_getter_time = max_exec_duration.checked_div(2).unwrap_or_default();
 
@@ -675,6 +686,15 @@ where
 	Ok((calls, blocks))
 }
 
+/// Execute pending trusted calls for the [`shard`] until [`max_exec_duration`] is reached.
+///
+/// This function returns:
+/// * 	the parentchain calls that should wrapped in an extrinsic and sent to the parentchain
+/// 	including the block_confirmation call for the sidechain block that was produced.
+/// * The sidechain block that was produced.
+///
+/// Todo: This function does to much, but it needs anyhow some refactoring here to make the code
+/// more readable.
 fn exec_trusted_calls<PB, SB, O, P>(
 	on_chain_ocall: &O,
 	top_pool: &P,
@@ -733,6 +753,8 @@ where
 			break
 		}
 	}
+
+	// Todo: this function should return here. Composing the block should be done by the caller.
 	// create new block (side-chain)
 	let block = match compose_block_and_confirmation::<PB, SB>(
 		latest_onchain_header,
@@ -773,6 +795,7 @@ fn load_initialized_state(shard: &H256) -> SgxResult<State> {
 	Ok(state)
 }
 
+/// Execute pending trusted getters for the [`shard`] until [`max_exec_duration`] is reached.
 fn exec_trusted_getters<P>(top_pool: &P, shard: H256, max_exec_duration: Duration) -> Result<()>
 where
 	P: TrustedOperationPool<Hash = H256> + 'static,
