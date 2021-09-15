@@ -32,7 +32,7 @@ use ita_stf::{
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
-	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
+	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
 };
 use itp_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
@@ -410,7 +410,7 @@ fn test_create_block_and_confirmation_works() {
 			&OcallApi,
 			&top_pool,
 			&latest_onchain_header,
-			GETTER_TIMEOUT + CALL_TIMEOUT,
+			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
 		.unwrap();
 
@@ -505,7 +505,7 @@ fn test_create_state_diff() {
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
-		GETTER_TIMEOUT + CALL_TIMEOUT,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
@@ -602,7 +602,7 @@ fn test_executing_call_updates_account_nonce() {
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
-		GETTER_TIMEOUT + CALL_TIMEOUT,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 
@@ -683,7 +683,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
-		GETTER_TIMEOUT + CALL_TIMEOUT,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 
@@ -756,7 +756,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
-		GETTER_TIMEOUT + CALL_TIMEOUT,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 

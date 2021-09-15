@@ -62,7 +62,7 @@ use itc_light_client::{io::LightClientSeal, BlockNumberOps, NumberFor, Validator
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::{
-	enclave::{CALL_TIMEOUT, GETTER_TIMEOUT},
+	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{
 		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
@@ -460,7 +460,7 @@ where
 		&OcallApi,
 		&GlobalTopPoolContainer,
 		&latest_onchain_header,
-		GETTER_TIMEOUT + CALL_TIMEOUT,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.map(|(confirm_calls, sb)| {
 		calls.extend(confirm_calls);
@@ -660,9 +660,7 @@ where
 {
 	// first half of the slot is dedicated to getters.
 	let ends_at = duration_now() + max_exec_duration;
-	let remaining_getter_time = max_exec_duration
-		.checked_div(2)
-		.expect("checked_div yields some if rhs != 0; qed");
+	let remaining_getter_time = max_exec_duration / 2;
 
 	exec_trusted_getters(top_pool, shard, remaining_getter_time)?;
 
