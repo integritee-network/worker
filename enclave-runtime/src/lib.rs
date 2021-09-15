@@ -600,16 +600,21 @@ where
 
 	// execute pending calls from operation pool and create block
 	for shard in shards.into_iter() {
-		let slot_end =
+		let shard_exec_time =
 			time_until_next_slot(ends_at).checked_div(remaining_shards).unwrap_or_default();
 
-		if slot_end == Default::default() {
+		if shard_exec_time == Default::default() {
 			info!("[Enclave] Could not execute trusted operations for all shards. Remaining shards: {}.", remaining_shards);
 			return Ok(Default::default())
 		}
 
-		match exec_tops::<B, SB, _, _>(ocall_api, tx_pool, &latest_onchain_header, shard, slot_end)
-		{
+		match exec_tops::<B, SB, _, _>(
+			ocall_api,
+			tx_pool,
+			&latest_onchain_header,
+			shard,
+			shard_exec_time,
+		) {
 			Ok((confirm_calls, sb)) => {
 				calls.extend(confirm_calls);
 				if let Some(sb) = sb {
@@ -628,7 +633,7 @@ fn exec_tops<B, SB, OcallApi, P>(
 	top_pool: &P,
 	latest_onchain_header: &B::Header,
 	shard: ShardIdentifier,
-	slot_end: Duration,
+	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Option<SB>)>
 where
 	B: BlockT<Hash = H256>,
@@ -637,16 +642,18 @@ where
 	OcallApi: EnclaveOnChainOCallApi,
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
-	let remaining_getter_time = time_until_next_slot(slot_end).checked_div(2).unwrap_or_default();
+	// Todo: make getter execution independent of slot.
+	// first half of the slot is dedicated to getters.
+	let remaining_getter_time = max_exec_duration.checked_div(2).unwrap_or_default();
 
 	if remaining_getter_time == Default::default() {
 		info!("[Enclave] not executed trusted getters; no time left.");
 		return Ok(Default::default())
 	}
 
-	exec_trusted_getters(top_pool, shard, duration_now() + remaining_getter_time)?;
+	exec_trusted_getters(top_pool, shard, remaining_getter_time)?;
 
-	let remaining_call_time = time_until_next_slot(slot_end);
+	let remaining_call_time = time_until_next_slot(max_exec_duration);
 
 	if remaining_call_time == Default::default() {
 		info!("[Enclave] not executed trusted calls; no time left.");
@@ -658,7 +665,7 @@ where
 		top_pool,
 		latest_onchain_header,
 		shard,
-		duration_now() + remaining_call_time,
+		remaining_call_time,
 	)?;
 
 	if blocks.is_none() {
@@ -673,7 +680,7 @@ fn exec_trusted_calls<PB, SB, OcallApi, P>(
 	top_pool: &P,
 	latest_onchain_header: &PB::Header,
 	shard: H256,
-	ends_at: Duration,
+	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Option<SB>)>
 where
 	PB: BlockT<Hash = H256>,
@@ -683,6 +690,7 @@ where
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	let author = Author::new(Arc::new(top_pool));
+	let ends_at = duration_now() + max_exec_duration;
 
 	let mut calls = Vec::<OpaqueCall>::new();
 	let mut call_hashes = Vec::<H256>::new();
@@ -765,11 +773,12 @@ fn load_initialized_state(shard: &H256) -> SgxResult<State> {
 	Ok(state)
 }
 
-fn exec_trusted_getters<P>(top_pool: &P, shard: H256, ends_at: Duration) -> Result<()>
+fn exec_trusted_getters<P>(top_pool: &P, shard: H256, max_exec_duration: Duration) -> Result<()>
 where
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	let author = Author::new(Arc::new(top_pool));
+	let ends_at = duration_now() + max_exec_duration;
 
 	// retrieve trusted operations from pool
 	let trusted_getters = author.get_pending_tops_separated(shard)?.1;

@@ -23,7 +23,6 @@ use crate::{
 		pool::ExtrinsicHash,
 		top_pool_container::{GetTopPool, TopPoolContainer},
 	},
-	utils::duration_now,
 };
 use codec::{Decode, Encode};
 use core::ops::Deref;
@@ -405,15 +404,13 @@ fn test_create_block_and_confirmation_works() {
 		top_hash = executor::block_on(result).unwrap();
 	}
 
-	let slot_end = duration_now() + GETTER_TIMEOUT + CALL_TIMEOUT;
-
 	// when
 	let (confirm_calls, signed_blocks) =
 		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 			&OcallApi,
 			&top_pool,
 			&latest_onchain_header,
-			slot_end,
+			GETTER_TIMEOUT + CALL_TIMEOUT,
 		)
 		.unwrap();
 
