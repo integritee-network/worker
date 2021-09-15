@@ -617,8 +617,6 @@ where
 			},
 		};
 
-		error!("Shards {:?} execution time: {:?}", shard, shard_exec_time);
-
 		match exec_tops::<PB, SB, _, _>(
 			ocall_api,
 			tx_pool,
@@ -662,8 +660,9 @@ where
 {
 	// first half of the slot is dedicated to getters.
 	let ends_at = duration_now() + max_exec_duration;
-	let remaining_getter_time =
-		max_exec_duration.checked_div(2).expect("checked_div yields some if rhs != 0");
+	let remaining_getter_time = max_exec_duration
+		.checked_div(2)
+		.expect("checked_div yields some if rhs != 0; qed");
 
 	exec_trusted_getters(top_pool, shard, remaining_getter_time)?;
 
@@ -693,7 +692,7 @@ where
 /// Execute pending trusted calls for the `shard` until `max_exec_duration` is reached.
 ///
 /// This function returns:
-/// *   The parentchain calls to be wrapped in an extrinsic and sent to the parentchain
+/// *   The parentchain calls produced by the `Stf` to be wrapped in an extrinsic and sent to the parentchain
 ///     including the `confirm_block` call for the produced sidechain block.
 /// *   The produced sidechain block.
 ///
