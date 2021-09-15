@@ -35,7 +35,15 @@ use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
 	rpc::worker_api_direct::public_api_rpc_handler,
-	utils::{hash_from_slice, UnwrapOrSgxErrorUnexpected},
+	top_pool::{
+		pool::Options as PoolOptions,
+		pool_types::BPool,
+		primitives::TrustedOperationPool,
+		top_pool_container::{GetTopPool, GlobalTopPoolContainer},
+	},
+	utils::{
+		hash_from_slice, write_slice_and_whitespace_pad, DecodeRaw, UnwrapOrSgxErrorUnexpected,
+	},
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
@@ -64,21 +72,10 @@ use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
-use itp_types::{
-	block::SignedBlock as SignedSidechainBlock, Block, CallWorkerFn, Header, OpaqueCall,
-	ShieldFundsFn, SignedBlock,
-};
-use its_primitives::traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT};
-use utils::{duration_now, time_until_next_slot};
-
-use crate::{
-	top_pool::{
-		pool::Options as PoolOptions,
-		pool_types::BPool,
-		primitives::TrustedOperationPool,
-		top_pool_container::{GetTopPool, GlobalTopPoolContainer},
-	},
-	utils::DecodeRaw,
+use itp_types::{Block, CallWorkerFn, Header, OpaqueCall, ShieldFundsFn, SignedBlock};
+use its_primitives::{
+	traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT},
+	types::block::SignedBlock as SignedSidechainBlock,
 };
 use log::*;
 use rpc::{
@@ -91,7 +88,7 @@ use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
-	traits::{Block as BlockT, Header as HeaderT},
+	traits::{Block as BlockT, Header as HeaderT, UniqueSaturatedInto},
 	MultiSignature, OpaqueExtrinsic,
 };
 use std::{
@@ -106,7 +103,7 @@ use std::{
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
-use utils::write_slice_and_whitespace_pad;
+use utils::{duration_now, time_until_next_slot};
 
 mod attestation;
 mod ipfs;
@@ -127,8 +124,6 @@ pub mod test;
 
 #[cfg(feature = "test")]
 pub mod tests;
-
-use sp_runtime::traits::UniqueSaturatedInto;
 
 // this is a 'dummy' for production mode
 #[cfg(not(feature = "test"))]
@@ -459,7 +454,7 @@ where
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
 	// execute pending calls from operation pool and create block
-	let signed_blocks = exec_tops_for_all_shards::<B, _, _>(
+	let signed_blocks = exec_tops_for_all_shards::<B, SignedSidechainBlock, _, _>(
 		&OcallApi,
 		&GlobalTopPoolContainer,
 		&latest_onchain_header,
@@ -490,7 +485,7 @@ fn sync_blocks_on_light_client<B, V, O>(
 	blocks_to_sync: Vec<SignedBlockG<B>>,
 	validator: &mut V,
 	on_chain_ocall_api: &O,
-) -> SgxResult<Vec<OpaqueCall>>
+) -> Result<Vec<OpaqueCall>>
 where
 	B: BlockT<Hash = H256>,
 	NumberFor<B>: BlockNumberOps,
@@ -511,12 +506,14 @@ where
 			signed_block.justifications.clone(),
 		) {
 			error!("Block verification failed. Error : {:?}", e);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(e.into())
 		}
 
-		if update_states::<B, _>(signed_block.block.header().clone(), on_chain_ocall_api).is_err() {
+		if let Err(e) =
+			update_states::<B, _>(signed_block.block.header().clone(), on_chain_ocall_api)
+		{
 			error!("Error performing state updates upon block import");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(e)
 		}
 
 		// execute indirect calls, incl. shielding and unshielding
@@ -571,19 +568,22 @@ fn get_stf_state(
 	Ok(Stf::get_state(&mut state, trusted_getter_signed.into()))
 }
 
-fn exec_tops_for_all_shards<B: BlockT<Hash = H256>, OcallApi, T>(
+fn exec_tops_for_all_shards<B, SB, OcallApi, T>(
 	ocall_api: &OcallApi,
 	top_pool_getter: &T,
 	latest_onchain_header: &B::Header,
 	max_duration: Duration,
-) -> Result<(Vec<OpaqueCall>, Vec<SignedSidechainBlock>)>
+) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
 where
+	B: BlockT<Hash = H256>,
+	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	OcallApi: EnclaveOnChainOCallApi,
 	T: GetTopPool,
 {
 	let shards = state::list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
-	let mut signed_blocks: Vec<SignedSidechainBlock> = Vec::with_capacity(shards.len());
+	let mut signed_blocks: Vec<SB> = Vec::with_capacity(shards.len());
 	let mut remaining_shards = shards.len() as u32;
 	let ends_at = duration_now() + max_duration;
 
@@ -608,10 +608,13 @@ where
 			return Ok(Default::default())
 		}
 
-		match exec_tops::<B, _, _>(ocall_api, tx_pool, &latest_onchain_header, shard, slot_end) {
+		match exec_tops::<B, SB, _, _>(ocall_api, tx_pool, &latest_onchain_header, shard, slot_end)
+		{
 			Ok((confirm_calls, sb)) => {
 				calls.extend(confirm_calls);
-				sb.map(|sb| signed_blocks.push(sb));
+				if let Some(sb) = sb {
+					signed_blocks.push(sb);
+				}
 			},
 			Err(e) => error!("Error in top execution for shard {:?}: {:?}", shard, e),
 		}
@@ -620,15 +623,17 @@ where
 	}
 	Ok((calls, signed_blocks))
 }
-
-fn exec_tops<B: BlockT<Hash = H256>, OcallApi, P>(
+fn exec_tops<B, SB, OcallApi, P>(
 	ocall_api: &OcallApi,
 	top_pool: &P,
 	latest_onchain_header: &B::Header,
 	shard: ShardIdentifier,
 	slot_end: Duration,
-) -> Result<(Vec<OpaqueCall>, Option<SignedSidechainBlock>)>
+) -> Result<(Vec<OpaqueCall>, Option<SB>)>
 where
+	B: BlockT<Hash = H256>,
+	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	OcallApi: EnclaveOnChainOCallApi,
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
@@ -648,7 +653,7 @@ where
 		return Ok(Default::default())
 	}
 
-	let (calls, blocks) = exec_trusted_calls::<B, SignedSidechainBlock, _, _>(
+	let (calls, blocks) = exec_trusted_calls::<B, SB, _, _>(
 		ocall_api,
 		top_pool,
 		latest_onchain_header,
@@ -705,9 +710,12 @@ where
 			on_chain_ocall,
 		) {
 			Ok(hashes) => {
-				hashes.map(|(_, op_hash)| call_hashes.push(op_hash));
-				let in_block = hashes.is_some();
-				author.remove_top(vec![top_or_hash(tcs, true)], shard, in_block).unwrap();
+				if let Some((_, op_hash)) = hashes {
+					call_hashes.push(op_hash)
+				}
+				author
+					.remove_top(vec![top_or_hash(tcs, true)], shard, hashes.is_some())
+					.unwrap();
 			},
 			Err(e) =>
 				error!("Error performing worker call (will not push top hash): Error: {:?}", e),

@@ -20,17 +20,18 @@ use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_types::{block::SignedBlock as SignedSidechainBlock, WorkerRequest, WorkerResponse};
+use itp_types::{WorkerRequest, WorkerResponse};
+use its_primitives::traits::SignedBlock;
 use log::*;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
 impl EnclaveOnChainOCallApi for OcallApi {
-	fn send_block_and_confirmation(
+	fn send_block_and_confirmation<SB: SignedBlock>(
 		&self,
 		confirmations: Vec<OpaqueExtrinsic>,
-		signed_blocks: Vec<SignedSidechainBlock>,
+		signed_blocks: Vec<SB>,
 	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let confirmations_encoded = confirmations.encode();

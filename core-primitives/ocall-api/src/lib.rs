@@ -19,10 +19,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_types::{
-	block::SignedBlock as SignedSidechainBlock, TrustedOperationStatus, WorkerRequest,
-	WorkerResponse,
-};
+use itp_types::{traits::SignedBlock, TrustedOperationStatus, WorkerRequest, WorkerResponse};
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 use sp_std::prelude::Vec;
@@ -64,10 +61,10 @@ pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
 
 /// trait for o-calls related to on-chain interactions
 pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
-	fn send_block_and_confirmation(
+	fn send_block_and_confirmation<SB: SignedBlock>(
 		&self,
 		confirmations: Vec<OpaqueExtrinsic>,
-		signed_blocks: Vec<SignedSidechainBlock>,
+		signed_blocks: Vec<SB>,
 	) -> SgxResult<()>;
 
 	fn worker_request<V: Encode + Decode>(

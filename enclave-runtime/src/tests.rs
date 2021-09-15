@@ -408,13 +408,14 @@ fn test_create_block_and_confirmation_works() {
 	let slot_end = duration_now() + GETTER_TIMEOUT + CALL_TIMEOUT;
 
 	// when
-	let (confirm_calls, signed_blocks) = crate::exec_tops_for_all_shards::<Block, _, _>(
-		&OcallApi,
-		&top_pool,
-		&latest_onchain_header,
-		slot_end,
-	)
-	.unwrap();
+	let (confirm_calls, signed_blocks) =
+		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+			&OcallApi,
+			&top_pool,
+			&latest_onchain_header,
+			slot_end,
+		)
+		.unwrap();
 
 	debug!("got {} signed block(s)", signed_blocks.len());
 
@@ -503,7 +504,7 @@ fn test_create_state_diff() {
 	}
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, _, _>(
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
@@ -600,7 +601,7 @@ fn test_executing_call_updates_account_nonce() {
 	}
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, _, _>(
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
@@ -681,7 +682,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	}
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, _, _>(
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
@@ -754,7 +755,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	}
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, _, _>(
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header,
