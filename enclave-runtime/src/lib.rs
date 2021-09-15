@@ -729,11 +729,11 @@ where
 
 	debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 	// call execution
-	for tcs in trusted_calls.into_iter() {
+	for trusted_call_signed in trusted_calls.into_iter() {
 		match handle_trusted_worker_call::<PB, _>(
 			&mut calls,
 			&mut state,
-			&tcs,
+			&trusted_call_signed,
 			latest_onchain_header,
 			shard,
 			on_chain_ocall,
@@ -743,7 +743,11 @@ where
 					call_hashes.push(op_hash)
 				}
 				author
-					.remove_top(vec![top_or_hash(tcs, true)], shard, hashes.is_some())
+					.remove_top(
+						vec![top_or_hash(trusted_call_signed, true)],
+						shard,
+						hashes.is_some(),
+					)
 					.unwrap();
 			},
 			Err(e) =>
