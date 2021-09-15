@@ -104,7 +104,7 @@ use std::{
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
-use utils::{duration_now, time_until_next_slot};
+use utils::duration_now;
 
 mod attestation;
 mod ipfs;
@@ -617,6 +617,8 @@ where
 			},
 		};
 
+		error!("Shards {:?} execution time: {:?}", shard, shard_exec_time);
+
 		match exec_tops::<PB, SB, _, _>(
 			ocall_api,
 			tx_pool,
@@ -659,7 +661,7 @@ where
 	P: TrustedOperationPool<Hash = H256> + 'static,
 {
 	// first half of the slot is dedicated to getters.
-	let ends_at = time_until_next_slot(max_exec_duration);
+	let ends_at = duration_now() + max_exec_duration;
 	let remaining_getter_time =
 		max_exec_duration.checked_div(2).expect("checked_div yields some if rhs != 0");
 
