@@ -692,10 +692,10 @@ where
 ///
 /// This function returns:
 /// * 	the parentchain calls that should wrapped in an extrinsic and sent to the parentchain
-/// 	including the block_confirmation call for the sidechain block that was produced.
-/// * The sidechain block that was produced.
+/// 	including the block_confirmation call for the produced sidechain block.
+/// * The produced sidechain block.
 ///
-/// Todo: This function does to much, but it needs anyhow some refactoring here to make the code
+/// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
 fn exec_trusted_calls<PB, SB, O, P>(
 	on_chain_ocall: &O,
