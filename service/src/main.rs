@@ -529,9 +529,15 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 	produce_blocks(enclave_api, api, latest)
 }
 
-/// Starts block production
+/// Gets the amount of blocks to sync from the parentchain and feeds them to the enclave.
 ///
-/// Returns the last synced header of layer one
+/// It also calls into the enclave if there are no blocks to sync because the enclave does
+/// currently two things in `produce_blocks`:
+///
+/// * sync blocks
+/// * execute pending trusted operations
+///
+/// Todo: the two tasks above should be independent: #404
 pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
 	api: &Api<sr25519::Pair, WsRpcClient>,
