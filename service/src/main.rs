@@ -52,7 +52,7 @@ use itp_settings::{
 	},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
-use itp_types::{block::SignedBlock as SignedSidechainBlock, SignedBlock};
+use itp_types::{block::SignedBlock as SignedSidechainBlock, Block, SignedBlock};
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
@@ -544,6 +544,17 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	let head_block_number = curr_head.block.header.number;
 
 	let blocks_to_sync = get_blocks_to_sync(api, &last_synced_head, &curr_head);
+
+	if blocks_to_sync.is_empty() {
+		// we have nothing to sync, but we can still execute trusted operations
+		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
+
+		if let Err(e) = enclave_api.produce_blocks::<Block>(&[], tee_nonce) {
+			error!("{:?}", e);
+		};
+
+		return last_synced_head
+	}
 
 	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
 	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
