@@ -575,7 +575,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 		)
 	}
 
-	curr_head.block.header
+	last_synced_head
 }
 
 /// gets a list of blocks that need to be synced, ordered from oldest to most recent header
