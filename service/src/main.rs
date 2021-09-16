@@ -535,7 +535,7 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
 	api: &Api<sr25519::Pair, WsRpcClient>,
-	mut last_synced_head: Header,
+	mut last_synced_header: Header,
 ) -> Header {
 	let tee_accountid = enclave_account(enclave_api);
 
@@ -543,7 +543,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	let curr_head: SignedBlock = api.last_finalized_block().unwrap().unwrap();
 	let head_block_number = curr_head.block.header.number;
 
-	let blocks_to_sync = get_blocks_to_sync(api, &last_synced_head, &curr_head);
+	let blocks_to_sync = get_blocks_to_sync(api, &last_synced_header, &curr_head);
 
 	if blocks_to_sync.is_empty() {
 		// we have nothing to sync, but we can still execute trusted operations
@@ -553,7 +553,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 			error!("{:?}", e);
 		};
 
-		return last_synced_head
+		return last_synced_header
 	}
 
 	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
@@ -563,19 +563,19 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 		if let Err(e) = enclave_api.produce_blocks(chunk, tee_nonce) {
 			error!("{:?}", e);
 			// enclave might not have synced
-			return last_synced_head
+			return last_synced_header
 		};
 
-		last_synced_head =
+		last_synced_header =
 			chunk.last().map(|b| b.block.header.clone()).expect("Chunk can't be empty; qed");
 
 		println!(
 			"Synced {} blocks out of {} finalized blocks",
-			last_synced_head.number, head_block_number,
+			last_synced_header.number, head_block_number,
 		)
 	}
 
-	last_synced_head
+	last_synced_header
 }
 
 /// gets a list of blocks that need to be synced, ordered from oldest to most recent header
