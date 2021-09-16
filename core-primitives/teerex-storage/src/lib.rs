@@ -15,7 +15,7 @@ pub trait StoragePrefix {
 
 impl StoragePrefix for TeeRexStorage {
 	fn prefix() -> &'static str {
-		"Teerex"
+		"SubstrateeRegistry"
 	}
 }
 

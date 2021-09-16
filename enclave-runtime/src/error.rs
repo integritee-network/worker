@@ -13,6 +13,7 @@ pub enum Error {
 	Rsa(crate::rsa3072::Error),
 	ChainStorage(itp_storage_verifier::Error),
 	IO(std::io::Error),
+	LightClient(itc_light_client::error::Error),
 	Sgx(sgx_status_t),
 	Stf(String),
 	Other(Box<dyn std::error::Error>),

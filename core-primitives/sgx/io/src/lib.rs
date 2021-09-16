@@ -20,7 +20,7 @@ pub use sgx::*;
 
 /// Abstraction around IO that is supposed to use the `std::io::File`
 pub trait IO: Sized {
-	type Error: From<std::io::Error>;
+	type Error: From<std::io::Error> + std::fmt::Debug + 'static;
 
 	fn read() -> Result<Self, Self::Error>;
 	fn write(&self) -> Result<(), Self::Error>;
@@ -29,7 +29,7 @@ pub trait IO: Sized {
 /// Abstraction around IO that is supposed to use `SgxFile`. We expose it also in `std` to
 /// be able to put it as trait bounds in `std` and use it in tests.
 pub trait SealedIO: Sized {
-	type Error: From<std::io::Error>;
+	type Error: From<std::io::Error> + std::fmt::Debug + 'static;
 
 	/// Type that is unsealed.
 	type Unsealed;

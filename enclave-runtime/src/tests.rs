@@ -23,7 +23,6 @@ use crate::{
 		pool::ExtrinsicHash,
 		top_pool_container::{GetTopPool, TopPoolContainer},
 	},
-	Timeout,
 };
 use codec::{Decode, Encode};
 use core::ops::Deref;
@@ -33,14 +32,17 @@ use ita_stf::{
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
-	enclave::GETTER_TIMEOUT,
+	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
 };
 use itp_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_storage::storage_value_key;
 use itp_types::{Block, Header};
-use its_primitives::traits::{Block as BlockT, SignedBlock as SignedBlockT};
+use its_primitives::{
+	traits::{Block as BlockT, SignedBlock as SignedBlockT},
+	types::block::SignedBlock,
+};
 use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{
@@ -53,13 +55,7 @@ use sgx_tunittest::*;
 use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
 use sp_runtime::traits::Header as HeaderT;
-use std::{
-	string::String,
-	sync::Arc,
-	time::{SystemTime, UNIX_EPOCH},
-	untrusted::time::SystemTimeEx,
-	vec::Vec,
-};
+use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
 
@@ -102,8 +98,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		state::tests::test_write_and_load_state_works,
 		state::tests::test_sgx_state_decode_encode_works,
 		state::tests::test_encrypt_decrypt_state_type_works,
-		test_time_is_overdue,
-		test_time_is_not_overdue,
 		test_compose_block_and_confirmation,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
@@ -149,27 +143,6 @@ pub fn ensure_no_empty_shard_directory_exists() {
 }
 
 #[allow(unused)]
-fn test_time_is_overdue() {
-	// given
-	let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-	// when
-	let before_start_time = (start_time * 1000 - GETTER_TIMEOUT) / 1000;
-	let time_has_run_out = crate::time_is_overdue(Timeout::Getter, before_start_time);
-	// then
-	assert!(time_has_run_out)
-}
-
-#[allow(unused)]
-fn test_time_is_not_overdue() {
-	// given
-	let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-	// when
-	let time_has_run_out = crate::time_is_overdue(Timeout::Call, start_time);
-	// then
-	assert!(!time_has_run_out)
-}
-
-#[allow(unused)]
 fn test_compose_block_and_confirmation() {
 	// given
 	ensure_no_empty_shard_directory_exists();
@@ -186,8 +159,8 @@ fn test_compose_block_and_confirmation() {
 	Stf::update_sidechain_block_number(&mut state, 3);
 
 	// when
-	let (opaque_call, signed_block) = crate::compose_block_and_confirmation(
-		latest_onchain_header,
+	let (opaque_call, signed_block) = crate::compose_block_and_confirmation::<Block, SignedBlock>(
+		&latest_onchain_header,
 		signed_top_hashes,
 		shard,
 		state_hash_apriori,
@@ -433,7 +406,13 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
+		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+			&OcallApi,
+			&top_pool,
+			&latest_onchain_header,
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+		)
+		.unwrap();
 
 	debug!("got {} signed block(s)", signed_blocks.len());
 
@@ -522,8 +501,13 @@ fn test_create_state_diff() {
 	}
 
 	// when
-	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+		&OcallApi,
+		&top_pool,
+		&latest_onchain_header,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
+	)
+	.unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
 	Aes::decrypt(&mut encrypted_payload).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
@@ -614,8 +598,13 @@ fn test_executing_call_updates_account_nonce() {
 	}
 
 	// when
-	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+		&OcallApi,
+		&top_pool,
+		&latest_onchain_header,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
+	)
+	.unwrap();
 
 	// then
 	let mut state = state::load(&shard).unwrap();
@@ -690,8 +679,13 @@ fn test_invalid_nonce_call_is_not_executed() {
 	}
 
 	// when
-	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+		&OcallApi,
+		&top_pool,
+		&latest_onchain_header,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
+	)
+	.unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();
@@ -758,8 +752,13 @@ fn test_non_root_shielding_call_is_not_executed() {
 	}
 
 	// when
-	let (_, signed_blocks) =
-		crate::execute_top_pool_calls(&OcallApi, &top_pool, latest_onchain_header).unwrap();
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+		&OcallApi,
+		&top_pool,
+		&latest_onchain_header,
+		MAX_TRUSTED_OPS_EXEC_DURATION,
+	)
+	.unwrap();
 
 	// then
 	let mut updated_state = state::load(&shard).unwrap();

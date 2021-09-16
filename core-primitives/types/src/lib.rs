@@ -4,8 +4,6 @@
 use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
-pub use sp_core::crypto::AccountId32 as AccountId;
-use sp_core::H256;
 use sp_runtime::{
 	generic::{Block as BlockG, Header as HeaderG, SignedBlock as SignedBlockG},
 	traits::BlakeTwo256,
@@ -36,6 +34,9 @@ pub type PalletString = Vec<u8>;
 #[cfg(feature = "std")]
 pub type PalletString = String;
 
+pub use sp_core::{crypto::AccountId32 as AccountId, H256};
+pub use substrate_api_client::{AccountData, AccountInfo};
+
 pub type ShardIdentifier = H256;
 pub type BlockNumber = u32;
 pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
@@ -47,7 +48,7 @@ pub type SignedBlock = SignedBlockG<Block>;
 pub struct OpaqueCall(pub Vec<u8>);
 
 impl OpaqueCall {
-	/// Convert an encoded call to an `OpaqueCall`.
+	/// Convert call tuple to an `OpaqueCall`.
 	pub fn from_tuple<C: Encode>(call: &C) -> Self {
 		OpaqueCall(call.encode())
 	}
@@ -144,5 +145,17 @@ impl From<WorkerResponse<Vec<u8>>> for StorageEntry<Vec<u8>> {
 		match response {
 			WorkerResponse::ChainStorage(key, value, proof) => StorageEntry { key, value, proof },
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn opaque_call_encodes_correctly() {
+		let call_tuple = ([1u8, 2u8], 5u8);
+		let call = OpaqueCall::from_tuple(&call_tuple);
+		assert_eq!(call.encode(), call_tuple.encode())
 	}
 }

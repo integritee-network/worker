@@ -73,9 +73,9 @@ pub mod worker {
 
 /// Settings concerning the enclave
 pub mod enclave {
-	// timeouts for getter and call execution
-	pub static CALL_TIMEOUT: i64 = 300; // timeout in ms
-	pub static GETTER_TIMEOUT: i64 = 300; // timeout in ms
+	use core::time::Duration;
+
+	pub static MAX_TRUSTED_OPS_EXEC_DURATION: Duration = Duration::from_millis(600);
 }
 
 /// Settings concerning the node

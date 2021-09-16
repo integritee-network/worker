@@ -2633,6 +2633,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+ "substrate-api-client",
 ]
 
 [[package]]

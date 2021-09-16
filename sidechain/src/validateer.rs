@@ -70,25 +70,22 @@ mod tests {
 
 	#[test]
 	pub fn get_validateer_count_works() {
-		let mock = OnchainMock::default().with_validateer_set();
+		let mock = OnchainMock::default().with_validateer_set(None);
 		assert_eq!(mock.validateer_count(&default_header()).unwrap(), 4u64);
 	}
 
 	#[test]
 	pub fn get_validateer_set_works() {
-		let mock = OnchainMock::default().with_validateer_set();
+		let mock = OnchainMock::default().with_validateer_set(None);
 
-		let validateers = validateer_set()
-			.into_iter()
-			.map(|e| e.into_tuple().1.unwrap())
-			.collect::<Vec<Enclave>>();
+		let validateers = validateer_set();
 
 		assert_eq!(mock.current_validateers(&default_header()).unwrap(), validateers);
 	}
 
 	#[test]
 	pub fn if_validateer_count_bigger_than_returned_validateers_return_err() {
-		let mut mock = OnchainMock::default().with_validateer_set();
+		let mut mock = OnchainMock::default().with_validateer_set(None);
 		mock.insert(TeeRexStorage::enclave_count(), 5u64.encode());
 
 		assert_eq!(
