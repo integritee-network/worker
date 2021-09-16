@@ -45,13 +45,13 @@ impl SealedIO for Rsa3072Seal {
 	}
 
 	fn seal(unsealed: Rsa3072KeyPair) -> Result<()> {
-		let key_json = serde_json::to_vec_pretty(&unsealed)
-			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		let key_json =
+			serde_json::to_vec(&unsealed).map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(seal(&key_json, RSA3072_SEALED_KEY_FILE)?)
 	}
 }
 
-impl ShieldingCrypto for Rsa3072Seal {
+impl ShieldingCrypto for Rsa3072KeyPair {
 	type Error = Error;
 
 	fn encrypt(data: &[u8]) -> Result<Vec<u8>> {
@@ -74,8 +74,8 @@ impl ShieldingCrypto for Rsa3072Seal {
 impl Rsa3072Seal {
 	pub fn unseal_pubkey() -> Result<Rsa3072PubKey> {
 		let pair = Self::unseal()?;
-		let pubkey = pair.export_pubkey().unwrap();
-		Ok(pubkey)
+		let pubkey = pair.export_pubkey().map_err(|e| Error::Other(format!("{:?}", e).into()));
+		Ok(pubkey.unwrap())
 	}
 }
 

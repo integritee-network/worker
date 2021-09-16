@@ -242,10 +242,8 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> EnclaveResult<()
 		.map(|_| info!("    [Enclave] Received Shielding key"))
 		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving shielding key")?;
 
-	//let key_json_str = std::str::from_utf8(&rsa_pair).unwrap();
 	let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair)
 		.sgx_error_with_log("    [Enclave] Received Invalid RSA key")?;
-	//let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair).unwrap();
 	Rsa3072Seal::seal(key)?;
 
 	let mut aes_key = [0u8; 16];

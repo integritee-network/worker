@@ -85,6 +85,7 @@ use rpc::{
 	api::SideChainApi,
 	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
 };
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_types::{sgx_status_t, SgxResult};
 use sp_core::{blake2_256, crypto::Pair, H256};
@@ -1036,7 +1037,7 @@ fn handle_shield_funds_xt(
 	let mut state = load_initialized_state(&shard)?;
 
 	debug!("decrypt the call");
-	let account_vec = Rsa3072Seal::decrypt(&account_encrypted)?;
+	let account_vec = Rsa3072KeyPair::decrypt(&account_encrypted)?;
 	let account = AccountId::decode(&mut account_vec.as_slice())
 		.sgx_error_with_log("[ShieldFunds] Could not decode account")?;
 	let root = Stf::get_root(&mut state);
@@ -1078,7 +1079,7 @@ fn decrypt_unchecked_extrinsic(
     );
 
 	debug!("decrypt the call");
-	let request_vec = Rsa3072Seal::decrypt(&cyphertext)?;
+	let request_vec = Rsa3072KeyPair::decrypt(&cyphertext)?;
 
 	Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
 }

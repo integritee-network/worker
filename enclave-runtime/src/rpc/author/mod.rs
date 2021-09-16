@@ -18,19 +18,6 @@
 
 //! Substrate block-author/full-node API.
 pub extern crate alloc;
-use alloc::{boxed::Box, vec::Vec};
-
-use log::*;
-
-use std::sync::Arc;
-
-use codec::{Decode, Encode};
-use core::iter::Iterator;
-use jsonrpc_core::futures::future::{ready, TryFutureExt};
-use sp_runtime::generic;
-
-use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
-
 use crate::{
 	rpc::error::{Error as StateRpcError, FutureResult, Result},
 	top_pool::{
@@ -40,13 +27,23 @@ use crate::{
 		},
 	},
 };
-use jsonrpc_core::Error as RpcError;
+use alloc::{boxed::Box, vec::Vec};
+use codec::{Decode, Encode};
+use core::iter::Iterator;
+use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use jsonrpc_core::{
+	futures::future::{ready, TryFutureExt},
+	Error as RpcError,
+};
+use log::*;
+use sp_runtime::generic;
+use std::sync::Arc;
 pub mod client_error;
 use client_error::Error as ClientError;
 pub mod hash;
-
 use crate::state;
-use itp_sgx_crypto::{Rsa3072Seal, ShieldingCrypto};
+use itp_sgx_crypto::ShieldingCrypto;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -138,7 +135,7 @@ where
 			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
 		}
 		// decrypt call
-		let request_vec: Vec<u8> = match Rsa3072Seal::decrypt(&ext.as_slice()) {
+		let request_vec: Vec<u8> = match Rsa3072KeyPair::decrypt(&ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
@@ -237,7 +234,7 @@ where
 			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
 		}
 		// decrypt call
-		let request_vec: Vec<u8> = match Rsa3072Seal::decrypt(&ext.as_slice()) {
+		let request_vec: Vec<u8> = match Rsa3072KeyPair::decrypt(&ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
