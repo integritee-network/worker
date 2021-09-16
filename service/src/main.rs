@@ -550,10 +550,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
 
 		// Produce blocks
-		if let Err(e) = chunk
-			.to_vec()
-			.using_encoded(|b| enclave_api.produce_blocks(b.to_vec(), tee_nonce))
-		{
+		if let Err(e) = enclave_api.produce_blocks(chunk, tee_nonce) {
 			error!("{:?}", e);
 			// enclave might not have synced
 			return last_synced_head
