@@ -17,21 +17,39 @@
 */
 
 use crate::{error::Error, Enclave, EnclaveResult};
+use codec::Encode;
 use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use sgx_types::sgx_status_t;
+use sp_runtime::{generic::SignedBlock, traits::Block};
 
 /// trait for handling blocks on the side chain
 pub trait SideChain: Send + Sync + 'static {
-	fn produce_blocks(&self, blocks: Vec<u8>, nonce: u32) -> EnclaveResult<()>;
+	/// Sync parentchain blocks and execute pending tops in the enclave
+	fn sync_parentchain_and_execute_tops<PB: Block>(
+		&self,
+		blocks: &[SignedBlock<PB>],
+		nonce: u32,
+	) -> EnclaveResult<()>;
 }
 
 impl SideChain for Enclave {
-	fn produce_blocks(&self, blocks: Vec<u8>, nonce: u32) -> EnclaveResult<()> {
+	fn sync_parentchain_and_execute_tops<PB: Block>(
+		&self,
+		blocks: &[SignedBlock<PB>],
+		nonce: u32,
+	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let blocks_enc = blocks.encode();
 
 		let result = unsafe {
-			ffi::produce_blocks(self.eid, &mut retval, blocks.as_ptr(), blocks.len(), &nonce)
+			ffi::sync_parentchain_and_execute_tops(
+				self.eid,
+				&mut retval,
+				blocks_enc.as_ptr(),
+				blocks_enc.len(),
+				&nonce,
+			)
 		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
