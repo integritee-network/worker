@@ -535,7 +535,7 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
 	api: &Api<sr25519::Pair, WsRpcClient>,
-	last_synced_head: Header,
+	mut last_synced_head: Header,
 ) -> Header {
 	let tee_accountid = enclave_account(enclave_api);
 
@@ -555,6 +555,9 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 			// enclave might not have synced
 			return last_synced_head
 		};
+
+		last_synced_head =
+			chunk.last().map(|b| b.block.header.clone()).expect("Chunk can't be empty; qed");
 
 		println!(
 			"Synced {} blocks out of {} finalized blocks",
