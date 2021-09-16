@@ -560,7 +560,6 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
 		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
 
-		// Produce blocks
 		if let Err(e) = enclave_api.produce_blocks(chunk, tee_nonce) {
 			error!("{:?}", e);
 			// enclave might not have synced
@@ -572,8 +571,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 
 		println!(
 			"Synced {} blocks out of {} finalized blocks",
-			chunk.last().map(|b| b.block.header.number).expect("Chunk can't be empty; qed"),
-			head_block_number,
+			last_synced_head.number, head_block_number,
 		)
 	}
 
