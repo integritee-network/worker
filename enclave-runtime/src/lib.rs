@@ -426,7 +426,7 @@ pub unsafe extern "C" fn init_light_client(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn produce_blocks(
+pub unsafe extern "C" fn sync_parentchain_and_execute_tops(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
 	nonce: *const u32,
@@ -436,15 +436,27 @@ pub unsafe extern "C" fn produce_blocks(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	if let Err(e) = produce_blocks_int::<Block>(blocks_to_sync, *nonce) {
+	if let Err(e) = sync_parentchain_and_execute_tops_int::<Block>(blocks_to_sync, *nonce) {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Internal [`produce_blocks`] function to be able to use the handy `?` operator.
-fn produce_blocks_int<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, nonce: u32) -> Result<()>
+/// Internal [`sync_parentchain_and_execute_tops`] function to be able to use the handy `?` operator.
+///
+/// Sync parentchain blocks to the light-client and execute pending trusted operations.
+///
+/// This function x	 an ecall that does the following:
+///
+/// *   send `confirm_call` xt's of the `Stf` functions executed due to in-/direct invocation to the
+///     to the parentchain
+/// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
+/// *   gossip produced sidechain blocks to peer validateers.
+fn sync_parentchain_and_execute_tops_int<PB>(
+	blocks_to_sync: Vec<SignedBlockG<PB>>,
+	nonce: u32,
+) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,

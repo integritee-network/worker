@@ -398,7 +398,7 @@ fn start_interval_block_production<E: EnclaveBase + SideChain>(
 			if elapsed >= block_production_interval {
 				// update interval time
 				interval_start = SystemTime::now();
-				latest_head = produce_blocks(enclave_api, api, latest_head)
+				latest_head = sync_parentchain_and_execute_tops(enclave_api, api, latest_head)
 			} else {
 				// sleep for the rest of the interval
 				let sleep_time = block_production_interval - elapsed;
@@ -526,7 +526,7 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 
 	info!("Finished initializing light client, syncing....");
 
-	produce_blocks(enclave_api, api, latest)
+	sync_parentchain_and_execute_tops(enclave_api, api, latest)
 }
 
 /// Gets the amount of blocks to sync from the parentchain and feeds them to the enclave.
@@ -538,7 +538,7 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 /// * execute pending trusted operations
 ///
 /// Todo: the two tasks above should be independent: #404
-pub fn produce_blocks<E: EnclaveBase + SideChain>(
+pub fn sync_parentchain_and_execute_tops<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	mut last_synced_header: Header,
@@ -555,7 +555,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 		// we have nothing to sync, but we can still execute trusted operations
 		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
 
-		if let Err(e) = enclave_api.produce_blocks::<Block>(&[], tee_nonce) {
+		if let Err(e) = enclave_api.sync_parentchain_and_execute_tops::<Block>(&[], tee_nonce) {
 			error!("{:?}", e);
 		};
 
@@ -566,7 +566,7 @@ pub fn produce_blocks<E: EnclaveBase + SideChain>(
 	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
 		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
 
-		if let Err(e) = enclave_api.produce_blocks(chunk, tee_nonce) {
+		if let Err(e) = enclave_api.sync_parentchain_and_execute_tops(chunk, tee_nonce) {
 			error!("{:?}", e);
 			// enclave might not have synced
 			return last_synced_header

@@ -37,7 +37,7 @@ extern "C" {
 		latest_header_size: usize,
 	) -> sgx_status_t;
 
-	pub fn produce_blocks(
+	pub fn sync_parentchain_and_execute_tops(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		blocks: *const u8,

@@ -25,7 +25,8 @@ use sp_runtime::{generic::SignedBlock, traits::Block};
 
 /// trait for handling blocks on the side chain
 pub trait SideChain: Send + Sync + 'static {
-	fn produce_blocks<PB: Block>(
+	/// Sync parentchain blocks and execute pending tops in the enclave
+	fn sync_parentchain_and_execute_tops<PB: Block>(
 		&self,
 		blocks: &[SignedBlock<PB>],
 		nonce: u32,
@@ -33,7 +34,7 @@ pub trait SideChain: Send + Sync + 'static {
 }
 
 impl SideChain for Enclave {
-	fn produce_blocks<PB: Block>(
+	fn sync_parentchain_and_execute_tops<PB: Block>(
 		&self,
 		blocks: &[SignedBlock<PB>],
 		nonce: u32,
@@ -42,7 +43,7 @@ impl SideChain for Enclave {
 		let blocks_enc = blocks.encode();
 
 		let result = unsafe {
-			ffi::produce_blocks(
+			ffi::sync_parentchain_and_execute_tops(
 				self.eid,
 				&mut retval,
 				blocks_enc.as_ptr(),

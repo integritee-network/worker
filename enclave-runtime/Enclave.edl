@@ -51,7 +51,7 @@ enclave {
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
-        public sgx_status_t produce_blocks(
+        public sgx_status_t sync_parentchain_and_execute_tops(
             [in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
             [in] uint32_t* nonce
         );
