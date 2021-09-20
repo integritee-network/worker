@@ -54,19 +54,17 @@ impl SealedIO for Rsa3072Seal {
 impl ShieldingCrypto for Rsa3072KeyPair {
 	type Error = Error;
 
-	fn encrypt(data: &[u8]) -> Result<Vec<u8>> {
-		let rsa_pair = Rsa3072Seal::unseal()?;
+	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
 		let mut cipher_buffer = Vec::new();
-		&rsa_pair.encrypt_buffer(data, &mut cipher_buffer);
+		self.encrypt_buffer(data, &mut cipher_buffer)
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(cipher_buffer)
 	}
 
-	fn decrypt(data: &[u8]) -> Result<Vec<u8>> {
-		let rsa_pair = Rsa3072Seal::unseal()?;
+	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
 		let mut decrypted_buffer = Vec::new();
-		&rsa_pair
-			.decrypt_buffer(data, &mut decrypted_buffer)
-			.map_err(|e| Error::Other(format!("{:?}", e).into()));
+		self.decrypt_buffer(data, &mut decrypted_buffer)
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(decrypted_buffer)
 	}
 }
@@ -74,8 +72,8 @@ impl ShieldingCrypto for Rsa3072KeyPair {
 impl Rsa3072Seal {
 	pub fn unseal_pubkey() -> Result<Rsa3072PubKey> {
 		let pair = Self::unseal()?;
-		let pubkey = pair.export_pubkey().map_err(|e| Error::Other(format!("{:?}", e).into()));
-		Ok(pubkey.unwrap())
+		let pubkey = pair.export_pubkey().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		Ok(pubkey)
 	}
 }
 
@@ -88,7 +86,7 @@ pub fn create_sealed_if_absent() -> Result<()> {
 }
 
 pub fn create_sealed() -> Result<()> {
-	let rsa_keypair = Rsa3072KeyPair::new().unwrap();
+	let rsa_keypair = Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
 	Rsa3072Seal::seal(rsa_keypair)
 }

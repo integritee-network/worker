@@ -35,7 +35,7 @@ use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
 };
-use itp_sgx_crypto::{Aes, Ed25519Seal, Rsa3072Seal, StateCrypto};
+use itp_sgx_crypto::{AesSeal, Ed25519Seal, Rsa3072Seal, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_storage::storage_value_key;
 use itp_types::{Block, Header};
@@ -509,7 +509,7 @@ fn test_create_state_diff() {
 	)
 	.unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
-	Aes::decrypt(&mut encrypted_payload).unwrap();
+	AesSeal::unseal().map(|key| key.decrypt(&mut encrypted_payload)).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
 	let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
 

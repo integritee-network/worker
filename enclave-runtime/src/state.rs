@@ -23,7 +23,8 @@ use ita_stf::{
 	StateTypeDiff as StfStateTypeDiff, Stf,
 };
 use itp_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
-use itp_sgx_crypto::{Aes, StateCrypto};
+use itp_sgx_crypto::{AesSeal, StateCrypto};
+use itp_sgx_io::SealedIO;
 use log::*;
 use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_tcrypto::rsgx_sha256_slice;
@@ -108,7 +109,7 @@ fn read(path: &str) -> Result<Vec<u8>> {
 	let state_hash = rsgx_sha256_slice(&bytes)?;
 	debug!("read encrypted state with hash 0x{} from {}", hex::encode_hex(&state_hash), path);
 
-	Aes::decrypt(&mut bytes)?;
+	AesSeal::unseal().map(|key| key.decrypt(&mut bytes))??;
 	trace!("buffer decrypted = {:?}", bytes);
 
 	Ok(bytes)
@@ -117,15 +118,13 @@ fn read(path: &str) -> Result<Vec<u8>> {
 #[allow(unused)]
 fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> Result<sgx_status_t> {
 	debug!("plaintext data to be written: {:?}", bytes);
-
-	Aes::encrypt(bytes)?;
-
+	AesSeal::unseal().map(|key| key.encrypt(bytes))?;
 	io::write(&bytes, path)?;
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 fn encrypt(mut state: Vec<u8>) -> Result<Vec<u8>> {
-	Aes::encrypt(&mut state)?;
+	AesSeal::unseal().map(|key| key.encrypt(&mut state))??;
 	Ok(state)
 }
 
