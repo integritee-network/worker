@@ -38,28 +38,22 @@ use my_node_runtime::Balance;
 #[cfg(feature = "std")]
 pub use my_node_runtime::Index;
 
-use sp_core::crypto::AccountId32;
-//use sp_core::{Encode, Decode};
-use sp_core::{ed25519, sr25519, Pair, H256};
+use sgx_externalities::SgxExternalitiesDiffType as StateTypeDiff;
+use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
+
 // TODO: use MultiAddress instead of AccountId32?
 
-//pub type Signature = AnySignature;
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
-//pub type AccountId = MultiAddress<AccountId32,;
 pub type AccountId = AccountId32;
 pub type Hash = sp_core::H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 //FIXME: Is this really necessary to define all variables three times?
-//pub static BALANCE_MODULE: u8 = 4u8;
-//pub static BALANCE_TRANSFER: u8 = 0u8;
 pub static TEEREX_MODULE: u8 = 8u8;
 pub static UNSHIELD: u8 = 6u8;
-//pub static CALL_CONFIRMED: u8 = 3u8;
 
 pub type ShardIdentifier = H256;
-//pub type Index = u32;
 
 #[derive(Clone)]
 pub enum KeyPair {
@@ -282,26 +276,31 @@ use std::vec::Vec;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct StatePayload {
+	/// state hash before the `state_update` was applied.
 	state_hash_apriori: H256,
+	/// state hash after the `state_update` was applied.
 	state_hash_aposteriori: H256,
-	/// encoded state update
-	state_update: Vec<u8>,
+	/// state diff applied to state with hash `state_hash_apriori`
+	/// leading to state with hash `state_hash_aposteriori`
+	state_update: StateTypeDiff,
 }
 
 impl StatePayload {
-	/// get hash of state before block execution
+	/// get state hash before the `state_update` was applied.
 	pub fn state_hash_apriori(&self) -> H256 {
 		self.state_hash_apriori
 	}
-	/// get hash of state after block execution
+	/// get state hash after the `state_update` was applied.
 	pub fn state_hash_aposteriori(&self) -> H256 {
 		self.state_hash_aposteriori
 	}
-	/// get encoded state update reference
-	pub fn state_update(&self) -> &Vec<u8> {
+	/// reference to the `state_update`
+	pub fn state_update(&self) -> &StateTypeDiff {
 		&self.state_update
 	}
-	pub fn new(apriori: H256, aposteriori: H256, update: Vec<u8>) -> StatePayload {
+
+	/// create new `StatePayload` instance.
+	pub fn new(apriori: H256, aposteriori: H256, update: StateTypeDiff) -> StatePayload {
 		StatePayload {
 			state_hash_apriori: apriori,
 			state_hash_aposteriori: aposteriori,
@@ -338,7 +337,7 @@ mod tests {
 		// given
 		let state_hash_apriori = H256::random();
 		let state_hash_aposteriori = H256::random();
-		let state_update: Vec<u8> = vec![];
+		let state_update: StateTypeDiff = Default::default();
 
 		// when
 		let payload = StatePayload::new(

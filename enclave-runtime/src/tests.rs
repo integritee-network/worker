@@ -510,8 +510,7 @@ fn test_create_state_diff() {
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
 	AesSeal::unseal().map(|key| key.decrypt(&mut encrypted_payload)).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
-	let state_diff =
-		StfStateTypeDiff::decode(&mut state_payload.state_update().as_slice()).unwrap();
+	let state_diff = state_payload.state_update();
 
 	// then
 	let acc_info_vec = state_diff.get(&account_with_money_key_hash).unwrap().as_ref().unwrap();
