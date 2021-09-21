@@ -20,7 +20,6 @@ pub extern crate alloc;
 use self::serde_json::*;
 use crate::{
 	rpc::author::{Author, AuthorApi},
-	rsa3072,
 	top_pool::top_pool_container::GetTopPool,
 	utils::write_slice_and_whitespace_pad,
 };
@@ -36,6 +35,7 @@ use base58::FromBase58;
 use codec::{Decode, Encode};
 use core::{ops::Deref, result::Result};
 use ita_stf::ShardIdentifier;
+use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{
 	block::SignedBlock, DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus,
 };
@@ -218,7 +218,7 @@ pub fn public_api_rpc_handler<T: GetTopPool>(tx_pool_getter: Arc<T>) -> IoHandle
 	let rsa_pubkey_name: &str = "author_getShieldingKey";
 	rpc_methods_vec.push(rsa_pubkey_name);
 	io.add_sync_method(rsa_pubkey_name, move |_: Params| {
-		let rsa_pubkey = match rsa3072::unseal_pubkey() {
+		let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
 			Ok(key) => key,
 			Err(status) => {
 				let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);

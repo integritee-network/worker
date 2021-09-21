@@ -16,7 +16,7 @@
 
 use crate::{
 	ocall::OcallApi,
-	rpc, rsa3072, state,
+	rpc, state,
 	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
 	top_pool,
 	top_pool::{
@@ -35,7 +35,7 @@ use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
 };
-use itp_sgx_crypto::{Aes, Ed25519Seal, StateCrypto};
+use itp_sgx_crypto::{AesSeal, Ed25519Seal, Rsa3072Seal, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_storage::storage_value_key;
 use itp_types::{Block, Header};
@@ -211,7 +211,7 @@ fn test_submit_trusted_call_to_top_pool() {
 	let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
 	let trusted_operation: TrustedOperation = signed_call.clone().into_trusted_operation(true);
 	// encrypt call
-	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+	let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 	let mut encrypted_top: Vec<u8> = Vec::new();
 	rsa_pubkey
 		.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
@@ -255,7 +255,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 	let signed_getter = getter.sign(&signer_pair.into());
 	let trusted_operation: TrustedOperation = signed_getter.clone().into();
 	// encrypt call
-	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+	let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 	let mut encrypted_top: Vec<u8> = Vec::new();
 	rsa_pubkey
 		.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
@@ -299,7 +299,7 @@ fn test_differentiate_getter_and_call_works() {
 	let signed_getter = getter.sign(&signer_pair.clone().into());
 	let trusted_operation: TrustedOperation = signed_getter.clone().into();
 	// encrypt call
-	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+	let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 	let mut encrypted_top: Vec<u8> = Vec::new();
 	rsa_pubkey
 		.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
@@ -317,7 +317,7 @@ fn test_differentiate_getter_and_call_works() {
 	let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
 	let trusted_operation_call: TrustedOperation = signed_call.clone().into_trusted_operation(true);
 	// encrypt call
-	let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+	let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 	let mut encrypted_top_call: Vec<u8> = Vec::new();
 	rsa_pubkey
 		.encrypt_buffer(&trusted_operation_call.encode(), &mut encrypted_top_call)
@@ -393,7 +393,7 @@ fn test_create_block_and_confirmation_works() {
 		let signed_call = call.sign(&signer_pair.into(), nonce, &mrenclave, &shard);
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
 		// encrypt call
-		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+		let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 		let mut encrypted_top: Vec<u8> = Vec::new();
 		rsa_pubkey
 			.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
@@ -451,7 +451,7 @@ fn test_create_state_diff() {
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
 		Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
-	let _rsa_pair = rsa3072::unseal_pair().unwrap();
+	let _rsa_pair = Rsa3072Seal::unseal().unwrap();
 
 	// ensure that state starts empty
 	state::init_shard(&shard).unwrap();
@@ -490,7 +490,7 @@ fn test_create_state_diff() {
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
 		// encrypt call
 		let mut encrypted_top: Vec<u8> = Vec::new();
-		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+		let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 		rsa_pubkey
 			.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
 			.unwrap();
@@ -509,7 +509,7 @@ fn test_create_state_diff() {
 	)
 	.unwrap();
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
-	Aes::decrypt(&mut encrypted_payload).unwrap();
+	AesSeal::unseal().map(|key| key.decrypt(&mut encrypted_payload)).unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
 	let state_diff = StfStateTypeDiff::decode(state_payload.state_update().to_vec());
 
@@ -551,7 +551,7 @@ fn test_executing_call_updates_account_nonce() {
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
 		Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
-	let _rsa_pair = rsa3072::unseal_pair().unwrap();
+	let _rsa_pair = Rsa3072Seal::unseal().unwrap();
 
 	// ensure that state starts empty
 	state::init_shard(&shard).unwrap();
@@ -587,7 +587,7 @@ fn test_executing_call_updates_account_nonce() {
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
 		// encrypt call
 		let mut encrypted_top: Vec<u8> = Vec::new();
-		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+		let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 		rsa_pubkey
 			.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
 			.unwrap();
@@ -632,7 +632,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
 		Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
-	let _rsa_pair = rsa3072::unseal_pair().unwrap();
+	let _rsa_pair = Rsa3072Seal::unseal().unwrap();
 
 	// ensure that state starts empty
 	state::init_shard(&shard).unwrap();
@@ -668,7 +668,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
 		// encrypt call
 		let mut encrypted_top: Vec<u8> = Vec::new();
-		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+		let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 		rsa_pubkey
 			.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
 			.unwrap();
@@ -716,7 +716,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	// Header::new(Number, extrinsicroot, stateroot, parenthash, digest)
 	let latest_onchain_header =
 		Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default());
-	let _rsa_pair = rsa3072::unseal_pair().unwrap();
+	let _rsa_pair = Rsa3072Seal::unseal().unwrap();
 
 	// ensure that state starts empty
 	state::init_shard(&shard).unwrap();
@@ -741,7 +741,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 		let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
 		// encrypt call
 		let mut encrypted_top: Vec<u8> = Vec::new();
-		let rsa_pubkey = rsa3072::unseal_pubkey().unwrap();
+		let rsa_pubkey = Rsa3072Seal::unseal_pubkey().unwrap();
 		rsa_pubkey
 			.encrypt_buffer(&trusted_operation.encode(), &mut encrypted_top)
 			.unwrap();

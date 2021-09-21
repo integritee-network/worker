@@ -68,7 +68,9 @@ use itp_settings::{
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
 	},
 };
-use itp_sgx_crypto::{aes, ed25519, Aes, Ed25519Seal, StateCrypto};
+use itp_sgx_crypto::{
+	aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal, ShieldingCrypto, StateCrypto,
+};
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_storage::{StorageEntryVerified, StorageProof};
@@ -109,7 +111,6 @@ use utils::duration_now;
 mod attestation;
 mod ipfs;
 mod ocall;
-mod rsa3072;
 mod state;
 mod utils;
 
@@ -178,7 +179,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 	pubkey: *mut u8,
 	pubkey_size: u32,
 ) -> sgx_status_t {
-	let rsa_pubkey = match rsa3072::unseal_pubkey() {
+	let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
 		Ok(key) => key,
 		Err(e) => return e.into(),
 	};
@@ -888,7 +889,7 @@ where
 	// create encrypted payload
 	let mut payload: Vec<u8> =
 		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state_update).encode();
-	Aes::encrypt(&mut payload)?;
+	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
 
 	let block = SB::Block::new(
 		signer_pair.public(),
@@ -1035,8 +1036,9 @@ fn handle_shield_funds_xt(
 	let mut state = load_initialized_state(&shard)?;
 
 	debug!("decrypt the call");
-	let rsa_keypair = rsa3072::unseal_pair()?;
-	let account_vec = rsa3072::decrypt(&account_encrypted, &rsa_keypair)?;
+	//let account_vec = Rsa3072KeyPair::decrypt(&account_encrypted)?;
+	let account_vec = Rsa3072Seal::unseal().map(|key| key.decrypt(&account_encrypted))??;
+
 	let account = AccountId::decode(&mut account_vec.as_slice())
 		.sgx_error_with_log("[ShieldFunds] Could not decode account")?;
 	let root = Stf::get_root(&mut state);
@@ -1078,8 +1080,8 @@ fn decrypt_unchecked_extrinsic(
     );
 
 	debug!("decrypt the call");
-	let rsa_keypair = rsa3072::unseal_pair()?;
-	let request_vec = rsa3072::decrypt(&cyphertext, &rsa_keypair)?;
+	//let request_vec = Rsa3072KeyPair::decrypt(&cyphertext)?;
+	let request_vec = Rsa3072Seal::unseal().map(|key| key.decrypt(&cyphertext))??;
 
 	Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
 }

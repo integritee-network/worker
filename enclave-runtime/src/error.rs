@@ -10,7 +10,6 @@ pub enum Error {
 	Rpc(rpc::error::Error),
 	Codec(codec::Error),
 	Crypto(itp_sgx_crypto::Error),
-	Rsa(crate::rsa3072::Error),
 	ChainStorage(itp_storage_verifier::Error),
 	IO(std::io::Error),
 	LightClient(itc_light_client::error::Error),
