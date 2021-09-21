@@ -5106,7 +5106,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#018a82a54424460673b440215b501cd7a24a85d8"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5121,7 +5121,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#018a82a54424460673b440215b501cd7a24a85d8"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -5729,7 +5729,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#018a82a54424460673b440215b501cd7a24a85d8"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
 dependencies = [
  "environmental",
  "hash-db",
