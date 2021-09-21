@@ -150,7 +150,7 @@ pub mod tests {
 	use crate::tests::ensure_no_empty_shard_directory_exists;
 	use sgx_externalities::SgxExternalitiesTrait;
 
-	// Fixme: Move this tests the sgx-runtime:
+	// Fixme: Move this test to sgx-runtime:
 	//
 	// https://github.com/integritee-network/sgx-runtime/issues/23
 	pub fn test_sgx_state_decode_encode_works() {

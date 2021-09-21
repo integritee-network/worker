@@ -40,7 +40,7 @@ pub mod types {
 
 use types::StateTypeDiff;
 
-/// payload of block that needs to be encrypted
+/// payload to be sent to peers for a state update
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 pub struct StatePayload {
 	/// state hash before the `state_update` was applied.
