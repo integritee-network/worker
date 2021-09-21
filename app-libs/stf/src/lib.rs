@@ -26,23 +26,14 @@
 
 extern crate alloc;
 
-#[cfg(feature = "std")]
-extern crate clap;
-
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Compact, Decode, Encode};
 #[cfg(feature = "std")]
 use my_node_runtime::Balance;
 #[cfg(feature = "std")]
 pub use my_node_runtime::Index;
 
-use sgx_externalities::SgxExternalitiesDiffType as StateTypeDiff;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-
-// TODO: use MultiAddress instead of AccountId32?
 
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
@@ -89,7 +80,7 @@ pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 
 #[cfg(feature = "sgx")]
-pub use stf_sgx::types::*;
+pub use stf_sgx_primitives::types::*;
 
 #[cfg(feature = "std")]
 pub mod cli;
@@ -266,49 +257,6 @@ pub struct TrustedReturnValue<T> {
 impl TrustedReturnValue
 */
 
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
-
-#[cfg(feature = "sgx")]
-use std::vec::Vec;
-
-/// payload of block that needs to be encrypted
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct StatePayload {
-	/// state hash before the `state_update` was applied.
-	state_hash_apriori: H256,
-	/// state hash after the `state_update` was applied.
-	state_hash_aposteriori: H256,
-	/// state diff applied to state with hash `state_hash_apriori`
-	/// leading to state with hash `state_hash_aposteriori`
-	state_update: StateTypeDiff,
-}
-
-impl StatePayload {
-	/// get state hash before the `state_update` was applied.
-	pub fn state_hash_apriori(&self) -> H256 {
-		self.state_hash_apriori
-	}
-	/// get state hash after the `state_update` was applied.
-	pub fn state_hash_aposteriori(&self) -> H256 {
-		self.state_hash_aposteriori
-	}
-	/// reference to the `state_update`
-	pub fn state_update(&self) -> &StateTypeDiff {
-		&self.state_update
-	}
-
-	/// create new `StatePayload` instance.
-	pub fn new(apriori: H256, aposteriori: H256, update: StateTypeDiff) -> StatePayload {
-		StatePayload {
-			state_hash_apriori: apriori,
-			state_hash_aposteriori: aposteriori,
-			state_update: update,
-		}
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -330,25 +278,5 @@ mod tests {
 			call.sign(&KeyPair::Sr25519(AccountKeyring::Alice.pair()), nonce, &mrenclave, &shard);
 
 		assert!(signed_call.verify_signature(&mrenclave, &shard));
-	}
-
-	#[test]
-	fn new_payload_works() {
-		// given
-		let state_hash_apriori = H256::random();
-		let state_hash_aposteriori = H256::random();
-		let state_update: StateTypeDiff = Default::default();
-
-		// when
-		let payload = StatePayload::new(
-			state_hash_apriori.clone(),
-			state_hash_aposteriori.clone(),
-			state_update.clone(),
-		);
-
-		// then
-		assert_eq!(state_hash_apriori, payload.state_hash_apriori());
-		assert_eq!(state_hash_aposteriori, payload.state_hash_aposteriori());
-		assert_eq!(state_update, *payload.state_update());
 	}
 }

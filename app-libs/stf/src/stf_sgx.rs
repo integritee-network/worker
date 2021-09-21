@@ -1,9 +1,10 @@
 use crate::{
 	stf_sgx_primitives::{
-		get_account_info, increment_nonce, shards_key_hash, validate_nonce, StfError, StfResult,
+		get_account_info, increment_nonce, shards_key_hash, types::*, validate_nonce, StfError,
+		StfResult,
 	},
-	AccountId, Getter, Index, PublicGetter, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedGetter, TEEREX_MODULE, UNSHIELD,
+	AccountId, Getter, Index, PublicGetter, TrustedCall, TrustedCallSigned, TrustedGetter,
+	TEEREX_MODULE, UNSHIELD,
 };
 use codec::{Decode, Encode};
 use itp_storage::storage_value_key;
@@ -25,19 +26,6 @@ pub trait StfTrait = SgxExternalitiesTrait + StateHash + Clone + Send + Sync;
 pub trait StateHash {
 	fn hash(&self) -> Hash;
 }
-
-pub mod types {
-	pub use sgx_runtime::{Balance, Index};
-	pub type AccountData = balances::AccountData<Balance>;
-	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
-
-	pub type StateType = sgx_externalities::SgxExternalitiesType;
-	pub type State = sgx_externalities::SgxExternalities;
-	pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
-	pub struct Stf;
-}
-
-use types::*;
 
 impl Stf {
 	pub fn init_state() -> State {
@@ -370,7 +358,7 @@ impl Stf {
 		ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
 		let mut ext2 = ext.clone();
 
-		Self::update_storage(&mut ext2, &state_payload.state_update);
+		Self::update_storage(&mut ext2, state_payload.state_update());
 
 		ensure!(
 			ext2.hash() == state_payload.state_hash_aposteriori(),

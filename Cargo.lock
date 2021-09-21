@@ -2393,7 +2393,6 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "sc-keystore",
- "serde 1.0.130",
  "sgx-externalities",
  "sgx-runtime",
  "sgx_tstd",

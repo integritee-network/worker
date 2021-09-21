@@ -27,8 +27,7 @@ use crate::{
 use codec::{Decode, Encode};
 use core::ops::Deref;
 use ita_stf::{
-	AccountInfo, ShardIdentifier, StatePayload, StateTypeDiff as StfStateTypeDiff, Stf,
-	TrustedCall, TrustedGetter, TrustedOperation,
+	AccountInfo, ShardIdentifier, StatePayload, Stf, TrustedCall, TrustedGetter, TrustedOperation,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{

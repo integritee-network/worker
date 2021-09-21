@@ -883,11 +883,11 @@ where
 
 	// hash previous of state
 	let state_hash_aposteriori = state::hash_of(state.state.clone())?;
-	let state_update = state.state_diff.clone().encode();
 
 	// create encrypted payload
 	let mut payload: Vec<u8> =
-		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state_update).encode();
+		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state.state_diff.clone())
+			.encode();
 	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
 
 	let block = SB::Block::new(
