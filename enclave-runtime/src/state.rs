@@ -18,15 +18,11 @@
 use crate::{error::Result, hex, io, utils::UnwrapOrSgxErrorUnexpected};
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use ita_stf::{
-	ShardIdentifier, State as StfState, StateType as StfStateType,
-	StateTypeDiff as StfStateTypeDiff, Stf,
-};
+use ita_stf::{ShardIdentifier, State as StfState, StateType as StfStateType, Stf};
 use itp_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use itp_sgx_crypto::{AesSeal, StateCrypto};
 use itp_sgx_io::SealedIO;
 use log::*;
-use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_types::*;
 use sp_core::H256;
@@ -47,12 +43,12 @@ pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
 		},
 		n => {
 			debug!("State loaded from {} with size {}B, deserializing...", state_path, n);
-			StfStateType::decode(state_vec)
+			StfStateType::decode(&mut state_vec.as_slice())?
 		},
 	};
 	trace!("state decoded successfully");
 	// add empty state-diff
-	let state_with_diff = StfState { state, state_diff: StfStateTypeDiff::new() };
+	let state_with_diff = StfState { state, state_diff: Default::default() };
 	trace!("New state created: {:?}", state_with_diff);
 	Ok(state_with_diff)
 }
@@ -154,6 +150,9 @@ pub mod tests {
 	use crate::tests::ensure_no_empty_shard_directory_exists;
 	use sgx_externalities::SgxExternalitiesTrait;
 
+	// Fixme: Move this tests the sgx-runtime:
+	//
+	// https://github.com/integritee-network/sgx-runtime/issues/23
 	pub fn test_sgx_state_decode_encode_works() {
 		// given
 		let key: Vec<u8> = "hello".encode();
@@ -162,9 +161,8 @@ pub mod tests {
 		state.insert(key, value);
 
 		// when
-		let encoded_state = state.state.clone().encode();
-		let state2 = StfStateType::decode(encoded_state);
-		debug!("State:{:?}", state);
+		let encoded_state = state.state.encode();
+		let state2 = StfStateType::decode(&mut encoded_state.as_slice()).unwrap();
 
 		// then
 		assert_eq!(state.state, state2);
@@ -178,10 +176,10 @@ pub mod tests {
 		state.insert(key, value);
 
 		// when
-		let encrypted = encrypt(state.state.clone().encode()).unwrap();
-		debug!("State encrypted:{:?}", encrypted);
+		let encrypted = encrypt(state.state.encode()).unwrap();
+
 		let decrypted = encrypt(encrypted).unwrap();
-		let decoded = StfStateType::decode(decrypted);
+		let decoded = StfStateType::decode(&mut decrypted.as_slice()).unwrap();
 
 		// then
 		assert_eq!(state.state, decoded);

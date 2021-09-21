@@ -9,13 +9,12 @@ use codec::{Decode, Encode};
 use itp_storage::storage_value_key;
 use itp_types::{OpaqueCall, SidechainBlockNumber};
 use log_sgx::*;
-use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
 use sgx_tstd as std;
 use sp_core::H256 as Hash;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
-use std::{collections::HashMap, prelude::v1::*};
+use std::prelude::v1::*;
 use support::{ensure, traits::UnfilteredDispatchable};
 
 #[cfg(feature = "test")]
@@ -84,10 +83,7 @@ impl Stf {
 		ext
 	}
 
-	pub fn update_storage(
-		ext: &mut impl SgxExternalitiesTrait,
-		map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>,
-	) {
+	pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &StateTypeDiff) {
 		ext.execute_with(|| {
 			map_update.iter().for_each(|(k, v)| {
 				match v {
@@ -373,7 +369,12 @@ impl Stf {
 		// Todo: how do we ensure that the apriori state hash matches?
 		ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
 		let mut ext2 = ext.clone();
-		Self::update_storage(&mut ext2, &StateTypeDiff::decode(state_payload.state_update.clone()));
+
+		let diff = StateTypeDiff::decode(&mut state_payload.state_update.as_slice())
+			.map_err(|_| StfError::InvalidStorageDiff)?;
+
+		Self::update_storage(&mut ext2, &diff);
+
 		ensure!(
 			ext2.hash() == state_payload.state_hash_aposteriori(),
 			StfError::InvalidStorageDiff
@@ -406,7 +407,6 @@ impl Stf {
 pub mod tests {
 	use super::*;
 	use crate::stf_sgx::StfError;
-	use sgx_externalities::SgxExternalitiesTypeTrait;
 	use sp_core::H256;
 	use sp_runtime::traits::{BlakeTwo256, Hash};
 	use support::{assert_err, assert_ok};
@@ -425,8 +425,7 @@ pub mod tests {
 		state1.insert(b"Hello".to_vec(), b"World".to_vec());
 		let aposteriori = state1.hash();
 
-		let mut state_update =
-			StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.encode());
 
 		assert_ok!(Stf::apply_state_diff(&mut state2, &mut state_update));
 		assert_eq!(state2.hash(), aposteriori);
@@ -442,8 +441,7 @@ pub mod tests {
 		state1.insert(b"Hello".to_vec(), b"World".to_vec());
 		let aposteriori = state1.hash();
 
-		let mut state_update =
-			StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.encode());
 
 		assert_err!(
 			Stf::apply_state_diff(&mut state2, &mut state_update),
@@ -462,15 +460,13 @@ pub mod tests {
 		state1.insert(b"Hello".to_vec(), b"World".to_vec());
 		let aposteriori = H256::from([1; 32]);
 
-		let mut state_update =
-			StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff.encode());
 
 		assert_err!(
 			Stf::apply_state_diff(&mut state2, &mut state_update),
 			StfError::InvalidStorageDiff
 		);
-		// todo: Derive `Eq` on State
-		assert_eq!(state2.hash(), State::new().hash());
-		assert!(state2.state_diff.is_empty());
+
+		assert_eq!(state2, State::new());
 	}
 }
