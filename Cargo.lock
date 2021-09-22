@@ -2393,7 +2393,6 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "sc-keystore",
- "serde 1.0.130",
  "sgx-externalities",
  "sgx-runtime",
  "sgx_tstd",
@@ -5106,10 +5105,12 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#b8e57b6ee8eff7d6e15591879509e06bb8d5ac39"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
 dependencies = [
+ "derive_more",
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
  "sgx_serialize",
  "sgx_serialize_derive",
  "sgx_tstd",
@@ -5119,7 +5120,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#b8e57b6ee8eff7d6e15591879509e06bb8d5ac39"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -5727,7 +5728,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#b8e57b6ee8eff7d6e15591879509e06bb8d5ac39"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
 dependencies = [
  "environmental",
  "hash-db",

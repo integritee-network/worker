@@ -26,40 +26,25 @@
 
 extern crate alloc;
 
-#[cfg(feature = "std")]
-extern crate clap;
-
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Compact, Decode, Encode};
 #[cfg(feature = "std")]
 use my_node_runtime::Balance;
 #[cfg(feature = "std")]
 pub use my_node_runtime::Index;
 
-use sp_core::crypto::AccountId32;
-//use sp_core::{Encode, Decode};
-use sp_core::{ed25519, sr25519, Pair, H256};
+use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-// TODO: use MultiAddress instead of AccountId32?
 
-//pub type Signature = AnySignature;
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
-//pub type AccountId = MultiAddress<AccountId32,;
 pub type AccountId = AccountId32;
 pub type Hash = sp_core::H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 //FIXME: Is this really necessary to define all variables three times?
-//pub static BALANCE_MODULE: u8 = 4u8;
-//pub static BALANCE_TRANSFER: u8 = 0u8;
 pub static TEEREX_MODULE: u8 = 8u8;
 pub static UNSHIELD: u8 = 6u8;
-//pub static CALL_CONFIRMED: u8 = 3u8;
 
 pub type ShardIdentifier = H256;
-//pub type Index = u32;
 
 #[derive(Clone)]
 pub enum KeyPair {
@@ -95,7 +80,7 @@ pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 
 #[cfg(feature = "sgx")]
-pub use stf_sgx::types::*;
+pub use stf_sgx_primitives::types::*;
 
 #[cfg(feature = "std")]
 pub mod cli;
@@ -272,44 +257,6 @@ pub struct TrustedReturnValue<T> {
 impl TrustedReturnValue
 */
 
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
-
-#[cfg(feature = "sgx")]
-use std::vec::Vec;
-
-/// payload of block that needs to be encrypted
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct StatePayload {
-	state_hash_apriori: H256,
-	state_hash_aposteriori: H256,
-	/// encoded state update
-	state_update: Vec<u8>,
-}
-
-impl StatePayload {
-	/// get hash of state before block execution
-	pub fn state_hash_apriori(&self) -> H256 {
-		self.state_hash_apriori
-	}
-	/// get hash of state after block execution
-	pub fn state_hash_aposteriori(&self) -> H256 {
-		self.state_hash_aposteriori
-	}
-	/// get encoded state update reference
-	pub fn state_update(&self) -> &Vec<u8> {
-		&self.state_update
-	}
-	pub fn new(apriori: H256, aposteriori: H256, update: Vec<u8>) -> StatePayload {
-		StatePayload {
-			state_hash_apriori: apriori,
-			state_hash_aposteriori: aposteriori,
-			state_update: update,
-		}
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -331,25 +278,5 @@ mod tests {
 			call.sign(&KeyPair::Sr25519(AccountKeyring::Alice.pair()), nonce, &mrenclave, &shard);
 
 		assert!(signed_call.verify_signature(&mrenclave, &shard));
-	}
-
-	#[test]
-	fn new_payload_works() {
-		// given
-		let state_hash_apriori = H256::random();
-		let state_hash_aposteriori = H256::random();
-		let state_update: Vec<u8> = vec![];
-
-		// when
-		let payload = StatePayload::new(
-			state_hash_apriori.clone(),
-			state_hash_aposteriori.clone(),
-			state_update.clone(),
-		);
-
-		// then
-		assert_eq!(state_hash_apriori, payload.state_hash_apriori());
-		assert_eq!(state_hash_aposteriori, payload.state_hash_aposteriori());
-		assert_eq!(state_update, *payload.state_update());
 	}
 }

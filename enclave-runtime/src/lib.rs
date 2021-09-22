@@ -51,8 +51,8 @@ use codec::{alloc::string::String, Decode, Encode};
 use core::ops::Deref;
 use ita_stf::{
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetterSigned,
+	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, StateTypeDiff, Stf,
+	TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -85,7 +85,6 @@ use rpc::{
 	api::SideChainApi,
 	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
 };
-use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_types::{sgx_status_t, SgxResult};
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
@@ -884,11 +883,11 @@ where
 
 	// hash previous of state
 	let state_hash_aposteriori = state::hash_of(state.state.clone())?;
-	let state_update = state.state_diff.clone().encode();
 
 	// create encrypted payload
 	let mut payload: Vec<u8> =
-		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state_update).encode();
+		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state.state_diff.clone())
+			.encode();
 	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
 
 	let block = SB::Block::new(
@@ -927,12 +926,13 @@ where
 	}
 
 	// global requests they are the same for every shard
-	let update_map = on_chain_ocall_api
+	let state_diff_update: StateTypeDiff = on_chain_ocall_api
 		.get_multiple_storages_verified(storage_hashes, &header)
-		.map(into_map)?;
+		.map(into_map)?
+		.into();
 
 	// look for new shards an initialize them
-	if let Some(maybe_shards) = update_map.get(&shards_key_hash()) {
+	if let Some(maybe_shards) = state_diff_update.get(&shards_key_hash()) {
 		match maybe_shards {
 			Some(shards) => {
 				let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
@@ -945,14 +945,14 @@ where
 					}
 					// per shard (cid) requests
 					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
-					let per_shard_update_map = on_chain_ocall_api
+					let per_shard_update = on_chain_ocall_api
 						.get_multiple_storages_verified(per_shard_hashes, &header)
 						.map(into_map)?;
 
 					let mut state = state::load(&s)?;
 					trace!("Sucessfully loaded state, updating states ...");
-					Stf::update_storage(&mut state, &per_shard_update_map);
-					Stf::update_storage(&mut state, &update_map);
+					Stf::update_storage(&mut state, &per_shard_update.into());
+					Stf::update_storage(&mut state, &state_diff_update);
 
 					// block number is purged from the substrate state so it can't be read like other storage values
 					// The number conversion is a bit unfortunate, but I wanted to prevent making the stf generic for now
@@ -1115,7 +1115,7 @@ where
 	let update_map = on_chain_ocall_api
 		.get_multiple_storages_verified(storage_hashes, header)
 		.map(into_map)?;
-	Stf::update_storage(state, &update_map);
+	Stf::update_storage(state, &update_map.into());
 
 	debug!("execute STF");
 	if let Err(e) = Stf::execute(state, stf_call_signed.clone(), calls) {

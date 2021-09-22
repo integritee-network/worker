@@ -1,21 +1,21 @@
 use crate::{
 	stf_sgx_primitives::{
-		get_account_info, increment_nonce, shards_key_hash, validate_nonce, StfError, StfResult,
+		get_account_info, increment_nonce, shards_key_hash, types::*, validate_nonce, StfError,
+		StfResult,
 	},
-	AccountId, Getter, Index, PublicGetter, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedGetter, TEEREX_MODULE, UNSHIELD,
+	AccountId, Getter, Index, PublicGetter, TrustedCall, TrustedCallSigned, TrustedGetter,
+	TEEREX_MODULE, UNSHIELD,
 };
 use codec::{Decode, Encode};
 use itp_storage::storage_value_key;
 use itp_types::{OpaqueCall, SidechainBlockNumber};
 use log_sgx::*;
-use sgx_externalities::SgxExternalitiesTypeTrait;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
 use sgx_tstd as std;
 use sp_core::H256 as Hash;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
-use std::{collections::HashMap, prelude::v1::*};
+use std::prelude::v1::*;
 use support::{ensure, traits::UnfilteredDispatchable};
 
 #[cfg(feature = "test")]
@@ -26,19 +26,6 @@ pub trait StfTrait = SgxExternalitiesTrait + StateHash + Clone + Send + Sync;
 pub trait StateHash {
 	fn hash(&self) -> Hash;
 }
-
-pub mod types {
-	pub use sgx_runtime::{Balance, Index};
-	pub type AccountData = balances::AccountData<Balance>;
-	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
-
-	pub type StateType = sgx_externalities::SgxExternalitiesType;
-	pub type State = sgx_externalities::SgxExternalities;
-	pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
-	pub struct Stf;
-}
-
-use types::*;
 
 impl Stf {
 	pub fn init_state() -> State {
@@ -84,10 +71,7 @@ impl Stf {
 		ext
 	}
 
-	pub fn update_storage(
-		ext: &mut impl SgxExternalitiesTrait,
-		map_update: &HashMap<Vec<u8>, Option<Vec<u8>>>,
-	) {
+	pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &StateTypeDiff) {
 		ext.execute_with(|| {
 			map_update.iter().for_each(|(k, v)| {
 				match v {
@@ -373,7 +357,9 @@ impl Stf {
 		// Todo: how do we ensure that the apriori state hash matches?
 		ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
 		let mut ext2 = ext.clone();
-		Self::update_storage(&mut ext2, &StateTypeDiff::decode(state_payload.state_update.clone()));
+
+		Self::update_storage(&mut ext2, state_payload.state_update());
+
 		ensure!(
 			ext2.hash() == state_payload.state_hash_aposteriori(),
 			StfError::InvalidStorageDiff
@@ -406,7 +392,6 @@ impl Stf {
 pub mod tests {
 	use super::*;
 	use crate::stf_sgx::StfError;
-	use sgx_externalities::SgxExternalitiesTypeTrait;
 	use sp_core::H256;
 	use sp_runtime::traits::{BlakeTwo256, Hash};
 	use support::{assert_err, assert_ok};
@@ -425,8 +410,7 @@ pub mod tests {
 		state1.insert(b"Hello".to_vec(), b"World".to_vec());
 		let aposteriori = state1.hash();
 
-		let mut state_update =
-			StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff);
 
 		assert_ok!(Stf::apply_state_diff(&mut state2, &mut state_update));
 		assert_eq!(state2.hash(), aposteriori);
@@ -442,8 +426,7 @@ pub mod tests {
 		state1.insert(b"Hello".to_vec(), b"World".to_vec());
 		let aposteriori = state1.hash();
 
-		let mut state_update =
-			StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff);
 
 		assert_err!(
 			Stf::apply_state_diff(&mut state2, &mut state_update),
@@ -462,15 +445,13 @@ pub mod tests {
 		state1.insert(b"Hello".to_vec(), b"World".to_vec());
 		let aposteriori = H256::from([1; 32]);
 
-		let mut state_update =
-			StatePayload::new(apriori, aposteriori, state1.state_diff.clone().encode());
+		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff);
 
 		assert_err!(
 			Stf::apply_state_diff(&mut state2, &mut state_update),
 			StfError::InvalidStorageDiff
 		);
-		// todo: Derive `Eq` on State
-		assert_eq!(state2.hash(), State::new().hash());
-		assert!(state2.state_diff.is_empty());
+
+		assert_eq!(state2, State::new());
 	}
 }
