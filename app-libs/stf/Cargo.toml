@@ -12,7 +12,6 @@ sgx = [
     "log-sgx",
     "sp-io",
     "sgx-runtime",
-    "sgx-externalities",
     "derive_more",
     "itp-types",
 ]
@@ -22,7 +21,6 @@ std = [
     "log",
     "base58",
     "sc-keystore",
-    "serde",
     "system/std",
     "sp-core/std",
     "hex",
@@ -30,6 +28,7 @@ std = [
     "substrate-client-keystore",
     "itp-storage/std",
     "my-node-runtime",
+    "sgx-externalities/std",
 ]
 test = []
 
@@ -42,7 +41,6 @@ log = { version = "0.4", optional = true }
 base58 = { version = "0.1", optional = true }
 derive_more = { version = "0.99.5", optional = true }
 hex = { version = "0.4.2", optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
 codec = { version = "2.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 sgx_tstd = { rev = "v1.1.3", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
@@ -62,7 +60,7 @@ sc-keystore = { version = "4.0.0-dev", default-features = false, git = "https://
 # scs / integritee
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master", optional = true }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master", optional = true }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master", optional = true }
