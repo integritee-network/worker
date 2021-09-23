@@ -27,16 +27,17 @@ use crate::{
 use codec::{Decode, Encode};
 use core::ops::Deref;
 use ita_stf::{
-	stf_sgx::StateHash, stf_sgx_primitives::account_key_hash, AccountInfo, ShardIdentifier, State,
-	StatePayload, StateTypeDiff, Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
-	TrustedGetterSigned, TrustedOperation,
+	stf_sgx::StateHash, stf_sgx_primitives::account_key_hash,
+	test_genesis::test_account as funded_pair, AccountInfo, ShardIdentifier, State, StatePayload,
+	StateTypeDiff, Stf, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedGetterSigned,
+	TrustedOperation,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
 };
-use itp_sgx_crypto::{AesSeal, Ed25519Seal, Rsa3072Seal, ShieldingCrypto, StateCrypto};
+use itp_sgx_crypto::{AesSeal, Rsa3072Seal, ShieldingCrypto, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_storage::storage_value_key;
 use itp_types::{Block, Header, OpaqueCall, SidechainBlockNumber};
@@ -187,8 +188,8 @@ fn test_submit_trusted_call_to_top_pool() {
 	let top_pool = test_top_pool();
 
 	// create accounts
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-	let receiver = Ed25519Seal::unseal().unwrap().public();
+	let sender = funded_pair();
+	let receiver = unfunded_public();
 
 	let call =
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42);
@@ -217,8 +218,8 @@ fn test_submit_trusted_getter_to_top_pool() {
 	let top_pool = test_top_pool();
 
 	// create accounts
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-	let receiver = Ed25519Seal::unseal().unwrap().public();
+	let sender = funded_pair();
+	let receiver = unfunded_public();
 
 	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 
@@ -244,8 +245,8 @@ fn test_differentiate_getter_and_call_works() {
 	let top_pool = test_top_pool();
 
 	// create accounts
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-	let receiver = Ed25519Seal::unseal().unwrap().public();
+	let sender = funded_pair();
+	let receiver = unfunded_public();
 
 	let index = get_current_shard_index(&shard);
 
@@ -284,8 +285,8 @@ fn test_create_block_and_confirmation_works() {
 
 	assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
 
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-	let receiver = Ed25519Seal::unseal().unwrap().public();
+	let sender = funded_pair();
+	let receiver = unfunded_public();
 
 	let index = get_current_shard_index(&shard);
 
@@ -332,9 +333,8 @@ fn test_create_state_diff() {
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
 
-	// create accounts
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
-	let receiver = Ed25519Seal::unseal().unwrap().public();
+	let receiver = unfunded_public();
+	let sender = funded_pair();
 
 	let index = get_current_shard_index(&shard);
 
@@ -384,8 +384,9 @@ fn test_executing_call_updates_account_nonce() {
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
 
-	let receiver = Ed25519Seal::unseal().unwrap().public();
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+	let sender = funded_pair();
+	let receiver = unfunded_public();
+
 	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000);
 
 	submit_trusted_call_to_top_pool(&top_pool, call, 0, shard, sender.clone());
@@ -416,14 +417,20 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	// create accounts
-	let receiver = Ed25519Seal::unseal().unwrap().public();
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+	let sender = funded_pair();
+	let receiver = unfunded_public();
 
-	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000);
+	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000).sign(
+		&sender.clone().into(),
+		10,
+		&mrenclave,
+		&shard,
+	);
 
-	submit_trusted_call_to_top_pool(&top_pool, call, 10, shard, sender.clone());
+	submit_top_to_top_pool(&top_pool, direct_top(call), shard);
 
 	// when
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
@@ -453,15 +460,17 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
-	let sender = spEd25519::Pair::from_seed(b"12345678901234567890123456789012");
+	let sender = funded_pair();
 	let sender_acc = sender.public().into();
 
 	let funds_old = Stf::account_data(&mut state, &sender_acc).unwrap().free;
 
-	let call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc.clone(), 1000);
+	let signed_call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc.clone(), 1000)
+		.sign(&sender.into(), 0, &mrenclave, &shard);
 
-	submit_trusted_call_to_top_pool(&top_pool, call, 0, shard, sender.clone());
+	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
@@ -518,6 +527,14 @@ fn test_top_pool() -> TestTopPool {
 	));
 
 	top_pool
+}
+
+fn unfunded_public() -> spEd25519::Public {
+	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
+}
+
+fn direct_top(call: TrustedCallSigned) -> TrustedOperation {
+	call.into_trusted_operation(true)
 }
 
 fn latest_onchain_header() -> Header {
