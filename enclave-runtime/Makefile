@@ -31,8 +31,8 @@ Rust_Enclave_Files := $(wildcard src/*.rs) $(wildcard ../stf/src/*.rs)
 Rust_Target_Path := $(CURDIR)/../../../xargo
 
 ifeq ($(SGX_DEBUG), 1)
-	OUTPUT_PATH := debug
-	CARGO_TARGET :=
+	OUTPUT_PATH := release
+	CARGO_TARGET := --release
 else
 	OUTPUT_PATH := release
 	CARGO_TARGET := --release
