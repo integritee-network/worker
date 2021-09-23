@@ -447,7 +447,7 @@ pub unsafe extern "C" fn sync_parentchain_and_execute_tops(
 ///
 /// Sync parentchain blocks to the light-client and execute pending trusted operations.
 ///
-/// This function makes an ecall that does the following:
+/// This function makes an ocall that does the following:
 ///
 /// *   send `confirm_call` xt's of the `Stf` functions executed due to in-/direct invocation to the
 ///     to the parentchain
