@@ -131,25 +131,10 @@ pub extern "C" fn test_main_entrance() -> size_t {
 	)
 }
 
-#[allow(unused)]
-pub fn ensure_no_empty_shard_directory_exists() {
-	// ensure no empty states are within directory (created with init-shard)
-	// otherwise an 'index out of bounds: the len is x but the index is x'
-	// error will be thrown
-	let shards = state::list_shards().unwrap();
-	for shard in shards {
-		if !state::exists(&shard) {
-			state::init_shard(&shard).unwrap();
-		}
-	}
-}
-
-#[allow(unused)]
 fn test_compose_block_and_confirmation() {
 	// given
-	ensure_no_empty_shard_directory_exists();
+	let (_, mut state, shard, _) = test_setup();
 
-	let (mut state, shard) = init_state();
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 
 	Stf::update_sidechain_block_number(&mut state, 3);
@@ -179,13 +164,11 @@ fn test_compose_block_and_confirmation() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_submit_trusted_call_to_top_pool() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (top_pool, _, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
-	let receiver = unfunded_public();
 
 	let signed_call =
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
@@ -204,17 +187,14 @@ fn test_submit_trusted_call_to_top_pool() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
 	ensure_no_empty_shard_directory_exists();
 
-	let (mut state, shard) = init_state();
+	let (_, shard) = init_state();
 	let top_pool = test_top_pool();
 
-	// create accounts
 	let sender = funded_pair();
-	let receiver = unfunded_public();
 
 	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 
@@ -229,16 +209,12 @@ fn test_submit_trusted_getter_to_top_pool() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_differentiate_getter_and_call_works() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (top_pool, _, shard, mrenclave) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
-	let receiver = unfunded_public();
-
-	let index = get_current_shard_index(&shard);
 
 	let signed_getter =
 		TrustedGetter::free_balance(sender.public().into()).sign(&sender.clone().into());
@@ -261,8 +237,6 @@ fn test_differentiate_getter_and_call_works() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
-#[allow(unused_assignments)]
 fn test_create_block_and_confirmation_works() {
 	// given
 	let (top_pool, mut state, shard, mrenclave) = test_setup();
@@ -292,7 +266,7 @@ fn test_create_block_and_confirmation_works() {
 	debug!("got {} signed block(s)", signed_blocks.len());
 
 	let signed_block = signed_blocks[index].clone();
-	let mut opaque_call = confirm_calls[index].clone();
+	let opaque_call = confirm_calls[index].clone();
 
 	let expected_call = OpaqueCall::from_tuple(&(
 		[TEEREX_MODULE, BLOCK_CONFIRMED],
@@ -310,13 +284,12 @@ fn test_create_block_and_confirmation_works() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_create_state_diff() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (top_pool, _, shard, mrenclave) = test_setup();
 
-	let receiver = unfunded_public();
 	let sender = funded_pair();
+	let receiver = unfunded_public();
 
 	let index = get_current_shard_index(&shard);
 
@@ -335,7 +308,10 @@ fn test_create_state_diff() {
 	.unwrap();
 
 	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
-	AesSeal::unseal().map(|key| key.decrypt(&mut encrypted_payload)).unwrap();
+	AesSeal::unseal()
+		.map(|key| key.decrypt(&mut encrypted_payload))
+		.unwrap()
+		.unwrap();
 	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
 	let state_diff = state_payload.state_update();
 
@@ -358,10 +334,9 @@ fn test_create_state_diff() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_executing_call_updates_account_nonce() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (top_pool, _, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -372,7 +347,7 @@ fn test_executing_call_updates_account_nonce() {
 	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header(),
@@ -389,10 +364,9 @@ fn test_executing_call_updates_account_nonce() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (top_pool, _, shard, mrenclave) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -404,7 +378,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header(),
@@ -424,7 +398,6 @@ fn test_invalid_nonce_call_is_not_executed() {
 	state::tests::remove_shard_dir(&shard);
 }
 
-#[allow(unused)]
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
 	let (top_pool, mut state, shard, mrenclave) = test_setup();
@@ -440,7 +413,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
 		&latest_onchain_header(),
@@ -461,6 +434,18 @@ fn test_non_root_shielding_call_is_not_executed() {
 	state::tests::remove_shard_dir(&shard);
 }
 
+pub fn ensure_no_empty_shard_directory_exists() {
+	// ensure no empty states are within directory (created with init-shard)
+	// otherwise an 'index out of bounds: the len is x but the index is x'
+	// error will be thrown
+	let shards = state::list_shards().unwrap();
+	for shard in shards {
+		if !state::exists(&shard) {
+			state::init_shard(&shard).unwrap();
+		}
+	}
+}
+
 fn get_current_shard_index(shard: &ShardIdentifier) -> usize {
 	let shards = state::list_shards().unwrap();
 	let mut index = 0;
@@ -476,6 +461,7 @@ fn get_current_shard_index(shard: &ShardIdentifier) -> usize {
 	index
 }
 
+/// returns an empty `State` with the corresponding `ShardIdentifier`
 fn init_state() -> (State, ShardIdentifier) {
 	let shard = ShardIdentifier::default();
 
@@ -496,6 +482,7 @@ fn test_top_pool() -> TestTopPool {
 	top_pool
 }
 
+/// Returns all the things that are commonly used in tests
 fn test_setup() -> (TestTopPool, State, ShardIdentifier, MrEnclave) {
 	ensure_no_empty_shard_directory_exists();
 
@@ -506,6 +493,7 @@ fn test_setup() -> (TestTopPool, State, ShardIdentifier, MrEnclave) {
 	(top_pool, state, shard, mrenclave)
 }
 
+/// Some random account that has no funds in the `Stf`'s `test_genesis` config.
 fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
 }
@@ -514,6 +502,7 @@ fn direct_top(call: TrustedCallSigned) -> TrustedOperation {
 	call.into_trusted_operation(true)
 }
 
+/// Just some random onchain header
 fn latest_onchain_header() -> Header {
 	Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default())
 }
@@ -529,6 +518,7 @@ fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -
 		.unwrap()
 }
 
+/// Encrypts `trusted_op` and adds it to the trusted operation pool of the corresponding `shard`.
 fn submit_top_to_top_pool<P: GetTopPool>(
 	top_pool: &P,
 	trusted_op: TrustedOperation,
