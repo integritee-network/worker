@@ -186,23 +186,24 @@ fn test_submit_trusted_call_to_top_pool() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
-	// create accounts
 	let sender = funded_pair();
 	let receiver = unfunded_public();
 
-	let call =
-		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42);
+	let signed_call =
+		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
+			.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// when
-	submit_trusted_call_to_top_pool(&top_pool, call.clone(), 0, shard, sender);
+	submit_top_to_top_pool(&top_pool, direct_top(signed_call.clone()), shard);
 
 	// get pending extrinsics
 	let (calls, _) = get_pending_tops_separated(&top_pool, shard);
 
 	// then
-	let call_one = format! {"{:?}", calls[0].call};
-	let call_two = format! {"{:?}", call};
+	let call_one = format! {"{:?}", calls[0]};
+	let call_two = format! {"{:?}", signed_call};
 	assert_eq!(call_one, call_two);
 
 	// clean up
@@ -243,6 +244,7 @@ fn test_differentiate_getter_and_call_works() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	// create accounts
 	let sender = funded_pair();
@@ -253,11 +255,12 @@ fn test_differentiate_getter_and_call_works() {
 	let signed_getter =
 		TrustedGetter::free_balance(sender.public().into()).sign(&sender.clone().into());
 
-	let call =
-		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42);
+	let signed_call =
+		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
+			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	submit_top_to_top_pool(&top_pool, signed_getter.clone().into(), shard);
-	submit_trusted_call_to_top_pool(&top_pool, call.clone(), 0, shard, sender);
+	submit_top_to_top_pool(&top_pool, direct_top(signed_call.clone()), shard);
 
 	// when
 	let (calls, getters) = get_pending_tops_separated(&top_pool, shard);
@@ -265,8 +268,8 @@ fn test_differentiate_getter_and_call_works() {
 	// then
 	let getter_one = format! {"{:?}", getters[0]};
 	let getter_two = format! {"{:?}", signed_getter};
-	let call_one = format! {"{:?}", calls[0].call};
-	let call_two = format! {"{:?}", call};
+	let call_one = format! {"{:?}", calls[0]};
+	let call_two = format! {"{:?}", signed_call};
 	assert_eq!(call_one, call_two);
 	assert_eq!(getter_one, getter_two);
 
@@ -282,6 +285,7 @@ fn test_create_block_and_confirmation_works() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
 
@@ -290,9 +294,10 @@ fn test_create_block_and_confirmation_works() {
 
 	let index = get_current_shard_index(&shard);
 
-	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000);
+	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
+		.sign(&sender.into(), 0, &mrenclave, &shard);
 
-	let top_hash = submit_trusted_call_to_top_pool(&top_pool, call, 0, shard, sender.clone());
+	let top_hash = submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
 	let (confirm_calls, signed_blocks) =
@@ -332,15 +337,17 @@ fn test_create_state_diff() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	let receiver = unfunded_public();
 	let sender = funded_pair();
 
 	let index = get_current_shard_index(&shard);
 
-	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000);
+	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
+		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
-	submit_trusted_call_to_top_pool(&top_pool, call, 0, shard, sender.clone());
+	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
@@ -383,13 +390,15 @@ fn test_executing_call_updates_account_nonce() {
 
 	let (mut state, shard) = init_state();
 	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
 
-	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000);
+	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
+		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
-	submit_trusted_call_to_top_pool(&top_pool, call, 0, shard, sender.clone());
+	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
@@ -423,14 +432,10 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let sender = funded_pair();
 	let receiver = unfunded_public();
 
-	let call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000).sign(
-		&sender.clone().into(),
-		10,
-		&mrenclave,
-		&shard,
-	);
+	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
+		.sign(&sender.clone().into(), 10, &mrenclave, &shard);
 
-	submit_top_to_top_pool(&top_pool, direct_top(call), shard);
+	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
 
 	// when
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
@@ -550,20 +555,6 @@ fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -
 		.map(|d| Decode::decode(&mut d.as_slice()))
 		.unwrap()
 		.unwrap()
-}
-
-fn submit_trusted_call_to_top_pool<P: GetTopPool>(
-	top_pool: &P,
-	trusted_call: TrustedCall,
-	nonce: u32,
-	shard: ShardIdentifier,
-	sender: spEd25519::Pair,
-) -> H256 {
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
-	let signed_call = trusted_call.sign(&sender.into(), nonce, &mrenclave, &shard);
-	let trusted_operation: TrustedOperation = signed_call.into_trusted_operation(true);
-
-	submit_top_to_top_pool(top_pool, trusted_operation, shard)
 }
 
 fn submit_top_to_top_pool<P: GetTopPool>(
