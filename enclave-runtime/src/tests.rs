@@ -141,7 +141,7 @@ fn test_compose_block_and_confirmation() {
 
 	// when
 	let (opaque_call, signed_block) = crate::compose_block_and_confirmation::<Block, SignedBlock>(
-		&latest_onchain_header(),
+		&latest_parentchain_header(),
 		signed_top_hashes,
 		shard,
 		state.hash(),
@@ -149,13 +149,13 @@ fn test_compose_block_and_confirmation() {
 	)
 	.unwrap();
 
+	// then
 	let expected_call = OpaqueCall::from_tuple(&(
 		[TEEREX_MODULE, BLOCK_CONFIRMED],
 		shard,
 		blake2_256(&signed_block.block().encode()),
 	));
 
-	// then
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().block_number(), 4);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
@@ -177,7 +177,6 @@ fn test_submit_trusted_call_to_top_pool() {
 	// when
 	submit_top_to_top_pool(&top_pool, direct_top(signed_call.clone()), shard);
 
-	// get pending extrinsics
 	let (calls, _) = get_pending_tops_separated(&top_pool, shard);
 
 	// then
@@ -189,15 +188,13 @@ fn test_submit_trusted_call_to_top_pool() {
 
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let (_, shard) = init_state();
-	let top_pool = test_top_pool();
+	let (top_pool, _, shard, _) = test_setup();
 
 	let sender = funded_pair();
 
 	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 
+	// when
 	submit_top_to_top_pool(&top_pool, signed_getter.clone().into(), shard);
 
 	let (_, getters) = get_pending_tops_separated(&top_pool, shard);
@@ -223,10 +220,10 @@ fn test_differentiate_getter_and_call_works() {
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
 			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
+	// when
 	submit_top_to_top_pool(&top_pool, signed_getter.clone().into(), shard);
 	submit_top_to_top_pool(&top_pool, direct_top(signed_call.clone()), shard);
 
-	// when
 	let (calls, getters) = get_pending_tops_separated(&top_pool, shard);
 
 	// then
@@ -258,13 +255,14 @@ fn test_create_block_and_confirmation_works() {
 		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 			&OcallApi,
 			&top_pool,
-			&latest_onchain_header(),
+			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
 		.unwrap();
 
 	debug!("got {} signed block(s)", signed_blocks.len());
 
+	// then
 	let signed_block = signed_blocks[index].clone();
 	let opaque_call = confirm_calls[index].clone();
 
@@ -274,7 +272,6 @@ fn test_create_block_and_confirmation_works() {
 		blake2_256(&signed_block.block().encode()),
 	));
 
-	// then
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().block_number(), 1);
 	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
@@ -302,17 +299,12 @@ fn test_create_state_diff() {
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
-		&latest_onchain_header(),
+		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 
-	let mut encrypted_payload: Vec<u8> = signed_blocks[index].block().state_payload().to_vec();
-	AesSeal::unseal()
-		.map(|key| key.decrypt(&mut encrypted_payload))
-		.unwrap()
-		.unwrap();
-	let state_payload = StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap();
+	let state_payload = state_payload_from_encrypted(signed_blocks[index].block().state_payload());
 	let state_diff = state_payload.state_update();
 
 	// then
@@ -350,7 +342,7 @@ fn test_executing_call_updates_account_nonce() {
 	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
-		&latest_onchain_header(),
+		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
@@ -381,7 +373,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
-		&latest_onchain_header(),
+		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
@@ -416,7 +408,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
 		&top_pool,
-		&latest_onchain_header(),
+		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
@@ -482,7 +474,18 @@ fn test_top_pool() -> TestTopPool {
 	top_pool
 }
 
-/// Returns all the things that are commonly used in tests
+/// Decrypt `encrypted` and decode it into `StatePayload`
+fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
+	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
+	AesSeal::unseal()
+		.map(|key| key.decrypt(&mut encrypted_payload))
+		.unwrap()
+		.unwrap();
+	StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap()
+}
+
+/// Returns all the things that are commonly used in tests and runs
+/// `ensure_no_empty_shard_directory_exists`
 fn test_setup() -> (TestTopPool, State, ShardIdentifier, MrEnclave) {
 	ensure_no_empty_shard_directory_exists();
 
@@ -498,15 +501,17 @@ fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
 }
 
+/// transforms `call` into `TrustedOperation::direct(call)`
 fn direct_top(call: TrustedCallSigned) -> TrustedOperation {
 	call.into_trusted_operation(true)
 }
 
 /// Just some random onchain header
-fn latest_onchain_header() -> Header {
+fn latest_parentchain_header() -> Header {
 	Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default())
 }
 
+/// Reads the value at `key_hash` from `state_diff` and decodes it into `D`
 fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -> D {
 	// fixme: what's up here with the wrapping??
 	state_diff
