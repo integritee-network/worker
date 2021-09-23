@@ -198,9 +198,7 @@ fn test_submit_trusted_call_to_top_pool() {
 	let (calls, _) = get_pending_tops_separated(&top_pool, shard);
 
 	// then
-	let call_one = format! {"{:?}", calls[0]};
-	let call_two = format! {"{:?}", signed_call};
-	assert_eq!(call_one, call_two);
+	assert_eq!(calls[0], signed_call);
 
 	// clean up
 	state::tests::remove_shard_dir(&shard);
@@ -225,9 +223,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 	let (_, getters) = get_pending_tops_separated(&top_pool, shard);
 
 	// then
-	let getter_one = format! {"{:?}", getters[0]};
-	let getter_two = format! {"{:?}", signed_getter};
-	assert_eq!(getter_one, getter_two);
+	assert_eq!(getters[0], signed_getter);
 
 	// clean up
 	state::tests::remove_shard_dir(&shard);
@@ -258,12 +254,8 @@ fn test_differentiate_getter_and_call_works() {
 	let (calls, getters) = get_pending_tops_separated(&top_pool, shard);
 
 	// then
-	let getter_one = format! {"{:?}", getters[0]};
-	let getter_two = format! {"{:?}", signed_getter};
-	let call_one = format! {"{:?}", calls[0]};
-	let call_two = format! {"{:?}", signed_call};
-	assert_eq!(call_one, call_two);
-	assert_eq!(getter_one, getter_two);
+	assert_eq!(calls[0], signed_call);
+	assert_eq!(getters[0], signed_getter);
 
 	// clean up
 	state::tests::remove_shard_dir(&shard);
