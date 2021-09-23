@@ -119,15 +119,20 @@ where
 /// some unique operations via RPC and have them included in the pool.
 const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
-//impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
-impl<'a, P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<'a, P>
+enum TopSubmissionMode {
+	Submit,
+	SubmitWatch,
+}
+
+impl<'a, P> Author<'a, P>
 where
 	P: TrustedOperationPool + Sync + Send + 'static,
 {
-	fn submit_top(
+	fn process_top(
 		&self,
 		ext: Vec<u8>,
 		shard: ShardIdentifier,
+		submission_mode: TopSubmissionMode,
 	) -> FutureResult<TxHash<P>, RpcError> {
 		// check if shard already exists
 		if !state::exists(&shard) {
@@ -148,23 +153,53 @@ where
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();
-		Box::pin(
-			self.pool
-				.submit_one(
-					&generic::BlockId::hash(best_block_hash),
-					TX_SOURCE,
-					stf_operation,
-					shard,
-				)
-				.map_err(|e| {
-					StateRpcError::PoolError(
-						e.into_pool_error()
-							.map(Into::into)
-							.unwrap_or_else(|_e| PoolError::Verification),
+
+		match submission_mode {
+			TopSubmissionMode::Submit => Box::pin(
+				self.pool
+					.submit_one(
+						&generic::BlockId::hash(best_block_hash),
+						TX_SOURCE,
+						stf_operation,
+						shard,
 					)
-					.into()
-				}),
-		)
+					.map_err(map_top_error::<P>),
+			),
+			TopSubmissionMode::SubmitWatch => Box::pin(
+				self.pool
+					.submit_and_watch(
+						&generic::BlockId::hash(best_block_hash),
+						TX_SOURCE,
+						stf_operation,
+						shard,
+					)
+					.map_err(map_top_error::<P>),
+			),
+		}
+	}
+}
+
+fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
+	StateRpcError::PoolError(
+		error
+			.into_pool_error()
+			.map(Into::into)
+			.unwrap_or_else(|_error| PoolError::Verification),
+	)
+	.into()
+}
+
+//impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
+impl<'a, P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<'a, P>
+where
+	P: TrustedOperationPool + Sync + Send + 'static,
+{
+	fn submit_top(
+		&self,
+		ext: Vec<u8>,
+		shard: ShardIdentifier,
+	) -> FutureResult<TxHash<P>, RpcError> {
+		self.process_top(ext, shard, TopSubmissionMode::Submit)
 	}
 
 	/// Get hash of TrustedOperation
@@ -229,42 +264,7 @@ where
 	}
 
 	fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError> {
-		// check if shard already exists
-		if !state::exists(&shard) {
-			//FIXME: Should this be an error? -> Issue error handling
-			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
-		}
-		// decrypt call
-		let rsa_key = Rsa3072Seal::unseal().unwrap();
-		let request_vec = match rsa_key.decrypt(&ext.as_slice()) {
-			Ok(req) => req,
-			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
-		};
-		// decode call
-		let stf_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
-			Ok(op) => op,
-			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
-		};
-		//let best_block_hash = self.client.info().best_hash;
-		// dummy block hash
-		let best_block_hash = Default::default();
-		Box::pin(
-			self.pool
-				.submit_and_watch(
-					&generic::BlockId::hash(best_block_hash),
-					TX_SOURCE,
-					stf_operation,
-					shard,
-				)
-				.map_err(|e| {
-					StateRpcError::PoolError(
-						e.into_pool_error()
-							.map(Into::into)
-							.unwrap_or_else(|_e| PoolError::Verification),
-					)
-					.into()
-				}),
-		)
+		self.process_top(ext, shard, TopSubmissionMode::SubmitWatch)
 	}
 
 	/*	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
