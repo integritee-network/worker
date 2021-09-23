@@ -69,6 +69,8 @@ pub struct Request {
 
 pub type IpfsHash = [u8; 46];
 
+pub type MrEnclave = [u8; 32];
+
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);

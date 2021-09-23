@@ -40,7 +40,7 @@ use itp_settings::{
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal, ShieldingCrypto, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_storage::storage_value_key;
-use itp_types::{Block, Header, OpaqueCall, SidechainBlockNumber};
+use itp_types::{Block, Header, MrEnclave, OpaqueCall, SidechainBlockNumber};
 use its_primitives::{
 	traits::{Block as BlockT, SignedBlock as SignedBlockT},
 	types::block::SignedBlock,
@@ -182,11 +182,7 @@ fn test_compose_block_and_confirmation() {
 #[allow(unused)]
 fn test_submit_trusted_call_to_top_pool() {
 	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -240,11 +236,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 #[allow(unused)]
 fn test_differentiate_getter_and_call_works() {
 	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -281,11 +273,7 @@ fn test_differentiate_getter_and_call_works() {
 #[allow(unused_assignments)]
 fn test_create_block_and_confirmation_works() {
 	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
 
@@ -333,11 +321,7 @@ fn test_create_block_and_confirmation_works() {
 #[allow(unused)]
 fn test_create_state_diff() {
 	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	let receiver = unfunded_public();
 	let sender = funded_pair();
@@ -385,12 +369,7 @@ fn test_create_state_diff() {
 #[allow(unused)]
 fn test_executing_call_updates_account_nonce() {
 	// given
-
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -421,12 +400,7 @@ fn test_executing_call_updates_account_nonce() {
 #[allow(unused)]
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
-
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -461,11 +435,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 #[allow(unused)]
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
-	ensure_no_empty_shard_directory_exists();
-
-	let (mut state, shard) = init_state();
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+	let (top_pool, mut state, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let sender_acc = sender.public().into();
@@ -532,6 +502,16 @@ fn test_top_pool() -> TestTopPool {
 	));
 
 	top_pool
+}
+
+fn test_setup() -> (TestTopPool, State, ShardIdentifier, MrEnclave) {
+	ensure_no_empty_shard_directory_exists();
+
+	let (state, shard) = init_state();
+	let top_pool = test_top_pool();
+	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+
+	(top_pool, state, shard, mrenclave)
 }
 
 fn unfunded_public() -> spEd25519::Public {
