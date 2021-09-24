@@ -88,7 +88,7 @@ pub mod cli;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 
-#[derive(Encode, Decode, Clone, core::fmt::Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedOperation {
 	indirect_call(TrustedCallSigned),
@@ -120,7 +120,7 @@ impl From<PublicGetter> for TrustedOperation {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Getter {
 	public(PublicGetter),
@@ -139,13 +139,13 @@ impl From<TrustedGetterSigned> for Getter {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
 	some_value,
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
 	balance_set_balance(AccountId, AccountId, Balance, Balance),
@@ -180,7 +180,7 @@ impl TrustedCall {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
 	free_balance(AccountId),
@@ -203,7 +203,7 @@ impl TrustedGetter {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct TrustedGetterSigned {
 	pub getter: TrustedGetter,
 	pub signature: Signature,
@@ -219,7 +219,7 @@ impl TrustedGetterSigned {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct TrustedCallSigned {
 	pub call: TrustedCall,
 	pub nonce: Index,

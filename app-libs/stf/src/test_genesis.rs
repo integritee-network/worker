@@ -21,31 +21,35 @@ use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::{Balance, Runtime};
 use sgx_tstd as std;
-use sp_core::{crypto::AccountId32, Pair};
+use sp_core::{crypto::AccountId32, ed25519, Pair};
 use sp_io::SgxExternalities;
 use sp_runtime::MultiAddress;
 use std::{string::ToString, vec, vec::Vec};
 use support::traits::UnfilteredDispatchable;
 
-const ALICE_ENCODED: [u8; 32] = [
+type Seed = [u8; 32];
+
+const ALICE_ENCODED: Seed = [
 	212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
 
+const TEST_SEED: Seed = *b"12345678901234567890123456789012";
+
 const ALICE_FUNDS: Balance = 1000000000000000;
+
+pub fn test_account() -> ed25519::Pair {
+	ed25519::Pair::from_seed(&TEST_SEED)
+}
 
 pub fn test_genesis_setup(state: &mut SgxExternalities) {
 	// set alice sudo account
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
-	let generic_test_account = AccountId32::from(
-		sp_core::ed25519::Pair::from_seed(b"12345678901234567890123456789012").public(),
-	);
-
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
-		(generic_test_account, 2000, 2000),
-		(AccountId32::from(ALICE_ENCODED), ALICE_FUNDS, ALICE_FUNDS),
+		(test_account().public().into(), 2000, 2000),
+		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 
 	endow(state, endowees);
