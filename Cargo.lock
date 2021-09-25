@@ -2441,6 +2441,7 @@ dependencies = [
  "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",
+ "sp-core",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
 ]

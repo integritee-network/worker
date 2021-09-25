@@ -76,6 +76,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::tests::test_sgx_state_decode_encode_works,
 		itp_stf_state_handler::tests::test_encrypt_decrypt_state_type_works,
 		itp_stf_state_handler::tests::test_write_access_locks_read_until_finished,
+		itp_stf_state_handler::tests::test_ensure_subsequent_state_loads_have_same_hash,
 		test_compose_block_and_confirmation,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
@@ -580,7 +581,7 @@ fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
 }
 
-pub fn test_account() -> spEd25519::Pair {
+fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
 }
 
