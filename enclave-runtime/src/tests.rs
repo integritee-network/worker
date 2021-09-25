@@ -52,6 +52,7 @@ use rpc::{
 	author::{Author, AuthorApi},
 	basic_pool::BasicPool,
 };
+use sgx_externalities::SgxExternalitiesTrait;
 use sgx_tunittest::*;
 use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
@@ -108,6 +109,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// needs node to be running.. unit tests?
 		// test_ocall_worker_request,
 		test_create_state_diff,
+		test_ensure_subsequent_state_loads_have_same_hash,
 		test_executing_call_updates_account_nonce,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
@@ -426,6 +428,22 @@ fn test_non_root_shielding_call_is_not_executed() {
 	state::tests::remove_shard_dir(&shard);
 }
 
+// Fixme: This test fails, see https://github.com/integritee-network/worker/issues/421
+#[allow(unused)]
+pub fn test_ensure_subsequent_state_loads_have_same_hash() {
+	let (_, state, shard, _) = test_setup();
+	state::write(state.clone(), &shard);
+
+	let state2 = state::load(&shard).unwrap();
+
+	// here we observe a different key order for the two states, which is why we get different hashes
+	// for the state.
+	// error!("State1: {:?}", state.state);
+	// error!("State2: {:?}", state2.state);
+
+	assert_eq!(state.hash(), state2.hash());
+}
+
 pub fn ensure_no_empty_shard_directory_exists() {
 	// ensure no empty states are within directory (created with init-shard)
 	// otherwise an 'index out of bounds: the len is x but the index is x'
@@ -460,7 +478,10 @@ fn init_state() -> (State, ShardIdentifier) {
 	// ensure that state starts empty
 	state::init_shard(&shard).unwrap();
 
-	(Stf::init_state(), shard)
+	let mut state = Stf::init_state();
+	state.prune_state_diff();
+
+	(state, shard)
 }
 
 fn test_top_pool() -> TestTopPool {
