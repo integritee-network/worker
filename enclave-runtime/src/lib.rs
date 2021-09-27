@@ -34,7 +34,10 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
-	rpc::worker_api_direct::public_api_rpc_handler,
+	rpc::{
+		author::{OnBlockCreated, SendState},
+		worker_api_direct::public_api_rpc_handler,
+	},
 	top_pool::{
 		pool::Options as PoolOptions,
 		pool_types::BPool,
@@ -679,7 +682,7 @@ where
 	let remaining_call_time = match remaining_time(ends_at) {
 		Some(t) => t,
 		None => {
-			info!("[Enclave] not executed trusted calls; no time left.");
+			info!("[Enclave] trusted calls not executed; no time left.");
 			return Ok(Default::default())
 		},
 	};
@@ -785,7 +788,7 @@ where
 
 			// Notify watching clients of InSidechainBlock
 			let block = signed_block.block();
-			top_pool.on_block_created(block.signed_top_hashes(), block.hash());
+			author.on_block_created(block.signed_top_hashes(), block.hash());
 
 			Some(signed_block)
 		},
@@ -831,7 +834,7 @@ where
 				trace!("Successfully loaded stf state");
 				// let client know of current state
 				trace!("Updating client");
-				match top_pool.rpc_send_state(hash_of_getter, r.encode()) {
+				match author.send_state(hash_of_getter, r.encode()) {
 					Ok(_) => trace!("Successfully updated client"),
 					Err(e) => error!("Could not send state to client {:?}", e),
 				}
@@ -847,6 +850,7 @@ where
 		{
 			error!("Error removing trusted operation from top pool: Error: {:?}", e);
 		}
+
 		// Check time
 		if ends_at < duration_now() {
 			return Ok(())

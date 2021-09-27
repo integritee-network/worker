@@ -20,6 +20,7 @@
 pub extern crate alloc;
 use crate::{
 	rpc::error::{Error as StateRpcError, FutureResult, Result},
+	state,
 	top_pool::{
 		error::{Error as PoolError, IntoPoolError},
 		primitives::{
@@ -28,9 +29,13 @@ use crate::{
 	},
 };
 use alloc::{boxed::Box, vec::Vec};
+use client_error::Error as ClientError;
 use codec::{Decode, Encode};
 use core::iter::Iterator;
 use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use itp_sgx_crypto::{Rsa3072Seal, ShieldingCrypto};
+use itp_sgx_io::SealedIO;
+use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::{
 	futures::future::{ready, TryFutureExt},
 	Error as RpcError,
@@ -38,12 +43,9 @@ use jsonrpc_core::{
 use log::*;
 use sp_runtime::generic;
 use std::sync::Arc;
+
 pub mod client_error;
-use client_error::Error as ClientError;
 pub mod hash;
-use crate::state;
-use itp_sgx_crypto::{Rsa3072Seal, ShieldingCrypto};
-use itp_sgx_io::SealedIO;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -60,7 +62,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	/// Returns all pending operations, potentially grouped by sender.
 	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
-	/// Returns all pending operations diveded in calls and getters, potentially grouped by sender.
+	/// Returns all pending operations divided in calls and getters, potentially grouped by sender.
 	fn get_pending_tops_separated(
 		&self,
 		shard: ShardIdentifier,
@@ -83,25 +85,29 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<Hash, RpcError>;
 }
 
+/// Trait to send state of a trusted getter back to the client
+pub trait SendState {
+	type Hash;
+
+	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<()>;
+}
+
+/// Trait to notify listeners/observer of a newly created block
+pub trait OnBlockCreated {
+	type Hash;
+
+	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+}
+
 /// Authoring API
-//pub struct Author<P, Client> {
 pub struct Author<'a, P>
 where
 	P: TrustedOperationPool + Sync + Send + 'static,
 {
-	/// Substrate client
-	//client: Arc<Client>,
 	/// Trusted Operation pool
 	pool: Arc<&'a P>,
-	/*/// Subscriptions manager
-	subscriptions: SubscriptionManager,*/
-	/*/// The key store.
-	keystore: SyncCryptoStorePtr,*/
-	/*/// Whether to deny unsafe calls
-	deny_unsafe: DenyUnsafe,*/
 }
 
-//impl<P, Client> Author<P, Client> {
 impl<'a, P> Author<'a, P>
 where
 	P: TrustedOperationPool + Sync + Send + 'static,
@@ -189,7 +195,6 @@ fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
 	.into()
 }
 
-//impl<P, Client> AuthorApi<TxHash<P>, BlockHash<P>> for Author<P, Client>
 impl<'a, P> AuthorApi<TxHash<P>, BlockHash<P>> for Author<'a, P>
 where
 	P: TrustedOperationPool + Sync + Send + 'static,
@@ -266,8 +271,26 @@ where
 	fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> FutureResult<TxHash<P>, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::SubmitWatch)
 	}
+}
 
-	/*	fn unwatch_extrinsic(&self, _metadata: Option<Self::Metadata>, id: SubscriptionId) -> Result<bool> {
-		Ok(self.subscriptions.cancel(id))
-	}*/
+impl<'a, P> OnBlockCreated for Author<'a, P>
+where
+	P: TrustedOperationPool + Sync + Send + 'static,
+{
+	type Hash = P::Hash;
+
+	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
+		self.pool.on_block_created(hashes, block_hash)
+	}
+}
+
+impl<'a, P> SendState for Author<'a, P>
+where
+	P: TrustedOperationPool + Sync + Send + 'static,
+{
+	type Hash = P::Hash;
+
+	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<()> {
+		self.pool.rpc_send_state(hash, state_encoded).map_err(|e| e.into())
+	}
 }
