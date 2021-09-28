@@ -19,13 +19,9 @@ use crate::{
 	rpc, state,
 	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
 	top_pool,
-	top_pool::{
-		pool::ExtrinsicHash,
-		top_pool_container::{GetTopPool, TopPoolContainer},
-	},
+	top_pool::{pool::ExtrinsicHash, top_pool_container::TopPoolContainer},
 };
 use codec::{Decode, Encode};
-use core::ops::Deref;
 use ita_stf::{
 	stf_sgx::StateHash, stf_sgx_primitives::account_key_hash,
 	test_genesis::test_account as funded_pair, AccountInfo, ShardIdentifier, State, StatePayload,
@@ -60,6 +56,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
 type TestTopPool = TopPoolContainer<BasicPool<SideChainApi<Block>, Block, TestRpcResponder>>;
+type TestRpcAuthor = Author<TestTopPool>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -166,7 +163,7 @@ fn test_compose_block_and_confirmation() {
 
 fn test_submit_trusted_call_to_top_pool() {
 	// given
-	let (top_pool, _, shard, mrenclave) = test_setup();
+	let (rpc_author, _, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 
@@ -175,9 +172,9 @@ fn test_submit_trusted_call_to_top_pool() {
 			.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// when
-	submit_top_to_top_pool(&top_pool, direct_top(signed_call.clone()), shard);
+	submit_top_to_top_pool(&rpc_author, direct_top(signed_call.clone()), shard);
 
-	let (calls, _) = get_pending_tops_separated(&top_pool, shard);
+	let (calls, _) = get_pending_tops_separated(&rpc_author, shard);
 
 	// then
 	assert_eq!(calls[0], signed_call);
@@ -188,16 +185,16 @@ fn test_submit_trusted_call_to_top_pool() {
 
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
-	let (top_pool, _, shard, _) = test_setup();
+	let (rpc_author, _, shard, _) = test_setup();
 
 	let sender = funded_pair();
 
 	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 
 	// when
-	submit_top_to_top_pool(&top_pool, signed_getter.clone().into(), shard);
+	submit_top_to_top_pool(&rpc_author, signed_getter.clone().into(), shard);
 
-	let (_, getters) = get_pending_tops_separated(&top_pool, shard);
+	let (_, getters) = get_pending_tops_separated(&rpc_author, shard);
 
 	// then
 	assert_eq!(getters[0], signed_getter);
@@ -208,7 +205,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 
 fn test_differentiate_getter_and_call_works() {
 	// given
-	let (top_pool, _, shard, mrenclave) = test_setup();
+	let (rpc_author, _, shard, mrenclave) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -221,10 +218,10 @@ fn test_differentiate_getter_and_call_works() {
 			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// when
-	submit_top_to_top_pool(&top_pool, signed_getter.clone().into(), shard);
-	submit_top_to_top_pool(&top_pool, direct_top(signed_call.clone()), shard);
+	submit_top_to_top_pool(&rpc_author, signed_getter.clone().into(), shard);
+	submit_top_to_top_pool(&rpc_author, direct_top(signed_call.clone()), shard);
 
-	let (calls, getters) = get_pending_tops_separated(&top_pool, shard);
+	let (calls, getters) = get_pending_tops_separated(&rpc_author, shard);
 
 	// then
 	assert_eq!(calls[0], signed_call);
@@ -236,7 +233,7 @@ fn test_differentiate_getter_and_call_works() {
 
 fn test_create_block_and_confirmation_works() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (rpc_author, mut state, shard, mrenclave) = test_setup();
 
 	assert_eq!(Stf::get_sidechain_block_number(&mut state).unwrap(), 0);
 
@@ -248,13 +245,13 @@ fn test_create_block_and_confirmation_works() {
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.into(), 0, &mrenclave, &shard);
 
-	let top_hash = submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
+	let top_hash = submit_top_to_top_pool(&rpc_author, direct_top(signed_call), shard);
 
 	// when
 	let (confirm_calls, signed_blocks) =
 		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 			&OcallApi,
-			&top_pool,
+			&rpc_author,
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -283,7 +280,7 @@ fn test_create_block_and_confirmation_works() {
 
 fn test_create_state_diff() {
 	// given
-	let (top_pool, _, shard, mrenclave) = test_setup();
+	let (rpc_author, _, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -293,12 +290,12 @@ fn test_create_state_diff() {
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
-	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
+	submit_top_to_top_pool(&rpc_author, direct_top(signed_call), shard);
 
 	// when
 	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
-		&top_pool,
+		&rpc_author,
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
@@ -328,7 +325,7 @@ fn test_create_state_diff() {
 
 fn test_executing_call_updates_account_nonce() {
 	// given
-	let (top_pool, _, shard, mrenclave) = test_setup();
+	let (rpc_author, _, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -336,12 +333,12 @@ fn test_executing_call_updates_account_nonce() {
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
-	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
+	submit_top_to_top_pool(&rpc_author, direct_top(signed_call), shard);
 
 	// when
 	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
-		&top_pool,
+		&rpc_author,
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
@@ -358,7 +355,7 @@ fn test_executing_call_updates_account_nonce() {
 
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
-	let (top_pool, _, shard, mrenclave) = test_setup();
+	let (rpc_author, _, shard, mrenclave) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -367,12 +364,12 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 10, &mrenclave, &shard);
 
-	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
+	submit_top_to_top_pool(&rpc_author, direct_top(signed_call), shard);
 
 	// when
 	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
-		&top_pool,
+		&rpc_author,
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
@@ -392,7 +389,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
-	let (top_pool, mut state, shard, mrenclave) = test_setup();
+	let (rpc_author, mut state, shard, mrenclave) = test_setup();
 
 	let sender = funded_pair();
 	let sender_acc = sender.public().into();
@@ -402,12 +399,12 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let signed_call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc.clone(), 1000)
 		.sign(&sender.into(), 0, &mrenclave, &shard);
 
-	submit_top_to_top_pool(&top_pool, direct_top(signed_call), shard);
+	submit_top_to_top_pool(&rpc_author, direct_top(signed_call), shard);
 
 	// when
 	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
 		&OcallApi,
-		&top_pool,
+		&rpc_author,
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
@@ -486,14 +483,14 @@ fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`
-fn test_setup() -> (TestTopPool, State, ShardIdentifier, MrEnclave) {
+fn test_setup() -> (TestRpcAuthor, State, ShardIdentifier, MrEnclave) {
 	ensure_no_empty_shard_directory_exists();
 
 	let (state, shard) = init_state();
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
-	(top_pool, state, shard, mrenclave)
+	(TestRpcAuthor::new(Arc::new(top_pool)), state, shard, mrenclave)
 }
 
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.
@@ -524,34 +521,24 @@ fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -
 }
 
 /// Encrypts `trusted_op` and adds it to the trusted operation pool of the corresponding `shard`.
-fn submit_top_to_top_pool<P: GetTopPool>(
-	top_pool: &P,
+fn submit_top_to_top_pool<R: AuthorApi<H256, H256>>(
+	rpc_author: &R,
 	trusted_op: TrustedOperation,
 	shard: ShardIdentifier,
 ) -> H256 {
-	let pool_mutex = top_pool.get().unwrap();
-	let pool_guard = pool_mutex.lock().unwrap();
-	let pool = Arc::new(pool_guard.deref());
-	let author = Arc::new(Author::new(pool.clone()));
-
 	let encrypted_top = Rsa3072Seal::unseal()
 		.map(|key| key.encrypt(&trusted_op.encode()))
 		.unwrap()
 		.unwrap();
 
 	// submit trusted call to top pool
-	let result = async { author.submit_top(encrypted_top.clone(), shard).await };
+	let result = async { rpc_author.submit_top(encrypted_top.clone(), shard).await };
 	executor::block_on(result).unwrap()
 }
 
-fn get_pending_tops_separated<P: GetTopPool>(
-	top_pool: &P,
+fn get_pending_tops_separated<R: AuthorApi<H256, H256>>(
+	rpc_author: &R,
 	shard: ShardIdentifier,
 ) -> (Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>) {
-	let pool_mutex = top_pool.get().unwrap();
-	let pool_guard = pool_mutex.lock().unwrap();
-	let pool = Arc::new(pool_guard.deref());
-	let author = Arc::new(Author::new(pool.clone()));
-
-	author.get_pending_tops_separated(shard).unwrap()
+	rpc_author.get_pending_tops_separated(shard).unwrap()
 }

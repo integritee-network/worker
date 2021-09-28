@@ -39,10 +39,7 @@ use crate::{
 		worker_api_direct::public_api_rpc_handler,
 	},
 	top_pool::{
-		pool::Options as PoolOptions,
-		pool_types::BPool,
-		primitives::TrustedOperationPool,
-		top_pool_container::{GetTopPool, GlobalTopPoolContainer},
+		pool::Options as PoolOptions, pool_types::BPool, top_pool_container::GlobalTopPoolContainer,
 	},
 	utils::{
 		hash_from_slice, remaining_time, write_slice_and_whitespace_pad, DecodeRaw,
@@ -51,7 +48,6 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
-use core::ops::Deref;
 use ita_stf::{
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
 	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, StateTypeDiff, Stf,
@@ -371,7 +367,9 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 
 	GlobalTopPoolContainer::initialize(top_pool);
 
-	let io_handler = public_api_rpc_handler(Arc::new(GlobalTopPoolContainer));
+	let rpc_author = Arc::new(Author::new(Arc::new(GlobalTopPoolContainer)));
+
+	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 
 	run_ws_server(server_addr.as_str(), rpc_handler);
@@ -470,10 +468,12 @@ where
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
+	let rpc_author = Author::new(Arc::new(GlobalTopPoolContainer));
+
 	// execute pending calls from operation pool and create block
 	let signed_blocks = exec_tops_for_all_shards::<PB, SignedSidechainBlock, _, _>(
 		&OcallApi,
-		&GlobalTopPoolContainer,
+		&rpc_author,
 		&latest_onchain_header,
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
@@ -589,9 +589,9 @@ fn get_stf_state(
 ///
 /// For fairness, the [`max_exec_duration`] is split equally among all shards. Leftover time from
 /// the previous shard is evenly distributed to all remaining shards.
-fn exec_tops_for_all_shards<PB, SB, O, T>(
+fn exec_tops_for_all_shards<PB, SB, O, R>(
 	ocall_api: &O,
-	top_pool_getter: &T,
+	rpc_author: &R,
 	latest_onchain_header: &PB::Header,
 	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
@@ -600,24 +600,13 @@ where
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	O: EnclaveOnChainOCallApi,
-	T: GetTopPool,
+	R: AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 {
 	let shards = state::list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
 	let mut signed_blocks: Vec<SB> = Vec::with_capacity(shards.len());
 	let mut remaining_shards = shards.len() as u32;
 	let ends_at = duration_now() + max_exec_duration;
-
-	let pool_mutex = match top_pool_getter.get() {
-		Some(mutex) => mutex,
-		None => {
-			error!("Could not get mutex to pool");
-			return Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED).into()
-		},
-	};
-
-	let tx_pool_guard = pool_mutex.lock().unwrap();
-	let tx_pool = tx_pool_guard.deref();
 
 	// execute pending calls from operation pool and create block
 	for shard in shards.into_iter() {
@@ -634,7 +623,7 @@ where
 
 		match exec_tops::<PB, SB, _, _>(
 			ocall_api,
-			tx_pool,
+			rpc_author,
 			&latest_onchain_header,
 			shard,
 			shard_exec_time,
@@ -659,9 +648,9 @@ where
 /// (plus leftover time from the getters) to the trusted calls.
 ///
 /// Todo: The getters should be handled individually: #400
-fn exec_tops<PB, SB, O, P>(
+fn exec_tops<PB, SB, O, R>(
 	ocall_api: &O,
-	top_pool: &P,
+	rpc_author: &R,
 	latest_onchain_header: &PB::Header,
 	shard: ShardIdentifier,
 	max_exec_duration: Duration,
@@ -671,13 +660,13 @@ where
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	O: EnclaveOnChainOCallApi,
-	P: TrustedOperationPool<Hash = H256> + 'static,
+	R: AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 {
 	// first half of the slot is dedicated to getters.
 	let ends_at = duration_now() + max_exec_duration;
 	let remaining_getter_time = max_exec_duration / 2;
 
-	exec_trusted_getters(top_pool, shard, remaining_getter_time)?;
+	exec_trusted_getters(rpc_author, shard, remaining_getter_time)?;
 
 	let remaining_call_time = match remaining_time(ends_at) {
 		Some(t) => t,
@@ -689,7 +678,7 @@ where
 
 	let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _>(
 		ocall_api,
-		top_pool,
+		rpc_author,
 		latest_onchain_header,
 		shard,
 		remaining_call_time,
@@ -711,9 +700,9 @@ where
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
-fn exec_trusted_calls<PB, SB, O, P>(
+fn exec_trusted_calls<PB, SB, O, R>(
 	on_chain_ocall: &O,
-	top_pool: &P,
+	rpc_author: &R,
 	latest_onchain_header: &PB::Header,
 	shard: H256,
 	max_exec_duration: Duration,
@@ -723,9 +712,8 @@ where
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	O: EnclaveOnChainOCallApi,
-	P: TrustedOperationPool<Hash = H256> + 'static,
+	R: AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 {
-	let author = Author::new(Arc::new(top_pool));
 	let ends_at = duration_now() + max_exec_duration;
 
 	let mut calls = Vec::<OpaqueCall>::new();
@@ -740,7 +728,7 @@ where
 	trace!("Loaded hash of previous state: {:?}", prev_state_hash);
 
 	// retrieve trusted operations from pool
-	let trusted_calls = author.get_pending_tops_separated(shard)?.0;
+	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
 
 	debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 	// call execution
@@ -757,7 +745,7 @@ where
 				if let Some((_, op_hash)) = hashes {
 					call_hashes.push(op_hash)
 				}
-				author
+				rpc_author
 					.remove_top(
 						vec![top_or_hash(trusted_call_signed, true)],
 						shard,
@@ -788,7 +776,7 @@ where
 
 			// Notify watching clients of InSidechainBlock
 			let block = signed_block.block();
-			author.on_block_created(block.signed_top_hashes(), block.hash());
+			rpc_author.on_block_created(block.signed_top_hashes(), block.hash());
 
 			Some(signed_block)
 		},
@@ -816,17 +804,17 @@ fn load_initialized_state(shard: &H256) -> SgxResult<State> {
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
-fn exec_trusted_getters<P>(top_pool: &P, shard: H256, max_exec_duration: Duration) -> Result<()>
+fn exec_trusted_getters<R>(rpc_author: &R, shard: H256, max_exec_duration: Duration) -> Result<()>
 where
-	P: TrustedOperationPool<Hash = H256> + 'static,
+	R: AuthorApi<H256, H256> + SendState<Hash = H256> + OnBlockCreated<Hash = H256>,
 {
-	let author = Author::new(Arc::new(top_pool));
 	let ends_at = duration_now() + max_exec_duration;
 
 	// retrieve trusted operations from pool
-	let trusted_getters = author.get_pending_tops_separated(shard)?.1;
+	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
 	for trusted_getter_signed in trusted_getters.into_iter() {
-		let hash_of_getter = author.hash_of(&trusted_getter_signed.clone().into());
+		let hash_of_getter =
+			rpc_author.hash_of(&trusted_getter_signed.clone().into()).map_err(Error::Rpc)?;
 
 		// get state
 		match get_stf_state(trusted_getter_signed, shard) {
@@ -834,7 +822,7 @@ where
 				trace!("Successfully loaded stf state");
 				// let client know of current state
 				trace!("Updating client");
-				match author.send_state(hash_of_getter, r.encode()) {
+				match rpc_author.send_state(hash_of_getter, r.encode()) {
 					Ok(_) => trace!("Successfully updated client"),
 					Err(e) => error!("Could not send state to client {:?}", e),
 				}
@@ -846,7 +834,7 @@ where
 
 		// remove getter from pool
 		if let Err(e) =
-			author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false)
+			rpc_author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false)
 		{
 			error!("Error removing trusted operation from top pool: Error: {:?}", e);
 		}
