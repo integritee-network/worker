@@ -19,8 +19,7 @@ pub extern crate alloc;
 
 use self::serde_json::*;
 use crate::{
-	rpc::author::{Author, AuthorApi},
-	top_pool::top_pool_container::GetTopPool,
+	rpc::author::{AuthorApi, OnBlockCreated, SendState},
 	utils::write_slice_and_whitespace_pad,
 };
 use alloc::{
@@ -33,11 +32,11 @@ use alloc::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use core::{ops::Deref, result::Result};
+use core::result::Result;
 use ita_stf::ShardIdentifier;
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{
-	block::SignedBlock, DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus,
+	block::SignedBlock, DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus, H256,
 };
 use jsonrpc_core::{futures::executor, Error as RpcError, *};
 use log::*;
@@ -89,33 +88,73 @@ fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
 	return_value.encode()
 }
 
-pub fn public_api_rpc_handler<T: GetTopPool>(tx_pool_getter: Arc<T>) -> IoHandler {
+pub fn public_api_rpc_handler<R>(rpc_author: Arc<R>) -> IoHandler
+where
+	R: AuthorApi<H256, H256>
+		+ SendState<Hash = H256>
+		+ OnBlockCreated<Hash = H256>
+		+ Send
+		+ Sync
+		+ 'static,
+{
 	let mut io = IoHandler::new();
 	let mut rpc_methods_vec: Vec<&str> = Vec::new();
 
 	// Add rpc methods
 	// author_submitAndWatchExtrinsic
 	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
-	let submit_watch_pool_getter = tx_pool_getter.clone();
+	let submit_watch_author = rpc_author.clone();
 	rpc_methods_vec.push(author_submit_and_watch_extrinsic_name);
 	io.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| match params
 		.parse::<Vec<u8>>()
 	{
-		Ok(encoded_params) => {
-			let tx_pool_guard = submit_watch_pool_getter.get().unwrap().lock().unwrap();
-			let tx_pool = Arc::new(tx_pool_guard.deref());
-			let author = Author::new(tx_pool);
+		Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
+			Ok(request) => {
+				let shard: ShardIdentifier = request.shard;
+				let encrypted_trusted_call: Vec<u8> = request.cyphertext;
+				let result = async {
+					submit_watch_author.watch_top(encrypted_trusted_call.clone(), shard).await
+				};
+				let response: Result<Hash, RpcError> = executor::block_on(result);
+				let json_value = match response {
+					Ok(hash_value) => RpcReturnValue {
+						do_watch: true,
+						value: hash_value.encode(),
+						status: DirectRequestStatus::TrustedOperationStatus(
+							TrustedOperationStatus::Submitted,
+						),
+					}
+					.encode(),
+					Err(rpc_error) => compute_encoded_return_error(rpc_error.message),
+				};
+				Ok(json!(json_value))
+			},
+			Err(_) =>
+				Ok(json!(compute_encoded_return_error("Could not decode request".to_owned()))),
+		},
+		Err(e) => {
+			let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+			Ok(json!(compute_encoded_return_error(error_msg)))
+		},
+	});
 
-			match Request::decode(&mut encoded_params.as_slice()) {
+	// author_submitExtrinsic
+	let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
+	let submit_author = rpc_author.clone();
+	rpc_methods_vec.push(author_submit_extrinsic_name);
+	io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
+		match params.parse::<Vec<u8>>() {
+			Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
 				Ok(request) => {
 					let shard: ShardIdentifier = request.shard;
-					let encrypted_trusted_call: Vec<u8> = request.cyphertext;
-					let result =
-						async { author.watch_top(encrypted_trusted_call.clone(), shard).await };
+					let encrypted_trusted_op: Vec<u8> = request.cyphertext;
+					let result = async {
+						submit_author.submit_top(encrypted_trusted_op.clone(), shard).await
+					};
 					let response: Result<Hash, RpcError> = executor::block_on(result);
 					let json_value = match response {
 						Ok(hash_value) => RpcReturnValue {
-							do_watch: true,
+							do_watch: false,
 							value: hash_value.encode(),
 							status: DirectRequestStatus::TrustedOperationStatus(
 								TrustedOperationStatus::Submitted,
@@ -128,49 +167,6 @@ pub fn public_api_rpc_handler<T: GetTopPool>(tx_pool_getter: Arc<T>) -> IoHandle
 				},
 				Err(_) =>
 					Ok(json!(compute_encoded_return_error("Could not decode request".to_owned()))),
-			}
-		},
-		Err(e) => {
-			let error_msg: String = format!("Could not submit trusted call due to: {}", e);
-			Ok(json!(compute_encoded_return_error(error_msg)))
-		},
-	});
-
-	// author_submitExtrinsic
-	let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
-	let submit_pool_getter = tx_pool_getter.clone();
-	rpc_methods_vec.push(author_submit_extrinsic_name);
-	io.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
-		match params.parse::<Vec<u8>>() {
-			Ok(encoded_params) => {
-				let tx_pool_guard = submit_pool_getter.get().unwrap().lock().unwrap();
-				let tx_pool = Arc::new(tx_pool_guard.deref());
-				let author = Author::new(tx_pool);
-
-				match Request::decode(&mut encoded_params.as_slice()) {
-					Ok(request) => {
-						let shard: ShardIdentifier = request.shard;
-						let encrypted_trusted_op: Vec<u8> = request.cyphertext;
-						let result =
-							async { author.submit_top(encrypted_trusted_op.clone(), shard).await };
-						let response: Result<Hash, RpcError> = executor::block_on(result);
-						let json_value = match response {
-							Ok(hash_value) => RpcReturnValue {
-								do_watch: false,
-								value: hash_value.encode(),
-								status: DirectRequestStatus::TrustedOperationStatus(
-									TrustedOperationStatus::Submitted,
-								),
-							}
-							.encode(),
-							Err(rpc_error) => compute_encoded_return_error(rpc_error.message),
-						};
-						Ok(json!(json_value))
-					},
-					Err(_) => Ok(json!(compute_encoded_return_error(
-						"Could not decode request".to_owned()
-					))),
-				}
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not submit trusted call due to: {}", e);
@@ -181,22 +177,18 @@ pub fn public_api_rpc_handler<T: GetTopPool>(tx_pool_getter: Arc<T>) -> IoHandle
 
 	// author_pendingExtrinsics
 	let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
-	let pending_pool_getter = tx_pool_getter;
+	let pending_author = rpc_author;
 	rpc_methods_vec.push(author_pending_extrinsic_name);
 	io.add_sync_method(author_pending_extrinsic_name, move |params: Params| {
 		match params.parse::<Vec<String>>() {
 			Ok(shards) => {
-				let tx_pool_guard = pending_pool_getter.get().unwrap().lock().unwrap();
-				let tx_pool = Arc::new(tx_pool_guard.deref());
-				let author = Author::new(tx_pool);
-
 				let mut retrieved_operations = vec![];
 				for shard_base58 in shards.iter() {
 					let shard = match decode_shard_from_base58(shard_base58.clone()) {
 						Ok(id) => id,
 						Err(msg) => return Ok(Value::String(msg)),
 					};
-					if let Ok(vec_of_operations) = author.pending_tops(shard) {
+					if let Ok(vec_of_operations) = pending_author.pending_tops(shard) {
 						retrieved_operations.push(vec_of_operations);
 					}
 				}

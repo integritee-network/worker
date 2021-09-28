@@ -73,6 +73,9 @@ pub enum Error {
 
 	#[display(fmt = "Failed to send result of trusted operation to RPC client")]
 	FailedToSendUpdateToRpcClient(String),
+
+	#[display(fmt = "Failed to unlock pool (mutex)")]
+	UnlockError,
 }
 
 /// TrustedOperation pool error conversion.
