@@ -16,10 +16,12 @@
 
 */
 
-use crate::rpc::author::alloc::prelude::v1::Vec;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use sgx_types::*;
-use std::fmt::{Debug, Formatter, Result as FormatResult};
+use std::{
+	fmt::{Debug, Formatter, Result as FormatResult},
+	vec::Vec,
+};
 
 #[derive(Clone)]
 pub struct AttestationOCallMock {

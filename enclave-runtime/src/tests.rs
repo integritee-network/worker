@@ -18,9 +18,12 @@ use crate::{
 	ocall::OcallApi,
 	rpc, state,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
-	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
+	test::{
+		cert_tests::*,
+		mocks::{rpc_responder_mock::RpcResponderMock, shielding_crypto_mock::ShieldingCryptoMock},
+	},
 	top_pool,
-	top_pool::{pool::ExtrinsicHash, top_pool_container::TopPoolContainer},
+	top_pool::pool::ExtrinsicHash,
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -33,7 +36,7 @@ use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
 };
-use itp_sgx_crypto::{AesSeal, Rsa3072Seal, ShieldingCrypto, StateCrypto};
+use itp_sgx_crypto::{AesSeal, ShieldingCrypto, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_types::{Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
@@ -47,7 +50,7 @@ use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{
 	api::SideChainApi,
-	author::{Author, AuthorApi},
+	author::{author::Author, AuthorApi},
 	basic_pool::BasicPool,
 };
 use sgx_externalities::SgxExternalitiesTrait;
@@ -58,8 +61,8 @@ use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
-type TestTopPool = TopPoolContainer<BasicPool<SideChainApi<Block>, Block, TestRpcResponder>>;
-type TestRpcAuthor = Author<TestTopPool>;
+type TestTopPool = BasicPool<SideChainApi<Block>, Block, TestRpcResponder>;
+type TestRpcAuthor = Author<TestTopPool, ShieldingCryptoMock>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -120,6 +123,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
+		rpc::author::atomic_container::tests::store_and_load_works,
 		// mra cert tests
 		test_verify_mra_cert_should_work,
 		test_verify_wrong_cert_is_err,
@@ -473,11 +477,8 @@ fn init_state() -> (State, ShardIdentifier) {
 
 fn test_top_pool() -> TestTopPool {
 	let chain_api = Arc::new(SideChainApi::<Block>::new());
-	let top_pool = TopPoolContainer::new(BasicPool::create(
-		Default::default(),
-		chain_api,
-		Arc::new(TestRpcResponder::new()),
-	));
+	let top_pool =
+		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
 
 	top_pool
 }
@@ -501,7 +502,9 @@ fn test_setup() -> (TestRpcAuthor, State, ShardIdentifier, MrEnclave) {
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
-	(TestRpcAuthor::new(Arc::new(top_pool)), state, shard, mrenclave)
+	let encryption_key = ShieldingCryptoMock;
+
+	(TestRpcAuthor::new(Arc::new(top_pool), encryption_key), state, shard, mrenclave)
 }
 
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.
@@ -537,10 +540,7 @@ fn submit_top_to_top_pool<R: AuthorApi<H256, H256>>(
 	trusted_op: TrustedOperation,
 	shard: ShardIdentifier,
 ) -> H256 {
-	let encrypted_top = Rsa3072Seal::unseal()
-		.map(|key| key.encrypt(&trusted_op.encode()))
-		.unwrap()
-		.unwrap();
+	let encrypted_top = ShieldingCryptoMock.encrypt(&trusted_op.encode()).unwrap();
 
 	// submit trusted call to top pool
 	let result = async { rpc_author.submit_top(encrypted_top.clone(), shard).await };

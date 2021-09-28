@@ -35,15 +35,16 @@ use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
 	rpc::{
-		author::{OnBlockCreated, SendState},
+		author::{
+			author_container::{GetAuthor, GlobalAuthorContainer},
+			OnBlockCreated, SendState,
+		},
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
 	sidechain_impl::exec_aura_on_slot,
 	state::list_shards,
 	sync::{EnclaveLock, EnclaveStateRWLock},
-	top_pool::{
-		pool::Options as PoolOptions, pool_types::BPool, top_pool_container::GlobalTopPoolContainer,
-	},
+	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
 		hash_from_slice, remaining_time, utf8_str_from_raw, write_slice_and_whitespace_pad,
 		DecodeRaw, UnwrapOrSgxErrorUnexpected,
@@ -92,7 +93,7 @@ use lazy_static::lazy_static;
 use log::*;
 use rpc::{
 	api::SideChainApi,
-	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
+	author::{author::Author, hash::TrustedOperationOrHash, AuthorApi},
 };
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_types::{sgx_status_t, SgxResult};
@@ -105,6 +106,7 @@ use sp_runtime::{
 };
 use std::{
 	collections::HashMap,
+	ops::Deref,
 	slice,
 	string::ToString,
 	sync::{Arc, SgxRwLock},
@@ -455,11 +457,19 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 	let rpc_responder = Arc::new(RpcResponder::new(connection_registry.clone()));
 
 	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
-	let top_pool = BPool::create(PoolOptions::default(), side_chain_api, rpc_responder);
+	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
 
-	GlobalTopPoolContainer::initialize(top_pool);
+	let rsa_shielding_key = match Rsa3072Seal::unseal() {
+		Ok(k) => k,
+		Err(e) => {
+			error!("Failed to unseal shielding key: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
-	let rpc_author = Arc::new(Author::new(Arc::new(GlobalTopPoolContainer)));
+	let rpc_author = Arc::new(Author::new(top_pool, rsa_shielding_key));
+
+	GlobalAuthorContainer::initialize(rpc_author.clone());
 
 	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
@@ -568,7 +578,12 @@ where
 
 	let authority = Ed25519Seal::unseal()?;
 
-	let rpc_author = Author::new(Arc::new(GlobalTopPoolContainer));
+	let author_mutex = GlobalAuthorContainer.get().ok_or_else(|| {
+		error!("Failed to retrieve author mutex. It might not be initialized?");
+		Error::MutexAccess
+	})?;
+
+	let rpc_author = author_mutex.lock().unwrap().deref().clone();
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
@@ -968,8 +983,7 @@ where
 	// retrieve trusted operations from pool
 	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
 	for trusted_getter_signed in trusted_getters.into_iter() {
-		let hash_of_getter =
-			rpc_author.hash_of(&trusted_getter_signed.clone().into()).map_err(Error::Rpc)?;
+		let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
 
 		// get state
 		match get_stf_state(trusted_getter_signed, shard) {

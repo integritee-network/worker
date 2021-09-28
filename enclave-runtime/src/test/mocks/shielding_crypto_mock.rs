@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,25 +15,29 @@
 
 */
 
-use codec::Encode;
-use itp_ocall_api::EnclaveRpcOCallApi;
-use itp_types::TrustedOperationStatus;
-use sgx_types::SgxResult;
+use derive_more::{Display, From};
+use itp_sgx_crypto::ShieldingCrypto;
 use std::vec::Vec;
 
-#[derive(Clone, Debug, Default)]
-pub struct EnclaveRpcOCallMock;
+/// Crypto key mock
+///
+/// mock implementation that does not encrypt
+/// encrypt/decrypt return the input as is
+pub struct ShieldingCryptoMock;
 
-impl EnclaveRpcOCallApi for EnclaveRpcOCallMock {
-	fn update_status_event<H: Encode>(
-		&self,
-		_hash: H,
-		_status_update: TrustedOperationStatus,
-	) -> SgxResult<()> {
-		Ok(())
+#[derive(Debug, Display, From)]
+pub enum ShieldingCryptoMockError {
+	None,
+}
+
+impl ShieldingCrypto for ShieldingCryptoMock {
+	type Error = ShieldingCryptoMockError;
+
+	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
+		Ok(Vec::from(data))
 	}
 
-	fn send_state<H: Encode>(&self, _hash: H, _value_opt: Option<Vec<u8>>) -> SgxResult<()> {
-		Ok(())
+	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
+		Ok(Vec::from(data))
 	}
 }

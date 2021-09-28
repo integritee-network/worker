@@ -5,7 +5,7 @@
 
 use crate::{
 	exec_tops, prepare_and_send_xts_and_block,
-	rpc::author::{alloc::sync::Arc, AuthorApi, OnBlockCreated, SendState},
+	rpc::author::{AuthorApi, OnBlockCreated, SendState},
 	state::load,
 	Result as EnclaveResult,
 };
@@ -31,7 +31,7 @@ use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::{traits::Block, MultiSignature};
 use sp_std::prelude::Vec;
-use std::{marker::PhantomData, string::ToString};
+use std::{marker::PhantomData, string::ToString, sync::Arc};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
 pub struct SlotProposer<PB: Block, SB: SignedBlock, Pair, OcallApi, LightClient, Author> {
