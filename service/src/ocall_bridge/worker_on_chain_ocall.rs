@@ -24,8 +24,8 @@ use crate::{
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
-pub use itp_types::block::SignedBlock as SignedSidechainBlock;
 use itp_types::{WorkerRequest, WorkerResponse};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;

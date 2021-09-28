@@ -1119,6 +1119,7 @@ dependencies = [
  "frame-system",
  "itp-storage",
  "itp-types",
+ "its-primitives",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",
  "parity-scale-codec",
@@ -1213,6 +1214,7 @@ name = "itp-ocall-api"
 version = "0.8.0"
 dependencies = [
  "itp-types",
+ "its-primitives",
  "parity-scale-codec",
  "sgx_types",
  "sp-runtime",
@@ -1314,7 +1316,6 @@ version = "0.8.0"
 dependencies = [
  "chrono 0.4.19",
  "itp-storage",
- "its-primitives",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.130",

@@ -13,7 +13,7 @@ use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::pin::Pin;
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_types::BlockHash as SidechainBlockHash;
+use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
 	channel::oneshot,
 	future::{ready, Future, FutureExt},

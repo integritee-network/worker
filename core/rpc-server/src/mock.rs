@@ -1,10 +1,10 @@
 use parity_scale_codec::Encode;
 
 use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
-use itp_types::{
-	block::{Block, SignedBlock},
+use itp_types::{RpcResponse, ShardIdentifier};
+use its_primitives::{
 	traits::{Block as BlockT, SignBlock},
-	RpcResponse, ShardIdentifier,
+	types::{Block, SignedBlock},
 };
 
 pub struct TestEnclave;

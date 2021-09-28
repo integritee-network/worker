@@ -12,7 +12,8 @@ use log::info;
 use std::num::ParseIntError;
 
 use itp_api_client_extensions::PalletTeerexApi;
-use itp_types::{block::SignedBlock as SignedSidechainBlock, Enclave as EnclaveMetadata};
+use itp_types::Enclave as EnclaveMetadata;
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;
@@ -115,7 +116,7 @@ pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
 #[cfg(test)]
 mod tests {
 	use frame_support::assert_ok;
-	use itp_types::block::SignedBlock as SignedSidechainBlock;
+	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
 	use std::net::SocketAddr;

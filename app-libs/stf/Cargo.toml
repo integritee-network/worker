@@ -14,6 +14,7 @@ sgx = [
     "sgx-runtime",
     "derive_more",
     "itp-types",
+    "its-primitives",
 ]
 std = [
     "clap",
@@ -47,6 +48,7 @@ sgx_tstd = { rev = "v1.1.3", features = ["untrusted_fs","net","backtrace"], git 
 # local crates
 itp-storage = { path = "../../core-primitives/storage", default-features = false }
 itp-types = { default-features = false, path = "../../core-primitives/types", optional = true }
+its-primitives = { default-features = false, path = "../../sidechain/primitives", optional = true }
 
 # Substrate dependencies
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = ["full_crypto"] }

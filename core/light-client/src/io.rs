@@ -45,7 +45,6 @@ impl<B: Block> SealedIO for LightClientSeal<B> {
 			warn!("could not backup previous light client state");
 		};
 		debug!("Seal light client State. Current state: {:?}", unsealed);
-
 		Ok(unsealed.using_encoded(|bytes| seal(bytes, LIGHT_CLIENT_DB))?)
 	}
 }

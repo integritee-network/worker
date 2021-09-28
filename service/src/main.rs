@@ -52,7 +52,8 @@ use itp_settings::{
 	},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
-use itp_types::{block::SignedBlock as SignedSidechainBlock, Block, SignedBlock};
+use itp_types::{Block, SignedBlock};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;

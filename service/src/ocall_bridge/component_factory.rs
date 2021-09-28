@@ -16,7 +16,6 @@
 
 */
 
-use super::worker_on_chain_ocall::SignedSidechainBlock;
 use crate::{
 	direct_invocation::{
 		direct_invocation_ocall::DirectInvocationOCall, watch_list_service::WatchList,
@@ -35,6 +34,7 @@ use crate::{
 	sync_block_gossiper::GossipBlocks,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use std::sync::Arc;
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker

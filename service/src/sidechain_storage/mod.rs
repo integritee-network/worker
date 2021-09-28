@@ -10,7 +10,7 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
-use itp_types::block::BlockNumber;
+use its_primitives::types::BlockNumber;
 use std::{
 	sync::Arc,
 	thread,

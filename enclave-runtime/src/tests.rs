@@ -36,10 +36,10 @@ use itp_settings::{
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal, ShieldingCrypto, StateCrypto};
 use itp_sgx_io::SealedIO;
 use itp_storage::storage_value_key;
-use itp_types::{Block, Header, MrEnclave, OpaqueCall, SidechainBlockNumber};
+use itp_types::{Block, Header, MrEnclave, OpaqueCall};
 use its_primitives::{
 	traits::{Block as BlockT, SignedBlock as SignedBlockT},
-	types::block::SignedBlock,
+	types::{BlockNumber as SidechainBlockNumber, SignedBlock},
 };
 use jsonrpc_core::futures::executor;
 use log::*;

@@ -2303,6 +2303,7 @@ dependencies = [
  "itp-enclave-api",
  "itp-settings",
  "itp-types",
+ "its-primitives",
  "jsonrpsee",
  "lazy_static",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2388,6 +2389,7 @@ dependencies = [
  "integritee-node-runtime",
  "itp-storage",
  "itp-types",
+ "its-primitives",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",
@@ -2491,6 +2493,7 @@ dependencies = [
  "env_logger 0.9.0",
  "itp-enclave-api",
  "itp-types",
+ "its-primitives",
  "jsonrpsee",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -2585,6 +2588,7 @@ name = "itp-ocall-api"
 version = "0.8.0"
 dependencies = [
  "itp-types",
+ "its-primitives",
  "parity-scale-codec",
  "sgx_types",
  "sp-runtime",
@@ -2690,7 +2694,6 @@ version = "0.8.0"
 dependencies = [
  "chrono",
  "itp-storage",
- "its-primitives",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.130",
