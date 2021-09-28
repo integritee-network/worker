@@ -1,8 +1,8 @@
 //! Abstraction over the state crypto that is used in the enclave
-use std::vec::Vec;
+use std::{fmt::Debug, vec::Vec};
 
 pub trait StateCrypto {
-	type Error;
+	type Error: Debug;
 	fn encrypt(&self, data: &mut [u8]) -> Result<(), Self::Error>;
 	fn decrypt(&self, data: &mut [u8]) -> Result<(), Self::Error>;
 }

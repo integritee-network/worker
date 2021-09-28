@@ -18,25 +18,15 @@
 pub extern crate alloc;
 
 use self::serde_json::*;
-use crate::{
-	rpc::author::{AuthorApi, OnBlockCreated, SendState},
-	utils::write_slice_and_whitespace_pad,
-};
-use alloc::{
-	borrow::ToOwned,
-	format,
-	slice::{from_raw_parts, from_raw_parts_mut},
-	str,
-	string::String,
-	vec::Vec,
-};
+use crate::rpc::author::{AuthorApi, OnBlockCreated, SendState};
+use alloc::{borrow::ToOwned, format, str, string::String, vec::Vec};
 use base58::FromBase58;
 use codec::{Decode, Encode};
 use core::result::Result;
 use ita_stf::ShardIdentifier;
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus, H256};
-use its_primitives::types::SignedBlock;
+use its_sidechain::primitives::types::SignedBlock;
 use jsonrpc_core::{futures::executor, Error as RpcError, *};
 use log::*;
 use sgx_types::*;
@@ -295,69 +285,52 @@ where
 	io
 }
 
-fn side_chain_io_handler() -> IoHandler {
+pub fn side_chain_io_handler<ImportFn>(import_fn: ImportFn) -> IoHandler
+where
+	ImportFn: Fn(Vec<SignedBlock>) -> Result<(), crate::error::Error> + Sync + Send + 'static,
+{
 	let mut io = IoHandler::new();
 
 	let sidechain_import_import_name: &str = "sidechain_importBlock";
-	io.add_sync_method(sidechain_import_import_name, |sidechain_blocks: Params| {
-		// Todo: actually do something with the block, i.e., apply the state diff.
-		// However, this requires importing the stf here. So, before doing that and increase
-		// the size of init_io_handler even more, we should think about how we can do that more
-		// modularized.
+	io.add_sync_method(sidechain_import_import_name, move |sidechain_blocks: Params| {
 		debug!("sidechain_importBlock rpc. Params: {:?}", sidechain_blocks);
+
 		let block_vec: Vec<u8> = sidechain_blocks.parse()?;
+
 		let blocks: Vec<SignedBlock> = Decode::decode(&mut block_vec.as_slice()).map_err(|_| {
 			jsonrpc_core::error::Error::invalid_params_with_details(
 				"Could not decode Vec<SignedBlock>",
 				block_vec,
 			)
 		})?;
+
 		info!("sidechain_importBlock. Blocks: {:?}", blocks);
+
+		let _ = import_fn(blocks).map_err(|e| {
+			jsonrpc_core::error::Error::invalid_params_with_details("Failed to import Block.", e)
+		})?;
+
 		Ok(Value::String("ok".to_owned()))
 	});
 
 	io
 }
 
-/// this is reduced to the side chain block import RPC interface (i.e. worker-worker communication)
-/// the entire rest of the RPC server is run inside the enclave and does not use this e-call function anymore
-#[no_mangle]
-pub unsafe extern "C" fn call_rpc_methods(
-	request: *const u8,
-	request_len: u32,
-	response: *mut u8,
-	response_len: u32,
-) -> sgx_status_t {
-	//init
-	let io = side_chain_io_handler();
-	// get request string
-	let req: Vec<u8> = from_raw_parts(request, request_len as usize).to_vec();
-	let request_string = match str::from_utf8(&req) {
-		Ok(req) => req,
-		Err(e) => {
-			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-	// Rpc Response String
-	let response_string = io.handle_request_sync(request_string).unwrap();
-
-	// update response outside of enclave
-	let response_slice = from_raw_parts_mut(response, response_len as usize);
-	write_slice_and_whitespace_pad(response_slice, response_string.as_bytes().to_vec());
-	sgx_status_t::SGX_SUCCESS
-}
-
 pub mod tests {
 	use super::{alloc::string::ToString, side_chain_io_handler};
+	use jsonrpc_core::IoHandler;
 	use std::string::String;
 
 	fn rpc_response<T: ToString>(result: T) -> String {
 		format!(r#"{{"jsonrpc":"2.0","result":{},"id":1}}"#, result.to_string())
 	}
 
+	fn io_handler() -> IoHandler {
+		side_chain_io_handler(|_| Ok(()))
+	}
+
 	pub fn sidechain_import_block_is_ok() {
-		let io = side_chain_io_handler();
+		let io = io_handler();
 		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":[4,0,0,0,0,0,0,0,0,228,0,145,188,97,251,138,131,108,29,6,107,10,152,67,29,148,190,114,167,223,169,197,163,93,228,76,169,171,80,15,209,101,11,211,96,0,0,0,0,83,52,167,255,37,229,185,231,38,66,122,3,55,139,5,190,125,85,94,177,190,99,22,149,92,97,154,30,142,89,24,144,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,136,220,52,23,213,5,142,196,180,80,62,12,18,234,26,10,137,190,32,15,233,137,34,66,61,67,52,1,79,166,176,238,0,0,0,175,124,84,84,32,238,162,224,130,203,26,66,7,121,44,59,196,200,100,31,173,226,165,106,187,135,223,149,30,46,191,95,116,203,205,102,100,85,82,74,158,197,166,218,181,130,119,127,162,134,227,129,118,85,123,76,21,113,90,1,160,77,110,15],"id":1}"#;
 
 		let response_string = io.handle_request_sync(enclave_req).unwrap();
@@ -366,7 +339,7 @@ pub mod tests {
 	}
 
 	pub fn sidechain_import_block_returns_invalid_param_err() {
-		let io = side_chain_io_handler();
+		let io = io_handler();
 		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":["SophisticatedInvalidParam"],"id":1}"#;
 
 		let response_string = io.handle_request_sync(enclave_req).unwrap();
@@ -376,7 +349,7 @@ pub mod tests {
 	}
 
 	pub fn sidechain_import_block_returns_decode_err() {
-		let io = side_chain_io_handler();
+		let io = io_handler();
 		let enclave_req =
 			r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":[2],"id":1}"#;
 

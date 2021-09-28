@@ -482,7 +482,6 @@ dependencies = [
  "itp-teerex-storage",
  "itp-test",
  "itp-types",
- "its-primitives",
  "its-sidechain",
  "jsonrpc-core",
  "lazy_static",
@@ -1328,6 +1327,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-consensus-aura"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "itp-storage-verifier",
+ "its-consensus-common",
+ "its-consensus-slots",
+ "its-primitives",
+ "its-state",
+ "its-validateer-fetch",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "sgx_tstd",
+ "sp-runtime",
+]
+
+[[package]]
+name = "its-consensus-common"
+version = "0.8.0"
+dependencies = [
+ "itp-sgx-crypto",
+ "itp-types",
+ "its-primitives",
+ "its-state",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sp-runtime",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-consensus-slots"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "itp-sgx-io",
+ "itp-types",
+ "its-consensus-common",
+ "its-primitives",
+ "lazy_static",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sp-consensus-slots",
+ "sp-runtime",
+]
+
+[[package]]
 name = "its-primitives"
 version = "0.8.0"
 dependencies = [
@@ -1339,7 +1385,38 @@ dependencies = [
 
 [[package]]
 name = "its-sidechain"
-version = "0.8.0"
+version = "0.1.0"
+dependencies = [
+ "its-consensus-aura",
+ "its-consensus-common",
+ "its-consensus-slots",
+ "its-primitives",
+ "its-state",
+ "its-validateer-fetch",
+]
+
+[[package]]
+name = "its-state"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "itp-storage",
+ "its-primitives",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "serde 1.0.130",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-validateer-fetch"
+version = "0.1.0"
 dependencies = [
  "derive_more",
  "frame-support",
@@ -2449,7 +2526,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
 dependencies = [
  "derive_more",
  "environmental",
@@ -2464,7 +2541,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2923,7 +3000,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eb9f1fd0a8ad2e6f33fb3642f7ecbb39e6a0363c"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
 dependencies = [
  "environmental",
  "hash-db",

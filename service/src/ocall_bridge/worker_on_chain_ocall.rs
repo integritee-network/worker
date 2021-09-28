@@ -130,7 +130,11 @@ where
 				},
 			};
 
-		println! {"Received blocks: {:?}", signed_blocks};
+		if !signed_blocks.is_empty() {
+			println!("Enclave produced sidechain blocks: {:?}", signed_blocks);
+		} else {
+			debug!("Enclave did not produce sidechain blocks");
+		}
 
 		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks.clone()) {
 			error!("Error gossiping blocks: {:?}", e);

@@ -103,6 +103,7 @@ class Worker:
     def purge(self):
         """ Deletes the light_client_db.bin, the shards and the sidechain_db.bin
         """
+        self.purge_last_slot_seal()
         self.purge_light_client_db()
         self.purge_shards_and_sidechain_db()
         return self
@@ -119,6 +120,12 @@ class Worker:
     def purge_light_client_db(self):
         print(f'purging light_client_db')
         for db in pathlib.Path(self.cwd).glob('light_client_db.bin*'):
+            print(f'remove: {db}')
+            db.unlink()
+
+    def purge_last_slot_seal(self):
+        print(f'purging last_slot_seal')
+        for db in pathlib.Path(self.cwd).glob('last_slot.bin'):
             print(f'remove: {db}')
             db.unlink()
 
@@ -156,7 +163,11 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='debug,ws=warn,sp_io=warn,substrate_api_client=warn')
+        env = dict(os.environ, RUST_LOG='info,ws=warn,sp_io=warn,'
+                                        'substrate_api_client=warn,'
+                                        'jsonrpsee_ws_client=warn,'
+                                        'jsonrpsee_ws_server=warn,'
+                                        'enclave_runtime=info')
 
         return Popen(
             self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),

@@ -16,10 +16,10 @@
 */
 use crate::Hash;
 use codec::{Decode, Error, Input};
-use core::time::Duration;
+use its_sidechain::slots::duration_now;
 use log::*;
 use sgx_types::sgx_status_t;
-use std::{slice, time::SystemTime, untrusted::time::SystemTimeEx, vec::Vec};
+use std::{slice, time::Duration, vec::Vec};
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];
@@ -63,12 +63,13 @@ unsafe impl<D: Decode> DecodeRaw for D {
 	}
 }
 
-/// Returns current duration since unix epoch.
-pub fn duration_now() -> Duration {
-	let now = SystemTime::now();
-	now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
-		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
-	})
+pub unsafe fn utf8_str_from_raw<'a>(
+	data: *const u8,
+	len: usize,
+) -> Result<&'a str, std::str::Utf8Error> {
+	let bytes = slice::from_raw_parts(data, len);
+
+	std::str::from_utf8(bytes)
 }
 
 /// calculates the remaining time `until`.

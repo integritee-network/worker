@@ -167,12 +167,11 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build.yml
-          # Todo: Change branch to master once merged
-          name: integritee-node-skip-ias-check
+          workflow: ci.yml
+          name: integritee-node-dev-5b0060b74f419da30d0e3960fee3a54ff6427d6f
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1216982384
+          run_id: 1285218313
           path: node
           repo: integritee-network/integritee-node
 

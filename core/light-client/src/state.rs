@@ -26,6 +26,7 @@ use std::{fmt, vec::Vec};
 #[derive(Encode, Decode, Clone, PartialEq)]
 pub struct RelayState<Block: BlockT> {
 	pub last_finalized_block_header: Block::Header,
+	pub penultimate_finalized_block_header: Block::Header,
 	pub current_validator_set: AuthorityList,
 	pub current_validator_set_id: SetId,
 	pub header_hashes: Vec<Block::Hash>,
@@ -44,13 +45,20 @@ impl<Block: BlockT> RelayState<Block> {
 	pub fn new(block_header: Block::Header, validator_set: AuthorityList) -> Self {
 		RelayState {
 			header_hashes: vec![block_header.hash()],
-			last_finalized_block_header: block_header,
+			last_finalized_block_header: block_header.clone(),
+			// is it bad to initialize with the same? Header trait does no implement default...
+			penultimate_finalized_block_header: block_header,
 			current_validator_set: validator_set,
 			current_validator_set_id: 0,
 			unjustified_headers: Vec::new(),
 			verify_tx_inclusion: Vec::new(),
 			scheduled_change: None,
 		}
+	}
+
+	pub fn set_last_finalized_block_header(&mut self, header: Block::Header) {
+		self.penultimate_finalized_block_header = self.last_finalized_block_header.clone();
+		self.last_finalized_block_header = header;
 	}
 }
 

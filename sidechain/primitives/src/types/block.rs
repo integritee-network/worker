@@ -34,8 +34,7 @@ pub struct Block {
 	block_number: BlockNumber,
 	parent_hash: H256,
 	timestamp: u64,
-	/// hash of the last header of block in layer one
-	/// needed in case extrinsics depend on layer one state
+	/// Parentchain header this block is based on
 	layer_one_head: H256,
 	shard_id: ShardIdentifier,
 	///  must be registered on layer one as an enclave for the respective shard
@@ -79,7 +78,7 @@ impl BlockT for Block {
 		&self.signed_top_hashes
 	}
 	/// get encrypted payload
-	fn state_payload(&self) -> &[u8] {
+	fn state_payload(&self) -> &Vec<u8> {
 		&self.state_payload
 	}
 	/// Constructs an unsigned block
@@ -121,7 +120,7 @@ impl SignedBlockT for SignedBlock {
 	}
 
 	/// get block reference
-	fn block(&self) -> &Block {
+	fn block(&self) -> &Self::Block {
 		&self.block
 	}
 

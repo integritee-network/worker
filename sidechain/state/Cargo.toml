@@ -1,0 +1,75 @@
+[package]
+name = "its-state"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["std"]
+std = [
+    "log/std",
+    "serde/std",
+
+    # substrace
+    "sp-std/std",
+    "sp-core/std",
+
+    # local creates
+    "itp-storage/std",
+    "its-primitives/std",
+
+    # scs crates
+    "sgx-externalities/std",
+
+    # optional std crates
+    "codec/std",
+    "thiserror",
+]
+sgx = [
+    # teaclave
+    "sgx_tstd",
+
+    # local crates
+    "itp-storage/sgx",
+
+    # scs crates
+    "sp-io-sgx",
+
+    # sgx versions of std crates
+    "thiserror_sgx",
+]
+test = [
+    "frame-support",
+    "sp-runtime",
+]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "chain-error"] }
+log = { version = "0.4", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+
+# optional std deps
+thiserror = { version = "1.0.9", optional = true }
+
+# sgx deps
+sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# sgx forks
+thiserror_sgx = { package = "thiserror", version = "1.0.9", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+
+# local deps
+itp-storage = { path = "../../core-primitives/storage", default-features = false}
+its-primitives = { path = "../primitives", default-features = false }
+
+# scs deps
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sp-io-sgx = { package = "sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+
+# substrate deps
+sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+# test deps
+frame-support = { version = "4.0.0-dev", default-features = false, optional = true, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "4.0.0-dev", default-features = false, optional = true, git = "https://github.com/paritytech/substrate.git", branch = "master"}

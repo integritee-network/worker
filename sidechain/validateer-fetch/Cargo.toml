@@ -1,6 +1,6 @@
 [package]
-name = "its-sidechain"
-version = "0.8.0"
+name = "its-validateer-fetch"
+version = "0.1.0"
 edition = "2018"
 
 [dependencies]
@@ -15,11 +15,11 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
-itp-types = { path = "../core-primitives/types", default-features = false }
-itp-storage = { path = "../core-primitives/storage", default-features = false }
-itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
-itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
+itp-teerex-storage = { path = "../../core-primitives/teerex-storage", default-features = false }
+itp-types = { path = "../../core-primitives/types", default-features = false }
+itp-storage = { path = "../../core-primitives/storage", default-features = false }
+itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
+itp-storage-verifier = { path = "../../core-primitives/storage-verified", default-features = false }
 
 [features]
 default = ["std"]
@@ -35,4 +35,4 @@ std = [
 ]
 
 [dev-dependencies]
-itp-test = { path = "../core-primitives/test" }
+itp-test = { path = "../../core-primitives/test" }

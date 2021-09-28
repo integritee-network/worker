@@ -8,11 +8,11 @@ use codec::{Decode, Encode};
 use core::hash::Hash;
 use sp_core::{blake2_256, Pair, Public, H256};
 use sp_runtime::traits::Member;
-use sp_std::prelude::*;
+use sp_std::{fmt::Debug, prelude::*};
 
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
-pub trait Block: Encode + Decode + Send + Sync {
+pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
 	/// Identifier for the shards
 	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
 
@@ -34,7 +34,7 @@ pub trait Block: Encode + Decode + Send + Sync {
 	/// get reference of extrinsics of block
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
-	fn state_payload(&self) -> &[u8];
+	fn state_payload(&self) -> &Vec<u8>;
 	/// get the `blake2_256` hash of the block
 	fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
@@ -57,7 +57,7 @@ pub trait Block: Encode + Decode + Send + Sync {
 pub type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as Block>::ShardIdentifier;
 
 /// A block and it's corresponding signature by the [`Block`] author.
-pub trait SignedBlock: Encode + Decode + Send + Sync {
+pub trait SignedBlock: Encode + Decode + Send + Sync + Debug + Clone {
 	/// The block type of the [`SignedBlock`]
 	type Block: Block<Public = Self::Public>;
 

@@ -21,7 +21,7 @@ use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::{WorkerRequest, WorkerResponse};
-use its_primitives::traits::SignedBlock;
+use its_sidechain::primitives::traits::SignedBlock;
 use log::*;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;

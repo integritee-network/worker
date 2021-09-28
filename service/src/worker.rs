@@ -8,7 +8,7 @@ use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
-use log::info;
+use log::{debug, info};
 use std::num::ParseIntError;
 
 use itp_api_client_extensions::PalletTeerexApi;
@@ -63,13 +63,18 @@ where
 	WorkerApiDirect: Send + Sync,
 {
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+		if blocks.is_empty() {
+			debug!("No blocks to gossip, returning");
+			return Ok(())
+		}
+
 		let peers = self.peers()?;
 		info!("Gossiping sidechain blocks to peers: {:?}", peers);
 
 		for p in peers.iter() {
 			// Todo: once the two direct servers are merged, remove this.
 			let url = worker_url_into_async_rpc_url(&p.url)?;
-			info!("Gossiping block to peer with address: {:?}", url);
+			debug!("Gossiping block to peer with address: {:?}", url);
 			let client = WsClientBuilder::default().build(&url).await?;
 			let response: String = client
 				.request::<Vec<u8>>(
@@ -77,15 +82,19 @@ where
 					vec![to_json_value(blocks.clone())?].into(),
 				)
 				.await
-				.map(String::from_utf8)??;
-			info!("sidechain_importBlock response: {:?}", response);
+				.map(String::from_utf8)?
+				.map(|s| s.trim_end().to_string())?; // remove whitespace padding
+			debug!("sidechain_importBlock response: {:?}", response);
 		}
 		Ok(())
 	}
 
 	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>> {
 		let mut peers = self.node_api.all_enclaves()?;
-		peers.retain(|e| e.url.trim_start_matches("ws://") != self.config.worker_url());
+		peers.retain(|e| {
+			e.url.trim_start_matches("ws://").trim_start_matches("wss://")
+				!= self.config.worker_url()
+		});
 		Ok(peers)
 	}
 }
@@ -94,7 +103,7 @@ where
 /// to the new version in rpc/server. Remove this, when all the methods have been migrated to the new one
 /// in rpc/server.
 pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
-	// [Option("ws"), //ip, port]
+	// [Option("ws(s)"), //ip, port]
 	let mut url_vec: Vec<&str> = url.split(':').collect();
 	match url_vec.len() {
 		3 | 2 => (),

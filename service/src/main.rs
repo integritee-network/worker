@@ -94,8 +94,6 @@ mod worker;
 /// how many blocks will be synced before storing the chain db to disk
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-/// start block production every ... ms
-const BLOCK_PRODUCTION_INTERVAL: u64 = 1000;
 
 fn main() {
 	// Setup logging
@@ -315,6 +313,9 @@ fn start_worker<E, T, D>(
 	// get enclaves's account nonce
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
+	enclave
+		.set_nonce(nonce)
+		.expect("Could not set nonce of enclave. Returning here...");
 
 	let uxt = if skip_ra {
 		println!(
@@ -392,17 +393,18 @@ fn start_interval_block_production<E: EnclaveBase + SideChain>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	mut latest_head: Header,
 ) {
-	let block_production_interval = Duration::from_millis(BLOCK_PRODUCTION_INTERVAL);
+	use itp_settings::sidechain::SLOT_DURATION;
+
 	let mut interval_start = SystemTime::now();
 	loop {
 		if let Ok(elapsed) = interval_start.elapsed() {
-			if elapsed >= block_production_interval {
+			if elapsed >= SLOT_DURATION {
 				// update interval time
 				interval_start = SystemTime::now();
 				latest_head = sync_parentchain_and_execute_tops(enclave_api, api, latest_head)
 			} else {
 				// sleep for the rest of the interval
-				let sleep_time = block_production_interval - elapsed;
+				let sleep_time = SLOT_DURATION - elapsed;
 				thread::sleep(sleep_time);
 			}
 		}
