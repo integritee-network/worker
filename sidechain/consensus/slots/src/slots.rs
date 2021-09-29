@@ -30,6 +30,11 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 	Duration::from_millis(remaining_millis as u64)
 }
 
+/// calculates the remaining time `until`.
+pub fn remaining_time(until: Duration) -> Option<Duration> {
+	until.checked_sub(duration_now())
+}
+
 /// Information about a slot.
 #[derive(Debug)]
 pub struct SlotInfo<B: ParentchainBlock> {

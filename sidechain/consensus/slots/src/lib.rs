@@ -237,8 +237,9 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 		let mut slot_results = Vec::with_capacity(remaining_shards);
 
 		for shard in shards.into_iter() {
-			let shard_remaining_duration = time_until_next_slot(slot_info.ends_at)
-				.checked_div(remaining_shards as u32)
+			let shard_remaining_duration = remaining_time(slot_info.ends_at)
+				.map(|time| time.checked_div(remaining_shards as u32))
+				.flatten()
 				.unwrap_or_default();
 
 			if shard_remaining_duration == Default::default() {
@@ -252,7 +253,7 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 
 			let shard_slot = SlotInfo::new(
 				slot_info.slot,
-				slot_info.timestamp,
+				duration_now(),
 				shard_remaining_duration,
 				slot_info.parentchain_head.clone(),
 			);
