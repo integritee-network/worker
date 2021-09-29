@@ -21,7 +21,7 @@ use crate::{
 	globals::{tokio_handle::GetTokioHandle, worker::GetWorker},
 	worker::{WorkerResult, WorkerT},
 };
-use itp_types::block::SignedBlock as SignedSidechainBlock;
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use std::sync::Arc;
 

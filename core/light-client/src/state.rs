@@ -43,10 +43,10 @@ pub struct ScheduledChangeAtBlock<Header: HeaderT> {
 impl<Block: BlockT> RelayState<Block> {
 	pub fn new(block_header: Block::Header, validator_set: AuthorityList) -> Self {
 		RelayState {
-			last_finalized_block_header: block_header.clone(),
+			header_hashes: vec![block_header.hash()],
+			last_finalized_block_header: block_header,
 			current_validator_set: validator_set,
 			current_validator_set_id: 0,
-			header_hashes: vec![block_header.hash()],
 			unjustified_headers: Vec::new(),
 			verify_tx_inclusion: Vec::new(),
 			scheduled_change: None,

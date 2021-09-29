@@ -8,7 +8,8 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use itp_storage::storage_value_key;
-use itp_types::{OpaqueCall, SidechainBlockNumber};
+use itp_types::OpaqueCall;
+use its_primitives::types::BlockNumber as SidechainBlockNumber;
 use log_sgx::*;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
 use sgx_tstd as std;

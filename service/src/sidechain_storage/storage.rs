@@ -13,9 +13,9 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
-use itp_types::{
-	block::{BlockHash, BlockNumber},
+use its_primitives::{
 	traits::{Block as BlockT, SignedBlock as SignedBlockT},
+	types::{BlockHash, BlockNumber},
 };
 use log::*;
 use rocksdb::WriteBatch;
@@ -308,10 +308,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use itp_types::{
-		block::{Block, SignedBlock},
+	use itp_types::ShardIdentifier;
+	use its_primitives::{
 		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
-		ShardIdentifier,
+		types::{Block, SignedBlock},
 	};
 	use rocksdb::{Options, DB};
 	use sp_core::{crypto::Pair, ed25519, H256};

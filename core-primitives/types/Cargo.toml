@@ -16,7 +16,6 @@ sgx_tstd = { rev = "v1.1.3", features = ["untrusted_fs","net","backtrace"], git 
 
 # local deps
 itp-storage = { path = "../storage", default-features = false }
-its-primitives = { path = "../../sidechain/primitives", default-features = false }
 
 # substrate-deps
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
@@ -31,9 +30,9 @@ std = [ 'codec/std',
         'serde/std',
         'serde_json/std',
         'primitive-types/std',
-        'its-primitives/std',
         'itp-storage/std',
         'sp-runtime/std',
+        'substrate-api-client/std',
 ]
 sgx = [ 'sgx_tstd' ]
 

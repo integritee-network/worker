@@ -35,8 +35,7 @@ use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use justification::GrandpaJustification;
 use log::*;
 use sp_finality_grandpa::{
-	AuthorityId, AuthorityList, AuthorityWeight, ConsensusLog, ScheduledChange, SetId,
-	GRANDPA_ENGINE_ID,
+	AuthorityId, AuthorityWeight, ConsensusLog, ScheduledChange, GRANDPA_ENGINE_ID,
 };
 use sp_runtime::{
 	generic::{Digest as DigestG, OpaqueDigestItemId},
@@ -53,10 +52,11 @@ pub mod state;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod io;
 
-// reexport this one as we need the trait bound in dependant crates
+// reexport useful types.
 pub use finality_grandpa::BlockNumberOps;
+pub use sp_finality_grandpa::{AuthorityList, SetId};
 
-type RelayId = u64;
+pub type RelayId = u64;
 
 pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
@@ -257,7 +257,7 @@ where
 	) -> Result<(), Error> {
 		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 
-		// Check that the new header is a decendent of the old header
+		// Check that the new header is a descendant of the old header
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 

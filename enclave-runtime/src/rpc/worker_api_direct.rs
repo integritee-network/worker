@@ -35,9 +35,8 @@ use codec::{Decode, Encode};
 use core::result::Result;
 use ita_stf::ShardIdentifier;
 use itp_sgx_crypto::Rsa3072Seal;
-use itp_types::{
-	block::SignedBlock, DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus, H256,
-};
+use itp_types::{DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus, H256};
+use its_primitives::types::SignedBlock;
 use jsonrpc_core::{futures::executor, Error as RpcError, *};
 use log::*;
 use sgx_types::*;

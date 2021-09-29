@@ -19,7 +19,8 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_types::{traits::SignedBlock, TrustedOperationStatus, WorkerRequest, WorkerResponse};
+use itp_types::{TrustedOperationStatus, WorkerRequest, WorkerResponse};
+use its_primitives::traits::SignedBlock;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 use sp_std::prelude::Vec;

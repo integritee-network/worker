@@ -32,9 +32,9 @@ use substrate_api_client::{rpc::WsRpcClient, Api};
 #[cfg(test)]
 use crate::config::Config;
 #[cfg(test)]
-use itp_types::{
-	block::{Block, SignedBlock},
+use its_primitives::{
 	traits::{Block as BlockT, SignBlock},
+	types::{Block, SignedBlock},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
