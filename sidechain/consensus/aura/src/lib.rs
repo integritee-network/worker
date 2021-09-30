@@ -55,7 +55,7 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi>
 			authority_pair,
 			ocall_api,
 			environment,
-			claim_strategy: SlotClaimStrategy::Normal,
+			claim_strategy: SlotClaimStrategy::RoundRobin,
 			_phantom: Default::default(),
 		}
 	}
@@ -76,8 +76,8 @@ pub enum SlotClaimStrategy {
 	/// try to produce a block always even if it's not the authors slot
 	/// Intended for first phase to see if aura production works
 	Always,
-	/// Only produce blocks, when it's the authors slot.
-	Normal,
+	/// Proper Aura strategy: Only produce blocks, when it's the authors slot.
+	RoundRobin,
 }
 
 type AuthorityId<P> = <P as Pair>::Public;
