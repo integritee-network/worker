@@ -17,8 +17,9 @@
 
 use crate::{
 	rpc::author::{
-		atomic_container::AtomicContainer, author::Author, AuthorApi, OnBlockCreated, SendState,
+		atomic_container::AtomicContainer, Author, AuthorApi, OnBlockCreated, SendState,
 	},
+	state::StateFacade,
 	top_pool::pool_types::BPool,
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -30,14 +31,16 @@ use std::{
 
 static GLOBAL_AUTHOR_CONTAINER: AtomicContainer = AtomicContainer::new();
 
+pub trait FullAuthor = AuthorApi<H256, H256>
+	+ SendState<Hash = H256>
+	+ OnBlockCreated<Hash = H256>
+	+ Send
+	+ Sync
+	+ 'static;
+
 /// getter trait for the RPC author
 pub trait GetAuthor: Send + Sync + 'static {
-	type AuthorType: AuthorApi<H256, H256>
-		+ SendState<Hash = H256>
-		+ OnBlockCreated<Hash = H256>
-		+ Send
-		+ Sync
-		+ 'static;
+	type AuthorType: FullAuthor;
 
 	fn get(&self) -> Option<&'static SgxMutex<Arc<Self::AuthorType>>>;
 }
@@ -53,7 +56,7 @@ impl GlobalAuthorContainer {
 }
 
 impl GetAuthor for GlobalAuthorContainer {
-	type AuthorType = Author<BPool, Rsa3072KeyPair>;
+	type AuthorType = Author<BPool, StateFacade, Rsa3072KeyPair>;
 
 	fn get(&self) -> Option<&'static SgxMutex<Arc<Self::AuthorType>>> {
 		GLOBAL_AUTHOR_CONTAINER.load()
@@ -69,12 +72,7 @@ pub struct AuthorContainer<AuthorT> {
 
 impl<AuthorT> AuthorContainer<AuthorT>
 where
-	AuthorT: AuthorApi<H256, H256>
-		+ SendState<Hash = H256>
-		+ OnBlockCreated<Hash = H256>
-		+ Send
-		+ Sync
-		+ 'static,
+	AuthorT: FullAuthor,
 {
 	pub fn new(trusted_operation_pool: Arc<AuthorT>) -> Self {
 		let container =
@@ -86,12 +84,7 @@ where
 
 impl<AuthorT> GetAuthor for AuthorContainer<AuthorT>
 where
-	AuthorT: AuthorApi<H256, H256>
-		+ SendState<Hash = H256>
-		+ OnBlockCreated<Hash = H256>
-		+ Send
-		+ Sync
-		+ 'static,
+	AuthorT: FullAuthor,
 {
 	type AuthorType = AuthorT;
 

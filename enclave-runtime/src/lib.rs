@@ -18,6 +18,7 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
+#![feature(trait_alias)]
 #![crate_name = "enclave_runtime"]
 #![crate_type = "staticlib"]
 #![cfg_attr(not(target_env = "sgx"), no_std)]
@@ -42,7 +43,7 @@ use crate::{
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
 	sidechain_impl::exec_aura_on_slot,
-	state::list_shards,
+	state::{list_shards, StateFacade},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
@@ -93,7 +94,7 @@ use lazy_static::lazy_static;
 use log::*;
 use rpc::{
 	api::SideChainApi,
-	author::{author::Author, hash::TrustedOperationOrHash, AuthorApi},
+	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
 };
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_types::{sgx_status_t, SgxResult};
@@ -458,6 +459,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 
 	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
 	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
+	let state_facade = Arc::new(StateFacade);
 
 	let rsa_shielding_key = match Rsa3072Seal::unseal() {
 		Ok(k) => k,
@@ -467,7 +469,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		},
 	};
 
-	let rpc_author = Arc::new(Author::new(top_pool, rsa_shielding_key));
+	let rpc_author = Arc::new(Author::new(top_pool, state_facade, rsa_shielding_key));
 
 	GlobalAuthorContainer::initialize(rpc_author.clone());
 

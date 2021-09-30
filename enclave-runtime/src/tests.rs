@@ -17,6 +17,7 @@
 use crate::{
 	ocall::OcallApi,
 	rpc, state,
+	state::StateFacade,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
@@ -50,7 +51,7 @@ use jsonrpc_core::futures::executor;
 use log::*;
 use rpc::{
 	api::SideChainApi,
-	author::{author::Author, AuthorApi},
+	author::{Author, AuthorApi},
 	basic_pool::BasicPool,
 };
 use sgx_externalities::SgxExternalitiesTrait;
@@ -62,7 +63,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
 type TestTopPool = BasicPool<SideChainApi<Block>, Block, TestRpcResponder>;
-type TestRpcAuthor = Author<TestTopPool, ShieldingCryptoMock>;
+type TestRpcAuthor = Author<TestTopPool, StateFacade, ShieldingCryptoMock>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -124,6 +125,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
 		rpc::author::atomic_container::tests::store_and_load_works,
+		rpc::author::author_tests::tests::submitting_to_author_inserts_in_pool,
 		// mra cert tests
 		test_verify_mra_cert_should_work,
 		test_verify_wrong_cert_is_err,
@@ -498,13 +500,15 @@ fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
 fn test_setup() -> (TestRpcAuthor, State, ShardIdentifier, MrEnclave) {
 	ensure_no_empty_shard_directory_exists();
 
+	// TODO: new that we have an abstraction for accessing the state, we should use the mock state, instead of having to write to files
+	let state_facade = Arc::new(StateFacade);
 	let (state, shard) = init_state();
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	let encryption_key = ShieldingCryptoMock;
 
-	(TestRpcAuthor::new(Arc::new(top_pool), encryption_key), state, shard, mrenclave)
+	(TestRpcAuthor::new(Arc::new(top_pool), state_facade, encryption_key), state, shard, mrenclave)
 }
 
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.

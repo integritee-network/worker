@@ -23,6 +23,7 @@ use std::vec::Vec;
 ///
 /// mock implementation that does not encrypt
 /// encrypt/decrypt return the input as is
+#[derive(Clone)]
 pub struct ShieldingCryptoMock;
 
 #[derive(Debug, Display, From)]
