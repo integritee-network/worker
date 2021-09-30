@@ -52,7 +52,7 @@ pub trait Environment<B: ParentchainBlock, SB: SignedSidechainBlock> {
 	/// Initialize the proposal logic on top of a specific header.
 	fn init(
 		&mut self,
-		parent_header: &B::Header,
+		parent_header: B::Header,
 		shard: ShardIdentifierFor<SB>,
 	) -> std::result::Result<Self::Proposer, Self::Error>;
 }

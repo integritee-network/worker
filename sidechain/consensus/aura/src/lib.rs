@@ -140,7 +140,7 @@ where
 
 	fn proposer(
 		&mut self,
-		header: &PB::Header,
+		header: PB::Header,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError> {
 		self.environment.init(header, shard)

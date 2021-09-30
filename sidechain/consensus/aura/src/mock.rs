@@ -41,7 +41,7 @@ impl Environment<ParentchainBlock, SignedSidechainBlock> for EnvironmentMock {
 
 	fn init(
 		&mut self,
-		_: &Header,
+		_: Header,
 		_: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(ProposerMock)

@@ -88,7 +88,7 @@ where
 
 	fn init(
 		&mut self,
-		parent_header: &PB::Header,
+		parent_header: PB::Header,
 		shard: ShardIdentifierFor<SB>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {
@@ -96,7 +96,7 @@ where
 			light_client: self.light_client.clone(),
 			author: self.author.clone(),
 			proposer_key: self.pair.clone(),
-			parentchain_header: parent_header.clone(),
+			parentchain_header: parent_header,
 			shard,
 			_phantom: PhantomData,
 		})

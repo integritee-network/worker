@@ -120,7 +120,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	/// Creates the proposer for the current slot
 	fn proposer(
 		&mut self,
-		header: &B::Header,
+		header: B::Header,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError>;
 
@@ -177,7 +177,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 
 		let _ = self.claim_slot(&slot_info.parentchain_head, slot, &epoch_data)?;
 
-		let proposer = match self.proposer(&slot_info.parentchain_head, shard) {
+		let proposer = match self.proposer(slot_info.parentchain_head.clone(), shard) {
 			Ok(p) => p,
 			Err(e) => {
 				warn!(target: logging_target, "Could not create proposer: {:?}", e);
