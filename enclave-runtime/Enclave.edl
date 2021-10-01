@@ -56,6 +56,10 @@ enclave {
             [in] uint32_t* nonce
         );
 
+        public sgx_status_t set_nonce(
+            [in] uint32_t* nonce
+        );
+
 		public sgx_status_t get_rsa_encryption_pubkey(
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 

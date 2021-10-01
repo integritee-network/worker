@@ -1,0 +1,30 @@
+[package]
+name = "its-sidechain"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = ["std"]
+std = [
+    "its-consensus-aura/std",
+    "its-consensus-common/std",
+    "its-consensus-slots/std",
+    "its-primitives/std",
+    "its-state/std",
+    "its-validateer-fetch/std",
+]
+sgx = [
+    "its-consensus-aura/sgx",
+    "its-consensus-common/sgx",
+    "its-consensus-slots/sgx",
+    "its-state/sgx",
+]
+test = ["its-state/test"]
+
+[dependencies]
+its-consensus-aura = { path = "../consensus/aura", default-features = false }
+its-consensus-common = { path = "../consensus/common", default-features = false }
+its-consensus-slots = { path = "../consensus/slots", default-features = false }
+its-primitives = { path = "../primitives", default-features = false }
+its-state = { path = "../state", default-features = false }
+its-validateer-fetch = { path = "../validateer-fetch", default-features = false }

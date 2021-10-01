@@ -14,6 +14,7 @@ pub enum Error {
 	IO(std::io::Error),
 	LightClient(itc_light_client::error::Error),
 	Sgx(sgx_status_t),
+	Consensus(its_sidechain::consensus_common::Error),
 	Stf(String),
 	Other(Box<dyn std::error::Error>),
 }

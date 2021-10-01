@@ -36,14 +36,17 @@ use crate::{
 	ocall::OcallApi,
 	rpc::{
 		author::{OnBlockCreated, SendState},
-		worker_api_direct::public_api_rpc_handler,
+		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
+	sidechain_impl::exec_aura_on_slot,
+	state::list_shards,
+	sync::{EnclaveLock, EnclaveStateRWLock},
 	top_pool::{
 		pool::Options as PoolOptions, pool_types::BPool, top_pool_container::GlobalTopPoolContainer,
 	},
 	utils::{
-		hash_from_slice, remaining_time, write_slice_and_whitespace_pad, DecodeRaw,
-		UnwrapOrSgxErrorUnexpected,
+		hash_from_slice, remaining_time, utf8_str_from_raw, write_slice_and_whitespace_pad,
+		DecodeRaw, UnwrapOrSgxErrorUnexpected,
 	},
 };
 use base58::ToBase58;
@@ -57,15 +60,17 @@ use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_responder::RpcResponder, rpc_ws_handler::RpcWsHandler,
 };
-use itc_light_client::{io::LightClientSeal, BlockNumberOps, NumberFor, Validator};
+use itc_light_client::{
+	io::LightClientSeal, BlockNumberOps, HashFor, LightClientState, NumberFor, Validator,
+};
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::{
-	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{
 		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
 		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
 	},
+	sidechain::SLOT_DURATION,
 };
 use itp_sgx_crypto::{
 	aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal, ShieldingCrypto, StateCrypto,
@@ -75,15 +80,21 @@ use itp_sgx_io::SealedIO;
 use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::{Block, CallWorkerFn, Header, OpaqueCall, ShieldFundsFn, SignedBlock};
-use its_primitives::{
-	traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT},
-	types::block::SignedBlock as SignedSidechainBlock,
+use its_sidechain::{
+	primitives::{
+		traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT},
+		types::block::SignedBlock as SignedSidechainBlock,
+	},
+	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
+	state::{SidechainDB, SidechainSystemExt, StateHash},
 };
+use lazy_static::lazy_static;
 use log::*;
 use rpc::{
 	api::SideChainApi,
 	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
 };
+use sgx_externalities::SgxExternalitiesTrait;
 use sgx_types::{sgx_status_t, SgxResult};
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
@@ -96,7 +107,7 @@ use std::{
 	collections::HashMap,
 	slice,
 	string::ToString,
-	sync::Arc,
+	sync::{Arc, SgxRwLock},
 	time::{Duration, SystemTime, UNIX_EPOCH},
 	untrusted::time::SystemTimeEx,
 	vec::Vec,
@@ -104,7 +115,6 @@ use std::{
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
-use utils::duration_now;
 
 mod attestation;
 mod ipfs;
@@ -116,6 +126,8 @@ pub mod cert;
 pub mod error;
 pub mod hex;
 pub mod rpc;
+mod sidechain_impl;
+mod sync;
 pub mod tls_ra;
 pub mod top_pool;
 
@@ -135,6 +147,18 @@ pub extern "C" fn test_main_entrance() -> size_t {
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub type Hash = sp_core::H256;
+pub type AuthorityPair = sp_core::ed25519::Pair;
+
+lazy_static! {
+	/// the enclave's parentchain nonce
+	///
+	/// This should be abstracted away better in the future. Currently, this only exists
+	/// because we produce sidechain blocks faster that parentchain chain blocks. So for now this
+	/// design suffices. Later, we also need to sync across parallel ecalls that might both result
+	/// in parentchain xt's. Then we should probably think about how we want to abstract the global
+	/// nonce.
+	static ref NONCE: SgxRwLock<u32> = SgxRwLock::new(Default::default());
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -215,10 +239,19 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn set_nonce(nonce: *const u32) -> sgx_status_t {
+	log::info!("[Ecall Set Nonce] Setting the nonce of the enclave to: {}", *nonce);
+
+	*NONCE.write().expect("Encountered poisoned NONCE lock") = *nonce;
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn mock_register_enclave_xt(
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
-	nonce: *const u32,
+	_nonce: *const u32,
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
@@ -239,6 +272,8 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let signer = Ed25519Seal::unseal().unwrap();
 	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
 
+	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
+
 	let xt = compose_extrinsic_offline!(
 		signer,
 		call,
@@ -251,19 +286,19 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	)
 	.encode();
 
+	*nonce += 1;
+
 	write_slice_and_whitespace_pad(extrinsic_slice, xt);
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_extrinsics<PB, V>(
-	validator: &V,
+fn create_extrinsics<PB>(
+	genesis_hash: HashFor<PB>,
 	calls: Vec<OpaqueCall>,
-	mut nonce: u32,
+	nonce: &mut u32,
 ) -> Result<Vec<OpaqueExtrinsic>>
 where
 	PB: BlockT<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-	V: Validator<PB>,
 {
 	// get information for composing the extrinsic
 	let signer = Ed25519Seal::unseal()?;
@@ -275,15 +310,15 @@ where
 			let xt = compose_extrinsic_offline!(
 				signer.clone(),
 				call,
-				nonce,
+				*nonce,
 				Era::Immortal,
-				validator.genesis_hash(validator.num_relays()).unwrap(),
-				validator.genesis_hash(validator.num_relays()).unwrap(),
+				genesis_hash,
+				genesis_hash,
 				RUNTIME_SPEC_VERSION,
 				RUNTIME_TRANSACTION_VERSION
 			)
 			.encode();
-			nonce += 1;
+			*nonce += 1;
 			xt
 		})
 		.map(|xt| {
@@ -293,6 +328,63 @@ where
 		.collect();
 
 	Ok(extrinsics_buffer)
+}
+
+/// this is reduced to the side chain block import RPC interface (i.e. worker-worker communication)
+/// the entire rest of the RPC server is run inside the enclave and does not use this e-call function anymore
+#[no_mangle]
+pub unsafe extern "C" fn call_rpc_methods(
+	request: *const u8,
+	request_len: u32,
+	response: *mut u8,
+	response_len: u32,
+) -> sgx_status_t {
+	let request = match utf8_str_from_raw(request, request_len as usize) {
+		Ok(req) => req,
+		Err(e) => {
+			error!("[SidechainRpc] FFI: Invalid utf8 request: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let res = match side_chain_rpc_int::<Block, _>(request, OcallApi) {
+		Ok(res) => res,
+		Err(e) => return e.into(),
+	};
+
+	let response_slice = slice::from_raw_parts_mut(response, response_len as usize);
+	write_slice_and_whitespace_pad(response_slice, res.into_bytes());
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn side_chain_rpc_int<PB, O>(request: &str, _ocall_api: O) -> Result<String>
+where
+	PB: BlockT<Hash = H256>,
+	NumberFor<PB>: BlockNumberOps,
+	O: EnclaveOnChainOCallApi + 'static,
+{
+	// Skip sidechain import now until #423 is solved.
+	// let _ = EnclaveLock::read_all()?;
+	//
+	// let header = LightClientSeal::<PB>::unseal()
+	// 	.map(|v| v.latest_finalized_header(v.num_relays()).unwrap())?;
+	//
+	// let importer: BlockImporter<AuthorityPair, PB, _, O, _> = BlockImporter::default();
+	//
+	// let io = side_chain_io_handler(move |signed_blocks| {
+	// 	import_sidechain_blocks::<PB, _, _, _>(signed_blocks, &header, importer.clone(), &ocall_api)
+	// });
+
+	let io = side_chain_io_handler(move |signed_blocks| {
+		log::info!("[sidechain] Imported blocks: {:?}", signed_blocks);
+		Ok(())
+	});
+
+	// note: errors are still returned as Option<String>
+	Ok(io
+		.handle_request_sync(request)
+		.unwrap_or_else(|| format!("Empty rpc response for request: {}", request)))
 }
 
 #[no_mangle]
@@ -446,7 +538,8 @@ pub unsafe extern "C" fn sync_parentchain_and_execute_tops(
 
 /// Internal [`sync_parentchain_and_execute_tops`] function to be able to use the handy `?` operator.
 ///
-/// Sync parentchain blocks to the light-client and execute pending trusted operations.
+/// Sync parentchain blocks to the light-client and executes `Aura::on_slot() for `slot`
+/// if it is this enclave's `Slot`.
 ///
 /// This function makes an ocall that does the following:
 ///
@@ -456,57 +549,61 @@ pub unsafe extern "C" fn sync_parentchain_and_execute_tops(
 /// *   gossip produced sidechain blocks to peer validateers.
 fn sync_parentchain_and_execute_tops_int<PB>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
-	nonce: u32,
+	_nonce: u32,
 ) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
+	let _ = EnclaveLock::read_all()?;
+
 	let mut validator = LightClientSeal::<PB>::unseal()?;
 
-	let mut calls = sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi)?;
+	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
 
-	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
+	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
+
+	// store updated state in light client in case we fail afterwards.
+	LightClientSeal::seal(validator.clone())?;
+
+	let authority = Ed25519Seal::unseal()?;
 
 	let rpc_author = Author::new(Arc::new(GlobalTopPoolContainer));
 
-	// execute pending calls from operation pool and create block
-	let signed_blocks = exec_tops_for_all_shards::<PB, SignedSidechainBlock, _, _>(
-		&OcallApi,
-		&rpc_author,
-		&latest_onchain_header,
-		MAX_TRUSTED_OPS_EXEC_DURATION,
-	)
-	.map(|(confirm_calls, sb)| {
-		calls.extend(confirm_calls);
-		sb
-	})?;
+	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
-	let extrinsics = create_extrinsics(&validator, calls, nonce)?;
-
-	// store extrinsics in light client for finalization check
-	for xt in extrinsics.iter() {
-		validator.submit_xt_to_be_included(validator.num_relays(), xt.clone()).unwrap();
-	}
+	match yield_next_slot(duration_now(), SLOT_DURATION, latest_onchain_header, &mut LastSlotSeal)?
+	{
+		Some(slot) => exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+			slot,
+			authority,
+			rpc_author,
+			&mut validator,
+			OcallApi,
+			&mut nonce,
+			list_shards()?,
+		)?,
+		None => {
+			debug!("No slot yielded. Skipping block production.");
+			return Ok(())
+		},
+	};
 
 	LightClientSeal::seal(validator)?;
 
-	// ocall to worker to store signed block and send block confirmation
-	// send extrinsics to parentchain, gossip blocks to side-chain
-	OcallApi
-		.send_block_and_confirmation(extrinsics, signed_blocks)
-		.map_err(|e| Error::Other(format!("Failed to send block and confirmation: {}", e).into()))
+	Ok(())
 }
 
 fn sync_blocks_on_light_client<PB, V, O>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
 	validator: &mut V,
 	on_chain_ocall_api: &O,
-) -> Result<Vec<OpaqueCall>>
+	nonce: &mut u32,
+) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
-	V: Validator<PB>,
+	V: Validator<PB> + LightClientState<PB>,
 	O: EnclaveOnChainOCallApi,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
@@ -553,7 +650,43 @@ where
 		)));
 	}
 
-	Ok(calls)
+	prepare_and_send_xts_and_block::<_, SignedSidechainBlock, _, _>(
+		validator,
+		on_chain_ocall_api,
+		calls,
+		Default::default(),
+		nonce,
+	)
+}
+
+fn prepare_and_send_xts_and_block<Block, SB, V, OcallApi>(
+	validator: &mut V,
+	ocall_api: &OcallApi,
+	calls: Vec<OpaqueCall>,
+	blocks: Vec<SB>,
+	nonce: &mut u32,
+) -> Result<()>
+where
+	Block: BlockT<Hash = H256>,
+	SB: SignedBlockT + 'static,
+	NumberFor<Block>: BlockNumberOps,
+	V: Validator<Block> + LightClientState<Block>,
+	OcallApi: EnclaveOnChainOCallApi,
+{
+	// store extrinsics in light client for finalization check
+	let extrinsics = create_extrinsics::<Block>(
+		validator.genesis_hash(validator.num_relays()).unwrap(),
+		calls,
+		nonce,
+	)?;
+
+	for xt in extrinsics.iter() {
+		validator.submit_xt_to_be_included(validator.num_relays(), xt.clone()).unwrap();
+	}
+
+	ocall_api
+		.send_block_and_confirmation::<SB>(extrinsics, blocks)
+		.map_err(|e| Error::Other(format!("Failed to send block and confirmation: {}", e).into()))
 }
 
 fn get_stf_state(
@@ -589,6 +722,9 @@ fn get_stf_state(
 ///
 /// For fairness, the [`max_exec_duration`] is split equally among all shards. Leftover time from
 /// the previous shard is evenly distributed to all remaining shards.
+///
+/// Todo: This will probably be used again if we decide to make sidechain optional?
+#[allow(unused)]
 fn exec_tops_for_all_shards<PB, SB, O, R>(
 	ocall_api: &O,
 	rpc_author: &R,
@@ -685,7 +821,7 @@ where
 	)?;
 
 	if blocks.is_none() {
-		warn!("[Enclave] did not produce a block for shard {:?}", shard);
+		info!("[Enclave] did not produce a block for shard {:?}", shard);
 	}
 
 	Ok((calls, blocks))
@@ -716,6 +852,24 @@ where
 {
 	let ends_at = duration_now() + max_exec_duration;
 
+	// retrieve trusted operations from pool
+	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
+
+	// Todo: remove when we have proper on-boarding of new workers #273.
+	if trusted_calls.is_empty() {
+		info!("No trusted calls in top for shard: {:?}", shard);
+	// we return here when we actually import sidechain blocks because we currently have no
+	// means of worker on-boarding. Without on-boarding we have can't get a working multi
+	// worker-setup.
+	//
+	// But if we use this trick (only produce a sidechain block if there are trusted_calls), we
+	// we can simply wait with the submission of trusted calls until all workers are ready. Then
+	// we don't need to exchange any state and can have a functional multi-worker setup.
+	// return Ok(Default::default())
+	} else {
+		debug!("Got following trusted calls from pool: {:?}", trusted_calls);
+	}
+
 	let mut calls = Vec::<OpaqueCall>::new();
 	let mut call_hashes = Vec::<H256>::new();
 
@@ -724,7 +878,7 @@ where
 	// save the state hash before call executions
 	// (needed for block composition)
 	trace!("Getting hash of previous state ..");
-	let prev_state_hash = state::hash_of(state.state.clone())?;
+	let prev_state_hash = state.hash();
 	trace!("Loaded hash of previous state: {:?}", prev_state_hash);
 
 	// retrieve trusted operations from pool
@@ -785,6 +939,7 @@ where
 			None
 		},
 	};
+
 	// save updated state after call executions
 	let _new_state_hash = state::write(state, &shard)?;
 
@@ -862,47 +1017,49 @@ where
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 {
 	let signer_pair = Ed25519Seal::unseal()?;
-	let layer_one_head = latest_onchain_header.hash();
+	let state_hash_new = state.hash();
 
-	let block_number = Stf::get_sidechain_block_number(state)
-		.map(|n| n + 1)
-		.ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
+	let mut db = SidechainDB::<SB::Block, _>::new(state.clone());
 
-	Stf::update_sidechain_block_number(state, block_number);
-
-	let parent_hash =
-		Stf::get_last_block_hash(state).ok_or(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
-
-	// hash previous of state
-	let state_hash_aposteriori = state::hash_of(state.state.clone())?;
+	let (block_number, parent_hash) = match db.get_last_block() {
+		Some(block) => (block.block_number() + 1, block.hash()),
+		None => {
+			info!("Seems to be first sidechain block.");
+			(1, Default::default())
+		},
+	};
 
 	// create encrypted payload
 	let mut payload: Vec<u8> =
-		StatePayload::new(state_hash_apriori, state_hash_aposteriori, state.state_diff.clone())
-			.encode();
+		StatePayload::new(state_hash_apriori, state_hash_new, db.ext.state_diff.clone()).encode();
 	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
 
 	let block = SB::Block::new(
 		signer_pair.public(),
 		block_number,
 		parent_hash,
-		layer_one_head,
+		latest_onchain_header.hash(),
 		shard,
 		top_call_hashes,
 		payload,
 		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
 	);
 
-	let block_hash = blake2_256(&block.encode());
-	let signed_block = block.sign_block(&signer_pair);
+	let block_hash = block.hash();
+	debug!("Block hash {}", block_hash);
+	db.set_last_block(&block);
 
-	debug!("Block hash 0x{}", hex::encode_hex(&block_hash));
-	Stf::update_last_block_hash(state, block_hash.into());
+	// state diff has been written to block, clean it for the next block.
+	db.ext.prune_state_diff();
+
+	// write back to state. This should be fixed when we have better separation of sidechain stuff
+	// and the rest.
+	*state = db.ext;
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
-		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_aposteriori.encode()));
-	Ok((opaque_call, signed_block))
+		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_new.encode()));
+	Ok((opaque_call, block.sign_block(&signer_pair)))
 }
 
 pub fn update_states<PB, O>(header: PB::Header, on_chain_ocall_api: &O) -> Result<()>
@@ -956,7 +1113,7 @@ where
 					state::write(state, &s)?;
 				}
 			},
-			None => info!("No shards are on the chain yet"),
+			None => debug!("No shards are on the chain yet"),
 		};
 	};
 	Ok(())
@@ -980,7 +1137,7 @@ where
 			// confirm call decodes successfully as well
 			if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
 				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt) {
-					error!("Error performing shieldfunds. Error: {:?}", e);
+					error!("Error performing shield funds. Error: {:?}", e);
 				}
 			}
 		};
@@ -1006,6 +1163,9 @@ where
 						error!("Error performing worker call: Error: {:?}", e);
 					}
 					// save updated state
+
+					// we only want to store the state diff for direct stuff.
+					state.prune_state_diff();
 					trace!("Updating state of shard {:?}", shard);
 					state::write(state, &shard)?;
 				}

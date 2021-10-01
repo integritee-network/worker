@@ -1,3 +1,20 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
 use crate::traits::{Block as BlockT, SignedBlock as SignedBlockT};
 use codec::{Decode, Encode};
 use sp_core::{ed25519, H256};
@@ -34,8 +51,7 @@ pub struct Block {
 	block_number: BlockNumber,
 	parent_hash: H256,
 	timestamp: u64,
-	/// hash of the last header of block in layer one
-	/// needed in case extrinsics depend on layer one state
+	/// Parentchain header this block is based on
 	layer_one_head: H256,
 	shard_id: ShardIdentifier,
 	///  must be registered on layer one as an enclave for the respective shard
@@ -79,7 +95,7 @@ impl BlockT for Block {
 		&self.signed_top_hashes
 	}
 	/// get encrypted payload
-	fn state_payload(&self) -> &[u8] {
+	fn state_payload(&self) -> &Vec<u8> {
 		&self.state_payload
 	}
 	/// Constructs an unsigned block
@@ -121,7 +137,7 @@ impl SignedBlockT for SignedBlock {
 	}
 
 	/// get block reference
-	fn block(&self) -> &Block {
+	fn block(&self) -> &Self::Block {
 		&self.block
 	}
 

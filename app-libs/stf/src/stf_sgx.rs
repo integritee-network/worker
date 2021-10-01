@@ -9,32 +9,23 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
-use its_primitives::types::BlockNumber as SidechainBlockNumber;
 use log_sgx::*;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
 use sgx_tstd as std;
-use sp_core::H256 as Hash;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
 use std::prelude::v1::*;
-use support::{ensure, traits::UnfilteredDispatchable};
+use support::traits::UnfilteredDispatchable;
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-pub trait StfTrait = SgxExternalitiesTrait + StateHash + Clone + Send + Sync;
-
-pub trait StateHash {
-	fn hash(&self) -> Hash;
-}
+pub trait StfTrait = SgxExternalitiesTrait + Clone + Send + Sync;
 
 impl Stf {
 	pub fn init_state() -> State {
 		debug!("initializing stf state");
 		let mut ext = State::new();
-		// set initial state hash
-		let state_hash: Hash = blake2_256(&ext.clone().encode()).into();
-		trace!("Created new state hash: {:?}", state_hash);
 
 		ext.execute_with(|| {
 			// do not set genesis for pallets that are meant to be on-chain
@@ -55,14 +46,6 @@ impl Stf {
 				&storage_value_key("Balances", "ExistentialDeposit"),
 				&1u128.encode(),
 			);
-			// Set first sidechainblock number to 0
-			let init_block_number: SidechainBlockNumber = 0;
-			sp_io::storage::set(
-				&storage_value_key("System", "Number"),
-				&init_block_number.encode(),
-			);
-			// Set first parent hash to initial state hash
-			sp_io::storage::set(&storage_value_key("System", "LastHash"), &state_hash.encode());
 		});
 
 		#[cfg(feature = "test")]
@@ -102,54 +85,6 @@ impl Stf {
 				}
 			} else {
 				error!("No Blocknumber l1 in state?");
-				None
-			}
-		})
-	}
-
-	pub fn update_sidechain_block_number(ext: &mut State, number: SidechainBlockNumber) {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "Number");
-			sp_io::storage::set(&key, &number.encode());
-		});
-	}
-
-	pub fn get_sidechain_block_number(ext: &mut State) -> Option<SidechainBlockNumber> {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "Number");
-			if let Some(infovec) = sp_io::storage::get(&key) {
-				if let Ok(number) = SidechainBlockNumber::decode(&mut infovec.as_slice()) {
-					Some(number)
-				} else {
-					error!("Sidechain blocknumber decode error");
-					None
-				}
-			} else {
-				error!("No sidechain blocknumber in state?");
-				None
-			}
-		})
-	}
-
-	pub fn update_last_block_hash(ext: &mut State, hash: Hash) {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "LastHash");
-			sp_io::storage::set(&key, &hash.encode());
-		});
-	}
-
-	pub fn get_last_block_hash(ext: &mut State) -> Option<Hash> {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "LastHash");
-			if let Some(infovec) = sp_io::storage::get(&key) {
-				if let Ok(hash) = Hash::decode(&mut infovec.as_slice()) {
-					Some(hash)
-				} else {
-					error!("Blockhash decode error");
-					None
-				}
-			} else {
-				error!("No Blockhash in state?");
 				None
 			}
 		})
@@ -237,7 +172,6 @@ impl Stf {
 		})
 	}
 
-	#[cfg(feature = "test")]
 	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
 		ext.execute_with(|| {
 			if let Some(info) = get_account_info(account) {
@@ -351,25 +285,6 @@ impl Stf {
 		key_hashes
 	}
 
-	pub fn apply_state_diff(
-		ext: &mut impl StfTrait,
-		state_payload: &mut StatePayload,
-	) -> StfResult<()> {
-		// Todo: how do we ensure that the apriori state hash matches?
-		ensure!(ext.hash() == state_payload.state_hash_apriori(), StfError::StorageHashMismatch);
-		let mut ext2 = ext.clone();
-
-		Self::update_storage(&mut ext2, state_payload.state_update());
-
-		ensure!(
-			ext2.hash() == state_payload.state_hash_aposteriori(),
-			StfError::InvalidStorageDiff
-		);
-		*ext = ext2;
-		ext.prune_state_diff();
-		Ok(())
-	}
-
 	pub fn get_storage_hashes_to_update_for_getter(getter: &Getter) -> Vec<Vec<u8>> {
 		debug!(
 			"No specific storage updates needed for getter. Returning those for on block: {:?}",
@@ -384,75 +299,5 @@ impl Stf {
 		// get all shards that are currently registered
 		key_hashes.push(shards_key_hash());
 		key_hashes
-	}
-}
-
-// this must be pub to be able to test it in the enclave. In the future this should be testable
-// with cargo test. See: https://github.com/integritee-network/worker/issues/272.
-#[cfg(feature = "test")]
-pub mod tests {
-	use super::*;
-	use crate::stf_sgx::StfError;
-	use sp_core::H256;
-	use sp_runtime::traits::{BlakeTwo256, Hash};
-	use support::{assert_err, assert_ok};
-
-	impl StateHash for State {
-		fn hash(&self) -> H256 {
-			BlakeTwo256::hash(self.state.clone().encode().as_slice())
-		}
-	}
-
-	pub fn apply_state_diff_works() {
-		let mut state1 = State::new();
-		let mut state2 = State::new();
-
-		let apriori = state1.hash();
-		state1.insert(b"Hello".to_vec(), b"World".to_vec());
-		let aposteriori = state1.hash();
-
-		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff);
-
-		assert_ok!(Stf::apply_state_diff(&mut state2, &mut state_update));
-		assert_eq!(state2.hash(), aposteriori);
-		assert_eq!(*state2.get(b"Hello").unwrap(), b"World".to_vec());
-		assert!(state2.state_diff.is_empty());
-	}
-
-	pub fn apply_state_diff_returns_storage_hash_mismatch_err() {
-		let mut state1 = State::new();
-		let mut state2 = State::new();
-
-		let apriori = H256::from([1; 32]);
-		state1.insert(b"Hello".to_vec(), b"World".to_vec());
-		let aposteriori = state1.hash();
-
-		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff);
-
-		assert_err!(
-			Stf::apply_state_diff(&mut state2, &mut state_update),
-			StfError::StorageHashMismatch
-		);
-		// todo: Derive `Eq` on State
-		assert_eq!(state2.hash(), State::new().hash());
-		assert!(state2.state_diff.is_empty());
-	}
-
-	pub fn apply_state_diff_returns_invalid_storage_diff_err() {
-		let mut state1 = State::new();
-		let mut state2 = State::new();
-
-		let apriori = state1.hash();
-		state1.insert(b"Hello".to_vec(), b"World".to_vec());
-		let aposteriori = H256::from([1; 32]);
-
-		let mut state_update = StatePayload::new(apriori, aposteriori, state1.state_diff);
-
-		assert_err!(
-			Stf::apply_state_diff(&mut state2, &mut state_update),
-			StfError::InvalidStorageDiff
-		);
-
-		assert_eq!(state2, State::new());
 	}
 }

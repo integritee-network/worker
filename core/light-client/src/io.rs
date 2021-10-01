@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::Result, Error, LightValidation, NumberFor, Validator};
+use crate::{error::Result, Error, LightClientState, LightValidation, NumberFor, Validator};
 use codec::{Decode, Encode};
 use derive_more::Display;
 use itp_settings::files::LIGHT_CLIENT_DB;

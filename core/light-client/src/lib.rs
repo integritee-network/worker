@@ -103,14 +103,6 @@ where
 	) -> Result<(), Error>;
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
-
-	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error>;
-
-	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
-
-	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error>;
-
-	fn num_relays(&self) -> RelayId;
 }
 
 #[derive(Encode, Decode, Clone, Default)]
@@ -285,13 +277,14 @@ where
 					// see issue #353
 					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
 					relay.unjustified_headers.push(header.hash());
-					relay.last_finalized_block_header = header;
+					relay.set_last_finalized_block_header(header);
 					return Ok(())
 				}
 			},
 			None => {
-				relay.last_finalized_block_header = header.clone();
 				relay.unjustified_headers.push(header.hash());
+				relay.set_last_finalized_block_header(header);
+
 				debug!(
 					"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
 					relay.unjustified_headers.len()
@@ -300,13 +293,13 @@ where
 			},
 		}
 
-		relay.last_finalized_block_header = header.clone();
-
 		Self::schedule_validator_set_change(&mut relay, &header);
 
 		// a valid grandpa proof proofs finalization of all previous unjustified blocks
 		relay.header_hashes.append(&mut relay.unjustified_headers);
 		relay.header_hashes.push(header.hash());
+
+		relay.set_last_finalized_block_header(header);
 
 		if validator_set_id > relay.current_validator_set_id {
 			relay.current_validator_set = validator_set;
@@ -381,7 +374,23 @@ where
 
 		Ok(())
 	}
+}
 
+pub trait LightClientState<Block: BlockT> {
+	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error>;
+
+	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
+
+	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error>;
+
+	// Todo: Check if we still need this after #423
+	fn penultimate_finalized_block_header(&self, relay_id: RelayId)
+		-> Result<Block::Header, Error>;
+
+	fn num_relays(&self) -> RelayId;
+}
+
+impl<Block: BlockT> LightClientState<Block> for LightValidation<Block> {
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.verify_tx_inclusion.len())
@@ -395,6 +404,14 @@ where
 	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.last_finalized_block_header.clone())
+	}
+
+	fn penultimate_finalized_block_header(
+		&self,
+		relay_id: RelayId,
+	) -> Result<Block::Header, Error> {
+		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		Ok(relay.penultimate_finalized_block_header.clone())
 	}
 
 	fn num_relays(&self) -> RelayId {

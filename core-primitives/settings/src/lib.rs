@@ -71,6 +71,12 @@ pub mod worker {
 	pub const MIN_FUND_INCREASE_FACTOR: u128 = 1_000;
 }
 
+pub mod sidechain {
+	use core::time::Duration;
+
+	pub static SLOT_DURATION: Duration = Duration::from_millis(300);
+}
+
 /// Settings concerning the enclave
 pub mod enclave {
 	use core::time::Duration;

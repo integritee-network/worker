@@ -45,6 +45,12 @@ extern "C" {
 		nonce: *const u32,
 	) -> sgx_status_t;
 
+	pub fn set_nonce(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		nonce: *const u32,
+	) -> sgx_status_t;
+
 	pub fn get_rsa_encryption_pubkey(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
