@@ -11,11 +11,11 @@ std = [
     "log/std",
     "serde/std",
 
-    # substrace
+    # substrate
     "sp-std/std",
     "sp-core/std",
 
-    # local creates
+    # local crates
     "itp-storage/std",
     "its-primitives/std",
 
