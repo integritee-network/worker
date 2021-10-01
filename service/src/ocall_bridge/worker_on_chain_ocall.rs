@@ -29,10 +29,7 @@ use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
-use std::{
-	sync::{mpsc::channel, Arc},
-	vec::Vec,
-};
+use std::{sync::Arc, vec::Vec};
 use substrate_api_client::XtStatus;
 
 pub struct WorkerOnChainOCall<F, S, D> {
@@ -108,14 +105,8 @@ where
 		if !confirmation_calls.is_empty() {
 			println!("Enclave wants to send {} extrinsics", confirmation_calls.len());
 			for call in confirmation_calls.into_iter() {
-				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
+				api.send_extrinsic(hex_encode(call.encode()), XtStatus::SubmitOnly).unwrap();
 			}
-			// await next block to avoid #37
-			let (events_in, events_out) = channel();
-			api.subscribe_events(events_in).unwrap();
-			let _ = events_out.recv().unwrap();
-			let _ = events_out.recv().unwrap();
-			// FIXME: we should unsubscribe here or the thread will throw a SendError because the channel is destroyed
 		}
 
 		// handle blocks
