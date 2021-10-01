@@ -105,7 +105,7 @@ where
 		if !confirmation_calls.is_empty() {
 			println!("Enclave wants to send {} extrinsics", confirmation_calls.len());
 			for call in confirmation_calls.into_iter() {
-				api.send_extrinsic(hex_encode(call.encode()), XtStatus::SubmitOnly).unwrap();
+				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
 			}
 		}
 
