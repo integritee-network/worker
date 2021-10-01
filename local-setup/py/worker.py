@@ -167,7 +167,7 @@ class Worker:
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'
-                                        'enclave_runtime=info')
+                                        'enclave_runtime=debug')
 
         return Popen(
             self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),
