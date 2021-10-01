@@ -213,7 +213,7 @@ mod tests {
 	}
 
 	#[test]
-	fn current_authority_should_claim_slot() {
+	fn current_authority_should_claim_its_slot() {
 		let authorities = vec![
 			Keyring::Bob.public().into(),
 			Keyring::Charlie.public().into(),
@@ -231,6 +231,23 @@ mod tests {
 		assert!(aura.claim_slot(&default_header(), 4.into(), &authorities).is_none());
 		// this our authority
 		assert!(aura.claim_slot(&default_header(), 5.into(), &authorities).is_some());
+	}
+
+	#[test]
+	fn current_authority_should_claim_all_slots() {
+		let authorities = vec![
+			Keyring::Bob.public().into(),
+			Keyring::Charlie.public().into(),
+			Keyring::Alice.public().into(),
+		];
+
+		let aura = get_aura(Default::default()).with_claim_strategy(SlotClaimStrategy::Always);
+
+		assert!(aura.claim_slot(&default_header(), 0.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&default_header(), 1.into(), &authorities).is_some());
+		// this our authority
+		assert!(aura.claim_slot(&default_header(), 2.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&default_header(), 3.into(), &authorities).is_some());
 	}
 
 	#[test]
