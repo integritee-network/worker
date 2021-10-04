@@ -102,7 +102,6 @@ where
 
 impl<B: ChainApi, R> ValidatedPool<B, R>
 where
-	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize
 	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
 {
 	/// Create a new operation pool.

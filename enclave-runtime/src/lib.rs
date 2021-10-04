@@ -38,7 +38,7 @@ use crate::{
 	rpc::{
 		author::{
 			author_container::{GetAuthor, GlobalAuthorContainer},
-			OnBlockCreated, SendState,
+			AuthorTopFilter, OnBlockCreated, SendState,
 		},
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
@@ -468,7 +468,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		},
 	};
 
-	let rpc_author = Arc::new(Author::new(top_pool, state_facade, rsa_shielding_key));
+	let rpc_author =
+		Arc::new(Author::new(top_pool, AuthorTopFilter {}, state_facade, rsa_shielding_key));
 
 	GlobalAuthorContainer::initialize(rpc_author.clone());
 
