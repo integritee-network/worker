@@ -4,9 +4,10 @@ use crate::{
 		StfResult,
 	},
 	AccountId, Getter, Index, PublicGetter, TrustedCall, TrustedCallSigned, TrustedGetter,
-	TEEREX_MODULE, UNSHIELD,
+	UNSHIELD,
 };
 use codec::{Decode, Encode};
+use itp_settings::node::TEEREX_MODULE;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use log_sgx::*;
