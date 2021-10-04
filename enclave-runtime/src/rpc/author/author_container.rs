@@ -17,7 +17,8 @@
 
 use crate::{
 	rpc::author::{
-		atomic_container::AtomicContainer, Author, AuthorApi, OnBlockCreated, SendState,
+		atomic_container::AtomicContainer, Author, AuthorApi, AuthorTopFilter, OnBlockCreated,
+		SendState,
 	},
 	state::StateFacade,
 	top_pool::pool_types::BPool,
@@ -56,7 +57,7 @@ impl GlobalAuthorContainer {
 }
 
 impl GetAuthor for GlobalAuthorContainer {
-	type AuthorType = Author<BPool, StateFacade, Rsa3072KeyPair>;
+	type AuthorType = Author<BPool, AuthorTopFilter, StateFacade, Rsa3072KeyPair>;
 
 	fn get(&self) -> Option<&'static SgxMutex<Arc<Self::AuthorType>>> {
 		GLOBAL_AUTHOR_CONTAINER.load()

@@ -67,6 +67,9 @@ pub enum Error {
 	/// Shard does not exist.
 	#[display(fmt = "Shard does not exist")]
 	InvalidShard,
+	/// Unsupported trusted operation (in case we allow only certain types of operations, using filters)
+	#[display(fmt = "Unsupported operation type")]
+	UnsupportedOperation,
 }
 
 impl std::error::Error for Error {

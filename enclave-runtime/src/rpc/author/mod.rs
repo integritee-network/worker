@@ -20,7 +20,10 @@ pub extern crate alloc;
 
 use crate::{
 	rpc::{
-		author::client_error::Error as ClientError,
+		author::{
+			client_error::Error as ClientError,
+			top_filter::{AllowAllTopsFilter, Filter},
+		},
 		error::{Error as StateRpcError, Result},
 	},
 	state::HandleState,
@@ -48,9 +51,18 @@ use std::{sync::Arc, vec::Vec};
 
 pub mod atomic_container;
 pub mod author_container;
-pub mod author_tests;
 pub mod client_error;
 pub mod hash;
+pub mod top_filter;
+
+#[cfg(feature = "test")]
+pub mod author_tests;
+
+#[cfg(feature = "test")]
+pub mod test_utils;
+
+/// Define type of TOP filter that is used in the Author
+pub type AuthorTopFilter = AllowAllTopsFilter;
 
 /// Substrate authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -110,30 +122,35 @@ const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 /// Authoring API for RPC calls
 ///
 ///
-pub struct Author<TopPool, StateFacade, EncryptionKey>
+pub struct Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: HandleState,
 	EncryptionKey: ShieldingCrypto,
 {
 	top_pool: Arc<TopPool>,
+	top_filter: TopFilter,
 	state_facade: Arc<StateFacade>,
 	encryption_key: EncryptionKey,
 }
 
-impl<TopPool, StateFacade, EncryptionKey> Author<TopPool, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey>
+	Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: HandleState,
 	EncryptionKey: ShieldingCrypto,
 {
 	/// Create new instance of Authoring API.
 	pub fn new(
 		top_pool: Arc<TopPool>,
+		top_filter: TopFilter,
 		state_facade: Arc<StateFacade>,
 		encryption_key: EncryptionKey,
 	) -> Self {
-		Author { top_pool, state_facade, encryption_key }
+		Author { top_pool, top_filter, state_facade, encryption_key }
 	}
 }
 
@@ -142,9 +159,11 @@ enum TopSubmissionMode {
 	SubmitWatch,
 }
 
-impl<TopPool, StateFacade, EncryptionKey> Author<TopPool, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey>
+	Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: HandleState,
 	EncryptionKey: ShieldingCrypto,
 {
@@ -170,6 +189,13 @@ where
 			Ok(op) => op,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
 		};
+
+		// apply top filter - return error if this specific type of trusted operation
+		// is not allowed by the filter
+		if !self.top_filter.filter(&stf_operation) {
+			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())))
+		}
+
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();
@@ -210,10 +236,11 @@ fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
 	.into()
 }
 
-impl<TopPool, StateFacade, EncryptionKey> AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
-	for Author<TopPool, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey> AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
+	for Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: HandleState,
 	EncryptionKey: ShieldingCrypto,
 {
@@ -296,10 +323,11 @@ where
 	}
 }
 
-impl<TopPool, StateFacade, EncryptionKey> OnBlockCreated
-	for Author<TopPool, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey> OnBlockCreated
+	for Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: HandleState,
 	EncryptionKey: ShieldingCrypto,
 {
@@ -310,9 +338,11 @@ where
 	}
 }
 
-impl<TopPool, StateFacade, EncryptionKey> SendState for Author<TopPool, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey> SendState
+	for Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: HandleState,
 	EncryptionKey: ShieldingCrypto,
 {
