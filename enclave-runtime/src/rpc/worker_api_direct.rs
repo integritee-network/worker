@@ -18,15 +18,8 @@
 pub extern crate alloc;
 
 use self::serde_json::*;
-use crate::rpc::author::{AuthorApi, OnBlockCreated, SendState};
-use alloc::{
-	borrow::ToOwned,
-	format,
-	slice::{from_raw_parts, from_raw_parts_mut},
-	str,
-	string::String,
-	vec::Vec,
-};
+use crate::rpc::author::AuthorApi;
+use alloc::{borrow::ToOwned, format, str, string::String, vec::Vec};
 use base58::FromBase58;
 use codec::{Decode, Encode};
 use core::result::Result;

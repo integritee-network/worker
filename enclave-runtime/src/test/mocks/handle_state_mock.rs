@@ -19,7 +19,7 @@ use crate::{
 	error::{Error, Result},
 	state::HandleState,
 };
-use ita_stf::{ShardIdentifier, State as StfState, StateType as StfStateType};
+use ita_stf::{ShardIdentifier, State as StfState};
 use itp_types::H256;
 use sgx_externalities::SgxExternalitiesTrait;
 use std::{collections::HashMap, string::ToString, vec::Vec};
@@ -52,10 +52,6 @@ impl HandleState for HandleStateMock {
 
 	fn exists(&self, shard: &ShardIdentifier) -> bool {
 		self.state_map.get(shard).is_some()
-	}
-
-	fn hash_of(&self, _state: StfStateType) -> Result<H256> {
-		Ok(H256::default())
 	}
 
 	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {

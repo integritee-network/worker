@@ -136,7 +136,7 @@ where
 pub fn exec_aura_on_slot<Authority, PB, SB, OcallApi, LightValidator, Author>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
-	rpc_author: Author,
+	rpc_author: Arc<Author>,
 	validator: &mut LightValidator,
 	ocall_api: OcallApi,
 	nonce: &mut u32,
@@ -163,7 +163,7 @@ where
 	let env = ProposerFactory::new(
 		Arc::new(ocall_api.clone()),
 		Arc::new(validator.clone()),
-		Arc::new(rpc_author),
+		rpc_author,
 		authority.clone(),
 	);
 

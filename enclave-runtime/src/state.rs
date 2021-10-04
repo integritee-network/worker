@@ -41,9 +41,6 @@ pub trait HandleState {
 	/// Query whether a given shard exists
 	fn exists(&self, shard: &ShardIdentifier) -> bool;
 
-	/// Compute the hash for a given state type
-	fn hash_of(&self, state: StfStateType) -> Result<H256>;
-
 	/// Initialize a shard with a given identifier
 	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()>;
 
@@ -64,10 +61,6 @@ impl HandleState for StateFacade {
 
 	fn exists(&self, shard: &ShardIdentifier) -> bool {
 		exists(shard)
-	}
-
-	fn hash_of(&self, state: StfStateType) -> Result<H256> {
-		hash_of(state)
 	}
 
 	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
