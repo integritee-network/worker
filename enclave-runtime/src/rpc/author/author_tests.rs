@@ -43,7 +43,7 @@ pub mod tests {
 		let mut state_facade = HandleStateMock::default();
 		state_facade.init_shard(&shard_id).unwrap();
 
-		let encryption_key = ShieldingCryptoMock;
+		let encryption_key = ShieldingCryptoMock::default();
 
 		let author = Author::new(top_pool.clone(), Arc::new(state_facade), encryption_key.clone());
 		let top = TrustedOperation::from(trusted_getter_signed());

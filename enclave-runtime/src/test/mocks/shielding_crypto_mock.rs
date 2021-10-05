@@ -15,8 +15,8 @@
 
 */
 
-use derive_more::{Display, From};
 use itp_sgx_crypto::ShieldingCrypto;
+use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use std::vec::Vec;
 
 /// Crypto key mock
@@ -24,21 +24,26 @@ use std::vec::Vec;
 /// mock implementation that does not encrypt
 /// encrypt/decrypt return the input as is
 #[derive(Clone)]
-pub struct ShieldingCryptoMock;
+pub struct ShieldingCryptoMock {
+	key: Rsa3072KeyPair,
+}
 
-#[derive(Debug, Display, From)]
-pub enum ShieldingCryptoMockError {
-	None,
+impl Default for ShieldingCryptoMock {
+	fn default() -> Self {
+		ShieldingCryptoMock {
+			key: Rsa3072KeyPair::new().expect("default RSA3072 key for shielding key mock"),
+		}
+	}
 }
 
 impl ShieldingCrypto for ShieldingCryptoMock {
-	type Error = ShieldingCryptoMockError;
+	type Error = itp_sgx_crypto::Error;
 
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
-		Ok(Vec::from(data))
+		self.key.encrypt(data)
 	}
 
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
-		Ok(Vec::from(data))
+		self.key.decrypt(data)
 	}
 }
