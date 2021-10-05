@@ -1116,6 +1116,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
+ "itp-settings",
  "itp-storage",
  "itp-types",
  "its-primitives",

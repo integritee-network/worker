@@ -40,9 +40,6 @@ pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = AccountId32;
 pub type Hash = sp_core::H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
-//FIXME: Is this really necessary to define all variables three times?
-pub static TEEREX_MODULE: u8 = 8u8;
-pub static UNSHIELD: u8 = 6u8;
 
 pub type ShardIdentifier = H256;
 
