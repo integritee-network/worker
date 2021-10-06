@@ -52,7 +52,7 @@ use itp_settings::{
 	},
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
-use itp_types::{Block, SignedBlock};
+use itp_types::SignedBlock;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
@@ -401,7 +401,8 @@ fn start_interval_block_production<E: EnclaveBase + SideChain>(
 			if elapsed >= SLOT_DURATION {
 				// update interval time
 				interval_start = SystemTime::now();
-				latest_head = sync_parentchain_and_execute_tops(enclave_api, api, latest_head)
+				latest_head = sync_parentchain(enclave_api, api, latest_head);
+				execute_trusted_operations(enclave_api);
 			} else {
 				// sleep for the rest of the interval
 				let sleep_time = SLOT_DURATION - elapsed;
@@ -529,19 +530,16 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 
 	info!("Finished initializing light client, syncing....");
 
-	sync_parentchain_and_execute_tops(enclave_api, api, latest)
+	let last_synced_header = sync_parentchain(enclave_api, api, latest);
+	execute_trusted_operations(enclave_api);
+
+	last_synced_header
 }
 
 /// Gets the amount of blocks to sync from the parentchain and feeds them to the enclave.
 ///
-/// It also calls into the enclave if there are no blocks to sync because the enclave does
-/// currently two things in `produce_blocks`:
 ///
-/// * sync blocks
-/// * execute pending trusted operations
-///
-/// Todo: the two tasks above should be independent: #404
-pub fn sync_parentchain_and_execute_tops<E: EnclaveBase + SideChain>(
+pub fn sync_parentchain<E: EnclaveBase + SideChain>(
 	enclave_api: &E,
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	mut last_synced_header: Header,
@@ -554,22 +552,11 @@ pub fn sync_parentchain_and_execute_tops<E: EnclaveBase + SideChain>(
 
 	let blocks_to_sync = get_blocks_to_sync(api, &last_synced_header, &curr_head);
 
-	if blocks_to_sync.is_empty() {
-		// we have nothing to sync, but we can still execute trusted operations
-		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
-
-		if let Err(e) = enclave_api.sync_parentchain_and_execute_tops::<Block>(&[], tee_nonce) {
-			error!("{:?}", e);
-		};
-
-		return last_synced_header
-	}
-
 	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
 	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
 		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
 
-		if let Err(e) = enclave_api.sync_parentchain_and_execute_tops(chunk, tee_nonce) {
+		if let Err(e) = enclave_api.sync_parentchain(chunk, tee_nonce) {
 			error!("{:?}", e);
 			// enclave might not have synced
 			return last_synced_header
@@ -585,6 +572,15 @@ pub fn sync_parentchain_and_execute_tops<E: EnclaveBase + SideChain>(
 	}
 
 	last_synced_header
+}
+
+/// Execute trusted operations in the enclave
+///
+///
+pub fn execute_trusted_operations<E: SideChain>(enclave_api: &E) {
+	if let Err(e) = enclave_api.execute_trusted_operations() {
+		error!("{:?}", e);
+	};
 }
 
 /// gets a list of blocks that need to be synced, ordered from oldest to most recent header
