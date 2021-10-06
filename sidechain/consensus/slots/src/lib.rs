@@ -260,7 +260,9 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 				.flatten()
 				.unwrap_or_default();
 
-			if shard_remaining_duration == Default::default() {
+			// important to check against millis here. We had the corner-case in production
+			// setup where `shard_remaining_duration` contained only nanos.
+			if shard_remaining_duration.as_millis() == Default::default() {
 				info!(
 					target: logging_target,
 					"⌛️ Could not produce blocks for all shards; block production took too long",
