@@ -42,6 +42,11 @@ pub fn duration_now() -> Duration {
 pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 	let now = duration_now().as_millis();
 
+	if slot_duration.as_millis() == Default::default() {
+		log::warn!("[Slots]: slot_duration.as_millis() is 0");
+		return Default::default()
+	}
+
 	let next_slot = (now + slot_duration.as_millis()) / slot_duration.as_millis();
 	let remaining_millis = next_slot * slot_duration.as_millis() - now;
 	Duration::from_millis(remaining_millis as u64)
@@ -111,6 +116,10 @@ where
 	SG: GetLastSlot,
 	B: ParentchainBlock,
 {
+	if duration == Default::default() {
+		return Err(ConsensusError::Other("Tried to yield next slot with 0 duration".into()))
+	}
+
 	let last_slot = last_slot_getter.get_last_slot()?;
 	let slot = slot_from_time_stamp_and_duration(timestamp, duration);
 
@@ -187,6 +196,7 @@ mod tests {
 	};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
+	use std::fmt::Debug;
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
 
@@ -262,6 +272,18 @@ mod tests {
 		dur.as_millis() as u64
 	}
 
+	fn assert_consensus_other_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
+		assert_matches!(result.unwrap_err(), ConsensusError::Other(
+			m,
+		) if &m.to_string() == msg)
+	}
+
+	#[test]
+	fn time_until_next_slot_returns_default_on_nano_duration() {
+		// prevent panic: https://github.com/integritee-network/worker/issues/439
+		assert_eq!(time_until_next_slot(Duration::from_nanos(999)), Default::default())
+	}
+
 	#[test]
 	fn timestamp_within_slot_returns_true_for_correct_timestamp() {
 		let slot = slot(1);
@@ -315,5 +337,18 @@ mod tests {
 		)
 		.unwrap()
 		.is_some())
+	}
+
+	#[test]
+	fn yield_next_slot_returns_err_on_0_duration() {
+		assert_consensus_other_err(
+			yield_next_slot::<_, ParentchainBlock>(
+				duration_now(),
+				Default::default(),
+				default_header(),
+				&mut LastSlotSealMock,
+			),
+			"Tried to yield next slot with 0 duration",
+		)
 	}
 }
