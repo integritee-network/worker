@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "app-libs/exchange-oracle",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
@@ -38,9 +39,11 @@ members = [
     "sidechain/validateer-fetch",
 ]
 
-#[patch."https://github.com/integritee-network/pallet-teerex.git"]
-#pallet-teerex = { path = "../pallet-teerex" }
+#[patch."https://github.com/integritee-network/integritee-node"]
+#my-node-runtime = { path = "../integritee-node/runtime", package = "integritee-node-runtime"}
 
+#[patch."https://github.com/integritee-network/pallets.git"]
+#pallet-teerex = { path = "../pallets/teerex" }
 
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../substrate-api-client" }

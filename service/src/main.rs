@@ -44,6 +44,7 @@ use itp_enclave_api::{
 	enclave_base::EnclaveBase,
 	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
 	sidechain::Sidechain,
+	teeracle_api::TeeracleApi,
 	teerex_api::TeerexApi,
 };
 use itp_settings::{
@@ -249,6 +250,7 @@ fn start_worker<E, T, D>(
 		+ RemoteAttestation
 		+ TlsRemoteAttestation
 		+ TeerexApi
+		+ TeeracleApi
 		+ Clone,
 	D: BlockPruner + Sync + Send + 'static,
 {
@@ -371,7 +373,7 @@ fn start_worker<E, T, D>(
 
 	//-------------------------------------------------------------------------
 	// start execution of trusted getters
-	let trusted_getters_enclave_api = enclave;
+	let trusted_getters_enclave_api = enclave.clone();
 	thread::Builder::new()
 		.name("trusted_getters_execution".to_owned())
 		.spawn(move || {
@@ -392,6 +394,16 @@ fn start_worker<E, T, D>(
 		})
 		.unwrap();
 
+	// ------------------------------------------------------------------------
+	// start update exchange rate loop
+	let api5 = node_api.clone();
+	let market_enclave_api = enclave;
+	thread::Builder::new()
+		.name("update_market_data".to_owned())
+		.spawn(move || {
+			start_interval_market_update(&api5, market_enclave_api.as_ref());
+		})
+		.unwrap();
 	// ------------------------------------------------------------------------
 	// subscribe to events and react on firing
 	println!("*** Subscribing to events");
@@ -441,6 +453,47 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 		},
 		TRUSTED_GETTERS_SLOT_DURATION,
 	);
+}
+
+/// Send extrinsic to chain once per day with the newest market data (for now only echange rate)
+fn start_interval_market_update<E: EnclaveBase + TeeracleApi>(
+	api: &Api<sr25519::Pair, WsRpcClient>,
+	enclave_api: &E,
+) {
+	use itp_settings::node::MARKET_DATA_UPDATE_INTERVAL;
+
+	schedule_on_repeating_intervals(
+		|| {
+			execute_update_market(api, enclave_api);
+		},
+		MARKET_DATA_UPDATE_INTERVAL,
+	);
+}
+
+fn execute_update_market<E: EnclaveBase + TeeracleApi>(
+	node_api: &Api<sr25519::Pair, WsRpcClient>,
+	enclave: &E,
+) {
+	let tee_accountid = enclave_account(enclave);
+	// get enclaves's account nonce
+	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
+
+	//For now usd
+	let uxt = match enclave.update_market_data_xt(node_api.genesis_hash, nonce, "usd") {
+		Err(e) => {
+			error!("{:?}", e);
+			return
+		},
+		Ok(r) => r,
+	};
+
+	let mut xthex = hex::encode(uxt);
+	xthex.insert_str(0, "0x");
+
+	// send the extrinsic and wait for confirmation
+	println!("[>] Update the exchange rate (send the extrinsic)");
+	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::InBlock).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 }
 
 /// Schedules a task on perpetually looping intervals.
@@ -567,6 +620,20 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
+			/*			Event::Teeracle(re) => {
+							debug!("{:?}", re);
+							match &re {
+								my_node_runtime::pallet_teeracle::RawEvent::ExchangeRateUpdated(
+									currency,
+									new_value,
+								) => {
+									println!("[+] Received ExchangeRateUpdated event");
+									println!("    Currency:  {:?}", str::from_utf8(&currency).unwrap());
+									println!("    Exchange rate: {}", new_value.to_string());
+								},
+							}
+						},
+			*/
 			_ => {
 				trace!("Ignoring event {:?}", evr);
 			},
