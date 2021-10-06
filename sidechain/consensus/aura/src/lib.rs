@@ -173,9 +173,15 @@ fn proposing_remaining_duration<PB: ParentchainBlock>(
 	slot_info: &SlotInfo<PB>,
 	now: Duration,
 ) -> Duration {
+	// if a bogus `now` is passed such that `slot_remaining` would be bigger than `slot.slot_duration`
+	// we take the total `slot_duration` as reference value.
 	let proposing_duration = slot_info.duration.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION);
 
-	let slot_remaining = slot_info.ends_at.checked_sub(now).unwrap_or_default();
+	let slot_remaining = slot_info
+		.ends_at
+		.checked_sub(now)
+		.map(|remaining| remaining.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION))
+		.unwrap_or_default();
 
 	std::cmp::min(slot_remaining, proposing_duration)
 }
@@ -315,6 +321,32 @@ mod tests {
 		);
 
 		assert_eq!(result.len(), 2);
+	}
+
+	#[test]
+	fn on_slot_with_nano_second_remaining_duration_does_not_panic() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		let mut aura = get_aura(OnchainMock::default());
+
+		let nano_dur = Duration::from_nanos(999);
+		let now = duration_now();
+
+		let slot_info = SlotInfo {
+			slot: 0.into(),
+			timestamp: now,
+			duration: nano_dur,
+			ends_at: now + nano_dur,
+			parentchain_head: default_header(),
+		};
+
+		let result = PerShardSlotWorkerScheduler::on_slot(
+			&mut aura,
+			slot_info,
+			vec![Default::default(), Default::default()],
+		);
+
+		assert_eq!(result.len(), 0);
 	}
 
 	#[test]
