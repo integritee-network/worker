@@ -173,7 +173,7 @@ fn proposing_remaining_duration<PB: ParentchainBlock>(
 	slot_info: &SlotInfo<PB>,
 	now: Duration,
 ) -> Duration {
-	// if a bogus `now` is passed such that `slot_remaining` would be bigger than `slot.slot_duration`
+	// if a `now` before slot begin is passed such that `slot_remaining` would be bigger than `slot.slot_duration`
 	// we take the total `slot_duration` as reference value.
 	let proposing_duration = slot_info.duration.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION);
 
@@ -233,6 +233,16 @@ mod tests {
 
 	fn get_aura(onchain_mock: OnchainMock) -> TestAura {
 		Aura::new(Keyring::Alice.pair(), onchain_mock, EnvironmentMock)
+	}
+
+	fn now_slot(slot: Slot) -> SlotInfo<ParentchainBlock> {
+		SlotInfo {
+			slot,
+			timestamp: duration_now(),
+			duration: SLOT_DURATION,
+			ends_at: duration_now() + SLOT_DURATION,
+			parentchain_head: default_header(),
+		}
 	}
 
 	#[test]
@@ -351,13 +361,7 @@ mod tests {
 
 	#[test]
 	fn proposing_remaining_duration_works() {
-		let slot_info: SlotInfo<ParentchainBlock> = SlotInfo {
-			slot: 0.into(),
-			timestamp: duration_now(),
-			duration: SLOT_DURATION,
-			ends_at: duration_now() + SLOT_DURATION,
-			parentchain_head: default_header(),
-		};
+		let slot_info = now_slot(0.into());
 
 		// hard to compare actual numbers but we can at least ensure that the general concept works
 		assert!(
@@ -365,12 +369,22 @@ mod tests {
 				&& proposing_remaining_duration(&slot_info, duration_now())
 					< SLOT_DURATION.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION + 0.01)
 		);
+	}
+
+	#[test]
+	fn proposing_remaining_duration_works_for_now_before_slot_timestamp() {
+		let slot_info = now_slot(0.into());
 
 		assert!(
 			proposing_remaining_duration(&slot_info, Duration::from_millis(0)) > SLOT_DURATION / 2
 				&& proposing_remaining_duration(&slot_info, Duration::from_millis(0))
 					< SLOT_DURATION.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION + 0.01)
 		);
+	}
+
+	#[test]
+	fn proposing_remaining_duration_returns_default_if_now_after_slot() {
+		let slot_info = now_slot(0.into());
 
 		assert_eq!(
 			proposing_remaining_duration(&slot_info, duration_now() + SLOT_DURATION),
