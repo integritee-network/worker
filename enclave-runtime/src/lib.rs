@@ -44,7 +44,7 @@ use crate::{
 	},
 	sidechain_impl::exec_aura_on_slot,
 	state::{list_shards, load_initialized_state, StateFacade},
-	sync::{EnclaveLock, EnclaveStateRWLock},
+	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
 	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
 		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
@@ -552,7 +552,9 @@ where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
-	let _ = EnclaveLock::read_all()?;
+	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
+	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+	let (_light_client_lock, _side_chain_lock) = EnclaveLock::write_all()?;
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
@@ -601,7 +603,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	if let Err(e) = sync_parentchain_int::<Block>(blocks_to_sync, *nonce) {
+	if let Err(e) = sync_parentchain_internal::<Block>(blocks_to_sync, *nonce) {
 		return e.into()
 	}
 
@@ -610,29 +612,27 @@ pub unsafe extern "C" fn sync_parentchain(
 
 /// Internal [`sync_parentchain`] function to be able to use the handy `?` operator.
 ///
-/// Sync parentchain blocks to the light-client
-///
-/// This function makes an ocall that does the following:
-///
-/// *   send `confirm_call` xt's of the `Stf` functions executed due to in-/direct invocation to the
-///     to the parentchain
-/// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
-/// *   gossip produced sidechain blocks to peer validateers.
-fn sync_parentchain_int<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, _nonce: u32) -> Result<()>
+/// Sync parentchain blocks to the light-client:
+/// * iterates over parentchain blocks and scans for relevant extrinsics
+/// * validates and execute those extrinsics (containing indirect calls), mutating state
+/// * sends `confirm_call` xt's of the executed unshielding calls
+/// * sends `confirm_blocks` xt's for every synced parentchain block
+fn sync_parentchain_internal<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, _nonce: u32) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
-	let _ = EnclaveLock::read_all()?;
+	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
+	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+	let _light_client_lock = EnclaveLock::write_light_client_db()?;
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
-
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
 
 	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
 
 	// store updated state in light client in case we fail afterwards.
-	LightClientSeal::seal(validator.clone())?;
+	LightClientSeal::seal(validator)?;
 
 	Ok(())
 }
