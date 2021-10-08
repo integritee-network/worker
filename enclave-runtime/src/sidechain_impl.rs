@@ -168,7 +168,8 @@ where
 	);
 
 	let mut aura = Aura::<_, _, SB, _, _>::new(authority, ocall_api.clone(), env)
-		.with_claim_strategy(SlotClaimStrategy::Always);
+		.with_claim_strategy(SlotClaimStrategy::Always)
+		.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
