@@ -151,6 +151,9 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	rps_new_game(AccountId, AccountId),
+	rps_choose(AccountId, pallet_rps::WeaponType),
+	rps_reveal(AccountId, pallet_rps::WeaponType),
 }
 
 impl TrustedCall {
@@ -160,6 +163,9 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(account, _, _) => account,
 			TrustedCall::balance_unshield(account, _, _, _) => account,
 			TrustedCall::balance_shield(account, _, _) => account,
+			TrustedCall::rps_new_game(account, _) => account,
+			TrustedCall::rps_choose(account, _) => account,
+			TrustedCall::rps_reveal(account, _) => account,
 		}
 	}
 
@@ -185,6 +191,7 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
+	game(AccountId),
 }
 
 impl TrustedGetter {
@@ -193,6 +200,7 @@ impl TrustedGetter {
 			TrustedGetter::free_balance(account) => account,
 			TrustedGetter::reserved_balance(account) => account,
 			TrustedGetter::nonce(account) => account,
+			TrustedGetter::game(account) => account,
 		}
 	}
 

@@ -46,6 +46,9 @@ hex = { version = "0.4.2", optional = true }
 codec = { version = "2.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 sgx_tstd = { rev = "v1.1.3", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
+# use case specific
+pallet-rps = { package = "pallet-jton_rps", default-features = false, git = "https://github.com/integritee-network/pallet-jton-rps.git", branch = "integritee-demo" }
+
 # local crates
 itp-storage = { path = "../../core-primitives/storage", default-features = false }
 itp-types = { default-features = false, path = "../../core-primitives/types", optional = true }
