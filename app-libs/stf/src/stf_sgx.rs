@@ -28,18 +28,21 @@ use crate::{
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use ita_sgx_runtime::Runtime;
+use ita_sgx_runtime::{BlockNumber as L1BlockNumer, Hash, Runtime};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use its_state::SidechainSystemExt;
 use log::*;
+use pallet_rps::Game as GameT;
 use sidechain_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
+
+type Game = GameT<Hash, AccountId>;
 
 impl Stf {
 	pub fn init_state(enclave_account: AccountId) -> State {
@@ -115,10 +118,27 @@ impl Stf {
 					} else {
 						None
 					},
+				TrustedGetter::game(who) =>
+					if let Some(game_id) = Self::get_game_id(&who) {
+						if let Some(game) = Self::get_game(game_id) {
+							Some(game.encode())
+						} else {
+							None
+						}
+					} else {
+						None
+					},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),
 			},
+		})
+	}
+
+	pub fn set_layer_two_block_number(ext: &mut State, number: BlockNumber) {
+		ext.execute_with(|| {
+			let key = storage_value_key("System", "Number");
+			sp_io::storage::set(&key, &number.encode());
 		})
 	}
 
@@ -198,6 +218,43 @@ impl Stf {
 					ensure_enclave_signer_account(&enclave_account)?;
 					debug!("balance_shield({}, {})", account_id_to_string(&who), value);
 					Self::shield_funds(who, value)?;
+					Ok(())
+				},
+				TrustedCall::rps_new_game(sender, opponent) => {
+					let origin = sgx_runtime::Origin::signed(sender.clone());
+					debug!("rps new_game ({:x?}, {:x?})", sender.encode(), opponent.encode());
+					sgx_runtime::RpsCall::<Runtime>::new_game(opponent)
+						.dispatch_bypass_filter(origin)
+						.map_err(|_| StfError::Dispatch("rps_new_game".to_string()))?;
+					Ok(())
+				},
+				TrustedCall::rps_choose(sender, weapon) => {
+					let origin = sgx_runtime::Origin::signed(sender.clone());
+					debug!("rps choose ({:x?}, {:?})", sender.encode(), weapon);
+					sgx_runtime::RpsCall::<Runtime>::choose(weapon.clone(), [0u8; 32])
+						.dispatch_bypass_filter(origin.clone())
+						.map_err(|e| {
+							error!("dispatch error {:?}", e);
+							StfError::Dispatch("rps_choose".to_string())
+						})?;
+					Ok(())
+				},
+				TrustedCall::rps_reveal(sender, weapon) => {
+					let origin = sgx_runtime::Origin::signed(sender.clone());
+					debug!("rps reveal ({:x?})", sender.encode());
+					sgx_runtime::RpsCall::<Runtime>::reveal(weapon, [0u8; 32])
+						.dispatch_bypass_filter(origin)
+						.map_err(|_| StfError::Dispatch("rps_reveal".to_string()))?;
+					// check state of game
+					if let Some(game_id) = Self::get_game_id(&sender) {
+						if let Some(game) = Self::get_game(game_id) {
+							info!("Game state for {:x?} is: {:?}", game.players, game.states);
+						} else {
+							debug!("could not read game")
+						}
+					} else {
+						debug!("could not read game id")
+					}
 					Ok(())
 				},
 			}?;
@@ -304,6 +361,9 @@ impl Stf {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::rps_new_game(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::rps_choose(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::rps_reveal(_, _) => debug!("No storage updates needed..."),
 		};
 		key_hashes
 	}
@@ -356,6 +416,34 @@ pub fn shards_key_hash() -> Vec<u8> {
 	// here you have to point to a storage value containing a Vec of
 	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
 	vec![]
+}
+
+pub fn get_game_id(who: &AccountId) -> Option<Hash> {
+	if let Some(infovec) =
+		sp_io::storage::get(&storage_map_key("Rps", "PlayerGame", who, &StorageHasher::Identity))
+	{
+		if let Ok(info) = Hash::decode(&mut infovec.as_slice()) {
+			Some(info)
+		} else {
+			None
+		}
+	} else {
+		None
+	}
+}
+
+pub fn get_game(game_id: Hash) -> Option<Game> {
+	if let Some(infovec) =
+		sp_io::storage::get(&storage_map_key("Rps", "Games", &game_id, &StorageHasher::Identity))
+	{
+		if let Ok(info) = Game::decode(&mut infovec.as_slice()) {
+			Some(info)
+		} else {
+			None
+		}
+	} else {
+		None
+	}
 }
 
 /// Trait extension to simplify sidechain data access from the STF.

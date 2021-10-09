@@ -30,6 +30,9 @@ substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
+# use case specific
+pallet-rps = { package = "pallet-jton_rps", default-features = false, git = "https://github.com/integritee-network/pallet-jton-rps.git", branch = "integritee-demo" }
+
 # substrate dependencies
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
