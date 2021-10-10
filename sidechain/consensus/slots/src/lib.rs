@@ -145,6 +145,11 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	/// Remaining duration for proposing.
 	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<B>) -> Duration;
 
+	/// Check if should propose even if the timestamp of the proposal is no longer within the slot.
+	///
+	/// Remove when #447 is resolved.
+	fn allow_delayed_proposal(&self) -> bool;
+
 	/// Implements [`SlotWorker::on_slot`]. This is an adaption from
 	/// substrate's sc-consensus-slots implementation. There, the slot worker handles all the
 	/// scheduling itself. Unfortunately, we can't use the same principle in the enclave due to some
@@ -211,7 +216,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 			},
 		};
 
-		if !timestamp_within_slot(&slot_info, &proposing.block) {
+		if !timestamp_within_slot(&slot_info, &proposing.block) && !self.allow_delayed_proposal() {
 			debug!(
 				target: logging_target,
 				"⌛️ Discarding proposal for slot {}; block production took too long", *slot,
