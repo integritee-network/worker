@@ -37,7 +37,10 @@ mod sgx_reexports {
 }
 
 use codec::{Decode, Encode};
-use its_primitives::traits::Block as SidechainBlockT;
+use its_primitives::{
+	traits::Block as SidechainBlockT,
+	types::{BlockHash, BlockNumber, Timestamp},
+};
 use sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use sp_core::H256;
 use sp_std::prelude::Vec;
@@ -109,6 +112,9 @@ pub trait SidechainState: Clone {
 	/// get the hash of the state
 	fn state_hash(&self) -> Self::Hash;
 
+	/// get the underlying externalities of the state
+	fn ext(&mut self) -> &mut Self::Externalities;
+
 	/// apply the state update to the state
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error>;
 
@@ -132,6 +138,24 @@ pub trait SidechainSystemExt<SB: SidechainBlockT> {
 
 	/// set the last block of the sidechain state
 	fn set_last_block(&mut self, block: &SB);
+
+	/// get the last block number of the sidechain state
+	fn get_block_number(&self) -> Option<BlockNumber>;
+
+	/// set the last block number of the sidechain state
+	fn set_block_number(&mut self, number: &BlockNumber);
+
+	/// get the last block hash of the sidechain state
+	fn get_last_block_hash(&self) -> Option<BlockHash>;
+
+	/// set the last block hash of the sidechain state
+	fn set_last_block_hash(&mut self, hash: &BlockHash);
+
+	/// get the timestamp of the sidechain state
+	fn get_timestamp(&self) -> Option<Timestamp>;
+
+	/// set the timestamp of the sidechain state
+	fn set_timestamp(&mut self, timestamp: &Timestamp);
 }
 
 impl<SB: SidechainBlockT, E> SidechainSystemExt<SB> for SidechainDB<SB, E>
@@ -143,6 +167,31 @@ where
 	}
 
 	fn set_last_block(&mut self, block: &SB) {
+		self.set_last_block_hash(&block.hash());
 		self.set_with_name("System", "LastBlock", block)
+	}
+
+	fn get_block_number(&self) -> Option<BlockNumber> {
+		self.get_with_name("System", "Number")
+	}
+
+	fn set_block_number(&mut self, number: &BlockNumber) {
+		self.set_with_name("System", "Number", number)
+	}
+
+	fn get_last_block_hash(&self) -> Option<BlockHash> {
+		self.get_with_name("System", "LastHash")
+	}
+
+	fn set_last_block_hash(&mut self, hash: &BlockHash) {
+		self.set_with_name("System", "LastHash", hash)
+	}
+
+	fn get_timestamp(&self) -> Option<Timestamp> {
+		self.get_with_name("System", "Timestamp")
+	}
+
+	fn set_timestamp(&mut self, timestamp: &Timestamp) {
+		self.set_with_name("System", "Timestamp", timestamp)
 	}
 }

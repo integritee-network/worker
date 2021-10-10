@@ -39,6 +39,10 @@ where
 		self.ext.hash()
 	}
 
+	fn ext(&mut self) -> &mut Self::Externalities {
+		&mut self.ext
+	}
+
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
 		// Todo: how do we ensure that the apriori state hash matches: See #421
 		// ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);

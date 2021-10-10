@@ -45,7 +45,7 @@ use its_sidechain::{
 		traits::{Block as BlockT, SignedBlock as SignedBlockT},
 		types::block::SignedBlock,
 	},
-	state::{SidechainDB, SidechainSystemExt, StateHash},
+	state::{SidechainDB, SidechainState, SidechainSystemExt},
 };
 use jsonrpc_core::futures::executor;
 use log::*;
@@ -143,19 +143,22 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 fn test_compose_block_and_confirmation() {
 	// given
-	let (_, mut state, shard, _, _) = test_setup();
+	let (_, state, shard, _, _) = test_setup();
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
+	let mut db = SidechainDB::new(state);
+	db.set_block_number(&1);
 
 	// when
-	let (opaque_call, signed_block) = crate::compose_block_and_confirmation::<Block, SignedBlock>(
-		&latest_parentchain_header(),
-		signed_top_hashes,
-		shard,
-		state.hash(),
-		&mut state,
-	)
-	.unwrap();
+	let (opaque_call, signed_block) =
+		crate::compose_block_and_confirmation::<Block, SignedBlock, _>(
+			&latest_parentchain_header(),
+			signed_top_hashes,
+			shard,
+			db.state_hash(),
+			&mut db,
+		)
+		.unwrap();
 
 	// then
 	let expected_call = OpaqueCall::from_tuple(&(
@@ -327,7 +330,8 @@ fn test_create_state_diff() {
 	let receiver_acc_info: AccountInfo =
 		get_from_state_diff(&state_diff, &account_key_hash(&receiver.into()));
 
-	assert_eq!(state_diff.len(), 2);
+	// (last_hash, block_number, timestamp, sender_funds, receiver_funds)
+	assert_eq!(state_diff.len(), 5);
 	assert_eq!(receiver_acc_info.data.free, 1000);
 	assert_eq!(sender_acc_info.data.free, 1000);
 

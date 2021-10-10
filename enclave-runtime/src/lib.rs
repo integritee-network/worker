@@ -43,19 +43,19 @@ use crate::{
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
 	sidechain_impl::exec_aura_on_slot,
-	state::{list_shards, StateFacade},
+	state::{list_shards, load_initialized_state, StateFacade},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
-		hash_from_slice, remaining_time, utf8_str_from_raw, write_slice_and_whitespace_pad,
-		DecodeRaw, UnwrapOrSgxErrorUnexpected,
+		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
+		write_slice_and_whitespace_pad, DecodeRaw, UnwrapOrSgxErrorUnexpected,
 	},
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, StateTypeDiff, Stf,
+	AccountId, Getter, ShardIdentifier, State as StfState, StatePayload, StateTypeDiff, Stf,
 	TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
 use itc_direct_rpc_server::{
@@ -88,7 +88,7 @@ use its_sidechain::{
 		types::block::SignedBlock as SignedSidechainBlock,
 	},
 	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
-	state::{SidechainDB, SidechainSystemExt, StateHash},
+	state::{SidechainDB, SidechainState, SidechainSystemExt},
 };
 use lazy_static::lazy_static;
 use log::*;
@@ -97,7 +97,7 @@ use rpc::{
 	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
 };
 use sgx_externalities::SgxExternalitiesTrait;
-use sgx_types::{sgx_status_t, SgxResult};
+use sgx_types::sgx_status_t;
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
@@ -111,8 +111,7 @@ use std::{
 	slice,
 	string::ToString,
 	sync::{Arc, SgxRwLock},
-	time::{Duration, SystemTime, UNIX_EPOCH},
-	untrusted::time::SystemTimeEx,
+	time::Duration,
 	vec::Vec,
 };
 use substrate_api_client::{
@@ -891,12 +890,14 @@ where
 	let mut call_hashes = Vec::<H256>::new();
 
 	// load state before executing any calls
-	let mut state = load_initialized_state(&shard)?;
-	// save the state hash before call executions
-	// (needed for block composition)
-	trace!("Getting hash of previous state ..");
-	let prev_state_hash = state.hash();
-	trace!("Loaded hash of previous state: {:?}", prev_state_hash);
+	let mut sidechain_db = load_initialized_state(&shard).map(SidechainDB::<SB::Block, _>::new)?;
+
+	let prev_state_hash = sidechain_db.state_hash();
+	trace!("state apriori hash: {:?}", prev_state_hash);
+
+	// update state needed for pallets
+	sidechain_db.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
+	sidechain_db.set_timestamp(&now_as_u64());
 
 	// retrieve trusted operations from pool
 	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
@@ -906,7 +907,7 @@ where
 	for trusted_call_signed in trusted_calls.into_iter() {
 		match handle_trusted_worker_call::<PB, _>(
 			&mut calls,
-			&mut state,
+			&mut sidechain_db.ext,
 			&trusted_call_signed,
 			latest_onchain_header,
 			shard,
@@ -935,12 +936,12 @@ where
 
 	// Todo: this function should return here. Composing the block should be done by the caller.
 	// create new block (side-chain)
-	let block = match compose_block_and_confirmation::<PB, SB>(
+	let block = match compose_block_and_confirmation::<PB, SB, _>(
 		latest_onchain_header,
 		call_hashes,
 		shard,
 		prev_state_hash,
-		&mut state,
+		&mut sidechain_db,
 	) {
 		Ok((block_confirm, signed_block)) => {
 			calls.push(block_confirm);
@@ -958,21 +959,9 @@ where
 	};
 
 	// save updated state after call executions
-	let _new_state_hash = state::write(state, &shard)?;
+	let _hash = state::write(sidechain_db.ext, &shard)?;
 
 	Ok((calls, block))
-}
-
-fn load_initialized_state(shard: &H256) -> SgxResult<State> {
-	trace!("Loading state from shard {:?}", shard);
-	let state = if state::exists(&shard) {
-		state::load(&shard)?
-	} else {
-		state::init_shard(&shard)?;
-		Stf::init_state()
-	};
-	trace!("Sucessfully loaded or initialized state from shard {:?}", shard);
-	Ok(state)
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
@@ -1020,22 +1009,21 @@ where
 }
 
 /// Composes a sidechain block of a shard
-pub fn compose_block_and_confirmation<PB, SB>(
+pub fn compose_block_and_confirmation<PB, SB, SidechainDB>(
 	latest_onchain_header: &PB::Header,
 	top_call_hashes: Vec<H256>,
 	shard: ShardIdentifier,
 	state_hash_apriori: H256,
-	state: &mut StfState,
+	db: &mut SidechainDB,
 ) -> Result<(OpaqueCall, SB)>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SidechainDB: SidechainSystemExt<SB::Block> + SidechainState<Hash = H256>,
 {
 	let signer_pair = Ed25519Seal::unseal()?;
-	let state_hash_new = state.hash();
-
-	let mut db = SidechainDB::<SB::Block, _>::new(state.clone());
+	let state_hash_new = db.state_hash();
 
 	let (block_number, parent_hash) = match db.get_last_block() {
 		Some(block) => (block.block_number() + 1, block.hash()),
@@ -1045,9 +1033,14 @@ where
 		},
 	};
 
+	if block_number != db.get_block_number().unwrap_or(0) {
+		return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
+	}
+
 	// create encrypted payload
 	let mut payload: Vec<u8> =
-		StatePayload::new(state_hash_apriori, state_hash_new, db.ext.state_diff.clone()).encode();
+		StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
+			.encode();
 	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
 
 	let block = SB::Block::new(
@@ -1058,7 +1051,7 @@ where
 		shard,
 		top_call_hashes,
 		payload,
-		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+		now_as_u64(),
 	);
 
 	let block_hash = block.hash();
@@ -1066,11 +1059,7 @@ where
 	db.set_last_block(&block);
 
 	// state diff has been written to block, clean it for the next block.
-	db.ext.prune_state_diff();
-
-	// write back to state. This should be fixed when we have better separation of sidechain stuff
-	// and the rest.
-	*state = db.ext;
+	db.ext().prune_state_diff();
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
