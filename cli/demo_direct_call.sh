@@ -47,7 +47,7 @@ echo "Using worker-rpc-port ${RPORT}"
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
-
+TIMEOUT="retry -t 1 -- timeout 30s "
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
 if [ "$READMRENCLAVE" = "file" ]
@@ -73,7 +73,7 @@ echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
 echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
+$TIMEOUT ${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -81,22 +81,22 @@ sleep 10
 echo ""
 
 echo "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 #send funds from Alice to bobs account
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
+$TIMEOUT $CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+RESULT=$($TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
 echo $RESULT
 echo ""
 
 
 echo "* Bob's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
 echo ""
 
 

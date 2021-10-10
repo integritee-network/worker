@@ -110,9 +110,9 @@ jobs:
 
       # we can't use the `actions/setup-python@v2` due to cross compiling issues with
       # ubuntu 18.04 and python > 3.6, but we need >3.6 for our scripts.
-      - name: Set up Python
+      - name: Set up Python and helpers
         run: |
-          sudo apt install software-properties-common -y
+          sudo apt install retry software-properties-common -y
           sudo add-apt-repository ppa:deadsnakes/ppa -y
           sudo apt install python3.7 -y
           python3.7 --version
