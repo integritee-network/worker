@@ -39,26 +39,26 @@ pub type Signature = MultiSignature;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SignedBlock {
-	block: Block,
+	pub block: Block,
 	/// block author signature
-	signature: Signature,
+	pub signature: Signature,
 }
 
 /// simplified block structure for relay chain submission as an extrinsic
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Block {
-	block_number: BlockNumber,
-	parent_hash: H256,
-	timestamp: u64,
+	pub block_number: BlockNumber,
+	pub parent_hash: H256,
+	pub timestamp: u64,
 	/// Parentchain header this block is based on
-	layer_one_head: H256,
-	shard_id: ShardIdentifier,
+	pub layer_one_head: H256,
+	pub shard_id: ShardIdentifier,
 	///  must be registered on layer one as an enclave for the respective shard
-	block_author: ed25519::Public,
-	signed_top_hashes: Vec<H256>,
+	pub block_author: ed25519::Public,
+	pub signed_top_hashes: Vec<H256>,
 	// encrypted state payload
-	state_payload: Vec<u8>,
+	pub state_payload: Vec<u8>,
 }
 
 impl BlockT for Block {

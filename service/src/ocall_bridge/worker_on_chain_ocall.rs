@@ -103,7 +103,7 @@ where
 			};
 
 		if !confirmation_calls.is_empty() {
-			println!("Enclave wants to send {} extrinsics", confirmation_calls.len());
+			debug!("Enclave wants to send {} extrinsics", confirmation_calls.len());
 			for call in confirmation_calls.into_iter() {
 				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
 			}
@@ -122,7 +122,10 @@ where
 			};
 
 		if !signed_blocks.is_empty() {
-			println!("Enclave produced sidechain blocks: {:?}", signed_blocks);
+			info!(
+				"Enclave produced sidechain blocks: {:?}",
+				signed_blocks.iter().map(|b| b.block.block_number).collect::<Vec<u64>>()
+			);
 		} else {
 			debug!("Enclave did not produce sidechain blocks");
 		}

@@ -5,6 +5,7 @@
 #   integritee-node purge-chain --dev
 #   integritee-node --tmp --dev -lruntime=debug
 #   rm light_client_db.bin
+#   export RUST_LOG=integritee_service=info,ita_stf=debug
 #   integritee-service init_shard
 #   integritee-service shielding-key
 #   integritee-service signing-key
@@ -13,6 +14,7 @@
 # then run this script
 
 # usage:
+#  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
 #  demo_private_tx.sh <NODEPORT> <WORKERRPCPORT>
 
 # using default port if none given as arguments

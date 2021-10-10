@@ -579,7 +579,7 @@ pub fn sync_parentchain_and_execute_tops<E: EnclaveBase + SideChain>(
 			chunk.last().map(|b| b.block.header.clone()).expect("Chunk can't be empty; qed");
 
 		println!(
-			"Synced {} blocks out of {} finalized blocks",
+			"Synced {} out of {} finalized parentchain blocks",
 			last_synced_header.number, head_block_number,
 		)
 	}
