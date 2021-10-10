@@ -18,4 +18,7 @@
 
 pub mod attestation_ocall_mock;
 pub mod enclave_rpc_ocall_mock;
+pub mod handle_state_mock;
 pub mod rpc_responder_mock;
+pub mod shielding_crypto_mock;
+pub mod trusted_operation_pool_mock;

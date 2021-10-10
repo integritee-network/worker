@@ -18,7 +18,7 @@
 pub extern crate alloc;
 
 use self::serde_json::*;
-use crate::rpc::author::{AuthorApi, OnBlockCreated, SendState};
+use crate::rpc::author::AuthorApi;
 use alloc::{borrow::ToOwned, format, str, string::String, vec::Vec};
 use base58::FromBase58;
 use codec::{Decode, Encode};
@@ -79,12 +79,7 @@ fn compute_encoded_return_error(error_msg: String) -> Vec<u8> {
 
 pub fn public_api_rpc_handler<R>(rpc_author: Arc<R>) -> IoHandler
 where
-	R: AuthorApi<H256, H256>
-		+ SendState<Hash = H256>
-		+ OnBlockCreated<Hash = H256>
-		+ Send
-		+ Sync
-		+ 'static,
+	R: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	let mut io = IoHandler::new();
 	let mut rpc_methods_vec: Vec<&str> = Vec::new();

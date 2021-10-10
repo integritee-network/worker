@@ -16,27 +16,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Substrate block-author/full-node API.
 pub extern crate alloc;
+
 use crate::{
-	rpc::error::{Error as StateRpcError, Error, Result},
-	state,
+	rpc::{
+		author::client_error::Error as ClientError,
+		error::{Error as StateRpcError, Result},
+	},
+	state::HandleState,
 	top_pool::{
-		error::{Error as PoolError, Error as TopPoolError, IntoPoolError},
+		error::{Error as PoolError, IntoPoolError},
 		primitives::{
 			BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
 			TxHash,
 		},
-		top_pool_container::GetTopPool,
 	},
 };
-use alloc::{boxed::Box, vec::Vec};
-use client_error::Error as ClientError;
+use alloc::boxed::Box;
 use codec::{Decode, Encode};
-use core::{iter::Iterator, ops::Deref};
+use core::iter::Iterator;
 use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
-use itp_sgx_crypto::{Rsa3072Seal, ShieldingCrypto};
-use itp_sgx_io::SealedIO;
+use itp_sgx_crypto::ShieldingCrypto;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::{
 	futures::future::{ready, TryFutureExt},
@@ -44,8 +44,11 @@ use jsonrpc_core::{
 };
 use log::*;
 use sp_runtime::generic;
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
+pub mod atomic_container;
+pub mod author_container;
+pub mod author_tests;
 pub mod client_error;
 pub mod hash;
 
@@ -55,7 +58,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;
 
 	/// Return hash of Trusted Operation
-	fn hash_of(&self, xt: &TrustedOperation) -> Result<Hash>;
+	fn hash_of(&self, xt: &TrustedOperation) -> Hash;
 
 	/// Returns all pending operations, potentially grouped by sender.
 	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
@@ -66,7 +69,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 		shard: ShardIdentifier,
 	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
 
-	fn get_shards(&self) -> Result<Vec<ShardIdentifier>>;
+	fn get_shards(&self) -> Vec<ShardIdentifier>;
 
 	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
 	fn remove_top(
@@ -97,24 +100,6 @@ pub trait OnBlockCreated {
 	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
 }
 
-/// Authoring API
-pub struct Author<TopPoolGetter>
-where
-	TopPoolGetter: GetTopPool + Sync + Send + 'static,
-{
-	top_pool_getter: Arc<TopPoolGetter>,
-}
-
-impl<TopPoolGetter> Author<TopPoolGetter>
-where
-	TopPoolGetter: GetTopPool + Sync + Send + 'static,
-{
-	/// Create new instance of Authoring API.
-	pub fn new(top_pool_getter: Arc<TopPoolGetter>) -> Self {
-		Author { top_pool_getter }
-	}
-}
-
 /// Currently we treat all RPC operations as externals.
 ///
 /// Possibly in the future we could allow opt-in for special treatment
@@ -122,51 +107,61 @@ where
 /// some unique operations via RPC and have them included in the pool.
 const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
+/// Authoring API for RPC calls
+///
+///
+pub struct Author<TopPool, StateFacade, EncryptionKey>
+where
+	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	StateFacade: HandleState,
+	EncryptionKey: ShieldingCrypto,
+{
+	top_pool: Arc<TopPool>,
+	state_facade: Arc<StateFacade>,
+	encryption_key: EncryptionKey,
+}
+
+impl<TopPool, StateFacade, EncryptionKey> Author<TopPool, StateFacade, EncryptionKey>
+where
+	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	StateFacade: HandleState,
+	EncryptionKey: ShieldingCrypto,
+{
+	/// Create new instance of Authoring API.
+	pub fn new(
+		top_pool: Arc<TopPool>,
+		state_facade: Arc<StateFacade>,
+		encryption_key: EncryptionKey,
+	) -> Self {
+		Author { top_pool, state_facade, encryption_key }
+	}
+}
+
 enum TopSubmissionMode {
 	Submit,
 	SubmitWatch,
 }
 
-impl<TopPoolGetter> Author<TopPoolGetter>
+impl<TopPool, StateFacade, EncryptionKey> Author<TopPool, StateFacade, EncryptionKey>
 where
-	TopPoolGetter: GetTopPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	StateFacade: HandleState,
+	EncryptionKey: ShieldingCrypto,
 {
-	/// Execute a specific task or function on the TOP pool
-	///
-	/// Needed to get a clean way around the mutexes in which the pool are wrapped.
-	/// Other approaches require lots of code duplication for the mutex locking and
-	/// unwrapping.
-	fn execute_on_top_pool<F, E, R>(&self, function_to_execute: F, mutex_error_func: E) -> R
-	where
-		F: FnOnce(&TopPoolGetter::TrustedOperationPool) -> R,
-		E: FnOnce(Error) -> R,
-	{
-		let pool_mutex = match self.top_pool_getter.get() {
-			Some(mutex) => mutex,
-			None => {
-				error!("Could not get mutex to trusted operation pool");
-				return (mutex_error_func)(Error::PoolError(TopPoolError::UnlockError))
-			},
-		};
-
-		let tx_pool_guard = pool_mutex.lock().unwrap();
-		(function_to_execute)(tx_pool_guard.deref())
-	}
-
 	fn process_top(
 		&self,
 		ext: Vec<u8>,
 		shard: ShardIdentifier,
 		submission_mode: TopSubmissionMode,
-	) -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
+	) -> PoolFuture<TxHash<TopPool>, RpcError> {
 		// check if shard already exists
-		if !state::exists(&shard) {
+		if !self.state_facade.exists(&shard) {
 			//FIXME: Should this be an error? -> Issue error handling
 			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
 		}
+
 		// decrypt call
-		let rsa_key = Rsa3072Seal::unseal().unwrap();
-		let request_vec = match rsa_key.decrypt(&ext.as_slice()) {
+		let request_vec = match self.encryption_key.decrypt(&ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
@@ -180,38 +175,26 @@ where
 		let best_block_hash = Default::default();
 
 		match submission_mode {
-			TopSubmissionMode::Submit => self.execute_on_top_pool(
-				|t: &TopPoolGetter::TrustedOperationPool| -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
-					Box::pin(
-						t.submit_one(
-							&generic::BlockId::hash(best_block_hash),
-							TX_SOURCE,
-							stf_operation,
-							shard,
-						)
-						.map_err(map_top_error::<TopPoolGetter::TrustedOperationPool>),
-					)
-				},
-				|e| -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
-						Box::pin(ready(Err(e.into())))
-					},
-			),
-
-			TopSubmissionMode::SubmitWatch => self.execute_on_top_pool(
-				|t: &TopPoolGetter::TrustedOperationPool| -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
-					Box::pin(
-					t.submit_and_watch(
+			TopSubmissionMode::Submit => Box::pin(
+				self.top_pool
+					.submit_one(
 						&generic::BlockId::hash(best_block_hash),
 						TX_SOURCE,
 						stf_operation,
 						shard,
 					)
-					.map_err(map_top_error::<TopPoolGetter::TrustedOperationPool>)
+					.map_err(map_top_error::<TopPool>),
+			),
+
+			TopSubmissionMode::SubmitWatch => Box::pin(
+				self.top_pool
+					.submit_and_watch(
+						&generic::BlockId::hash(best_block_hash),
+						TX_SOURCE,
+						stf_operation,
+						shard,
 					)
-				},
-				|e| -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
-						Box::pin(ready(Err(e.into())))
-					},
+					.map_err(map_top_error::<TopPool>),
 			),
 		}
 	}
@@ -227,137 +210,115 @@ fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
 	.into()
 }
 
-impl<TopPoolGetter>
-	AuthorApi<
-		TxHash<TopPoolGetter::TrustedOperationPool>,
-		BlockHash<TopPoolGetter::TrustedOperationPool>,
-	> for Author<TopPoolGetter>
+impl<TopPool, StateFacade, EncryptionKey> AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
+	for Author<TopPool, StateFacade, EncryptionKey>
 where
-	TopPoolGetter: GetTopPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	StateFacade: HandleState,
+	EncryptionKey: ShieldingCrypto,
 {
 	fn submit_top(
 		&self,
 		ext: Vec<u8>,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
+	) -> PoolFuture<TxHash<TopPool>, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::Submit)
 	}
 
 	/// Get hash of TrustedOperation
-	fn hash_of(
-		&self,
-		xt: &TrustedOperation,
-	) -> Result<TxHash<TopPoolGetter::TrustedOperationPool>> {
-		self.execute_on_top_pool(|t| Ok(t.hash_of(xt)), Err)
+	fn hash_of(&self, xt: &TrustedOperation) -> TxHash<TopPool> {
+		self.top_pool.hash_of(xt)
 	}
 
 	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>> {
-		self.execute_on_top_pool(
-			|t| Ok(t.ready(shard).map(|top| top.data().encode()).collect()),
-			Err,
-		)
+		Ok(self.top_pool.ready(shard).map(|top| top.data().encode()).collect())
 	}
 
 	fn get_pending_tops_separated(
 		&self,
 		shard: ShardIdentifier,
 	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
-		self.execute_on_top_pool(
-			|t| {
-				let mut calls: Vec<TrustedCallSigned> = vec![];
-				let mut getters: Vec<TrustedGetterSigned> = vec![];
-				for operation in t.ready(shard) {
-					match operation.data() {
-						TrustedOperation::direct_call(call) => calls.push(call.clone()),
-						TrustedOperation::get(getter) => match getter {
-							Getter::trusted(trusted_getter_signed) =>
-								getters.push(trusted_getter_signed.clone()),
-							_ => error!("Found invalid trusted getter in top pool"),
-						},
-						_ => { // might be emtpy?
-						},
-					}
-				}
+		let mut calls: Vec<TrustedCallSigned> = vec![];
+		let mut getters: Vec<TrustedGetterSigned> = vec![];
+		for operation in self.top_pool.ready(shard) {
+			match operation.data() {
+				TrustedOperation::direct_call(call) => calls.push(call.clone()),
+				TrustedOperation::get(getter) => match getter {
+					Getter::trusted(trusted_getter_signed) =>
+						getters.push(trusted_getter_signed.clone()),
+					_ => error!("Found invalid trusted getter in top pool"),
+				},
+				_ => { // might be emtpy?
+				},
+			}
+		}
 
-				Ok((calls, getters))
-			},
-			Err,
-		)
+		Ok((calls, getters))
 	}
 
-	fn get_shards(&self) -> Result<Vec<ShardIdentifier>> {
-		self.execute_on_top_pool(|t| Ok(t.shards()), Err)
+	fn get_shards(&self) -> Vec<ShardIdentifier> {
+		self.top_pool.shards()
 	}
 
 	fn remove_top(
 		&self,
-		bytes_or_hash: Vec<
-			hash::TrustedOperationOrHash<TxHash<TopPoolGetter::TrustedOperationPool>>,
-		>,
+		bytes_or_hash: Vec<hash::TrustedOperationOrHash<TxHash<TopPool>>>,
 		shard: ShardIdentifier,
 		inblock: bool,
-	) -> Result<Vec<TxHash<TopPoolGetter::TrustedOperationPool>>> {
-		self.execute_on_top_pool(
-			|t| {
-				let hashes = bytes_or_hash
-					.into_iter()
-					.map(|x| match x {
-						hash::TrustedOperationOrHash::Hash(h) => Ok(h),
-						hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
-							let op = Decode::decode(&mut &bytes[..]).unwrap();
-							Ok(t.hash_of(&op))
-						},
-						hash::TrustedOperationOrHash::Operation(op) => Ok(t.hash_of(&op)),
-					})
-					.collect::<Result<Vec<_>>>()?;
-				debug!("removing {:?} from top pool", hashes);
+	) -> Result<Vec<TxHash<TopPool>>> {
+		let hashes = bytes_or_hash
+			.into_iter()
+			.map(|x| match x {
+				hash::TrustedOperationOrHash::Hash(h) => Ok(h),
+				hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
+					let op = Decode::decode(&mut &bytes[..]).unwrap();
+					Ok(self.top_pool.hash_of(&op))
+				},
+				hash::TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
+			})
+			.collect::<Result<Vec<_>>>()?;
+		debug!("removing {:?} from top pool", hashes);
 
-				Ok(t.remove_invalid(&hashes, shard, inblock)
-					.into_iter()
-					.map(|op| *op.hash())
-					.collect())
-			},
-			Err,
-		)
+		Ok(self
+			.top_pool
+			.remove_invalid(&hashes, shard, inblock)
+			.into_iter()
+			.map(|op| op.hash().clone())
+			.collect())
 	}
 
 	fn watch_top(
 		&self,
 		ext: Vec<u8>,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<TopPoolGetter::TrustedOperationPool>, RpcError> {
+	) -> PoolFuture<TxHash<TopPool>, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::SubmitWatch)
 	}
 }
 
-impl<TopPoolGetter> OnBlockCreated for Author<TopPoolGetter>
+impl<TopPool, StateFacade, EncryptionKey> OnBlockCreated
+	for Author<TopPool, StateFacade, EncryptionKey>
 where
-	TopPoolGetter: GetTopPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	StateFacade: HandleState,
+	EncryptionKey: ShieldingCrypto,
 {
-	type Hash = <<TopPoolGetter as GetTopPool>::TrustedOperationPool as TrustedOperationPool>::Hash;
+	type Hash = <TopPool as TrustedOperationPool>::Hash;
 
 	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
-		self.execute_on_top_pool(
-			|t| {
-				t.on_block_created(hashes, block_hash);
-			},
-			|e| {
-				error!("Failed to notify listeners about new block creation: {:?}", e);
-			},
-		);
+		self.top_pool.on_block_created(hashes, block_hash)
 	}
 }
 
-impl<TopPoolGetter> SendState for Author<TopPoolGetter>
+impl<TopPool, StateFacade, EncryptionKey> SendState for Author<TopPool, StateFacade, EncryptionKey>
 where
-	TopPoolGetter: GetTopPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	StateFacade: HandleState,
+	EncryptionKey: ShieldingCrypto,
 {
-	type Hash = <<TopPoolGetter as GetTopPool>::TrustedOperationPool as TrustedOperationPool>::Hash;
+	type Hash = <TopPool as TrustedOperationPool>::Hash;
 
 	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<()> {
-		self.execute_on_top_pool(
-			|t| t.rpc_send_state(hash, state_encoded).map_err(|e| e.into()),
-			Err,
-		)
+		self.top_pool.rpc_send_state(hash, state_encoded).map_err(|e| e.into())
 	}
 }

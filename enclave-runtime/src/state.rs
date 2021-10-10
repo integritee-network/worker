@@ -28,6 +28,50 @@ use sgx_types::*;
 use sp_core::H256;
 use std::{fs, io::Write, path::Path, vec::Vec};
 
+/// Facade for handling STF state from file
+pub trait HandleState {
+	/// Load the STF state for a specific shard
+	fn load(&self, shard: &ShardIdentifier) -> Result<StfState>;
+
+	/// Writes the state (without the state diff) encrypted into the enclave
+	///
+	/// Returns the hash of the saved state (independent of the diff!)
+	fn write(&mut self, state: StfState, shard: ShardIdentifier) -> Result<H256>;
+
+	/// Query whether a given shard exists
+	fn exists(&self, shard: &ShardIdentifier) -> bool;
+
+	/// Initialize a shard with a given identifier
+	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()>;
+
+	/// List all available shards
+	fn list_shards(&self) -> Result<Vec<ShardIdentifier>>;
+}
+
+pub struct StateFacade;
+
+impl HandleState for StateFacade {
+	fn load(&self, shard: &ShardIdentifier) -> Result<StfState> {
+		load(shard)
+	}
+
+	fn write(&mut self, state: StfState, shard: ShardIdentifier) -> Result<H256> {
+		write(state, &shard)
+	}
+
+	fn exists(&self, shard: &ShardIdentifier) -> bool {
+		exists(shard)
+	}
+
+	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
+		init_shard(shard)
+	}
+
+	fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
+		list_shards()
+	}
+}
+
 pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
 	// load last state
 	let state_path =
@@ -54,7 +98,7 @@ pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
 }
 
 /// Writes the state (without the state diff) encrypted into the enclave storage
-// Returns the hash of the saved state (independent of the diff!)
+/// Returns the hash of the saved state (independent of the diff!)
 pub fn write(state: StfState, shard: &ShardIdentifier) -> Result<H256> {
 	let state_path =
 		format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);

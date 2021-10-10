@@ -16,6 +16,7 @@ pub enum Error {
 	Sgx(sgx_status_t),
 	Consensus(its_sidechain::consensus_common::Error),
 	Stf(String),
+	MutexAccess,
 	Other(Box<dyn std::error::Error>),
 }
 
