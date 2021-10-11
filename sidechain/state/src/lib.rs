@@ -138,7 +138,7 @@ pub trait SidechainState: Clone {
 	fn set(&mut self, key: &[u8], value: &[u8]);
 }
 
-/// trait to set and the the last sidechain block of the `SidechainDB`
+/// trait to set and get the last sidechain block of the sidechain state
 pub trait LastBlockExt<SB: SidechainBlockT> {
 	/// get the last block of the sidechain state
 	fn get_last_block(&self) -> Option<SB>;
@@ -149,7 +149,7 @@ pub trait LastBlockExt<SB: SidechainBlockT> {
 
 impl<SB: SidechainBlockT, E> LastBlockExt<SB> for SidechainDB<SB, E>
 where
-	SidechainDB<SB, E>: SidechainState,
+	SidechainDB<SB, E>: SidechainState + SidechainSystemExt,
 {
 	fn get_last_block(&self) -> Option<SB> {
 		self.get_with_name("System", "LastBlock")
