@@ -20,8 +20,6 @@ use support::traits::UnfilteredDispatchable;
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-pub trait StfTrait = SgxExternalitiesTrait + Clone + Send + Sync;
-
 impl Stf {
 	pub fn init_state() -> State {
 		debug!("initializing stf state");
