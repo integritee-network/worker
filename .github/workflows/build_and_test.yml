@@ -122,7 +122,7 @@ jobs:
         run: |
           sudo apt install software-properties-common -y
           sudo add-apt-repository ppa:deadsnakes/ppa -y
-          sudo add-apt-repositroy ppa:minfrin/retry -y
+          sudo add-apt-repository ppa:minfrin/retry -y
           sudo apt install python3.7 retry -y
           python3.7 --version
       - name: Download Worker
