@@ -24,6 +24,7 @@ use sp_std::vec::Vec;
 pub type BlockHash = H256;
 pub type BlockNumber = u64;
 pub type ShardIdentifier = H256;
+pub type Timestamp = u64;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -75,7 +76,7 @@ impl BlockT for Block {
 		self.parent_hash
 	}
 	/// get timestamp of block
-	fn timestamp(&self) -> u64 {
+	fn timestamp(&self) -> Timestamp {
 		self.timestamp
 	}
 	/// get layer one head of block
@@ -109,7 +110,7 @@ impl BlockT for Block {
 		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
-		timestamp: u64,
+		timestamp: Timestamp,
 	) -> Block {
 		// create block
 		Block {
@@ -161,8 +162,8 @@ mod tests {
 	use std::time::{SystemTime, UNIX_EPOCH};
 
 	/// gets the timestamp of the block as seconds since unix epoch
-	fn timestamp_now() -> u64 {
-		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+	fn timestamp_now() -> Timestamp {
+		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as Timestamp
 	}
 
 	fn test_block() -> Block {

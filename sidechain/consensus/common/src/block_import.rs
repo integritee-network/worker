@@ -23,7 +23,7 @@ use itp_sgx_crypto::StateCrypto;
 use its_primitives::traits::{
 	Block as SidechainBlock, ShardIdentifierFor, SignedBlock as SignedSidechainBlock,
 };
-use its_state::{SidechainState, SidechainSystemExt};
+use its_state::{LastBlockExt, SidechainState};
 use sp_runtime::traits::Block as ParentchainBlock;
 use std::vec::Vec;
 
@@ -36,7 +36,7 @@ where
 	type Verifier: Verifier<PB, SB, BlockImportParams = SB, Context = Self::Context>;
 
 	/// context needed to derive verifier relevant data
-	type SidechainState: SidechainState + SidechainSystemExt<SB::Block>;
+	type SidechainState: SidechainState + LastBlockExt<SB::Block>;
 
 	/// provides the cryptographic functions for our the state encryption
 	type StateCrypto: StateCrypto;

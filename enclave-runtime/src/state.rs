@@ -72,6 +72,18 @@ impl HandleState for StateFacade {
 	}
 }
 
+pub fn load_initialized_state(shard: &H256) -> SgxResult<StfState> {
+	trace!("Loading state from shard {:?}", shard);
+	let state = if exists(&shard) {
+		load(&shard)?
+	} else {
+		init_shard(&shard)?;
+		Stf::init_state()
+	};
+	trace!("Sucessfully loaded or initialized state from shard {:?}", shard);
+	Ok(state)
+}
+
 pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
 	// load last state
 	let state_path =
