@@ -39,28 +39,32 @@ where
 		self.ext.hash()
 	}
 
-	fn ext(&mut self) -> &mut Self::Externalities {
+	fn ext(&self) -> &Self::Externalities {
+		&self.ext
+	}
+
+	fn ext_mut(&mut self) -> &mut Self::Externalities {
 		&mut self.ext
 	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		self.ext().apply_state_update(state_payload)
+		self.ext_mut().apply_state_update(state_payload)
 	}
 
 	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V> {
-		self.ext.get_with_name(module_prefix, storage_prefix)
+		self.ext().get_with_name(module_prefix, storage_prefix)
 	}
 
 	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V) {
-		self.ext().set_with_name(module_prefix, storage_prefix, value)
+		self.ext_mut().set_with_name(module_prefix, storage_prefix, value)
 	}
 
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.ext.get(key).cloned()
+		self.ext().get(key).cloned()
 	}
 
 	fn set(&mut self, key: &[u8], value: &[u8]) {
-		self.ext().set(key, value)
+		self.ext_mut().set(key, value)
 	}
 }
 
@@ -73,7 +77,11 @@ impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
 		self.hash()
 	}
 
-	fn ext(&mut self) -> &mut Self::Externalities {
+	fn ext(&self) -> &Self::Externalities {
+		self
+	}
+
+	fn ext_mut(&mut self) -> &mut Self::Externalities {
 		self
 	}
 

@@ -116,8 +116,11 @@ pub trait SidechainState: Clone {
 	/// get the hash of the state
 	fn state_hash(&self) -> Self::Hash;
 
-	/// get the underlying externalities of the state
-	fn ext(&mut self) -> &mut Self::Externalities;
+	/// get a reference to the underlying externalities of the state
+	fn ext(&self) -> &Self::Externalities;
+
+	/// get a mutable reference to the underlying externalities of the state
+	fn ext_mut(&mut self) -> &mut Self::Externalities;
 
 	/// apply the state update to the state
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error>;

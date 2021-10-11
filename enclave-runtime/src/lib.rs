@@ -1059,7 +1059,7 @@ where
 	db.set_last_block(&block);
 
 	// state diff has been written to block, clean it for the next block.
-	db.ext().prune_state_diff();
+	db.ext_mut().prune_state_diff();
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
