@@ -302,7 +302,7 @@ impl Stf {
 	}
 }
 
-/// Trait to simplify sidechain data access from the STF.
+/// Trait extension to simplify sidechain data access from the STF.
 ///
 /// This should be removed when the refactoring of the STF has been done: #269
 pub trait SidechainExt {
