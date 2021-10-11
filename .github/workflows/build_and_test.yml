@@ -225,6 +225,7 @@ jobs:
           source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
 
       - name: Upload logs
+        continue-on-error: true
         if: always()
         uses: actions/upload-artifact@v2
         with:
