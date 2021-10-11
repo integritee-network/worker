@@ -44,46 +44,15 @@ where
 	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		// Todo: how do we ensure that the apriori state hash matches: See #421
-		// ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
-		let mut state2 = self.ext.clone();
-
-		state2.execute_with(|| {
-			state_payload.state_update.iter().for_each(|(k, v)| {
-				match v {
-					Some(value) => sp_io::storage::set(k, value),
-					None => sp_io::storage::clear(k),
-				};
-			})
-		});
-
-		// Todo: Consequence of #421
-		// ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
-		self.ext = state2;
-		self.ext.prune_state_diff();
-		Ok(())
+		self.ext().apply_state_update(state_payload)
 	}
 
 	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V> {
-		let res = self
-			.get(&storage_value_key(module_prefix, storage_prefix))
-			.map(|v| Decode::decode(&mut v.as_slice()))
-			.transpose();
-
-		match res {
-			Ok(res) => res,
-			Err(e) => {
-				error!(
-					"Error decoding storage: {}, {}. Error: {:?}",
-					module_prefix, storage_prefix, e
-				);
-				None
-			},
-		}
+		self.ext.get_with_name(module_prefix, storage_prefix)
 	}
 
 	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V) {
-		self.set(&storage_value_key(module_prefix, storage_prefix), &value.encode())
+		self.ext().set_with_name(module_prefix, storage_prefix, value)
 	}
 
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
@@ -91,7 +60,7 @@ where
 	}
 
 	fn set(&mut self, key: &[u8], value: &[u8]) {
-		self.ext.execute_with(|| sp_io::storage::set(key, value))
+		self.ext().set(key, value)
 	}
 }
 
