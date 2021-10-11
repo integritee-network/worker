@@ -88,7 +88,7 @@ use its_sidechain::{
 		types::block::SignedBlock as SignedSidechainBlock,
 	},
 	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
-	state::{SidechainDB, SidechainState, SidechainSystemExt},
+	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 };
 use lazy_static::lazy_static;
 use log::*;
@@ -1020,7 +1020,7 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	SidechainDB: SidechainSystemExt<SB::Block> + SidechainState<Hash = H256>,
+	SidechainDB: LastBlockExt<SB::Block> + SidechainState<Hash = H256>,
 {
 	let signer_pair = Ed25519Seal::unseal()?;
 	let state_hash_new = db.state_hash();

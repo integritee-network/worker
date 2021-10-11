@@ -132,13 +132,30 @@ pub trait SidechainState: Clone {
 }
 
 /// system extension for the `SidechainDB`
-pub trait SidechainSystemExt<SB: SidechainBlockT> {
+pub trait LastBlockExt<SB: SidechainBlockT> {
 	/// get the last block of the sidechain state
 	fn get_last_block(&self) -> Option<SB>;
 
 	/// set the last block of the sidechain state
 	fn set_last_block(&mut self, block: &SB);
+}
 
+impl<SB: SidechainBlockT, E> LastBlockExt<SB> for SidechainDB<SB, E>
+where
+	SidechainDB<SB, E>: SidechainState,
+{
+	fn get_last_block(&self) -> Option<SB> {
+		self.get_with_name("System", "LastBlock")
+	}
+
+	fn set_last_block(&mut self, block: &SB) {
+		self.set_last_block_hash(&block.hash());
+		self.set_with_name("System", "LastBlock", block)
+	}
+}
+
+/// system extension for the `SidechainDB`
+pub trait SidechainSystemExt {
 	/// get the last block number of the sidechain state
 	fn get_block_number(&self) -> Option<BlockNumber>;
 
@@ -158,19 +175,7 @@ pub trait SidechainSystemExt<SB: SidechainBlockT> {
 	fn set_timestamp(&mut self, timestamp: &Timestamp);
 }
 
-impl<SB: SidechainBlockT, E> SidechainSystemExt<SB> for SidechainDB<SB, E>
-where
-	SidechainDB<SB, E>: SidechainState,
-{
-	fn get_last_block(&self) -> Option<SB> {
-		self.get_with_name("System", "LastBlock")
-	}
-
-	fn set_last_block(&mut self, block: &SB) {
-		self.set_last_block_hash(&block.hash());
-		self.set_with_name("System", "LastBlock", block)
-	}
-
+impl<T: SidechainState> SidechainSystemExt for T {
 	fn get_block_number(&self) -> Option<BlockNumber> {
 		self.get_with_name("System", "Number")
 	}

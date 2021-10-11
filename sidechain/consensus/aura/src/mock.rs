@@ -22,12 +22,9 @@ use its_consensus_common::{Environment, Error as ConsensusError, Proposal, Propo
 use its_consensus_slots::duration_now;
 use its_primitives::{
 	traits::{Block as SidechainBlockT, SignBlock as SignBlockT, SignedBlock as SignedBlockT},
-	types::{
-		block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-		BlockHash, BlockNumber, Timestamp,
-	},
+	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
-use its_state::SidechainSystemExt;
+use its_state::LastBlockExt;
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::{app_crypto::ed25519, testing::H256, traits::Header as HeaderT};
 use std::time::Duration;
@@ -80,37 +77,13 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 	}
 }
 
-impl<SB: SidechainBlockT> SidechainSystemExt<SB> for StateMock<SB> {
+impl<SB: SidechainBlockT> LastBlockExt<SB> for StateMock<SB> {
 	fn get_last_block(&self) -> Option<SB> {
 		self.last_block.clone()
 	}
 
 	fn set_last_block(&mut self, block: &SB) {
 		self.last_block = Some(block.clone())
-	}
-
-	fn get_block_number(&self) -> Option<BlockNumber> {
-		unimplemented!()
-	}
-
-	fn set_block_number(&mut self, _: &BlockNumber) {
-		unimplemented!()
-	}
-
-	fn get_last_block_hash(&self) -> Option<BlockHash> {
-		unimplemented!()
-	}
-
-	fn set_last_block_hash(&mut self, _: &BlockHash) {
-		unimplemented!()
-	}
-
-	fn get_timestamp(&self) -> Option<Timestamp> {
-		unimplemented!()
-	}
-
-	fn set_timestamp(&mut self, _: &Timestamp) {
-		unimplemented!()
 	}
 }
 

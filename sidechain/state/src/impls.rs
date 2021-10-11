@@ -91,8 +91,72 @@ where
 	}
 
 	fn set(&mut self, key: &[u8], value: &[u8]) {
-		// self.ext.insert(key.to_vec(), value.to_vec());
 		self.ext.execute_with(|| sp_io::storage::set(key, value))
+	}
+}
+
+impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
+	type Externalities = Self;
+	type StateUpdate = StateUpdate;
+	type Hash = H256;
+
+	fn state_hash(&self) -> Self::Hash {
+		self.hash()
+	}
+
+	fn ext(&mut self) -> &mut Self::Externalities {
+		self
+	}
+
+	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
+		// Todo: how do we ensure that the apriori state hash matches: See #421
+		// ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
+		let mut state2 = self.clone();
+
+		state2.execute_with(|| {
+			state_payload.state_update.iter().for_each(|(k, v)| {
+				match v {
+					Some(value) => sp_io::storage::set(k, value),
+					None => sp_io::storage::clear(k),
+				};
+			})
+		});
+
+		// Todo: Consequence of #421
+		// ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
+		*self = state2;
+		self.prune_state_diff();
+		Ok(())
+	}
+
+	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V> {
+		let res = self
+			.get(&storage_value_key(module_prefix, storage_prefix))
+			.map(|v| Decode::decode(&mut v.as_slice()))
+			.transpose();
+
+		match res {
+			Ok(res) => res,
+			Err(e) => {
+				error!(
+					"Error decoding storage: {}, {}. Error: {:?}",
+					module_prefix, storage_prefix, e
+				);
+				None
+			},
+		}
+	}
+
+	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V) {
+		self.set(&storage_value_key(module_prefix, storage_prefix), &value.encode())
+	}
+
+	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+		self.get(key).cloned()
+	}
+
+	fn set(&mut self, key: &[u8], value: &[u8]) {
+		self.execute_with(|| sp_io::storage::set(key, value))
 	}
 }
 

@@ -45,7 +45,7 @@ use its_sidechain::{
 		traits::{Block as BlockT, SignedBlock as SignedBlockT},
 		types::block::SignedBlock,
 	},
-	state::{SidechainDB, SidechainState, SidechainSystemExt},
+	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 };
 use jsonrpc_core::futures::executor;
 use log::*;
