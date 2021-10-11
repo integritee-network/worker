@@ -135,7 +135,7 @@ pub trait SidechainState: Clone {
 	fn set(&mut self, key: &[u8], value: &[u8]);
 }
 
-/// system extension for the `SidechainDB`
+/// trait to set and the the last sidechain block of the `SidechainDB`
 pub trait LastBlockExt<SB: SidechainBlockT> {
 	/// get the last block of the sidechain state
 	fn get_last_block(&self) -> Option<SB>;

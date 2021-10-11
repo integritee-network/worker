@@ -306,9 +306,10 @@ impl Stf {
 ///
 /// This should be removed when the refactoring of the STF has been done: #269
 pub trait SidechainExt {
-	/// simple wrapper to get direct access to some
+	/// get the block number of the sidechain state
 	fn get_sidechain_block_number<S: SidechainSystemExt>(ext: &S) -> Option<SidechainBlockNumber>;
 
+	/// set the block number of the sidechain state
 	fn set_sidechain_block_number<S: SidechainSystemExt>(
 		ext: &mut S,
 		number: &SidechainBlockNumber,
