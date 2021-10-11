@@ -68,16 +68,12 @@ echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
 echo "* Create a new incognito account for Bob"
-ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTBOB=//BobIncognito
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-$TIMEOUT ${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
-echo ""
-
-echo "* Waiting 10 seconds"
-sleep 10
+echo "* Issue ${AMOUNTSHIELD} tokens to Alice's incognito account"
+$TIMEOUT ${CLIENT} trusted set-balance ${ICGACCOUNTALICE} ${AMOUNTSHIELD} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Get balance of Alice's incognito account"
@@ -96,7 +92,7 @@ echo ""
 
 
 echo "* Bob's incognito account balance"
-$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+RESULT=$($TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE} | xargs)
 echo ""
 
 
@@ -105,7 +101,7 @@ echo ""
 # they only work if you're running from fresh genesis
 case $TEST in
     first)
-        if [ "10000000000" = "$RESULT" ]; then
+        if [ "40000000000" = "$RESULT" ]; then
             echo "test passed (1st time)"
             exit 0
         else
@@ -114,7 +110,7 @@ case $TEST in
         fi
         ;;
     second)
-        if [ "20000000000" = "$RESULT" ]; then
+        if [ "80000000000" = "$RESULT" ]; then
             echo "test passed (2nd time)"
             exit 0
         else

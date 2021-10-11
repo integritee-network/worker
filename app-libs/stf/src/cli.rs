@@ -219,9 +219,9 @@ pub fn cmd<'a>(
 
 					let (mrenclave, shard) = get_identifiers(matches);
 					// get nonce
-					let key_pair = sr25519_core::Pair::from(who.clone());
+					let key_pair = sr25519_core::Pair::from(signer.clone());
 					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(who.public()).into())
+						TrustedGetter::nonce(sr25519_core::Public::from(signer.public()).into())
 							.sign(&KeyPair::Sr25519(key_pair.clone()))
 							.into();
 					let res = perform_operation(matches, &top);
