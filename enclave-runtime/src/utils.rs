@@ -77,6 +77,11 @@ pub fn remaining_time(until: Duration) -> Option<Duration> {
 	until.checked_sub(duration_now())
 }
 
+/// returns current duration since unix epoch in millis as u64
+pub fn now_as_u64() -> u64 {
+	duration_now().as_millis() as u64
+}
+
 pub trait UnwrapOrSgxErrorUnexpected {
 	type ReturnType;
 	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t>;

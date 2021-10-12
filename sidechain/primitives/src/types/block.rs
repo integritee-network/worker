@@ -24,6 +24,7 @@ use sp_std::vec::Vec;
 pub type BlockHash = H256;
 pub type BlockNumber = u64;
 pub type ShardIdentifier = H256;
+pub type Timestamp = u64;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -39,26 +40,26 @@ pub type Signature = MultiSignature;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SignedBlock {
-	block: Block,
+	pub block: Block,
 	/// block author signature
-	signature: Signature,
+	pub signature: Signature,
 }
 
 /// simplified block structure for relay chain submission as an extrinsic
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Block {
-	block_number: BlockNumber,
-	parent_hash: H256,
-	timestamp: u64,
+	pub block_number: BlockNumber,
+	pub parent_hash: H256,
+	pub timestamp: u64,
 	/// Parentchain header this block is based on
-	layer_one_head: H256,
-	shard_id: ShardIdentifier,
+	pub layer_one_head: H256,
+	pub shard_id: ShardIdentifier,
 	///  must be registered on layer one as an enclave for the respective shard
-	block_author: ed25519::Public,
-	signed_top_hashes: Vec<H256>,
+	pub block_author: ed25519::Public,
+	pub signed_top_hashes: Vec<H256>,
 	// encrypted state payload
-	state_payload: Vec<u8>,
+	pub state_payload: Vec<u8>,
 }
 
 impl BlockT for Block {
@@ -75,7 +76,7 @@ impl BlockT for Block {
 		self.parent_hash
 	}
 	/// get timestamp of block
-	fn timestamp(&self) -> u64 {
+	fn timestamp(&self) -> Timestamp {
 		self.timestamp
 	}
 	/// get layer one head of block
@@ -109,7 +110,7 @@ impl BlockT for Block {
 		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
-		timestamp: u64,
+		timestamp: Timestamp,
 	) -> Block {
 		// create block
 		Block {
@@ -161,8 +162,8 @@ mod tests {
 	use std::time::{SystemTime, UNIX_EPOCH};
 
 	/// gets the timestamp of the block as seconds since unix epoch
-	fn timestamp_now() -> u64 {
-		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+	fn timestamp_now() -> Timestamp {
+		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as Timestamp
 	}
 
 	fn test_block() -> Block {

@@ -24,7 +24,7 @@ use its_primitives::{
 	traits::{Block as SidechainBlockT, SignBlock as SignBlockT, SignedBlock as SignedBlockT},
 	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
-use its_state::SidechainSystemExt;
+use its_state::LastBlockExt;
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::{app_crypto::ed25519, testing::H256, traits::Header as HeaderT};
 use std::time::Duration;
@@ -77,7 +77,7 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 	}
 }
 
-impl<SB: SidechainBlockT> SidechainSystemExt<SB> for StateMock<SB> {
+impl<SB: SidechainBlockT> LastBlockExt<SB> for StateMock<SB> {
 	fn get_last_block(&self) -> Option<SB> {
 		self.last_block.clone()
 	}

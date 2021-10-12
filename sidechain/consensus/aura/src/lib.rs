@@ -57,6 +57,8 @@ pub struct Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, Oc
 	ocall_api: OcallApi,
 	environment: Environment,
 	claim_strategy: SlotClaimStrategy,
+	/// Remove when #447 is resolved.
+	allow_delayed_proposal: bool,
 	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock)>,
 }
 
@@ -73,12 +75,19 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi>
 			ocall_api,
 			environment,
 			claim_strategy: SlotClaimStrategy::RoundRobin,
+			allow_delayed_proposal: false,
 			_phantom: Default::default(),
 		}
 	}
 
 	pub fn with_claim_strategy(mut self, claim_strategy: SlotClaimStrategy) -> Self {
 		self.claim_strategy = claim_strategy;
+
+		self
+	}
+
+	pub fn with_allow_delayed_proposal(mut self, allow_delayed: bool) -> Self {
+		self.allow_delayed_proposal = allow_delayed;
 
 		self
 	}
@@ -161,6 +170,10 @@ where
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError> {
 		self.environment.init(header, shard)
+	}
+
+	fn allow_delayed_proposal(&self) -> bool {
+		self.allow_delayed_proposal
 	}
 
 	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<PB>) -> Duration {

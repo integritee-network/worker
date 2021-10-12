@@ -11,5 +11,4 @@ pub mod pool_types;
 pub mod primitives;
 pub mod ready; // pub necessary for unit tests
 pub mod rotator; // pub necessary for unit tests
-pub mod top_pool_container;
 pub mod tracked_map; // pub necessary for unit tests

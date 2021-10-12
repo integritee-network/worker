@@ -5,6 +5,7 @@
 #   integritee-node purge-chain --dev
 #   integritee-node --dev -lruntime=debug
 #   rm light_client_db.bin
+#   export RUST_LOG=integritee_service=info,ita_stf=debug
 #   integritee-service init_shard
 #   integritee-service shielding-key
 #   integritee-service signing-key
@@ -13,6 +14,7 @@
 # then run this script
 
 # usage:
+#  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
 #  demo_shielding_unshielding.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
 #
 # TEST_BALANCE_RUN is either "first" or "second"
@@ -47,6 +49,7 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=25000000000
 AMOUNTUNSHIELD=15000000000
 
+TIMEOUT="timeout 30s "
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
 echo "* Query on-chain enclave registry:"
@@ -87,7 +90,7 @@ echo ""
 sleep 10
 
 echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
+${TIMEOUT} ${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -95,7 +98,7 @@ sleep 10
 echo ""
 
 echo "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Get balance of Alice's on-chain account"
@@ -103,19 +106,19 @@ ${CLIENT} balance "//Alice"
 echo ""
 
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
+$TIMEOUT $CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Bob's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
 echo ""
 
 echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
-${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
+$TIMEOUT ${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -123,7 +126,7 @@ sleep 10
 echo ""
 
 echo "Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+RESULT=$($TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
 echo $RESULT
 
 echo "* Get balance of Alice's on-chain account"

@@ -67,6 +67,9 @@ pub enum Error {
 	/// Shard does not exist.
 	#[display(fmt = "Shard does not exist")]
 	InvalidShard,
+	/// Unsupported trusted operation (in case we allow only certain types of operations, using filters)
+	#[display(fmt = "Unsupported operation type")]
+	UnsupportedOperation,
 }
 
 impl std::error::Error for Error {
@@ -116,7 +119,7 @@ impl From<Error> for rpc_core::Error {
 			},
 			Error::BadFormatDecipher => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(BAD_FORMAT),
-				message: "Trusted oprations could not be deciphered".into(),
+				message: "Trusted operation could not be deciphered".into(),
 				data: None,
 			},
 			Error::Verification => rpc_core::Error {

@@ -8,7 +8,7 @@ use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
-use log::{debug, info};
+use log::*;
 use std::num::ParseIntError;
 
 use itp_api_client_extensions::PalletTeerexApi;
@@ -69,12 +69,12 @@ where
 		}
 
 		let peers = self.peers()?;
-		info!("Gossiping sidechain blocks to peers: {:?}", peers);
+		debug!("Gossiping sidechain blocks to peers: {:?}", peers);
 
 		for p in peers.iter() {
 			// Todo: once the two direct servers are merged, remove this.
 			let url = worker_url_into_async_rpc_url(&p.url)?;
-			debug!("Gossiping block to peer with address: {:?}", url);
+			trace!("Gossiping block to peer with address: {:?}", url);
 			let client = WsClientBuilder::default().build(&url).await?;
 			let response: String = client
 				.request::<Vec<u8>>(

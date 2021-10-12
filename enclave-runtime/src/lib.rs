@@ -18,6 +18,7 @@
 #![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
+#![feature(trait_alias)]
 #![crate_name = "enclave_runtime"]
 #![crate_type = "staticlib"]
 #![cfg_attr(not(target_env = "sgx"), no_std)]
@@ -35,25 +36,26 @@ use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
 	rpc::{
-		author::{OnBlockCreated, SendState},
+		author::{
+			author_container::{GetAuthor, GlobalAuthorContainer},
+			AuthorTopFilter, OnBlockCreated, SendState,
+		},
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
 	sidechain_impl::exec_aura_on_slot,
-	state::list_shards,
-	sync::{EnclaveLock, EnclaveStateRWLock},
-	top_pool::{
-		pool::Options as PoolOptions, pool_types::BPool, top_pool_container::GlobalTopPoolContainer,
-	},
+	state::{list_shards, load_initialized_state, StateFacade},
+	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
+	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
-		hash_from_slice, remaining_time, utf8_str_from_raw, write_slice_and_whitespace_pad,
-		DecodeRaw, UnwrapOrSgxErrorUnexpected,
+		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
+		write_slice_and_whitespace_pad, DecodeRaw, UnwrapOrSgxErrorUnexpected,
 	},
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{
 	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, State, StatePayload, StateTypeDiff, Stf,
+	AccountId, Getter, ShardIdentifier, State as StfState, StatePayload, StateTypeDiff, Stf,
 	TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };
 use itc_direct_rpc_server::{
@@ -86,7 +88,7 @@ use its_sidechain::{
 		types::block::SignedBlock as SignedSidechainBlock,
 	},
 	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
-	state::{SidechainDB, SidechainSystemExt, StateHash},
+	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 };
 use lazy_static::lazy_static;
 use log::*;
@@ -95,7 +97,7 @@ use rpc::{
 	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
 };
 use sgx_externalities::SgxExternalitiesTrait;
-use sgx_types::{sgx_status_t, SgxResult};
+use sgx_types::sgx_status_t;
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
@@ -105,11 +107,11 @@ use sp_runtime::{
 };
 use std::{
 	collections::HashMap,
+	ops::Deref,
 	slice,
 	string::ToString,
 	sync::{Arc, SgxRwLock},
-	time::{Duration, SystemTime, UNIX_EPOCH},
-	untrusted::time::SystemTimeEx,
+	time::Duration,
 	vec::Vec,
 };
 use substrate_api_client::{
@@ -455,11 +457,21 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 	let rpc_responder = Arc::new(RpcResponder::new(connection_registry.clone()));
 
 	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
-	let top_pool = BPool::create(PoolOptions::default(), side_chain_api, rpc_responder);
+	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
+	let state_facade = Arc::new(StateFacade);
 
-	GlobalTopPoolContainer::initialize(top_pool);
+	let rsa_shielding_key = match Rsa3072Seal::unseal() {
+		Ok(k) => k,
+		Err(e) => {
+			error!("Failed to unseal shielding key: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
-	let rpc_author = Arc::new(Author::new(Arc::new(GlobalTopPoolContainer)));
+	let rpc_author =
+		Arc::new(Author::new(top_pool, AuthorTopFilter {}, state_facade, rsa_shielding_key));
+
+	GlobalAuthorContainer::initialize(rpc_author.clone());
 
 	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
@@ -519,56 +531,42 @@ pub unsafe extern "C" fn init_light_client(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn sync_parentchain_and_execute_tops(
-	blocks_to_sync: *const u8,
-	blocks_to_sync_size: usize,
-	nonce: *const u32,
-) -> sgx_status_t {
-	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
-		Ok(blocks) => blocks,
-		Err(e) => return Error::Codec(e).into(),
-	};
-
-	if let Err(e) = sync_parentchain_and_execute_tops_int::<Block>(blocks_to_sync, *nonce) {
+pub unsafe extern "C" fn execute_trusted_operations() -> sgx_status_t {
+	if let Err(e) = execute_trusted_operations_internal::<Block>() {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Internal [`sync_parentchain_and_execute_tops`] function to be able to use the handy `?` operator.
+/// Internal [`execute_trusted_operations`] function to be able to use the `?` operator.
 ///
-/// Sync parentchain blocks to the light-client and executes `Aura::on_slot() for `slot`
-/// if it is this enclave's `Slot`.
+/// Executes `Aura::on_slot() for `slot` if it is this enclave's `Slot`.
 ///
 /// This function makes an ocall that does the following:
 ///
-/// *   send `confirm_call` xt's of the `Stf` functions executed due to in-/direct invocation to the
-///     to the parentchain
 /// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
 /// *   gossip produced sidechain blocks to peer validateers.
-fn sync_parentchain_and_execute_tops_int<PB>(
-	blocks_to_sync: Vec<SignedBlockG<PB>>,
-	_nonce: u32,
-) -> Result<()>
+fn execute_trusted_operations_internal<PB>() -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
-	let _ = EnclaveLock::read_all()?;
+	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
+	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+	let (_light_client_lock, _side_chain_lock) = EnclaveLock::write_all()?;
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
-
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
-
-	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
-
-	// store updated state in light client in case we fail afterwards.
-	LightClientSeal::seal(validator.clone())?;
 
 	let authority = Ed25519Seal::unseal()?;
 
-	let rpc_author = Author::new(Arc::new(GlobalTopPoolContainer));
+	let author_mutex = GlobalAuthorContainer.get().ok_or_else(|| {
+		error!("Failed to retrieve author mutex. It might not be initialized?");
+		Error::MutexAccess
+	})?;
+
+	let rpc_author = author_mutex.lock().unwrap().deref().clone();
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
@@ -589,6 +587,51 @@ where
 		},
 	};
 
+	LightClientSeal::seal(validator)?;
+
+	Ok(())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sync_parentchain(
+	blocks_to_sync: *const u8,
+	blocks_to_sync_size: usize,
+	nonce: *const u32,
+) -> sgx_status_t {
+	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
+		Ok(blocks) => blocks,
+		Err(e) => return Error::Codec(e).into(),
+	};
+
+	if let Err(e) = sync_parentchain_internal::<Block>(blocks_to_sync, *nonce) {
+		return e.into()
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+/// Internal [`sync_parentchain`] function to be able to use the handy `?` operator.
+///
+/// Sync parentchain blocks to the light-client:
+/// * iterates over parentchain blocks and scans for relevant extrinsics
+/// * validates and execute those extrinsics (containing indirect calls), mutating state
+/// * sends `confirm_call` xt's of the executed unshielding calls
+/// * sends `confirm_blocks` xt's for every synced parentchain block
+fn sync_parentchain_internal<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, _nonce: u32) -> Result<()>
+where
+	PB: BlockT<Hash = H256>,
+	NumberFor<PB>: BlockNumberOps,
+{
+	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
+	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+	let _light_client_lock = EnclaveLock::write_light_client_db()?;
+
+	let mut validator = LightClientSeal::<PB>::unseal()?;
+	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
+
+	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
+
+	// store updated state in light client in case we fail afterwards.
 	LightClientSeal::seal(validator)?;
 
 	Ok(())
@@ -874,12 +917,14 @@ where
 	let mut call_hashes = Vec::<H256>::new();
 
 	// load state before executing any calls
-	let mut state = load_initialized_state(&shard)?;
-	// save the state hash before call executions
-	// (needed for block composition)
-	trace!("Getting hash of previous state ..");
-	let prev_state_hash = state.hash();
-	trace!("Loaded hash of previous state: {:?}", prev_state_hash);
+	let mut sidechain_db = load_initialized_state(&shard).map(SidechainDB::<SB::Block, _>::new)?;
+
+	let prev_state_hash = sidechain_db.state_hash();
+	trace!("state apriori hash: {:?}", prev_state_hash);
+
+	// update state needed for pallets
+	sidechain_db.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
+	sidechain_db.set_timestamp(&now_as_u64());
 
 	// retrieve trusted operations from pool
 	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
@@ -889,7 +934,7 @@ where
 	for trusted_call_signed in trusted_calls.into_iter() {
 		match handle_trusted_worker_call::<PB, _>(
 			&mut calls,
-			&mut state,
+			&mut sidechain_db.ext,
 			&trusted_call_signed,
 			latest_onchain_header,
 			shard,
@@ -918,12 +963,12 @@ where
 
 	// Todo: this function should return here. Composing the block should be done by the caller.
 	// create new block (side-chain)
-	let block = match compose_block_and_confirmation::<PB, SB>(
+	let block = match compose_block_and_confirmation::<PB, SB, _>(
 		latest_onchain_header,
 		call_hashes,
 		shard,
 		prev_state_hash,
-		&mut state,
+		&mut sidechain_db,
 	) {
 		Ok((block_confirm, signed_block)) => {
 			calls.push(block_confirm);
@@ -941,21 +986,9 @@ where
 	};
 
 	// save updated state after call executions
-	let _new_state_hash = state::write(state, &shard)?;
+	let _hash = state::write(sidechain_db.ext, &shard)?;
 
 	Ok((calls, block))
-}
-
-fn load_initialized_state(shard: &H256) -> SgxResult<State> {
-	trace!("Loading state from shard {:?}", shard);
-	let state = if state::exists(&shard) {
-		state::load(&shard)?
-	} else {
-		state::init_shard(&shard)?;
-		Stf::init_state()
-	};
-	trace!("Sucessfully loaded or initialized state from shard {:?}", shard);
-	Ok(state)
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
@@ -968,8 +1001,7 @@ where
 	// retrieve trusted operations from pool
 	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
 	for trusted_getter_signed in trusted_getters.into_iter() {
-		let hash_of_getter =
-			rpc_author.hash_of(&trusted_getter_signed.clone().into()).map_err(Error::Rpc)?;
+		let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
 
 		// get state
 		match get_stf_state(trusted_getter_signed, shard) {
@@ -1004,22 +1036,21 @@ where
 }
 
 /// Composes a sidechain block of a shard
-pub fn compose_block_and_confirmation<PB, SB>(
+pub fn compose_block_and_confirmation<PB, SB, SidechainDB>(
 	latest_onchain_header: &PB::Header,
 	top_call_hashes: Vec<H256>,
 	shard: ShardIdentifier,
 	state_hash_apriori: H256,
-	state: &mut StfState,
+	db: &mut SidechainDB,
 ) -> Result<(OpaqueCall, SB)>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SidechainDB: LastBlockExt<SB::Block> + SidechainState<Hash = H256>,
 {
 	let signer_pair = Ed25519Seal::unseal()?;
-	let state_hash_new = state.hash();
-
-	let mut db = SidechainDB::<SB::Block, _>::new(state.clone());
+	let state_hash_new = db.state_hash();
 
 	let (block_number, parent_hash) = match db.get_last_block() {
 		Some(block) => (block.block_number() + 1, block.hash()),
@@ -1029,9 +1060,14 @@ where
 		},
 	};
 
+	if block_number != db.get_block_number().unwrap_or(0) {
+		return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
+	}
+
 	// create encrypted payload
 	let mut payload: Vec<u8> =
-		StatePayload::new(state_hash_apriori, state_hash_new, db.ext.state_diff.clone()).encode();
+		StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
+			.encode();
 	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
 
 	let block = SB::Block::new(
@@ -1042,7 +1078,7 @@ where
 		shard,
 		top_call_hashes,
 		payload,
-		SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+		now_as_u64(),
 	);
 
 	let block_hash = block.hash();
@@ -1050,11 +1086,7 @@ where
 	db.set_last_block(&block);
 
 	// state diff has been written to block, clean it for the next block.
-	db.ext.prune_state_diff();
-
-	// write back to state. This should be fixed when we have better separation of sidechain stuff
-	// and the rest.
-	*state = db.ext;
+	db.ext_mut().prune_state_diff();
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =

@@ -2391,6 +2391,7 @@ dependencies = [
  "itp-storage",
  "itp-types",
  "its-primitives",
+ "its-state",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",

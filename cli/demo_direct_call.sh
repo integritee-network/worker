@@ -5,6 +5,7 @@
 #   integritee-node purge-chain --dev
 #   integritee-node --tmp --dev -lruntime=debug
 #   rm light_client_db.bin
+#   export RUST_LOG=integritee_service=info,ita_stf=debug
 #   integritee-service init_shard
 #   integritee-service shielding-key
 #   integritee-service signing-key
@@ -13,6 +14,7 @@
 # then run this script
 
 # usage:
+#  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
 #  demo_direct_call.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
 #
 # TEST_BALANCE_RUN is either "first" or "second"
@@ -45,7 +47,7 @@ echo "Using worker-rpc-port ${RPORT}"
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
-
+TIMEOUT="timeout 30s "
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
 if [ "$READMRENCLAVE" = "file" ]
@@ -66,35 +68,31 @@ echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
 echo "* Create a new incognito account for Bob"
-ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTBOB=//BobIncognito
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
-echo ""
-
-echo "* Waiting 10 seconds"
-sleep 10
+echo "* Issue ${AMOUNTSHIELD} tokens to Alice's incognito account"
+$TIMEOUT ${CLIENT} trusted set-balance ${ICGACCOUNTALICE} ${AMOUNTSHIELD} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+$TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 #send funds from Alice to bobs account
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
+$TIMEOUT $CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+RESULT=$($TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
 echo $RESULT
 echo ""
 
 
 echo "* Bob's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+RESULT=$($TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE} | xargs)
 echo ""
 
 
@@ -103,7 +101,7 @@ echo ""
 # they only work if you're running from fresh genesis
 case $TEST in
     first)
-        if [ "10000000000" = "$RESULT" ]; then
+        if [ "40000000000" = "$RESULT" ]; then
             echo "test passed (1st time)"
             exit 0
         else
@@ -112,7 +110,7 @@ case $TEST in
         fi
         ;;
     second)
-        if [ "20000000000" = "$RESULT" ]; then
+        if [ "80000000000" = "$RESULT" ]; then
             echo "test passed (2nd time)"
             exit 0
         else

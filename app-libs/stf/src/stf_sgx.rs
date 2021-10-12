@@ -19,8 +19,8 @@ use support::traits::UnfilteredDispatchable;
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-
-pub trait StfTrait = SgxExternalitiesTrait + Clone + Send + Sync;
+use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
+use its_state::SidechainSystemExt;
 
 impl Stf {
 	pub fn init_state() -> State {
@@ -299,5 +299,60 @@ impl Stf {
 		// get all shards that are currently registered
 		key_hashes.push(shards_key_hash());
 		key_hashes
+	}
+}
+
+/// Trait extension to simplify sidechain data access from the STF.
+///
+/// This should be removed when the refactoring of the STF has been done: #269
+pub trait SidechainExt {
+	/// get the block number of the sidechain state
+	fn get_sidechain_block_number<S: SidechainSystemExt>(ext: &S) -> Option<SidechainBlockNumber>;
+
+	/// set the block number of the sidechain state
+	fn set_sidechain_block_number<S: SidechainSystemExt>(
+		ext: &mut S,
+		number: &SidechainBlockNumber,
+	);
+
+	/// get the last block hash of the sidechain state
+	fn get_last_block_hash<S: SidechainSystemExt>(ext: &S) -> Option<BlockHash>;
+
+	/// set the last block hash of the sidechain state
+	fn set_last_block_hash<S: SidechainSystemExt>(ext: &mut S, hash: &BlockHash);
+
+	/// get the timestamp of the sidechain state
+	fn get_timestamp<S: SidechainSystemExt>(ext: &S) -> Option<Timestamp>;
+
+	/// set the timestamp of the sidechain state
+	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp);
+}
+
+impl SidechainExt for Stf {
+	fn get_sidechain_block_number<S: SidechainSystemExt>(ext: &S) -> Option<SidechainBlockNumber> {
+		ext.get_block_number()
+	}
+
+	fn set_sidechain_block_number<S: SidechainSystemExt>(
+		ext: &mut S,
+		number: &SidechainBlockNumber,
+	) {
+		ext.set_block_number(number)
+	}
+
+	fn get_last_block_hash<S: SidechainSystemExt>(ext: &S) -> Option<BlockHash> {
+		ext.get_last_block_hash()
+	}
+
+	fn set_last_block_hash<S: SidechainSystemExt>(ext: &mut S, hash: &BlockHash) {
+		ext.set_last_block_hash(hash)
+	}
+
+	fn get_timestamp<S: SidechainSystemExt>(ext: &S) -> Option<Timestamp> {
+		ext.get_timestamp()
+	}
+
+	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp) {
+		ext.set_timestamp(timestamp)
 	}
 }

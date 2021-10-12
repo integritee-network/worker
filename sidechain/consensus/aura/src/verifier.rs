@@ -25,7 +25,7 @@ use its_primitives::{
 	traits::{Block, SignedBlock},
 	types::block::BlockHash,
 };
-use its_state::SidechainSystemExt;
+use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
 use sp_runtime::{
 	app_crypto::Pair,
@@ -57,7 +57,7 @@ where
 	PB: ParentchainBlock<Hash = BlockHash>,
 	SB: SignedBlock<Public = AuthorityPair::Public> + 'static,
 	SB::Block: Block,
-	SidechainState: SidechainSystemExt<SB::Block> + Send + Sync,
+	SidechainState: LastBlockExt<SB::Block> + Send + Sync,
 	Context: ValidateerFetch + GetStorageVerified + Send + Sync,
 {
 	type BlockImportParams = SB;

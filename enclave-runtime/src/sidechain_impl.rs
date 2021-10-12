@@ -5,7 +5,7 @@
 
 use crate::{
 	exec_tops, prepare_and_send_xts_and_block,
-	rpc::author::{alloc::sync::Arc, AuthorApi, OnBlockCreated, SendState},
+	rpc::author::{AuthorApi, OnBlockCreated, SendState},
 	state::load,
 	Result as EnclaveResult,
 };
@@ -31,7 +31,7 @@ use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::{traits::Block, MultiSignature};
 use sp_std::prelude::Vec;
-use std::{marker::PhantomData, string::ToString};
+use std::{marker::PhantomData, string::ToString, sync::Arc};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
 pub struct SlotProposer<PB: Block, SB: SignedBlock, Pair, OcallApi, LightClient, Author> {
@@ -136,7 +136,7 @@ where
 pub fn exec_aura_on_slot<Authority, PB, SB, OcallApi, LightValidator, Author>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
-	rpc_author: Author,
+	rpc_author: Arc<Author>,
 	validator: &mut LightValidator,
 	ocall_api: OcallApi,
 	nonce: &mut u32,
@@ -163,12 +163,13 @@ where
 	let env = ProposerFactory::new(
 		Arc::new(ocall_api.clone()),
 		Arc::new(validator.clone()),
-		Arc::new(rpc_author),
+		rpc_author,
 		authority.clone(),
 	);
 
 	let mut aura = Aura::<_, _, SB, _, _>::new(authority, ocall_api.clone(), env)
-		.with_claim_strategy(SlotClaimStrategy::Always);
+		.with_claim_strategy(SlotClaimStrategy::Always)
+		.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
