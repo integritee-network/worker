@@ -6,8 +6,7 @@
 use crate::{
 	exec_tops, prepare_and_send_xts_and_block,
 	rpc::author::{AuthorApi, OnBlockCreated, SendState},
-	state::load,
-	Result as EnclaveResult,
+	state, Result as EnclaveResult,
 };
 use codec::Encode;
 use core::time::Duration;
@@ -247,7 +246,8 @@ where
 		shard: &ShardIdentifierFor<SB>,
 	) -> Result<Self::SidechainState, ConsensusError> {
 		Ok(SidechainDB::<SB::Block, _>::new(
-			load(&shard).map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?,
+			state::load_initialized_state(&shard)
+				.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?,
 		))
 	}
 

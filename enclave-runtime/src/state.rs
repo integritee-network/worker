@@ -31,7 +31,7 @@ use std::{fs, io::Write, path::Path, vec::Vec};
 /// Facade for handling STF state from file
 pub trait HandleState {
 	/// Load the STF state for a specific shard
-	fn load(&self, shard: &ShardIdentifier) -> Result<StfState>;
+	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState>;
 
 	/// Writes the state (without the state diff) encrypted into the enclave
 	///
@@ -51,8 +51,8 @@ pub trait HandleState {
 pub struct StateFacade;
 
 impl HandleState for StateFacade {
-	fn load(&self, shard: &ShardIdentifier) -> Result<StfState> {
-		load(shard)
+	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
+		load_initialized_state(shard)
 	}
 
 	fn write(&mut self, state: StfState, shard: ShardIdentifier) -> Result<H256> {
@@ -72,19 +72,24 @@ impl HandleState for StateFacade {
 	}
 }
 
-pub fn load_initialized_state(shard: &H256) -> SgxResult<StfState> {
+/// Load the state for a given shard
+///
+/// Initializes the shard and state if necessary, so this is guaranteed to
+/// return a state
+pub fn load_initialized_state(shard: &ShardIdentifier) -> Result<StfState> {
 	trace!("Loading state from shard {:?}", shard);
 	let state = if exists(&shard) {
 		load(&shard)?
 	} else {
+		trace!("Initialize new shard: {:?}", shard);
 		init_shard(&shard)?;
 		Stf::init_state()
 	};
-	trace!("Sucessfully loaded or initialized state from shard {:?}", shard);
+	trace!("Successfully loaded or initialized state from shard {:?}", shard);
 	Ok(state)
 }
 
-pub fn load(shard: &ShardIdentifier) -> Result<StfState> {
+fn load(shard: &ShardIdentifier) -> Result<StfState> {
 	// load last state
 	let state_path =
 		format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);

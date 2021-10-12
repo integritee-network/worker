@@ -411,14 +411,7 @@ pub unsafe extern "C" fn get_state(
 		}
 	}
 
-	if !state::exists(&shard) {
-		info!("Initialized new shard that was queried chain: {:?}", shard);
-		if let Err(e) = state::init_shard(&shard) {
-			return e.into()
-		}
-	}
-
-	let mut state = match state::load(&shard) {
+	let mut state = match state::load_initialized_state(&shard) {
 		Ok(s) => s,
 		Err(e) => return e.into(),
 	};
@@ -741,21 +734,8 @@ fn get_stf_state(
 		return Err(Error::Stf("bad signature".to_string()))
 	}
 
-	if !state::exists(&shard) {
-		info!("Initialized new shard that was queried chain: {:?}", shard);
-		if let Err(e) = state::init_shard(&shard) {
-			return Err(Error::Stf(format!(
-				"Error initialising shard {:?} state: Error: {:?}",
-				shard, e
-			)))
-		}
-	}
-
-	let mut state = match state::load(&shard) {
-		Ok(s) => s,
-		Err(e) =>
-			return Err(Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e))),
-	};
+	let mut state = state::load_initialized_state(&shard)
+		.map_err(|e| Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e)))?;
 
 	debug!("calling into STF to get state");
 	Ok(Stf::get_state(&mut state, trusted_getter_signed.into()))
@@ -1119,19 +1099,16 @@ where
 				let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
 					.sgx_error_with_log("error decoding shards")?;
 
-				for s in shards {
-					if !state::exists(&s) {
-						info!("Initialized new shard that was found on chain: {:?}", s);
-						state::init_shard(&s)?;
-					}
+				for shard_id in shards {
+					let mut state = state::load_initialized_state(&shard_id)?;
+					trace!("Successfully loaded state, updating states ...");
+
 					// per shard (cid) requests
-					let per_shard_hashes = storage_hashes_to_update_per_shard(&s);
+					let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
 					let per_shard_update = on_chain_ocall_api
 						.get_multiple_storages_verified(per_shard_hashes, &header)
 						.map(into_map)?;
 
-					let mut state = state::load(&s)?;
-					trace!("Sucessfully loaded state, updating states ...");
 					Stf::update_storage(&mut state, &per_shard_update.into());
 					Stf::update_storage(&mut state, &state_diff_update);
 
@@ -1142,7 +1119,7 @@ where
 						(*header.number()).unique_saturated_into(),
 					);
 
-					state::write(state, &s)?;
+					state::write(state, &shard_id)?;
 				}
 			},
 			None => debug!("No shards are on the chain yet"),
