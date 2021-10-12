@@ -54,7 +54,7 @@ use crate::{
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{
-	stf_sgx_primitives::{shards_key_hash, storage_hashes_to_update_per_shard},
+	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	AccountId, Getter, ShardIdentifier, State as StfState, StatePayload, StateTypeDiff, Stf,
 	TrustedCall, TrustedCallSigned, TrustedGetterSigned,
 };

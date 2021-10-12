@@ -15,14 +15,12 @@
 
 */
 
-use crate::{AccountId, AccountInfo, Index, ShardIdentifier};
+use crate::{AccountId, Index};
 use codec::{Decode, Encode};
 use derive_more::Display;
-use itp_storage::{storage_map_key, StorageHasher};
 use itp_types::H256;
-use log_sgx::*;
 use sgx_tstd as std;
-use std::{prelude::v1::*, vec};
+use std::prelude::v1::*;
 
 pub type StfResult<T> = Result<T, StfError>;
 
@@ -90,63 +88,4 @@ pub enum StfError {
 	InvalidNonce(Index),
 	StorageHashMismatch,
 	InvalidStorageDiff,
-}
-
-pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-	Vec::new()
-}
-
-pub fn shards_key_hash() -> Vec<u8> {
-	// here you have to point to a storage value containing a Vec of ShardIdentifiers
-	// the enclave uses this to autosubscribe to no shards
-	vec![]
-}
-
-// get the AccountInfo key where the account is stored
-pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
-	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
-}
-
-pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
-	if let Some(infovec) = sp_io::storage::get(&storage_map_key(
-		"System",
-		"Account",
-		who,
-		&StorageHasher::Blake2_128Concat,
-	)) {
-		if let Ok(info) = AccountInfo::decode(&mut infovec.as_slice()) {
-			Some(info)
-		} else {
-			None
-		}
-	} else {
-		None
-	}
-}
-
-pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
-	// validate
-	let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
-	if expected_nonce == nonce {
-		return Ok(())
-	}
-	Err(StfError::InvalidNonce(nonce))
-}
-
-/// increment nonce after a successful call execution
-pub fn increment_nonce(account: &AccountId) {
-	//FIXME: Proper error handling - should be taken into
-	// consideration after implementing pay fee check
-	if let Some(mut acc_info) = get_account_info(account) {
-		debug!("incrementing account nonce");
-		acc_info.nonce += 1;
-		sp_io::storage::set(&account_key_hash(account), &acc_info.encode());
-		debug!(
-			"updated account {:?} nonce: {:?}",
-			account.encode(),
-			get_account_info(account).unwrap().nonce
-		);
-	} else {
-		error!("tried to increment nonce of a non-existent account")
-	}
 }

@@ -35,6 +35,26 @@ const KEYSTORE_PATH: &str = "my_trusted_keystore";
 pub fn cmd<'a>(
 	perform_operation: &'a dyn Fn(&ArgMatches<'_>, &TrustedOperation) -> Option<Vec<u8>>,
 ) -> MultiCommand<'a, str, str> {
+	macro_rules! get_layer_two_nonce {
+		($signer_pair:ident, $matches:ident ) => {{
+			let top: TrustedOperation =
+				TrustedGetter::nonce(sr25519_core::Public::from($signer_pair.public()).into())
+					.sign(&KeyPair::Sr25519($signer_pair.clone()))
+					.into();
+			let res = perform_operation($matches, &top);
+			let nonce: Index = if let Some(n) = res {
+				if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
+					nonce
+				} else {
+					0
+				}
+			} else {
+				0
+			};
+			debug!("got layer two nonce: {:?}", nonce);
+			nonce
+		}};
+	}
 	Commander::new()
 		.options(|app| {
 			app.setting(AppSettings::ColoredHelp)
@@ -155,31 +175,11 @@ pub fn cmd<'a>(
 						amount
 					);
 					let (mrenclave, shard) = get_identifiers(matches);
-					// get nonce
-					let key_pair = sr25519_core::Pair::from(from.clone());
+					let nonce = get_layer_two_nonce!(from, matches);
 					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(from.public()).into())
-							.sign(&KeyPair::Sr25519(key_pair.clone()))
-							.into();
-					let res = perform_operation(matches, &top);
-					let nonce: Index = if let Some(n) = res {
-						if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-							nonce
-						} else {
-							info!("could not decode value. maybe hasn't been set? {:x?}", n);
-							0
-						}
-					} else {
-						0
-					};
-					debug!("got nonce: {:?}", nonce);
-					let top: TrustedOperation = TrustedCall::balance_transfer(
-						sr25519_core::Public::from(from.public()).into(),
-						to,
-						amount,
-					)
-					.sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
-					.into_trusted_operation(direct);
+						TrustedCall::balance_transfer(from.public().into(), to, amount)
+							.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+							.into_trusted_operation(direct);
 					let _ = perform_operation(matches, &top);
 					Ok(())
 				}),
@@ -218,31 +218,14 @@ pub fn cmd<'a>(
 					println!("send trusted call set-balance({}, {})", who.public(), amount);
 
 					let (mrenclave, shard) = get_identifiers(matches);
-					// get nonce
-					let key_pair = sr25519_core::Pair::from(signer.clone());
-					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(signer.public()).into())
-							.sign(&KeyPair::Sr25519(key_pair.clone()))
-							.into();
-					let res = perform_operation(matches, &top);
-					let nonce: Index = if let Some(n) = res {
-						if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-							nonce
-						} else {
-							info!("could not decode value. maybe hasn't been set? {:x?}", n);
-							0
-						}
-					} else {
-						0
-					};
-					debug!("got nonce: {:?}", nonce);
+					let nonce = get_layer_two_nonce!(signer, matches);
 					let top: TrustedOperation = TrustedCall::balance_set_balance(
-						sr25519_core::Public::from(signer.public()).into(),
-						sr25519_core::Public::from(who.public()).into(),
+						signer.public().into(),
+						who.public().into(),
 						amount,
 						amount,
 					)
-					.sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
+					.sign(&KeyPair::Sr25519(signer), nonce, &mrenclave, &shard)
 					.into_trusted_operation(direct);
 					let _ = perform_operation(matches, &top);
 					Ok(())
@@ -264,12 +247,9 @@ pub fn cmd<'a>(
 					let arg_who = matches.value_of("accountid").unwrap();
 					debug!("arg_who = {:?}", arg_who);
 					let who = get_pair_from_str(matches, arg_who);
-					let key_pair = sr25519_core::Pair::from(who.clone());
-					let top: TrustedOperation = TrustedGetter::free_balance(
-						sr25519_core::Public::from(who.public()).into(),
-					)
-					.sign(&KeyPair::Sr25519(key_pair))
-					.into();
+					let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
+						.sign(&KeyPair::Sr25519(who))
+						.into();
 					let res = perform_operation(matches, &top);
 					debug!("received result for balance");
 					let bal = if let Some(v) = res {
@@ -341,32 +321,11 @@ pub fn cmd<'a>(
 					);
 
 					let (mrenclave, shard) = get_identifiers(matches);
-					// get nonce
-					let key_pair = sr25519_core::Pair::from(from.clone());
+					let nonce = get_layer_two_nonce!(from, matches);
 					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(from.public()).into())
-							.sign(&KeyPair::Sr25519(key_pair.clone()))
-							.into();
-					let res = perform_operation(matches, &top);
-					let nonce: Index = if let Some(n) = res {
-						if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-							nonce
-						} else {
-							info!("could not decode value. maybe hasn't been set? {:x?}", n);
-							0
-						}
-					} else {
-						0
-					};
-					debug!("got nonce: {:?}", nonce);
-					let top: TrustedOperation = TrustedCall::balance_unshield(
-						sr25519_core::Public::from(from.public()).into(),
-						to,
-						amount,
-						shard,
-					)
-					.sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
-					.into_trusted_operation(direct);
+						TrustedCall::balance_unshield(from.public().into(), to, amount, shard)
+							.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+							.into_trusted_operation(direct);
 					let _ = perform_operation(matches, &top);
 					Ok(())
 				}),
@@ -411,12 +370,12 @@ fn get_accountid_from_str(account: &str) -> AccountId {
 	}
 }
 
-// TODO this function is redundant with client::main
+// TODO this function is ALMOST redundant with client::main
 // get a pair either form keyring (well known keys) or from the store
-fn get_pair_from_str(matches: &ArgMatches<'_>, account: &str) -> sr25519::AppPair {
+fn get_pair_from_str(matches: &ArgMatches<'_>, account: &str) -> sr25519_core::Pair {
 	info!("getting pair for {}", account);
 	match &account[..2] {
-		"//" => sr25519::AppPair::from_string(account, None).unwrap(),
+		"//" => sr25519_core::Pair::from_string(account, None).unwrap(),
 		_ => {
 			info!("fetching from keystore at {}", &KEYSTORE_PATH);
 			// open store without password protection
@@ -431,7 +390,7 @@ fn get_pair_from_str(matches: &ArgMatches<'_>, account: &str) -> sr25519::AppPai
 				.unwrap();
 			info!("key pair fetched");
 			drop(store);
-			_pair
+			_pair.into()
 		},
 	}
 }
