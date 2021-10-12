@@ -271,8 +271,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		let current_block_nr = block.header().block_number();
 		if let Some(last_block) = self.last_block_of_shard(shard) {
 			if last_block.number != current_block_nr - 1 {
-				//error!("[Sidechain DB] Sidechainblock (nr: {:?}) is not a succession of the previous block (nr: {:?}) in shard: {:?}",
-				//current_block_nr, last_block.number, *shard);
+				error!("[Sidechain DB] Sidechainblock (nr: {:?}) is not a succession of the previous block (nr: {:?}) in shard: {:?}",
+				current_block_nr, last_block.number, *shard);
 				return false
 			}
 		} else {
