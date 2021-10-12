@@ -298,7 +298,7 @@ fn test_create_block_and_confirmation_works() {
 	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 
-	let db = SidechainDB::new(state::load(&shard).unwrap());
+	let db = SidechainDB::new(state::load_initialized_state(&shard).unwrap());
 
 	assert_eq!(db.get_last_block(), Some(signed_block.block().clone()));
 
@@ -375,7 +375,7 @@ fn test_executing_call_updates_account_nonce() {
 	.unwrap();
 
 	// then
-	let mut state = state::load(&shard).unwrap();
+	let mut state = state::load_initialized_state(&shard).unwrap();
 	let nonce = Stf::account_nonce(&mut state, &sender.public().into());
 	assert_eq!(nonce, 1);
 
@@ -406,7 +406,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	.unwrap();
 
 	// then
-	let mut updated_state = state::load(&shard).unwrap();
+	let mut updated_state = state::load_initialized_state(&shard).unwrap();
 	let nonce = Stf::account_nonce(&mut updated_state, &sender.public().into());
 	assert_eq!(nonce, 0);
 
@@ -441,7 +441,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	.unwrap();
 
 	// then
-	let mut updated_state = state::load(&shard).unwrap();
+	let mut updated_state = state::load_initialized_state(&shard).unwrap();
 
 	let nonce = Stf::account_nonce(&mut updated_state, &sender_acc);
 	let funds_new = Stf::account_data(&mut updated_state, &sender_acc).unwrap().free;

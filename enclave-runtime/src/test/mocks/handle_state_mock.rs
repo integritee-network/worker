@@ -38,7 +38,7 @@ impl Default for HandleStateMock {
 }
 
 impl HandleState for HandleStateMock {
-	fn load(&self, shard: &ShardIdentifier) -> Result<StfState> {
+	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
 		self.state_map
 			.get(shard)
 			.map(|s| s.clone())
