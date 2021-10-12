@@ -100,13 +100,6 @@ impl Stf {
 		})
 	}
 
-	pub fn set_layer_two_block_number(ext: &mut State, number: BlockNumber) {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "Number");
-			sp_io::storage::set(&key, &number.encode());
-		})
-	}
-
 	pub fn execute(
 		ext: &mut State,
 		call: TrustedCallSigned,
