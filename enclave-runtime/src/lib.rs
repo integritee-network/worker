@@ -44,7 +44,7 @@ use crate::{
 	},
 	sidechain_impl::exec_aura_on_slot,
 	state::{list_shards, load_initialized_state, StateFacade},
-	sync::{EnclaveLock, EnclaveStateRWLock},
+	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
 	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
 		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
@@ -531,52 +531,33 @@ pub unsafe extern "C" fn init_light_client(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn sync_parentchain_and_execute_tops(
-	blocks_to_sync: *const u8,
-	blocks_to_sync_size: usize,
-	nonce: *const u32,
-) -> sgx_status_t {
-	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
-		Ok(blocks) => blocks,
-		Err(e) => return Error::Codec(e).into(),
-	};
-
-	if let Err(e) = sync_parentchain_and_execute_tops_int::<Block>(blocks_to_sync, *nonce) {
+pub unsafe extern "C" fn execute_trusted_operations() -> sgx_status_t {
+	if let Err(e) = execute_trusted_operations_internal::<Block>() {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Internal [`sync_parentchain_and_execute_tops`] function to be able to use the handy `?` operator.
+/// Internal [`execute_trusted_operations`] function to be able to use the `?` operator.
 ///
-/// Sync parentchain blocks to the light-client and executes `Aura::on_slot() for `slot`
-/// if it is this enclave's `Slot`.
+/// Executes `Aura::on_slot() for `slot` if it is this enclave's `Slot`.
 ///
 /// This function makes an ocall that does the following:
 ///
-/// *   send `confirm_call` xt's of the `Stf` functions executed due to in-/direct invocation to the
-///     to the parentchain
 /// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
 /// *   gossip produced sidechain blocks to peer validateers.
-fn sync_parentchain_and_execute_tops_int<PB>(
-	blocks_to_sync: Vec<SignedBlockG<PB>>,
-	_nonce: u32,
-) -> Result<()>
+fn execute_trusted_operations_internal<PB>() -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
-	let _ = EnclaveLock::read_all()?;
+	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
+	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+	let (_light_client_lock, _side_chain_lock) = EnclaveLock::write_all()?;
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
-
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
-
-	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
-
-	// store updated state in light client in case we fail afterwards.
-	LightClientSeal::seal(validator.clone())?;
 
 	let authority = Ed25519Seal::unseal()?;
 
@@ -606,6 +587,51 @@ where
 		},
 	};
 
+	LightClientSeal::seal(validator)?;
+
+	Ok(())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sync_parentchain(
+	blocks_to_sync: *const u8,
+	blocks_to_sync_size: usize,
+	nonce: *const u32,
+) -> sgx_status_t {
+	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
+		Ok(blocks) => blocks,
+		Err(e) => return Error::Codec(e).into(),
+	};
+
+	if let Err(e) = sync_parentchain_internal::<Block>(blocks_to_sync, *nonce) {
+		return e.into()
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+/// Internal [`sync_parentchain`] function to be able to use the handy `?` operator.
+///
+/// Sync parentchain blocks to the light-client:
+/// * iterates over parentchain blocks and scans for relevant extrinsics
+/// * validates and execute those extrinsics (containing indirect calls), mutating state
+/// * sends `confirm_call` xt's of the executed unshielding calls
+/// * sends `confirm_blocks` xt's for every synced parentchain block
+fn sync_parentchain_internal<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, _nonce: u32) -> Result<()>
+where
+	PB: BlockT<Hash = H256>,
+	NumberFor<PB>: BlockNumberOps,
+{
+	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
+	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+	let _light_client_lock = EnclaveLock::write_light_client_db()?;
+
+	let mut validator = LightClientSeal::<PB>::unseal()?;
+	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
+
+	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
+
+	// store updated state in light client in case we fail afterwards.
 	LightClientSeal::seal(validator)?;
 
 	Ok(())

@@ -7,6 +7,8 @@ pub enum Error {
 	Codec(#[from] CodecError),
 	#[error("{0}")]
 	ApiClientError(#[from] ApiClientError),
+	#[error("Node API terminated subscription unexpectedly: {0}")]
+	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
 	#[error("{0}")]
 	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
 	#[error("{0}")]

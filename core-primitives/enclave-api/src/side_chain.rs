@@ -26,15 +26,17 @@ use sp_runtime::{generic::SignedBlock, traits::Block};
 /// trait for handling blocks on the side chain
 pub trait SideChain: Send + Sync + 'static {
 	/// Sync parentchain blocks and execute pending tops in the enclave
-	fn sync_parentchain_and_execute_tops<PB: Block>(
+	fn sync_parentchain<PB: Block>(
 		&self,
 		blocks: &[SignedBlock<PB>],
 		nonce: u32,
 	) -> EnclaveResult<()>;
+
+	fn execute_trusted_operations(&self) -> EnclaveResult<()>;
 }
 
 impl SideChain for Enclave {
-	fn sync_parentchain_and_execute_tops<PB: Block>(
+	fn sync_parentchain<PB: Block>(
 		&self,
 		blocks: &[SignedBlock<PB>],
 		nonce: u32,
@@ -43,7 +45,7 @@ impl SideChain for Enclave {
 		let blocks_enc = blocks.encode();
 
 		let result = unsafe {
-			ffi::sync_parentchain_and_execute_tops(
+			ffi::sync_parentchain(
 				self.eid,
 				&mut retval,
 				blocks_enc.as_ptr(),
@@ -51,6 +53,17 @@ impl SideChain for Enclave {
 				&nonce,
 			)
 		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
+	}
+
+	fn execute_trusted_operations(&self) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let result = unsafe { ffi::execute_trusted_operations(self.eid, &mut retval) };
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
