@@ -49,7 +49,7 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=25000000000
 AMOUNTUNSHIELD=15000000000
 
-TIMEOUT="retry -t 1 -- timeout 30s "
+TIMEOUT="timeout 30s "
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
 echo "* Query on-chain enclave registry:"

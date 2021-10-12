@@ -47,7 +47,7 @@ echo "Using worker-rpc-port ${RPORT}"
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
-TIMEOUT="retry -t 1 -- timeout 30s "
+TIMEOUT="timeout 30s "
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
 if [ "$READMRENCLAVE" = "file" ]
