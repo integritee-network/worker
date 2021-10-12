@@ -1123,6 +1123,7 @@ dependencies = [
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",
+ "pallet-jton_rps",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx-runtime",
@@ -1807,6 +1808,19 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-jton_rps"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network/pallet-jton-rps.git?branch=integritee-demo#60b230fa308bf705b96e3c5b2de7001348af24e8"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -2528,7 +2542,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.3.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=rps-demo#4f2400f657ac782d0fc0ad075ed123febbf53850"
 dependencies = [
  "derive_more",
  "environmental",
@@ -2543,7 +2557,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=rps-demo#4f2400f657ac782d0fc0ad075ed123febbf53850"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2552,6 +2566,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
+ "pallet-jton_rps",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
@@ -3002,7 +3017,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=rps-demo#4f2400f657ac782d0fc0ad075ed123febbf53850"
 dependencies = [
  "environmental",
  "hash-db",

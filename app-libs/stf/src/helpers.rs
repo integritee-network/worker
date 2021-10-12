@@ -16,13 +16,15 @@
 */
 use crate::{
 	stf_sgx_primitives::{types::*, StfError, StfResult},
-	AccountId, Index,
+	AccountId, Index, Hash
 };
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use log_sgx::*;
 use sgx_tstd as std;
 use std::prelude::v1::*;
+use crate::stf_sgx::Game;
+use its_primitives::types::BlockNumber;
 
 pub fn get_storage_value<V: Decode>(
 	storage_prefix: &'static str,
@@ -137,4 +139,33 @@ pub fn ensure_root(account: AccountId) -> StfResult<()> {
 	} else {
 		Err(StfError::MissingPrivileges(account))
 	}
+}
+
+pub fn get_block_number() -> BlockNumber {
+	get_storage_value("System", "Number").unwrap()
+}
+
+pub fn get_game_for(who: AccountId) -> Option<Game> {
+    if let Some(game_id) = get_storage_map::<AccountId, Hash>(
+        "Rps",
+        "PlayerGame",
+        &who,
+        &StorageHasher::Identity
+    ) {
+        if let Some(game) = get_storage_map::<Hash, Game>(
+            "Rps",
+            "Games",
+            &game_id,
+            &StorageHasher::Identity	
+        ) {
+            info!("Game state for {:x?} is: {:?}", game.players, game.states);
+            Some(game)
+        } else {
+            debug!("could not read game");
+            None
+        }
+    } else { 
+        debug!("could not read game id");
+        None
+    }
 }

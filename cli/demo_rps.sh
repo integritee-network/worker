@@ -56,34 +56,37 @@ else
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
+PLAYER1=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
+PLAYER2=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
+
 echo "Alice (sudo) sets initial balances"
-${CLIENT} trusted set-balance //Alice 1000 --mrenclave ${MRENCLAVE} --direct
-${CLIENT} trusted set-balance //Bob 1000 --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted set-balance $PLAYER1 1000 --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted set-balance $PLAYER2 1000 --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 
 echo "Alice starts new game against Bob"
-${CLIENT} trusted new-game //Alice //Bob --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted new-game $PLAYER1 $PLAYER2 --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Alice chooses her weapon"
-${CLIENT} trusted choose //Alice Rock --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted choose $PLAYER1 Rock --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Bob chooses his weapon"
-${CLIENT} trusted choose //Bob Paper --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted choose $PLAYER2 Paper --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Alice reveals"
-${CLIENT} trusted reveal //Alice Rock --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted reveal $PLAYER1 Rock --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Bob reveals"
-${CLIENT} trusted reveal //Bob Paper --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted reveal $PLAYER2 Paper --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "Query result"
-${CLIENT} trusted get-game //Bob --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted get-game $PLAYER1 --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 exit 0

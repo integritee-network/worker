@@ -1,7 +1,7 @@
 use crate::{
 	helpers::{
 		account_data, account_nonce, ensure_root, get_account_info, get_storage_value,
-		increment_nonce, root, validate_nonce,
+		increment_nonce, root, validate_nonce, get_game_for
 	},
 	stf_sgx_primitives::{StfError, StfResult},
 	AccountData, AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, StateTypeDiff,
@@ -9,7 +9,7 @@ use crate::{
 };
 use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
-use itp_storage::{storage_value_key, storage_map_key, StorageHasher};
+use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use log_sgx::*;
 use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime, Hash, BlockNumber};
@@ -21,7 +21,7 @@ use support::traits::UnfilteredDispatchable;
 use pallet_rps::Game as GameT;
 
 
-type Game = GameT<Hash, AccountId>;
+pub type Game = GameT<Hash, AccountId>;
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
@@ -87,6 +87,12 @@ impl Stf {
 						Some(info.nonce.encode())
 					} else {
 						None
+					},
+				TrustedGetter::game(who) => 
+					if let Some(game) = get_game_for(who) {
+						Some(game.encode())
+					} else { 
+						None 
 					},
 			},
 			Getter::public(g) => match g {
@@ -169,7 +175,7 @@ impl Stf {
 				},
 				TrustedCall::rps_new_game(sender, opponent) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
-					debug!("rps new_game ({:x?}, {:x?})", sender.encode(), opponent.encode());
+					info!("rps new_game");
 					sgx_runtime::RpsCall::<Runtime>::new_game(
 						opponent,
 					)
@@ -179,7 +185,7 @@ impl Stf {
 				},
 				TrustedCall::rps_choose(sender, weapon) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
-					debug!("rps choose ({:x?}, {:?})", sender.encode(), weapon);
+					info!("rps choose: {:?}", weapon);
 					sgx_runtime::RpsCall::<Runtime>::choose(
 						weapon.clone(),
 						[0u8; 32],
@@ -193,19 +199,14 @@ impl Stf {
 				}
 				TrustedCall::rps_reveal(sender, weapon) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
-					debug!("rps reveal ({:x?})", sender.encode());
+					info!("rps reveal");
 					sgx_runtime::RpsCall::<Runtime>::reveal(
 						weapon,
 						[0u8; 32],
 					)
 						.dispatch_bypass_filter(origin)
 						.map_err(|_| StfError::Dispatch("rps_reveal".to_string()))?;
-					// check state of game
-					if let Some(game_id) = Self::get_game_id(&sender) {
-						if let Some(game) = Self::get_game(game_id) {
-							info!("Game state for {:x?} is: {:?}", game.players, game.states);
-						} else {debug!("could not read game")}
-					} else { debug!("could not read game id")}
+					get_game_for(sender);
 					Ok(())
 				},
 			}?;
@@ -214,88 +215,6 @@ impl Stf {
 		})
 	}
 
-<<<<<<< HEAD
-=======
-	pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
-		ext.execute_with(|| {
-			if let Some(info) = get_account_info(account) {
-				debug!("Account {:?} nonce is {}", account.encode(), info.nonce);
-				info.nonce
-			} else {
-				0 as Index
-			}
-		})
-	}
-
-	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
-		ext.execute_with(|| {
-			if let Some(info) = get_account_info(account) {
-				debug!("Account {:?} data is {:?}", account.encode(), info.data);
-				Some(info.data)
-			} else {
-				None
-			}
-		})
-	}
-
-	pub fn get_root(ext: &mut State) -> AccountId {
-		ext.execute_with(|| {
-			AccountId::decode(
-				&mut sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap().as_slice(),
-			)
-			.unwrap()
-		})
-	}
-
-	pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
-		ext.execute_with(|| match getter {
-			Getter::trusted(g) => match g.getter {
-				TrustedGetter::free_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-						debug!("Account free balance is {}", info.data.free);
-						Some(info.data.free.encode())
-					} else {
-						None
-					},
-				TrustedGetter::reserved_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-						debug!("Account reserved balance is {}", info.data.reserved);
-						Some(info.data.reserved.encode())
-					} else {
-						None
-					},
-				TrustedGetter::nonce(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-						debug!("Account nonce is {}", info.nonce);
-						Some(info.nonce.encode())
-					} else {
-						None
-					},
-				TrustedGetter::game(who) =>
-					if let Some(game_id) = Self::get_game_id(&who) {
-						if let Some(game) = Self::get_game(game_id) {
-							Some(game.encode())
-						} else { None }
-					} else { None }
-			},
-			Getter::public(g) => match g {
-				PublicGetter::some_value => Some(42u32.encode()),
-			},
-		})
-	}
-
-	fn ensure_root(account: AccountId) -> StfResult<()> {
-		if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
-			Ok(())
-		} else {
-			Err(StfError::MissingPrivileges(account))
-		}
-	}
-
->>>>>>> initial implementation of rps wrapper in stf
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
 		match get_account_info(&account) {
 			Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
@@ -388,7 +307,6 @@ impl Stf {
 		key_hashes
 	}
 
-<<<<<<< HEAD
 	pub fn get_root(ext: &mut State) -> AccountId {
 		ext.execute_with(|| root())
 	}
@@ -469,40 +387,4 @@ impl SidechainExt for Stf {
 	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp) {
 		ext.set_timestamp(timestamp)
 	}
-=======
-	pub fn get_game_id(who: &AccountId) -> Option<Hash> {
-		if let Some(infovec) = sp_io::storage::get(&storage_map_key(
-			"Rps",
-			"PlayerGame",
-			who,
-			&StorageHasher::Identity,
-		)) {
-			if let Ok(info) = Hash::decode(&mut infovec.as_slice()) {
-				Some(info)
-			} else {
-				None
-			}
-		} else {
-			None
-		}
-	}
-
-	pub fn get_game(game_id: Hash) -> Option<Game> {
-		if let Some(infovec) = sp_io::storage::get(&storage_map_key(
-			"Rps",
-			"Games",
-			&game_id,
-			&StorageHasher::Identity,
-		)) {
-			if let Ok(info) = Game::decode(&mut infovec.as_slice()) {
-				Some(info)
-			} else {
-				None
-			}
-		} else {
-			None
-		}
-	}
-
->>>>>>> initial implementation of rps wrapper in stf
 }
