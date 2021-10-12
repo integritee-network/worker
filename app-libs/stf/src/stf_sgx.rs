@@ -21,7 +21,8 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, get_game_for, increment_nonce, root, validate_nonce,
+		ensure_root, get_account_info, get_game_for, get_storage_value, increment_nonce, root,
+		validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
