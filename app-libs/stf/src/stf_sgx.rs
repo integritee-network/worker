@@ -1,7 +1,7 @@
 use crate::{
 	helpers::{
-		account_data, account_nonce, ensure_root, get_account_info, get_storage_value,
-		increment_nonce, root, validate_nonce, get_game_for
+		account_data, account_nonce, ensure_root, get_account_info, get_game_for,
+		get_storage_value, increment_nonce, root, validate_nonce,
 	},
 	stf_sgx_primitives::{StfError, StfResult},
 	AccountData, AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, StateTypeDiff,
@@ -12,14 +12,13 @@ use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use log_sgx::*;
-use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime, Hash, BlockNumber};
+use pallet_rps::Game as GameT;
+use sgx_runtime::{BlockNumber as L1BlockNumer, BlockNumber, Hash, Runtime};
 use sgx_tstd as std;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
 use std::{prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
-use pallet_rps::Game as GameT;
-
 
 pub type Game = GameT<Hash, AccountId>;
 
@@ -88,11 +87,11 @@ impl Stf {
 					} else {
 						None
 					},
-				TrustedGetter::game(who) => 
+				TrustedGetter::game(who) =>
 					if let Some(game) = get_game_for(who) {
 						Some(game.encode())
-					} else { 
-						None 
+					} else {
+						None
 					},
 			},
 			Getter::public(g) => match g {
@@ -176,9 +175,7 @@ impl Stf {
 				TrustedCall::rps_new_game(sender, opponent) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
 					info!("rps new_game");
-					sgx_runtime::RpsCall::<Runtime>::new_game(
-						opponent,
-					)
+					sgx_runtime::RpsCall::<Runtime>::new_game(opponent)
 						.dispatch_bypass_filter(origin)
 						.map_err(|_| StfError::Dispatch("rps_new_game".to_string()))?;
 					Ok(())
@@ -186,24 +183,18 @@ impl Stf {
 				TrustedCall::rps_choose(sender, weapon) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
 					info!("rps choose: {:?}", weapon);
-					sgx_runtime::RpsCall::<Runtime>::choose(
-						weapon.clone(),
-						[0u8; 32],
-					)
+					sgx_runtime::RpsCall::<Runtime>::choose(weapon.clone(), [0u8; 32])
 						.dispatch_bypass_filter(origin.clone())
 						.map_err(|e| {
 							error!("dispatch error {:?}", e);
 							StfError::Dispatch("rps_choose".to_string())
 						})?;
 					Ok(())
-				}
+				},
 				TrustedCall::rps_reveal(sender, weapon) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
 					info!("rps reveal");
-					sgx_runtime::RpsCall::<Runtime>::reveal(
-						weapon,
-						[0u8; 32],
-					)
+					sgx_runtime::RpsCall::<Runtime>::reveal(weapon, [0u8; 32])
 						.dispatch_bypass_filter(origin)
 						.map_err(|_| StfError::Dispatch("rps_reveal".to_string()))?;
 					get_game_for(sender);

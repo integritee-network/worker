@@ -16,19 +16,19 @@
 */
 
 use crate::{
-	AccountId, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation, Hash
+	AccountId, Hash, Index, KeyPair, ShardIdentifier, TrustedCall, TrustedGetter, TrustedOperation,
 };
 use base58::{FromBase58, ToBase58};
 use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander, MultiCommand};
 use codec::{Decode, Encode};
 use log::*;
+use pallet_rps::WeaponType;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use pallet_rps::WeaponType;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const KEYSTORE_PATH: &str = "my_trusted_keystore";
@@ -366,30 +366,11 @@ pub fn cmd<'a>(
 						opponent
 					);
 					let (mrenclave, shard) = get_identifiers(matches);
-					// get nonce
-					let key_pair = sr25519_core::Pair::from(creator.clone());
+					let nonce = get_layer_two_nonce!(creator, matches);
 					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(creator.public()).into())
-							.sign(&KeyPair::Sr25519(key_pair.clone()))
-							.into();
-					let res = perform_operation(matches, &top);
-					let nonce: Index = if let Some(n) = res {
-						if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-							nonce
-						} else {
-							info!("could not decode value. maybe hasn't been set? {:x?}", n);
-							0
-						}
-					} else {
-						0
-					};
-					debug!("got nonce: {:?}", nonce);
-					let top: TrustedOperation = TrustedCall::rps_new_game(
-						sr25519_core::Public::from(creator.public()).into(),
-						opponent,
-					)
-						.sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
-						.into_trusted_operation(direct);
+						TrustedCall::rps_new_game(creator.public().into(), opponent)
+							.sign(&KeyPair::Sr25519(creator), nonce, &mrenclave, &shard)
+							.into_trusted_operation(direct);
 					let _ = perform_operation(matches, &top);
 					Ok(())
 				}),
@@ -416,13 +397,11 @@ pub fn cmd<'a>(
 				})
 				.runner(move |_args: &str, matches: &ArgMatches<'_>| {
 					let arg_player = matches.value_of("player").unwrap();
-					let weapon : WeaponType = match matches
-						.value_of("weapon")
-						.unwrap() {
-							r"Rock" => WeaponType::Rock,
-							r"Paper" => WeaponType::Paper,
-							r"Scissors" => WeaponType::Scissors,
-							_ => panic!("unknown weapon type")
+					let weapon: WeaponType = match matches.value_of("weapon").unwrap() {
+						r"Rock" => WeaponType::Rock,
+						r"Paper" => WeaponType::Paper,
+						r"Scissors" => WeaponType::Scissors,
+						_ => panic!("unknown weapon type"),
 					};
 					let player = get_pair_from_str(matches, arg_player);
 					let direct: bool = matches.is_present("direct");
@@ -435,30 +414,11 @@ pub fn cmd<'a>(
 						weapon
 					);
 					let (mrenclave, shard) = get_identifiers(matches);
-					// get nonce
-					let key_pair = sr25519_core::Pair::from(player.clone());
+					let nonce = get_layer_two_nonce!(player, matches);
 					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(player.public()).into())
-							.sign(&KeyPair::Sr25519(key_pair.clone()))
-							.into();
-					let res = perform_operation(matches, &top);
-					let nonce: Index = if let Some(n) = res {
-						if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-							nonce
-						} else {
-							info!("could not decode value. maybe hasn't been set? {:x?}", n);
-							0
-						}
-					} else {
-						0
-					};
-					debug!("got nonce: {:?}", nonce);
-					let top: TrustedOperation = TrustedCall::rps_choose(
-						sr25519_core::Public::from(player.public()).into(),
-						weapon,
-					)
-						.sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
-						.into_trusted_operation(direct);
+						TrustedCall::rps_choose(player.public().into(), weapon)
+							.sign(&KeyPair::Sr25519(player), nonce, &mrenclave, &shard)
+							.into_trusted_operation(direct);
 					let _ = perform_operation(matches, &top);
 					Ok(())
 				}),
@@ -485,13 +445,11 @@ pub fn cmd<'a>(
 				})
 				.runner(move |_args: &str, matches: &ArgMatches<'_>| {
 					let arg_player = matches.value_of("player").unwrap();
-					let weapon : WeaponType = match matches
-						.value_of("weapon")
-						.unwrap() {
+					let weapon: WeaponType = match matches.value_of("weapon").unwrap() {
 						r"Rock" => WeaponType::Rock,
 						r"Paper" => WeaponType::Paper,
 						r"Scissors" => WeaponType::Scissors,
-						_ => panic!("unknown weapon type")
+						_ => panic!("unknown weapon type"),
 					};
 					let player = get_pair_from_str(matches, arg_player);
 					let direct: bool = matches.is_present("direct");
@@ -504,34 +462,15 @@ pub fn cmd<'a>(
 						weapon
 					);
 					let (mrenclave, shard) = get_identifiers(matches);
-					// get nonce
-					let key_pair = sr25519_core::Pair::from(player.clone());
+					let nonce = get_layer_two_nonce!(player, matches);
 					let top: TrustedOperation =
-						TrustedGetter::nonce(sr25519_core::Public::from(player.public()).into())
-							.sign(&KeyPair::Sr25519(key_pair.clone()))
-							.into();
-					let res = perform_operation(matches, &top);
-					let nonce: Index = if let Some(n) = res {
-						if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-							nonce
-						} else {
-							info!("could not decode value. maybe hasn't been set? {:x?}", n);
-							0
-						}
-					} else {
-						0
-					};
-					debug!("got nonce: {:?}", nonce);
-					let top: TrustedOperation = TrustedCall::rps_reveal(
-						sr25519_core::Public::from(player.public()).into(),
-						weapon,
-					)
-						.sign(&KeyPair::Sr25519(key_pair), nonce, &mrenclave, &shard)
-						.into_trusted_operation(direct);
+						TrustedCall::rps_reveal(player.public().into(), weapon)
+							.sign(&KeyPair::Sr25519(player), nonce, &mrenclave, &shard)
+							.into_trusted_operation(direct);
 					let _ = perform_operation(matches, &top);
 					Ok(())
 				}),
-			)
+		)
 		.add_cmd(
 			Command::new("get-game")
 				.description("query game state for account in keystore")
@@ -547,20 +486,27 @@ pub fn cmd<'a>(
 				.runner(move |_args: &str, matches: &ArgMatches<'_>| {
 					let arg_who = matches.value_of("accountid").unwrap();
 					debug!("arg_who = {:?}", arg_who);
-					let who = get_pair_from_str(matches, arg_who);
-					let key_pair = sr25519_core::Pair::from(who.clone());
-					let top: TrustedOperation = TrustedGetter::game(
-						sr25519_core::Public::from(who.public()).into(),
-					)
-						.sign(&KeyPair::Sr25519(key_pair))
+					let player = get_pair_from_str(matches, arg_who);
+					let top: TrustedOperation = TrustedGetter::game(player.public().into())
+						.sign(&KeyPair::Sr25519(player))
 						.into();
 					let res = perform_operation(matches, &top);
 					debug!("received result for game");
 					if let Some(v) = res {
-						if let Ok(game) = pallet_rps::Game::<Hash, AccountId>::decode(&mut v.as_slice()) {
+						if let Ok(game) =
+							pallet_rps::Game::<Hash, AccountId>::decode(&mut v.as_slice())
+						{
 							println!("game state for {:?} ", game.id);
-							println!("player {}: {:?}", game.players[0].to_ss58check(), game.states[0]);
-							println!("player {}: {:?}", game.players[1].to_ss58check(), game.states[1]);
+							println!(
+								"player {}: {:?}",
+								game.players[0].to_ss58check(),
+								game.states[0]
+							);
+							println!(
+								"player {}: {:?}",
+								game.players[1].to_ss58check(),
+								game.states[1]
+							);
 						} else {
 							println!("could not decode game. maybe hasn't been set? {:x?}", v);
 						}
@@ -570,8 +516,8 @@ pub fn cmd<'a>(
 
 					Ok(())
 				}),
-			)
-			.into_cmd("trusted")
+		)
+		.into_cmd("trusted")
 }
 
 fn get_keystore_path(matches: &ArgMatches<'_>) -> PathBuf {
