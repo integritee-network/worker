@@ -28,8 +28,8 @@ std = [
 
 [dependencies]
 # sgx dependencies
-sgx_types   = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_tstd    = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
+sgx_types   = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd    = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
 
 # sgx enabled external libraries
 mio_sgx         = { package = "mio",            git = "https://github.com/mesalock-linux/mio-sgx",                  tag = "sgx_1.1.3",              optional = true }

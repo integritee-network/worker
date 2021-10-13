@@ -13,7 +13,7 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # sgx-deps
-sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local deps
 itp-types = { path = "../types", default-features = false }

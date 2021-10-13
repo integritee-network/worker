@@ -8,7 +8,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 derive_more = { version = "0.99.5" }
 
 # sgx deps
-sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # substrate deps
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}

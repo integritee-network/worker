@@ -38,10 +38,6 @@ members = [
     "sidechain/validateer-fetch",
 ]
 
-#[patch."https://github.com/integritee-network/pallet-teerex.git"]
-#pallet-teerex = { path = "../pallet-teerex" }
-
-
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../substrate-api-client" }
 #substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }
@@ -50,3 +46,14 @@ members = [
 #sgx-runtime = { path = "../sgx-runtime/runtime", default-features = false}
 #sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 #sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities" }
+
+[patch."https://github.com/apache/teaclave-sgx-sdk.git"]
+sgx_tstd = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_tstd" }
+sgx_alloc = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_alloc" }
+sgx_libc = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_libc" }
+sgx_serialize = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_serialize" }
+sgx_serialize_derive = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_serialize_derive" }
+sgx_serialize_derive_internals = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_serialize_derive_internals" }
+sgx_trts = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_trts" }
+sgx_types = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_ucrypto = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_ucrypto" }
