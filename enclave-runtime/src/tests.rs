@@ -33,7 +33,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{
-	stf_sgx_primitives::account_key_hash, test_genesis::test_account as funded_pair, AccountInfo,
+	helpers::account_key_hash, test_genesis::test_account as funded_pair, AccountInfo,
 	ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall, TrustedCallSigned,
 	TrustedGetter, TrustedOperation,
 };

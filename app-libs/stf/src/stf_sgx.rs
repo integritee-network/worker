@@ -1,11 +1,13 @@
 use crate::{
-	stf_sgx_primitives::{
-		get_account_info, increment_nonce, shards_key_hash, types::*, validate_nonce, StfError,
-		StfResult,
+	helpers::{
+		account_data, account_nonce, ensure_root, get_account_info, get_storage_value,
+		increment_nonce, root, validate_nonce,
 	},
-	AccountId, Getter, Index, PublicGetter, TrustedCall, TrustedCallSigned, TrustedGetter,
+	stf_sgx_primitives::{StfError, StfResult},
+	AccountData, AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, StateTypeDiff,
+	Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
 };
-use codec::{Decode, Encode};
+use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
@@ -14,7 +16,7 @@ use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
 use sgx_tstd as std;
 use sp_io::{hashing::blake2_256, SgxExternalitiesTrait};
 use sp_runtime::MultiAddress;
-use std::prelude::v1::*;
+use std::{prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 
 #[cfg(feature = "test")]
@@ -55,38 +57,37 @@ impl Stf {
 		ext
 	}
 
-	pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &StateTypeDiff) {
-		ext.execute_with(|| {
-			map_update.iter().for_each(|(k, v)| {
-				match v {
-					Some(value) => sp_io::storage::set(k, value),
-					None => sp_io::storage::clear(k),
-				};
-			});
-		});
-	}
-
-	pub fn update_layer_one_block_number(ext: &mut State, number: L1BlockNumer) {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "LayerOneNumber");
-			sp_io::storage::set(&key, &number.encode());
-		});
-	}
-
-	pub fn get_layer_one_block_number(ext: &mut State) -> Option<L1BlockNumer> {
-		ext.execute_with(|| {
-			let key = storage_value_key("System", "LayerOneNumber");
-			if let Some(infovec) = sp_io::storage::get(&key) {
-				if let Ok(number) = L1BlockNumer::decode(&mut infovec.as_slice()) {
-					Some(number)
-				} else {
-					error!("Blocknumber l1 decode error");
-					None
-				}
-			} else {
-				error!("No Blocknumber l1 in state?");
-				None
-			}
+	pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
+		ext.execute_with(|| match getter {
+			Getter::trusted(g) => match g.getter {
+				TrustedGetter::free_balance(who) =>
+					if let Some(info) = get_account_info(&who) {
+						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+						debug!("Account free balance is {}", info.data.free);
+						Some(info.data.free.encode())
+					} else {
+						None
+					},
+				TrustedGetter::reserved_balance(who) =>
+					if let Some(info) = get_account_info(&who) {
+						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+						debug!("Account reserved balance is {}", info.data.reserved);
+						Some(info.data.reserved.encode())
+					} else {
+						None
+					},
+				TrustedGetter::nonce(who) =>
+					if let Some(info) = get_account_info(&who) {
+						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
+						debug!("Account nonce is {}", info.nonce);
+						Some(info.nonce.encode())
+					} else {
+						None
+					},
+			},
+			Getter::public(g) => match g {
+				PublicGetter::some_value => Some(42u32.encode()),
+			},
 		})
 	}
 
@@ -101,7 +102,7 @@ impl Stf {
 			validate_nonce(&sender, call.nonce)?;
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-					Self::ensure_root(root)?;
+					ensure_root(root)?;
 					debug!(
 						"balance_set_balance({:x?}, {}, {})",
 						who.encode(),
@@ -150,7 +151,7 @@ impl Stf {
 					Ok(())
 				},
 				TrustedCall::balance_shield(root, who, value) => {
-					Self::ensure_root(root)?;
+					ensure_root(root)?;
 					debug!("balance_shield({:x?}, {})", who.encode(), value);
 					Self::shield_funds(who, value)?;
 					Ok(())
@@ -159,79 +160,6 @@ impl Stf {
 			increment_nonce(&sender);
 			Ok(())
 		})
-	}
-
-	pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
-		ext.execute_with(|| {
-			if let Some(info) = get_account_info(account) {
-				debug!("Account {:?} nonce is {}", account.encode(), info.nonce);
-				info.nonce
-			} else {
-				0 as Index
-			}
-		})
-	}
-
-	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
-		ext.execute_with(|| {
-			if let Some(info) = get_account_info(account) {
-				debug!("Account {:?} data is {:?}", account.encode(), info.data);
-				Some(info.data)
-			} else {
-				None
-			}
-		})
-	}
-
-	pub fn get_root(ext: &mut State) -> AccountId {
-		ext.execute_with(|| {
-			AccountId::decode(
-				&mut sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap().as_slice(),
-			)
-			.unwrap()
-		})
-	}
-
-	pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
-		ext.execute_with(|| match getter {
-			Getter::trusted(g) => match g.getter {
-				TrustedGetter::free_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-						debug!("Account free balance is {}", info.data.free);
-						Some(info.data.free.encode())
-					} else {
-						None
-					},
-				TrustedGetter::reserved_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-						debug!("Account reserved balance is {}", info.data.reserved);
-						Some(info.data.reserved.encode())
-					} else {
-						None
-					},
-				TrustedGetter::nonce(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
-						debug!("Account nonce is {}", info.nonce);
-						Some(info.nonce.encode())
-					} else {
-						None
-					},
-			},
-			Getter::public(g) => match g {
-				PublicGetter::some_value => Some(42u32.encode()),
-			},
-		})
-	}
-
-	fn ensure_root(account: AccountId) -> StfResult<()> {
-		if sp_io::storage::get(&storage_value_key("Sudo", "Key")).unwrap() == account.encode() {
-			Ok(())
-		} else {
-			Err(StfError::MissingPrivileges(account))
-		}
 	}
 
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
@@ -274,6 +202,28 @@ impl Stf {
 		}
 	}
 
+	pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &StateTypeDiff) {
+		ext.execute_with(|| {
+			map_update.iter().for_each(|(k, v)| {
+				match v {
+					Some(value) => sp_io::storage::set(k, value),
+					None => sp_io::storage::clear(k),
+				};
+			});
+		});
+	}
+
+	pub fn update_layer_one_block_number(ext: &mut State, number: L1BlockNumer) {
+		ext.execute_with(|| {
+			let key = storage_value_key("System", "LayerOneNumber");
+			sp_io::storage::set(&key, &number.encode());
+		});
+	}
+
+	pub fn get_layer_one_block_number(ext: &mut State) -> Option<L1BlockNumer> {
+		ext.execute_with(|| get_storage_value("System", "LayerOneNumber"))
+	}
+
 	pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
 		let key_hashes = Vec::new();
 		match call.call {
@@ -300,6 +250,32 @@ impl Stf {
 		key_hashes.push(shards_key_hash());
 		key_hashes
 	}
+
+	pub fn get_root(ext: &mut State) -> AccountId {
+		ext.execute_with(|| root())
+	}
+
+	pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
+		ext.execute_with(|| {
+			let nonce = account_nonce(account);
+			debug!("Account {:?} nonce is {}", account.encode(), nonce);
+			nonce
+		})
+	}
+
+	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
+		ext.execute_with(|| account_data(account))
+	}
+}
+
+pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
+	Vec::new()
+}
+
+pub fn shards_key_hash() -> Vec<u8> {
+	// here you have to point to a storage value containing a Vec of ShardIdentifiers
+	// the enclave uses this to autosubscribe to no shards
+	vec![]
 }
 
 /// Trait extension to simplify sidechain data access from the STF.
