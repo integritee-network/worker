@@ -76,6 +76,9 @@ pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 
 #[cfg(feature = "sgx")]
+pub mod helpers;
+
+#[cfg(feature = "sgx")]
 pub use stf_sgx_primitives::types::*;
 
 #[cfg(feature = "std")]
