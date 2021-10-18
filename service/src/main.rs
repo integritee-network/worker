@@ -107,11 +107,6 @@ fn main() {
 
 	GlobalTokioHandle::initialize();
 
-	// #[cfg(feature = "production")]
-	// println!("*** Starting service in SGX production mode");
-	// #[cfg(not(feature = "production"))]
-	// println!("*** Starting service in SGX debug mode");
-
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
@@ -134,7 +129,11 @@ fn main() {
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
-		println!("*** Starting integritee-worker");
+		#[cfg(feature = "production")]
+		println!("*** Starting service in SGX production mode");
+		#[cfg(not(feature = "production"))]
+		println!("*** Starting service in SGX debug mode");
+
 		let shard = extract_shard(&smatches, enclave.as_ref());
 
 		// Todo: Is this deprecated?? It is only used in remote attestation.
