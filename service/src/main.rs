@@ -107,10 +107,10 @@ fn main() {
 
 	GlobalTokioHandle::initialize();
 
-	#[cfg(feature = "production")]
-	println!("*** Starting service in SGX production mode");
-	#[cfg(not(feature = "production"))]
-	println!("*** Starting service in SGX debug mode");
+	// #[cfg(feature = "production")]
+	// println!("*** Starting service in SGX production mode");
+	// #[cfg(not(feature = "production"))]
+	// println!("*** Starting service in SGX debug mode");
 
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
