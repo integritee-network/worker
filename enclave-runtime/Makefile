@@ -40,7 +40,7 @@ else
 endif
 
 ifeq ($(SGX_PRODUCTION), 1)
-	ENCLAVE_FEATURES = --features=production
+	ENCLAVE_FEATURES =
 else
 	ENCLAVE_FEATURES = --features=test
 endif

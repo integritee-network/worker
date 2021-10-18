@@ -107,11 +107,6 @@ fn main() {
 
 	GlobalTokioHandle::initialize();
 
-	#[cfg(feature = "production")]
-	println!("*** Starting service in SGX production mode");
-	#[cfg(not(feature = "production"))]
-	println!("*** Starting service in SGX debug mode");
-
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
@@ -258,6 +253,11 @@ fn start_worker<E, T, D>(
 	check_files();
 	// ------------------------------------------------------------------------
 	// initialize the enclave
+	#[cfg(feature = "production")]
+	println!("*** Starting enclave in production mode");
+	#[cfg(not(feature = "production"))]
+	println!("*** Starting enclave in development mode");
+
 	let mrenclave = enclave.get_mrenclave().unwrap();
 	println!("MRENCLAVE={}", mrenclave.to_base58());
 
