@@ -107,6 +107,13 @@ fn main() {
 
 	GlobalTokioHandle::initialize();
 
+	// log this information, don't println because some python scripts for GA rely on the
+	// stdout from the service
+	#[cfg(feature = "production")]
+	info!("*** Starting service in SGX production mode");
+	#[cfg(not(feature = "production"))]
+	info!("*** Starting service in SGX debug mode");
+
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
@@ -129,11 +136,6 @@ fn main() {
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
-		#[cfg(feature = "production")]
-		println!("*** Starting service in SGX production mode");
-		#[cfg(not(feature = "production"))]
-		println!("*** Starting service in SGX debug mode");
-
 		let shard = extract_shard(&smatches, enclave.as_ref());
 
 		// Todo: Is this deprecated?? It is only used in remote attestation.
