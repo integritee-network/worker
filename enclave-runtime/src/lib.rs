@@ -725,22 +725,6 @@ where
 		.map_err(|e| Error::Other(format!("Failed to send block and confirmation: {}", e).into()))
 }
 
-fn get_stf_state(
-	trusted_getter_signed: TrustedGetterSigned,
-	shard: ShardIdentifier,
-) -> Result<Option<Vec<u8>>> {
-	debug!("verifying signature of TrustedGetterSigned");
-	if let false = trusted_getter_signed.verify_signature() {
-		return Err(Error::Stf("bad signature".to_string()))
-	}
-
-	let mut state = state::load_initialized_state(&shard)
-		.map_err(|e| Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e)))?;
-
-	debug!("calling into STF to get state");
-	Ok(Stf::get_state(&mut state, trusted_getter_signed.into()))
-}
-
 /// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
 ///
 /// For fairness, the [`max_exec_duration`] is split equally among all shards. Leftover time from
@@ -978,15 +962,19 @@ where
 {
 	let ends_at = duration_now() + max_exec_duration;
 
+	// load state once per shard
+	let mut state = state::load_initialized_state(&shard)
+		.map_err(|e| Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e)))?;
+	trace!("Successfully loaded stf state");
+
 	// retrieve trusted operations from pool
 	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
 	for trusted_getter_signed in trusted_getters.into_iter() {
 		let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
 
 		// get state
-		match get_stf_state(trusted_getter_signed, shard) {
+		match get_stf_state(trusted_getter_signed, &mut state) {
 			Ok(r) => {
-				trace!("Successfully loaded stf state");
 				// let client know of current state
 				trace!("Updating client");
 				match rpc_author.send_state(hash_of_getter, r.encode()) {
@@ -1013,6 +1001,23 @@ where
 	}
 
 	Ok(())
+}
+
+/// Execute a trusted getter on a state and return its value, if available.
+///
+/// Also verifies the signature of the trusted getter and returns an error
+/// if it's invalid.
+fn get_stf_state(
+	trusted_getter_signed: TrustedGetterSigned,
+	state: &mut StfState,
+) -> Result<Option<Vec<u8>>> {
+	debug!("verifying signature of TrustedGetterSigned");
+	if let false = trusted_getter_signed.verify_signature() {
+		return Err(Error::Stf("bad signature".to_string()))
+	}
+
+	debug!("calling into STF to get state");
+	Ok(Stf::get_state(state, trusted_getter_signed.into()))
 }
 
 /// Composes a sidechain block of a shard
