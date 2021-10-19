@@ -47,45 +47,43 @@ where
 	/// get a verifier instance
 	fn verifier(&self, state: Self::SidechainState) -> Self::Verifier;
 
-	/// get the sidechain state
-	fn get_state(&self, shard: &ShardIdentifierFor<SB>) -> Result<Self::SidechainState, Error>;
-
-	/// set the sidechain state
-	fn set_state(
-		&mut self,
-		state: Self::SidechainState,
+	/// apply a state update by providing a mutating function
+	fn apply_state_update<F>(
+		&self,
 		shard: &ShardIdentifierFor<SB>,
-	) -> Result<(), Error>;
+		mutating_function: F,
+	) -> Result<(), Error>
+	where
+		F: FnOnce(Self::SidechainState) -> Result<Self::SidechainState, Error>;
 
 	/// key that is used for state encryption
 	fn state_key() -> Result<Self::StateCrypto, Error>;
 
 	/// import the block
 	fn import_block(
-		&mut self,
+		&self,
 		sidechain_block: SB,
 		parentchain_header: &PB::Header,
 		ctx: &Self::Context,
 	) -> Result<(), Error> {
 		let shard = sidechain_block.block().shard_id();
-		let mut state = self.get_state(&shard)?;
 
-		let mut verifier = self.verifier(state.clone());
+		self.apply_state_update(&shard, |mut state| {
+			let mut verifier = self.verifier(state.clone());
 
-		let block_import_params = verifier.verify(sidechain_block, parentchain_header, ctx)?;
+			let block_import_params = verifier.verify(sidechain_block, parentchain_header, ctx)?;
 
-		let update = state_update_from_encrypted(
-			block_import_params.block().state_payload(),
-			Self::state_key()?,
-		)?;
+			let update = state_update_from_encrypted(
+				block_import_params.block().state_payload(),
+				Self::state_key()?,
+			)?;
 
-		state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;
+			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;
 
-		state.set_last_block(block_import_params.block());
+			state.set_last_block(block_import_params.block());
 
-		self.set_state(state, &shard)?;
-
-		Ok(())
+			Ok(state)
+		})
 	}
 }
 

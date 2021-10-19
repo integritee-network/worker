@@ -106,8 +106,8 @@ pub mod tests {
 		let top_pool = Arc::new(TrustedOperationPoolMock::default());
 
 		let shard_id = shard_id();
-		let mut state_facade = HandleStateMock::default();
-		state_facade.init_shard(&shard_id).unwrap();
+		let state_facade = HandleStateMock::default();
+		let _ = state_facade.load_initialized(&shard_id).unwrap();
 
 		let encryption_key = ShieldingCryptoMock::default();
 

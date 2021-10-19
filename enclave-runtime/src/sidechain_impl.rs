@@ -6,7 +6,8 @@
 use crate::{
 	exec_tops, prepare_and_send_xts_and_block,
 	rpc::author::{AuthorApi, OnBlockCreated, SendState},
-	state, Result as EnclaveResult,
+	state::HandleState,
+	Result as EnclaveResult,
 };
 use codec::Encode;
 use core::time::Duration;
@@ -33,56 +34,51 @@ use sp_std::prelude::Vec;
 use std::{marker::PhantomData, string::ToString, sync::Arc};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
-pub struct SlotProposer<PB: Block, SB: SignedBlock, Pair, OcallApi, LightClient, Author> {
-	pub ocall_api: Arc<OcallApi>,
-	pub light_client: Arc<LightClient>,
-	pub author: Arc<Author>,
-	pub proposer_key: Pair,
-	pub parentchain_header: PB::Header,
-	pub shard: ShardIdentifierFor<SB>,
+pub struct SlotProposer<PB: Block, SB: SignedBlock, OcallApi, Author, StateHandler> {
+	ocall_api: Arc<OcallApi>,
+	author: Arc<Author>,
+	state_handler: Arc<StateHandler>,
+	parentchain_header: PB::Header,
+	shard: ShardIdentifierFor<SB>,
 	_phantom: PhantomData<PB>,
 }
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`
-pub struct ProposerFactory<PB: Block, Pair, OcallApi, LightClient, Author> {
-	pub ocall_api: Arc<OcallApi>,
-	pub light_client: Arc<LightClient>,
-	pub author: Arc<Author>,
-	pub pair: Pair,
+pub struct ProposerFactory<PB: Block, OcallApi, Author, StateHandler> {
+	ocall_api: Arc<OcallApi>,
+	author: Arc<Author>,
+	state_handler: Arc<StateHandler>,
 	_phantom: PhantomData<PB>,
 }
 
-impl<PB: Block, Pair, OcallApi, LightClient, Author>
-	ProposerFactory<PB, Pair, OcallApi, LightClient, Author>
+impl<PB: Block, OcallApi, Author, StateHandler>
+	ProposerFactory<PB, OcallApi, Author, StateHandler>
 {
 	pub fn new(
 		ocall_api: Arc<OcallApi>,
-		light_client: Arc<LightClient>,
 		author: Arc<Author>,
-		pair: Pair,
+		state_handler: Arc<StateHandler>,
 	) -> Self {
-		Self { ocall_api, light_client, author, pair, _phantom: Default::default() }
+		Self { ocall_api, author, state_handler, _phantom: Default::default() }
 	}
 }
 
-impl<PB: Block<Hash = H256>, SB, P, OcallApi, LightClient, Author> Environment<PB, SB>
-	for ProposerFactory<PB, P, OcallApi, LightClient, Author>
+impl<PB: Block<Hash = H256>, SB, OcallApi, Author, StateHandler> Environment<PB, SB>
+	for ProposerFactory<PB, OcallApi, Author, StateHandler>
 where
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	P: Pair,
-	P::Public: Encode,
 	OcallApi: EnclaveOnChainOCallApi + GetStorageVerified + 'static,
-	LightClient: Validator<PB> + Send + Sync + 'static,
 	Author: AuthorApi<H256, PB::Hash>
 		+ SendState<Hash = PB::Hash>
 		+ OnBlockCreated<Hash = PB::Hash>
 		+ Send
 		+ Sync,
+	StateHandler: HandleState + Send + Sync + 'static,
 {
-	type Proposer = SlotProposer<PB, SB, P, OcallApi, LightClient, Author>;
+	type Proposer = SlotProposer<PB, SB, OcallApi, Author, StateHandler>;
 	type Error = ConsensusError;
 
 	fn init(
@@ -92,9 +88,8 @@ where
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {
 			ocall_api: self.ocall_api.clone(),
-			light_client: self.light_client.clone(),
 			author: self.author.clone(),
-			proposer_key: self.pair.clone(),
+			state_handler: self.state_handler.clone(),
 			parentchain_header: parent_header,
 			shard,
 			_phantom: PhantomData,
@@ -102,22 +97,23 @@ where
 	}
 }
 
-impl<PB, SB, Pair, OcallApi, LightClient, Author> Proposer<PB, SB>
-	for SlotProposer<PB, SB, Pair, OcallApi, LightClient, Author>
+impl<PB, SB, OcallApi, Author, StateHandler> Proposer<PB, SB>
+	for SlotProposer<PB, SB, OcallApi, Author, StateHandler>
 where
 	PB: Block<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	OcallApi: EnclaveOnChainOCallApi,
-	LightClient: Validator<PB> + Send + Sync + 'static,
 	Author:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	StateHandler: HandleState + Send + Sync + 'static,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
-		let (calls, blocks) = exec_tops::<PB, SB, _, _>(
+		let (calls, blocks) = exec_tops::<PB, SB, _, _, _>(
 			self.ocall_api.as_ref(),
 			self.author.as_ref(),
+			self.state_handler.as_ref(),
 			&self.parentchain_header,
 			self.shard,
 			max_duration,
@@ -132,12 +128,12 @@ where
 }
 
 /// Executes aura for the given `slot`
-pub fn exec_aura_on_slot<Authority, PB, SB, OcallApi, LightValidator, Author>(
+pub fn exec_aura_on_slot<Authority, PB, SB, OcallApi, LightValidator, PEnvironment>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
-	rpc_author: Arc<Author>,
 	validator: &mut LightValidator,
 	ocall_api: OcallApi,
+	proposer_environment: PEnvironment,
 	nonce: &mut u32,
 	shards: Vec<ShardIdentifierFor<SB>>,
 ) -> EnclaveResult<()>
@@ -151,24 +147,14 @@ where
 	OcallApi: EnclaveOnChainOCallApi + 'static,
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
-	Author: AuthorApi<H256, PB::Hash>
-		+ SendState<Hash = PB::Hash>
-		+ OnBlockCreated<Hash = PB::Hash>
-		+ Send
-		+ Sync,
+	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let env = ProposerFactory::new(
-		Arc::new(ocall_api.clone()),
-		Arc::new(validator.clone()),
-		rpc_author,
-		authority.clone(),
-	);
-
-	let mut aura = Aura::<_, _, SB, _, _>::new(authority, ocall_api.clone(), env)
-		.with_claim_strategy(SlotClaimStrategy::Always)
-		.with_allow_delayed_proposal(true);
+	let mut aura =
+		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api.clone(), proposer_environment)
+			.with_claim_strategy(SlotClaimStrategy::Always)
+			.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
@@ -212,18 +198,20 @@ where
 /// Implements `BlockImport`. This is not the definite version. This might change depending on the
 /// implementation of #423: https://github.com/integritee-network/worker/issues/423
 #[derive(Clone)]
-pub struct BlockImporter<A, PB, SB, O, ST> {
+pub struct BlockImporter<A, PB, SB, O, ST, StateHandler> {
+	state_handler: Arc<StateHandler>,
 	_phantom: PhantomData<(A, PB, SB, ST, O)>,
 }
 
-impl<A, PB, SB, O, ST> Default for BlockImporter<A, PB, SB, O, ST> {
-	fn default() -> Self {
-		Self { _phantom: Default::default() }
+impl<A, PB, SB, O, ST, StateHandler> BlockImporter<A, PB, SB, O, ST, StateHandler> {
+	#[allow(unused)]
+	pub fn new(state_handler: Arc<StateHandler>) -> Self {
+		Self { state_handler, _phantom: Default::default() }
 	}
 }
 
-impl<A, PB, SB, O> BlockImport<PB, SB>
-	for BlockImporter<A, PB, SB, O, SidechainDB<SB::Block, SgxExternalities>>
+impl<A, PB, SB, O, StateHandler> BlockImport<PB, SB>
+	for BlockImporter<A, PB, SB, O, SidechainDB<SB::Block, SgxExternalities>, StateHandler>
 where
 	A: Pair,
 	A::Public: std::fmt::Debug,
@@ -231,6 +219,7 @@ where
 	SB: SignedBlock<Public = A::Public> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256>,
 	O: ValidateerFetch + GetStorageVerified + Send + Sync,
+	StateHandler: HandleState,
 {
 	type Verifier = AuraVerifier<A, PB, SB, SidechainDB<SB::Block, SgxExternalities>, O>;
 	type SidechainState = SidechainDB<SB::Block, SgxExternalities>;
@@ -241,22 +230,23 @@ where
 		AuraVerifier::<A, PB, _, _, _>::new(SLOT_DURATION, state)
 	}
 
-	fn get_state(
+	fn apply_state_update<F>(
 		&self,
 		shard: &ShardIdentifierFor<SB>,
-	) -> Result<Self::SidechainState, ConsensusError> {
-		Ok(SidechainDB::<SB::Block, _>::new(
-			state::load_initialized_state(&shard)
-				.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?,
-		))
-	}
+		mutating_function: F,
+	) -> Result<(), ConsensusError>
+	where
+		F: FnOnce(Self::SidechainState) -> Result<Self::SidechainState, ConsensusError>,
+	{
+		let (write_lock, state) = self
+			.state_handler
+			.load_for_mutation(shard)
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
-	fn set_state(
-		&mut self,
-		state: Self::SidechainState,
-		shard: &ShardIdentifierFor<SB>,
-	) -> Result<(), ConsensusError> {
-		crate::state::write(state.ext, shard)
+		let updated_state = mutating_function(SidechainDB::<SB::Block, _>::new(state))?;
+
+		self.state_handler
+			.write(updated_state.ext, write_lock, shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		Ok(())
