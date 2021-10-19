@@ -528,15 +528,73 @@ pub unsafe extern "C" fn init_light_client(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn execute_trusted_operations() -> sgx_status_t {
-	if let Err(e) = execute_trusted_operations_internal::<Block>() {
+pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
+	if let Err(e) = execute_trusted_getters_on_all_shards() {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Internal [`execute_trusted_operations`] function to be able to use the `?` operator.
+/// Internal [`execute_trusted_getters`] function to be able to use the `?` operator.
+///
+/// Executes trusted getters for a scheduled amount of time (defined by settings).
+fn execute_trusted_getters_on_all_shards() -> Result<()> {
+	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
+
+	let author_mutex = GlobalAuthorContainer.get().ok_or_else(|| {
+		error!("Failed to retrieve author mutex. It might not be initialized?");
+		Error::MutexAccess
+	})?;
+
+	let rpc_author = author_mutex.lock().unwrap().deref().clone();
+
+	let state_handler = GlobalFileStateHandler;
+
+	let shards = state_handler.list_shards()?;
+	let mut remaining_shards = shards.len() as u32;
+	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
+
+	// Execute trusted getters for each shard. Each shard gets equal amount of time to execute
+	// getters.
+	for shard in shards.into_iter() {
+		let shard_exec_time = match remaining_time(ends_at)
+			.map(|r| r.checked_div(remaining_shards))
+			.flatten()
+		{
+			Some(t) => t,
+			None => {
+				info!("[Enclave] Could not execute trusted operations for all shards. Remaining number of shards: {}.", remaining_shards);
+				break
+			},
+		};
+
+		match execute_trusted_getters_on_shard(
+			rpc_author.as_ref(),
+			&state_handler,
+			shard,
+			shard_exec_time,
+		) {
+			Ok(()) => {},
+			Err(e) => error!("Error in trusted getter execution for shard {:?}: {:?}", shard, e),
+		}
+
+		remaining_shards -= 1;
+	}
+
+	Ok(())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
+	if let Err(e) = execute_trusted_calls_internal::<Block>() {
+		return e.into()
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+/// Internal [`execute_trusted_calls`] function to be able to use the `?` operator.
 ///
 /// Executes `Aura::on_slot() for `slot` if it is this enclave's `Slot`.
 ///
@@ -544,7 +602,7 @@ pub unsafe extern "C" fn execute_trusted_operations() -> sgx_status_t {
 ///
 /// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
 /// *   gossip produced sidechain blocks to peer validateers.
-fn execute_trusted_operations_internal<PB>() -> Result<()>
+fn execute_trusted_calls_internal<PB>() -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
@@ -752,7 +810,7 @@ where
 ///
 /// Todo: This will probably be used again if we decide to make sidechain optional?
 #[allow(unused)]
-fn exec_tops_for_all_shards<PB, SB, OCallApi, RpcAuthor, StateHandler>(
+fn exec_trusted_calls_for_all_shards<PB, SB, OCallApi, RpcAuthor, StateHandler>(
 	ocall_api: &OCallApi,
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
@@ -787,7 +845,7 @@ where
 			},
 		};
 
-		match exec_tops::<PB, SB, _, _, _>(
+		match exec_trusted_calls::<PB, SB, _, _, _>(
 			ocall_api,
 			rpc_author,
 			state_handler,
@@ -807,59 +865,6 @@ where
 		remaining_shards -= 1;
 	}
 	Ok((calls, signed_blocks))
-}
-
-/// Execute pending trusted operations for the `shard` until the `max_exec_duration` is reached.
-///
-/// The first half of the `max_exec_duration` is dedicated to the trusted getters, the second half
-/// (plus leftover time from the getters) to the trusted calls.
-///
-/// Todo: The getters should be handled individually: #400
-fn exec_tops<PB, SB, OCallApi, RpcAuthor, StateHandler>(
-	ocall_api: &OCallApi,
-	rpc_author: &RpcAuthor,
-	state_handler: &StateHandler,
-	latest_onchain_header: &PB::Header,
-	shard: ShardIdentifier,
-	max_exec_duration: Duration,
-) -> Result<(Vec<OpaqueCall>, Option<SB>)>
-where
-	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OCallApi: EnclaveOnChainOCallApi,
-	RpcAuthor:
-		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StateHandler: HandleState,
-{
-	// first half of the slot is dedicated to getters.
-	let ends_at = duration_now() + max_exec_duration;
-	let remaining_getter_time = max_exec_duration / 2;
-
-	exec_trusted_getters(rpc_author, state_handler, shard, remaining_getter_time)?;
-
-	let remaining_call_time = match remaining_time(ends_at) {
-		Some(t) => t,
-		None => {
-			info!("[Enclave] trusted calls not executed; no time left.");
-			return Ok(Default::default())
-		},
-	};
-
-	let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _, _>(
-		ocall_api,
-		rpc_author,
-		state_handler,
-		latest_onchain_header,
-		shard,
-		remaining_call_time,
-	)?;
-
-	if blocks.is_none() {
-		info!("[Enclave] did not produce a block for shard {:?}", shard);
-	}
-
-	Ok((calls, blocks))
 }
 
 /// Execute pending trusted calls for the `shard` until `max_exec_duration` is reached.
@@ -984,11 +989,15 @@ where
 	// save updated state after call executions
 	let _hash = state_handler.write(sidechain_db.ext, state_lock, &shard)?;
 
+	if block.is_none() {
+		info!("[Enclave] did not produce a block for shard {:?}", shard);
+	}
+
 	Ok((calls, block))
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
-fn exec_trusted_getters<RpcAuthor, StateHandler>(
+fn execute_trusted_getters_on_shard<RpcAuthor, StateHandler>(
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
 	shard: H256,
@@ -1000,14 +1009,20 @@ where
 {
 	let ends_at = duration_now() + max_exec_duration;
 
+	// retrieve trusted operations from pool
+	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
+
+	// return early if we have no trusted getters, so we don't decrypt the state unnecessarily
+	if trusted_getters.is_empty() {
+		return Ok(())
+	}
+
 	// load state once per shard
 	let mut state = state_handler
 		.load_initialized(&shard)
 		.map_err(|e| Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e)))?;
 	trace!("Successfully loaded stf state");
 
-	// retrieve trusted operations from pool
-	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
 	for trusted_getter_signed in trusted_getters.into_iter() {
 		let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
 
