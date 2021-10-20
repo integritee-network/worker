@@ -31,8 +31,6 @@ use crate::{
 			rpc_responder_mock::RpcResponderMock, shielding_crypto_mock::ShieldingCryptoMock,
 		},
 	},
-	top_pool,
-	top_pool::pool::ExtrinsicHash,
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -54,9 +52,10 @@ use its_sidechain::{
 		types::block::SignedBlock,
 	},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
+	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
 };
 use log::*;
-use rpc::{api::SideChainApi, author::Author, basic_pool::BasicPool};
+use rpc::{api::SideChainApi, author::Author};
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_tunittest::*;
 use sgx_types::size_t;
@@ -71,39 +70,6 @@ type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, Sh
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
-		top_pool::base_pool::tests::test_should_import_transaction_to_ready,
-		top_pool::base_pool::tests::test_should_not_import_same_transaction_twice,
-		top_pool::base_pool::tests::test_should_import_transaction_to_future_and_promote_it_later,
-		top_pool::base_pool::tests::test_should_promote_a_subgraph,
-		top_pool::base_pool::tests::test_should_handle_a_cycle,
-		top_pool::base_pool::tests::test_can_track_heap_size,
-		top_pool::base_pool::tests::test_should_handle_a_cycle_with_low_priority,
-		top_pool::base_pool::tests::test_should_remove_invalid_transactions,
-		top_pool::base_pool::tests::test_should_prune_ready_transactions,
-		top_pool::base_pool::tests::test_transaction_debug,
-		top_pool::base_pool::tests::test_transaction_propagation,
-		top_pool::base_pool::tests::test_should_reject_future_transactions,
-		top_pool::base_pool::tests::test_should_clear_future_queue,
-		top_pool::base_pool::tests::test_should_accept_future_transactions_when_explicitly_asked_to,
-		top_pool::primitives::tests::test_h256,
-		top_pool::pool::tests::test_should_validate_and_import_transaction,
-		top_pool::pool::tests::test_should_reject_if_temporarily_banned,
-		top_pool::pool::tests::test_should_notify_about_pool_events,
-		top_pool::pool::tests::test_should_clear_stale_transactions,
-		top_pool::pool::tests::test_should_ban_mined_transactions,
-		//FIXME: This test sometimes fails, sometimes succeeds..
-		//top_pool::pool::test_should_limit_futures,
-		top_pool::pool::tests::test_should_error_if_reject_immediately,
-		top_pool::pool::tests::test_should_reject_transactions_with_no_provides,
-		top_pool::ready::tests::test_should_replace_transaction_that_provides_the_same_tag,
-		top_pool::ready::tests::test_should_replace_multiple_transactions_correctly,
-		top_pool::ready::tests::test_should_return_best_transactions_in_correct_order,
-		top_pool::ready::tests::test_should_order_refs,
-		top_pool::rotator::tests::test_should_not_ban_if_not_stale,
-		top_pool::rotator::tests::test_should_ban_stale_extrinsic,
-		top_pool::rotator::tests::test_should_clear_banned,
-		top_pool::rotator::tests::test_should_garbage_collect,
-		top_pool::tracked_map::tests::test_basic,
 		state::tests::test_write_and_load_state_works,
 		state::tests::test_sgx_state_decode_encode_works,
 		state::tests::test_encrypt_decrypt_state_type_works,

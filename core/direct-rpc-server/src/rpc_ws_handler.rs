@@ -225,7 +225,7 @@ pub mod tests {
 		ReturnValue: Encode + Send + Sync + 'static,
 	{
 		let mut io_handler = IoHandler::new();
-		io_handler.add_method(method_name, move |_: Params| Ok(json!(return_value.encode())));
+		io_handler.add_sync_method(method_name, move |_: Params| Ok(json!(return_value.encode())));
 		io_handler
 	}
 }

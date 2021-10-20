@@ -16,12 +16,14 @@
 */
 
 use crate::{
-	rpc::author::{
-		atomic_container::AtomicContainer, Author, AuthorApi, AuthorTopFilter, OnBlockCreated,
-		SendState,
+	rpc::{
+		author::{
+			atomic_container::AtomicContainer, Author, AuthorApi, AuthorTopFilter, OnBlockCreated,
+			SendState,
+		},
+		pool_types::BPool,
 	},
 	state::GlobalFileStateHandler,
-	top_pool::pool_types::BPool,
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::H256;

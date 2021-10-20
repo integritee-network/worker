@@ -40,12 +40,12 @@ use crate::{
 			author_container::{GetAuthor, GlobalAuthorContainer},
 			AuthorTopFilter, OnBlockCreated, SendState,
 		},
+		pool_types::BPool,
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
 	sidechain_impl::{exec_aura_on_slot, ProposerFactory},
 	state::{GlobalFileStateHandler, HandleState},
 	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
-	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
 		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
 		write_slice_and_whitespace_pad, DecodeRaw, UnwrapOrSgxErrorUnexpected,
@@ -89,6 +89,7 @@ use its_sidechain::{
 	},
 	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
+	top_pool::pool::Options as PoolOptions,
 };
 use lazy_static::lazy_static;
 use log::*;
@@ -131,7 +132,6 @@ pub mod rpc;
 mod sidechain_impl;
 mod sync;
 pub mod tls_ra;
-pub mod top_pool;
 
 #[cfg(feature = "test")]
 pub mod test;

@@ -1,6 +1,7 @@
 [package]
 name = "its-sidechain"
-version = "0.1.0"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [features]
@@ -11,6 +12,7 @@ std = [
     "its-consensus-slots/std",
     "its-primitives/std",
     "its-state/std",
+    "its-top-pool/std",
     "its-validateer-fetch/std",
 ]
 sgx = [
@@ -18,6 +20,7 @@ sgx = [
     "its-consensus-common/sgx",
     "its-consensus-slots/sgx",
     "its-state/sgx",
+    "its-top-pool/sgx",
 ]
 test = ["its-state/test"]
 
@@ -27,4 +30,5 @@ its-consensus-common = { path = "../consensus/common", default-features = false 
 its-consensus-slots = { path = "../consensus/slots", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 its-state = { path = "../state", default-features = false }
+its-top-pool = { path = "../top-pool", default-features = false }
 its-validateer-fetch = { path = "../validateer-fetch", default-features = false }

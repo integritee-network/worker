@@ -16,7 +16,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::top_pool::{
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxMutex as Mutex;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::untrusted::time::InstantEx;
+
+use crate::{
 	base_pool as base,
 	base_pool::PruneStatus,
 	error,
@@ -39,10 +55,11 @@ use sp_runtime::{
 };
 use std::{
 	collections::{HashMap, HashSet},
+	format,
 	string::String,
-	sync::{Arc, SgxMutex, SgxRwLock},
+	sync::Arc,
 	time::Instant,
-	untrusted::time::InstantEx,
+	vec,
 	vec::Vec,
 };
 
@@ -94,9 +111,9 @@ where
 {
 	api: Arc<B>,
 	options: Options,
-	listener: SgxRwLock<Listener<ExtrinsicHash<B>, R>>,
-	pool: SgxRwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
-	import_notification_sinks: SgxMutex<Vec<Sender<ExtrinsicHash<B>>>>,
+	listener: RwLock<Listener<ExtrinsicHash<B>, R>>,
+	pool: RwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
+	import_notification_sinks: Mutex<Vec<Sender<ExtrinsicHash<B>>>>,
 	rotator: PoolRotator<ExtrinsicHash<B>>,
 }
 
@@ -109,9 +126,9 @@ where
 		let base_pool = base::BasePool::new(options.reject_future_operations);
 		ValidatedPool {
 			options,
-			listener: SgxRwLock::new(Listener::new(rpc_response_sender)),
+			listener: RwLock::new(Listener::new(rpc_response_sender)),
 			api,
-			pool: SgxRwLock::new(base_pool),
+			pool: RwLock::new(base_pool),
 			import_notification_sinks: Default::default(),
 			rotator: Default::default(),
 		}

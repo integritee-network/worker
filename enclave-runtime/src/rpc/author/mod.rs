@@ -27,13 +27,6 @@ use crate::{
 		error::{Error as StateRpcError, Result},
 	},
 	state::HandleState,
-	top_pool::{
-		error::{Error as PoolError, IntoPoolError},
-		primitives::{
-			BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
-			TxHash,
-		},
-	},
 };
 use alloc::boxed::Box;
 use codec::{Decode, Encode};
@@ -41,6 +34,13 @@ use core::iter::Iterator;
 use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_sgx_crypto::ShieldingCrypto;
 use itp_types::BlockHash as SidechainBlockHash;
+use its_sidechain::top_pool::{
+	error::{Error as PoolError, IntoPoolError},
+	primitives::{
+		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
+		TxHash,
+	},
+};
 use jsonrpc_core::{
 	futures::future::{ready, TryFutureExt},
 	Error as RpcError,

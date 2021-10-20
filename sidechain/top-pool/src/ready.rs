@@ -17,23 +17,18 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 pub extern crate alloc;
-use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec::Vec};
-
-use std::collections::{HashMap, HashSet};
-
-use core::{cmp, cmp::Ord, default::Default, hash};
-
-use log::trace;
-use sp_runtime::{traits::Member, transaction_validity::TransactionTag as Tag};
-
-use crate::top_pool::{
+use crate::{
 	base_pool::TrustedOperation,
 	error,
 	future::WaitingTrustedOperations,
 	tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
 };
-
+use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec, vec::Vec};
+use core::{cmp, cmp::Ord, default::Default, hash};
 use ita_stf::ShardIdentifier;
+use log::trace;
+use sp_runtime::{traits::Member, transaction_validity::TransactionTag as Tag};
+use std::collections::{HashMap, HashSet};
 
 type TopErrorResult<Hash, Ex> = error::Result<(Vec<Arc<TrustedOperation<Hash, Ex>>>, Vec<Hash>)>;
 
@@ -631,10 +626,10 @@ fn remove_item<T: PartialEq>(vec: &mut Vec<T>, item: &T) {
 	}
 }
 
+#[cfg(test)]
 pub mod tests {
 	use super::*;
-
-	use crate::top_pool::primitives::TrustedOperationSource as Source;
+	use crate::primitives::TrustedOperationSource as Source;
 
 	fn tx(id: u8) -> TrustedOperation<u64, Vec<u8>> {
 		TrustedOperation {
@@ -659,6 +654,7 @@ pub mod tests {
 		ready.import(x, shard)
 	}
 
+	#[test]
 	pub fn test_should_replace_transaction_that_provides_the_same_tag() {
 		// given
 		let shard = ShardIdentifier::default();
@@ -687,6 +683,7 @@ pub mod tests {
 		assert_eq!(ready.get(shard).count(), 1);
 	}
 
+	#[test]
 	pub fn test_should_replace_multiple_transactions_correctly() {
 		// given
 		let shard = ShardIdentifier::default();
@@ -724,6 +721,7 @@ pub mod tests {
 		assert_eq!(ready.get(shard).count(), 3);
 	}
 
+	#[test]
 	pub fn test_should_return_best_transactions_in_correct_order() {
 		// given
 		let shard = ShardIdentifier::default();
@@ -769,6 +767,7 @@ pub mod tests {
 		assert_eq!(it.next(), None);
 	}
 
+	#[test]
 	pub fn test_should_order_refs() {
 		let mut id = 1;
 		let mut with_priority = |priority, longevity| {

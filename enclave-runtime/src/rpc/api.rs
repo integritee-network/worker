@@ -18,13 +18,18 @@
 
 //! Chain api required for the operation pool.
 extern crate alloc;
+
+use crate::rpc::error;
 use alloc::{boxed::Box, vec::Vec};
-use log::*;
-
 use codec::Encode;
+use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use itp_types::BlockHash as SidechainBlockHash;
+use its_sidechain::top_pool::{
+	pool::{ChainApi, ExtrinsicHash, NumberFor},
+	primitives::TrustedOperationSource,
+};
 use jsonrpc_core::futures::future::{ready, Future, Ready};
-use std::{marker::PhantomData, pin::Pin};
-
+use log::*;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
@@ -32,16 +37,7 @@ use sp_runtime::{
 		TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
 	},
 };
-
-use crate::top_pool::{
-	pool::{ChainApi, ExtrinsicHash, NumberFor},
-	primitives::TrustedOperationSource,
-};
-
-use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_types::BlockHash as SidechainBlockHash;
-
-use crate::rpc::error;
+use std::{marker::PhantomData, pin::Pin};
 
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, ()>;
