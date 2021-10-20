@@ -51,6 +51,8 @@ pub mod files {
 	pub static RA_SPID_FILE: &str = "spid.txt";
 	#[cfg(not(feature = "production"))]
 	pub static RA_API_KEY_FILE: &str = "key.txt";
+
+	pub const SPID_MIN_LENGTH: usize = 32;
 }
 
 /// Settings concerning the worker

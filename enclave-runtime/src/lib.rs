@@ -127,7 +127,6 @@ mod utils;
 
 pub mod cert;
 pub mod error;
-pub mod hex;
 pub mod rpc;
 mod sidechain_impl;
 mod sync;
@@ -1294,10 +1293,10 @@ where
 	let state_hash = state_handler.write(state, state_lock, &shard)?;
 
 	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
-	let call_hash = blake2_256(&xt.encode());
-	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+	let xt_hash = blake2_256(&xt.encode());
+	debug!("Extrinsic hash {:?}", xt_hash);
 
-	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, call_hash, state_hash.encode())));
+	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, xt_hash, state_hash.encode())));
 
 	Ok(())
 }
@@ -1360,8 +1359,8 @@ where
 	let call_hash = blake2_256(&stf_call_signed.encode());
 	let operation = stf_call_signed.clone().into_trusted_operation(true);
 	let operation_hash = blake2_256(&operation.encode());
-	debug!("Operation hash 0x{}", hex::encode_hex(&operation_hash));
-	debug!("Call hash 0x{}", hex::encode_hex(&call_hash));
+	debug!("Operation hash {:?}", operation_hash);
+	debug!("Call hash {:?}", call_hash);
 
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
 }

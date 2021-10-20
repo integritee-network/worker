@@ -38,7 +38,7 @@ retain_mut = { version = "0.1.2"}
 derive_more = { version = "0.99.5" }
 byteorder = { version = "1.4.2", default-features = false }
 arrayvec = { version = "0.7.1", default-features = false }
-hex = { version = "0.4.3", default-features = false }
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 
 # scs / integritee
