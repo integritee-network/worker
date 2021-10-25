@@ -20,7 +20,7 @@ use crate::{
 		atomic_container::AtomicContainer, Author, AuthorApi, AuthorTopFilter, OnBlockCreated,
 		SendState,
 	},
-	state::StateFacade,
+	state::GlobalFileStateHandler,
 	top_pool::pool_types::BPool,
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -57,7 +57,7 @@ impl GlobalAuthorContainer {
 }
 
 impl GetAuthor for GlobalAuthorContainer {
-	type AuthorType = Author<BPool, AuthorTopFilter, StateFacade, Rsa3072KeyPair>;
+	type AuthorType = Author<BPool, AuthorTopFilter, GlobalFileStateHandler, Rsa3072KeyPair>;
 
 	fn get(&self) -> Option<&'static SgxMutex<Arc<Self::AuthorType>>> {
 		GLOBAL_AUTHOR_CONTAINER.load()

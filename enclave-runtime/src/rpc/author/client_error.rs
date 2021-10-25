@@ -129,7 +129,7 @@ impl From<Error> for rpc_core::Error {
 			},
 			Error::InvalidShard => rpc_core::Error {
 				code: rpc_core::ErrorCode::ServerError(VERIFICATION_ERROR),
-				message: "Shard does not exisit".into(),
+				message: "Shard does not exist".into(),
 				data: Some(format!("{:?}", e).into()),
 			},
 			Error::Pool(PoolError::InvalidTrustedOperation) => rpc_core::Error {

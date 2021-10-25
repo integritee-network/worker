@@ -42,8 +42,8 @@ use crate::{
 		},
 		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	},
-	sidechain_impl::exec_aura_on_slot,
-	state::{list_shards, load_initialized_state, StateFacade},
+	sidechain_impl::{exec_aura_on_slot, ProposerFactory},
+	state::{GlobalFileStateHandler, HandleState},
 	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
 	top_pool::{pool::Options as PoolOptions, pool_types::BPool},
 	utils::{
@@ -187,8 +187,10 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 		return e.into()
 	}
 
+	let state_handler = GlobalFileStateHandler;
+
 	// for debug purposes, list shards. no problem to panic if fails
-	let shards = state::list_shards().unwrap();
+	let shards = state_handler.list_shards().unwrap();
 	debug!("found the following {} shards on disk:", shards.len());
 	for s in shards {
 		debug!("{}", s.encode().to_base58())
@@ -411,7 +413,9 @@ pub unsafe extern "C" fn get_state(
 		}
 	}
 
-	let mut state = match state::load_initialized_state(&shard) {
+	let state_handler = GlobalFileStateHandler;
+
+	let mut state = match state_handler.load_initialized(&shard) {
 		Ok(s) => s,
 		Err(e) => return e.into(),
 	};
@@ -451,7 +455,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 
 	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
 	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
-	let state_facade = Arc::new(StateFacade);
+	let state_facade = Arc::new(GlobalFileStateHandler);
 
 	let rsa_shielding_key = match Rsa3072Seal::unseal() {
 		Ok(k) => k,
@@ -560,20 +564,26 @@ where
 	})?;
 
 	let rpc_author = author_mutex.lock().unwrap().deref().clone();
+	let state_handler = Arc::new(GlobalFileStateHandler);
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
 	match yield_next_slot(duration_now(), SLOT_DURATION, latest_onchain_header, &mut LastSlotSeal)?
 	{
-		Some(slot) => exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
-			slot,
-			authority,
-			rpc_author,
-			&mut validator,
-			OcallApi,
-			&mut nonce,
-			list_shards()?,
-		)?,
+		Some(slot) => {
+			let shards = state_handler.list_shards()?;
+			let env = ProposerFactory::new(Arc::new(OcallApi), rpc_author, state_handler);
+
+			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+				slot,
+				authority,
+				&mut validator,
+				OcallApi,
+				env,
+				&mut nonce,
+				shards,
+			)?
+		},
 		None => {
 			debug!("No slot yielded. Skipping block production.");
 			return Ok(())
@@ -622,7 +632,13 @@ where
 	let mut validator = LightClientSeal::<PB>::unseal()?;
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
 
-	sync_blocks_on_light_client(blocks_to_sync, &mut validator, &OcallApi, &mut *nonce)?;
+	sync_blocks_on_light_client(
+		blocks_to_sync,
+		&mut validator,
+		&OcallApi,
+		&GlobalFileStateHandler,
+		&mut *nonce,
+	)?;
 
 	// store updated state in light client in case we fail afterwards.
 	LightClientSeal::seal(validator)?;
@@ -630,17 +646,19 @@ where
 	Ok(())
 }
 
-fn sync_blocks_on_light_client<PB, V, O>(
+fn sync_blocks_on_light_client<PB, V, OCallApi, StateHandler>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
 	validator: &mut V,
-	on_chain_ocall_api: &O,
+	on_chain_ocall_api: &OCallApi,
+	state_handler: &StateHandler,
 	nonce: &mut u32,
 ) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	V: Validator<PB> + LightClientState<PB>,
-	O: EnclaveOnChainOCallApi,
+	OCallApi: EnclaveOnChainOCallApi,
+	StateHandler: HandleState,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
 
@@ -659,15 +677,17 @@ where
 			return Err(e.into())
 		}
 
-		if let Err(e) =
-			update_states::<PB, _>(signed_block.block.header().clone(), on_chain_ocall_api)
-		{
+		if let Err(e) = update_states::<PB, _, _>(
+			signed_block.block.header().clone(),
+			on_chain_ocall_api,
+			state_handler,
+		) {
 			error!("Error performing state updates upon block import");
 			return Err(e)
 		}
 
 		// execute indirect calls, incl. shielding and unshielding
-		match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api) {
+		match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api, state_handler) {
 			// push shield funds to opaque calls
 			Ok(c) => calls.extend(c.into_iter()),
 			Err(_) => error!("Error executing relevant extrinsics"),
@@ -695,9 +715,9 @@ where
 	)
 }
 
-fn prepare_and_send_xts_and_block<Block, SB, V, OcallApi>(
+fn prepare_and_send_xts_and_block<Block, SB, V, OCallApi>(
 	validator: &mut V,
-	ocall_api: &OcallApi,
+	ocall_api: &OCallApi,
 	calls: Vec<OpaqueCall>,
 	blocks: Vec<SB>,
 	nonce: &mut u32,
@@ -707,7 +727,7 @@ where
 	SB: SignedBlockT + 'static,
 	NumberFor<Block>: BlockNumberOps,
 	V: Validator<Block> + LightClientState<Block>,
-	OcallApi: EnclaveOnChainOCallApi,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	// store extrinsics in light client for finalization check
 	let extrinsics = create_extrinsics::<Block>(
@@ -732,9 +752,10 @@ where
 ///
 /// Todo: This will probably be used again if we decide to make sidechain optional?
 #[allow(unused)]
-fn exec_tops_for_all_shards<PB, SB, O, R>(
-	ocall_api: &O,
-	rpc_author: &R,
+fn exec_tops_for_all_shards<PB, SB, OCallApi, RpcAuthor, StateHandler>(
+	ocall_api: &OCallApi,
+	rpc_author: &RpcAuthor,
+	state_handler: &StateHandler,
 	latest_onchain_header: &PB::Header,
 	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
@@ -742,10 +763,12 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	O: EnclaveOnChainOCallApi,
-	R: AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	OCallApi: EnclaveOnChainOCallApi,
+	RpcAuthor:
+		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	StateHandler: HandleState,
 {
-	let shards = state::list_shards()?;
+	let shards = state_handler.list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
 	let mut signed_blocks: Vec<SB> = Vec::with_capacity(shards.len());
 	let mut remaining_shards = shards.len() as u32;
@@ -764,9 +787,10 @@ where
 			},
 		};
 
-		match exec_tops::<PB, SB, _, _>(
+		match exec_tops::<PB, SB, _, _, _>(
 			ocall_api,
 			rpc_author,
+			state_handler,
 			&latest_onchain_header,
 			shard,
 			shard_exec_time,
@@ -791,9 +815,10 @@ where
 /// (plus leftover time from the getters) to the trusted calls.
 ///
 /// Todo: The getters should be handled individually: #400
-fn exec_tops<PB, SB, O, R>(
-	ocall_api: &O,
-	rpc_author: &R,
+fn exec_tops<PB, SB, OCallApi, RpcAuthor, StateHandler>(
+	ocall_api: &OCallApi,
+	rpc_author: &RpcAuthor,
+	state_handler: &StateHandler,
 	latest_onchain_header: &PB::Header,
 	shard: ShardIdentifier,
 	max_exec_duration: Duration,
@@ -802,14 +827,16 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	O: EnclaveOnChainOCallApi,
-	R: AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	OCallApi: EnclaveOnChainOCallApi,
+	RpcAuthor:
+		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	StateHandler: HandleState,
 {
 	// first half of the slot is dedicated to getters.
 	let ends_at = duration_now() + max_exec_duration;
 	let remaining_getter_time = max_exec_duration / 2;
 
-	exec_trusted_getters(rpc_author, shard, remaining_getter_time)?;
+	exec_trusted_getters(rpc_author, state_handler, shard, remaining_getter_time)?;
 
 	let remaining_call_time = match remaining_time(ends_at) {
 		Some(t) => t,
@@ -819,9 +846,10 @@ where
 		},
 	};
 
-	let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _>(
+	let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _, _>(
 		ocall_api,
 		rpc_author,
+		state_handler,
 		latest_onchain_header,
 		shard,
 		remaining_call_time,
@@ -843,9 +871,10 @@ where
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
-fn exec_trusted_calls<PB, SB, O, R>(
-	on_chain_ocall: &O,
-	rpc_author: &R,
+fn exec_trusted_calls<PB, SB, OCallApi, RpcAuthor, StateHandler>(
+	on_chain_ocall: &OCallApi,
+	rpc_author: &RpcAuthor,
+	state_handler: &StateHandler,
 	latest_onchain_header: &PB::Header,
 	shard: H256,
 	max_exec_duration: Duration,
@@ -854,8 +883,9 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	O: EnclaveOnChainOCallApi,
-	R: AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	OCallApi: EnclaveOnChainOCallApi,
+	RpcAuthor: AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
+	StateHandler: HandleState,
 {
 	let ends_at = duration_now() + max_exec_duration;
 
@@ -881,7 +911,9 @@ where
 	let mut call_hashes = Vec::<H256>::new();
 
 	// load state before executing any calls
-	let mut sidechain_db = load_initialized_state(&shard).map(SidechainDB::<SB::Block, _>::new)?;
+	let (mut sidechain_db, state_lock) = state_handler
+		.load_for_mutation(&shard)
+		.map(|(l, s)| (SidechainDB::<SB::Block, _>::new(s), l))?;
 
 	let prev_state_hash = sidechain_db.state_hash();
 	trace!("state apriori hash: {:?}", prev_state_hash);
@@ -950,20 +982,27 @@ where
 	};
 
 	// save updated state after call executions
-	let _hash = state::write(sidechain_db.ext, &shard)?;
+	let _hash = state_handler.write(sidechain_db.ext, state_lock, &shard)?;
 
 	Ok((calls, block))
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
-fn exec_trusted_getters<R>(rpc_author: &R, shard: H256, max_exec_duration: Duration) -> Result<()>
+fn exec_trusted_getters<RpcAuthor, StateHandler>(
+	rpc_author: &RpcAuthor,
+	state_handler: &StateHandler,
+	shard: H256,
+	max_exec_duration: Duration,
+) -> Result<()>
 where
-	R: AuthorApi<H256, H256> + SendState<Hash = H256> + OnBlockCreated<Hash = H256>,
+	RpcAuthor: AuthorApi<H256, H256> + SendState<Hash = H256>,
+	StateHandler: HandleState,
 {
 	let ends_at = duration_now() + max_exec_duration;
 
 	// load state once per shard
-	let mut state = state::load_initialized_state(&shard)
+	let mut state = state_handler
+		.load_initialized(&shard)
 		.map_err(|e| Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e)))?;
 	trace!("Successfully loaded stf state");
 
@@ -1079,10 +1118,15 @@ where
 	Ok((opaque_call, block.sign_block(&signer_pair)))
 }
 
-pub fn update_states<PB, O>(header: PB::Header, on_chain_ocall_api: &O) -> Result<()>
+pub fn update_states<PB, O, StateHandler>(
+	header: PB::Header,
+	on_chain_ocall_api: &O,
+	state_handler: &StateHandler,
+) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	O: EnclaveOnChainOCallApi,
+	StateHandler: HandleState,
 {
 	debug!("Update STF storage upon block import!");
 	let storage_hashes = Stf::storage_hashes_to_update_on_block();
@@ -1105,7 +1149,7 @@ where
 					.sgx_error_with_log("error decoding shards")?;
 
 				for shard_id in shards {
-					let mut state = state::load_initialized_state(&shard_id)?;
+					let (state_lock, mut state) = state_handler.load_for_mutation(&shard_id)?;
 					trace!("Successfully loaded state, updating states ...");
 
 					// per shard (cid) requests
@@ -1124,7 +1168,7 @@ where
 						(*header.number()).unique_saturated_into(),
 					);
 
-					state::write(state, &shard_id)?;
+					state_handler.write(state, state_lock, &shard_id)?;
 				}
 			},
 			None => debug!("No shards are on the chain yet"),
@@ -1136,10 +1180,15 @@ where
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, as well as shielding and unshielding calls
 /// Returns all unshielding call confirmations as opaque calls
-pub fn scan_block_for_relevant_xt<PB, O>(block: &PB, on_chain_ocall: &O) -> Result<Vec<OpaqueCall>>
+pub fn scan_block_for_relevant_xt<PB, O, StateHandler>(
+	block: &PB,
+	on_chain_ocall: &O,
+	state_handler: &StateHandler,
+) -> Result<Vec<OpaqueCall>>
 where
 	PB: BlockT<Hash = H256>,
 	O: EnclaveOnChainOCallApi,
+	StateHandler: HandleState,
 {
 	debug!("Scanning block {:?} for relevant xt", block.header().number());
 	let mut opaque_calls = Vec::<OpaqueCall>::new();
@@ -1150,7 +1199,7 @@ where
 		{
 			// confirm call decodes successfully as well
 			if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
-				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt) {
+				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt, state_handler) {
 					error!("Error performing shield funds. Error: {:?}", e);
 				}
 			}
@@ -1163,7 +1212,7 @@ where
 			if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
 				if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
 					// load state before executing any calls
-					let mut state = load_initialized_state(&shard)?;
+					let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 					// call execution
 					trace!("Handling trusted worker call of state: {:?}", state);
 					if let Err(e) = handle_trusted_worker_call::<PB, _>(
@@ -1181,7 +1230,7 @@ where
 					// we only want to store the state diff for direct stuff.
 					state.prune_state_diff();
 					trace!("Updating state of shard {:?}", shard);
-					state::write(state, &shard)?;
+					state_handler.write(state, state_lock, &shard)?;
 				}
 			}
 		}
@@ -1190,16 +1239,20 @@ where
 	Ok(opaque_calls)
 }
 
-fn handle_shield_funds_xt(
+fn handle_shield_funds_xt<StateHandler>(
 	calls: &mut Vec<OpaqueCall>,
 	xt: UncheckedExtrinsicV4<ShieldFundsFn>,
-) -> Result<()> {
+	state_handler: &StateHandler,
+) -> Result<()>
+where
+	StateHandler: HandleState,
+{
 	let (call, account_encrypted, amount, shard) = xt.function.clone();
 	info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         call, account_encrypted, amount, shard.encode().to_base58(),
     );
 
-	let mut state = load_initialized_state(&shard)?;
+	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 
 	debug!("decrypt the call");
 	//let account_vec = Rsa3072KeyPair::decrypt(&account_encrypted)?;
@@ -1223,7 +1276,7 @@ fn handle_shield_funds_xt(
 		return Ok(())
 	}
 
-	let state_hash = state::write(state, &shard)?;
+	let state_hash = state_handler.write(state, state_lock, &shard)?;
 
 	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
 	let call_hash = blake2_256(&xt.encode());

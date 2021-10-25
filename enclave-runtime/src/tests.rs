@@ -22,11 +22,14 @@ use crate::{
 		top_filter::AllowAllTopsFilter,
 	},
 	state,
-	state::StateFacade,
+	state::HandleState,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
-		mocks::{rpc_responder_mock::RpcResponderMock, shielding_crypto_mock::ShieldingCryptoMock},
+		mocks::{
+			handle_state_mock, handle_state_mock::HandleStateMock,
+			rpc_responder_mock::RpcResponderMock, shielding_crypto_mock::ShieldingCryptoMock,
+		},
 	},
 	top_pool,
 	top_pool::pool::ExtrinsicHash,
@@ -63,7 +66,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
 type TestTopPool = BasicPool<SideChainApi<Block>, Block, TestRpcResponder>;
-type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, StateFacade, ShieldingCryptoMock>;
+type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -104,6 +107,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		state::tests::test_write_and_load_state_works,
 		state::tests::test_sgx_state_decode_encode_works,
 		state::tests::test_encrypt_decrypt_state_type_works,
+		state::tests::test_write_access_locks_read_until_finished,
 		test_compose_block_and_confirmation,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
@@ -132,6 +136,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		rpc::author::top_filter::tests::filter_returns_none_if_values_is_filtered_out,
 		rpc::author::top_filter::tests::getters_only_filter_allows_trusted_getters,
 		rpc::author::top_filter::tests::getters_only_filter_denies_trusted_calls,
+		handle_state_mock::tests::load_initialized_inserts_default_state,
+		handle_state_mock::tests::load_mutate_and_write_works,
 		// mra cert tests
 		test_verify_mra_cert_should_work,
 		test_verify_wrong_cert_is_err,
@@ -149,7 +155,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 fn test_compose_block_and_confirmation() {
 	// given
-	let (_, state, shard, _, _) = test_setup();
+	let (_, state, shard, _, _, _) = test_setup();
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 	let mut db = SidechainDB::new(state);
@@ -176,14 +182,11 @@ fn test_compose_block_and_confirmation() {
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().block_number(), 1);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_submit_trusted_call_to_top_pool() {
 	// given
-	let (rpc_author, _, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, _, shard, mrenclave, shielding_key, _) = test_setup();
 
 	let sender = funded_pair();
 
@@ -199,14 +202,11 @@ fn test_submit_trusted_call_to_top_pool() {
 
 	// then
 	assert_eq!(calls[0], signed_call);
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
-	let (rpc_author, _, shard, _, shielding_key) = test_setup();
+	let (rpc_author, _, shard, _, shielding_key, _) = test_setup();
 
 	let sender = funded_pair();
 
@@ -220,14 +220,11 @@ fn test_submit_trusted_getter_to_top_pool() {
 
 	// then
 	assert_eq!(getters[0], signed_getter);
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_differentiate_getter_and_call_works() {
 	// given
-	let (rpc_author, _, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, _, shard, mrenclave, shielding_key, _) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -250,19 +247,16 @@ fn test_differentiate_getter_and_call_works() {
 	// then
 	assert_eq!(calls[0], signed_call);
 	assert_eq!(getters[0], signed_getter);
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_create_block_and_confirmation_works() {
 	// given
-	let (rpc_author, _, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
 
-	let index = get_current_shard_index(&shard);
+	let index = get_current_shard_index(&shard, state_handler.as_ref());
 
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.into(), 0, &mrenclave, &shard);
@@ -273,9 +267,10 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
 			&OcallApi,
 			&rpc_author,
+			state_handler.as_ref(),
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -298,22 +293,19 @@ fn test_create_block_and_confirmation_works() {
 	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 
-	let db = SidechainDB::new(state::load_initialized_state(&shard).unwrap());
+	let db = SidechainDB::new(state_handler.load_initialized(&shard).unwrap());
 
 	assert_eq!(db.get_last_block(), Some(signed_block.block().clone()));
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_create_state_diff() {
 	// given
-	let (rpc_author, _, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
 
-	let index = get_current_shard_index(&shard);
+	let index = get_current_shard_index(&shard, state_handler.as_ref());
 
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
@@ -323,9 +315,10 @@ fn test_create_state_diff() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
+		state_handler.as_ref(),
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
@@ -348,14 +341,11 @@ fn test_create_state_diff() {
 
 	// Fixme: Fails #421
 	// assert_eq!(apriori_hash, state_payload.state_hash_apriori());
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_executing_call_updates_account_nonce() {
 	// given
-	let (rpc_author, _, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -366,26 +356,24 @@ fn test_executing_call_updates_account_nonce() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
+		state_handler.as_ref(),
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 
 	// then
-	let mut state = state::load_initialized_state(&shard).unwrap();
+	let mut state = state_handler.load_initialized(&shard).unwrap();
 	let nonce = Stf::account_nonce(&mut state, &sender.public().into());
 	assert_eq!(nonce, 1);
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
-	let (rpc_author, _, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -397,29 +385,27 @@ fn test_invalid_nonce_call_is_not_executed() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
+		state_handler.as_ref(),
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 
 	// then
-	let mut updated_state = state::load_initialized_state(&shard).unwrap();
+	let mut updated_state = state_handler.load_initialized(&shard).unwrap();
 	let nonce = Stf::account_nonce(&mut updated_state, &sender.public().into());
 	assert_eq!(nonce, 0);
 
 	let sender_data = Stf::account_data(&mut updated_state, &sender.public().into()).unwrap();
 	assert_eq!(sender_data.free, 2000);
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
-	let (rpc_author, mut state, shard, mrenclave, shielding_key) = test_setup();
+	let (rpc_author, mut state, shard, mrenclave, shielding_key, state_handler) = test_setup();
 
 	let sender = funded_pair();
 	let sender_acc = sender.public().into();
@@ -432,41 +418,30 @@ fn test_non_root_shielding_call_is_not_executed() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _>(
+	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
+		state_handler.as_ref(),
 		&latest_parentchain_header(),
 		MAX_TRUSTED_OPS_EXEC_DURATION,
 	)
 	.unwrap();
 
 	// then
-	let mut updated_state = state::load_initialized_state(&shard).unwrap();
+	let mut updated_state = state_handler.load_initialized(&shard).unwrap();
 
 	let nonce = Stf::account_nonce(&mut updated_state, &sender_acc);
 	let funds_new = Stf::account_data(&mut updated_state, &sender_acc).unwrap().free;
 
 	assert_eq!(nonce, 0);
 	assert_eq!(funds_new, funds_old);
-
-	// clean up
-	state::tests::remove_shard_dir(&shard);
 }
 
-pub fn ensure_no_empty_shard_directory_exists() {
-	// ensure no empty states are within directory (created with init-shard)
-	// otherwise an 'index out of bounds: the len is x but the index is x'
-	// error will be thrown
-	let shards = state::list_shards().unwrap();
-	for shard in shards {
-		if !state::exists(&shard) {
-			state::init_shard(&shard).unwrap();
-		}
-	}
-}
-
-fn get_current_shard_index(shard: &ShardIdentifier) -> usize {
-	let shards = state::list_shards().unwrap();
+fn get_current_shard_index<StateHandler: HandleState>(
+	shard: &ShardIdentifier,
+	state_handler: &StateHandler,
+) -> usize {
+	let shards = state_handler.list_shards().unwrap();
 	let mut index = 0;
 	for s in shards.into_iter() {
 		if s == *shard {
@@ -481,14 +456,15 @@ fn get_current_shard_index(shard: &ShardIdentifier) -> usize {
 }
 
 /// returns an empty `State` with the corresponding `ShardIdentifier`
-fn init_state() -> (State, ShardIdentifier) {
+fn init_state<S: HandleState>(state_handler: &S) -> (State, ShardIdentifier) {
 	let shard = ShardIdentifier::default();
 
-	// ensure that state starts empty
-	state::init_shard(&shard).unwrap();
+	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 
 	let mut state = Stf::init_state();
 	state.prune_state_diff();
+
+	state_handler.write(state.clone(), lock, &shard).unwrap();
 
 	(state, shard)
 }
@@ -513,13 +489,10 @@ fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`
-fn test_setup() -> (TestRpcAuthor, State, ShardIdentifier, MrEnclave, ShieldingCryptoMock) {
-	ensure_no_empty_shard_directory_exists();
-
-	// TODO: new that we have an abstraction for accessing the state, we should use the mock state,
-	// instead of having to write to files
-	let state_facade = Arc::new(StateFacade);
-	let (state, shard) = init_state();
+fn test_setup(
+) -> (TestRpcAuthor, State, ShardIdentifier, MrEnclave, ShieldingCryptoMock, Arc<HandleStateMock>) {
+	let state_handler = Arc::new(HandleStateMock::default());
+	let (state, shard) = init_state(state_handler.as_ref());
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
@@ -529,13 +502,14 @@ fn test_setup() -> (TestRpcAuthor, State, ShardIdentifier, MrEnclave, ShieldingC
 		TestRpcAuthor::new(
 			Arc::new(top_pool),
 			AllowAllTopsFilter,
-			state_facade,
+			state_handler.clone(),
 			encryption_key.clone(),
 		),
 		state,
 		shard,
 		mrenclave,
 		encryption_key,
+		state_handler,
 	)
 }
 

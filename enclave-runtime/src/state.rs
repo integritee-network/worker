@@ -15,56 +15,102 @@
 
 */
 
-use crate::{error::Result, hex, io, utils::UnwrapOrSgxErrorUnexpected};
+use crate::{
+	error::{Error, Result},
+	hex, io,
+	utils::UnwrapOrSgxErrorUnexpected,
+};
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, State as StfState, StateType as StfStateType, Stf};
 use itp_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use itp_sgx_crypto::{AesSeal, StateCrypto};
 use itp_sgx_io::SealedIO;
+use lazy_static::lazy_static;
 use log::*;
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_types::*;
 use sp_core::H256;
-use std::{fs, io::Write, path::Path, vec::Vec};
+use std::{
+	fs,
+	io::Write,
+	path::Path,
+	sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard},
+	vec::Vec,
+};
 
 /// Facade for handling STF state from file
 pub trait HandleState {
-	/// Load the STF state for a specific shard
+	type WriteLockPayload;
+
+	/// Load the state for a given shard
+	///
+	/// Initializes the shard and state if necessary, so this is guaranteed to
+	/// return a state
 	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState>;
+
+	fn load_for_mutation(
+		&self,
+		shard: &ShardIdentifier,
+	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, StfState)>;
 
 	/// Writes the state (without the state diff) encrypted into the enclave
 	///
 	/// Returns the hash of the saved state (independent of the diff!)
-	fn write(&mut self, state: StfState, shard: ShardIdentifier) -> Result<H256>;
+	fn write(
+		&self,
+		state: StfState,
+		state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
+		shard: &ShardIdentifier,
+	) -> Result<H256>;
 
 	/// Query whether a given shard exists
 	fn exists(&self, shard: &ShardIdentifier) -> bool;
-
-	/// Initialize a shard with a given identifier
-	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()>;
 
 	/// List all available shards
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>>;
 }
 
-pub struct StateFacade;
+lazy_static! {
+	// as long as we have a file backend, we use this 'dummy' lock,
+	// which guards against concurrent read/write access
+	pub static ref STF_STATE_LOCK: RwLock<()> = Default::default();
+}
 
-impl HandleState for StateFacade {
+/// Implementation of the `HandleState` trait using global files and locks.
+///
+/// For each call it will make a file access and encrypt/decrypt the state from file I/O.
+/// The lock it uses is therefore an 'empty' dummy lock, that guards against concurrent file access.
+pub struct GlobalFileStateHandler;
+
+impl HandleState for GlobalFileStateHandler {
+	type WriteLockPayload = ();
+
 	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
+		let _state_read_lock = STF_STATE_LOCK.read().map_err(|e| Error::Other(e.into()))?;
 		load_initialized_state(shard)
 	}
 
-	fn write(&mut self, state: StfState, shard: ShardIdentifier) -> Result<H256> {
-		write(state, &shard)
+	fn load_for_mutation(
+		&self,
+		shard: &ShardIdentifier,
+	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, StfState)> {
+		let state_write_lock = STF_STATE_LOCK.write().map_err(|e| Error::Other(e.into()))?;
+		let loaded_state = load_initialized_state(shard)?;
+		Ok((state_write_lock, loaded_state))
+	}
+
+	fn write(
+		&self,
+		state: StfState,
+		_state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
+		shard: &ShardIdentifier,
+	) -> Result<H256> {
+		write(state, shard)
 	}
 
 	fn exists(&self, shard: &ShardIdentifier) -> bool {
 		exists(shard)
-	}
-
-	fn init_shard(&mut self, shard: &ShardIdentifier) -> Result<()> {
-		init_shard(shard)
 	}
 
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
@@ -72,11 +118,7 @@ impl HandleState for StateFacade {
 	}
 }
 
-/// Load the state for a given shard
-///
-/// Initializes the shard and state if necessary, so this is guaranteed to
-/// return a state
-pub fn load_initialized_state(shard: &ShardIdentifier) -> Result<StfState> {
+fn load_initialized_state(shard: &ShardIdentifier) -> Result<StfState> {
 	trace!("Loading state from shard {:?}", shard);
 	let state = if exists(&shard) {
 		load(&shard)?
@@ -116,7 +158,7 @@ fn load(shard: &ShardIdentifier) -> Result<StfState> {
 
 /// Writes the state (without the state diff) encrypted into the enclave storage
 /// Returns the hash of the saved state (independent of the diff!)
-pub fn write(state: StfState, shard: &ShardIdentifier) -> Result<H256> {
+fn write(state: StfState, shard: &ShardIdentifier) -> Result<H256> {
 	let state_path =
 		format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE);
 	trace!("writing state to: {}", state_path);
@@ -136,12 +178,12 @@ pub fn write(state: StfState, shard: &ShardIdentifier) -> Result<H256> {
 	Ok(state_hash.into())
 }
 
-pub fn exists(shard: &ShardIdentifier) -> bool {
+fn exists(shard: &ShardIdentifier) -> bool {
 	Path::new(&format!("{}/{}/{}", SHARDS_PATH, shard.encode().to_base58(), ENCRYPTED_STATE_FILE))
 		.exists()
 }
 
-pub fn init_shard(shard: &ShardIdentifier) -> Result<()> {
+fn init_shard(shard: &ShardIdentifier) -> Result<()> {
 	let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
 	fs::create_dir_all(path.clone()).sgx_error()?;
 	let mut file = fs::File::create(format!("{}/{}", path, ENCRYPTED_STATE_FILE)).sgx_error()?;
@@ -177,7 +219,7 @@ fn encrypt(mut state: Vec<u8>) -> Result<Vec<u8>> {
 	Ok(state)
 }
 
-pub fn list_shards() -> Result<Vec<ShardIdentifier>> {
+fn list_shards() -> Result<Vec<ShardIdentifier>> {
 	let files = match fs::read_dir(SHARDS_PATH).sgx_error() {
 		Ok(f) => f,
 		Err(_) => return Ok(Vec::new()),
@@ -200,18 +242,15 @@ pub fn list_shards() -> Result<Vec<ShardIdentifier>> {
 #[cfg(feature = "test")]
 pub mod tests {
 	use super::*;
-	use crate::tests::ensure_no_empty_shard_directory_exists;
 	use sgx_externalities::SgxExternalitiesTrait;
+	use std::thread;
 
 	// Fixme: Move this test to sgx-runtime:
 	//
 	// https://github.com/integritee-network/sgx-runtime/issues/23
 	pub fn test_sgx_state_decode_encode_works() {
 		// given
-		let key: Vec<u8> = "hello".encode();
-		let value: Vec<u8> = "world".encode();
-		let mut state = StfState::new();
-		state.insert(key, value);
+		let state = given_hello_world_state();
 
 		// when
 		let encoded_state = state.state.encode();
@@ -223,10 +262,7 @@ pub mod tests {
 
 	pub fn test_encrypt_decrypt_state_type_works() {
 		// given
-		let key: Vec<u8> = "hello".encode();
-		let value: Vec<u8> = "world".encode();
-		let mut state = StfState::new();
-		state.insert(key, value);
+		let state = given_hello_world_state();
 
 		// when
 		let encrypted = encrypt(state.state.encode()).unwrap();
@@ -242,16 +278,12 @@ pub mod tests {
 		// given
 		ensure_no_empty_shard_directory_exists();
 
-		let key: Vec<u8> = "hello".encode();
-		let value: Vec<u8> = "world".encode();
-		let mut state = StfState::new();
+		let state = given_hello_world_state();
+
 		let shard: ShardIdentifier = [94u8; 32].into();
-		state.insert(key, value);
+		given_initialized_shard(&shard);
 
 		// when
-		if !exists(&shard) {
-			init_shard(&shard).unwrap();
-		}
 		let _hash = write(state.clone(), &shard).unwrap();
 		let result = load(&shard).unwrap();
 
@@ -262,7 +294,72 @@ pub mod tests {
 		remove_shard_dir(&shard);
 	}
 
-	pub fn remove_shard_dir(shard: &ShardIdentifier) {
+	pub fn test_write_access_locks_read_until_finished() {
+		// here we want to test that a lock we obtain for
+		// mutating state locks out any read attempt that happens during that time
+
+		// given
+		ensure_no_empty_shard_directory_exists();
+
+		let shard: ShardIdentifier = [47u8; 32].into();
+		given_initialized_shard(&shard);
+
+		let state_handler = GlobalFileStateHandler;
+
+		let new_state_key = "my_new_state".encode();
+		let (lock, mut state_to_mutate) = state_handler.load_for_mutation(&shard).unwrap();
+
+		// spawn a new thread that reads state
+		// this thread should be blocked until the write lock is released, i.e. until
+		// the new state is written. We can verify this, by trying to read that state variable
+		// that will be inserted further down below
+		let new_state_key_for_read = new_state_key.clone();
+		let shard_for_read = shard.clone();
+		let join_handle = thread::spawn(move || {
+			let state_handler = GlobalFileStateHandler;
+			let state_to_read = state_handler.load_initialized(&shard_for_read).unwrap();
+			assert!(state_to_read.get(new_state_key_for_read.as_slice()).is_some());
+		});
+
+		assert!(state_to_mutate.get(new_state_key.clone().as_slice()).is_none());
+		state_to_mutate.insert(new_state_key, "mega_secret_value".encode());
+
+		let _hash = state_handler.write(state_to_mutate, lock, &shard).unwrap();
+
+		join_handle.join().unwrap();
+
+		// clean up
+		remove_shard_dir(&shard);
+	}
+
+	fn ensure_no_empty_shard_directory_exists() {
+		// ensure no empty states are within directory (created with init-shard)
+		// otherwise an 'index out of bounds: the len is x but the index is x'
+		// error will be thrown
+		let shards = list_shards().unwrap();
+		for shard in shards {
+			if !exists(&shard) {
+				init_shard(&shard).unwrap();
+			}
+		}
+	}
+
+	fn given_hello_world_state() -> StfState {
+		let key: Vec<u8> = "hello".encode();
+		let value: Vec<u8> = "world".encode();
+		let mut state = StfState::new();
+		state.insert(key, value);
+		state
+	}
+
+	fn given_initialized_shard(shard: &ShardIdentifier) {
+		if exists(&shard) {
+			remove_shard_dir(shard);
+		}
+		init_shard(&shard).unwrap();
+	}
+
+	fn remove_shard_dir(shard: &ShardIdentifier) {
 		std::fs::remove_dir_all(&format!("{}/{}", SHARDS_PATH, shard.encode().to_base58()))
 			.unwrap();
 	}
