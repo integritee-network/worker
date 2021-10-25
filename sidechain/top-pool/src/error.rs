@@ -17,12 +17,10 @@
 
 //! TrustedOperation pool errors.
 
-use sp_runtime::transaction_validity::TransactionPriority as Priority;
-
-extern crate alloc;
-use alloc::string::String;
-
 use derive_more::{Display, From};
+use sp_runtime::transaction_validity::TransactionPriority as Priority;
+use std::string::String;
+
 /// TrustedOperation pool result.
 pub type Result<T> = std::result::Result<T, Error>;
 

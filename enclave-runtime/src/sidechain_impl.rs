@@ -3,19 +3,15 @@
 //! Todo: Once we have put the `top_pool` stuff in an entirely different crate we can
 //! move most parts here to the sidechain crate.
 
-use crate::{
-	exec_trusted_calls, prepare_and_send_xts_and_block,
-	rpc::author::{AuthorApi, OnBlockCreated, SendState},
-	state::HandleState,
-	Result as EnclaveResult,
-};
+use crate::{exec_trusted_calls, prepare_and_send_xts_and_block, Result as EnclaveResult};
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
-use itp_ocall_api::EnclaveOnChainOCallApi;
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, AesSeal};
 use itp_sgx_io::SealedIO;
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
 use its_sidechain::{
 	aura::{Aura, AuraVerifier, SlotClaimStrategy},
@@ -23,6 +19,7 @@ use its_sidechain::{
 	primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
 	slots::{PerShardSlotWorkerScheduler, SlotInfo},
 	state::SidechainDB,
+	top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState},
 	validateer_fetch::ValidateerFetch,
 };
 use log::error;
@@ -30,8 +27,7 @@ use primitive_types::H256;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::{traits::Block, MultiSignature};
-use sp_std::prelude::Vec;
-use std::{marker::PhantomData, string::ToString, sync::Arc};
+use std::{marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
 pub struct SlotProposer<PB: Block, SB: SignedBlock, OcallApi, Author, StateHandler> {
@@ -70,7 +66,7 @@ where
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi + GetStorageVerified + 'static,
+	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + GetStorageVerified + 'static,
 	Author: AuthorApi<H256, PB::Hash>
 		+ SendState<Hash = PB::Hash>
 		+ OnBlockCreated<Hash = PB::Hash>
@@ -104,7 +100,7 @@ where
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi,
+	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	Author:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StateHandler: HandleState + Send + Sync + 'static,
@@ -144,7 +140,7 @@ where
 	PB: Block<Hash = H256>,
 	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
-	OcallApi: EnclaveOnChainOCallApi + 'static,
+	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,

@@ -15,23 +15,20 @@
 
 */
 
-pub extern crate alloc;
-
-use self::serde_json::*;
-use crate::rpc::author::AuthorApi;
-use alloc::{borrow::ToOwned, format, str, string::String, vec::Vec};
 use base58::FromBase58;
 use codec::{Decode, Encode};
 use core::result::Result;
 use ita_stf::ShardIdentifier;
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{DirectRequestStatus, Request, RpcReturnValue, TrustedOperationStatus, H256};
-use its_sidechain::primitives::types::SignedBlock;
-use jsonrpc_core::{futures::executor, Error as RpcError, *};
+use its_sidechain::{primitives::types::SignedBlock, top_pool_rpc_author::traits::AuthorApi};
+use jsonrpc_core::{
+	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
+};
 use log::*;
-use sgx_types::*;
+use sgx_types::sgx_status_t;
 use sp_core::H256 as Hash;
-use std::sync::Arc;
+use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
 // TODO: remove this e-call - includes EDL file and e-call bridge on untrusted worker side
 #[no_mangle]
@@ -312,9 +309,9 @@ where
 }
 
 pub mod tests {
-	use super::{alloc::string::ToString, side_chain_io_handler};
+	use super::side_chain_io_handler;
 	use jsonrpc_core::IoHandler;
-	use std::string::String;
+	use std::string::{String, ToString};
 
 	fn rpc_response<T: ToString>(result: T) -> String {
 		format!(r#"{{"jsonrpc":"2.0","result":{},"id":1}}"#, result.to_string())

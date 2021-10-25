@@ -15,7 +15,10 @@
 
 */
 
-use crate::rpc::author::AuthorApi;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+use crate::traits::AuthorApi;
 use codec::Encode;
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_sgx_crypto::ShieldingCrypto;

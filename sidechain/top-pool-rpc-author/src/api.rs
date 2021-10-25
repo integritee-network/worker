@@ -1,30 +1,30 @@
-// This file is part of Substrate.
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
-// Copyright (C) 2018-2020 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+		http://www.apache.org/licenses/LICENSE-2.0
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+*/
 
 //! Chain api required for the operation pool.
-extern crate alloc;
 
-use crate::rpc::error;
-use alloc::{boxed::Box, vec::Vec};
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+use crate::error;
 use codec::Encode;
 use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
-use its_sidechain::top_pool::{
+use its_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
 	primitives::TrustedOperationSource,
 };
@@ -37,7 +37,7 @@ use sp_runtime::{
 		TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
 	},
 };
-use std::{marker::PhantomData, pin::Pin};
+use std::{boxed::Box, marker::PhantomData, pin::Pin, vec, vec::Vec};
 
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, ()>;
@@ -69,10 +69,6 @@ where
 	type ValidationFuture =
 		Pin<Box<dyn Future<Output = error::Result<TransactionValidity>> + Send>>;
 	type BodyFuture = Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
-
-	fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
-		ready(Ok(None))
-	}
 
 	fn validate_transaction(
 		&self,
@@ -140,5 +136,9 @@ where
 	fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
 		debug!("[Pool] creating hash of {:?}", ex);
 		ex.using_encoded(|x| (<<Block::Header as HeaderT>::Hashing as HashT>::hash(x), x.len()))
+	}
+
+	fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
+		ready(Ok(None))
 	}
 }

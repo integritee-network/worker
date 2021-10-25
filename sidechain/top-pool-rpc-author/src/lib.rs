@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,9 +15,8 @@
 
 */
 
+#![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
-
-//! Itp-test crate which contains mocks and soon some fixtures.
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -26,4 +24,29 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-pub mod mock;
+// re-export module to properly feature gate sgx and regular std environment
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use jsonrpc_core_sgx as jsonrpc_core;
+	pub use thiserror_sgx as thiserror;
+}
+
+pub mod api;
+pub mod atomic_container;
+pub mod author;
+pub mod author_container;
+pub mod client_error;
+pub mod error;
+pub mod hash;
+pub mod pool_types;
+pub mod top_filter;
+pub mod traits;
+
+#[cfg(feature = "sgx")]
+pub mod global_author_container;
+
+#[cfg(all(feature = "sgx", feature = "test"))]
+pub mod author_tests;
+
+#[cfg(feature = "test")]
+pub mod test_utils;

@@ -117,7 +117,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "072df7202e63b127ab55acfe16ce97013d5b97bf160489336d3f1840fd78e99e"
 dependencies = [
- "num-traits",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -679,8 +679,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
 dependencies = [
  "libc",
- "num-integer",
- "num-traits",
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
  "time",
  "winapi 0.3.9",
 ]
@@ -1169,7 +1169,7 @@ dependencies = [
  "futures 0.3.17",
  "futures-timer",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "num-traits",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "scale-info",
@@ -1193,7 +1193,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1267f4ac4f343772758f7b1bdcbe767c218bbab93bb432acbf5162bbf85a6c4"
 dependencies = [
- "num-traits",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -1664,7 +1664,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4ac03428b3276fc7f1756eba0c76c7c0c91ef77e1c43fbdd47a460238419cb9"
 dependencies = [
- "num-traits",
+ "num-traits 0.2.14",
  "serde 1.0.130",
  "serde_json 1.0.67",
 ]
@@ -2209,7 +2209,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
 dependencies = [
- "num-traits",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -2444,7 +2444,7 @@ dependencies = [
  "itp-sgx-io",
  "itp-storage",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "num-traits",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
@@ -2636,6 +2636,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-stf-state-handler"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itp-settings",
+ "itp-sgx-crypto",
+ "itp-sgx-io",
+ "itp-types",
+ "lazy_static",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "rust-base58 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx?rev=sgx_1.1.3)",
+ "sgx-externalities",
+ "sgx_tcrypto",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.29",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "itp-storage"
 version = "0.8.0"
 dependencies = [
@@ -2682,12 +2704,19 @@ name = "itp-test"
 version = "0.8.0"
 dependencies = [
  "derive_more",
+ "ita-stf",
  "itp-ocall-api",
+ "itp-sgx-crypto",
+ "itp-stf-state-handler",
  "itp-storage",
  "itp-storage-verifier",
  "itp-teerex-storage",
  "itp-types",
+ "its-top-pool",
+ "jsonrpc-core 16.1.0",
  "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tcrypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -2788,6 +2817,7 @@ dependencies = [
  "its-primitives",
  "its-state",
  "its-top-pool",
+ "its-top-pool-rpc-author",
  "its-validateer-fetch",
 ]
 
@@ -2833,6 +2863,32 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.29",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-top-pool-rpc-author"
+version = "0.8.0"
+dependencies = [
+ "derive_more",
+ "ita-stf",
+ "itc-direct-rpc-server",
+ "itc-tls-websocket-server",
+ "itp-sgx-crypto",
+ "itp-stf-state-handler",
+ "itp-test",
+ "itp-types",
+ "its-top-pool",
+ "jsonrpc-core 16.0.0",
+ "jsonrpc-core 16.1.0",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "sgx_tcrypto_helper",
+ "sgx_tstd",
+ "sgx_types",
  "sp-core",
  "sp-runtime",
  "thiserror 1.0.29",
@@ -3494,9 +3550,9 @@ dependencies = [
  "approx",
  "matrixmultiply",
  "nalgebra-macros",
- "num-complex",
+ "num-complex 0.4.0",
  "num-rational 0.4.0",
- "num-traits",
+ "num-traits 0.2.14",
  "rand 0.8.4",
  "rand_distr",
  "simba",
@@ -3587,14 +3643,73 @@ dependencies = [
 ]
 
 [[package]]
+name = "num"
+version = "0.2.0"
+source = "git+https://github.com/mesalock-linux/num-sgx#22645415542cc67551890dfdd34f4d5638b9ec78"
+dependencies = [
+ "num-bigint 0.2.5",
+ "num-complex 0.2.3",
+ "num-integer 0.1.41",
+ "num-iter 0.1.39",
+ "num-rational 0.2.2",
+ "num-traits 0.2.10",
+]
+
+[[package]]
+name = "num"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43db66d1170d347f9a065114077f7dccb00c1b9478c89384490a3425279a4606"
+dependencies = [
+ "num-bigint 0.4.2",
+ "num-complex 0.4.0",
+ "num-integer 0.1.44",
+ "num-iter 0.1.42",
+ "num-rational 0.4.0",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.2.5"
+source = "git+https://github.com/mesalock-linux/num-bigint-sgx#76a5bed94dc31c32bd1670dbf72877abcf9bbc09"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-integer 0.1.41",
+ "num-traits 0.2.10",
+ "sgx_tstd",
+]
+
+[[package]]
 name = "num-bigint"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
 dependencies = [
  "autocfg 1.0.1",
- "num-integer",
- "num-traits",
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74e768dff5fb39a41b3bcd30bb25cf989706c90d028d1ad71971987aa309d535"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.2.3"
+source = "git+https://github.com/mesalock-linux/num-complex-sgx#19700ad6de079ebc5560db472c282d1591e0d84f"
+dependencies = [
+ "autocfg 0.1.7",
+ "num-traits 0.2.10",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -3603,7 +3718,17 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26873667bbbb7c5182d4a37c1add32cdf09f841af72da53318fdb81543c15085"
 dependencies = [
- "num-traits",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.41"
+source = "git+https://github.com/mesalock-linux/num-integer-sgx#404c50e5378ca635261688b080dee328ff42b6bd"
+dependencies = [
+ "autocfg 0.1.7",
+ "num-traits 0.2.10",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -3613,7 +3738,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
 dependencies = [
  "autocfg 1.0.1",
- "num-traits",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-iter"
+version = "0.1.39"
+source = "git+https://github.com/mesalock-linux/num-iter-sgx#f19fc44fcad0b82a040e5a24c511e5049cc04b60"
+dependencies = [
+ "num-integer 0.1.41",
+ "num-traits 0.2.10",
+ "sgx_tstd",
+]
+
+[[package]]
+name = "num-iter"
+version = "0.1.42"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2021c8337a54d21aca0d59a92577a029af9431cb59b909b03252b9c164fad59"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.2.2"
+source = "git+https://github.com/mesalock-linux/num-rational-sgx#be65f9ce439f3c9ec850d8041635ab6c3309b816"
+dependencies = [
+ "autocfg 0.1.7",
+ "num-bigint 0.2.5",
+ "num-integer 0.1.41",
+ "num-traits 0.2.10",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -3623,9 +3781,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c000134b5dbf44adc5cb772486d335293351644b801551abe8f75c84cfa4aef"
 dependencies = [
  "autocfg 1.0.1",
- "num-bigint",
- "num-integer",
- "num-traits",
+ "num-bigint 0.2.6",
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -3635,8 +3793,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d41702bd167c2df5520b384281bc111a4b5efcf7fbc4c9c222c815b07e0a6a6a"
 dependencies = [
  "autocfg 1.0.1",
- "num-integer",
- "num-traits",
+ "num-bigint 0.4.2",
+ "num-integer 0.1.44",
+ "num-traits 0.2.14",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.10"
+source = "git+https://github.com/mesalock-linux/num-traits-sgx#af046e0b15c594c960007418097dd4ff37ec3f7a"
+dependencies = [
+ "autocfg 0.1.7",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -4530,7 +4698,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "051b398806e42b9cd04ad9ec8f81e355d0a382c543ac6672c62f5a5b452ef142"
 dependencies = [
- "num-traits",
+ "num-traits 0.2.14",
  "rand 0.8.4",
 ]
 
@@ -4823,6 +4991,24 @@ dependencies = [
  "blake2b_simd",
  "constant_time_eq",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "rust-base58"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b313b91fcdc6719ad41fa2dad2b7e810b03833fae4bf911950e15529a5f04439"
+dependencies = [
+ "num 0.4.0",
+]
+
+[[package]]
+name = "rust-base58"
+version = "0.0.4"
+source = "git+https://github.com/mesalock-linux/rust-base58-sgx?rev=sgx_1.1.3#13fb3e0a543690e6e19332f37ba85fd74c56cb2f"
+dependencies = [
+ "num 0.2.0",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -5183,6 +5369,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-big-array"
+version = "0.3.0"
+source = "git+https://github.com/mesalock-linux/serde-big-array-sgx#94122c5167aee38b39b09a620a60db2c28cf7428"
+dependencies = [
+ "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde_derive 1.0.118",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.118"
 source = "git+https://github.com/mesalock-linux/serde-sgx#db0226f1d5d70fca6b96af2c285851502204e21c"
@@ -5321,9 +5516,14 @@ source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3#6cf73140
 dependencies = [
  "itertools",
  "libc",
+ "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
  "serde 1.0.130",
- "serde-big-array",
+ "serde-big-array 0.1.5",
+ "serde-big-array 0.3.0",
+ "serde_derive 1.0.118",
  "serde_derive 1.0.130",
+ "sgx_tcrypto",
+ "sgx_tstd",
  "sgx_types",
  "sgx_ucrypto",
 ]
@@ -5375,6 +5575,22 @@ version = "1.1.3"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3#6cf73140d5e9b05366a2ae4f8fe8141449e7204f"
 dependencies = [
  "syn 0.11.11",
+]
+
+[[package]]
+name = "sgx_tcrypto"
+version = "1.1.3"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3#6cf73140d5e9b05366a2ae4f8fe8141449e7204f"
+dependencies = [
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_tcrypto_helper"
+version = "1.1.3"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3#6cf73140d5e9b05366a2ae4f8fe8141449e7204f"
+dependencies = [
+ "sgx_crypto_helper",
 ]
 
 [[package]]
@@ -5567,8 +5783,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e82063457853d00243beda9952e910b82593e4b07ae9f721b9278a99a0d3d5c"
 dependencies = [
  "approx",
- "num-complex",
- "num-traits",
+ "num-complex 0.4.0",
+ "num-traits 0.2.14",
  "paste",
 ]
 
@@ -5690,7 +5906,7 @@ version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#f651d45ce5742bc60fe8ae518c035d1638ae83d2"
 dependencies = [
  "integer-sqrt",
- "num-traits",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "serde 1.0.130",
  "sp-debug-derive",
@@ -5794,7 +6010,7 @@ dependencies = [
  "libsecp256k1",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "merlin",
- "num-traits",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parity-util-mem",
  "parking_lot 0.11.2",
@@ -6063,7 +6279,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=master#f651d45c
 dependencies = [
  "hash-db",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "num-traits",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6226,7 +6442,7 @@ dependencies = [
  "approx",
  "lazy_static",
  "nalgebra",
- "num-traits",
+ "num-traits 0.2.14",
  "rand 0.8.4",
 ]
 
@@ -7201,7 +7417,7 @@ dependencies = [
  "libc",
  "memory_units",
  "num-rational 0.2.4",
- "num-traits",
+ "num-traits 0.2.14",
  "parity-wasm 0.42.2",
  "wasmi-validation",
 ]

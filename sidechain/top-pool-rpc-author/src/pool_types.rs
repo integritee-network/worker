@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,14 +15,19 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::api::SideChainApi;
+use itc_direct_rpc_server::{
+	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
+};
+use itc_tls_websocket_server::connection::TungsteniteWsConnection;
+use itp_types::Block;
+use its_top_pool::basic_pool::BasicPool;
 
-//! Itp-test crate which contains mocks and soon some fixtures.
+type Hash = sp_core::H256;
 
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, TungsteniteWsConnection>;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
+pub type EnclaveRpcResponder =
+	RpcResponder<EnclaveRpcConnectionRegistry, Hash, TungsteniteWsConnection>;
 
-pub mod mock;
+pub type BPool = BasicPool<SideChainApi<Block>, Block, EnclaveRpcResponder>;

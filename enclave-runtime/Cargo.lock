@@ -477,6 +477,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-io",
+ "itp-stf-state-handler",
  "itp-storage",
  "itp-storage-verifier",
  "itp-teerex-storage",
@@ -1263,6 +1264,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-stf-state-handler"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itp-settings",
+ "itp-sgx-crypto",
+ "itp-sgx-io",
+ "itp-types",
+ "lazy_static",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "rust-base58",
+ "sgx-externalities",
+ "sgx_tcrypto",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "itp-storage"
 version = "0.8.0"
 dependencies = [
@@ -1307,12 +1328,19 @@ name = "itp-test"
 version = "0.8.0"
 dependencies = [
  "derive_more",
+ "ita-stf",
  "itp-ocall-api",
+ "itp-sgx-crypto",
+ "itp-stf-state-handler",
  "itp-storage",
  "itp-storage-verifier",
  "itp-teerex-storage",
  "itp-types",
+ "its-top-pool",
+ "jsonrpc-core",
  "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tcrypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -1404,6 +1432,7 @@ dependencies = [
  "its-primitives",
  "its-state",
  "its-top-pool",
+ "its-top-pool-rpc-author",
  "its-validateer-fetch",
 ]
 
@@ -1445,6 +1474,30 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-top-pool-rpc-author"
+version = "0.8.0"
+dependencies = [
+ "derive_more",
+ "ita-stf",
+ "itc-direct-rpc-server",
+ "itc-tls-websocket-server",
+ "itp-sgx-crypto",
+ "itp-stf-state-handler",
+ "itp-test",
+ "itp-types",
+ "its-top-pool",
+ "jsonrpc-core",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx_tcrypto_helper",
+ "sgx_tstd",
+ "sgx_types",
  "sp-core",
  "sp-runtime",
  "thiserror 1.0.9",

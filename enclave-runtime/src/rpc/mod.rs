@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,14 +15,4 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-//! Itp-test crate which contains mocks and soon some fixtures.
-
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
-
-pub mod mock;
+pub mod worker_api_direct;

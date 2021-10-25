@@ -15,11 +15,17 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sync::SgxMutex as Mutex;
+
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+
 use std::{
 	default::Default,
 	sync::{
 		atomic::{AtomicPtr, Ordering},
-		Arc, SgxMutex,
+		Arc,
 	},
 };
 
@@ -35,14 +41,14 @@ impl AtomicContainer {
 
 	/// store and item in the container
 	pub fn store<T>(&self, item: T) {
-		let pool_ptr = Arc::new(SgxMutex::<T>::new(item));
+		let pool_ptr = Arc::new(Mutex::<T>::new(item));
 		let ptr = Arc::into_raw(pool_ptr);
 		self.atomic_ptr.store(ptr as *mut (), Ordering::SeqCst);
 	}
 
 	/// load an item from the container, returning a mutex
-	pub fn load<T>(&self) -> Option<&'static SgxMutex<T>> {
-		let ptr = self.atomic_ptr.load(Ordering::SeqCst) as *mut SgxMutex<T>;
+	pub fn load<T>(&self) -> Option<&'static Mutex<T>> {
+		let ptr = self.atomic_ptr.load(Ordering::SeqCst) as *mut Mutex<T>;
 		if ptr.is_null() {
 			None
 		} else {
@@ -57,7 +63,7 @@ impl Default for AtomicContainer {
 	}
 }
 
-#[cfg(feature = "test")]
+#[cfg(test)]
 pub mod tests {
 
 	use super::*;
@@ -73,6 +79,7 @@ pub mod tests {
 		data: Vec<u8>,
 	}
 
+	#[test]
 	pub fn store_and_load_works() {
 		let atomic_container = AtomicContainer::new();
 

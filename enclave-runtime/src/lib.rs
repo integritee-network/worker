@@ -35,16 +35,8 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
-	rpc::{
-		author::{
-			author_container::{GetAuthor, GlobalAuthorContainer},
-			AuthorTopFilter, OnBlockCreated, SendState,
-		},
-		pool_types::BPool,
-		worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
-	},
+	rpc::worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	sidechain_impl::{exec_aura_on_slot, ProposerFactory},
-	state::{GlobalFileStateHandler, HandleState},
 	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
 	utils::{
 		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
@@ -79,6 +71,9 @@ use itp_sgx_crypto::{
 };
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
+use itp_stf_state_handler::{
+	handle_state::HandleState, query_shard_state::QueryShardState, GlobalFileStateHandler,
+};
 use itp_storage::{StorageEntryVerified, StorageProof};
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::{Block, CallWorkerFn, Header, OpaqueCall, ShieldFundsFn, SignedBlock};
@@ -90,13 +85,17 @@ use its_sidechain::{
 	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::pool::Options as PoolOptions,
+	top_pool_rpc_author::{
+		api::SideChainApi,
+		author::{Author, AuthorTopFilter},
+		global_author_container::GlobalAuthorContainer,
+		hash::TrustedOperationOrHash,
+		pool_types::BPool,
+		traits::{AuthorApi, GetAuthor, OnBlockCreated, SendState},
+	},
 };
 use lazy_static::lazy_static;
 use log::*;
-use rpc::{
-	api::SideChainApi,
-	author::{hash::TrustedOperationOrHash, Author, AuthorApi},
-};
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_types::sgx_status_t;
 use sp_core::{blake2_256, crypto::Pair, H256};
@@ -122,7 +121,6 @@ use substrate_api_client::{
 mod attestation;
 mod ipfs;
 mod ocall;
-mod state;
 mod utils;
 
 pub mod cert;
@@ -416,7 +414,7 @@ pub unsafe extern "C" fn get_state(
 
 	let mut state = match state_handler.load_initialized(&shard) {
 		Ok(s) => s,
-		Err(e) => return e.into(),
+		Err(e) => return Error::StfStateHandler(e).into(),
 	};
 
 	debug!("calling into STF to get state");
@@ -714,7 +712,7 @@ where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	V: Validator<PB> + LightClientState<PB>,
-	OCallApi: EnclaveOnChainOCallApi,
+	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StateHandler: HandleState,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
@@ -820,10 +818,10 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OCallApi: EnclaveOnChainOCallApi,
+	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	RpcAuthor:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StateHandler: HandleState,
+	StateHandler: HandleState + QueryShardState,
 {
 	let shards = state_handler.list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
@@ -887,7 +885,7 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OCallApi: EnclaveOnChainOCallApi,
+	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	RpcAuthor: AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StateHandler: HandleState,
 {
@@ -1201,7 +1199,7 @@ pub fn scan_block_for_relevant_xt<PB, O, StateHandler>(
 ) -> Result<Vec<OpaqueCall>>
 where
 	PB: BlockT<Hash = H256>,
-	O: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StateHandler: HandleState,
 {
 	debug!("Scanning block {:?} for relevant xt", block.header().number());
@@ -1329,10 +1327,10 @@ fn handle_trusted_worker_call<PB, O>(
 ) -> Result<Option<(H256, H256)>>
 where
 	PB: BlockT<Hash = H256>,
-	O: EnclaveOnChainOCallApi,
+	O: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 {
 	debug!("query mrenclave of self");
-	let mrenclave = OcallApi.get_mrenclave_of_self()?;
+	let mrenclave = on_chain_ocall_api.get_mrenclave_of_self()?;
 	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 
 	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {

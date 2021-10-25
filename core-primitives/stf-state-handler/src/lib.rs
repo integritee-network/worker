@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -18,12 +17,33 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//! Itp-test crate which contains mocks and soon some fixtures.
-
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-pub mod mock;
+// re-export module to properly feature gate sgx and regular std environment
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use rust_base58_sgx as base58;
+	pub use thiserror_sgx as thiserror;
+}
+
+pub mod error;
+pub mod query_shard_state;
+
+#[cfg(feature = "sgx")]
+pub mod global_file_state_handler;
+
+#[cfg(feature = "sgx")]
+pub mod handle_state;
+
+#[cfg(feature = "sgx")]
+pub use global_file_state_handler::GlobalFileStateHandler;
+
+#[cfg(feature = "sgx")]
+mod file_io;
+
+#[cfg(all(feature = "test", feature = "sgx"))]
+pub mod tests;

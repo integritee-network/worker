@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,14 +15,18 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::error::Result;
+use itp_types::ShardIdentifier;
+use std::vec::Vec;
 
-//! Itp-test crate which contains mocks and soon some fixtures.
+/// Trait for querying shard information on the state
+///
+/// The reason this is a separate trait, is that it does not require any
+/// SGX exclusive data structures (feature sgx)
+pub trait QueryShardState {
+	/// Query whether a given shard exists
+	fn exists(&self, shard: &ShardIdentifier) -> bool;
 
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
-
-pub mod mock;
+	/// List all available shards
+	fn list_shards(&self) -> Result<Vec<ShardIdentifier>>;
+}
