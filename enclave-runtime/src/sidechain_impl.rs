@@ -4,7 +4,7 @@
 //! move most parts here to the sidechain crate.
 
 use crate::{
-	exec_tops, prepare_and_send_xts_and_block,
+	exec_trusted_calls, prepare_and_send_xts_and_block,
 	rpc::author::{AuthorApi, OnBlockCreated, SendState},
 	state::HandleState,
 	Result as EnclaveResult,
@@ -110,7 +110,7 @@ where
 	StateHandler: HandleState + Send + Sync + 'static,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
-		let (calls, blocks) = exec_tops::<PB, SB, _, _, _>(
+		let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _, _>(
 			self.ocall_api.as_ref(),
 			self.author.as_ref(),
 			self.state_handler.as_ref(),

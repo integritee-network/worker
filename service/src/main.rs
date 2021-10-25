@@ -75,7 +75,7 @@ use std::{
 		Arc,
 	},
 	thread,
-	time::{Duration, SystemTime},
+	time::{Duration, Instant},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
 
@@ -344,7 +344,7 @@ fn start_worker<E, T, D>(
 	println!("*** [+] Finished syncing light client\n");
 
 	// ------------------------------------------------------------------------
-	// start interval block production
+	// start interval block production (execution of trusted calls, sidechain block production)
 	let side_chain_enclave_api = enclave.clone();
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
@@ -354,17 +354,28 @@ fn start_worker<E, T, D>(
 	// ------------------------------------------------------------------------
 	// start parentchain syncing loop (subscribe to header updates)
 	let api4 = node_api.clone();
+	let parentchain_sync_enclave_api = enclave.clone();
 	thread::Builder::new()
 		.name("parent_chain_sync_loop".to_owned())
 		.spawn(move || {
 			if let Err(e) = subscribe_to_parentchain_new_headers(
-				enclave.clone().as_ref(),
+				parentchain_sync_enclave_api.as_ref(),
 				&api4,
 				last_synced_header,
 			) {
 				error!("Parentchain block syncing terminated with a failure: {:?}", e);
 			}
 			println!("[+] Parentchain block syncing has terminated");
+		})
+		.unwrap();
+
+	//-------------------------------------------------------------------------
+	// start execution of trusted getters
+	let trusted_getters_enclave_api = enclave;
+	thread::Builder::new()
+		.name("trusted_getters_execution".to_owned())
+		.spawn(move || {
+			start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
 		})
 		.unwrap();
 
@@ -404,22 +415,55 @@ fn start_worker<E, T, D>(
 	}
 }
 
-/// Triggers the enclave to produce a block based on a fixed time schedule
+/// Triggers the enclave to produce a block based on a fixed time schedule.
 fn start_interval_block_production<E: EnclaveBase + SideChain>(enclave_api: &E) {
 	use itp_settings::sidechain::SLOT_DURATION;
 
-	let mut interval_start = SystemTime::now();
-	loop {
-		if let Ok(elapsed) = interval_start.elapsed() {
-			if elapsed >= SLOT_DURATION {
-				// update interval time
-				interval_start = SystemTime::now();
-				execute_trusted_operations(enclave_api);
-			} else {
-				// sleep for the rest of the interval
-				let sleep_time = SLOT_DURATION - elapsed;
-				thread::sleep(sleep_time);
+	schedule_on_repeating_intervals(
+		|| {
+			execute_trusted_calls(enclave_api);
+		},
+		SLOT_DURATION,
+	);
+}
+
+/// Starts the execution of trusted getters in repeating intervals.
+///
+/// The getters are executed in a pre-defined slot duration.
+fn start_interval_trusted_getter_execution<E: SideChain>(enclave_api: &E) {
+	use itp_settings::enclave::TRUSTED_GETTERS_SLOT_DURATION;
+
+	schedule_on_repeating_intervals(
+		|| {
+			if let Err(e) = enclave_api.execute_trusted_getters() {
+				error!("Execution of trusted getters failed: {:?}", e);
 			}
+		},
+		TRUSTED_GETTERS_SLOT_DURATION,
+	);
+}
+
+/// Schedules a task on perpetually looping intervals.
+///
+/// In case the task takes longer than is scheduled by the interval duration,
+/// the interval timing will drift. The task is responsible for
+/// ensuring it does not use up more time than is scheduled.
+fn schedule_on_repeating_intervals<T>(task: T, interval_duration: Duration)
+where
+	T: Fn(),
+{
+	let mut interval_start = Instant::now();
+	loop {
+		let elapsed = interval_start.elapsed();
+
+		if elapsed >= interval_duration {
+			// update interval time
+			interval_start = Instant::now();
+			task();
+		} else {
+			// sleep for the rest of the interval
+			let sleep_time = interval_duration - elapsed;
+			thread::sleep(sleep_time);
 		}
 	}
 }
@@ -546,7 +590,7 @@ pub fn init_light_client<E: EnclaveBase + SideChain>(
 
 	info!("Execute trusted operations for the first time and start side chain block production");
 
-	execute_trusted_operations(enclave_api);
+	execute_trusted_calls(enclave_api);
 
 	latest_synced_header
 }
@@ -621,8 +665,8 @@ pub fn sync_parentchain<E: EnclaveBase + SideChain>(
 /// Execute trusted operations in the enclave
 ///
 ///
-pub fn execute_trusted_operations<E: SideChain>(enclave_api: &E) {
-	if let Err(e) = enclave_api.execute_trusted_operations() {
+fn execute_trusted_calls<E: SideChain>(enclave_api: &E) {
+	if let Err(e) = enclave_api.execute_trusted_calls() {
 		error!("{:?}", e);
 	};
 }

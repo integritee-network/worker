@@ -32,7 +32,9 @@ pub trait SideChain: Send + Sync + 'static {
 		nonce: u32,
 	) -> EnclaveResult<()>;
 
-	fn execute_trusted_operations(&self) -> EnclaveResult<()>;
+	fn execute_trusted_getters(&self) -> EnclaveResult<()>;
+
+	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
 }
 
 impl SideChain for Enclave {
@@ -60,10 +62,21 @@ impl SideChain for Enclave {
 		Ok(())
 	}
 
-	fn execute_trusted_operations(&self) -> EnclaveResult<()> {
+	fn execute_trusted_getters(&self) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
-		let result = unsafe { ffi::execute_trusted_operations(self.eid, &mut retval) };
+		let result = unsafe { ffi::execute_trusted_getters(self.eid, &mut retval) };
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
+	}
+
+	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let result = unsafe { ffi::execute_trusted_calls(self.eid, &mut retval) };
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));

@@ -267,7 +267,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
 			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
@@ -315,14 +315,15 @@ fn test_create_state_diff() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, signed_blocks) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
-		&OcallApi,
-		&rpc_author,
-		state_handler.as_ref(),
-		&latest_parentchain_header(),
-		MAX_TRUSTED_OPS_EXEC_DURATION,
-	)
-	.unwrap();
+	let (_, signed_blocks) =
+		crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+			&OcallApi,
+			&rpc_author,
+			state_handler.as_ref(),
+			&latest_parentchain_header(),
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+		)
+		.unwrap();
 
 	let state_payload = state_payload_from_encrypted(signed_blocks[index].block().state_payload());
 	let state_diff = state_payload.state_update();
@@ -356,7 +357,7 @@ fn test_executing_call_updates_account_nonce() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
+	let (_, _) = crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
 		state_handler.as_ref(),
@@ -385,7 +386,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
+	let (_, _) = crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
 		state_handler.as_ref(),
@@ -418,7 +419,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_tops_for_all_shards::<Block, SignedBlock, _, _, _>(
+	let (_, _) = crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
 		&OcallApi,
 		&rpc_author,
 		state_handler.as_ref(),
