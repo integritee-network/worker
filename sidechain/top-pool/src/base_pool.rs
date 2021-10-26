@@ -21,28 +21,24 @@
 //! For a more full-featured pool, have a look at the `pool` module.
 
 pub extern crate alloc;
-use alloc::{fmt, sync::Arc, vec::Vec};
-
-use std::collections::HashSet;
-
-use core::{hash, iter};
-
-use sp_runtime::traits::Member;
-
-use log::{debug, trace, warn};
-use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::transaction_validity::{
-	TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
-};
-
-use ita_stf::ShardIdentifier;
-
-use crate::top_pool::{
+use crate::{
 	error,
 	future::{FutureTrustedOperations, WaitingTrustedOperations},
 	primitives::{InPoolOperation, PoolStatus, TrustedOperationSource as Source},
 	ready::ReadyOperations,
 };
+use alloc::{fmt, sync::Arc, vec, vec::Vec};
+use core::{hash, iter};
+use ita_stf::ShardIdentifier;
+use log::{debug, trace, warn};
+use sp_core::hexdisplay::HexDisplay;
+use sp_runtime::{
+	traits::Member,
+	transaction_validity::{
+		TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
+	},
+};
+use std::collections::HashSet;
 
 /// Successful import result.
 #[derive(Debug, PartialEq, Eq)]
@@ -569,8 +565,7 @@ impl Limit {
 	}
 }
 
-/// Tests
-#[cfg(feature = "test")]
+#[cfg(test)]
 pub mod tests {
 
 	use super::*;
@@ -582,6 +577,7 @@ pub mod tests {
 		BasePool::default()
 	}
 
+	#[test]
 	pub fn test_should_import_transaction_to_ready() {
 		// given
 		let mut pool = test_pool();
@@ -609,6 +605,7 @@ pub mod tests {
 		assert_eq!(pool.ready.len(shard), 1);
 	}
 
+	#[test]
 	pub fn test_should_not_import_same_transaction_twice() {
 		// given
 		let mut pool = test_pool();
@@ -651,6 +648,7 @@ pub mod tests {
 		assert_eq!(pool.ready.len(shard), 1);
 	}
 
+	#[test]
 	pub fn test_should_import_transaction_to_future_and_promote_it_later() {
 		// given
 		let mut pool = test_pool();
@@ -695,6 +693,7 @@ pub mod tests {
 		assert_eq!(pool.ready.len(shard), 2);
 	}
 
+	#[test]
 	pub fn test_should_promote_a_subgraph() {
 		// given
 		let mut pool = test_pool();
@@ -801,6 +800,7 @@ pub mod tests {
 		);
 	}
 
+	#[test]
 	pub fn test_should_handle_a_cycle() {
 		// given
 		let shard = ShardIdentifier::default();
@@ -892,6 +892,7 @@ pub mod tests {
 		assert_eq!(pool.future.len(shard), 0);
 	}
 
+	#[test]
 	pub fn test_should_handle_a_cycle_with_low_priority() {
 		// given
 		let mut pool = test_pool();
@@ -981,6 +982,7 @@ pub mod tests {
 		}
 	}
 
+	#[test]
 	pub fn test_can_track_heap_size() {
 		let mut pool = test_pool();
 		let shard = ShardIdentifier::default();
@@ -1018,6 +1020,7 @@ pub mod tests {
 		//assert!(parity_util_mem::malloc_size(&pool) > 5000);
 	}
 
+	#[test]
 	pub fn test_should_remove_invalid_transactions() {
 		// given
 		let shard = ShardIdentifier::default();
@@ -1124,6 +1127,7 @@ pub mod tests {
 		assert_eq!(pool.future.len(shard), 0);
 	}
 
+	#[test]
 	pub fn test_should_prune_ready_transactions() {
 		// given
 		let mut pool = test_pool();
@@ -1225,6 +1229,7 @@ pub mod tests {
 		assert_eq!(pool.ready(shard).count(), 3);
 	}
 
+	#[test]
 	pub fn test_transaction_debug() {
 		assert_eq!(
 			format!(
@@ -1248,6 +1253,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		);
 	}
 
+	#[test]
 	pub fn test_transaction_propagation() {
 		assert!(TrustedOperation {
 			data: vec![4u8],
@@ -1276,6 +1282,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		.is_propagable());
 	}
 
+	#[test]
 	pub fn test_should_reject_future_transactions() {
 		// given
 		let mut pool = test_pool();
@@ -1306,6 +1313,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		}
 	}
 
+	#[test]
 	pub fn test_should_clear_future_queue() {
 		// given
 		let mut pool = test_pool();
@@ -1338,6 +1346,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		assert_eq!(pool.future.len(shard), 0);
 	}
 
+	#[test]
 	pub fn test_should_accept_future_transactions_when_explicitly_asked_to() {
 		// given
 		let mut pool = test_pool();

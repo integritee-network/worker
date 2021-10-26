@@ -16,17 +16,7 @@
 
 */
 
-use crate::{
-	rpc::error,
-	top_pool::{
-		base_pool::TrustedOperation,
-		error::Error,
-		primitives::{
-			ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
-			TrustedOperationSource, TxHash,
-		},
-	},
-};
+use crate::rpc::error;
 use codec::Encode;
 use core::{future::Future, pin::Pin};
 use frame_support::sp_runtime::{
@@ -35,6 +25,14 @@ use frame_support::sp_runtime::{
 };
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::{Block, BlockHash as SidechainBlockHash, H256};
+use its_sidechain::top_pool::{
+	base_pool::TrustedOperation,
+	error::Error,
+	primitives::{
+		ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
+		TrustedOperationSource, TxHash,
+	},
+};
 use jsonrpc_core::futures::future::ready;
 use std::{
 	boxed::Box,

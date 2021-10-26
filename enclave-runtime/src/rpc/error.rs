@@ -18,20 +18,15 @@
 
 //! State RPC errors.
 
-use jsonrpc_core as rpc;
-
-use std::error;
-
 pub extern crate alloc;
-use alloc::{boxed::Box, string::String};
-
-use core::pin::Pin;
-
-use crate::top_pool::error::{Error as PoolError, IntoPoolError};
 
 use crate::rpc::author::client_error::Error as ClientError;
-
+use alloc::{boxed::Box, string::String};
+use core::pin::Pin;
 use derive_more::{Display, From};
+use its_sidechain::top_pool::error::{Error as PoolError, IntoPoolError};
+use jsonrpc_core as rpc;
+use std::error;
 
 /// State RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;

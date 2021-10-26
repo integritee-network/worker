@@ -18,13 +18,11 @@
 
 //! Authoring RPC module errors.
 
-use jsonrpc_core as rpc_core;
-
 pub extern crate alloc;
+
 use alloc::boxed::Box;
 use derive_more::{Display, From};
-
-use crate::top_pool;
+use jsonrpc_core as rpc_core;
 
 /// Author RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;
@@ -38,7 +36,7 @@ pub enum Error {
 	Client(Box<dyn std::error::Error + Send>),
 	/// TrustedOperation pool error,
 	#[display(fmt = "TrustedOperation pool error: {}", _0)]
-	Pool(top_pool::error::Error),
+	Pool(its_sidechain::top_pool::error::Error),
 	/// Verification error
 	#[display(fmt = "Extrinsic verification error")]
 	#[from(ignore)]
@@ -109,7 +107,7 @@ const UNSUPPORTED_KEY_TYPE: i64 = POOL_INVALID_TX + 7;
 
 impl From<Error> for rpc_core::Error {
 	fn from(e: Error) -> Self {
-		use top_pool::error::Error as PoolError;
+		use its_sidechain::top_pool::error::Error as PoolError;
 
 		match e {
 			Error::BadFormat => rpc_core::Error {

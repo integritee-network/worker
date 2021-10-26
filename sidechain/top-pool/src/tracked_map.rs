@@ -18,14 +18,12 @@
 
 pub extern crate alloc;
 use alloc::sync::Arc;
-
-use std::collections::{hash_map::Values, HashMap};
-
 use core::{
 	clone::Clone,
 	cmp, hash,
 	sync::atomic::{AtomicIsize, Ordering as AtomicOrdering},
 };
+use std::collections::{hash_map::Values, HashMap};
 
 //use parking_lot::{RwLock, RwLockWriteGuard, RwLockReadGuard};
 
@@ -164,6 +162,7 @@ where
 	}
 }
 
+#[cfg(test)]
 pub mod tests {
 
 	use super::*;
@@ -173,6 +172,8 @@ pub mod tests {
 			*self as usize / 10
 		}
 	}
+
+	#[test]
 	pub fn test_basic() {
 		let mut map = TrackedMap::default();
 		map.write().insert(5, 10);

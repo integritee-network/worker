@@ -1402,12 +1402,6 @@ checksum = "fed34cd105917e91daa4da6b3728c47b068749d6a62c59811f06ed2ac71d9da7"
 
 [[package]]
 name = "futures"
-version = "0.1.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a471a38ef8ed83cd6e40aa59c1ffe17db6855c18e3604d9c4ed8c08ebc28678"
-
-[[package]]
-name = "futures"
 version = "0.3.8"
 source = "git+https://github.com/mesalock-linux/futures-rs-sgx#d54882f24ddf7d61327a067b2f608d6940a36444"
 dependencies = [
@@ -2415,7 +2409,7 @@ version = "0.8.0"
 dependencies = [
  "itc-tls-websocket-server",
  "itp-types",
- "jsonrpc-core 14.2.0",
+ "jsonrpc-core 16.0.0",
  "jsonrpc-core 16.1.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -2710,7 +2704,7 @@ dependencies = [
 
 [[package]]
 name = "its-consensus-aura"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "env_logger 0.9.0",
  "frame-support",
@@ -2746,7 +2740,7 @@ dependencies = [
 
 [[package]]
 name = "its-consensus-slots"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "itp-sgx-io",
@@ -2775,19 +2769,20 @@ dependencies = [
 
 [[package]]
 name = "its-sidechain"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "its-consensus-aura",
  "its-consensus-common",
  "its-consensus-slots",
  "its-primitives",
  "its-state",
+ "its-top-pool",
  "its-validateer-fetch",
 ]
 
 [[package]]
 name = "its-state"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "frame-support",
  "itp-storage",
@@ -2806,8 +2801,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-top-pool"
+version = "0.8.0"
+dependencies = [
+ "byteorder 1.4.3",
+ "derive_more",
+ "ita-stf",
+ "itc-direct-rpc-server",
+ "itp-types",
+ "its-primitives",
+ "jsonrpc-core 16.0.0",
+ "jsonrpc-core 16.1.0",
+ "linked-hash-map 0.5.2",
+ "linked-hash-map 0.5.4",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "retain_mut",
+ "serde 1.0.130",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.29",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "its-validateer-fetch"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "frame-support",
@@ -2850,11 +2873,11 @@ checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
 
 [[package]]
 name = "jsonrpc-core"
-version = "14.2.0"
+version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0747307121ffb9703afd93afbd0fb4f854c38fb873f2c8b90e0e902f27c7b62"
+checksum = "6a47c4c3ac843f9a4238943f97620619033dadef4b378cd1e8addd170de396b3"
 dependencies = [
- "futures 0.1.31",
+ "futures 0.3.17",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.130",
  "serde_derive 1.0.130",
@@ -3114,6 +3137,20 @@ dependencies = [
  "subtle 2.4.1",
  "typenum",
 ]
+
+[[package]]
+name = "linked-hash-map"
+version = "0.5.2"
+source = "git+https://github.com/mesalock-linux/linked-hash-map-sgx#03e763f7c251c16e0b85e2fb058ba47be52f2a49"
+dependencies = [
+ "sgx_tstd",
+]
+
+[[package]]
+name = "linked-hash-map"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "linregress"
@@ -4709,6 +4746,12 @@ checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
 dependencies = [
  "winapi 0.3.9",
 ]
+
+[[package]]
+name = "retain_mut"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "448296241d034b96c11173591deaa1302f2c17b56092106c1f92c1bc0183a8c9"
 
 [[package]]
 name = "ring"

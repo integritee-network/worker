@@ -21,15 +21,18 @@
 //! Keeps only recent extrinsic and discard the ones kept for a significant amount of time.
 //! Discarded extrinsics are banned so that they don't get re-imported again.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
+use crate::base_pool::TrustedOperation;
 use std::{
 	collections::HashMap,
 	hash, iter,
-	sync::SgxRwLock,
 	time::{Duration, Instant},
-	untrusted::time::InstantEx,
 };
-
-use crate::top_pool::base_pool::TrustedOperation;
 
 /// Expected size of the banned extrinsics cache.
 const EXPECTED_SIZE: usize = 2048;
@@ -42,7 +45,7 @@ pub struct PoolRotator<Hash> {
 	/// How long the extrinsic is banned for.
 	ban_time: Duration,
 	/// Currently banned extrinsics.
-	banned_until: SgxRwLock<HashMap<Hash, Instant>>,
+	banned_until: RwLock<HashMap<Hash, Instant>>,
 }
 
 impl<Hash: hash::Hash + Eq> Default for PoolRotator<Hash> {
@@ -99,9 +102,10 @@ impl<Hash: hash::Hash + Eq + Clone + core::fmt::Debug> PoolRotator<Hash> {
 	}
 }
 
+#[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::top_pool::primitives::TrustedOperationSource;
+	use crate::primitives::TrustedOperationSource;
 
 	type Hash = u64;
 	type Ex = ();
@@ -127,6 +131,7 @@ pub mod tests {
 		(hash, tx)
 	}
 
+	#[test]
 	pub fn test_should_not_ban_if_not_stale() {
 		// given
 		let (hash, tx) = tx();
@@ -142,6 +147,7 @@ pub mod tests {
 		assert!(!rotator.is_banned(&hash));
 	}
 
+	#[test]
 	pub fn test_should_ban_stale_extrinsic() {
 		// given
 		let (hash, tx) = tx();
@@ -155,6 +161,7 @@ pub mod tests {
 		assert!(rotator.is_banned(&hash));
 	}
 
+	#[test]
 	pub fn test_should_clear_banned() {
 		// given
 		let (hash, tx) = tx();
@@ -170,6 +177,7 @@ pub mod tests {
 		assert!(!rotator.is_banned(&hash));
 	}
 
+	#[test]
 	pub fn test_should_garbage_collect() {
 		// given
 		fn tx_with(i: u64, valid_till: u64) -> TrustedOperation<Hash, Ex> {

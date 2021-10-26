@@ -15,23 +15,17 @@
 
 */
 
-//! Reexport all the sidechain stuff in one crate
+use crate::{rpc::api::SideChainApi, Hash};
+use itc_direct_rpc_server::{
+	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
+};
+use itc_tls_websocket_server::connection::TungsteniteWsConnection;
+use itp_types::Block;
+use its_sidechain::top_pool::basic_pool::BasicPool;
 
-#![cfg_attr(not(feature = "std"), no_std)]
+type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, TungsteniteWsConnection>;
 
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+pub type EnclaveRpcResponder =
+	RpcResponder<EnclaveRpcConnectionRegistry, Hash, TungsteniteWsConnection>;
 
-pub use its_consensus_aura as aura;
-
-pub use its_consensus_common as consensus_common;
-
-pub use its_consensus_slots as slots;
-
-pub use its_primitives as primitives;
-
-pub use its_state as state;
-
-pub use its_top_pool as top_pool;
-
-pub use its_validateer_fetch as validateer_fetch;
+pub type BPool = BasicPool<SideChainApi<Block>, Block, EnclaveRpcResponder>;

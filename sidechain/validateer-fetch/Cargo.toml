@@ -1,6 +1,7 @@
 [package]
 name = "its-validateer-fetch"
-version = "0.1.0"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]

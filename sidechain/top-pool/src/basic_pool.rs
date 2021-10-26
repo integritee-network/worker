@@ -1,6 +1,15 @@
 pub extern crate alloc;
 
-use crate::top_pool::{
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxMutex as Mutex;
+
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+
+use crate::{
 	base_pool::TrustedOperation,
 	error::{Error, IntoPoolError},
 	pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
@@ -9,11 +18,11 @@ use crate::top_pool::{
 		TrustedOperationSource, TxHash,
 	},
 };
-use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, string::String, sync::Arc};
 use core::pin::Pin;
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
-use its_sidechain::primitives::types::BlockHash as SidechainBlockHash;
+use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
 	channel::oneshot,
 	future::{ready, Future, FutureExt},
@@ -22,7 +31,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, NumberFor, Zero},
 };
-use std::{collections::HashMap, sync::SgxMutex as Mutex};
+use std::{collections::HashMap, format, vec, vec::Vec};
 
 type BoxedReadyIterator<Hash, Data> =
 	Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;

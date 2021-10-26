@@ -1,14 +1,17 @@
 // File replacing substrate crate sp_transaction_pool::{error, PoolStatus};
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 extern crate alloc;
-use crate::top_pool::error;
+use crate::error;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use byteorder::{BigEndian, ByteOrder};
 use codec::{Decode, Encode};
 use core::{hash::Hash, pin::Pin};
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
-use jsonrpc_core::futures::{channel, Future, Stream};
+use jsonrpc_core::futures::{channel::mpsc::Receiver, Future, Stream};
 use sp_core::H256;
 use sp_runtime::{
 	generic::BlockId,
@@ -114,7 +117,7 @@ pub type TrustedOperationStatusStream<Hash, BlockHash> =
 	dyn Stream<Item = TrustedOperationStatus<Hash, BlockHash>> + Send + Unpin;
 
 /// The import notification event stream.
-pub type ImportNotificationStream<H> = channel::mpsc::Receiver<H>;
+pub type ImportNotificationStream<H> = Receiver<H>;
 
 /// TrustedOperation hash type for a pool.
 pub type TxHash<P> = <P as TrustedOperationPool>::Hash;
@@ -300,13 +303,13 @@ pub fn from_low_u64_to_be_h256(val: u64) -> H256 {
 	H256::from_slice(&bytes)
 }
 
-/// test
-#[cfg(feature = "test")]
+#[cfg(test)]
 pub mod tests {
 
 	use super::*;
 	use alloc::string::ToString;
 
+	#[test]
 	pub fn test_h256() {
 		let tests = vec![
 			(

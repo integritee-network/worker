@@ -26,6 +26,7 @@ members = [
     "sidechain/consensus/common",
     "sidechain/consensus/slots",
     "sidechain/state",
+    "sidechain/top-pool",
     "app-libs/stf",
     "service",
     "core/rpc-client",

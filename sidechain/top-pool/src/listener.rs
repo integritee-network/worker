@@ -16,14 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::top_pool::watcher::Watcher;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+use crate::watcher::Watcher;
 use codec::Encode;
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use linked_hash_map::LinkedHashMap;
 use log::{debug, trace};
 use sp_runtime::traits;
-use std::{collections::HashMap, hash, string::String, sync::Arc, vec::Vec};
+use std::{collections::HashMap, hash, string::String, sync::Arc, vec, vec::Vec};
 
 /// Extrinsic pool default listener.
 #[derive(Default)]

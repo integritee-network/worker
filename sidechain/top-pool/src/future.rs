@@ -18,19 +18,19 @@
 
 pub extern crate alloc;
 
-use alloc::{boxed::Box, fmt, sync::Arc, vec::Vec};
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::untrusted::time::InstantEx;
+
+use crate::base_pool::TrustedOperation;
+use alloc::{boxed::Box, fmt, sync::Arc, vec, vec::Vec};
 use core::hash;
-
-use std::collections::{HashMap, HashSet};
-
+use ita_stf::ShardIdentifier;
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::TransactionTag as Tag;
-
-use std::{time::Instant, untrusted::time::InstantEx};
-
-use ita_stf::ShardIdentifier;
-
-use crate::top_pool::base_pool::TrustedOperation;
+use std::{
+	collections::{HashMap, HashSet},
+	time::Instant,
+};
 
 /// TrustedOperation with partially satisfied dependencies.
 pub struct WaitingTrustedOperations<Hash, Ex> {
@@ -142,6 +142,7 @@ every hash from `wanted_tags` is always present in `waiting`;
 qed
 #";
 
+#[allow(clippy::len_without_is_empty)]
 impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	/// Import operation to Future queue.
 	///
