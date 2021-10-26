@@ -26,15 +26,28 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use crate::{
+	cert, io,
+	ocall::OcallApi,
+	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
+	Result as EnclaveResult,
+};
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
+use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_settings::{
+	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
+	node::{REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE},
+};
+use itp_sgx_crypto::Ed25519Seal;
+use itp_sgx_io::SealedIO;
 use log::*;
 use sgx_rand::*;
 use sgx_tcrypto::*;
 use sgx_tse::*;
 use sgx_types::*;
-use sp_core::Pair;
+use sp_core::{blake2_256, Pair};
 use std::{
 	io::{Read, Write},
 	net::TcpStream,
@@ -45,21 +58,6 @@ use std::{
 	vec::Vec,
 };
 use substrate_api_client::compose_extrinsic_offline;
-
-use itp_settings::{
-	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
-	node::{REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE},
-};
-
-use crate::{
-	cert, hex, io,
-	ocall::OcallApi,
-	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
-	Result as EnclaveResult,
-};
-use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::Ed25519Seal;
-use itp_sgx_io::SealedIO;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -406,9 +404,32 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 }
 
 fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-	io::read_to_string(filename)
-		.map(|contents| hex::decode_spid(&contents))
-		.sgx_error()?
+	match io::read_to_string(filename).map(|contents| decode_spid(&contents)) {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Failed to load SPID: {:?}", e);
+			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		},
+	}
+}
+
+fn decode_spid(hex_encoded_string: &str) -> SgxResult<sgx_spid_t> {
+	let mut spid = sgx_spid_t::default();
+	let hex = hex_encoded_string.trim();
+
+	if hex.len() < itp_settings::files::SPID_MIN_LENGTH {
+		error!(
+			"Input spid length ({}) is incorrect, minimum length required is {}",
+			hex.len(),
+			itp_settings::files::SPID_MIN_LENGTH
+		);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
+
+	let decoded_vec = hex::decode(hex).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+
+	spid.id.copy_from_slice(&decoded_vec[..16]);
+	Ok(spid)
 }
 
 fn get_ias_api_key() -> SgxResult<String> {
@@ -517,14 +538,11 @@ pub unsafe extern "C" fn perform_ra(
 		RUNTIME_TRANSACTION_VERSION
 	);
 
-	let encoded = xt.encode();
-	debug!(
-		"    [Enclave] Encoded extrinsic ( len = {} B) = {}",
-		encoded.len(),
-		hex::encode_hex(&encoded)
-	);
+	let xt_encoded = xt.encode();
+	let xt_hash = blake2_256(&xt_encoded);
+	debug!("    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}", xt_encoded.len(), xt_hash);
 
-	write_slice_and_whitespace_pad(extrinsic_slice, encoded);
+	write_slice_and_whitespace_pad(extrinsic_slice, xt_encoded);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -549,4 +567,20 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 
 	sgx_status_t::SGX_SUCCESS
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+	use super::*;
+
+	pub fn decode_spid_works() {
+		let spid_encoded = "F39ABCF95015A5BF6C7D360EF5035E12";
+		let expected_spid = sgx_spid_t {
+			id: [243, 154, 188, 249, 80, 21, 165, 191, 108, 125, 54, 14, 245, 3, 94, 18],
+		};
+
+		let decoded_spid = decode_spid(spid_encoded).unwrap();
+		assert_eq!(decoded_spid.id, expected_spid.id);
+	}
 }

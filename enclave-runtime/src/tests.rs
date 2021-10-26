@@ -15,6 +15,7 @@
 */
 
 use crate::{
+	attestation,
 	ocall::OcallApi,
 	rpc,
 	rpc::author::{
@@ -70,6 +71,7 @@ type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, Sh
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
+		attestation::tests::decode_spid_works,
 		state::tests::test_write_and_load_state_works,
 		state::tests::test_sgx_state_decode_encode_works,
 		state::tests::test_encrypt_decrypt_state_type_works,

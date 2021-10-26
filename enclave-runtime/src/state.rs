@@ -17,7 +17,6 @@
 
 use crate::{
 	error::{Error, Result},
-	hex, io,
 	utils::UnwrapOrSgxErrorUnexpected,
 };
 use base58::{FromBase58, ToBase58};
@@ -25,7 +24,7 @@ use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, State as StfState, StateType as StfStateType, Stf};
 use itp_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use itp_sgx_crypto::{AesSeal, StateCrypto};
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::{read as io_read, write as io_write, SealedIO};
 use lazy_static::lazy_static;
 use log::*;
 use sgx_tcrypto::rsgx_sha256_slice;
@@ -168,13 +167,9 @@ fn write(state: StfState, shard: &ShardIdentifier) -> Result<H256> {
 
 	let state_hash = rsgx_sha256_slice(&cyphertext)?;
 
-	debug!(
-		"new encrypted state with hash=0x{} written to {}",
-		hex::encode_hex(&state_hash),
-		state_path
-	);
+	debug!("new encrypted state with hash={:?} written to {}", state_hash, state_path);
 
-	io::write(&cyphertext, &state_path)?;
+	io_write(&cyphertext, &state_path)?;
 	Ok(state_hash.into())
 }
 
@@ -191,14 +186,14 @@ fn init_shard(shard: &ShardIdentifier) -> Result<()> {
 }
 
 fn read(path: &str) -> Result<Vec<u8>> {
-	let mut bytes = io::read(path)?;
+	let mut bytes = io_read(path)?;
 
 	if bytes.is_empty() {
 		return Ok(bytes)
 	}
 
 	let state_hash = rsgx_sha256_slice(&bytes)?;
-	debug!("read encrypted state with hash 0x{} from {}", hex::encode_hex(&state_hash), path);
+	debug!("read encrypted state with hash {:?} from {}", state_hash, path);
 
 	AesSeal::unseal().map(|key| key.decrypt(&mut bytes))??;
 	trace!("buffer decrypted = {:?}", bytes);
@@ -210,7 +205,7 @@ fn read(path: &str) -> Result<Vec<u8>> {
 fn write_encrypted(bytes: &mut Vec<u8>, path: &str) -> Result<sgx_status_t> {
 	debug!("plaintext data to be written: {:?}", bytes);
 	AesSeal::unseal().map(|key| key.encrypt(bytes))?;
-	io::write(&bytes, path)?;
+	io_write(&bytes, path)?;
 	Ok(sgx_status_t::SGX_SUCCESS)
 }
 
