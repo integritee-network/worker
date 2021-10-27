@@ -16,7 +16,7 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # substrate deps
-frame-metadata = { version = "14.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+frame-metadata = { version = "14.0.0", features = ["v13"], default-features = false, git = "https://github.com/paritytech/frame-metadata.git", branch = "main" }
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
