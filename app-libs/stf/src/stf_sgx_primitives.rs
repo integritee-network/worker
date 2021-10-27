@@ -15,14 +15,9 @@
 
 */
 
-use crate::{AccountId, Index};
 use codec::{Decode, Encode};
-use derive_more::Display;
 use itp_types::H256;
-use sgx_tstd as std;
 use std::prelude::v1::*;
-
-pub type StfResult<T> = Result<T, StfError>;
 
 pub mod types {
 	pub use sgx_runtime::{Balance, Index};
@@ -72,20 +67,4 @@ impl StatePayload {
 			state_update: update,
 		}
 	}
-}
-
-#[derive(Debug, Display, PartialEq, Eq)]
-pub enum StfError {
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
-	MissingPrivileges(AccountId),
-	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
-	Dispatch(String),
-	#[display(fmt = "Not enough funds to perform operation")]
-	MissingFunds,
-	#[display(fmt = "Account does not exist {:?}", _0)]
-	InexistentAccount(AccountId),
-	#[display(fmt = "Invalid Nonce {:?}", _0)]
-	InvalidNonce(Index),
-	StorageHashMismatch,
-	InvalidStorageDiff,
 }

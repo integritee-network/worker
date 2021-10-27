@@ -16,6 +16,7 @@ members = [
     "core-primitives/settings",
     "core-primitives/sgx/crypto",
     "core-primitives/sgx/io",
+    "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
     "core-primitives/storage",
     "core-primitives/test",

@@ -14,10 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{
-	stf_sgx_primitives::{types::*, StfError, StfResult},
-	AccountId, Index,
-};
+use crate::{stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult};
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use log_sgx::*;

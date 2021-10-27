@@ -15,7 +15,7 @@
 
 */
 
-use crate::{helpers::get_account_info, stf_sgx_primitives::StfError};
+use crate::{helpers::get_account_info, StfError};
 use itp_storage::storage_value_key;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTrait;

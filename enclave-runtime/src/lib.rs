@@ -71,6 +71,10 @@ use itp_sgx_crypto::{
 };
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
+use itp_stf_executor::{
+	executor::StfExecutor,
+	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall, StfUpdateState},
+};
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState, GlobalFileStateHandler,
 };
@@ -681,12 +685,13 @@ where
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), GlobalFileStateHandler);
 
 	sync_blocks_on_light_client(
 		blocks_to_sync,
 		&mut validator,
 		&OcallApi,
-		&GlobalFileStateHandler,
+		&stf_executor,
 		&mut *nonce,
 	)?;
 
@@ -696,19 +701,19 @@ where
 	Ok(())
 }
 
-fn sync_blocks_on_light_client<PB, V, OCallApi, StateHandler>(
+fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
 	validator: &mut V,
 	on_chain_ocall_api: &OCallApi,
-	state_handler: &StateHandler,
+	stf_executor: &StfExecutor,
 	nonce: &mut u32,
 ) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	V: Validator<PB> + LightClientState<PB>,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
-	StateHandler: HandleState,
+	OCallApi: EnclaveOnChainOCallApi,
+	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
 
@@ -727,17 +732,13 @@ where
 			return Err(e.into())
 		}
 
-		if let Err(e) = update_states::<PB, _, _>(
-			signed_block.block.header().clone(),
-			on_chain_ocall_api,
-			state_handler,
-		) {
+		if let Err(e) = stf_executor.update_states::<PB>(&signed_block.block.header()) {
 			error!("Error performing state updates upon block import");
-			return Err(e)
+			return Err(e.into())
 		}
 
 		// execute indirect calls, incl. shielding and unshielding
-		match scan_block_for_relevant_xt(&signed_block.block, on_chain_ocall_api, state_handler) {
+		match scan_block_for_relevant_xt(&signed_block.block, stf_executor) {
 			// push shield funds to opaque calls
 			Ok(c) => calls.extend(c.into_iter()),
 			Err(_) => error!("Error executing relevant extrinsics"),
@@ -1126,77 +1127,16 @@ where
 	Ok((opaque_call, block.sign_block(&signer_pair)))
 }
 
-fn update_states<PB, O, StateHandler>(
-	header: PB::Header,
-	on_chain_ocall_api: &O,
-	state_handler: &StateHandler,
-) -> Result<()>
-where
-	PB: BlockT<Hash = H256>,
-	O: EnclaveOnChainOCallApi,
-	StateHandler: HandleState,
-{
-	debug!("Update STF storage upon block import!");
-	let storage_hashes = Stf::storage_hashes_to_update_on_block();
-
-	if storage_hashes.is_empty() {
-		return Ok(())
-	}
-
-	// global requests they are the same for every shard
-	let state_diff_update: StateTypeDiff = on_chain_ocall_api
-		.get_multiple_storages_verified(storage_hashes, &header)
-		.map(into_map)?
-		.into();
-
-	// look for new shards an initialize them
-	if let Some(maybe_shards) = state_diff_update.get(&shards_key_hash()) {
-		match maybe_shards {
-			Some(shards) => {
-				let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())
-					.sgx_error_with_log("error decoding shards")?;
-
-				for shard_id in shards {
-					let (state_lock, mut state) = state_handler.load_for_mutation(&shard_id)?;
-					trace!("Successfully loaded state, updating states ...");
-
-					// per shard (cid) requests
-					let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
-					let per_shard_update = on_chain_ocall_api
-						.get_multiple_storages_verified(per_shard_hashes, &header)
-						.map(into_map)?;
-
-					Stf::update_storage(&mut state, &per_shard_update.into());
-					Stf::update_storage(&mut state, &state_diff_update);
-
-					// block number is purged from the substrate state so it can't be read like other storage values
-					// The number conversion is a bit unfortunate, but I wanted to prevent making the stf generic for now
-					Stf::update_layer_one_block_number(
-						&mut state,
-						(*header.number()).unique_saturated_into(),
-					);
-
-					state_handler.write(state, state_lock, &shard_id)?;
-				}
-			},
-			None => debug!("No shards are on the chain yet"),
-		};
-	};
-	Ok(())
-}
-
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, as well as shielding and unshielding calls
 /// Returns all unshielding call confirmations as opaque calls
-fn scan_block_for_relevant_xt<PB, O, StateHandler>(
+fn scan_block_for_relevant_xt<PB, StfExecutor>(
 	block: &PB,
-	on_chain_ocall: &O,
-	state_handler: &StateHandler,
+	stf_executor: &StfExecutor,
 ) -> Result<Vec<OpaqueCall>>
 where
 	PB: BlockT<Hash = H256>,
-	O: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
-	StateHandler: HandleState,
+	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	debug!("Scanning block {:?} for relevant xt", block.header().number());
 	let mut opaque_calls = Vec::<OpaqueCall>::new();
@@ -1207,7 +1147,7 @@ where
 		{
 			// confirm call decodes successfully as well
 			if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
-				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt, state_handler) {
+				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt, stf_executor) {
 					error!("Error performing shield funds. Error: {:?}", e);
 				}
 			}
@@ -1219,26 +1159,15 @@ where
 		{
 			if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
 				if let Ok((decrypted_trusted_call, shard)) = decrypt_unchecked_extrinsic(xt) {
-					// load state before executing any calls
-					let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-					// call execution
-					trace!("Handling trusted worker call of state: {:?}", state);
-					if let Err(e) = handle_trusted_worker_call::<PB, _>(
-						&mut opaque_calls, // necessary for unshielding
-						&mut state,
+					if let Err(e) = stf_executor.execute_trusted_call::<PB>(
+						&mut opaque_calls,
 						&decrypted_trusted_call,
-						block.header(),
+						&block.header(),
 						shard,
-						on_chain_ocall,
+						StatePostProcessing::Prune, // we only want to store the state diff for direct stuff.
 					) {
-						error!("Error performing worker call: Error: {:?}", e);
+						error!("Error executing trusted call: Error: {:?}", e);
 					}
-					// save updated state
-
-					// we only want to store the state diff for direct stuff.
-					state.prune_state_diff();
-					trace!("Updating state of shard {:?}", shard);
-					state_handler.write(state, state_lock, &shard)?;
 				}
 			}
 		}
@@ -1247,20 +1176,18 @@ where
 	Ok(opaque_calls)
 }
 
-fn handle_shield_funds_xt<StateHandler>(
+fn handle_shield_funds_xt<StfExecutor>(
 	calls: &mut Vec<OpaqueCall>,
 	xt: UncheckedExtrinsicV4<ShieldFundsFn>,
-	state_handler: &StateHandler,
+	stf_executor: &StfExecutor,
 ) -> Result<()>
 where
-	StateHandler: HandleState,
+	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	let (call, account_encrypted, amount, shard) = xt.function.clone();
 	info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         call, account_encrypted, amount, shard.encode().to_base58(),
     );
-
-	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 
 	debug!("decrypt the call");
 	//let account_vec = Rsa3072KeyPair::decrypt(&account_encrypted)?;
@@ -1268,23 +1195,14 @@ where
 
 	let account = AccountId::decode(&mut account_vec.as_slice())
 		.sgx_error_with_log("[ShieldFunds] Could not decode account")?;
-	let root = Stf::get_root(&mut state);
-	let nonce = Stf::account_nonce(&mut state, &root);
 
-	if let Err(e) = Stf::execute(
-		&mut state,
-		TrustedCallSigned::new(
-			TrustedCall::balance_shield(root, account, amount),
-			nonce,
-			Default::default(), //don't care about signature here
-		),
-		calls,
-	) {
-		error!("Error performing Stf::execute. Error: {:?}", e);
-		return Ok(())
-	}
-
-	let state_hash = state_handler.write(state, state_lock, &shard)?;
+	let state_hash = match stf_executor.execute_shield_funds(account, amount, &shard, calls) {
+		Ok(h) => h,
+		Err(e) => {
+			error!("Error executing shield funds. Error: {:?}", e);
+			return Ok(())
+		},
+	};
 
 	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
 	let xt_hash = blake2_256(&xt.encode());
