@@ -3,7 +3,9 @@
 //! Todo: Once we have put the `top_pool` stuff in an entirely different crate we can
 //! move most parts here to the sidechain crate.
 
-use crate::{exec_trusted_calls, prepare_and_send_xts_and_block, Result as EnclaveResult};
+use crate::{
+	execute_top_pool_trusted_calls, prepare_and_send_xts_and_block, Result as EnclaveResult,
+};
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
@@ -106,7 +108,7 @@ where
 	StateHandler: HandleState + Send + Sync + 'static,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
-		let (calls, blocks) = exec_trusted_calls::<PB, SB, _, _, _>(
+		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _, _>(
 			self.ocall_api.as_ref(),
 			self.author.as_ref(),
 			self.state_handler.as_ref(),

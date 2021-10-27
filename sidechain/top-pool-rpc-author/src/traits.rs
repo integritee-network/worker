@@ -18,12 +18,6 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-#[cfg(feature = "sgx")]
-use std::sync::SgxMutex as Mutex;
-
-#[cfg(feature = "std")]
-use std::sync::Mutex;
-
 use crate::{error::Result, hash};
 use ita_stf::{TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
@@ -43,7 +37,7 @@ pub trait FullAuthor = AuthorApi<H256, H256>
 pub trait GetAuthor: Send + Sync + 'static {
 	type AuthorType: FullAuthor;
 
-	fn get(&self) -> Option<&'static Mutex<Arc<Self::AuthorType>>>;
+	fn get(&self) -> Option<Arc<Self::AuthorType>>;
 }
 
 /// Authoring RPC API

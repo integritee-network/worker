@@ -26,6 +26,7 @@ members = [
     "sidechain/consensus/aura",
     "sidechain/consensus/common",
     "sidechain/consensus/slots",
+    "sidechain/rpc-handler",
     "sidechain/state",
     "sidechain/top-pool",
     "sidechain/top-pool-rpc-author",

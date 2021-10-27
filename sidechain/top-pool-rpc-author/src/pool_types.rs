@@ -25,7 +25,7 @@ use its_top_pool::basic_pool::BasicPool;
 
 type Hash = sp_core::H256;
 
-type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, TungsteniteWsConnection>;
+pub(crate) type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, TungsteniteWsConnection>;
 
 pub type EnclaveRpcResponder =
 	RpcResponder<EnclaveRpcConnectionRegistry, Hash, TungsteniteWsConnection>;

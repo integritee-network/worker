@@ -28,28 +28,8 @@ extern crate sgx_tstd as std;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
 	pub use jsonrpc_core_sgx as jsonrpc_core;
-	pub use thiserror_sgx as thiserror;
+	pub use rust_base58_sgx as base58;
 }
 
-pub mod api;
-pub mod atomic_container;
-pub mod author;
-pub mod author_container;
-pub mod client_error;
-pub mod error;
-pub mod hash;
-pub mod pool_types;
-pub mod top_filter;
-pub mod traits;
-
-#[cfg(feature = "sgx")]
-pub mod initializer;
-
-#[cfg(feature = "sgx")]
-pub mod global_author_container;
-
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod author_tests;
-
-#[cfg(feature = "test")]
-pub mod test_utils;
+pub mod direct_top_pool_api;
+pub mod import_block_api;

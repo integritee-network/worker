@@ -52,7 +52,9 @@ where
 {
 	type AuthorType = AuthorT;
 
-	fn get(&self) -> Option<&'static Mutex<Arc<Self::AuthorType>>> {
-		self.atomic_container.load()
+	fn get(&self) -> Option<Arc<Self::AuthorType>> {
+		let author_mutex: &'static Mutex<Arc<Self::AuthorType>> = self.atomic_container.load()?;
+
+		Some(author_mutex.lock().unwrap().clone())
 	}
 }

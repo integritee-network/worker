@@ -92,9 +92,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// its_sidechain::state::tests::apply_state_update_returns_invalid_storage_diff_err,
 		its_sidechain::state::tests::sp_io_storage_set_creates_storage_diff,
 		its_sidechain::state::tests::create_state_diff_without_setting_externalities_works,
-		rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
-		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
-		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
+		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
 		author_tests::top_encryption_works,
 		author_tests::submitting_to_author_inserts_in_pool,
 		author_tests::submitting_call_to_author_when_top_is_filtered_returns_error,
@@ -232,7 +230,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
 			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
@@ -281,7 +279,7 @@ fn test_create_state_diff() {
 
 	// when
 	let (_, signed_blocks) =
-		crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
 			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
@@ -322,14 +320,15 @@ fn test_executing_call_updates_account_nonce() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-		&OcallApi,
-		&rpc_author,
-		state_handler.as_ref(),
-		&latest_parentchain_header(),
-		MAX_TRUSTED_OPS_EXEC_DURATION,
-	)
-	.unwrap();
+	let (_, _) =
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+			&OcallApi,
+			&rpc_author,
+			state_handler.as_ref(),
+			&latest_parentchain_header(),
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+		)
+		.unwrap();
 
 	// then
 	let mut state = state_handler.load_initialized(&shard).unwrap();
@@ -351,14 +350,15 @@ fn test_invalid_nonce_call_is_not_executed() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-		&OcallApi,
-		&rpc_author,
-		state_handler.as_ref(),
-		&latest_parentchain_header(),
-		MAX_TRUSTED_OPS_EXEC_DURATION,
-	)
-	.unwrap();
+	let (_, _) =
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+			&OcallApi,
+			&rpc_author,
+			state_handler.as_ref(),
+			&latest_parentchain_header(),
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+		)
+		.unwrap();
 
 	// then
 	let mut updated_state = state_handler.load_initialized(&shard).unwrap();
@@ -384,14 +384,15 @@ fn test_non_root_shielding_call_is_not_executed() {
 	submit_and_execute_top(&rpc_author, &direct_top(signed_call), &shielding_key, shard).unwrap();
 
 	// when
-	let (_, _) = crate::exec_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-		&OcallApi,
-		&rpc_author,
-		state_handler.as_ref(),
-		&latest_parentchain_header(),
-		MAX_TRUSTED_OPS_EXEC_DURATION,
-	)
-	.unwrap();
+	let (_, _) =
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+			&OcallApi,
+			&rpc_author,
+			state_handler.as_ref(),
+			&latest_parentchain_header(),
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+		)
+		.unwrap();
 
 	// then
 	let mut updated_state = state_handler.load_initialized(&shard).unwrap();

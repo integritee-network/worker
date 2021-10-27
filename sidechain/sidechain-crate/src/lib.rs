@@ -30,6 +30,8 @@ pub use its_consensus_slots as slots;
 
 pub use its_primitives as primitives;
 
+pub use its_rpc_handler as rpc_handler;
+
 pub use its_state as state;
 
 pub use its_top_pool as top_pool;
