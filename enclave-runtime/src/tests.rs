@@ -18,20 +18,8 @@ use crate::{
 	attestation,
 	ocall::OcallApi,
 	rpc,
-	rpc::author::{
-		test_utils::{get_pending_tops_separated, submit_and_execute_top},
-		top_filter::AllowAllTopsFilter,
-	},
-	state,
-	state::HandleState,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
-	test::{
-		cert_tests::*,
-		mocks::{
-			handle_state_mock, handle_state_mock::HandleStateMock,
-			rpc_responder_mock::RpcResponderMock, shielding_crypto_mock::ShieldingCryptoMock,
-		},
-	},
+	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -46,6 +34,11 @@ use itp_settings::{
 };
 use itp_sgx_crypto::{AesSeal, StateCrypto};
 use itp_sgx_io::SealedIO;
+use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+use itp_test::mock::{
+	handle_state_mock, handle_state_mock::HandleStateMock,
+	shielding_crypto_mock::ShieldingCryptoMock,
+};
 use itp_types::{Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
 	primitives::{
@@ -54,9 +47,15 @@ use its_sidechain::{
 	},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
+	top_pool_rpc_author::{
+		api::SideChainApi,
+		author::Author,
+		author_tests,
+		test_utils::{get_pending_tops_separated, submit_and_execute_top},
+		top_filter::AllowAllTopsFilter,
+	},
 };
 use log::*;
-use rpc::{api::SideChainApi, author::Author};
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_tunittest::*;
 use sgx_types::size_t;
@@ -72,10 +71,10 @@ type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, Sh
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		attestation::tests::decode_spid_works,
-		state::tests::test_write_and_load_state_works,
-		state::tests::test_sgx_state_decode_encode_works,
-		state::tests::test_encrypt_decrypt_state_type_works,
-		state::tests::test_write_access_locks_read_until_finished,
+		itp_stf_state_handler::tests::test_write_and_load_state_works,
+		itp_stf_state_handler::tests::test_sgx_state_decode_encode_works,
+		itp_stf_state_handler::tests::test_encrypt_decrypt_state_type_works,
+		itp_stf_state_handler::tests::test_write_access_locks_read_until_finished,
 		test_compose_block_and_confirmation,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
@@ -96,14 +95,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		rpc::worker_api_direct::tests::sidechain_import_block_is_ok,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_invalid_param_err,
 		rpc::worker_api_direct::tests::sidechain_import_block_returns_decode_err,
-		rpc::author::atomic_container::tests::store_and_load_works,
-		rpc::author::author_tests::tests::top_encryption_works,
-		rpc::author::author_tests::tests::submitting_to_author_inserts_in_pool,
-		rpc::author::author_tests::tests::submitting_call_to_author_when_top_is_filtered_returns_error,
-		rpc::author::author_tests::tests::submitting_getter_to_author_when_top_is_filtered_inserts_in_pool,
-		rpc::author::top_filter::tests::filter_returns_none_if_values_is_filtered_out,
-		rpc::author::top_filter::tests::getters_only_filter_allows_trusted_getters,
-		rpc::author::top_filter::tests::getters_only_filter_denies_trusted_calls,
+		author_tests::top_encryption_works,
+		author_tests::submitting_to_author_inserts_in_pool,
+		author_tests::submitting_call_to_author_when_top_is_filtered_returns_error,
+		author_tests::submitting_getter_to_author_when_top_is_filtered_inserts_in_pool,
+		handle_state_mock::tests::initialized_shards_list_is_empty,
+		handle_state_mock::tests::shard_exists_after_inserting,
 		handle_state_mock::tests::load_initialized_inserts_default_state,
 		handle_state_mock::tests::load_mutate_and_write_works,
 		// mra cert tests
@@ -406,7 +403,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	assert_eq!(funds_new, funds_old);
 }
 
-fn get_current_shard_index<StateHandler: HandleState>(
+fn get_current_shard_index<StateHandler: QueryShardState>(
 	shard: &ShardIdentifier,
 	state_handler: &StateHandler,
 ) -> usize {

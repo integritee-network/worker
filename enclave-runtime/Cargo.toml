@@ -15,7 +15,13 @@ crate-type = ["staticlib"]
 [features]
 default = []
 production = ["itp-settings/production"]
-test = ["its-sidechain/test", "itp-storage/test", "ita-stf/test"]
+test = [
+    "ita-stf/test",
+    "itp-stf-state-handler/test",
+    "itp-storage/test",
+    "itp-test/sgx",
+    "its-sidechain/test",
+]
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tse = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -72,20 +78,21 @@ cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", defau
 multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
 
 # local deps
+ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itc-light-client = { path = "../core/light-client", default-features = false, features = ["sgx"] }
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"]  }
-itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
-itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
-itp-sgx-crypto= { path = "../core-primitives/sgx/crypto", default-features = false,  features = ["sgx"] }
-itp-types = {path = "../core-primitives/types", default-features = false, features = ["sgx"] }
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../core-primitives/settings" }
 itp-sgx-io = { path = "../core-primitives/sgx/io", default-features = false, features = ["sgx"] }
-its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
-ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }
-itp-test = { path = "../core-primitives/test", default-features = false, features = ["sgx"] }
+itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
+itp-sgx-crypto= { path = "../core-primitives/sgx/crypto", default-features = false, features = ["sgx"] }
+itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default-features = false, features = ["sgx"] }
+itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
+itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
+itp-types = {path = "../core-primitives/types", default-features = false, features = ["sgx"] }
+its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }

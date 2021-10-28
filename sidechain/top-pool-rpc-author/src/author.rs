@@ -1,40 +1,36 @@
-// This file is part of Substrate.
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
-// Copyright (C) 2017-2020 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+		http://www.apache.org/licenses/LICENSE-2.0
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+*/
 
-pub extern crate alloc;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	rpc::{
-		author::{
-			client_error::Error as ClientError,
-			top_filter::{AllowAllTopsFilter, Filter},
-		},
-		error::{Error as StateRpcError, Result},
-	},
-	state::HandleState,
+	client_error::Error as ClientError,
+	error::{Error as StateRpcError, Result},
+	hash,
+	top_filter::{AllowAllTopsFilter, Filter},
+	traits::{AuthorApi, OnBlockCreated, SendState},
 };
-use alloc::boxed::Box;
 use codec::{Decode, Encode};
-use core::iter::Iterator;
-use ita_stf::{Getter, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_sgx_crypto::ShieldingCrypto;
-use itp_types::BlockHash as SidechainBlockHash;
-use its_sidechain::top_pool::{
+use itp_stf_state_handler::query_shard_state::QueryShardState;
+use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
+use its_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
 	primitives::{
 		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
@@ -47,70 +43,10 @@ use jsonrpc_core::{
 };
 use log::*;
 use sp_runtime::generic;
-use std::{sync::Arc, vec::Vec};
-
-pub mod atomic_container;
-pub mod author_container;
-pub mod client_error;
-pub mod hash;
-pub mod top_filter;
-
-#[cfg(feature = "test")]
-pub mod author_tests;
-
-#[cfg(feature = "test")]
-pub mod test_utils;
+use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 pub type AuthorTopFilter = AllowAllTopsFilter;
-
-/// Substrate authoring RPC API
-pub trait AuthorApi<Hash, BlockHash> {
-	/// Submit encoded extrinsic for inclusion in block.
-	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;
-
-	/// Return hash of Trusted Operation
-	fn hash_of(&self, xt: &TrustedOperation) -> Hash;
-
-	/// Returns all pending operations, potentially grouped by sender.
-	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
-
-	/// Returns all pending operations divided in calls and getters, potentially grouped by sender.
-	fn get_pending_tops_separated(
-		&self,
-		shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
-
-	fn get_shards(&self) -> Vec<ShardIdentifier>;
-
-	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
-	fn remove_top(
-		&self,
-		bytes_or_hash: Vec<hash::TrustedOperationOrHash<Hash>>,
-		shard: ShardIdentifier,
-		inblock: bool,
-	) -> Result<Vec<Hash>>;
-
-	/// Submit an extrinsic to watch.
-	///
-	/// See [`TrustedOperationStatus`](sp_transaction_pool::TrustedOperationStatus) for details on transaction
-	/// life cycle.
-	fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;
-}
-
-/// Trait to send state of a trusted getter back to the client
-pub trait SendState {
-	type Hash;
-
-	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<()>;
-}
-
-/// Trait to notify listeners/observer of a newly created block
-pub trait OnBlockCreated {
-	type Hash;
-
-	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
-}
 
 /// Currently we treat all RPC operations as externals.
 ///
@@ -126,7 +62,7 @@ pub struct Author<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: HandleState,
+	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
 {
 	top_pool: Arc<TopPool>,
@@ -140,7 +76,7 @@ impl<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: HandleState,
+	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
 {
 	/// Create new instance of Authoring API.
@@ -164,7 +100,7 @@ impl<TopPool, TopFilter, StateFacade, EncryptionKey>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: HandleState,
+	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
 {
 	fn process_top(
@@ -241,7 +177,7 @@ impl<TopPool, TopFilter, StateFacade, EncryptionKey> AuthorApi<TxHash<TopPool>, 
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: HandleState,
+	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
 {
 	fn submit_top(
@@ -328,7 +264,7 @@ impl<TopPool, TopFilter, StateFacade, EncryptionKey> OnBlockCreated
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: HandleState,
+	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
@@ -343,7 +279,7 @@ impl<TopPool, TopFilter, StateFacade, EncryptionKey> SendState
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: HandleState,
+	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;

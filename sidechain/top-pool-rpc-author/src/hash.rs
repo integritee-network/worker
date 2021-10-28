@@ -15,17 +15,21 @@
 
 */
 
-use crate::{rpc::api::SideChainApi, Hash};
-use itc_direct_rpc_server::{
-	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
-};
-use itc_tls_websocket_server::connection::TungsteniteWsConnection;
-use itp_types::Block;
-use its_sidechain::top_pool::basic_pool::BasicPool;
+//! Extrinsic helpers for author RPC module.
 
-type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, TungsteniteWsConnection>;
+use codec::{Decode, Encode};
+use ita_stf::TrustedOperation;
+use std::vec::Vec;
 
-pub type EnclaveRpcResponder =
-	RpcResponder<EnclaveRpcConnectionRegistry, Hash, TungsteniteWsConnection>;
-
-pub type BPool = BasicPool<SideChainApi<Block>, Block, EnclaveRpcResponder>;
+/// RPC Trusted call or hash
+///
+/// Allows to refer to trusted calls either by its raw representation or its hash.
+#[derive(Debug, Encode, Decode)]
+pub enum TrustedOperationOrHash<Hash> {
+	/// The hash of the call.
+	Hash(Hash),
+	/// Raw extrinsic bytes.
+	OperationEncoded(Vec<u8>),
+	/// Raw extrinsic
+	Operation(TrustedOperation),
+}

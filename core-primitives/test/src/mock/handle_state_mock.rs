@@ -15,16 +15,17 @@
 
 */
 
-use crate::{
-	error::{Error, Result},
-	state::HandleState,
-};
 use ita_stf::{ShardIdentifier, State as StfState};
+use itp_stf_state_handler::{
+	error::{Error, Result},
+	handle_state::HandleState,
+	query_shard_state::QueryShardState,
+};
 use itp_types::H256;
 use sgx_externalities::SgxExternalitiesTrait;
 use std::{
 	collections::HashMap,
-	string::ToString,
+	format,
 	sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard},
 	vec::Vec,
 };
@@ -54,7 +55,10 @@ impl HandleState for HandleStateMock {
 				self.state_map.write().unwrap().insert(shard.clone(), StfState::default());
 
 				self.state_map.read().unwrap().get(shard).map(|s| s.clone()).ok_or_else(|| {
-					Error::Stf("state does not exist after inserting it".to_string())
+					Error::Other(
+						format!("state does not exist after inserting it, shard {:?}", shard)
+							.into(),
+					)
 				})
 			},
 			Some(s) => Ok(s),
@@ -79,7 +83,9 @@ impl HandleState for HandleStateMock {
 		state_lock.insert(shard.clone(), state);
 		Ok(H256::default())
 	}
+}
 
+impl QueryShardState for HandleStateMock {
 	fn exists(&self, shard: &ShardIdentifier) -> bool {
 		self.state_map.read().unwrap().get(shard).is_some()
 	}
@@ -94,6 +100,19 @@ pub mod tests {
 
 	use super::*;
 	use codec::Encode;
+	use itp_types::ShardIdentifier;
+
+	pub fn initialized_shards_list_is_empty() {
+		let state_handler = HandleStateMock::default();
+		assert!(state_handler.list_shards().unwrap().is_empty());
+	}
+
+	pub fn shard_exists_after_inserting() {
+		let state_handler = HandleStateMock::default();
+		let shard = ShardIdentifier::default();
+		let _loaded_state_result = state_handler.load_initialized(&shard);
+		assert!(state_handler.exists(&shard));
+	}
 
 	pub fn load_initialized_inserts_default_state() {
 		let state_handler = HandleStateMock::default();

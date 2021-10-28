@@ -16,16 +16,11 @@
 
 */
 
-use crate::rpc::error;
 use codec::Encode;
 use core::{future::Future, pin::Pin};
-use frame_support::sp_runtime::{
-	generic::BlockId,
-	traits::{BlakeTwo256, Hash, NumberFor},
-};
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::{Block, BlockHash as SidechainBlockHash, H256};
-use its_sidechain::top_pool::{
+use its_top_pool::{
 	base_pool::TrustedOperation,
 	error::Error,
 	primitives::{
@@ -34,11 +29,16 @@ use its_sidechain::top_pool::{
 	},
 };
 use jsonrpc_core::futures::future::ready;
+use sp_runtime::{
+	generic::BlockId,
+	traits::{BlakeTwo256, Hash, NumberFor},
+};
 use std::{
 	boxed::Box,
 	collections::HashMap,
 	string::String,
 	sync::{Arc, SgxRwLock as RwLock},
+	vec,
 	vec::Vec,
 };
 
@@ -91,7 +91,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 	type Block = Block;
 	type Hash = H256;
 	type InPoolOperation = TrustedOperation<TxHash<Self>, StfTrustedOperation>;
-	type Error = error::Error;
+	type Error = Error;
 
 	fn submit_at(
 		&self,

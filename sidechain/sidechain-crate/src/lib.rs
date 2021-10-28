@@ -34,4 +34,6 @@ pub use its_state as state;
 
 pub use its_top_pool as top_pool;
 
+pub use its_top_pool_rpc_author as top_pool_rpc_author;
+
 pub use its_validateer_fetch as validateer_fetch;

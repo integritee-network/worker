@@ -1,32 +1,29 @@
-// This file is part of Substrate.
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
-// Copyright (C) 2017-2020 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+		http://www.apache.org/licenses/LICENSE-2.0
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+*/
 
-//! State RPC errors.
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
 
-pub extern crate alloc;
-
-use crate::rpc::author::client_error::Error as ClientError;
-use alloc::{boxed::Box, string::String};
+use crate::client_error::Error as ClientError;
 use core::pin::Pin;
 use derive_more::{Display, From};
-use its_sidechain::top_pool::error::{Error as PoolError, IntoPoolError};
+use its_top_pool::error::{Error as PoolError, IntoPoolError};
 use jsonrpc_core as rpc;
-use std::error;
+use std::{boxed::Box, error, format, string::String};
 
 /// State RPC Result type.
 pub type Result<T> = core::result::Result<T, Error>;

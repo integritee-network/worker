@@ -48,20 +48,21 @@ impl Filter for GettersOnlyFilter {
 	}
 }
 
-#[cfg(feature = "test")]
+#[cfg(test)]
 pub mod tests {
 
 	use super::*;
 	use codec::Encode;
-	use frame_support::sp_runtime::traits::{BlakeTwo256, Hash};
 	use ita_stf::{Getter, KeyPair, TrustedCall, TrustedGetter};
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};
+	use sp_runtime::traits::{BlakeTwo256, Hash};
 	use std::string::{String, ToString};
 
 	type Seed = [u8; 32];
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
+	#[test]
 	pub fn filter_returns_none_if_values_is_filtered_out() {
 		struct WorldFilter;
 		impl Filter for WorldFilter {
@@ -81,6 +82,7 @@ pub mod tests {
 		assert!(filter.filter(&"world".to_string()));
 	}
 
+	#[test]
 	pub fn getters_only_filter_allows_trusted_getters() {
 		let account = test_account();
 
@@ -93,6 +95,7 @@ pub mod tests {
 		assert!(filter.filter(&trusted_operation));
 	}
 
+	#[test]
 	pub fn getters_only_filter_denies_trusted_calls() {
 		let account = test_account();
 		let call =
