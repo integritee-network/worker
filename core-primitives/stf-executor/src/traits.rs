@@ -52,6 +52,21 @@ pub trait StfExecuteTrustedCall {
 		PB: BlockT<Hash = H256>;
 }
 
+/// Execute a batch of trusted calls within a given time window
+///
+/// If the time expires, any remaining trusted calls will be ignored
+/// All executed call hashes are returned.
+pub trait StfExecuteTimedCallsBatch {
+	fn execute_timed_calls_batch(
+		&self,
+		callback_calls: &mut Vec<OpaqueCall>,
+		trusted_calls: &Vec<TrustedCallSigned>,
+		header: &PB::Header,
+		shard: ShardIdentifier,
+		max_exec_duration: Duration,
+	) -> Result<Vec<Option<(H256, H256)>>>;
+}
+
 ///
 pub trait StfUpdateState {
 	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
