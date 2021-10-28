@@ -38,7 +38,7 @@ pub enum Error {
 	#[error("SGX crypto error: {0}")]
 	CryptoError(itp_sgx_crypto::Error),
 	#[error("SGX error, status: {0}")]
-	SgxError(#[from] sgx_status_t),
+	SgxError(sgx_status_t),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -52,6 +52,12 @@ impl From<std::io::Error> for Error {
 impl From<codec::Error> for Error {
 	fn from(e: codec::Error) -> Self {
 		Self::Other(format!("{:?}", e).into())
+	}
+}
+
+impl From<sgx_status_t> for Error {
+	fn from(sgx_status: sgx_status_t) -> Self {
+		Self::SgxError(sgx_status)
 	}
 }
 
