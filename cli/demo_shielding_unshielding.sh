@@ -107,6 +107,9 @@ echo ""
 
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
 $TIMEOUT $CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
+
+echo "* Waiting 5 seconds"
+sleep 5
 echo ""
 
 echo "* Get balance of Alice's incognito account"
@@ -121,8 +124,8 @@ echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
 $TIMEOUT ${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
 echo ""
 
-echo "* Waiting 10 seconds"
-sleep 10
+echo "* Waiting 20 seconds"
+sleep 20
 echo ""
 
 echo "Get balance of Alice's incognito account"
