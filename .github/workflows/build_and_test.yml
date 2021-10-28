@@ -175,7 +175,7 @@ jobs:
           name: integritee-node-dev-ubuntu-18.04-505c0d2babd14825f713ddf4a254d28c0c305628
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1306804818
+          run_id: 1384450796
           path: node
           repo: integritee-network/integritee-node
 
