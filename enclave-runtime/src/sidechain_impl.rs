@@ -13,6 +13,7 @@ use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, AesSeal};
 use itp_sgx_io::SealedIO;
+use itp_stf_executor::traits::{StfExecuteGenericUpdate, StfExecuteTimedCallsBatch};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
 use its_sidechain::{
@@ -32,10 +33,9 @@ use sp_runtime::{traits::Block, MultiSignature};
 use std::{marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
-pub struct SlotProposer<PB: Block, SB: SignedBlock, OcallApi, Author, StateHandler> {
-	ocall_api: Arc<OcallApi>,
+pub struct SlotProposer<PB: Block, SB: SignedBlock, Author, StfExecutor> {
 	author: Arc<Author>,
-	state_handler: Arc<StateHandler>,
+	stf_executor: Arc<StfExecutor>,
 	parentchain_header: PB::Header,
 	shard: ShardIdentifierFor<SB>,
 	_phantom: PhantomData<PB>,
@@ -43,40 +43,36 @@ pub struct SlotProposer<PB: Block, SB: SignedBlock, OcallApi, Author, StateHandl
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`
-pub struct ProposerFactory<PB: Block, OcallApi, Author, StateHandler> {
-	ocall_api: Arc<OcallApi>,
+pub struct ProposerFactory<PB: Block, Author, StfExecutor> {
 	author: Arc<Author>,
-	state_handler: Arc<StateHandler>,
+	stf_executor: Arc<StfExecutor>,
 	_phantom: PhantomData<PB>,
 }
 
-impl<PB: Block, OcallApi, Author, StateHandler>
-	ProposerFactory<PB, OcallApi, Author, StateHandler>
-{
-	pub fn new(
-		ocall_api: Arc<OcallApi>,
-		author: Arc<Author>,
-		state_handler: Arc<StateHandler>,
-	) -> Self {
-		Self { ocall_api, author, state_handler, _phantom: Default::default() }
+impl<PB: Block, Author, StfExecutor> ProposerFactory<PB, Author, StfExecutor> {
+	pub fn new(author: Arc<Author>, stf_executor: Arc<StfExecutor>) -> Self {
+		Self { author, stf_executor, _phantom: Default::default() }
 	}
 }
 
-impl<PB: Block<Hash = H256>, SB, OcallApi, Author, StateHandler> Environment<PB, SB>
-	for ProposerFactory<PB, OcallApi, Author, StateHandler>
+impl<PB: Block<Hash = H256>, SB, Author, StfExecutor> Environment<PB, SB>
+	for ProposerFactory<PB, Author, StfExecutor>
 where
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + GetStorageVerified + 'static,
 	Author: AuthorApi<H256, PB::Hash>
 		+ SendState<Hash = PB::Hash>
 		+ OnBlockCreated<Hash = PB::Hash>
 		+ Send
 		+ Sync,
-	StateHandler: HandleState + Send + Sync + 'static,
+	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
+		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>
+		+ Send
+		+ Sync
+		+ 'static,
 {
-	type Proposer = SlotProposer<PB, SB, OcallApi, Author, StateHandler>;
+	type Proposer = SlotProposer<PB, SB, Author, StfExecutor>;
 	type Error = ConsensusError;
 
 	fn init(
@@ -85,9 +81,8 @@ where
 		shard: ShardIdentifierFor<SB>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {
-			ocall_api: self.ocall_api.clone(),
 			author: self.author.clone(),
-			state_handler: self.state_handler.clone(),
+			stf_executor: self.stf_executor.clone(),
 			parentchain_header: parent_header,
 			shard,
 			_phantom: PhantomData,
@@ -95,23 +90,24 @@ where
 	}
 }
 
-impl<PB, SB, OcallApi, Author, StateHandler> Proposer<PB, SB>
-	for SlotProposer<PB, SB, OcallApi, Author, StateHandler>
+impl<PB, SB, Author, StfExecutor> Proposer<PB, SB> for SlotProposer<PB, SB, Author, StfExecutor>
 where
 	PB: Block<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	Author:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StateHandler: HandleState + Send + Sync + 'static,
+	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
+		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>
+		+ Send
+		+ Sync
+		+ 'static,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
-		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _, _>(
-			self.ocall_api.as_ref(),
+		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _>(
 			self.author.as_ref(),
-			self.state_handler.as_ref(),
+			self.stf_executor.as_ref(),
 			&self.parentchain_header,
 			self.shard,
 			max_duration,

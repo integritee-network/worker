@@ -34,6 +34,7 @@ use itp_settings::{
 };
 use itp_sgx_crypto::{AesSeal, StateCrypto};
 use itp_sgx_io::SealedIO;
+use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_test::mock::{
 	handle_state_mock, handle_state_mock::HandleStateMock,
@@ -118,11 +119,16 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 fn test_compose_block_and_confirmation() {
 	// given
-	let (_, state, shard, _, _, _) = test_setup();
+	let (_, _, shard, _, _, state_handler) = test_setup();
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
-	let mut db = SidechainDB::new(state);
+
+	let (lock, state) = state_handler.load_for_mutation(&shard).unwrap();
+	let mut db = SidechainDB::<SignedBlock, _>::new(state);
 	db.set_block_number(&1);
+	let previous_state_hash = db.state_hash();
+	state_handler.write(db.ext, lock, &shard).unwrap();
 
 	// when
 	let (opaque_call, signed_block) =
@@ -130,8 +136,8 @@ fn test_compose_block_and_confirmation() {
 			&latest_parentchain_header(),
 			signed_top_hashes,
 			shard,
-			db.state_hash(),
-			&mut db,
+			previous_state_hash,
+			&stf_executor,
 		)
 		.unwrap();
 
@@ -215,6 +221,7 @@ fn test_differentiate_getter_and_call_works() {
 fn test_create_block_and_confirmation_works() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -231,9 +238,9 @@ fn test_create_block_and_confirmation_works() {
 	// when
 	let (confirm_calls, signed_blocks) =
 		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
+			&stf_executor,
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -264,6 +271,7 @@ fn test_create_block_and_confirmation_works() {
 fn test_create_state_diff() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -280,9 +288,9 @@ fn test_create_state_diff() {
 	// when
 	let (_, signed_blocks) =
 		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
+			&stf_executor,
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -310,6 +318,7 @@ fn test_create_state_diff() {
 fn test_executing_call_updates_account_nonce() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -322,9 +331,9 @@ fn test_executing_call_updates_account_nonce() {
 	// when
 	let (_, _) =
 		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
+			&stf_executor,
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -339,6 +348,7 @@ fn test_executing_call_updates_account_nonce() {
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	// create accounts
 	let sender = funded_pair();
@@ -352,9 +362,9 @@ fn test_invalid_nonce_call_is_not_executed() {
 	// when
 	let (_, _) =
 		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
+			&stf_executor,
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -372,6 +382,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
 	let (rpc_author, mut state, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	let sender = funded_pair();
 	let sender_acc = sender.public().into();
@@ -386,9 +397,9 @@ fn test_non_root_shielding_call_is_not_executed() {
 	// when
 	let (_, _) =
 		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
-			&OcallApi,
 			&rpc_author,
 			state_handler.as_ref(),
+			&stf_executor,
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)

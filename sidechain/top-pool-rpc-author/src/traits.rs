@@ -18,8 +18,8 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::Result, hash};
-use ita_stf::{TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use crate::error::Result;
+use ita_stf::{hash, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use its_top_pool::primitives::PoolFuture;
 use jsonrpc_core::Error as RpcError;

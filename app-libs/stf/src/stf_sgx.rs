@@ -108,7 +108,7 @@ impl Stf {
 	}
 
 	pub fn execute(
-		ext: &mut State,
+		ext: &mut impl SgxExternalitiesTrait,
 		call: TrustedCallSigned,
 		calls: &mut Vec<OpaqueCall>,
 	) -> StfResult<()> {

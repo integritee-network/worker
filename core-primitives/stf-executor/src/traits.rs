@@ -15,11 +15,13 @@
 
 */
 
-use crate::error::Result;
+use crate::{error::Result, ExecutionResult};
+use codec::Encode;
 use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned};
 use itp_types::{Amount, OpaqueCall, H256};
+use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::traits::Block as BlockT;
-use std::vec::Vec;
+use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
 
 /// Post-processing steps after executing STF
 pub enum StatePostProcessing {
@@ -45,7 +47,7 @@ pub trait StfExecuteTrustedCall {
 		calls: &mut Vec<OpaqueCall>,
 		stf_call_signed: &TrustedCallSigned,
 		header: &PB::Header,
-		shard: ShardIdentifier,
+		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<Option<(H256, H256)>>
 	where
@@ -57,14 +59,32 @@ pub trait StfExecuteTrustedCall {
 /// If the time expires, any remaining trusted calls will be ignored
 /// All executed call hashes are returned.
 pub trait StfExecuteTimedCallsBatch {
-	fn execute_timed_calls_batch(
+	type Externalities: SgxExternalitiesTrait + Encode;
+
+	fn execute_timed_calls_batch<PB, F>(
 		&self,
-		callback_calls: &mut Vec<OpaqueCall>,
-		trusted_calls: &Vec<TrustedCallSigned>,
+		trusted_calls: &[TrustedCallSigned],
 		header: &PB::Header,
-		shard: ShardIdentifier,
+		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
-	) -> Result<Vec<Option<(H256, H256)>>>;
+		prepare_state_function: F,
+	) -> Result<ExecutionResult>
+	where
+		PB: BlockT<Hash = H256>,
+		F: FnOnce(Self::Externalities) -> Self::Externalities;
+}
+
+pub trait StfExecuteGenericUpdate {
+	type Externalities: SgxExternalitiesTrait + Encode;
+
+	fn execute_update<F, ResultT, ErrorT>(
+		&self,
+		shard: &ShardIdentifier,
+		update_function: F,
+	) -> Result<(ResultT, H256)>
+	where
+		F: FnOnce(Self::Externalities) -> StdResult<(Self::Externalities, ResultT), ErrorT>,
+		ErrorT: Debug;
 }
 
 ///

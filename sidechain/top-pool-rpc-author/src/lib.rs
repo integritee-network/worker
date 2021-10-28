@@ -37,7 +37,6 @@ pub mod author;
 pub mod author_container;
 pub mod client_error;
 pub mod error;
-pub mod hash;
 pub mod pool_types;
 pub mod top_filter;
 pub mod traits;

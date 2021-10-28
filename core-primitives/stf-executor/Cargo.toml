@@ -15,6 +15,7 @@ std = [
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-storage-verifier/std",
+    "sgx-externalities/std",
     "sp-runtime/std",
     "thiserror",
 ]

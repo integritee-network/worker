@@ -46,9 +46,8 @@ use crate::{
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{
-	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, Getter, ShardIdentifier, State as StfState, StatePayload, StateTypeDiff, Stf,
-	TrustedCall, TrustedCallSigned, TrustedGetterSigned,
+	hash::TrustedOperationOrHash, AccountId, Getter, ShardIdentifier, State as StfState,
+	StatePayload, Stf, TrustedCallSigned, TrustedGetterSigned,
 };
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -73,13 +72,15 @@ use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::{
 	executor::StfExecutor,
-	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall, StfUpdateState},
+	traits::{
+		StatePostProcessing, StfExecuteGenericUpdate, StfExecuteShieldFunds,
+		StfExecuteTimedCallsBatch, StfExecuteTrustedCall, StfUpdateState,
+	},
 };
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState, GlobalFileStateHandler,
 };
-use itp_storage::{StorageEntryVerified, StorageProof};
-use itp_storage_verifier::GetStorageVerified;
+use itp_storage::StorageProof;
 use itp_types::{Block, CallWorkerFn, Header, OpaqueCall, ShieldFundsFn, SignedBlock};
 use its_sidechain::{
 	primitives::{
@@ -90,23 +91,21 @@ use its_sidechain::{
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool_rpc_author::{
 		global_author_container::GlobalAuthorContainer,
-		hash::TrustedOperationOrHash,
 		traits::{AuthorApi, GetAuthor, OnBlockCreated, SendState},
 	},
 };
 use lazy_static::lazy_static;
 use log::*;
-use sgx_externalities::SgxExternalitiesTrait;
+use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_types::sgx_status_t;
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
-	traits::{Block as BlockT, Header as HeaderT, UniqueSaturatedInto},
+	traits::{Block as BlockT, Header as HeaderT},
 	MultiSignature, OpaqueExtrinsic,
 };
 use std::{
-	collections::HashMap,
 	slice,
 	string::ToString,
 	sync::{Arc, SgxRwLock},
@@ -164,7 +163,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	env_logger::init();
 
 	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into()
+		return e.into();
 	}
 
 	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
@@ -174,13 +173,13 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
 	if let Err(e) = rsa3072::create_sealed_if_absent() {
-		return e.into()
+		return e.into();
 	}
 
 	// create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker
 	if let Err(e) = aes::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into()
+		return e.into();
 	}
 
 	let state_handler = GlobalFileStateHandler;
@@ -210,8 +209,8 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 		Ok(k) => k,
 		Err(x) => {
 			println!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
@@ -223,7 +222,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into()
+		return e.into();
 	}
 
 	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
@@ -265,9 +264,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let mre = OcallApi
-		.get_mrenclave_of_self()
-		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
+	let mre = OcallApi.get_mrenclave_of_self().map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
 
 	let signer = Ed25519Seal::unseal().unwrap();
 	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
@@ -343,8 +340,8 @@ pub unsafe extern "C" fn call_rpc_methods(
 		Ok(req) => req,
 		Err(e) => {
 			error!("[SidechainRpc] FFI: Invalid utf8 request: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	let res = match side_chain_rpc_int::<Block, _>(request, OcallApi) {
@@ -405,7 +402,7 @@ pub unsafe extern "C" fn get_state(
 		debug!("verifying signature of TrustedGetterSigned");
 		if let false = trusted_getter_signed.verify_signature() {
 			error!("bad signature");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	}
 
@@ -441,8 +438,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("Decoding RPC server address failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
@@ -452,8 +449,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Ok(k) => k,
 		Err(e) => {
 			error!("Failed to unseal shielding key: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	its_sidechain::top_pool_rpc_author::initializer::initialize_top_pool_rpc_author(
@@ -465,8 +462,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Some(a) => a,
 		None => {
 			error!("Failed to retrieve global top pool author");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	let io_handler = public_api_rpc_handler(rpc_author);
@@ -499,24 +496,24 @@ pub unsafe extern "C" fn init_light_client(
 		Ok(h) => h,
 		Err(e) => {
 			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	let auth = match VersionedAuthorityList::decode(&mut auth) {
 		Ok(a) => a,
 		Err(e) => {
 			error!("Decoding VersionedAuthorityList failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	let proof = match StorageProof::decode(&mut proof) {
 		Ok(h) => h,
 		Err(e) => {
 			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
 	};
 
 	match itc_light_client::io::read_or_init_validator::<Block>(header, auth, proof) {
@@ -529,7 +526,7 @@ pub unsafe extern "C" fn init_light_client(
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 	if let Err(e) = execute_top_pool_trusted_getters_on_all_shards() {
-		return e.into()
+		return e.into();
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -562,8 +559,8 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 			Some(t) => t,
 			None => {
 				info!("[Enclave] Could not execute trusted operations for all shards. Remaining number of shards: {}.", remaining_shards);
-				break
-			},
+				break;
+			}
 		};
 
 		match execute_top_pool_trusted_getters_on_shard(
@@ -572,7 +569,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 			shard,
 			shard_exec_time,
 		) {
-			Ok(()) => {},
+			Ok(()) => {}
 			Err(e) => error!("Error in trusted getter execution for shard {:?}: {:?}", shard, e),
 		}
 
@@ -585,7 +582,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 	if let Err(e) = execute_top_pool_trusted_calls_internal::<Block>() {
-		return e.into()
+		return e.into();
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -619,6 +616,7 @@ where
 	})?;
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
+	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
@@ -626,7 +624,7 @@ where
 	{
 		Some(slot) => {
 			let shards = state_handler.list_shards()?;
-			let env = ProposerFactory::new(Arc::new(OcallApi), rpc_author, state_handler);
+			let env = ProposerFactory::new(rpc_author, stf_executor);
 
 			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
 				slot,
@@ -637,11 +635,11 @@ where
 				&mut nonce,
 				shards,
 			)?
-		},
+		}
 		None => {
 			debug!("No slot yielded. Skipping block production.");
-			return Ok(())
-		},
+			return Ok(());
+		}
 	};
 
 	LightClientSeal::seal(validator)?;
@@ -661,7 +659,7 @@ pub unsafe extern "C" fn sync_parentchain(
 	};
 
 	if let Err(e) = sync_parentchain_internal::<Block>(blocks_to_sync, *nonce) {
-		return e.into()
+		return e.into();
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -685,7 +683,7 @@ where
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
-	let stf_executor = StfExecutor::new(Arc::new(OcallApi), GlobalFileStateHandler);
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler));
 
 	sync_blocks_on_light_client(
 		blocks_to_sync,
@@ -712,16 +710,15 @@ where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	V: Validator<PB> + LightClientState<PB>,
-	OCallApi: EnclaveOnChainOCallApi,
+	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
+	let mrenclave: ShardIdentifier = on_chain_ocall_api.get_mrenclave_of_self()?.m.into();
 
 	debug!("Syncing light client!");
 	for signed_block in blocks_to_sync.into_iter() {
-		validator
-			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
-			.unwrap(); // panic can only happen if relay_id does not exist
+		validator.check_xt_inclusion(validator.num_relays(), &signed_block.block).unwrap(); // panic can only happen if relay_id does not exist
 
 		if let Err(e) = validator.submit_simple_header(
 			validator.num_relays(),
@@ -729,12 +726,12 @@ where
 			signed_block.justifications.clone(),
 		) {
 			error!("Block verification failed. Error : {:?}", e);
-			return Err(e.into())
+			return Err(e.into());
 		}
 
 		if let Err(e) = stf_executor.update_states::<PB>(&signed_block.block.header()) {
 			error!("Error performing state updates upon block import");
-			return Err(e.into())
+			return Err(e.into());
 		}
 
 		// execute indirect calls, incl. shielding and unshielding
@@ -747,7 +744,6 @@ where
 		// compose indirect block confirmation
 		// should be changed to ParentchainBlockProcessed, see worker issue #457
 		let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
-		let mrenclave: ShardIdentifier = on_chain_ocall_api.get_mrenclave_of_self()?.m.into();
 		let block_hash = signed_block.block.header().hash();
 		let prev_state_hash = signed_block.block.header().parent_hash();
 		calls.push(OpaqueCall::from_tuple(&(
@@ -804,10 +800,10 @@ where
 ///
 /// Todo: This will probably be used again if we decide to make sidechain optional?
 #[allow(unused)]
-fn execute_top_pool_trusted_calls_for_all_shards<PB, SB, OCallApi, RpcAuthor, StateHandler>(
-	ocall_api: &OCallApi,
+fn execute_top_pool_trusted_calls_for_all_shards<PB, SB, RpcAuthor, StateHandler, StfExecutor>(
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
+	stf_executor: &StfExecutor,
 	latest_onchain_header: &PB::Header,
 	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
@@ -815,10 +811,11 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	RpcAuthor:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StateHandler: HandleState + QueryShardState,
+	StateHandler: QueryShardState,
+	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
+		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
 {
 	let shards = state_handler.list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
@@ -835,14 +832,13 @@ where
 			Some(t) => t,
 			None => {
 				info!("[Enclave] Could not execute trusted operations for all shards. Remaining shards: {}.", remaining_shards);
-				break
-			},
+				break;
+			}
 		};
 
-		match execute_top_pool_trusted_calls::<PB, SB, _, _, _>(
-			ocall_api,
+		match execute_top_pool_trusted_calls::<PB, SB, _, _>(
 			rpc_author,
-			state_handler,
+			stf_executor,
 			&latest_onchain_header,
 			shard,
 			shard_exec_time,
@@ -852,7 +848,7 @@ where
 				if let Some(sb) = sb {
 					signed_blocks.push(sb);
 				}
-			},
+			}
 			Err(e) => error!("Error in top execution for shard {:?}: {:?}", shard, e),
 		}
 
@@ -870,10 +866,9 @@ where
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
-fn execute_top_pool_trusted_calls<PB, SB, OCallApi, RpcAuthor, StateHandler>(
-	on_chain_ocall: &OCallApi,
+fn execute_top_pool_trusted_calls<PB, SB, RpcAuthor, StfExecutor>(
 	rpc_author: &RpcAuthor,
-	state_handler: &StateHandler,
+	stf_executor: &StfExecutor,
 	latest_onchain_header: &PB::Header,
 	shard: H256,
 	max_exec_duration: Duration,
@@ -882,12 +877,10 @@ where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	RpcAuthor: AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StateHandler: HandleState,
+	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
+		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
 {
-	let ends_at = duration_now() + max_exec_duration;
-
 	// retrieve trusted operations from pool
 	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
 
@@ -906,54 +899,31 @@ where
 		debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 	}
 
-	let mut calls = Vec::<OpaqueCall>::new();
-	let mut call_hashes = Vec::<H256>::new();
+	let execution_result = stf_executor.execute_timed_calls_batch::<PB, _>(
+		&trusted_calls,
+		latest_onchain_header,
+		&shard,
+		max_exec_duration,
+		|s| {
+			let mut sidechain_db = SidechainDB::<SB::Block, _>::new(s);
+			sidechain_db.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
+			sidechain_db.set_timestamp(&now_as_u64());
+			sidechain_db.ext
+		},
+	)?;
 
-	// load state before executing any calls
-	let (mut sidechain_db, state_lock) = state_handler
-		.load_for_mutation(&shard)
-		.map(|(l, s)| (SidechainDB::<SB::Block, _>::new(s), l))?;
+	let mut extrinsic_callbacks = execution_result.get_extrinsic_callbacks();
+	let call_hashes =
+		execution_result.get_all_execution_hashes().iter().map(|eh| eh.operation_hash).collect();
 
-	let prev_state_hash = sidechain_db.state_hash();
-	trace!("state apriori hash: {:?}", prev_state_hash);
-
-	// update state needed for pallets
-	sidechain_db.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
-	sidechain_db.set_timestamp(&now_as_u64());
-
-	// retrieve trusted operations from pool
-	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
-
-	debug!("Got following trusted calls from pool: {:?}", trusted_calls);
-	// call execution
-	for trusted_call_signed in trusted_calls.into_iter() {
-		match handle_trusted_worker_call::<PB, _>(
-			&mut calls,
-			&mut sidechain_db.ext,
-			&trusted_call_signed,
-			latest_onchain_header,
-			shard,
-			on_chain_ocall,
-		) {
-			Ok(hashes) => {
-				if let Some((_, op_hash)) = hashes {
-					call_hashes.push(op_hash)
-				}
-				rpc_author
-					.remove_top(
-						vec![top_or_hash(trusted_call_signed, true)],
-						shard,
-						hashes.is_some(),
-					)
-					.unwrap();
-			},
-			Err(e) =>
-				error!("Error performing worker call (will not push top hash): Error: {:?}", e),
-		};
-		// Check time
-		if ends_at < duration_now() {
-			break
-		}
+	for executed_operation in execution_result.executed_operations.iter() {
+		rpc_author
+			.remove_top(
+				vec![executed_operation.trusted_operation_or_hash.clone()],
+				shard,
+				executed_operation.is_success(),
+			)
+			.unwrap();
 	}
 
 	// Todo: this function should return here. Composing the block should be done by the caller.
@@ -962,32 +932,29 @@ where
 		latest_onchain_header,
 		call_hashes,
 		shard,
-		prev_state_hash,
-		&mut sidechain_db,
+		execution_result.previous_state_hash,
+		stf_executor,
 	) {
 		Ok((block_confirm, signed_block)) => {
-			calls.push(block_confirm);
+			extrinsic_callbacks.push(block_confirm);
 
 			// Notify watching clients of InSidechainBlock
 			let block = signed_block.block();
 			rpc_author.on_block_created(block.signed_top_hashes(), block.hash());
 
 			Some(signed_block)
-		},
+		}
 		Err(e) => {
 			error!("Could not compose block confirmation: {:?}", e);
 			None
-		},
+		}
 	};
-
-	// save updated state after call executions
-	let _hash = state_handler.write(sidechain_db.ext, state_lock, &shard)?;
 
 	if block.is_none() {
 		info!("[Enclave] did not produce a block for shard {:?}", shard);
 	}
 
-	Ok((calls, block))
+	Ok((extrinsic_callbacks, block))
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
@@ -1008,7 +975,7 @@ where
 
 	// return early if we have no trusted getters, so we don't decrypt the state unnecessarily
 	if trusted_getters.is_empty() {
-		return Ok(())
+		return Ok(());
 	}
 
 	// load state once per shard
@@ -1029,10 +996,10 @@ where
 					Ok(_) => trace!("Successfully updated client"),
 					Err(e) => error!("Could not send state to client {:?}", e),
 				}
-			},
+			}
 			Err(e) => {
 				error!("failed to get stf state, skipping trusted getter ({:?})", e);
-			},
+			}
 		};
 
 		// remove getter from pool
@@ -1044,7 +1011,7 @@ where
 
 		// Check time
 		if ends_at < duration_now() {
-			return Ok(())
+			return Ok(());
 		}
 	}
 
@@ -1061,7 +1028,7 @@ fn get_stf_state(
 ) -> Result<Option<Vec<u8>>> {
 	debug!("verifying signature of TrustedGetterSigned");
 	if let false = trusted_getter_signed.verify_signature() {
-		return Err(Error::Stf("bad signature".to_string()))
+		return Err(Error::Stf("bad signature".to_string()));
 	}
 
 	debug!("calling into STF to get state");
@@ -1069,57 +1036,67 @@ fn get_stf_state(
 }
 
 /// Composes a sidechain block of a shard
-fn compose_block_and_confirmation<PB, SB, SidechainDB>(
+fn compose_block_and_confirmation<PB, SB, StfExecutor>(
 	latest_onchain_header: &PB::Header,
 	top_call_hashes: Vec<H256>,
 	shard: ShardIdentifier,
 	state_hash_apriori: H256,
-	db: &mut SidechainDB,
+	stf_executor: &StfExecutor,
 ) -> Result<(OpaqueCall, SB)>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	SidechainDB: LastBlockExt<SB::Block> + SidechainState<Hash = H256>,
+	StfExecutor: StfExecuteGenericUpdate<Externalities = SgxExternalities>,
 {
 	let signer_pair = Ed25519Seal::unseal()?;
-	let state_hash_new = db.state_hash();
 
-	let (block_number, parent_hash) = match db.get_last_block() {
-		Some(block) => (block.block_number() + 1, block.hash()),
-		None => {
-			info!("Seems to be first sidechain block.");
-			(1, Default::default())
-		},
-	};
+	let author_public = signer_pair.public();
+	let (block, state_hash_new) = stf_executor.execute_update(&shard, |state| {
+		let mut db = SidechainDB::<SB::Block, _>::new(state);
+		let state_hash_new = db.state_hash();
 
-	if block_number != db.get_block_number().unwrap_or(0) {
-		return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
-	}
+		let (block_number, parent_hash) = match db.get_last_block() {
+			Some(block) => (block.block_number() + 1, block.hash()),
+			None => {
+				info!("Seems to be first sidechain block.");
+				(1, Default::default())
+			}
+		};
 
-	// create encrypted payload
-	let mut payload: Vec<u8> =
-		StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
-			.encode();
-	AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
+		if block_number != db.get_block_number().unwrap_or(0) {
+			return Err(Error::Other(
+				"[Sidechain] BlockNumber is not LastBlock's Number + 1".into(),
+			));
+		}
 
-	let block = SB::Block::new(
-		signer_pair.public(),
-		block_number,
-		parent_hash,
-		latest_onchain_header.hash(),
-		shard,
-		top_call_hashes,
-		payload,
-		now_as_u64(),
-	);
+		// create encrypted payload
+		let mut payload: Vec<u8> =
+			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
+				.encode();
+		AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
+
+		let block = SB::Block::new(
+			author_public,
+			block_number,
+			parent_hash,
+			latest_onchain_header.hash(),
+			shard,
+			top_call_hashes,
+			payload,
+			now_as_u64(),
+		);
+
+		db.set_last_block(&block);
+
+		// state diff has been written to block, clean it for the next block.
+		db.ext_mut().prune_state_diff();
+
+		Ok((db.ext, block))
+	})?;
 
 	let block_hash = block.hash();
 	debug!("Block hash {}", block_hash);
-	db.set_last_block(&block);
-
-	// state diff has been written to block, clean it for the next block.
-	db.ext_mut().prune_state_diff();
 
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
@@ -1163,7 +1140,7 @@ where
 						&mut opaque_calls,
 						&decrypted_trusted_call,
 						&block.header(),
-						shard,
+						&shard,
 						StatePostProcessing::Prune, // we only want to store the state diff for direct stuff.
 					) {
 						error!("Error executing trusted call: Error: {:?}", e);
@@ -1200,8 +1177,8 @@ where
 		Ok(h) => h,
 		Err(e) => {
 			error!("Error executing shield funds. Error: {:?}", e);
-			return Ok(())
-		},
+			return Ok(());
+		}
 	};
 
 	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
@@ -1229,60 +1206,4 @@ fn decrypt_unchecked_extrinsic(
 	let request_vec = Rsa3072Seal::unseal().map(|key| key.decrypt(&cyphertext))??;
 
 	Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
-}
-
-fn handle_trusted_worker_call<PB, O>(
-	calls: &mut Vec<OpaqueCall>,
-	state: &mut StfState,
-	stf_call_signed: &TrustedCallSigned,
-	header: &PB::Header,
-	shard: ShardIdentifier,
-	on_chain_ocall_api: &O,
-) -> Result<Option<(H256, H256)>>
-where
-	PB: BlockT<Hash = H256>,
-	O: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
-{
-	debug!("query mrenclave of self");
-	let mrenclave = on_chain_ocall_api.get_mrenclave_of_self()?;
-	debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
-
-	if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
-		error!("TrustedCallSigned: bad signature");
-		// do not panic here or users will be able to shoot workers dead by supplying a bad signature
-		return Ok(None)
-	}
-
-	// Necessary because light client sync may not be up to date
-	// see issue #208
-	debug!("Update STF storage!");
-	let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
-	let update_map = on_chain_ocall_api
-		.get_multiple_storages_verified(storage_hashes, header)
-		.map(into_map)?;
-	Stf::update_storage(state, &update_map.into());
-
-	debug!("execute STF");
-	if let Err(e) = Stf::execute(state, stf_call_signed.clone(), calls) {
-		error!("Error performing Stf::execute. Error: {:?}", e);
-		return Ok(None)
-	}
-
-	let call_hash = blake2_256(&stf_call_signed.encode());
-	let operation = stf_call_signed.clone().into_trusted_operation(true);
-	let operation_hash = blake2_256(&operation.encode());
-	debug!("Operation hash {:?}", operation_hash);
-	debug!("Call hash {:?}", call_hash);
-
-	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
-}
-
-fn into_map(
-	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
-) -> HashMap<Vec<u8>, Option<Vec<u8>>> {
-	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
-}
-
-fn top_or_hash<H>(tcs: TrustedCallSigned, direct: bool) -> TrustedOperationOrHash<H> {
-	TrustedOperationOrHash::<H>::Operation(tcs.into_trusted_operation(direct))
 }

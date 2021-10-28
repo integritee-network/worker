@@ -92,6 +92,8 @@ impl From<sr25519::Pair> for KeyPair {
 	}
 }
 
+pub mod hash;
+
 #[cfg(feature = "sgx")]
 pub mod stf_sgx;
 

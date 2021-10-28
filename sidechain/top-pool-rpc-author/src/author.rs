@@ -21,12 +21,11 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	client_error::Error as ClientError,
 	error::{Error as StateRpcError, Result},
-	hash,
 	top_filter::{AllowAllTopsFilter, Filter},
 	traits::{AuthorApi, OnBlockCreated, SendState},
 };
 use codec::{Decode, Encode};
-use ita_stf::{Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_sgx_crypto::ShieldingCrypto;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
