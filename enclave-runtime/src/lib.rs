@@ -749,13 +749,14 @@ where
 		};
 
 		// compose indirect block confirmation
+		// should be changed to ParentchainBlockProcessed, see worker issue #457
 		let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
-		let genesis_hash = validator.genesis_hash(validator.num_relays()).unwrap();
+		let mrenclave: ShardIdentifier = on_chain_ocall_api.get_mrenclave_of_self()?.m.into();
 		let block_hash = signed_block.block.header().hash();
 		let prev_state_hash = signed_block.block.header().parent_hash();
 		calls.push(OpaqueCall::from_tuple(&(
 			xt_block,
-			genesis_hash,
+			mrenclave, // pallet teerex only accepts shard == mrenclave for now
 			block_hash,
 			prev_state_hash.encode(),
 		)));
