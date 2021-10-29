@@ -116,15 +116,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # we can't use the `actions/setup-python@v2` due to cross compiling issues with
-      # ubuntu 18.04 and python > 3.6, but we need >3.6 for our scripts.
-      - name: Set up Python and helpers
-        run: |
-          sudo apt install software-properties-common -y
-          sudo add-apt-repository ppa:deadsnakes/ppa -y
-          sudo add-apt-repository ppa:minfrin/retry -y
-          sudo apt install python3.7 retry -y
-          python3.7 --version
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
       - name: Download Worker
         uses: actions/download-artifact@v2
         with:
