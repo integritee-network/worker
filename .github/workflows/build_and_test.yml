@@ -65,7 +65,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: init rust
-        run: rustup show
+        # enclave is not in the same workspace
+        run: rustup show && cd enclave-runtime && rustup show
 
       - name: Worker & Client
         run: cargo clippy -- -D warnings
