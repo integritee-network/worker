@@ -28,8 +28,8 @@ jobs:
     container: "integritee/integritee-dev:0.1.6"
     steps:
       - uses: actions/checkout@v2
-      - name: init-rust-target
-        run: rustup target add wasm32-unknown-unknown
+      - name: init rust
+        run: rustup show
 
       - name: Build
         run:  SGX_MODE=SW make
@@ -64,10 +64,8 @@ jobs:
     container: "integritee/integritee-dev:0.1.6"
     steps:
       - uses: actions/checkout@v2
-      - name: init-rust
-        run: |
-          rustup component add clippy
-          rustup target add wasm32-unknown-unknown
+      - name: init rust
+        run: rustup show
 
       - name: Worker & Client
         run: cargo clippy -- -D warnings
@@ -82,10 +80,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: init-rust
-        run: |
-          rustup component add rustfmt
-          rustup target add wasm32-unknown-unknown
+      - name: init rust
+        run: rustup show
+
       - name: Worker & Client
         run: cargo fmt --all -- --check
       - name: Enclave # Enclave is separate as it's not in the workspace
