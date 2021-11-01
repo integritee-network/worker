@@ -1,0 +1,48 @@
+[package]
+name = "its-rpc-handler"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["std"]
+std = [
+    "itp-types/std",
+    "its-primitives/std",
+    "its-top-pool-rpc-author/std",
+    "jsonrpc-core",
+    "log/std",
+    "rust-base58",
+]
+sgx = [
+    "sgx_tstd",
+    "itp-types/sgx",
+    "its-top-pool-rpc-author/sgx",
+    "jsonrpc-core_sgx",
+    "rust-base58_sgx",
+]
+
+[dependencies]
+# sgx dependencies
+sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# local dependencies
+itp-types = { path = "../../core-primitives/types", default-features = false }
+its-primitives = { path = "../primitives", default-features = false }
+its-top-pool-rpc-author = { path = "../top-pool-rpc-author", default-features = false }
+
+# sgx enabled external libraries
+rust-base58_sgx = { package = "rust-base58", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/rust-base58-sgx", optional = true, default-features = false, features = ["mesalock_sgx"] }
+jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
+
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+rust-base58 = { package = "rust-base58", version = "0.0.4", optional = true }
+jsonrpc-core = { version = "16", optional = true }
+
+# no-std compatible libraries
+codec  = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4", default-features = false }
+sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }

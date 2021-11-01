@@ -52,7 +52,7 @@ use ita_stf::{
 };
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
-	rpc_responder::RpcResponder, rpc_ws_handler::RpcWsHandler,
+	rpc_ws_handler::RpcWsHandler,
 };
 use itc_light_client::{
 	io::LightClientSeal, BlockNumberOps, HashFor, LightClientState, NumberFor, Validator,
@@ -84,13 +84,9 @@ use its_sidechain::{
 	},
 	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
-	top_pool::pool::Options as PoolOptions,
 	top_pool_rpc_author::{
-		api::SideChainApi,
-		author::{Author, AuthorTopFilter},
 		global_author_container::GlobalAuthorContainer,
 		hash::TrustedOperationOrHash,
-		pool_types::BPool,
 		traits::{AuthorApi, GetAuthor, OnBlockCreated, SendState},
 	},
 };
@@ -107,7 +103,6 @@ use sp_runtime::{
 };
 use std::{
 	collections::HashMap,
-	ops::Deref,
 	slice,
 	string::ToString,
 	sync::{Arc, SgxRwLock},
@@ -377,7 +372,7 @@ where
 	// 	import_sidechain_blocks::<PB, _, _, _>(signed_blocks, &header, importer.clone(), &ocall_api)
 	// });
 
-	let io = side_chain_io_handler(move |signed_blocks| {
+	let io = side_chain_io_handler::<_, crate::error::Error>(move |signed_blocks| {
 		log::info!("[sidechain] Imported blocks: {:?}", signed_blocks);
 		Ok(())
 	});
@@ -448,11 +443,6 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
 	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
-	let rpc_responder = Arc::new(RpcResponder::new(connection_registry.clone()));
-
-	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
-	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
-	let state_facade = Arc::new(GlobalFileStateHandler);
 
 	let rsa_shielding_key = match Rsa3072Seal::unseal() {
 		Ok(k) => k,
@@ -462,10 +452,18 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		},
 	};
 
-	let rpc_author =
-		Arc::new(Author::new(top_pool, AuthorTopFilter {}, state_facade, rsa_shielding_key));
+	its_sidechain::top_pool_rpc_author::initializer::initialize_top_pool_rpc_author(
+		connection_registry.clone(),
+		rsa_shielding_key,
+	);
 
-	GlobalAuthorContainer::initialize(rpc_author.clone());
+	let rpc_author = match GlobalAuthorContainer.get() {
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global top pool author");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
 	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
@@ -526,7 +524,7 @@ pub unsafe extern "C" fn init_light_client(
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
-	if let Err(e) = execute_trusted_getters_on_all_shards() {
+	if let Err(e) = execute_top_pool_trusted_getters_on_all_shards() {
 		return e.into()
 	}
 
@@ -536,15 +534,13 @@ pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 /// Internal [`execute_trusted_getters`] function to be able to use the `?` operator.
 ///
 /// Executes trusted getters for a scheduled amount of time (defined by settings).
-fn execute_trusted_getters_on_all_shards() -> Result<()> {
+fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let author_mutex = GlobalAuthorContainer.get().ok_or_else(|| {
+	let rpc_author = GlobalAuthorContainer.get().ok_or_else(|| {
 		error!("Failed to retrieve author mutex. It might not be initialized?");
 		Error::MutexAccess
 	})?;
-
-	let rpc_author = author_mutex.lock().unwrap().deref().clone();
 
 	let state_handler = GlobalFileStateHandler;
 
@@ -566,7 +562,7 @@ fn execute_trusted_getters_on_all_shards() -> Result<()> {
 			},
 		};
 
-		match execute_trusted_getters_on_shard(
+		match execute_top_pool_trusted_getters_on_shard(
 			rpc_author.as_ref(),
 			&state_handler,
 			shard,
@@ -584,7 +580,7 @@ fn execute_trusted_getters_on_all_shards() -> Result<()> {
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
-	if let Err(e) = execute_trusted_calls_internal::<Block>() {
+	if let Err(e) = execute_top_pool_trusted_calls_internal::<Block>() {
 		return e.into()
 	}
 
@@ -599,7 +595,7 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 ///
 /// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
 /// *   gossip produced sidechain blocks to peer validateers.
-fn execute_trusted_calls_internal<PB>() -> Result<()>
+fn execute_top_pool_trusted_calls_internal<PB>() -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
@@ -613,12 +609,11 @@ where
 
 	let authority = Ed25519Seal::unseal()?;
 
-	let author_mutex = GlobalAuthorContainer.get().ok_or_else(|| {
-		error!("Failed to retrieve author mutex. It might not be initialized?");
+	let rpc_author = GlobalAuthorContainer.get().ok_or_else(|| {
+		error!("Failed to retrieve author mutex. Maybe it's not initialized?");
 		Error::MutexAccess
 	})?;
 
-	let rpc_author = author_mutex.lock().unwrap().deref().clone();
 	let state_handler = Arc::new(GlobalFileStateHandler);
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
@@ -808,7 +803,7 @@ where
 ///
 /// Todo: This will probably be used again if we decide to make sidechain optional?
 #[allow(unused)]
-fn exec_trusted_calls_for_all_shards<PB, SB, OCallApi, RpcAuthor, StateHandler>(
+fn execute_top_pool_trusted_calls_for_all_shards<PB, SB, OCallApi, RpcAuthor, StateHandler>(
 	ocall_api: &OCallApi,
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
@@ -843,7 +838,7 @@ where
 			},
 		};
 
-		match exec_trusted_calls::<PB, SB, _, _, _>(
+		match execute_top_pool_trusted_calls::<PB, SB, _, _, _>(
 			ocall_api,
 			rpc_author,
 			state_handler,
@@ -874,7 +869,7 @@ where
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
-fn exec_trusted_calls<PB, SB, OCallApi, RpcAuthor, StateHandler>(
+fn execute_top_pool_trusted_calls<PB, SB, OCallApi, RpcAuthor, StateHandler>(
 	on_chain_ocall: &OCallApi,
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
@@ -995,7 +990,7 @@ where
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
-fn execute_trusted_getters_on_shard<RpcAuthor, StateHandler>(
+fn execute_top_pool_trusted_getters_on_shard<RpcAuthor, StateHandler>(
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
 	shard: H256,
@@ -1073,7 +1068,7 @@ fn get_stf_state(
 }
 
 /// Composes a sidechain block of a shard
-pub fn compose_block_and_confirmation<PB, SB, SidechainDB>(
+fn compose_block_and_confirmation<PB, SB, SidechainDB>(
 	latest_onchain_header: &PB::Header,
 	top_call_hashes: Vec<H256>,
 	shard: ShardIdentifier,
@@ -1131,7 +1126,7 @@ where
 	Ok((opaque_call, block.sign_block(&signer_pair)))
 }
 
-pub fn update_states<PB, O, StateHandler>(
+fn update_states<PB, O, StateHandler>(
 	header: PB::Header,
 	on_chain_ocall_api: &O,
 	state_handler: &StateHandler,
@@ -1193,7 +1188,7 @@ where
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, as well as shielding and unshielding calls
 /// Returns all unshielding call confirmations as opaque calls
-pub fn scan_block_for_relevant_xt<PB, O, StateHandler>(
+fn scan_block_for_relevant_xt<PB, O, StateHandler>(
 	block: &PB,
 	on_chain_ocall: &O,
 	state_handler: &StateHandler,
@@ -1364,7 +1359,7 @@ where
 	Ok(Some((H256::from(call_hash), H256::from(operation_hash))))
 }
 
-pub fn into_map(
+fn into_map(
 	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
 ) -> HashMap<Vec<u8>, Option<Vec<u8>>> {
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()

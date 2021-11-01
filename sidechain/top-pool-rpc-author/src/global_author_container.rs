@@ -15,6 +15,12 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sync::SgxMutex as Mutex;
+
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+
 use crate::{
 	atomic_container::AtomicContainer,
 	author::{Author, AuthorTopFilter},
@@ -23,7 +29,7 @@ use crate::{
 };
 use itp_stf_state_handler::GlobalFileStateHandler;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use std::sync::{Arc, SgxMutex};
+use std::sync::Arc;
 
 static GLOBAL_AUTHOR_CONTAINER: AtomicContainer = AtomicContainer::new();
 
@@ -40,7 +46,9 @@ impl GlobalAuthorContainer {
 impl GetAuthor for GlobalAuthorContainer {
 	type AuthorType = Author<BPool, AuthorTopFilter, GlobalFileStateHandler, Rsa3072KeyPair>;
 
-	fn get(&self) -> Option<&'static SgxMutex<Arc<Self::AuthorType>>> {
-		GLOBAL_AUTHOR_CONTAINER.load()
+	fn get(&self) -> Option<Arc<Self::AuthorType>> {
+		let author_mutex: &'static Mutex<Arc<Self::AuthorType>> = GLOBAL_AUTHOR_CONTAINER.load()?;
+
+		Some(author_mutex.lock().unwrap().clone())
 	}
 }

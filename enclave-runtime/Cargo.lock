@@ -1423,6 +1423,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-rpc-handler"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "its-primitives",
+ "its-top-pool-rpc-author",
+ "jsonrpc-core",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "rust-base58",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+]
+
+[[package]]
 name = "its-sidechain"
 version = "0.8.0"
 dependencies = [
@@ -1430,6 +1446,7 @@ dependencies = [
  "its-consensus-common",
  "its-consensus-slots",
  "its-primitives",
+ "its-rpc-handler",
  "its-state",
  "its-top-pool",
  "its-top-pool-rpc-author",
