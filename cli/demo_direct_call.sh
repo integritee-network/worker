@@ -93,6 +93,7 @@ echo ""
 
 echo "* Bob's incognito account balance"
 RESULT=$($TIMEOUT ${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE} | xargs)
+echo $RESULT
 echo ""
 
 
