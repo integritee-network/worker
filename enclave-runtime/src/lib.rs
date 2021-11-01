@@ -756,7 +756,7 @@ where
 		let prev_state_hash = signed_block.block.header().parent_hash();
 		calls.push(OpaqueCall::from_tuple(&(
 			xt_block,
-			mrenclave, // 'block_confirmed' only accepts shard == mrenclave. Will be changed with #457
+			mrenclave, // 'block_confirmed' only accepts shard == mrenclave. Will be adjusted with #457
 			block_hash,
 			prev_state_hash.encode(),
 		)));
