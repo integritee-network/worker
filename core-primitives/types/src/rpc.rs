@@ -21,6 +21,14 @@ impl RpcReturnValue {
 			//signature: sign,
 		}
 	}
+
+	pub fn from_error_message(error_msg: &str) -> Self {
+		RpcReturnValue {
+			value: error_msg.encode(),
+			do_watch: false,
+			status: DirectRequestStatus::Error,
+		}
+	}
 }
 
 #[derive(Clone, Encode, Decode, Serialize, Deserialize)]
