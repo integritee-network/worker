@@ -70,7 +70,7 @@ pub mod worker {
 	// size of the MR enclave
 	pub const MR_ENCLAVE_SIZE: usize = 32;
 	// factor to tune the amount of enclave funding: funding_amount = MIN_FUND_INCREASE_FACTOR*existential_deposit - balance.free
-	pub const MIN_FUND_INCREASE_FACTOR: u128 = 1_000;
+	pub const MIN_FUND_INCREASE_FACTOR: u128 = 10_000;
 }
 
 pub mod sidechain {
