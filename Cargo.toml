@@ -58,3 +58,4 @@ sgx_trts = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_trt
 sgx_types = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_ucrypto = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_ucrypto" }
 sgx_tcrypto = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_tcrypto" }
+sgx_tcrypto_helper = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
