@@ -46,8 +46,8 @@ use crate::{
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{
-	hash::TrustedOperationOrHash, AccountId, Getter, ShardIdentifier, State as StfState,
-	StatePayload, Stf, TrustedCallSigned, TrustedGetterSigned,
+	hash::TrustedOperationOrHash, AccountId, Getter, ShardIdentifier, StatePayload, Stf,
+	TrustedCallSigned, TrustedGetterSigned,
 };
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -70,6 +70,7 @@ use itp_sgx_crypto::{
 };
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
+use itp_stf_executor::traits::StfExecuteTimedGettersBatch;
 use itp_stf_executor::{
 	executor::StfExecutor,
 	traits::{
@@ -107,7 +108,6 @@ use sp_runtime::{
 };
 use std::{
 	slice,
-	string::ToString,
 	sync::{Arc, SgxRwLock},
 	time::Duration,
 	vec::Vec,
@@ -543,7 +543,8 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 		Error::MutexAccess
 	})?;
 
-	let state_handler = GlobalFileStateHandler;
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
 
 	let shards = state_handler.list_shards()?;
 	let mut remaining_shards = shards.len() as u32;
@@ -565,8 +566,8 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 
 		match execute_top_pool_trusted_getters_on_shard(
 			rpc_author.as_ref(),
-			&state_handler,
-			shard,
+			&stf_executor,
+			&shard,
 			shard_exec_time,
 		) {
 			Ok(()) => {}
@@ -958,81 +959,55 @@ where
 }
 
 /// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
-fn execute_top_pool_trusted_getters_on_shard<RpcAuthor, StateHandler>(
+fn execute_top_pool_trusted_getters_on_shard<RpcAuthor, StfExecutor>(
 	rpc_author: &RpcAuthor,
-	state_handler: &StateHandler,
-	shard: H256,
+	stf_executor: &StfExecutor,
+	shard: &ShardIdentifier,
 	max_exec_duration: Duration,
 ) -> Result<()>
 where
 	RpcAuthor: AuthorApi<H256, H256> + SendState<Hash = H256>,
-	StateHandler: HandleState,
+	StfExecutor: StfExecuteTimedGettersBatch,
 {
-	let ends_at = duration_now() + max_exec_duration;
-
 	// retrieve trusted operations from pool
-	let trusted_getters = rpc_author.get_pending_tops_separated(shard)?.1;
+	let trusted_getters = rpc_author.get_pending_tops_separated(*shard)?.1;
 
-	// return early if we have no trusted getters, so we don't decrypt the state unnecessarily
-	if trusted_getters.is_empty() {
-		return Ok(());
-	}
+	type StfExecutorResult<T> = itp_stf_executor::error::Result<T>;
 
-	// load state once per shard
-	let mut state = state_handler
-		.load_initialized(&shard)
-		.map_err(|e| Error::Stf(format!("Error loading shard {:?}: Error: {:?}", shard, e)))?;
-	trace!("Successfully loaded stf state");
+	stf_executor
+		.execute_timed_getters_batch(
+			&trusted_getters,
+			&shard,
+			max_exec_duration,
+			|trusted_getter_signed: &TrustedGetterSigned,
+			 state_result: StfExecutorResult<Option<Vec<u8>>>| {
+				let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
 
-	for trusted_getter_signed in trusted_getters.into_iter() {
-		let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
+				match state_result {
+					Ok(r) => {
+						// let client know of current state
+						trace!("Updating client");
+						match rpc_author.send_state(hash_of_getter, r.encode()) {
+							Ok(_) => trace!("Successfully updated client"),
+							Err(e) => error!("Could not send state to client {:?}", e),
+						}
+					}
+					Err(e) => {
+						error!("failed to get stf state, skipping trusted getter ({:?})", e);
+					}
+				};
 
-		// get state
-		match get_stf_state(trusted_getter_signed, &mut state) {
-			Ok(r) => {
-				// let client know of current state
-				trace!("Updating client");
-				match rpc_author.send_state(hash_of_getter, r.encode()) {
-					Ok(_) => trace!("Successfully updated client"),
-					Err(e) => error!("Could not send state to client {:?}", e),
+				// remove getter from pool
+				if let Err(e) = rpc_author.remove_top(
+					vec![TrustedOperationOrHash::Hash(hash_of_getter)],
+					*shard,
+					false,
+				) {
+					error!("Error removing trusted operation from top pool: Error: {:?}", e);
 				}
-			}
-			Err(e) => {
-				error!("failed to get stf state, skipping trusted getter ({:?})", e);
-			}
-		};
-
-		// remove getter from pool
-		if let Err(e) =
-			rpc_author.remove_top(vec![TrustedOperationOrHash::Hash(hash_of_getter)], shard, false)
-		{
-			error!("Error removing trusted operation from top pool: Error: {:?}", e);
-		}
-
-		// Check time
-		if ends_at < duration_now() {
-			return Ok(());
-		}
-	}
-
-	Ok(())
-}
-
-/// Execute a trusted getter on a state and return its value, if available.
-///
-/// Also verifies the signature of the trusted getter and returns an error
-/// if it's invalid.
-fn get_stf_state(
-	trusted_getter_signed: TrustedGetterSigned,
-	state: &mut StfState,
-) -> Result<Option<Vec<u8>>> {
-	debug!("verifying signature of TrustedGetterSigned");
-	if let false = trusted_getter_signed.verify_signature() {
-		return Err(Error::Stf("bad signature".to_string()));
-	}
-
-	debug!("calling into STF to get state");
-	Ok(Stf::get_state(state, trusted_getter_signed.into()))
+			},
+		)
+		.map_err(Error::StfExecution)
 }
 
 /// Composes a sidechain block of a shard

@@ -21,6 +21,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::untrusted::time::SystemTimeEx;
 
+use crate::traits::StfExecuteTimedGettersBatch;
 use crate::{
 	error::{Error, Result},
 	traits::{
@@ -34,6 +35,7 @@ use ita_stf::{
 	hash::TrustedOperationOrHash,
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	AccountId, ShardIdentifier, StateTypeDiff, Stf, TrustedCall, TrustedCallSigned,
+	TrustedGetterSigned,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::handle_state::HandleState;
@@ -100,17 +102,15 @@ where
 		if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
 			error!("TrustedCallSigned: bad signature");
 			// do not panic here or users will be able to shoot workers dead by supplying a bad signature
-			return Ok(ExecutedOperation::failed(top_or_hash))
+			return Ok(ExecutedOperation::failed(top_or_hash));
 		}
 
 		// Necessary because light client sync may not be up to date
 		// see issue #208
 		debug!("Update STF storage!");
 		let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
-		let update_map = self
-			.ocall_api
-			.get_multiple_storages_verified(storage_hashes, header)
-			.map(into_map)?;
+		let update_map =
+			self.ocall_api.get_multiple_storages_verified(storage_hashes, header).map(into_map)?;
 
 		Stf::update_storage(state, &update_map.into());
 
@@ -118,7 +118,7 @@ where
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
 		if let Err(e) = Stf::execute(state, stf_call_signed.clone(), &mut extrinsic_call_backs) {
 			error!("Stf::execute failed: {:?}", e);
-			return Ok(ExecutedOperation::failed(top_or_hash))
+			return Ok(ExecutedOperation::failed(top_or_hash));
 		}
 
 		let call_hash = blake2_256(&stf_call_signed.encode());
@@ -166,8 +166,9 @@ where
 		)?;
 
 		let (maybe_hashes, mut extrinsic_callbacks) = match executed_call.status {
-			ExecutionStatus::Success(execution_hashes, e) =>
-				(Some((execution_hashes.call_hash, execution_hashes.operation_hash)), e),
+			ExecutionStatus::Success(execution_hashes, e) => {
+				(Some((execution_hashes.call_hash, execution_hashes.operation_hash)), e)
+			}
 			ExecutionStatus::Failure => (None, Vec::new()),
 		};
 
@@ -222,7 +223,7 @@ where
 		let storage_hashes = Stf::storage_hashes_to_update_on_block();
 
 		if storage_hashes.is_empty() {
-			return Ok(())
+			return Ok(());
 		}
 
 		// global requests they are the same for every shard
@@ -262,7 +263,7 @@ where
 
 						self.state_handler.write(state, state_lock, &shard_id)?;
 					}
-				},
+				}
 				None => debug!("No shards are on the chain yet"),
 			};
 		};
@@ -308,15 +309,15 @@ where
 			) {
 				Ok(executed_call) => {
 					executed_calls.push(executed_call);
-				},
+				}
 				Err(e) => {
 					error!("Error executing trusted call (will not push top hash): {:?}", e);
-				},
+				}
 			};
 
 			// Check time
 			if ends_at < duration_now() {
-				break
+				break;
 			}
 		}
 
@@ -325,6 +326,49 @@ where
 			.map_err(|e| Error::StateHandlingError(e))?;
 
 		Ok(ExecutionResult { executed_operations: executed_calls, previous_state_hash })
+	}
+}
+
+impl<OCallApi, StateHandler> StfExecuteTimedGettersBatch for StfExecutor<OCallApi, StateHandler>
+where
+	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	StateHandler: HandleState,
+{
+	type Externalities = SgxExternalities;
+
+	fn execute_timed_getters_batch<F>(
+		&self,
+		trusted_getters: &[TrustedGetterSigned],
+		shard: &ShardIdentifier,
+		max_exec_duration: Duration,
+		getter_callback: F,
+	) -> Result<()>
+	where
+		F: Fn(&TrustedGetterSigned, Result<Option<Vec<u8>>>),
+	{
+		let ends_at = duration_now() + max_exec_duration;
+
+		// return early if we have no trusted getters, so we don't decrypt the state unnecessarily
+		if trusted_getters.is_empty() {
+			return Ok(());
+		}
+
+		// load state once per shard
+		let mut state = self.state_handler.load_initialized(&shard)?;
+
+		for trusted_getter_signed in trusted_getters.into_iter() {
+			// get state
+			let getter_state = get_stf_state(trusted_getter_signed, &mut state);
+
+			getter_callback(trusted_getter_signed, getter_state);
+
+			// Check time
+			if ends_at < duration_now() {
+				return Ok(());
+			}
+		}
+
+		Ok(())
 	}
 }
 
@@ -376,4 +420,21 @@ fn duration_now() -> Duration {
 
 fn top_or_hash<H>(tcs: TrustedCallSigned, direct: bool) -> TrustedOperationOrHash<H> {
 	TrustedOperationOrHash::<H>::Operation(tcs.into_trusted_operation(direct))
+}
+
+/// Execute a trusted getter on a state and return its value, if available.
+///
+/// Also verifies the signature of the trusted getter and returns an error
+/// if it's invalid.
+fn get_stf_state<E: SgxExternalitiesTrait>(
+	trusted_getter_signed: &TrustedGetterSigned,
+	state: &mut E,
+) -> Result<Option<Vec<u8>>> {
+	debug!("verifying signature of TrustedGetterSigned");
+	if let false = trusted_getter_signed.verify_signature() {
+		return Err(Error::OperationHasInvalidSignature);
+	}
+
+	debug!("calling into STF to get state");
+	Ok(Stf::get_state(state, trusted_getter_signed.clone().into()))
 }

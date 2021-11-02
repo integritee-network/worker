@@ -26,8 +26,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 /// STF-Executor error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("Trusted call has invalid signature")]
-	CallHasInvalidSignature,
+	#[error("Trusted operation has invalid signature")]
+	OperationHasInvalidSignature,
 	#[error("SGX error, status: {0}")]
 	SgxError(sgx_status_t),
 	#[error("State handling error: {0}")]

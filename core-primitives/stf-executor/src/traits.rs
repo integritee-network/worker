@@ -17,7 +17,7 @@
 
 use crate::{error::Result, ExecutionResult};
 use codec::Encode;
-use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned};
+use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned};
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::traits::Block as BlockT;
@@ -74,6 +74,24 @@ pub trait StfExecuteTimedCallsBatch {
 		F: FnOnce(Self::Externalities) -> Self::Externalities;
 }
 
+/// Execute a batch of trusted getter within a given time window
+///
+///
+pub trait StfExecuteTimedGettersBatch {
+	type Externalities: SgxExternalitiesTrait + Encode;
+
+	fn execute_timed_getters_batch<F>(
+		&self,
+		trusted_getters: &[TrustedGetterSigned],
+		shard: &ShardIdentifier,
+		max_exec_duration: Duration,
+		getter_callback: F,
+	) -> Result<()>
+	where
+		F: Fn(&TrustedGetterSigned, Result<Option<Vec<u8>>>);
+}
+
+/// Execute a generic function on the STF state
 pub trait StfExecuteGenericUpdate {
 	type Externalities: SgxExternalitiesTrait + Encode;
 

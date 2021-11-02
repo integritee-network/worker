@@ -73,33 +73,36 @@ impl Stf {
 		ext
 	}
 
-	pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
+	pub fn get_state(ext: &mut impl SgxExternalitiesTrait, getter: Getter) -> Option<Vec<u8>> {
 		ext.execute_with(|| match getter {
 			Getter::trusted(g) => match g.getter {
-				TrustedGetter::free_balance(who) =>
+				TrustedGetter::free_balance(who) => {
 					if let Some(info) = get_account_info(&who) {
 						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
 						debug!("Account free balance is {}", info.data.free);
 						Some(info.data.free.encode())
 					} else {
 						None
-					},
-				TrustedGetter::reserved_balance(who) =>
+					}
+				}
+				TrustedGetter::reserved_balance(who) => {
 					if let Some(info) = get_account_info(&who) {
 						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
 						debug!("Account reserved balance is {}", info.data.reserved);
 						Some(info.data.reserved.encode())
 					} else {
 						None
-					},
-				TrustedGetter::nonce(who) =>
+					}
+				}
+				TrustedGetter::nonce(who) => {
 					if let Some(info) = get_account_info(&who) {
 						debug!("AccountInfo for {:x?} is {:?}", who.encode(), info);
 						debug!("Account nonce is {}", info.nonce);
 						Some(info.nonce.encode())
 					} else {
 						None
-					},
+					}
+				}
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),
@@ -133,7 +136,7 @@ impl Stf {
 					.dispatch_bypass_filter(sgx_runtime::Origin::root())
 					.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
 					Ok(())
-				},
+				}
 				TrustedCall::balance_transfer(from, to, value) => {
 					let origin = sgx_runtime::Origin::signed(from.clone());
 					debug!("balance_transfer({:x?}, {:x?}, {})", from.encode(), to.encode(), value);
@@ -146,7 +149,7 @@ impl Stf {
 						.dispatch_bypass_filter(origin)
 						.map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
 					Ok(())
-				},
+				}
 				TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
 					debug!(
 						"balance_unshield({:x?}, {:x?}, {}, {})",
@@ -165,13 +168,13 @@ impl Stf {
 						call_hash,
 					)));
 					Ok(())
-				},
+				}
 				TrustedCall::balance_shield(root, who, value) => {
 					ensure_root(root)?;
 					debug!("balance_shield({:x?}, {})", who.encode(), value);
 					Self::shield_funds(who, value)?;
 					Ok(())
-				},
+				}
 			}?;
 			increment_nonce(&sender);
 			Ok(())
@@ -202,7 +205,7 @@ impl Stf {
 		match get_account_info(&account) {
 			Some(account_info) => {
 				if account_info.data.free < amount {
-					return Err(StfError::MissingFunds)
+					return Err(StfError::MissingFunds);
 				}
 
 				sgx_runtime::BalancesCall::<Runtime>::set_balance(
@@ -213,7 +216,7 @@ impl Stf {
 				.dispatch_bypass_filter(sgx_runtime::Origin::root())
 				.map_err(|_| StfError::Dispatch("unshield_funds::set_balance".to_string()))?;
 				Ok(())
-			},
+			}
 			None => Err(StfError::InexistentAccount(account)),
 		}
 	}
