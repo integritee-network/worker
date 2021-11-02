@@ -137,3 +137,4 @@ sgx_types = { version = "1.1.4", path = "../../../incubator-teaclave-sgx-sdk/sgx
 sgx_ucrypto = { version = "1.1.4", path = "../../../incubator-teaclave-sgx-sdk/sgx_ucrypto" }
 sgx_tcrypto = { version = "1.1.4", path = "../../../incubator-teaclave-sgx-sdk/sgx_tcrypto" }
 sgx_tcrypto_helper = { version = "1.1.4", path = "../../../incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
+sgx_crypto_helper = { version = "1.1.4", path = "../../incubator-teaclave-sgx-sdk/sgx_crypto_helper" }
