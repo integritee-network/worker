@@ -37,7 +37,7 @@ std = [
 [dependencies]
 # sgx dependencies
 sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread", "untrusted_time"] }
+sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread", "untrusted_time"] }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -51,7 +51,7 @@ linked-hash-map_sgx = { package = "linked-hash-map", git = "https://github.com/m
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
-jsonrpc-core = { version = "16", optional = true }
+jsonrpc-core = { version = "18", optional = true }
 linked-hash-map = { version = "0.5.2", optional = true }
 thiserror = { version = "1.0", optional = true }
 
