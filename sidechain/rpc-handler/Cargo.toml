@@ -40,7 +40,7 @@ jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jso
 
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
 rust-base58 = { package = "rust-base58", version = "0.0.4", optional = true }
-jsonrpc-core = { version = "16", optional = true }
+jsonrpc-core = { version = "18", optional = true }
 
 # no-std compatible libraries
 codec  = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
