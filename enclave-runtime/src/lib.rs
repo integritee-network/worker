@@ -70,12 +70,12 @@ use itp_sgx_crypto::{
 };
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
-use itp_stf_executor::traits::StfExecuteTimedGettersBatch;
 use itp_stf_executor::{
 	executor::StfExecutor,
 	traits::{
 		StatePostProcessing, StfExecuteGenericUpdate, StfExecuteShieldFunds,
-		StfExecuteTimedCallsBatch, StfExecuteTrustedCall, StfUpdateState,
+		StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch, StfExecuteTrustedCall,
+		StfUpdateState,
 	},
 };
 use itp_stf_state_handler::{
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	env_logger::init();
 
 	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into();
+		return e.into()
 	}
 
 	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
@@ -173,13 +173,13 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
 	if let Err(e) = rsa3072::create_sealed_if_absent() {
-		return e.into();
+		return e.into()
 	}
 
 	// create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker
 	if let Err(e) = aes::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into();
+		return e.into()
 	}
 
 	let state_handler = GlobalFileStateHandler;
@@ -209,8 +209,8 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 		Ok(k) => k,
 		Err(x) => {
 			println!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
@@ -222,7 +222,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
 	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into();
+		return e.into()
 	}
 
 	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
@@ -264,7 +264,9 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let mre = OcallApi.get_mrenclave_of_self().map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
+	let mre = OcallApi
+		.get_mrenclave_of_self()
+		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
 
 	let signer = Ed25519Seal::unseal().unwrap();
 	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
@@ -340,8 +342,8 @@ pub unsafe extern "C" fn call_rpc_methods(
 		Ok(req) => req,
 		Err(e) => {
 			error!("[SidechainRpc] FFI: Invalid utf8 request: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let res = match side_chain_rpc_int::<Block, _>(request, OcallApi) {
@@ -402,7 +404,7 @@ pub unsafe extern "C" fn get_state(
 		debug!("verifying signature of TrustedGetterSigned");
 		if let false = trusted_getter_signed.verify_signature() {
 			error!("bad signature");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		}
 	}
 
@@ -438,8 +440,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("Decoding RPC server address failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
@@ -449,8 +451,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Ok(k) => k,
 		Err(e) => {
 			error!("Failed to unseal shielding key: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	its_sidechain::top_pool_rpc_author::initializer::initialize_top_pool_rpc_author(
@@ -462,8 +464,8 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Some(a) => a,
 		None => {
 			error!("Failed to retrieve global top pool author");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let io_handler = public_api_rpc_handler(rpc_author);
@@ -496,24 +498,24 @@ pub unsafe extern "C" fn init_light_client(
 		Ok(h) => h,
 		Err(e) => {
 			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let auth = match VersionedAuthorityList::decode(&mut auth) {
 		Ok(a) => a,
 		Err(e) => {
 			error!("Decoding VersionedAuthorityList failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let proof = match StorageProof::decode(&mut proof) {
 		Ok(h) => h,
 		Err(e) => {
 			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	match itc_light_client::io::read_or_init_validator::<Block>(header, auth, proof) {
@@ -526,7 +528,7 @@ pub unsafe extern "C" fn init_light_client(
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 	if let Err(e) = execute_top_pool_trusted_getters_on_all_shards() {
-		return e.into();
+		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -560,8 +562,8 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 			Some(t) => t,
 			None => {
 				info!("[Enclave] Could not execute trusted operations for all shards. Remaining number of shards: {}.", remaining_shards);
-				break;
-			}
+				break
+			},
 		};
 
 		match execute_top_pool_trusted_getters_on_shard(
@@ -570,7 +572,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 			&shard,
 			shard_exec_time,
 		) {
-			Ok(()) => {}
+			Ok(()) => {},
 			Err(e) => error!("Error in trusted getter execution for shard {:?}: {:?}", shard, e),
 		}
 
@@ -583,7 +585,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 	if let Err(e) = execute_top_pool_trusted_calls_internal::<Block>() {
-		return e.into();
+		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -636,11 +638,11 @@ where
 				&mut nonce,
 				shards,
 			)?
-		}
+		},
 		None => {
 			debug!("No slot yielded. Skipping block production.");
-			return Ok(());
-		}
+			return Ok(())
+		},
 	};
 
 	LightClientSeal::seal(validator)?;
@@ -660,7 +662,7 @@ pub unsafe extern "C" fn sync_parentchain(
 	};
 
 	if let Err(e) = sync_parentchain_internal::<Block>(blocks_to_sync, *nonce) {
-		return e.into();
+		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -719,7 +721,9 @@ where
 
 	debug!("Syncing light client!");
 	for signed_block in blocks_to_sync.into_iter() {
-		validator.check_xt_inclusion(validator.num_relays(), &signed_block.block).unwrap(); // panic can only happen if relay_id does not exist
+		validator
+			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
+			.unwrap(); // panic can only happen if relay_id does not exist
 
 		if let Err(e) = validator.submit_simple_header(
 			validator.num_relays(),
@@ -727,12 +731,12 @@ where
 			signed_block.justifications.clone(),
 		) {
 			error!("Block verification failed. Error : {:?}", e);
-			return Err(e.into());
+			return Err(e.into())
 		}
 
 		if let Err(e) = stf_executor.update_states::<PB>(&signed_block.block.header()) {
 			error!("Error performing state updates upon block import");
-			return Err(e.into());
+			return Err(e.into())
 		}
 
 		// execute indirect calls, incl. shielding and unshielding
@@ -833,8 +837,8 @@ where
 			Some(t) => t,
 			None => {
 				info!("[Enclave] Could not execute trusted operations for all shards. Remaining shards: {}.", remaining_shards);
-				break;
-			}
+				break
+			},
 		};
 
 		match execute_top_pool_trusted_calls::<PB, SB, _, _>(
@@ -849,7 +853,7 @@ where
 				if let Some(sb) = sb {
 					signed_blocks.push(sb);
 				}
-			}
+			},
 			Err(e) => error!("Error in top execution for shard {:?}: {:?}", shard, e),
 		}
 
@@ -914,8 +918,11 @@ where
 	)?;
 
 	let mut extrinsic_callbacks = execution_result.get_extrinsic_callbacks();
-	let call_hashes =
-		execution_result.get_all_execution_hashes().iter().map(|eh| eh.operation_hash).collect();
+	let call_hashes = execution_result
+		.get_all_execution_hashes()
+		.iter()
+		.map(|eh| eh.operation_hash)
+		.collect();
 
 	for executed_operation in execution_result.executed_operations.iter() {
 		rpc_author
@@ -944,11 +951,11 @@ where
 			rpc_author.on_block_created(block.signed_top_hashes(), block.hash());
 
 			Some(signed_block)
-		}
+		},
 		Err(e) => {
 			error!("Could not compose block confirmation: {:?}", e);
 			None
-		}
+		},
 	};
 
 	if block.is_none() {
@@ -991,10 +998,10 @@ where
 							Ok(_) => trace!("Successfully updated client"),
 							Err(e) => error!("Could not send state to client {:?}", e),
 						}
-					}
+					},
 					Err(e) => {
 						error!("failed to get stf state, skipping trusted getter ({:?})", e);
-					}
+					},
 				};
 
 				// remove getter from pool
@@ -1036,13 +1043,11 @@ where
 			None => {
 				info!("Seems to be first sidechain block.");
 				(1, Default::default())
-			}
+			},
 		};
 
 		if block_number != db.get_block_number().unwrap_or(0) {
-			return Err(Error::Other(
-				"[Sidechain] BlockNumber is not LastBlock's Number + 1".into(),
-			));
+			return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
 		}
 
 		// create encrypted payload
@@ -1152,8 +1157,8 @@ where
 		Ok(h) => h,
 		Err(e) => {
 			error!("Error executing shield funds. Error: {:?}", e);
-			return Ok(());
-		}
+			return Ok(())
+		},
 	};
 
 	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
