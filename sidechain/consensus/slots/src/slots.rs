@@ -194,6 +194,7 @@ mod tests {
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
 	use std::fmt::Debug;
+	use core::assert_matches::assert_matches;
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
 

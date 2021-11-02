@@ -176,6 +176,7 @@ mod tests {
 	use its_primitives::traits::SignBlock;
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{app_crypto::ed25519, testing::H256};
+	use core::assert_matches::assert_matches;
 
 	fn assert_bad_sidechain_block_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
 		assert_matches!(result.unwrap_err(),ConsensusError::BadSidechainBlock(

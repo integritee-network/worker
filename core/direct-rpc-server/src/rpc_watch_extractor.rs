@@ -78,6 +78,7 @@ pub mod tests {
 	};
 	use codec::Encode;
 	use itp_types::TrustedOperationStatus;
+	use core::assert_matches::assert_matches;
 
 	#[test]
 	fn invalid_rpc_response_returns_encoding_error() {

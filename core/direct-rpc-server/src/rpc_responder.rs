@@ -145,6 +145,7 @@ pub mod tests {
 		mocks::{connection_mock::ConnectionMock, updates_sink::UpdatesSink},
 		rpc_connection_registry::ConnectionRegistry,
 	};
+	use core::assert_matches::assert_matches;
 
 	type TestConnection = ConnectionMock;
 	type TestConnectionRegistry = ConnectionRegistry<String, TestConnection>;

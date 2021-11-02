@@ -103,6 +103,7 @@ pub mod tests {
 	use itp_types::{DirectRequestStatus, RpcReturnValue};
 	use jsonrpc_core::Params;
 	use serde_json::json;
+	use core::assert_matches::assert_matches;
 
 	type TestConnection = ConnectionMock;
 	type TestConnectionRegistry = ConnectionRegistry<String, TestConnection>;
