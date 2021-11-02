@@ -171,12 +171,12 @@ mod tests {
 	use crate::mock::{
 		default_header, validateer, StateMock, TestAuraVerifier, TestBlockBuilder, SLOT_DURATION,
 	};
+	use core::assert_matches::assert_matches;
 	use frame_support::assert_ok;
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use its_primitives::traits::SignBlock;
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{app_crypto::ed25519, testing::H256};
-	use core::assert_matches::assert_matches;
 
 	fn assert_bad_sidechain_block_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
 		assert_matches!(result.unwrap_err(),ConsensusError::BadSidechainBlock(

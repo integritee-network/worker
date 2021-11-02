@@ -185,6 +185,7 @@ pub mod sgx {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use core::assert_matches::assert_matches;
 	use itp_sgx_io::SealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{
@@ -194,7 +195,6 @@ mod tests {
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
 	use std::fmt::Debug;
-	use core::assert_matches::assert_matches;
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
 

@@ -77,8 +77,8 @@ pub mod tests {
 		rpc_response_builder::RpcResponseBuilder, rpc_return_value_builder::RpcReturnValueBuilder,
 	};
 	use codec::Encode;
-	use itp_types::TrustedOperationStatus;
 	use core::assert_matches::assert_matches;
+	use itp_types::TrustedOperationStatus;
 
 	#[test]
 	fn invalid_rpc_response_returns_encoding_error() {
