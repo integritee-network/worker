@@ -73,9 +73,9 @@ jobs:
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
 
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.2
+      # - name: Fail-fast; cancel other jobs
+      #   if: failure()
+      #   uses: andymckay/cancel-action@0.2
 
   fmt:
     runs-on: ubuntu-latest
