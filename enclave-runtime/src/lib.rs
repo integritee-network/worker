@@ -904,7 +904,7 @@ where
 		debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 	}
 
-	let execution_result = stf_executor.execute_timed_calls_batch::<PB, _>(
+	let batch_execution_result = stf_executor.execute_timed_calls_batch::<PB, _>(
 		&trusted_calls,
 		latest_onchain_header,
 		&shard,
@@ -917,21 +917,21 @@ where
 		},
 	)?;
 
-	let mut extrinsic_callbacks = execution_result.get_extrinsic_callbacks();
-	let call_hashes = execution_result
-		.get_all_execution_hashes()
+	let mut extrinsic_callbacks = batch_execution_result.get_extrinsic_callbacks();
+	let call_hashes = batch_execution_result
+		.get_executed_operation_hashes()
 		.iter()
 		.map(|eh| eh.operation_hash)
 		.collect();
 
-	for executed_operation in execution_result.executed_operations.iter() {
+	for executed_operation in batch_execution_result.executed_operations.iter() {
 		rpc_author
 			.remove_top(
 				vec![executed_operation.trusted_operation_or_hash.clone()],
 				shard,
 				executed_operation.is_success(),
 			)
-			.unwrap();
+			.map_err(|e| Error::Other(e.into()))?;
 	}
 
 	// Todo: this function should return here. Composing the block should be done by the caller.
@@ -940,7 +940,7 @@ where
 		latest_onchain_header,
 		call_hashes,
 		shard,
-		execution_result.previous_state_hash,
+		batch_execution_result.previous_state_hash,
 		stf_executor,
 	) {
 		Ok((block_confirm, signed_block)) => {

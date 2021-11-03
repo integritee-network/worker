@@ -115,12 +115,12 @@ impl ExecutedOperation {
 ///
 /// Contains multiple executed calls
 #[derive(Clone, Debug)]
-pub struct ExecutionResult {
+pub struct BatchExecutionResult {
 	pub previous_state_hash: H256,
 	pub executed_operations: Vec<ExecutedOperation>,
 }
 
-impl ExecutionResult {
+impl BatchExecutionResult {
 	pub fn get_extrinsic_callbacks(&self) -> Vec<OpaqueCall> {
 		self.executed_operations
 			.iter()
@@ -128,7 +128,7 @@ impl ExecutionResult {
 			.collect()
 	}
 
-	pub fn get_all_execution_hashes(&self) -> Vec<ExecutionHashes> {
+	pub fn get_executed_operation_hashes(&self) -> Vec<ExecutionHashes> {
 		self.executed_operations
 			.iter()
 			.flat_map(|ec| ec.status.get_execution_hashes())

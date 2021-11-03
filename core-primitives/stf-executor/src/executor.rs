@@ -28,7 +28,7 @@ use crate::{
 		StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch, StfExecuteTrustedCall,
 		StfUpdateState,
 	},
-	ExecutedOperation, ExecutionHashes, ExecutionResult, ExecutionStatus,
+	BatchExecutionResult, ExecutedOperation, ExecutionHashes, ExecutionStatus,
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -286,7 +286,7 @@ where
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<ExecutionResult>
+	) -> Result<BatchExecutionResult>
 	where
 		PB: BlockT<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
@@ -324,9 +324,9 @@ where
 
 		self.state_handler
 			.write(state, state_lock, shard)
-			.map_err(|e| Error::StateHandlingError(e))?;
+			.map_err(|e| Error::StateHandler(e))?;
 
-		Ok(ExecutionResult { executed_operations: executed_calls, previous_state_hash })
+		Ok(BatchExecutionResult { executed_operations: executed_calls, previous_state_hash })
 	}
 }
 
@@ -398,7 +398,7 @@ where
 		let new_state_hash = self
 			.state_handler
 			.write(new_state, state_lock, shard)
-			.map_err(|e| Error::StateHandlingError(e))?;
+			.map_err(|e| Error::StateHandler(e))?;
 		Ok((result, new_state_hash))
 	}
 }

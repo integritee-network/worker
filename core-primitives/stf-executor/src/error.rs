@@ -29,20 +29,20 @@ pub enum Error {
 	#[error("Trusted operation has invalid signature")]
 	OperationHasInvalidSignature,
 	#[error("SGX error, status: {0}")]
-	SgxError(sgx_status_t),
+	Sgx(sgx_status_t),
 	#[error("State handling error: {0}")]
-	StateHandlingError(#[from] itp_stf_state_handler::error::Error),
+	StateHandler(#[from] itp_stf_state_handler::error::Error),
 	#[error("STF error: {0}")]
-	StfError(ita_stf::StfError),
+	Stf(ita_stf::StfError),
 	#[error("Storage verified error: {0}")]
-	StorageVerifiedError(itp_storage_verifier::Error),
+	StorageVerified(itp_storage_verifier::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 impl From<sgx_status_t> for Error {
 	fn from(sgx_status: sgx_status_t) -> Self {
-		Self::SgxError(sgx_status)
+		Self::Sgx(sgx_status)
 	}
 }
 
@@ -54,12 +54,12 @@ impl From<codec::Error> for Error {
 
 impl From<ita_stf::StfError> for Error {
 	fn from(error: ita_stf::StfError) -> Self {
-		Self::StfError(error)
+		Self::Stf(error)
 	}
 }
 
 impl From<itp_storage_verifier::Error> for Error {
 	fn from(error: itp_storage_verifier::Error) -> Self {
-		Self::StorageVerifiedError(error)
+		Self::StorageVerified(error)
 	}
 }

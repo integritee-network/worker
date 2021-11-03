@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::Result, ExecutionResult};
+use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
 use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned};
 use itp_types::{Amount, OpaqueCall, H256};
@@ -68,7 +68,7 @@ pub trait StfExecuteTimedCallsBatch {
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<ExecutionResult>
+	) -> Result<BatchExecutionResult>
 	where
 		PB: BlockT<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities;
