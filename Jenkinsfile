@@ -15,7 +15,7 @@ pipeline {
   stages {
     stage('rustup') {
       steps {
-        sh './ci/install_rust.sh'
+        sh 'rustup show'
       }
     }
     stage('Information') {
