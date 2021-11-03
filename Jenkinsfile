@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'scssubstratee/substratee_dev:1804-2.12-1.1.3-001'
+      image 'integritee/integritee-dev:0.1.7'
       args '''
         -u root
         --privileged
@@ -13,12 +13,7 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '14'))
   }
   stages {
-    stage('rustup') {
-      steps {
-        sh './ci/install_rust.sh'
-      }
-    }
-    stage('Information') {
+    stage('Init rust') {
       steps {
         sh 'cargo --version'
         sh 'rustup show'
