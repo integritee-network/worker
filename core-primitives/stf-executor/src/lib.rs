@@ -41,7 +41,7 @@ pub mod executor;
 
 /// Execution status of a trusted operation
 ///
-/// In case of success, it includes the call and operation hash, as well as
+/// In case of success, it includes the operation hash, as well as
 /// any extrinsic callbacks (e.g. unshield extrinsics) that need to be executed on-chain
 #[derive(Clone, Debug)]
 pub enum ExecutionStatus {
@@ -57,9 +57,9 @@ impl ExecutionStatus {
 		}
 	}
 
-	pub fn get_executed_call_hash(&self) -> Option<H256> {
+	pub fn get_executed_operation_hash(&self) -> Option<H256> {
 		match self {
-			ExecutionStatus::Success(call_hash, _) => Some(*call_hash),
+			ExecutionStatus::Success(operation_hash, _) => Some(*operation_hash),
 			_ => None,
 		}
 	}
@@ -77,22 +77,22 @@ pub struct ExecutedOperation {
 impl ExecutedOperation {
 	/// constructor for a successfully executed trusted operation
 	pub fn success(
-		call_hash: H256,
+		operation_hash: H256,
 		trusted_operation_or_hash: TrustedOperationOrHash<H256>,
 		extrinsic_call_backs: Vec<OpaqueCall>,
 	) -> Self {
 		ExecutedOperation {
-			status: ExecutionStatus::Success(call_hash, extrinsic_call_backs),
+			status: ExecutionStatus::Success(operation_hash, extrinsic_call_backs),
 			trusted_operation_or_hash,
 		}
 	}
 
-	/// constructor for a failed trusted call execution
+	/// constructor for a failed trusted operation execution
 	pub fn failed(trusted_operation_or_hash: TrustedOperationOrHash<H256>) -> Self {
 		ExecutedOperation { status: ExecutionStatus::Failure, trusted_operation_or_hash }
 	}
 
-	/// returns if the executed call was a success
+	/// returns if the executed operation was a success
 	pub fn is_success(&self) -> bool {
 		matches!(self.status, ExecutionStatus::Success(_, _))
 	}
@@ -100,7 +100,7 @@ impl ExecutedOperation {
 
 /// Result of an execution on the STF
 ///
-/// Contains multiple executed calls
+/// Contains multiple executed operations
 #[derive(Clone, Debug)]
 pub struct BatchExecutionResult {
 	pub previous_state_hash: H256,
@@ -115,10 +115,10 @@ impl BatchExecutionResult {
 			.collect()
 	}
 
-	pub fn get_executed_call_hashes(&self) -> Vec<H256> {
+	pub fn get_executed_operation_hashes(&self) -> Vec<H256> {
 		self.executed_operations
 			.iter()
-			.flat_map(|ec| ec.status.get_executed_call_hash())
+			.flat_map(|ec| ec.status.get_executed_operation_hash())
 			.collect()
 	}
 }

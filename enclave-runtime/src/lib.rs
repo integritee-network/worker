@@ -918,7 +918,8 @@ where
 	)?;
 
 	let mut extrinsic_callbacks = batch_execution_result.get_extrinsic_callbacks();
-	let call_hashes = batch_execution_result.get_executed_call_hashes().iter().copied().collect();
+	let executed_operation_hashes =
+		batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
 
 	for executed_operation in batch_execution_result.executed_operations.iter() {
 		rpc_author
@@ -934,7 +935,7 @@ where
 	// create new block (side-chain)
 	let block = match compose_block_and_confirmation::<PB, SB, _>(
 		latest_onchain_header,
-		call_hashes,
+		executed_operation_hashes,
 		shard,
 		batch_execution_result.previous_state_hash,
 		stf_executor,

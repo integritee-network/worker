@@ -127,14 +127,15 @@ where
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
-		let call_hash: H256 = blake2_256(&stf_call_signed.encode()).into();
-		debug!("Call hash {:?}", call_hash);
+		let operation = stf_call_signed.clone().into_trusted_operation(true);
+		let operation_hash: H256 = blake2_256(&operation.encode()).into();
+		debug!("Operation hash {:?}", operation_hash);
 
 		if let StatePostProcessing::Prune = post_processing {
 			state.prune_state_diff();
 		}
 
-		Ok(ExecutedOperation::success(call_hash, top_or_hash, extrinsic_call_backs))
+		Ok(ExecutedOperation::success(operation_hash, top_or_hash, extrinsic_call_backs))
 	}
 }
 
