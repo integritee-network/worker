@@ -57,7 +57,7 @@ use its_sidechain::{
 	},
 };
 use log::*;
-use sgx_externalities::SgxExternalitiesTrait;
+use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_tunittest::*;
 use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
@@ -434,7 +434,9 @@ fn get_current_shard_index<StateHandler: QueryShardState>(
 }
 
 /// returns an empty `State` with the corresponding `ShardIdentifier`
-fn init_state<S: HandleState>(state_handler: &S) -> (State, ShardIdentifier) {
+fn init_state<S: HandleState<StateT = SgxExternalities>>(
+	state_handler: &S,
+) -> (State, ShardIdentifier) {
 	let shard = ShardIdentifier::default();
 
 	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();

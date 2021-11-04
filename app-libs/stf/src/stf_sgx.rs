@@ -229,14 +229,19 @@ impl Stf {
 		});
 	}
 
-	pub fn update_layer_one_block_number(ext: &mut State, number: L1BlockNumer) {
+	pub fn update_layer_one_block_number(
+		ext: &mut impl SgxExternalitiesTrait,
+		number: L1BlockNumer,
+	) {
 		ext.execute_with(|| {
 			let key = storage_value_key("System", "LayerOneNumber");
 			sp_io::storage::set(&key, &number.encode());
 		});
 	}
 
-	pub fn get_layer_one_block_number(ext: &mut State) -> Option<L1BlockNumer> {
+	pub fn get_layer_one_block_number(
+		ext: &mut impl SgxExternalitiesTrait,
+	) -> Option<L1BlockNumer> {
 		ext.execute_with(|| get_storage_value("System", "LayerOneNumber"))
 	}
 
@@ -267,11 +272,11 @@ impl Stf {
 		key_hashes
 	}
 
-	pub fn get_root(ext: &mut State) -> AccountId {
+	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
 		ext.execute_with(|| root())
 	}
 
-	pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
+	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {
 		ext.execute_with(|| {
 			let nonce = account_nonce(account);
 			debug!("Account {:?} nonce is {}", account.encode(), nonce);
@@ -279,7 +284,10 @@ impl Stf {
 		})
 	}
 
-	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
+	pub fn account_data(
+		ext: &mut impl SgxExternalitiesTrait,
+		account: &AccountId,
+	) -> Option<AccountData> {
 		ext.execute_with(|| account_data(account))
 	}
 }

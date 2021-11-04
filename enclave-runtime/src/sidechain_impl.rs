@@ -213,7 +213,7 @@ where
 	SB: SignedBlock<Public = A::Public> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256>,
 	O: ValidateerFetch + GetStorageVerified + Send + Sync,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = SgxExternalities>,
 {
 	type Verifier = AuraVerifier<A, PB, SB, SidechainDB<SB::Block, SgxExternalities>, O>;
 	type SidechainState = SidechainDB<SB::Block, SgxExternalities>;

@@ -45,6 +45,7 @@ impl Default for HandleStateMock {
 
 impl HandleState for HandleStateMock {
 	type WriteLockPayload = HashMap<ShardIdentifier, StfState>;
+	type StateT = StfState;
 
 	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
 		let maybe_state = self.state_map.read().unwrap().get(shard).map(|s| s.clone());

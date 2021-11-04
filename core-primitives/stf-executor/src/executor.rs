@@ -43,7 +43,7 @@ use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{
 	app_crypto::sp_core::blake2_256,
 	traits::{Block as BlockT, Header, UniqueSaturatedInto},
@@ -52,6 +52,7 @@ use std::{
 	collections::HashMap,
 	fmt::Debug,
 	format,
+	marker::PhantomData,
 	result::Result as StdResult,
 	sync::Arc,
 	time::{Duration, SystemTime},
@@ -61,18 +62,20 @@ use std::{
 /// STF Executor implementation
 ///
 ///
-pub struct StfExecutor<OCallApi, StateHandler> {
+pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
+	_phantom_externalities: PhantomData<ExternalitiesT>,
 }
 
-impl<OCallApi, StateHandler> StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	pub fn new(ocall_api: Arc<OCallApi>, state_handler: Arc<StateHandler>) -> Self {
-		StfExecutor { ocall_api, state_handler }
+		StfExecutor { ocall_api, state_handler, _phantom_externalities: Default::default() }
 	}
 
 	/// Execute a trusted call on the STF
@@ -140,10 +143,12 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteTrustedCall for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTrustedCall
+	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn execute_trusted_call<PB>(
 		&self,
@@ -182,10 +187,12 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteShieldFunds for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteShieldFunds
+	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn execute_shield_funds(
 		&self,
@@ -211,10 +218,12 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfUpdateState for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfUpdateState
+	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
 	where
@@ -272,12 +281,14 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteTimedCallsBatch for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedCallsBatch
+	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = SgxExternalities;
+	type Externalities = ExternalitiesT;
 
 	fn execute_timed_calls_batch<PB, F>(
 		&self,
@@ -330,12 +341,14 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteTimedGettersBatch for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedGettersBatch
+	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = SgxExternalities;
+	type Externalities = ExternalitiesT;
 
 	fn execute_timed_getters_batch<F>(
 		&self,
@@ -373,12 +386,14 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteGenericUpdate for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteGenericUpdate
+	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = ExternalitiesT>,
+	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = SgxExternalities;
+	type Externalities = ExternalitiesT;
 
 	fn execute_update<F, ResultT, ErrorT>(
 		&self,
