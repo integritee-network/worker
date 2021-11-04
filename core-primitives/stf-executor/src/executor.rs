@@ -61,7 +61,8 @@ use std::{
 
 /// STF Executor implementation
 ///
-///
+/// FIXME: Next time we change this class, we should add some unit tests
+/// (where they make sense and can be done with reasonable effort)
 pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
