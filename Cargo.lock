@@ -2636,6 +2636,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-stf-executor"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itp-ocall-api",
+ "itp-stf-state-handler",
+ "itp-storage",
+ "itp-storage-verifier",
+ "itp-types",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.29",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "itp-stf-state-handler"
 version = "0.8.0"
 dependencies = [

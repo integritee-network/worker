@@ -31,13 +31,11 @@ pub mod sgx_reexport_prelude {
 }
 
 pub mod error;
+pub mod handle_state;
 pub mod query_shard_state;
 
 #[cfg(feature = "sgx")]
 pub mod global_file_state_handler;
-
-#[cfg(feature = "sgx")]
-pub mod handle_state;
 
 #[cfg(feature = "sgx")]
 pub use global_file_state_handler::GlobalFileStateHandler;

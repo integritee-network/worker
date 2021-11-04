@@ -1,11 +1,27 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
 use crate::{
 	helpers::{
 		account_data, account_nonce, ensure_root, get_account_info, get_storage_value,
 		increment_nonce, root, validate_nonce,
 	},
-	stf_sgx_primitives::{StfError, StfResult},
 	AccountData, AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, StateTypeDiff,
-	Stf, TrustedCall, TrustedCallSigned, TrustedGetter,
+	Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 };
 use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
@@ -57,7 +73,7 @@ impl Stf {
 		ext
 	}
 
-	pub fn get_state(ext: &mut State, getter: Getter) -> Option<Vec<u8>> {
+	pub fn get_state(ext: &mut impl SgxExternalitiesTrait, getter: Getter) -> Option<Vec<u8>> {
 		ext.execute_with(|| match getter {
 			Getter::trusted(g) => match g.getter {
 				TrustedGetter::free_balance(who) =>
@@ -92,7 +108,7 @@ impl Stf {
 	}
 
 	pub fn execute(
-		ext: &mut State,
+		ext: &mut impl SgxExternalitiesTrait,
 		call: TrustedCallSigned,
 		calls: &mut Vec<OpaqueCall>,
 	) -> StfResult<()> {
@@ -213,14 +229,19 @@ impl Stf {
 		});
 	}
 
-	pub fn update_layer_one_block_number(ext: &mut State, number: L1BlockNumer) {
+	pub fn update_layer_one_block_number(
+		ext: &mut impl SgxExternalitiesTrait,
+		number: L1BlockNumer,
+	) {
 		ext.execute_with(|| {
 			let key = storage_value_key("System", "LayerOneNumber");
 			sp_io::storage::set(&key, &number.encode());
 		});
 	}
 
-	pub fn get_layer_one_block_number(ext: &mut State) -> Option<L1BlockNumer> {
+	pub fn get_layer_one_block_number(
+		ext: &mut impl SgxExternalitiesTrait,
+	) -> Option<L1BlockNumer> {
 		ext.execute_with(|| get_storage_value("System", "LayerOneNumber"))
 	}
 
@@ -251,11 +272,11 @@ impl Stf {
 		key_hashes
 	}
 
-	pub fn get_root(ext: &mut State) -> AccountId {
+	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
 		ext.execute_with(|| root())
 	}
 
-	pub fn account_nonce(ext: &mut State, account: &AccountId) -> Index {
+	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {
 		ext.execute_with(|| {
 			let nonce = account_nonce(account);
 			debug!("Account {:?} nonce is {}", account.encode(), nonce);
@@ -263,7 +284,10 @@ impl Stf {
 		})
 	}
 
-	pub fn account_data(ext: &mut State, account: &AccountId) -> Option<AccountData> {
+	pub fn account_data(
+		ext: &mut impl SgxExternalitiesTrait,
+		account: &AccountId,
+	) -> Option<AccountData> {
 		ext.execute_with(|| account_data(account))
 	}
 }

@@ -17,13 +17,15 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub extern crate alloc;
+
+use alloc::vec::Vec;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_types::{TrustedOperationStatus, WorkerRequest, WorkerResponse};
 use its_primitives::traits::SignedBlock;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
-use sp_std::prelude::Vec;
 
 /// Trait for the enclave to make o-calls related to remote attestation
 pub trait EnclaveAttestationOCallApi: Clone + Debug + Send + Sync {

@@ -87,11 +87,12 @@ itp-settings = { path = "../core-primitives/settings" }
 itp-sgx-io = { path = "../core-primitives/sgx/io", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }
 itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
-itp-sgx-crypto= { path = "../core-primitives/sgx/crypto", default-features = false, features = ["sgx"] }
+itp-sgx-crypto = { path = "../core-primitives/sgx/crypto", default-features = false, features = ["sgx"] }
+itp-stf-executor = { path = "../core-primitives/stf-executor", default-features = false, features = ["sgx"] }
 itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default-features = false, features = ["sgx"] }
 itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
-itp-types = {path = "../core-primitives/types", default-features = false, features = ["sgx"] }
+itp-types = { path = "../core-primitives/types", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps

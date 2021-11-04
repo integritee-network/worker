@@ -29,6 +29,7 @@ pub use substrate_api_client::{AccountData, AccountInfo};
 
 pub type ShardIdentifier = H256;
 pub type BlockNumber = u32;
+pub type Amount = u128;
 pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
@@ -64,7 +65,7 @@ pub type MrEnclave = [u8; 32];
 pub type BlockHash = H256;
 
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, u128, ShardIdentifier);
+pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
 
 // Todo: move this improved enclave definition into a primitives crate in the pallet_teerex repo.

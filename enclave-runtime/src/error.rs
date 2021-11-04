@@ -33,6 +33,7 @@ pub enum Error {
 	Consensus(its_sidechain::consensus_common::Error),
 	Stf(String),
 	StfStateHandler(itp_stf_state_handler::error::Error),
+	StfExecution(itp_stf_executor::error::Error),
 	MutexAccess,
 	Other(Box<dyn std::error::Error>),
 }

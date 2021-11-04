@@ -43,8 +43,9 @@ pub struct GlobalFileStateHandler;
 
 impl HandleState for GlobalFileStateHandler {
 	type WriteLockPayload = ();
+	type StateT = StfState;
 
-	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
+	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<Self::StateT> {
 		let _state_read_lock = STF_STATE_LOCK.read().map_err(|_| Error::LockPoisoning)?;
 		load_initialized_state(shard)
 	}
@@ -52,7 +53,7 @@ impl HandleState for GlobalFileStateHandler {
 	fn load_for_mutation(
 		&self,
 		shard: &ShardIdentifier,
-	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, StfState)> {
+	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, Self::StateT)> {
 		let state_write_lock = STF_STATE_LOCK.write().map_err(|_| Error::LockPoisoning)?;
 		let loaded_state = load_initialized_state(shard)?;
 		Ok((state_write_lock, loaded_state))
@@ -60,7 +61,7 @@ impl HandleState for GlobalFileStateHandler {
 
 	fn write(
 		&self,
-		state: StfState,
+		state: Self::StateT,
 		_state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<H256> {

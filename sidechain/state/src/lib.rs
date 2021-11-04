@@ -49,7 +49,7 @@ use std::marker::PhantomData;
 /// Sidechain DB
 ///
 /// Todo: In the course of refactoring the STF (#269), verify if this struct is even needed.
-/// It might be that we could implement everithing directly on `[SgxExternalities]`.
+/// It might be that we could implement everything directly on `[SgxExternalities]`.
 #[derive(Clone, Debug, Default, Encode, Decode, PartialEq, Eq)]
 pub struct SidechainDB<Block, E> {
 	/// Externalities

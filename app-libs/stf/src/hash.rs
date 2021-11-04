@@ -15,16 +15,14 @@
 
 */
 
-//! Extrinsic helpers for author RPC module.
-
+use crate::TrustedOperation;
 use codec::{Decode, Encode};
-use ita_stf::TrustedOperation;
 use std::vec::Vec;
 
-/// RPC Trusted call or hash
+/// Trusted operation Or hash
 ///
 /// Allows to refer to trusted calls either by its raw representation or its hash.
-#[derive(Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 pub enum TrustedOperationOrHash<Hash> {
 	/// The hash of the call.
 	Hash(Hash),

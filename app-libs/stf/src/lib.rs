@@ -23,16 +23,21 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
 extern crate alloc;
 
-use codec::{Compact, Decode, Encode};
 #[cfg(feature = "std")]
 use my_node_runtime::Balance;
 #[cfg(feature = "std")]
 pub use my_node_runtime::Index;
 
+use codec::{Compact, Decode, Encode};
+use derive_more::Display;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
+use std::string::String;
 
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
@@ -41,6 +46,24 @@ pub type Hash = sp_core::H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 
 pub type ShardIdentifier = H256;
+
+pub type StfResult<T> = Result<T, StfError>;
+
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum StfError {
+	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+	MissingPrivileges(AccountId),
+	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
+	Dispatch(String),
+	#[display(fmt = "Not enough funds to perform operation")]
+	MissingFunds,
+	#[display(fmt = "Account does not exist {:?}", _0)]
+	InexistentAccount(AccountId),
+	#[display(fmt = "Invalid Nonce {:?}", _0)]
+	InvalidNonce(Index),
+	StorageHashMismatch,
+	InvalidStorageDiff,
+}
 
 #[derive(Clone)]
 pub enum KeyPair {
@@ -68,6 +91,8 @@ impl From<sr25519::Pair> for KeyPair {
 		KeyPair::Sr25519(x)
 	}
 }
+
+pub mod hash;
 
 #[cfg(feature = "sgx")]
 pub mod stf_sgx;
