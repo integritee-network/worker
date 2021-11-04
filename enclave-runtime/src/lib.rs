@@ -918,11 +918,7 @@ where
 	)?;
 
 	let mut extrinsic_callbacks = batch_execution_result.get_extrinsic_callbacks();
-	let call_hashes = batch_execution_result
-		.get_executed_operation_hashes()
-		.iter()
-		.map(|eh| eh.operation_hash)
-		.collect();
+	let call_hashes = batch_execution_result.get_executed_call_hashes().iter().copied().collect();
 
 	for executed_operation in batch_execution_result.executed_operations.iter() {
 		rpc_author

@@ -28,7 +28,7 @@ use crate::{
 		StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch, StfExecuteTrustedCall,
 		StfUpdateState,
 	},
-	BatchExecutionResult, ExecutedOperation, ExecutionHashes, ExecutionStatus,
+	BatchExecutionResult, ExecutedOperation, ExecutionStatus,
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -126,20 +126,14 @@ where
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
-		let call_hash = blake2_256(&stf_call_signed.encode());
-		let operation = stf_call_signed.clone().into_trusted_operation(true);
-		let operation_hash = blake2_256(&operation.encode());
-		debug!("Operation hash {:?}", operation_hash);
+		let call_hash: H256 = blake2_256(&stf_call_signed.encode()).into();
 		debug!("Call hash {:?}", call_hash);
 
 		if let StatePostProcessing::Prune = post_processing {
 			state.prune_state_diff();
 		}
 
-		let execution_hashes =
-			ExecutionHashes::new(H256::from(call_hash), H256::from(operation_hash));
-
-		Ok(ExecutedOperation::success(execution_hashes, top_or_hash, extrinsic_call_backs))
+		Ok(ExecutedOperation::success(call_hash, top_or_hash, extrinsic_call_backs))
 	}
 }
 
@@ -157,7 +151,7 @@ where
 		header: &PB::Header,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
-	) -> Result<Option<(H256, H256)>>
+	) -> Result<Option<H256>>
 	where
 		PB: BlockT<Hash = H256>,
 	{
@@ -172,9 +166,8 @@ where
 			post_processing,
 		)?;
 
-		let (maybe_hashes, mut extrinsic_callbacks) = match executed_call.status {
-			ExecutionStatus::Success(execution_hashes, e) =>
-				(Some((execution_hashes.call_hash, execution_hashes.operation_hash)), e),
+		let (maybe_call_hash, mut extrinsic_callbacks) = match executed_call.status {
+			ExecutionStatus::Success(call_hash, e) => (Some(call_hash), e),
 			ExecutionStatus::Failure => (None, Vec::new()),
 		};
 
@@ -183,7 +176,7 @@ where
 		trace!("Updating state of shard {:?}", shard);
 		self.state_handler.write(state, state_lock, shard)?;
 
-		Ok(maybe_hashes)
+		Ok(maybe_call_hash)
 	}
 }
 

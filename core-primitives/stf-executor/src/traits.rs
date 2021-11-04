@@ -49,7 +49,7 @@ pub trait StfExecuteTrustedCall {
 		header: &PB::Header,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
-	) -> Result<Option<(H256, H256)>>
+	) -> Result<Option<H256>>
 	where
 		PB: BlockT<Hash = H256>;
 }

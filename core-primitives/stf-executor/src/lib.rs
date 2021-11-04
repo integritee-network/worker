@@ -39,26 +39,13 @@ pub mod traits;
 #[cfg(feature = "sgx")]
 pub mod executor;
 
-/// Hash results of an operation execution on the STF
-#[derive(Clone, Debug)]
-pub struct ExecutionHashes {
-	pub call_hash: H256,
-	pub operation_hash: H256,
-}
-
-impl ExecutionHashes {
-	pub fn new(call_hash: H256, operation_hash: H256) -> Self {
-		ExecutionHashes { call_hash, operation_hash }
-	}
-}
-
 /// Execution status of a trusted operation
 ///
 /// In case of success, it includes the call and operation hash, as well as
 /// any extrinsic callbacks (e.g. unshield extrinsics) that need to be executed on-chain
 #[derive(Clone, Debug)]
 pub enum ExecutionStatus {
-	Success(ExecutionHashes, Vec<OpaqueCall>),
+	Success(H256, Vec<OpaqueCall>),
 	Failure,
 }
 
@@ -70,9 +57,9 @@ impl ExecutionStatus {
 		}
 	}
 
-	pub fn get_execution_hashes(&self) -> Option<ExecutionHashes> {
+	pub fn get_executed_call_hash(&self) -> Option<H256> {
 		match self {
-			ExecutionStatus::Success(execution_hashes, _) => Some(execution_hashes.clone()),
+			ExecutionStatus::Success(call_hash, _) => Some(*call_hash),
 			_ => None,
 		}
 	}
@@ -90,12 +77,12 @@ pub struct ExecutedOperation {
 impl ExecutedOperation {
 	/// constructor for a successfully executed trusted operation
 	pub fn success(
-		execution_hashes: ExecutionHashes,
+		call_hash: H256,
 		trusted_operation_or_hash: TrustedOperationOrHash<H256>,
 		extrinsic_call_backs: Vec<OpaqueCall>,
 	) -> Self {
 		ExecutedOperation {
-			status: ExecutionStatus::Success(execution_hashes, extrinsic_call_backs),
+			status: ExecutionStatus::Success(call_hash, extrinsic_call_backs),
 			trusted_operation_or_hash,
 		}
 	}
@@ -128,10 +115,10 @@ impl BatchExecutionResult {
 			.collect()
 	}
 
-	pub fn get_executed_operation_hashes(&self) -> Vec<ExecutionHashes> {
+	pub fn get_executed_call_hashes(&self) -> Vec<H256> {
 		self.executed_operations
 			.iter()
-			.flat_map(|ec| ec.status.get_execution_hashes())
+			.flat_map(|ec| ec.status.get_executed_call_hash())
 			.collect()
 	}
 }
