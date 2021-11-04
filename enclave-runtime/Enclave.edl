@@ -138,10 +138,13 @@ enclave {
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
 	    );
 
-		sgx_status_t ocall_send_block_and_confirmation(
-	        [in, size = confirmations_size] uint8_t * confirmations, uint32_t confirmations_size,
+		sgx_status_t ocall_send_sidechain_blocks(
 	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
 	    );
+
+        sgx_status_t ocall_send_confirmations(
+            [in, size = confirmations_size] uint8_t * confirmations, uint32_t confirmations_size
+        );
 
 		sgx_status_t ocall_update_status_event(
 	        [in, size = hash_size] uint8_t * hash_encoded, uint32_t hash_size,

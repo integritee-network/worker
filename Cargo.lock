@@ -2576,7 +2576,6 @@ name = "itp-ocall-api"
 version = "0.8.0"
 dependencies = [
  "itp-types",
- "its-primitives",
  "parity-scale-codec",
  "sgx_types",
  "sp-runtime",

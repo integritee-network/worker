@@ -132,11 +132,12 @@ fn test_compose_block_and_confirmation() {
 
 	// when
 	let (opaque_call, signed_block) =
-		crate::compose_block_and_confirmation::<Block, SignedBlock, _>(
+		crate::compose_block_and_confirmation::<Block, SignedBlock, _, _>(
 			&latest_parentchain_header(),
 			signed_top_hashes,
 			shard,
 			previous_state_hash,
+			test_account(),
 			&stf_executor,
 		)
 		.unwrap();
@@ -237,10 +238,11 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let (confirm_calls, signed_blocks) =
-		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _, _>(
 			&rpc_author,
 			state_handler.as_ref(),
 			&stf_executor,
+			test_account(),
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -287,10 +289,11 @@ fn test_create_state_diff() {
 
 	// when
 	let (_, signed_blocks) =
-		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _, _>(
 			&rpc_author,
 			state_handler.as_ref(),
 			&stf_executor,
+			test_account(),
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -330,10 +333,11 @@ fn test_executing_call_updates_account_nonce() {
 
 	// when
 	let (_, _) =
-		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _, _>(
 			&rpc_author,
 			state_handler.as_ref(),
 			&stf_executor,
+			test_account(),
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -361,10 +365,11 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 	// when
 	let (_, _) =
-		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _, _>(
 			&rpc_author,
 			state_handler.as_ref(),
 			&stf_executor,
+			test_account(),
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -396,10 +401,11 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 	// when
 	let (_, _) =
-		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _>(
+		crate::execute_top_pool_trusted_calls_for_all_shards::<Block, SignedBlock, _, _, _, _>(
 			&rpc_author,
 			state_handler.as_ref(),
 			&stf_executor,
+			test_account(),
 			&latest_parentchain_header(),
 			MAX_TRUSTED_OPS_EXEC_DURATION,
 		)
@@ -496,6 +502,10 @@ fn test_setup(
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.
 fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
+}
+
+pub fn test_account() -> spEd25519::Pair {
+	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`

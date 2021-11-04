@@ -291,16 +291,19 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn create_extrinsics<PB>(
+fn create_extrinsics<PB, Signer>(
 	genesis_hash: HashFor<PB>,
+	signer: Signer,
 	calls: Vec<OpaqueCall>,
-	nonce: &mut u32,
-) -> Result<Vec<OpaqueExtrinsic>>
+	mut nonce: u32,
+) -> Result<(Vec<OpaqueExtrinsic>, u32)>
 where
 	PB: BlockT<Hash = H256>,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
+	Signer::Public: Encode,
+	Signer::Signature: Into<MultiSignature>,
 {
 	// get information for composing the extrinsic
-	let signer = Ed25519Seal::unseal()?;
 	debug!("Restored ECC pubkey: {:?}", signer.public());
 
 	let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
@@ -309,7 +312,7 @@ where
 			let xt = compose_extrinsic_offline!(
 				signer.clone(),
 				call,
-				*nonce,
+				nonce,
 				Era::Immortal,
 				genesis_hash,
 				genesis_hash,
@@ -317,7 +320,7 @@ where
 				RUNTIME_TRANSACTION_VERSION
 			)
 			.encode();
-			*nonce += 1;
+			nonce += 1;
 			xt
 		})
 		.map(|xt| {
@@ -326,7 +329,7 @@ where
 		})
 		.collect();
 
-	Ok(extrinsics_buffer)
+	Ok((extrinsics_buffer, nonce))
 }
 
 /// this is reduced to the side chain block import RPC interface (i.e. worker-worker communication)
@@ -627,15 +630,15 @@ where
 	{
 		Some(slot) => {
 			let shards = state_handler.list_shards()?;
-			let env = ProposerFactory::new(rpc_author, stf_executor);
+			let env = ProposerFactory::new(rpc_author, stf_executor, authority.clone());
 
-			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+			*nonce = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
 				slot,
 				authority,
 				&mut validator,
 				OcallApi,
 				env,
-				&mut nonce,
+				*nonce,
 				shards,
 			)?
 		},
@@ -685,15 +688,17 @@ where
 	let _light_client_lock = EnclaveLock::write_light_client_db()?;
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
+	let signer = Ed25519Seal::unseal()?;
 	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
 	let stf_executor = StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler));
 
-	sync_blocks_on_light_client(
+	*nonce = sync_blocks_on_light_client(
 		blocks_to_sync,
 		&mut validator,
+		signer,
 		&OcallApi,
 		&stf_executor,
-		&mut *nonce,
+		*nonce,
 	)?;
 
 	// store updated state in light client in case we fail afterwards.
@@ -702,19 +707,23 @@ where
 	Ok(())
 }
 
-fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor>(
+fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor, Signer>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
 	validator: &mut V,
+	signer: Signer,
 	on_chain_ocall_api: &OCallApi,
 	stf_executor: &StfExecutor,
-	nonce: &mut u32,
-) -> Result<()>
+	nonce: u32,
+) -> Result<u32>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	V: Validator<PB> + LightClientState<PB>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
+	Signer::Public: Encode,
+	Signer::Signature: Into<MultiSignature>,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
 	let mrenclave: ShardIdentifier = on_chain_ocall_api.get_mrenclave_of_self()?.m.into();
@@ -759,32 +768,29 @@ where
 		)));
 	}
 
-	prepare_and_send_xts_and_block::<_, SignedSidechainBlock, _, _>(
-		validator,
-		on_chain_ocall_api,
-		calls,
-		Default::default(),
-		nonce,
-	)
+	prepare_and_send_xts::<_, _, _, Signer>(validator, signer, on_chain_ocall_api, calls, nonce)
 }
 
-fn prepare_and_send_xts_and_block<Block, SB, V, OCallApi>(
+fn prepare_and_send_xts<Block, V, OCallApi, Signer>(
 	validator: &mut V,
+	signer: Signer,
 	ocall_api: &OCallApi,
 	calls: Vec<OpaqueCall>,
-	blocks: Vec<SB>,
-	nonce: &mut u32,
-) -> Result<()>
+	nonce: u32,
+) -> Result<u32>
 where
 	Block: BlockT<Hash = H256>,
-	SB: SignedBlockT + 'static,
 	NumberFor<Block>: BlockNumberOps,
 	V: Validator<Block> + LightClientState<Block>,
 	OCallApi: EnclaveOnChainOCallApi,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
+	Signer::Public: Encode,
+	Signer::Signature: Into<MultiSignature>,
 {
 	// store extrinsics in light client for finalization check
-	let extrinsics = create_extrinsics::<Block>(
+	let (extrinsics, nonce_updated) = create_extrinsics::<Block, Signer>(
 		validator.genesis_hash(validator.num_relays()).unwrap(),
+		signer,
 		calls,
 		nonce,
 	)?;
@@ -793,9 +799,11 @@ where
 		validator.submit_xt_to_be_included(validator.num_relays(), xt.clone()).unwrap();
 	}
 
-	ocall_api
-		.send_block_and_confirmation::<SB>(extrinsics, blocks)
-		.map_err(|e| Error::Other(format!("Failed to send block and confirmation: {}", e).into()))
+	ocall_api.send_confirmations(extrinsics).map_err(|e| {
+		Error::Other(format!("Failed to send block and confirmation: {}", e).into())
+	})?;
+
+	Ok(nonce_updated)
 }
 
 /// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
@@ -805,10 +813,18 @@ where
 ///
 /// Todo: This will probably be used again if we decide to make sidechain optional?
 #[allow(unused)]
-fn execute_top_pool_trusted_calls_for_all_shards<PB, SB, RpcAuthor, StateHandler, StfExecutor>(
+fn execute_top_pool_trusted_calls_for_all_shards<
+	PB,
+	SB,
+	RpcAuthor,
+	StateHandler,
+	StfExecutor,
+	Signer,
+>(
 	rpc_author: &RpcAuthor,
 	state_handler: &StateHandler,
 	stf_executor: &StfExecutor,
+	signer: Signer,
 	latest_onchain_header: &PB::Header,
 	max_exec_duration: Duration,
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
@@ -821,6 +837,9 @@ where
 	StateHandler: QueryShardState,
 	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
 		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
+	Signer: Pair<Public = SB::Public>,
+	Signer::Public: Encode,
+	SB::Signature: From<Signer::Signature>,
 {
 	let shards = state_handler.list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
@@ -841,9 +860,10 @@ where
 			},
 		};
 
-		match execute_top_pool_trusted_calls::<PB, SB, _, _>(
+		match execute_top_pool_trusted_calls::<PB, SB, _, _, Signer>(
 			rpc_author,
 			stf_executor,
+			signer.clone(),
 			&latest_onchain_header,
 			shard,
 			shard_exec_time,
@@ -871,9 +891,10 @@ where
 ///
 /// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
 /// more readable.
-fn execute_top_pool_trusted_calls<PB, SB, RpcAuthor, StfExecutor>(
+fn execute_top_pool_trusted_calls<PB, SB, RpcAuthor, StfExecutor, Signer>(
 	rpc_author: &RpcAuthor,
 	stf_executor: &StfExecutor,
+	signer: Signer,
 	latest_onchain_header: &PB::Header,
 	shard: H256,
 	max_exec_duration: Duration,
@@ -885,6 +906,9 @@ where
 	RpcAuthor: AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
 		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
+	Signer: Pair<Public = SB::Public>,
+	Signer::Public: Encode,
+	SB::Signature: From<Signer::Signature>,
 {
 	// retrieve trusted operations from pool
 	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
@@ -933,11 +957,12 @@ where
 
 	// Todo: this function should return here. Composing the block should be done by the caller.
 	// create new block (side-chain)
-	let block = match compose_block_and_confirmation::<PB, SB, _>(
+	let block = match compose_block_and_confirmation::<PB, SB, Signer, _>(
 		latest_onchain_header,
 		executed_operation_hashes,
 		shard,
 		batch_execution_result.previous_state_hash,
+		signer,
 		stf_executor,
 	) {
 		Ok((block_confirm, signed_block)) => {
@@ -1015,11 +1040,12 @@ where
 }
 
 /// Composes a sidechain block of a shard
-fn compose_block_and_confirmation<PB, SB, StfExecutor>(
+fn compose_block_and_confirmation<PB, SB, Signer, StfExecutor>(
 	latest_onchain_header: &PB::Header,
 	top_call_hashes: Vec<H256>,
 	shard: ShardIdentifier,
 	state_hash_apriori: H256,
+	signer: Signer,
 	stf_executor: &StfExecutor,
 ) -> Result<(OpaqueCall, SB)>
 where
@@ -1027,10 +1053,11 @@ where
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	StfExecutor: StfExecuteGenericUpdate<Externalities = SgxExternalities>,
+	Signer: Pair<Public = SB::Public>,
+	Signer::Public: Encode,
+	SB::Signature: From<Signer::Signature>,
 {
-	let signer_pair = Ed25519Seal::unseal()?;
-
-	let author_public = signer_pair.public();
+	let author_public = signer.public();
 	let (block, state_hash_new) = stf_executor.execute_update(&shard, |state| {
 		let mut db = SidechainDB::<SB::Block, _>::new(state);
 		let state_hash_new = db.state_hash();
@@ -1078,7 +1105,7 @@ where
 	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
 	let opaque_call =
 		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_new.encode()));
-	Ok((opaque_call, block.sign_block(&signer_pair)))
+	Ok((opaque_call, block.sign_block(&signer)))
 }
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.

@@ -74,12 +74,16 @@ extern "C" {
 		resp_size: u32,
 	) -> sgx_status_t;
 
-	pub fn ocall_send_block_and_confirmation(
+	pub fn ocall_send_sidechain_blocks(
+		ret_val: *mut sgx_status_t,
+		signed_blocks: *const u8,
+		signed_blocks_size: u32,
+	) -> sgx_status_t;
+
+	pub fn ocall_send_confirmations(
 		ret_val: *mut sgx_status_t,
 		confirmations: *const u8,
 		confirmations_size: u32,
-		signed_blocks: *const u8,
-		signed_blocks_size: u32,
 	) -> sgx_status_t;
 
 	pub fn ocall_read_ipfs(

@@ -79,35 +79,9 @@ where
 		Ok(encoded_response)
 	}
 
-	fn send_block_and_confirmation(
-		&self,
-		confirmations: Vec<u8>,
-		signed_blocks_encoded: Vec<u8>,
-	) -> OCallBridgeResult<()> {
-		debug!("    Entering ocall_send_block_and_confirmation");
-
+	fn send_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
-		let api = self.node_api_factory.create_api();
-
-		// send confirmations to layer one
-		let confirmation_calls: Vec<OpaqueExtrinsic> =
-			match Decode::decode(&mut confirmations.as_slice()) {
-				Ok(calls) => calls,
-				Err(_) => {
-					status = Err(OCallBridgeError::SendBlockAndConfirmation(
-						"Could not decode confirmation calls".to_string(),
-					));
-					Default::default()
-				},
-			};
-
-		if !confirmation_calls.is_empty() {
-			debug!("Enclave wants to send {} extrinsics", confirmation_calls.len());
-			for call in confirmation_calls.into_iter() {
-				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
-			}
-		}
 
 		// handle blocks
 		let signed_blocks: Vec<SignedSidechainBlock> =
@@ -139,6 +113,33 @@ where
 		if let Err(e) = self.block_storage.store_blocks(signed_blocks) {
 			error!("Error storing blocks: {:?}", e);
 		}
+		status
+	}
+
+	fn send_confirmations(&self, confirmations: Vec<u8>) -> OCallBridgeResult<()> {
+		// TODO: improve error handling, using a mut status is not good design?
+		let mut status: OCallBridgeResult<()> = Ok(());
+		let api = self.node_api_factory.create_api();
+
+		// send confirmations to layer one
+		let confirmation_calls: Vec<OpaqueExtrinsic> =
+			match Decode::decode(&mut confirmations.as_slice()) {
+				Ok(calls) => calls,
+				Err(_) => {
+					status = Err(OCallBridgeError::SendBlockAndConfirmation(
+						"Could not decode confirmation calls".to_string(),
+					));
+					Default::default()
+				},
+			};
+
+		if !confirmation_calls.is_empty() {
+			debug!("Enclave wants to send {} extrinsics", confirmation_calls.len());
+			for call in confirmation_calls.into_iter() {
+				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
+			}
+		}
+
 		status
 	}
 }

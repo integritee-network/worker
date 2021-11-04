@@ -21,29 +21,39 @@ use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::{WorkerRequest, WorkerResponse};
-use its_sidechain::primitives::traits::SignedBlock;
 use log::*;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
 impl EnclaveOnChainOCallApi for OcallApi {
-	fn send_block_and_confirmation<SB: SignedBlock>(
-		&self,
-		confirmations: Vec<OpaqueExtrinsic>,
-		signed_blocks: Vec<SB>,
-	) -> SgxResult<()> {
+	fn send_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let confirmations_encoded = confirmations.encode();
 		let signed_blocks_encoded = signed_blocks.encode();
 
 		let res = unsafe {
-			ffi::ocall_send_block_and_confirmation(
+			ffi::ocall_send_sidechain_blocks(
+				&mut rt as *mut sgx_status_t,
+				signed_blocks_encoded.as_ptr(),
+				signed_blocks_encoded.len() as u32,
+			)
+		};
+
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
+
+		Ok(())
+	}
+
+	fn send_confirmations(&self, confirmations: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		let confirmations_encoded = confirmations.encode();
+
+		let res = unsafe {
+			ffi::ocall_send_confirmations(
 				&mut rt as *mut sgx_status_t,
 				confirmations_encoded.as_ptr(),
 				confirmations_encoded.len() as u32,
-				signed_blocks_encoded.as_ptr(),
-				signed_blocks_encoded.len() as u32,
 			)
 		};
 

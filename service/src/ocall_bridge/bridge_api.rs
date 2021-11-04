@@ -174,11 +174,9 @@ pub trait RemoteAttestationBridge {
 pub trait WorkerOnChainBridge {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
 
-	fn send_block_and_confirmation(
-		&self,
-		confirmations: Vec<u8>,
-		signed_blocks: Vec<u8>,
-	) -> OCallBridgeResult<()>;
+	fn send_sidechain_blocks(&self, signed_blocks: Vec<u8>) -> OCallBridgeResult<()>;
+
+	fn send_confirmations(&self, confirmations: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
 /// type for IPFS
