@@ -15,12 +15,6 @@
 
 */
 
-// #[cfg(all(not(feature = "std"), feature = "sgx"))]
-// use crate::sgx_reexport_prelude::*;
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use std::untrusted::time::SystemTimeEx;
-
 use crate::{
 	error::{Error, Result},
 	traits::{

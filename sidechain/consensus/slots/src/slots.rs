@@ -27,9 +27,6 @@ use std::time::{Duration, SystemTime};
 
 pub use sp_consensus_slots::Slot;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use std::untrusted::time::SystemTimeEx;
-
 /// Returns current duration since unix epoch.
 pub fn duration_now() -> Duration {
 	let now = SystemTime::now();

@@ -18,9 +18,6 @@
 
 pub extern crate alloc;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use std::untrusted::time::InstantEx;
-
 use crate::base_pool::TrustedOperation;
 use alloc::{boxed::Box, fmt, sync::Arc, vec, vec::Vec};
 use core::hash;
