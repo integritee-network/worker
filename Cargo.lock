@@ -578,14 +578,6 @@ dependencies = [
 
 [[package]]
 name = "bytes"
-version = "0.5.4"
-source = "git+https://github.com/mesalock-linux/bytes-sgx#63d1951a35f2e888696aba3796aac45214e727ec"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "bytes"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
@@ -1892,17 +1884,6 @@ dependencies = [
 [[package]]
 name = "http"
 version = "0.2.1"
-source = "git+https://github.com/mesalock-linux/http-sgx?tag=sgx_1.1.3#62544a1833f98f1810a44877c5f1efe45f5327c0"
-dependencies = [
- "bytes 0.5.4",
- "fnv 1.0.6",
- "itoa 0.4.5",
- "sgx_tstd",
-]
-
-[[package]]
-name = "http"
-version = "0.2.1"
 source = "git+https://github.com/integritee-network/http-sgx?branch=sgx-experimental#307b5421fb7a489a114bede0dc05c8d32b804f49"
 dependencies = [
  "bytes 1.0.1",
@@ -2462,7 +2443,7 @@ name = "itc-rest-client"
 version = "0.8.0"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "http 0.2.1 (git+https://github.com/mesalock-linux/http-sgx?tag=sgx_1.1.3)",
+ "http 0.2.1",
  "http 0.2.4",
  "http_req 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "http_req 0.7.2 (git+https://github.com/mesalock-linux/http_req-sgx?tag=sgx_1.1.3)",
@@ -7098,7 +7079,7 @@ dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?tag=sgx_1.1.3)",
  "byteorder 1.3.4",
  "bytes 1.0.1",
- "http 0.2.1 (git+https://github.com/integritee-network/http-sgx?branch=sgx-experimental)",
+ "http 0.2.1",
  "httparse 1.4.1",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx?tag=sgx_1.1.3)",
  "rand 0.7.3 (git+https://github.com/mesalock-linux/rand-sgx?tag=sgx_1.1.3)",
