@@ -1092,11 +1092,13 @@ fn hash_of<T: Encode>(xt: T) -> H256 {
 	blake2_256(&xt.encode()).into()
 }
 
+/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and executed extrinsics.
+///
+/// Calculates the merkle root of the extrinsics. In case they are empty, the root will be a hash filled with zeros.
 fn processed_parentchain_block_extrinsic(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
-	// Create merkle proof out of all extrinsics:
+	// Calculate merkle proof out of all extrinsics. Will be zero for empty vector.
 	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
-	let xt_call = [TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK];
-	OpaqueCall::from_tuple(&(xt_call, block_hash, root))
+	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
 }
 
 fn handle_shield_funds_xt<StfExecutor>(
