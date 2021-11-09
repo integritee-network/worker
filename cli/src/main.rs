@@ -728,18 +728,6 @@ fn listen(matches: &ArgMatches<'_>) {
 								) => {
 									println!("RemovedEnclave: {:?}", accountid);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::UpdatedIpfsHash(
-									shard,
-									idx,
-									ipfs_hash,
-								) => {
-									println!(
-										"UpdatedIpfsHash for shard {}, worker index {}, ipfs# {:?}",
-										shard.encode().to_base58(),
-										idx,
-										ipfs_hash
-									);
-								},
 								my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 									println!(
 										"Forwarded request for shard {}",
