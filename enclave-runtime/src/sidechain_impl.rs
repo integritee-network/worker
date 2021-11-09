@@ -59,8 +59,9 @@ impl<PB: Block<Hash = H256>, SB, Author, StfExecutor, Signer> Environment<PB, SB
 	for ProposerFactory<PB, Author, StfExecutor, Signer>
 where
 	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
+	SB: SignedBlock<Public = Signer::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SB::Signature: From<Signer::Signature>,
 	Author: AuthorApi<H256, PB::Hash>
 		+ SendState<Hash = PB::Hash>
 		+ OnBlockCreated<Hash = PB::Hash>
@@ -71,9 +72,8 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	Signer: Pair<Public = SB::Public>,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
-	SB::Signature: From<Signer::Signature>,
 {
 	type Proposer = SlotProposer<PB, SB, Author, StfExecutor, Signer>;
 	type Error = ConsensusError;
@@ -99,8 +99,9 @@ impl<PB, SB, Author, StfExecutor, Signer> Proposer<PB, SB>
 where
 	PB: Block<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SB: SignedBlock<Public = Signer::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SB::Signature: From<Signer::Signature>,
 	Author:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
@@ -108,9 +109,8 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	Signer: Pair<Public = SB::Public>,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
-	SB::Signature: From<Signer::Signature>,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
 		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _, Signer>(
@@ -143,11 +143,11 @@ pub fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironme
 where
 	// setting the public type is necessary due to some non-generic downstream code.
 	PB: Block<Hash = H256>,
-	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
+	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
-	Authority: Pair<Public = SB::Public>,
-	Authority::Public: Encode,
 	SB::Signature: From<Authority::Signature>,
+	Authority: Pair<Public = sp_core::ed25519::Public>,
+	Authority::Public: Encode,
 	OCallApi:
 		EnclaveSideChainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,

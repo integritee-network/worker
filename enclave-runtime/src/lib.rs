@@ -830,16 +830,16 @@ fn execute_top_pool_trusted_calls_for_all_shards<
 ) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
 where
 	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SB: SignedBlockT<Public = Signer::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SB::Signature: From<Signer::Signature>,
 	RpcAuthor:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StateHandler: QueryShardState,
 	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
 		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
-	Signer: Pair<Public = SB::Public>,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
-	SB::Signature: From<Signer::Signature>,
 {
 	let shards = state_handler.list_shards()?;
 	let mut calls: Vec<OpaqueCall> = Vec::new();
@@ -901,14 +901,14 @@ fn execute_top_pool_trusted_calls<PB, SB, RpcAuthor, StfExecutor, Signer>(
 ) -> Result<(Vec<OpaqueCall>, Option<SB>)>
 where
 	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SB: SignedBlockT<Public = Signer::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SB::Signature: From<Signer::Signature>,
 	RpcAuthor: AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
 		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
-	Signer: Pair<Public = SB::Public>,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
-	SB::Signature: From<Signer::Signature>,
 {
 	// retrieve trusted operations from pool
 	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
@@ -1051,11 +1051,11 @@ fn compose_block_and_confirmation<PB, SB, Signer, StfExecutor>(
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	StfExecutor: StfExecuteGenericUpdate<Externalities = SgxExternalities>,
-	Signer: Pair<Public = SB::Public>,
-	Signer::Public: Encode,
+	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Signer::Public>,
 	SB::Signature: From<Signer::Signature>,
+	StfExecutor: StfExecuteGenericUpdate<Externalities = SgxExternalities>,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
+	Signer::Public: Encode,
 {
 	let author_public = signer.public();
 	let (block, state_hash_new) = stf_executor.execute_update(&shard, |state| {
