@@ -97,8 +97,8 @@ pub mod node {
 	pub static REGISTER_ENCLAVE: u8 = 0u8;
 	//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
 	pub static CALL_WORKER: u8 = 2u8;
-	pub static CALL_CONFIRMED: u8 = 3u8;
-	pub static BLOCK_CONFIRMED: u8 = 4u8;
+	pub static PROCESSED_PARENTCHAIN_BLOCK: u8 = 3u8;
+	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 4u8;
 	pub static SHIELD_FUNDS: u8 = 5u8;
 	// bump this to be consistent with integritee-node runtime
 	pub static RUNTIME_SPEC_VERSION: u32 = 3;

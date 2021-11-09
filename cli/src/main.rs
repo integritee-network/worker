@@ -786,7 +786,9 @@ fn listen(matches: &ArgMatches<'_>) {
 }
 
 // subscribes to he pallet_teerex events of type CallConfirmed
-pub fn subscribe_to_call_confirmed<P: Pair, Client: 'static>(api: Api<P, Client>) -> H256
+pub fn subscribe_to_PROCESSED_PARENTCHAIN_BLOCK<P: Pair, Client: 'static>(
+	api: Api<P, Client>,
+) -> H256
 where
 	MultiSignature: From<P::Signature>,
 	Client: RpcClient + Subscriber + Send,

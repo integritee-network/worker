@@ -62,8 +62,8 @@ use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::{
 	node::{
-		BLOCK_CONFIRMED, CALL_CONFIRMED, CALL_WORKER, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
+		CALL_WORKER, PROCESSED_PARENTCHAIN_BLOCK, PROPOSED_SIDECHAIN_BLOCK, REGISTER_ENCLAVE,
+		RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
 	},
 	sidechain::SLOT_DURATION,
 };
@@ -712,12 +712,12 @@ where
 
 		// compose indirect block confirmation
 		// should be changed to ParentchainBlockProcessed, see worker issue #457
-		let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
+		let xt_block = [TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK];
 		let block_hash = signed_block.block.header().hash();
 		let prev_state_hash = signed_block.block.header().parent_hash();
 		calls.push(OpaqueCall::from_tuple(&(
 			xt_block,
-			mrenclave, // 'block_confirmed' only accepts shard == mrenclave. Overall 'block_confirmed' construct will be adjusted with #457
+			mrenclave, // 'PROPOSED_SIDECHAIN_BLOCK' only accepts shard == mrenclave. Overall 'PROPOSED_SIDECHAIN_BLOCK' construct will be adjusted with #457
 			block_hash,
 			prev_state_hash.encode(),
 		)));
@@ -1026,7 +1026,7 @@ where
 	let block_hash = block.hash();
 	debug!("Block hash {}", block_hash);
 
-	let xt_block = [TEEREX_MODULE, BLOCK_CONFIRMED];
+	let xt_block = [TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK];
 	let opaque_call =
 		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_new.encode()));
 	Ok((opaque_call, block.sign_block(&signer)))
@@ -1109,7 +1109,7 @@ where
 		},
 	};
 
-	let xt_call = [TEEREX_MODULE, CALL_CONFIRMED];
+	let xt_call = [TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK];
 	let xt_hash = blake2_256(&xt.encode());
 	debug!("Extrinsic hash {:?}", xt_hash);
 
