@@ -101,7 +101,7 @@ class Worker:
             return False
 
     def purge(self):
-        """ Deletes the light_client_db.bin, the shards and the sidechain_db.bin
+        """ Deletes the light_client_db.bin, the shards and the sidechain_db
         """
         self.purge_last_slot_seal()
         self.purge_light_client_db()
@@ -113,9 +113,9 @@ class Worker:
             print(f'Purging shards')
             shutil.rmtree(pathlib.Path(f'{self.cwd}/shards'))
 
-        if pathlib.Path(f'{self.cwd}/sidechain_db.bin').exists():
+        if pathlib.Path(f'{self.cwd}/sidechain_db').exists():
             print(f'purging sidechain_db')
-            shutil.rmtree(pathlib.Path(f'{self.cwd}/sidechain_db.bin'))
+            shutil.rmtree(pathlib.Path(f'{self.cwd}/sidechain_db'))
 
     def purge_light_client_db(self):
         print(f'purging light_client_db')
