@@ -44,6 +44,7 @@ use crate::{
 	},
 };
 use base58::ToBase58;
+use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{
 	hash::TrustedOperationOrHash, AccountId, Getter, ShardIdentifier, StatePayload, Stf,
@@ -123,6 +124,8 @@ pub mod rpc;
 mod sidechain_impl;
 mod sync;
 pub mod tls_ra;
+
+mod beefy_merkle_tree;
 
 #[cfg(feature = "test")]
 pub mod test;
@@ -1046,7 +1049,7 @@ where
 	let mut opaque_calls = Vec::<OpaqueCall>::new();
 	let mut executed_shielding_calls = Vec::<H256>::new();
 	for xt_opaque in block.extrinsics().iter() {
-		// Found shielding funds extrinsic in block.
+		// Found ShieldFunds extrinsic in block.
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
@@ -1060,7 +1063,7 @@ where
 			}
 		};
 
-		// Found Call worker extrinsic in block.
+		// Found CallWorker extrinsic in block.
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
@@ -1079,19 +1082,21 @@ where
 			}
 		}
 	}
-	// Create merkle proof out of all successfully executed extrinsics:
-
-	/* let xt_call = [TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK];
-	let xt_hash = blake2_256(&xt.encode());
-	debug!("Extrinsic hash {:?}", xt_hash);
-
-	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, xt_hash, state_hash.encode()))); */
+	opaque_calls
+		.push(processed_parentchain_block_extrinsic(block.hash(), executed_shielding_calls));
 
 	Ok(opaque_calls)
 }
 
 fn hash_of<T: Encode>(xt: T) -> H256 {
 	blake2_256(&xt.encode()).into()
+}
+
+fn processed_parentchain_block_extrinsic(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
+	// Create merkle proof out of all extrinsics:
+	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
+	let xt_call = [TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK];
+	OpaqueCall::from_tuple(&(xt_call, block_hash, root))
 }
 
 fn handle_shield_funds_xt<StfExecutor>(
