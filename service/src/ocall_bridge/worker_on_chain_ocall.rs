@@ -77,21 +77,20 @@ where
 		let mut status: OCallBridgeResult<()> = Ok(());
 		let api = self.node_api_factory.create_api();
 
-		// send confirmations to layer one
-		let confirmation_calls: Vec<OpaqueExtrinsic> =
+		let extrinsics: Vec<OpaqueExtrinsic> =
 			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
 				Ok(calls) => calls,
 				Err(_) => {
-					status = Err(OCallBridgeError::SendExtrinsicsToParentChain(
+					status = Err(OCallBridgeError::SendExtrinsicsToParentchain(
 						"Could not decode extrinsics".to_string(),
 					));
 					Default::default()
 				},
 			};
 
-		if !confirmation_calls.is_empty() {
-			debug!("Enclave wants to send {} extrinsics", confirmation_calls.len());
-			for call in confirmation_calls.into_iter() {
+		if !extrinsics.is_empty() {
+			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
+			for call in extrinsics.into_iter() {
 				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
 			}
 		}

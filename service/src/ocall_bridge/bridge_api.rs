@@ -132,7 +132,7 @@ pub enum OCallBridgeError {
 	#[error("Propose sidechain block failed: {0}")]
 	ProposeSidechainBlock(String),
 	#[error("Sending extrinsics to parentchain failed: {0}")]
-	SendExtrinsicsToParentChain(String),
+	SendExtrinsicsToParentchain(String),
 	#[error("IPFS Error: {0}")]
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
@@ -147,7 +147,7 @@ impl From<OCallBridgeError> for sgx_status_t {
 			OCallBridgeError::GetUpdateInfo(s) => s,
 			OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::ProposeSidechainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::SendExtrinsicsToParentChain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			OCallBridgeError::SendExtrinsicsToParentchain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 		}

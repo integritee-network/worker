@@ -26,24 +26,25 @@ use std::{slice, sync::Arc, vec::Vec};
 /// FFI are always unsafe
 #[no_mangle]
 pub unsafe extern "C" fn ocall_send_to_parentchain(
-	confirmations: *const u8,
-	confirmations_size: u32,
+	extrinsics_encoded: *const u8,
+	extrinsics_encoded_size: u32,
 ) -> sgx_status_t {
-	send_to_parentchain(confirmations, confirmations_size, Bridge::get_oc_api())
+	send_to_parentchain(extrinsics_encoded, extrinsics_encoded_size, Bridge::get_oc_api())
 }
 
 fn send_to_parentchain(
-	confirmations: *const u8,
-	confirmations_size: u32,
+	extrinsics_encoded: *const u8,
+	extrinsics_encoded_size: u32,
 	oc_api: Arc<dyn WorkerOnChainBridge>,
 ) -> sgx_status_t {
-	let confirmations_vec: Vec<u8> =
-		unsafe { Vec::from(slice::from_raw_parts(confirmations, confirmations_size as usize)) };
+	let extrinsics_encoded_vec: Vec<u8> = unsafe {
+		Vec::from(slice::from_raw_parts(extrinsics_encoded, extrinsics_encoded_size as usize))
+	};
 
-	match oc_api.send_to_parentchain(confirmations_vec) {
+	match oc_api.send_to_parentchain(extrinsics_encoded_vec) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
-			error!("send confirmations failed: {:?}", e);
+			error!("send extrinsics_encoded failed: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	}

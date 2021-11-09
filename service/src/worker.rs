@@ -49,7 +49,6 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
 
 #[async_trait]
 pub trait WorkerT {
-	// fn send_confirmations(&self, confirms: Vec<Vec<u8>>) -> WorkerResult<()>;
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>>;
 }
