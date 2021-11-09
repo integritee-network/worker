@@ -35,6 +35,11 @@ pub trait HandleState {
 	/// return a state
 	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<Self::StateT>;
 
+	/// Load the state in order to mutate it
+	///
+	/// Returns a write lock to protect against any concurrent access as long as
+	/// the lock is held. Finalize the operation by calling `write` and returning
+	/// the lock again.
 	fn load_for_mutation(
 		&self,
 		shard: &ShardIdentifier,

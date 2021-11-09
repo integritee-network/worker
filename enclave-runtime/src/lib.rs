@@ -54,9 +54,11 @@ use itc_direct_rpc_server::{
 	rpc_ws_handler::RpcWsHandler,
 };
 use itc_light_client::{
-	io::LightClientSeal, BlockNumberOps, HashFor, LightClientState, NumberFor, Validator,
+	io::LightClientSeal, BlockNumberOps, LightClientState, NumberFor, Validator,
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
+use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
+use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::{
 	node::{
@@ -95,7 +97,6 @@ use its_sidechain::{
 		traits::{AuthorApi, GetAuthor, OnBlockCreated, SendState},
 	},
 };
-use lazy_static::lazy_static;
 use log::*;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_types::sgx_status_t;
@@ -104,14 +105,9 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
 	traits::{Block as BlockT, Header as HeaderT},
-	MultiSignature, OpaqueExtrinsic,
+	MultiSignature,
 };
-use std::{
-	slice,
-	sync::{Arc, SgxRwLock},
-	time::Duration,
-	vec::Vec,
-};
+use std::{slice, sync::Arc, time::Duration, vec::Vec};
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
@@ -145,17 +141,6 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
-
-lazy_static! {
-	/// the enclave's parentchain nonce
-	///
-	/// This should be abstracted away better in the future. Currently, this only exists
-	/// because we produce sidechain blocks faster that parentchain chain blocks. So for now this
-	/// design suffices. Later, we also need to sync across parallel ecalls that might both result
-	/// in parentchain xt's. Then we should probably think about how we want to abstract the global
-	/// nonce.
-	static ref NONCE: SgxRwLock<u32> = SgxRwLock::new(Default::default());
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn init() -> sgx_status_t {
@@ -241,7 +226,15 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 pub unsafe extern "C" fn set_nonce(nonce: *const u32) -> sgx_status_t {
 	log::info!("[Ecall Set Nonce] Setting the nonce of the enclave to: {}", *nonce);
 
-	*NONCE.write().expect("Encountered poisoned NONCE lock") = *nonce;
+	let mut nonce_lock = match GLOBAL_NONCE_CACHE.load_for_mutation() {
+		Ok(l) => l,
+		Err(e) => {
+			error!("Failed to set nonce in enclave: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	*nonce_lock = Nonce(*nonce);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -271,12 +264,14 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let signer = Ed25519Seal::unseal().unwrap();
 	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
 
-	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
+	let nonce_cache = GLOBAL_NONCE_CACHE.clone();
+	let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
+	let nonce_value = nonce_lock.0;
 
 	let xt = compose_extrinsic_offline!(
 		signer,
 		call,
-		*nonce,
+		nonce_value,
 		Era::Immortal,
 		genesis_hash,
 		genesis_hash,
@@ -285,51 +280,11 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	)
 	.encode();
 
-	*nonce += 1;
+	*nonce_lock = Nonce(nonce_value + 1);
+	std::mem::drop(nonce_lock);
 
 	write_slice_and_whitespace_pad(extrinsic_slice, xt);
 	sgx_status_t::SGX_SUCCESS
-}
-
-fn create_extrinsics<PB, Signer>(
-	genesis_hash: HashFor<PB>,
-	signer: Signer,
-	calls: Vec<OpaqueCall>,
-	mut nonce: u32,
-) -> Result<(Vec<OpaqueExtrinsic>, u32)>
-where
-	PB: BlockT<Hash = H256>,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
-	Signer::Signature: Into<MultiSignature>,
-{
-	// get information for composing the extrinsic
-	debug!("Restored ECC pubkey: {:?}", signer.public());
-
-	let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
-		.into_iter()
-		.map(|call| {
-			let xt = compose_extrinsic_offline!(
-				signer.clone(),
-				call,
-				nonce,
-				Era::Immortal,
-				genesis_hash,
-				genesis_hash,
-				RUNTIME_SPEC_VERSION,
-				RUNTIME_TRANSACTION_VERSION
-			)
-			.encode();
-			nonce += 1;
-			xt
-		})
-		.map(|xt| {
-			OpaqueExtrinsic::from_bytes(&xt)
-				.expect("A previously encoded extrinsic has valid codec; qed.")
-		})
-		.collect();
-
-	Ok((extrinsics_buffer, nonce))
 }
 
 /// this is reduced to the side chain block import RPC interface (i.e. worker-worker communication)
@@ -612,7 +567,6 @@ where
 	let (_light_client_lock, _side_chain_lock) = EnclaveLock::write_all()?;
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
-	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
 
 	let authority = Ed25519Seal::unseal()?;
 
@@ -625,6 +579,9 @@ where
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
 
 	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
+	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
+	let extrinsics_factory =
+		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
 
 	match yield_next_slot(duration_now(), SLOT_DURATION, latest_onchain_header, &mut LastSlotSeal)?
 	{
@@ -632,13 +589,13 @@ where
 			let shards = state_handler.list_shards()?;
 			let env = ProposerFactory::new(rpc_author, stf_executor, authority.clone());
 
-			*nonce = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _>(
 				slot,
 				authority,
 				&mut validator,
+				&extrinsics_factory,
 				OcallApi,
 				env,
-				*nonce,
 				shards,
 			)?
 		},
@@ -689,16 +646,17 @@ where
 
 	let mut validator = LightClientSeal::<PB>::unseal()?;
 	let signer = Ed25519Seal::unseal()?;
-	let mut nonce = NONCE.write().expect("Encountered poisoned NONCE lock");
 	let stf_executor = StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler));
+	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
+	let extrinsics_factory =
+		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
 
-	*nonce = sync_blocks_on_light_client(
+	sync_blocks_on_light_client(
 		blocks_to_sync,
 		&mut validator,
-		signer,
+		&extrinsics_factory,
 		&OcallApi,
 		&stf_executor,
-		*nonce,
 	)?;
 
 	// store updated state in light client in case we fail afterwards.
@@ -707,23 +665,20 @@ where
 	Ok(())
 }
 
-fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor, Signer>(
+fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor, ExtrinsicsFactory>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
 	validator: &mut V,
-	signer: Signer,
+	extrinsics_factory: &ExtrinsicsFactory,
 	on_chain_ocall_api: &OCallApi,
 	stf_executor: &StfExecutor,
-	nonce: u32,
-) -> Result<u32>
+) -> Result<()>
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 	V: Validator<PB> + LightClientState<PB>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
-	Signer::Signature: Into<MultiSignature>,
+	ExtrinsicsFactory: CreateExtrinsics,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
 	let mrenclave: ShardIdentifier = on_chain_ocall_api.get_mrenclave_of_self()?.m.into();
@@ -768,42 +723,11 @@ where
 		)));
 	}
 
-	prepare_and_send_xts::<_, _, _, Signer>(validator, signer, on_chain_ocall_api, calls, nonce)
-}
+	let xts = extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
-fn prepare_and_send_xts<Block, V, OCallApi, Signer>(
-	validator: &mut V,
-	signer: Signer,
-	ocall_api: &OCallApi,
-	calls: Vec<OpaqueCall>,
-	nonce: u32,
-) -> Result<u32>
-where
-	Block: BlockT<Hash = H256>,
-	NumberFor<Block>: BlockNumberOps,
-	V: Validator<Block> + LightClientState<Block>,
-	OCallApi: EnclaveOnChainOCallApi,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
-	Signer::Signature: Into<MultiSignature>,
-{
-	// store extrinsics in light client for finalization check
-	let (extrinsics, nonce_updated) = create_extrinsics::<Block, Signer>(
-		validator.genesis_hash(validator.num_relays()).unwrap(),
-		signer,
-		calls,
-		nonce,
-	)?;
+	validator.send_extrinsics(on_chain_ocall_api, xts)?;
 
-	for xt in extrinsics.iter() {
-		validator.submit_xt_to_be_included(validator.num_relays(), xt.clone()).unwrap();
-	}
-
-	ocall_api
-		.send_to_parentchain(extrinsics)
-		.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))?;
-
-	Ok(nonce_updated)
+	Ok(())
 }
 
 /// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.

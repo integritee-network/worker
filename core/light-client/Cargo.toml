@@ -23,6 +23,7 @@ std = [
     "sp-trie/std",
 
     # local deps
+    "itp-ocall-api/std",
     "itp-storage/std",
     "itp-sgx-io/std",
 ]
@@ -51,6 +52,7 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 itp-settings = { path = "../../core-primitives/settings", default-features = false }
 itp-storage = { path = "../../core-primitives/storage", default-features = false }
+itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
 
 # substrate deps
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }

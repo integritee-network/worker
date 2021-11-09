@@ -3,10 +3,11 @@
 //! Todo: Once we have put the `top_pool` stuff in an entirely different crate we can
 //! move most parts here to the sidechain crate.
 
-use crate::{execute_top_pool_trusted_calls, prepare_and_send_xts, Result as EnclaveResult};
+use crate::{execute_top_pool_trusted_calls, Result as EnclaveResult};
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, AesSeal};
@@ -14,6 +15,7 @@ use itp_sgx_io::SealedIO;
 use itp_stf_executor::traits::{StfExecuteGenericUpdate, StfExecuteTimedCallsBatch};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
+use itp_types::OpaqueCall;
 use its_sidechain::{
 	aura::{Aura, AuraVerifier, SlotClaimStrategy},
 	consensus_common::{BlockImport, Environment, Error as ConsensusError, Proposal, Proposer},
@@ -131,15 +133,23 @@ where
 }
 
 /// Executes aura for the given `slot`
-pub fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment>(
+pub fn exec_aura_on_slot<
+	Authority,
+	PB,
+	SB,
+	OCallApi,
+	LightValidator,
+	PEnvironment,
+	ExtrinsicsFactory,
+>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
 	validator: &mut LightValidator,
+	extrinsics_factory: &ExtrinsicsFactory,
 	ocall_api: OCallApi,
 	proposer_environment: PEnvironment,
-	nonce: u32,
 	shards: Vec<ShardIdentifierFor<SB>>,
-) -> EnclaveResult<u32>
+) -> EnclaveResult<()>
 where
 	// setting the public type is necessary due to some non-generic downstream code.
 	PB: Block<Hash = H256>,
@@ -153,16 +163,14 @@ where
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
+	ExtrinsicsFactory: CreateExtrinsics,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let mut aura = Aura::<_, _, SB, PEnvironment, _>::new(
-		authority.clone(),
-		ocall_api.clone(),
-		proposer_environment,
-	)
-	.with_claim_strategy(SlotClaimStrategy::Always)
-	.with_allow_delayed_proposal(true);
+	let mut aura =
+		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api.clone(), proposer_environment)
+			.with_claim_strategy(SlotClaimStrategy::Always)
+			.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
@@ -171,15 +179,13 @@ where
 			.unzip();
 
 	ocall_api.propose_sidechain_blocks(blocks)?;
-	let signer = authority;
+	let opaque_calls: Vec<OpaqueCall> = xts.into_iter().flatten().collect();
 
-	prepare_and_send_xts::<_, _, _, _>(
-		validator,
-		signer,
-		&ocall_api,
-		xts.into_iter().flatten().collect(),
-		nonce,
-	)
+	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
+
+	validator.send_extrinsics(&ocall_api, xts)?;
+
+	Ok(())
 }
 
 /// Not used now as we skip block import currently.

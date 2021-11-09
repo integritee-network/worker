@@ -54,6 +54,7 @@ pub mod io;
 
 // reexport useful types.
 pub use finality_grandpa::BlockNumberOps;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 pub use sp_finality_grandpa::{AuthorityList, SetId};
 
 pub type RelayId = u64;
@@ -100,6 +101,12 @@ where
 		&mut self,
 		relay_id: RelayId,
 		extrinsic: OpaqueExtrinsic,
+	) -> Result<(), Error>;
+
+	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
+		&mut self,
+		ocall_api: &OCallApi,
+		extrinsics: Vec<OpaqueExtrinsic>,
 	) -> Result<(), Error>;
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
@@ -344,6 +351,20 @@ where
 		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		relay.verify_tx_inclusion.push(extrinsic);
 		Ok(())
+	}
+
+	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
+		&mut self,
+		ocall_api: &OCallApi,
+		extrinsics: Vec<OpaqueExtrinsic>,
+	) -> Result<(), Error> {
+		for xt in extrinsics.iter() {
+			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
+		}
+
+		ocall_api
+			.send_to_parentchain(extrinsics)
+			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	}
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
