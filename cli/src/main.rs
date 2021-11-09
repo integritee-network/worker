@@ -785,7 +785,7 @@ fn listen(matches: &ArgMatches<'_>) {
 	}
 }
 
-// subscribes to he pallet_teerex events of type ProcessedParentchainBlock
+// Subscribes to the pallet_teerex events of type ProcessedParentchainBlock.
 pub fn subscribe_to_processed_parentchain_block<P: Pair, Client: 'static>(
 	api: Api<P, Client>,
 ) -> H256
