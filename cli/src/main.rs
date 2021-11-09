@@ -746,12 +746,12 @@ fn listen(matches: &ArgMatches<'_>) {
 										shard.encode().to_base58()
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
 									accountid,
 									call_hash,
 								) => {
 									println!(
-										"CallConfirmed from {} with hash {:?}",
+										"ProcessedParentchainBlock from {} with hash {:?}",
 										accountid, call_hash
 									);
 								},
@@ -785,8 +785,8 @@ fn listen(matches: &ArgMatches<'_>) {
 	}
 }
 
-// subscribes to he pallet_teerex events of type CallConfirmed
-pub fn subscribe_to_PROCESSED_PARENTCHAIN_BLOCK<P: Pair, Client: 'static>(
+// subscribes to he pallet_teerex events of type ProcessedParentchainBlock
+pub fn subscribe_to_processed_parentchain_block<P: Pair, Client: 'static>(
 	api: Api<P, Client>,
 ) -> H256
 where
@@ -813,7 +813,7 @@ where
 			for evr in &evts {
 				info!("received event {:?}", evr.event);
 				if let Event::Teerex(pe) = &evr.event {
-					if let my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
+					if let my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
 						sender,
 						payload,
 					) = &pe
