@@ -43,24 +43,24 @@ use std::{boxed::Box, marker::PhantomData, pin::Pin, vec, vec::Vec};
 pub type Result<T> = core::result::Result<T, ()>;
 
 /// The operation pool logic for full client.
-pub struct SideChainApi<Block> {
+pub struct SidechainApi<Block> {
 	_marker: PhantomData<Block>,
 }
 
-impl<Block> SideChainApi<Block> {
+impl<Block> SidechainApi<Block> {
 	/// Create new operation pool logic.
 	pub fn new() -> Self {
-		SideChainApi { _marker: Default::default() }
+		SidechainApi { _marker: Default::default() }
 	}
 }
 
-impl<Block> Default for SideChainApi<Block> {
+impl<Block> Default for SidechainApi<Block> {
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
-impl<Block> ChainApi for SideChainApi<Block>
+impl<Block> ChainApi for SidechainApi<Block>
 where
 	Block: BlockT,
 {

@@ -19,36 +19,29 @@
 use crate::{
 	node_api_factory::CreateNodeApi,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
-	sidechain_storage::BlockStorage,
-	sync_block_gossiper::GossipBlocks,
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
 use itp_types::{WorkerRequest, WorkerResponse};
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
 use substrate_api_client::XtStatus;
 
-pub struct WorkerOnChainOCall<F, S, D> {
+pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,
-	block_gossiper: Arc<S>,
-	block_storage: Arc<D>,
 }
 
-impl<F, S, D> WorkerOnChainOCall<F, S, D> {
-	pub fn new(node_api_factory: Arc<F>, block_gossiper: Arc<S>, block_storage: Arc<D>) -> Self {
-		WorkerOnChainOCall { node_api_factory, block_gossiper, block_storage }
+impl<F> WorkerOnChainOCall<F> {
+	pub fn new(node_api_factory: Arc<F>) -> Self {
+		WorkerOnChainOCall { node_api_factory }
 	}
 }
 
-impl<F, S, D> WorkerOnChainBridge for WorkerOnChainOCall<F, S, D>
+impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
 where
 	F: CreateNodeApi,
-	S: GossipBlocks,
-	D: BlockStorage<SignedSidechainBlock>,
 {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>> {
 		debug!("    Entering ocall_worker_request");
@@ -79,66 +72,29 @@ where
 		Ok(encoded_response)
 	}
 
-	fn send_block_and_confirmation(
-		&self,
-		confirmations: Vec<u8>,
-		signed_blocks_encoded: Vec<u8>,
-	) -> OCallBridgeResult<()> {
-		debug!("    Entering ocall_send_block_and_confirmation");
-
+	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
 		let api = self.node_api_factory.create_api();
 
-		// send confirmations to layer one
-		let confirmation_calls: Vec<OpaqueExtrinsic> =
-			match Decode::decode(&mut confirmations.as_slice()) {
+		let extrinsics: Vec<OpaqueExtrinsic> =
+			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
 				Ok(calls) => calls,
 				Err(_) => {
-					status = Err(OCallBridgeError::SendBlockAndConfirmation(
-						"Could not decode confirmation calls".to_string(),
+					status = Err(OCallBridgeError::SendExtrinsicsToParentchain(
+						"Could not decode extrinsics".to_string(),
 					));
 					Default::default()
 				},
 			};
 
-		if !confirmation_calls.is_empty() {
-			debug!("Enclave wants to send {} extrinsics", confirmation_calls.len());
-			for call in confirmation_calls.into_iter() {
+		if !extrinsics.is_empty() {
+			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
+			for call in extrinsics.into_iter() {
 				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
 			}
 		}
 
-		// handle blocks
-		let signed_blocks: Vec<SignedSidechainBlock> =
-			match Decode::decode(&mut signed_blocks_encoded.as_slice()) {
-				Ok(blocks) => blocks,
-				Err(_) => {
-					status = Err(OCallBridgeError::SendBlockAndConfirmation(
-						"Could not decode signed blocks".to_string(),
-					));
-					vec![]
-				},
-			};
-
-		if !signed_blocks.is_empty() {
-			info!(
-				"Enclave produced sidechain blocks: {:?}",
-				signed_blocks.iter().map(|b| b.block.block_number).collect::<Vec<u64>>()
-			);
-		} else {
-			debug!("Enclave did not produce sidechain blocks");
-		}
-
-		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks.clone()) {
-			error!("Error gossiping blocks: {:?}", e);
-			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
-
-		if let Err(e) = self.block_storage.store_blocks(signed_blocks) {
-			error!("Error storing blocks: {:?}", e);
-		}
 		status
 	}
 }
@@ -147,19 +103,13 @@ where
 mod tests {
 
 	use super::*;
-	use crate::{
-		node_api_factory::MockCreateNodeApi, sidechain_storage::interface::MockBlockStorage,
-		sync_block_gossiper::MockGossipBlocks,
-	};
+	use crate::node_api_factory::MockCreateNodeApi;
 
 	#[test]
 	fn given_empty_worker_request_when_submitting_then_return_empty_response() {
 		let mock_node_api_factory = Arc::new(MockCreateNodeApi::new());
-		let mock_block_gossiper = Arc::new(MockGossipBlocks::new());
-		let mock_block_storage = Arc::new(MockBlockStorage::new());
 
-		let on_chain_ocall =
-			WorkerOnChainOCall::new(mock_node_api_factory, mock_block_gossiper, mock_block_storage);
+		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory);
 
 		let response = on_chain_ocall.worker_request(Vec::<u8>::new().encode()).unwrap();
 

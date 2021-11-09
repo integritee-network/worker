@@ -24,10 +24,11 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::{
 			DirectInvocationBridge, GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge,
-			WorkerOnChainBridge,
+			SidechainBridge, WorkerOnChainBridge,
 		},
 		ipfs_ocall::IpfsOCall,
 		remote_attestation_ocall::RemoteAttestationOCall,
+		sidechain_ocall::SidechainOCall,
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
 	sidechain_storage::BlockStorage,
@@ -78,12 +79,12 @@ where
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))
 	}
 
+	fn get_sidechain_api(&self) -> Arc<dyn SidechainBridge> {
+		Arc::new(SidechainOCall::new(self.block_gossiper.clone(), self.block_storage.clone()))
+	}
+
 	fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge> {
-		Arc::new(WorkerOnChainOCall::new(
-			self.node_api_factory.clone(),
-			self.block_gossiper.clone(),
-			self.block_storage.clone(),
-		))
+		Arc::new(WorkerOnChainOCall::new(self.node_api_factory.clone()))
 	}
 
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {

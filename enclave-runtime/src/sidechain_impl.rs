@@ -3,13 +3,11 @@
 //! Todo: Once we have put the `top_pool` stuff in an entirely different crate we can
 //! move most parts here to the sidechain crate.
 
-use crate::{
-	execute_top_pool_trusted_calls, prepare_and_send_xts_and_block, Result as EnclaveResult,
-};
+use crate::{execute_top_pool_trusted_calls, prepare_and_send_xts, Result as EnclaveResult};
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, AesSeal};
 use itp_sgx_io::SealedIO;
@@ -33,34 +31,37 @@ use sp_runtime::{traits::Block, MultiSignature};
 use std::{marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
-pub struct SlotProposer<PB: Block, SB: SignedBlock, Author, StfExecutor> {
+pub struct SlotProposer<PB: Block, SB: SignedBlock, Author, StfExecutor, Signer> {
 	author: Arc<Author>,
 	stf_executor: Arc<StfExecutor>,
 	parentchain_header: PB::Header,
 	shard: ShardIdentifierFor<SB>,
+	signer: Signer,
 	_phantom: PhantomData<PB>,
 }
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`
-pub struct ProposerFactory<PB: Block, Author, StfExecutor> {
+pub struct ProposerFactory<PB: Block, Author, StfExecutor, Signer> {
 	author: Arc<Author>,
 	stf_executor: Arc<StfExecutor>,
+	signer: Signer,
 	_phantom: PhantomData<PB>,
 }
 
-impl<PB: Block, Author, StfExecutor> ProposerFactory<PB, Author, StfExecutor> {
-	pub fn new(author: Arc<Author>, stf_executor: Arc<StfExecutor>) -> Self {
-		Self { author, stf_executor, _phantom: Default::default() }
+impl<PB: Block, Author, StfExecutor, Signer> ProposerFactory<PB, Author, StfExecutor, Signer> {
+	pub fn new(author: Arc<Author>, stf_executor: Arc<StfExecutor>, signer: Signer) -> Self {
+		Self { author, stf_executor, signer, _phantom: Default::default() }
 	}
 }
 
-impl<PB: Block<Hash = H256>, SB, Author, StfExecutor> Environment<PB, SB>
-	for ProposerFactory<PB, Author, StfExecutor>
+impl<PB: Block<Hash = H256>, SB, Author, StfExecutor, Signer> Environment<PB, SB>
+	for ProposerFactory<PB, Author, StfExecutor, Signer>
 where
 	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
+	SB: SignedBlock<Public = Signer::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SB::Signature: From<Signer::Signature>,
 	Author: AuthorApi<H256, PB::Hash>
 		+ SendState<Hash = PB::Hash>
 		+ OnBlockCreated<Hash = PB::Hash>
@@ -71,8 +72,10 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
+	Signer::Public: Encode,
 {
-	type Proposer = SlotProposer<PB, SB, Author, StfExecutor>;
+	type Proposer = SlotProposer<PB, SB, Author, StfExecutor, Signer>;
 	type Error = ConsensusError;
 
 	fn init(
@@ -85,17 +88,20 @@ where
 			stf_executor: self.stf_executor.clone(),
 			parentchain_header: parent_header,
 			shard,
+			signer: self.signer.clone(),
 			_phantom: PhantomData,
 		})
 	}
 }
 
-impl<PB, SB, Author, StfExecutor> Proposer<PB, SB> for SlotProposer<PB, SB, Author, StfExecutor>
+impl<PB, SB, Author, StfExecutor, Signer> Proposer<PB, SB>
+	for SlotProposer<PB, SB, Author, StfExecutor, Signer>
 where
 	PB: Block<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SB: SignedBlock<Public = Signer::Public, Signature = MultiSignature>,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SB::Signature: From<Signer::Signature>,
 	Author:
 		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
 	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
@@ -103,11 +109,14 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
+	Signer: Pair<Public = sp_core::ed25519::Public>,
+	Signer::Public: Encode,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
-		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _>(
+		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _, Signer>(
 			self.author.as_ref(),
 			self.stf_executor.as_ref(),
+			self.signer.clone(),
 			&self.parentchain_header,
 			self.shard,
 			max_duration,
@@ -122,33 +131,38 @@ where
 }
 
 /// Executes aura for the given `slot`
-pub fn exec_aura_on_slot<Authority, PB, SB, OcallApi, LightValidator, PEnvironment>(
+pub fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
 	validator: &mut LightValidator,
-	ocall_api: OcallApi,
+	ocall_api: OCallApi,
 	proposer_environment: PEnvironment,
-	nonce: &mut u32,
+	nonce: u32,
 	shards: Vec<ShardIdentifierFor<SB>>,
-) -> EnclaveResult<()>
+) -> EnclaveResult<u32>
 where
 	// setting the public type is necessary due to some non-generic downstream code.
-	Authority: Pair<Public = sp_core::ed25519::Public>,
-	Authority::Public: Encode,
 	PB: Block<Hash = H256>,
 	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
-	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
+	SB::Signature: From<Authority::Signature>,
+	Authority: Pair<Public = sp_core::ed25519::Public>,
+	Authority::Public: Encode,
+	OCallApi:
+		EnclaveSidechainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let mut aura =
-		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api.clone(), proposer_environment)
-			.with_claim_strategy(SlotClaimStrategy::Always)
-			.with_allow_delayed_proposal(true);
+	let mut aura = Aura::<_, _, SB, PEnvironment, _>::new(
+		authority.clone(),
+		ocall_api.clone(),
+		proposer_environment,
+	)
+	.with_claim_strategy(SlotClaimStrategy::Always)
+	.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
@@ -156,11 +170,14 @@ where
 			.map(|r| (r.block, r.parentchain_effects))
 			.unzip();
 
-	prepare_and_send_xts_and_block::<_, SB, _, _>(
+	ocall_api.propose_sidechain_blocks(blocks)?;
+	let signer = authority;
+
+	prepare_and_send_xts::<_, _, _, _>(
 		validator,
+		signer,
 		&ocall_api,
 		xts.into_iter().flatten().collect(),
-		blocks,
 		nonce,
 	)
 }

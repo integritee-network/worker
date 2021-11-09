@@ -186,7 +186,7 @@ pub mod sgx {
 mod tests {
 	use super::*;
 	use itp_sgx_io::SealedIO;
-	use itp_types::{Block as ParentchainBlock, Header as ParentChainHeader};
+	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
@@ -233,7 +233,7 @@ mod tests {
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			parentchain_head: ParentChainHeader {
+			parentchain_head: ParentchainHeader {
 				parent_hash: Default::default(),
 				number: 1,
 				state_root: Default::default(),
@@ -243,8 +243,8 @@ mod tests {
 		}
 	}
 
-	pub fn default_header() -> ParentChainHeader {
-		ParentChainHeader::new(
+	pub fn default_header() -> ParentchainHeader {
+		ParentchainHeader::new(
 			Default::default(),
 			Default::default(),
 			Default::default(),

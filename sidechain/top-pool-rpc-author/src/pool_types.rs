@@ -15,7 +15,7 @@
 
 */
 
-use crate::api::SideChainApi;
+use crate::api::SidechainApi;
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 };
@@ -30,4 +30,4 @@ pub(crate) type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, Tungsten
 pub type EnclaveRpcResponder =
 	RpcResponder<EnclaveRpcConnectionRegistry, Hash, TungsteniteWsConnection>;
 
-pub type BPool = BasicPool<SideChainApi<Block>, Block, EnclaveRpcResponder>;
+pub type BPool = BasicPool<SidechainApi<Block>, Block, EnclaveRpcResponder>;

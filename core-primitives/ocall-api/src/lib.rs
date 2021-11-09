@@ -23,7 +23,6 @@ use alloc::vec::Vec;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_types::{TrustedOperationStatus, WorkerRequest, WorkerResponse};
-use its_primitives::traits::SignedBlock;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 
@@ -64,16 +63,16 @@ pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
 
 /// trait for o-calls related to on-chain interactions
 pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
-	fn send_block_and_confirmation<SB: SignedBlock>(
-		&self,
-		confirmations: Vec<OpaqueExtrinsic>,
-		signed_blocks: Vec<SB>,
-	) -> SgxResult<()>;
+	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()>;
 
 	fn worker_request<V: Encode + Decode>(
 		&self,
 		req: Vec<WorkerRequest>,
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
+}
+
+pub trait EnclaveSidechainOCallApi: Clone + Debug + Send + Sync {
+	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
 }
 
 /// Newtype for IPFS CID

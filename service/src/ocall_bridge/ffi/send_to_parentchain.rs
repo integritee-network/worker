@@ -25,38 +25,26 @@ use std::{slice, sync::Arc, vec::Vec};
 ///
 /// FFI are always unsafe
 #[no_mangle]
-pub unsafe extern "C" fn ocall_send_block_and_confirmation(
-	confirmations: *const u8,
-	confirmations_size: u32,
-	signed_blocks_ptr: *const u8,
-	signed_blocks_size: u32,
+pub unsafe extern "C" fn ocall_send_to_parentchain(
+	extrinsics_encoded: *const u8,
+	extrinsics_encoded_size: u32,
 ) -> sgx_status_t {
-	send_block_and_confirmation(
-		confirmations,
-		confirmations_size,
-		signed_blocks_ptr,
-		signed_blocks_size,
-		Bridge::get_oc_api(),
-	)
+	send_to_parentchain(extrinsics_encoded, extrinsics_encoded_size, Bridge::get_oc_api())
 }
 
-fn send_block_and_confirmation(
-	confirmations: *const u8,
-	confirmations_size: u32,
-	signed_blocks_ptr: *const u8,
-	signed_blocks_size: u32,
+fn send_to_parentchain(
+	extrinsics_encoded: *const u8,
+	extrinsics_encoded_size: u32,
 	oc_api: Arc<dyn WorkerOnChainBridge>,
 ) -> sgx_status_t {
-	let confirmations_vec: Vec<u8> =
-		unsafe { Vec::from(slice::from_raw_parts(confirmations, confirmations_size as usize)) };
+	let extrinsics_encoded_vec: Vec<u8> = unsafe {
+		Vec::from(slice::from_raw_parts(extrinsics_encoded, extrinsics_encoded_size as usize))
+	};
 
-	let signed_blocks_vec: Vec<u8> =
-		unsafe { Vec::from(slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize)) };
-
-	match oc_api.send_block_and_confirmation(confirmations_vec, signed_blocks_vec) {
+	match oc_api.send_to_parentchain(extrinsics_encoded_vec) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
-			error!("send block and confirmation failed: {:?}", e);
+			error!("send extrinsics_encoded failed: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	}
