@@ -65,7 +65,7 @@ sc-keystore = { version = "4.0.0-dev", default-features = false, git = "https://
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master", optional = true }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "upgrade-to-new-pallet-teerex", optional = true }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master", optional = true }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master", optional = true }
 
