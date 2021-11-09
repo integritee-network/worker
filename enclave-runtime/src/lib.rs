@@ -1095,13 +1095,12 @@ where
     );
 
 	debug!("decrypt the call");
-	//let account_vec = Rsa3072KeyPair::decrypt(&account_encrypted)?;
 	let account_vec = Rsa3072Seal::unseal().map(|key| key.decrypt(&account_encrypted))??;
 
 	let account = AccountId::decode(&mut account_vec.as_slice())
 		.sgx_error_with_log("[ShieldFunds] Could not decode account")?;
 
-	let state_hash = match stf_executor.execute_shield_funds(account, amount, &shard, calls) {
+	let state_hash = match stf_executor.execute_shield_funds(account, amount, &shard) {
 		Ok(h) => h,
 		Err(e) => {
 			error!("Error executing shield funds. Error: {:?}", e);
