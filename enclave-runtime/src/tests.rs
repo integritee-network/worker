@@ -49,7 +49,7 @@ use its_sidechain::{
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
 	top_pool_rpc_author::{
-		api::SideChainApi,
+		api::SidechainApi,
 		author::Author,
 		author_tests,
 		test_utils::{get_pending_tops_separated, submit_and_execute_top},
@@ -64,8 +64,8 @@ use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};
 
-type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SideChainApi<Block>>>;
-type TestTopPool = BasicPool<SideChainApi<Block>, Block, TestRpcResponder>;
+type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
+type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
 type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock>;
 
 #[no_mangle]
@@ -456,7 +456,7 @@ fn init_state<S: HandleState<StateT = SgxExternalities>>(
 }
 
 fn test_top_pool() -> TestTopPool {
-	let chain_api = Arc::new(SideChainApi::<Block>::new());
+	let chain_api = Arc::new(SidechainApi::<Block>::new());
 	let top_pool =
 		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
 

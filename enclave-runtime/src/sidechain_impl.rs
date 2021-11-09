@@ -7,7 +7,7 @@ use crate::{execute_top_pool_trusted_calls, prepare_and_send_xts, Result as Encl
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSideChainOCallApi};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, AesSeal};
 use itp_sgx_io::SealedIO;
@@ -149,7 +149,7 @@ where
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
 	OCallApi:
-		EnclaveSideChainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
+		EnclaveSidechainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,

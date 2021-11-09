@@ -24,7 +24,7 @@ use sgx_types::sgx_status_t;
 use sp_runtime::{generic::SignedBlock, traits::Block};
 
 /// trait for handling blocks on the side chain
-pub trait SideChain: Send + Sync + 'static {
+pub trait Sidechain: Send + Sync + 'static {
 	/// Sync parentchain blocks and execute pending tops in the enclave
 	fn sync_parentchain<PB: Block>(
 		&self,
@@ -37,7 +37,7 @@ pub trait SideChain: Send + Sync + 'static {
 	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
 }
 
-impl SideChain for Enclave {
+impl Sidechain for Enclave {
 	fn sync_parentchain<PB: Block>(
 		&self,
 		blocks: &[SignedBlock<PB>],

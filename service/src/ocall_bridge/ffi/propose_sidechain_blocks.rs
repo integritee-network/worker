@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, SideChainBridge};
+use crate::ocall_bridge::bridge_api::{Bridge, SidechainBridge};
 use log::*;
 use sgx_types::sgx_status_t;
 use std::{slice, sync::Arc};
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn ocall_propose_sidechain_blocks(
 fn propose_sidechain_blocks(
 	signed_blocks_ptr: *const u8,
 	signed_blocks_size: u32,
-	sidechain_api: Arc<dyn SideChainBridge>,
+	sidechain_api: Arc<dyn SidechainBridge>,
 ) -> sgx_status_t {
 	let signed_blocks_vec: Vec<u8> =
 		unsafe { Vec::from(slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize)) };

@@ -71,7 +71,7 @@ pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
 }
 
-pub trait EnclaveSideChainOCallApi: Clone + Debug + Send + Sync {
+pub trait EnclaveSidechainOCallApi: Clone + Debug + Send + Sync {
 	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
 }
 

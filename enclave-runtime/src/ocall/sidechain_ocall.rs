@@ -19,10 +19,10 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::Encode;
 use frame_support::ensure;
-use itp_ocall_api::{alloc::prelude::v1::Vec, EnclaveSideChainOCallApi};
+use itp_ocall_api::{alloc::prelude::v1::Vec, EnclaveSidechainOCallApi};
 use sgx_types::{sgx_status_t, SgxResult};
 
-impl EnclaveSideChainOCallApi for OcallApi {
+impl EnclaveSidechainOCallApi for OcallApi {
 	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let signed_blocks_encoded = signed_blocks.encode();

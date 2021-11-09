@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	api::SideChainApi,
+	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
 	global_author_container::GlobalAuthorContainer,
 	pool_types::{BPool, EnclaveRpcConnectionRegistry},
@@ -38,7 +38,7 @@ pub fn initialize_top_pool_rpc_author(
 ) {
 	let rpc_responder = Arc::new(RpcResponder::new(connection_registry));
 
-	let side_chain_api = Arc::new(SideChainApi::<itp_types::Block>::new());
+	let side_chain_api = Arc::new(SidechainApi::<itp_types::Block>::new());
 	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
 	let state_handler = Arc::new(GlobalFileStateHandler);
 

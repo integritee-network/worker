@@ -30,7 +30,7 @@ use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::Unchecke
 use crate::tests::commons::*;
 use itp_api_client_extensions::TEEREX;
 use itp_enclave_api::{
-	enclave_base::EnclaveBase, remote_attestation::RemoteAttestation, side_chain::SideChain,
+	enclave_base::EnclaveBase, remote_attestation::RemoteAttestation, sidechain::Sidechain,
 };
 use itp_settings::files::SIGNING_KEY_FILE;
 
@@ -53,7 +53,7 @@ pub fn perform_ra_works<E: EnclaveBase + RemoteAttestation>(enclave_api: &E, por
 	let _xt = enclave_api.perform_ra(genesis_hash, nonce, w_url.encode()).unwrap();
 }
 
-pub fn call_worker_encrypted_set_balance_works<E: EnclaveBase + SideChain>(
+pub fn call_worker_encrypted_set_balance_works<E: EnclaveBase + Sidechain>(
 	enclave_api: &E,
 	port: &str,
 	last_synced_head: Header,
@@ -74,7 +74,7 @@ pub fn call_worker_encrypted_set_balance_works<E: EnclaveBase + SideChain>(
 	crate::sync_parentchain(enclave_api, &api, last_synced_head)
 }
 
-pub fn forward_encrypted_unshield_works<E: EnclaveBase + SideChain>(
+pub fn forward_encrypted_unshield_works<E: EnclaveBase + Sidechain>(
 	enclave_api: &E,
 	port: &str,
 	last_synced_head: Header,
@@ -96,12 +96,12 @@ pub fn forward_encrypted_unshield_works<E: EnclaveBase + SideChain>(
 	crate::sync_parentchain(enclave_api, &api, last_synced_head)
 }
 
-pub fn init_light_client<E: EnclaveBase + SideChain>(port: &str, enclave_api: &E) -> Header {
+pub fn init_light_client<E: EnclaveBase + Sidechain>(port: &str, enclave_api: &E) -> Header {
 	let (api, _, _) = setup(enclave_api, None, port);
 	crate::init_light_client(&api, enclave_api)
 }
 
-pub fn shield_funds_workds<E: EnclaveBase + SideChain>(
+pub fn shield_funds_workds<E: EnclaveBase + Sidechain>(
 	enclave_api: &E,
 	port: &str,
 	last_synced_head: Header,

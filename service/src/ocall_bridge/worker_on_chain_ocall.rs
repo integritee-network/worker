@@ -104,19 +104,13 @@ where
 mod tests {
 
 	use super::*;
-	use crate::{
-		node_api_factory::MockCreateNodeApi, sidechain_storage::interface::MockBlockStorage,
-		sync_block_gossiper::MockGossipBlocks,
-	};
+	use crate::node_api_factory::MockCreateNodeApi;
 
 	#[test]
 	fn given_empty_worker_request_when_submitting_then_return_empty_response() {
 		let mock_node_api_factory = Arc::new(MockCreateNodeApi::new());
-		let mock_block_gossiper = Arc::new(MockGossipBlocks::new());
-		let mock_block_storage = Arc::new(MockBlockStorage::new());
 
-		let on_chain_ocall =
-			WorkerOnChainOCall::new(mock_node_api_factory, mock_block_gossiper, mock_block_storage);
+		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory);
 
 		let response = on_chain_ocall.worker_request(Vec::<u8>::new().encode()).unwrap();
 

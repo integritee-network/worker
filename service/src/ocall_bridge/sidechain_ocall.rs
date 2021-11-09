@@ -17,7 +17,7 @@
 */
 
 use crate::{
-	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SideChainBridge},
+	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
 	sidechain_storage::BlockStorage,
 	sync_block_gossiper::GossipBlocks,
 };
@@ -26,18 +26,18 @@ use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use std::sync::Arc;
 
-pub struct SideChainOCall<S, D> {
+pub struct SidechainOCall<S, D> {
 	block_gossiper: Arc<S>,
 	block_storage: Arc<D>,
 }
 
-impl<S, D> SideChainOCall<S, D> {
+impl<S, D> SidechainOCall<S, D> {
 	pub fn new(block_gossiper: Arc<S>, block_storage: Arc<D>) -> Self {
-		SideChainOCall { block_gossiper, block_storage }
+		SidechainOCall { block_gossiper, block_storage }
 	}
 }
 
-impl<S, D> SideChainBridge for SideChainOCall<S, D>
+impl<S, D> SidechainBridge for SidechainOCall<S, D>
 where
 	S: GossipBlocks,
 	D: BlockStorage<SignedSidechainBlock>,
@@ -51,7 +51,7 @@ where
 			match Decode::decode(&mut signed_blocks_encoded.as_slice()) {
 				Ok(blocks) => blocks,
 				Err(_) => {
-					status = Err(OCallBridgeError::ProposeSideChainBlock(
+					status = Err(OCallBridgeError::ProposeSidechainBlock(
 						"Could not decode signed blocks".to_string(),
 					));
 					vec![]

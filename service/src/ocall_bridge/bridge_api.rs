@@ -54,7 +54,7 @@ impl Bridge {
 			.get_ra_api()
 	}
 
-	pub fn get_sidechain_api() -> Arc<dyn SideChainBridge> {
+	pub fn get_sidechain_api() -> Arc<dyn SidechainBridge> {
 		COMPONENT_FACTORY
 			.read()
 			.as_ref()
@@ -106,7 +106,7 @@ pub trait GetOCallBridgeComponents {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge>;
 
 	/// side chain OCall API
-	fn get_sidechain_api(&self) -> Arc<dyn SideChainBridge>;
+	fn get_sidechain_api(&self) -> Arc<dyn SidechainBridge>;
 
 	/// on chain (parentchain) OCall API
 	fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge>;
@@ -130,7 +130,7 @@ pub enum OCallBridgeError {
 	#[error("GetIasSocket Error: {0}")]
 	GetIasSocket(String),
 	#[error("Propose sidechain block failed: {0}")]
-	ProposeSideChainBlock(String),
+	ProposeSidechainBlock(String),
 	#[error("Sending extrinsics to parentchain failed: {0}")]
 	SendExtrinsicsToParentChain(String),
 	#[error("IPFS Error: {0}")]
@@ -146,7 +146,7 @@ impl From<OCallBridgeError> for sgx_status_t {
 			OCallBridgeError::InitQuote(s) => s,
 			OCallBridgeError::GetUpdateInfo(s) => s,
 			OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::ProposeSideChainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			OCallBridgeError::ProposeSidechainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::SendExtrinsicsToParentChain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
@@ -193,7 +193,7 @@ pub trait WorkerOnChainBridge {
 
 /// Trait for all the OCalls related to sidechain operations
 #[cfg_attr(test, automock)]
-pub trait SideChainBridge {
+pub trait SidechainBridge {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
