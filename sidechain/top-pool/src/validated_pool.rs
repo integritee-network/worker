@@ -29,9 +29,6 @@ use std::sync::Mutex;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use std::untrusted::time::InstantEx;
-
 use crate::{
 	base_pool as base,
 	base_pool::PruneStatus,

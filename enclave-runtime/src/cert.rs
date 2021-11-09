@@ -10,7 +10,7 @@ use num_bigint::BigUint;
 use serde_json::Value;
 use sgx_tcrypto::*;
 use sgx_types::*;
-use std::{io::BufReader, prelude::v1::*, ptr, str, time::*, untrusted::time::SystemTimeEx};
+use std::{io::BufReader, prelude::v1::*, ptr, str, time::*};
 use yasna::models::ObjectIdentifier;
 
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
