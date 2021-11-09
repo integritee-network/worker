@@ -19,36 +19,29 @@
 use crate::{
 	node_api_factory::CreateNodeApi,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
-	sidechain_storage::BlockStorage,
-	sync_block_gossiper::GossipBlocks,
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
 use itp_types::{WorkerRequest, WorkerResponse};
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
 use substrate_api_client::XtStatus;
 
-pub struct WorkerOnChainOCall<F, S, D> {
+pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,
-	block_gossiper: Arc<S>,
-	block_storage: Arc<D>,
 }
 
-impl<F, S, D> WorkerOnChainOCall<F, S, D> {
-	pub fn new(node_api_factory: Arc<F>, block_gossiper: Arc<S>, block_storage: Arc<D>) -> Self {
-		WorkerOnChainOCall { node_api_factory, block_gossiper, block_storage }
+impl<F> WorkerOnChainOCall<F> {
+	pub fn new(node_api_factory: Arc<F>) -> Self {
+		WorkerOnChainOCall { node_api_factory }
 	}
 }
 
-impl<F, S, D> WorkerOnChainBridge for WorkerOnChainOCall<F, S, D>
+impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
 where
 	F: CreateNodeApi,
-	S: GossipBlocks,
-	D: BlockStorage<SignedSidechainBlock>,
 {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>> {
 		debug!("    Entering ocall_worker_request");
@@ -79,55 +72,18 @@ where
 		Ok(encoded_response)
 	}
 
-	fn send_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
-		// TODO: improve error handling, using a mut status is not good design?
-		let mut status: OCallBridgeResult<()> = Ok(());
-
-		// handle blocks
-		let signed_blocks: Vec<SignedSidechainBlock> =
-			match Decode::decode(&mut signed_blocks_encoded.as_slice()) {
-				Ok(blocks) => blocks,
-				Err(_) => {
-					status = Err(OCallBridgeError::SendBlockAndConfirmation(
-						"Could not decode signed blocks".to_string(),
-					));
-					vec![]
-				},
-			};
-
-		if !signed_blocks.is_empty() {
-			info!(
-				"Enclave produced sidechain blocks: {:?}",
-				signed_blocks.iter().map(|b| b.block.block_number).collect::<Vec<u64>>()
-			);
-		} else {
-			debug!("Enclave did not produce sidechain blocks");
-		}
-
-		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks.clone()) {
-			error!("Error gossiping blocks: {:?}", e);
-			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
-
-		if let Err(e) = self.block_storage.store_blocks(signed_blocks) {
-			error!("Error storing blocks: {:?}", e);
-		}
-		status
-	}
-
-	fn send_confirmations(&self, confirmations: Vec<u8>) -> OCallBridgeResult<()> {
+	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
 		let api = self.node_api_factory.create_api();
 
 		// send confirmations to layer one
 		let confirmation_calls: Vec<OpaqueExtrinsic> =
-			match Decode::decode(&mut confirmations.as_slice()) {
+			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
 				Ok(calls) => calls,
 				Err(_) => {
-					status = Err(OCallBridgeError::SendBlockAndConfirmation(
-						"Could not decode confirmation calls".to_string(),
+					status = Err(OCallBridgeError::SendExtrinsicsToParentChain(
+						"Could not decode extrinsics".to_string(),
 					));
 					Default::default()
 				},

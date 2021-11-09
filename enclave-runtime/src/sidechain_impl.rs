@@ -7,7 +7,7 @@ use crate::{execute_top_pool_trusted_calls, prepare_and_send_xts, Result as Encl
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSideChainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, AesSeal};
 use itp_sgx_io::SealedIO;
@@ -131,11 +131,11 @@ where
 }
 
 /// Executes aura for the given `slot`
-pub fn exec_aura_on_slot<Authority, PB, SB, OcallApi, LightValidator, PEnvironment>(
+pub fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
 	validator: &mut LightValidator,
-	ocall_api: OcallApi,
+	ocall_api: OCallApi,
 	proposer_environment: PEnvironment,
 	nonce: u32,
 	shards: Vec<ShardIdentifierFor<SB>>,
@@ -148,7 +148,8 @@ where
 	Authority: Pair<Public = SB::Public>,
 	Authority::Public: Encode,
 	SB::Signature: From<Authority::Signature>,
-	OcallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
+	OCallApi:
+		EnclaveSideChainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
 	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
@@ -169,7 +170,7 @@ where
 			.map(|r| (r.block, r.parentchain_effects))
 			.unzip();
 
-	ocall_api.send_sidechain_blocks(blocks)?;
+	ocall_api.propose_sidechain_blocks(blocks)?;
 	let signer = authority;
 
 	prepare_and_send_xts::<_, _, _, _>(

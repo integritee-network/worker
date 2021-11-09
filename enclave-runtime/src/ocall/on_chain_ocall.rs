@@ -27,33 +27,15 @@ use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
 impl EnclaveOnChainOCallApi for OcallApi {
-	fn send_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let signed_blocks_encoded = signed_blocks.encode();
+		let extrinsics_encoded = extrinsics.encode();
 
 		let res = unsafe {
-			ffi::ocall_send_sidechain_blocks(
+			ffi::ocall_send_to_parentchain(
 				&mut rt as *mut sgx_status_t,
-				signed_blocks_encoded.as_ptr(),
-				signed_blocks_encoded.len() as u32,
-			)
-		};
-
-		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
-		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-
-		Ok(())
-	}
-
-	fn send_confirmations(&self, confirmations: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
-		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let confirmations_encoded = confirmations.encode();
-
-		let res = unsafe {
-			ffi::ocall_send_confirmations(
-				&mut rt as *mut sgx_status_t,
-				confirmations_encoded.as_ptr(),
-				confirmations_encoded.len() as u32,
+				extrinsics_encoded.as_ptr(),
+				extrinsics_encoded.len() as u32,
 			)
 		};
 

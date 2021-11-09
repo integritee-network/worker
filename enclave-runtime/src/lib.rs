@@ -799,9 +799,9 @@ where
 		validator.submit_xt_to_be_included(validator.num_relays(), xt.clone()).unwrap();
 	}
 
-	ocall_api.send_confirmations(extrinsics).map_err(|e| {
-		Error::Other(format!("Failed to send block and confirmation: {}", e).into())
-	})?;
+	ocall_api
+		.send_to_parentchain(extrinsics)
+		.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))?;
 
 	Ok(nonce_updated)
 }

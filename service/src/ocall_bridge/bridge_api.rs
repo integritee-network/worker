@@ -54,6 +54,14 @@ impl Bridge {
 			.get_ra_api()
 	}
 
+	pub fn get_sidechain_api() -> Arc<dyn SideChainBridge> {
+		COMPONENT_FACTORY
+			.read()
+			.as_ref()
+			.expect("Component factory has not been set. Use `initialize()`")
+			.get_sidechain_api()
+	}
+
 	pub fn get_oc_api() -> Arc<dyn WorkerOnChainBridge> {
 		debug!("Requesting WorkerOnChain OCall API instance");
 
@@ -97,7 +105,10 @@ pub trait GetOCallBridgeComponents {
 	/// remote attestation OCall API
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge>;
 
-	/// on chain OCall API
+	/// side chain OCall API
+	fn get_sidechain_api(&self) -> Arc<dyn SideChainBridge>;
+
+	/// on chain (parentchain) OCall API
 	fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge>;
 
 	/// ipfs OCall API
@@ -118,8 +129,10 @@ pub enum OCallBridgeError {
 	GetUpdateInfo(sgx_status_t),
 	#[error("GetIasSocket Error: {0}")]
 	GetIasSocket(String),
-	#[error("SendBlockAndConfirmation Error: {0}")]
-	SendBlockAndConfirmation(String),
+	#[error("Propose sidechain block failed: {0}")]
+	ProposeSideChainBlock(String),
+	#[error("Sending extrinsics to parentchain failed: {0}")]
+	SendExtrinsicsToParentChain(String),
 	#[error("IPFS Error: {0}")]
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
@@ -133,7 +146,8 @@ impl From<OCallBridgeError> for sgx_status_t {
 			OCallBridgeError::InitQuote(s) => s,
 			OCallBridgeError::GetUpdateInfo(s) => s,
 			OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::SendBlockAndConfirmation(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			OCallBridgeError::ProposeSideChainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			OCallBridgeError::SendExtrinsicsToParentChain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 			OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
 		}
@@ -169,14 +183,18 @@ pub trait RemoteAttestationBridge {
 	) -> OCallBridgeResult<sgx_update_info_bit_t>;
 }
 
-/// Trait for all the OCalls related to on-chain operations
+/// Trait for all the OCalls related to parentchain operations
 #[cfg_attr(test, automock)]
 pub trait WorkerOnChainBridge {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
 
-	fn send_sidechain_blocks(&self, signed_blocks: Vec<u8>) -> OCallBridgeResult<()>;
+	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+}
 
-	fn send_confirmations(&self, confirmations: Vec<u8>) -> OCallBridgeResult<()>;
+/// Trait for all the OCalls related to sidechain operations
+#[cfg_attr(test, automock)]
+pub trait SideChainBridge {
+	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
 /// type for IPFS

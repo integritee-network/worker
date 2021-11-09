@@ -63,14 +63,16 @@ pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
 
 /// trait for o-calls related to on-chain interactions
 pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
-	fn send_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
-
-	fn send_confirmations(&self, confirmations: Vec<OpaqueExtrinsic>) -> SgxResult<()>;
+	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()>;
 
 	fn worker_request<V: Encode + Decode>(
 		&self,
 		req: Vec<WorkerRequest>,
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
+}
+
+pub trait EnclaveSideChainOCallApi: Clone + Debug + Send + Sync {
+	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
 }
 
 /// Newtype for IPFS CID

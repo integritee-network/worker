@@ -16,62 +16,34 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, WorkerOnChainBridge};
+use crate::ocall_bridge::bridge_api::{Bridge, SideChainBridge};
 use log::*;
 use sgx_types::sgx_status_t;
-use std::{slice, sync::Arc, vec::Vec};
+use std::{slice, sync::Arc};
 
 /// # Safety
 ///
 /// FFI are always unsafe
 #[no_mangle]
-pub unsafe extern "C" fn ocall_send_sidechain_blocks(
+pub unsafe extern "C" fn ocall_propose_sidechain_blocks(
 	signed_blocks_ptr: *const u8,
 	signed_blocks_size: u32,
 ) -> sgx_status_t {
-	send_sidechain_blocks(signed_blocks_ptr, signed_blocks_size, Bridge::get_oc_api())
+	propose_sidechain_blocks(signed_blocks_ptr, signed_blocks_size, Bridge::get_sidechain_api())
 }
 
-/// # Safety
-///
-/// FFI are always unsafe
-#[no_mangle]
-pub unsafe extern "C" fn ocall_send_confirmations(
-	confirmations: *const u8,
-	confirmations_size: u32,
-) -> sgx_status_t {
-	send_confirmations(confirmations, confirmations_size, Bridge::get_oc_api())
-}
-
-fn send_sidechain_blocks(
+fn propose_sidechain_blocks(
 	signed_blocks_ptr: *const u8,
 	signed_blocks_size: u32,
-	oc_api: Arc<dyn WorkerOnChainBridge>,
+	sidechain_api: Arc<dyn SideChainBridge>,
 ) -> sgx_status_t {
 	let signed_blocks_vec: Vec<u8> =
 		unsafe { Vec::from(slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize)) };
 
-	match oc_api.send_sidechain_blocks(signed_blocks_vec) {
+	match sidechain_api.propose_sidechain_blocks(signed_blocks_vec) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
 			error!("send sidechain blocks failed: {:?}", e);
-			sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	}
-}
-
-fn send_confirmations(
-	confirmations: *const u8,
-	confirmations_size: u32,
-	oc_api: Arc<dyn WorkerOnChainBridge>,
-) -> sgx_status_t {
-	let confirmations_vec: Vec<u8> =
-		unsafe { Vec::from(slice::from_raw_parts(confirmations, confirmations_size as usize)) };
-
-	match oc_api.send_confirmations(confirmations_vec) {
-		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => {
-			error!("send confirmations failed: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	}
