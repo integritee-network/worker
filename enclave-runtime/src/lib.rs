@@ -710,8 +710,7 @@ where
 			Err(_) => error!("Error executing relevant extrinsics"),
 		};
 
-		// compose indirect block confirmation
-		// should be changed to ParentchainBlockProcessed, see worker issue #457
+		// Compose indirect block confirmation
 		let xt_block = [TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK];
 		let block_hash = signed_block.block.header().hash();
 		let prev_state_hash = signed_block.block.header().parent_hash();
@@ -1045,20 +1044,23 @@ where
 {
 	debug!("Scanning block {:?} for relevant xt", block.header().number());
 	let mut opaque_calls = Vec::<OpaqueCall>::new();
+	let mut executed_shielding_calls = Vec::<H256>::new();
 	for xt_opaque in block.extrinsics().iter() {
-		// shield funds XT
+		// Found shielding funds extrinsic in block.
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<ShieldFundsFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
-			// confirm call decodes successfully as well
 			if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
-				if let Err(e) = handle_shield_funds_xt(&mut opaque_calls, xt, stf_executor) {
+				if let Err(e) = handle_shield_funds_xt(&xt, stf_executor) {
 					error!("Error performing shield funds. Error: {:?}", e);
+				} else {
+					// Cache successfully executed shielding call.
+					executed_shielding_calls.push(hash_of(xt))
 				}
 			}
 		};
 
-		// call worker XT
+		// Found Call worker extrinsic in block.
 		if let Ok(xt) =
 			UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
 		{
@@ -1077,19 +1079,29 @@ where
 			}
 		}
 	}
+	// Create merkle proof out of all successfully executed extrinsics:
+
+	/* let xt_call = [TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK];
+	let xt_hash = blake2_256(&xt.encode());
+	debug!("Extrinsic hash {:?}", xt_hash);
+
+	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, xt_hash, state_hash.encode()))); */
 
 	Ok(opaque_calls)
 }
 
+fn hash_of<T: Encode>(xt: T) -> H256 {
+	blake2_256(&xt.encode()).into()
+}
+
 fn handle_shield_funds_xt<StfExecutor>(
-	calls: &mut Vec<OpaqueCall>,
-	xt: UncheckedExtrinsicV4<ShieldFundsFn>,
+	xt: &UncheckedExtrinsicV4<ShieldFundsFn>,
 	stf_executor: &StfExecutor,
 ) -> Result<()>
 where
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
-	let (call, account_encrypted, amount, shard) = xt.function.clone();
+	let (call, account_encrypted, amount, shard) = &xt.function;
 	info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         call, account_encrypted, amount, shard.encode().to_base58(),
     );
@@ -1100,20 +1112,7 @@ where
 	let account = AccountId::decode(&mut account_vec.as_slice())
 		.sgx_error_with_log("[ShieldFunds] Could not decode account")?;
 
-	let state_hash = match stf_executor.execute_shield_funds(account, amount, &shard) {
-		Ok(h) => h,
-		Err(e) => {
-			error!("Error executing shield funds. Error: {:?}", e);
-			return Ok(())
-		},
-	};
-
-	let xt_call = [TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK];
-	let xt_hash = blake2_256(&xt.encode());
-	debug!("Extrinsic hash {:?}", xt_hash);
-
-	calls.push(OpaqueCall::from_tuple(&(xt_call, shard, xt_hash, state_hash.encode())));
-
+	stf_executor.execute_shield_funds(account, *amount, shard)?;
 	Ok(())
 }
 
