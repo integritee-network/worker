@@ -1040,7 +1040,7 @@ fn proposed_sidechain_block_extrinsic(shard_id: ShardIdentifier, block_hash: H25
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
 /// Executes indirect invocation calls, including shielding and unshielding calls.
-/// Returns all unshielding call confirmations as opaque calls and the hashes of executed shielding calls
+/// Returns all unshielding call confirmations as opaque calls and the hashes of executed shielding calls.
 fn scan_block_for_relevant_xt<PB, StfExecutor>(
 	block: &PB,
 	stf_executor: &StfExecutor,
