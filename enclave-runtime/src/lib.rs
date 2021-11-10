@@ -710,7 +710,7 @@ where
 				// Include all unshieldung confirmations that need to be executed on the parentchain.
 				calls.extend(unshielding_call_confirmations.into_iter());
 				// Include a processed parentchain block confirmation for each block.
-				calls.push(processed_parentchain_block_extrinsic(
+				calls.push(create_processed_parentchain_block_extrinsic(
 					block.hash(),
 					executed_shielding_calls,
 				));
@@ -728,7 +728,10 @@ where
 /// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
 ///
 /// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
-fn processed_parentchain_block_extrinsic(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
+fn create_processed_parentchain_block_extrinsic(
+	block_hash: H256,
+	extrinsics: Vec<H256>,
+) -> OpaqueCall {
 	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
 }
@@ -1029,12 +1032,15 @@ where
 	let block_hash = block.hash();
 	debug!("Block hash {}", block_hash);
 
-	let opaque_call = proposed_sidechain_block_extrinsic(shard, block_hash);
+	let opaque_call = create_proposed_sidechain_block_extrinsic(shard, block_hash);
 	Ok((opaque_call, block.sign_block(&signer)))
 }
 
 /// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
-fn proposed_sidechain_block_extrinsic(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
+fn create_proposed_sidechain_block_extrinsic(
+	shard_id: ShardIdentifier,
+	block_hash: H256,
+) -> OpaqueCall {
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
 }
 
