@@ -114,10 +114,9 @@ where
 pub mod tests {
 
 	use super::*;
-	use codec::Decode;
-	use itp_nonce_cache::{Nonce, NonceCache, NonceValue};
+	use itp_nonce_cache::{GetNonce, Nonce, NonceCache, NonceValue};
 	use sp_core::ed25519;
-	use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
+	//use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
 	#[test]
 	pub fn creating_xts_increases_nonce_for_each_xt() {
