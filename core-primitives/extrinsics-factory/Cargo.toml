@@ -1,0 +1,46 @@
+[package]
+name = "itp-extrinsics-factory"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["std"]
+std = [
+    "itp-nonce-cache/std",
+    "itp-types/std",
+    "log/std",
+    "substrate-api-client/std",
+    "thiserror",
+]
+sgx = [
+    "itp-nonce-cache/sgx",
+    "sgx_tstd",
+    "thiserror_sgx",
+]
+
+[dependencies]
+# sgx dependencies
+sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "master" }
+
+# local dependencies
+itp-nonce-cache = { path = "../nonce-cache", default-features = false }
+itp-settings = { path = "../settings", default-features = false }
+itp-types = { path = "../types", default-features = false }
+
+# sgx enabled external libraries
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+thiserror = { version = "1.0", optional = true }
+
+# no-std dependencies
+log = { version = "0.4", default-features = false }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
