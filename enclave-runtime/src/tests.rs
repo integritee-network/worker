@@ -431,7 +431,7 @@ fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
 		([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
 
 	// when
-	let call = crate::create_processed_parentchain_block_extrinsic(block_hash, extrinsics);
+	let call = crate::create_processed_parentchain_block_call(block_hash, extrinsics);
 
 	// then
 	assert_eq!(call.0, expected_call);
@@ -445,7 +445,7 @@ fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
 		([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
 
 	// when
-	let call = crate::create_processed_parentchain_block_extrinsic(block_hash, extrinsics);
+	let call = crate::create_processed_parentchain_block_call(block_hash, extrinsics);
 
 	// then
 	assert_ne!(call.0, zero_root_call);
