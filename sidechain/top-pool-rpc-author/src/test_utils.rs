@@ -26,10 +26,8 @@ use jsonrpc_core::futures::executor;
 use sp_core::H256;
 use std::{fmt::Debug, vec::Vec};
 
-/// Test utility function to submit and execute a trusted operation on an RPC author
-///
-/// The trusted operation will be executed in a blocking (i.e. synchronous) fashion
-pub fn submit_and_execute_top<R, S>(
+/// Test utility function to submit a trusted operation on an RPC author
+pub fn submit_operation_to_top_pool<R, S>(
 	author: &R,
 	top: &TrustedOperation,
 	shielding_key: &S,
@@ -46,8 +44,6 @@ where
 }
 
 /// Get all pending trusted operations, grouped into calls and getters
-///
-///
 pub fn get_pending_tops_separated<R>(
 	rpc_author: &R,
 	shard: ShardIdentifier,

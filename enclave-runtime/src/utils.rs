@@ -19,7 +19,7 @@ use codec::{Decode, Error, Input};
 use its_sidechain::slots::duration_now;
 use log::*;
 use sgx_types::sgx_status_t;
-use std::{slice, time::Duration, vec::Vec};
+use std::{slice, vec::Vec};
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];
@@ -70,11 +70,6 @@ pub unsafe fn utf8_str_from_raw<'a>(
 	let bytes = slice::from_raw_parts(data, len);
 
 	std::str::from_utf8(bytes)
-}
-
-/// calculates the remaining time `until`.
-pub fn remaining_time(until: Duration) -> Option<Duration> {
-	until.checked_sub(duration_now())
 }
 
 /// returns current duration since unix epoch in millis as u64

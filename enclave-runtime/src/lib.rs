@@ -36,20 +36,16 @@ use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
-	sidechain_impl::{exec_aura_on_slot, ProposerFactory},
-	sync::{EnclaveLock, EnclaveStateRWLock, LightClientRwLock},
+	sync::{EnclaveLock, LightClientRwLock},
 	utils::{
-		hash_from_slice, now_as_u64, remaining_time, utf8_str_from_raw,
-		write_slice_and_whitespace_pad, DecodeRaw, UnwrapOrSgxErrorUnexpected,
+		hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw,
+		UnwrapOrSgxErrorUnexpected,
 	},
 };
 use base58::ToBase58;
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{alloc::string::String, Decode, Encode};
-use ita_stf::{
-	hash::TrustedOperationOrHash, AccountId, Getter, ShardIdentifier, StatePayload, Stf,
-	TrustedCallSigned, TrustedGetterSigned,
-};
+use ita_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -61,54 +57,34 @@ use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_serve
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-use itp_settings::{
-	node::{
-		CALL_WORKER, PROCESSED_PARENTCHAIN_BLOCK, PROPOSED_SIDECHAIN_BLOCK, REGISTER_ENCLAVE,
-		RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
-	},
-	sidechain::SLOT_DURATION,
+use itp_settings::node::{
+	CALL_WORKER, PROCESSED_PARENTCHAIN_BLOCK, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
+	RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
 };
-use itp_sgx_crypto::{
-	aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal, ShieldingCrypto, StateCrypto,
-};
+use itp_sgx_crypto::{aes, ed25519, rsa3072, Ed25519Seal, Rsa3072Seal, ShieldingCrypto};
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::{
 	executor::StfExecutor,
-	traits::{
-		StatePostProcessing, StfExecuteGenericUpdate, StfExecuteShieldFunds,
-		StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch, StfExecuteTrustedCall,
-		StfUpdateState,
-	},
+	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall, StfUpdateState},
 };
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState, GlobalFileStateHandler,
 };
 use itp_storage::StorageProof;
 use itp_types::{Block, CallWorkerFn, Header, OpaqueCall, ShieldFundsFn, SignedBlock};
-use its_sidechain::{
-	primitives::{
-		traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT},
-		types::block::SignedBlock as SignedSidechainBlock,
-	},
-	slots::{duration_now, sgx::LastSlotSeal, yield_next_slot},
-	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
-	top_pool_rpc_author::{
-		global_author_container::GlobalAuthorContainer,
-		traits::{AuthorApi, GetAuthor, OnBlockCreated, SendState},
-	},
+use its_sidechain::top_pool_rpc_author::{
+	global_author_container::GlobalAuthorContainer, traits::GetAuthor,
 };
 use log::*;
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_types::sgx_status_t;
 use sp_core::{blake2_256, crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
 	traits::{Block as BlockT, Header as HeaderT},
-	MultiSignature,
 };
-use std::{slice, sync::Arc, time::Duration, vec::Vec};
+use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
@@ -121,9 +97,12 @@ mod utils;
 pub mod cert;
 pub mod error;
 pub mod rpc;
+mod sidechain_block_composer;
 mod sidechain_impl;
 mod sync;
 pub mod tls_ra;
+pub mod top_pool_execution;
+mod top_pool_operation_executor;
 
 mod beefy_merkle_tree;
 
@@ -487,133 +466,6 @@ pub unsafe extern "C" fn init_light_client(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
-	if let Err(e) = execute_top_pool_trusted_getters_on_all_shards() {
-		return e.into()
-	}
-
-	sgx_status_t::SGX_SUCCESS
-}
-
-/// Internal [`execute_trusted_getters`] function to be able to use the `?` operator.
-///
-/// Executes trusted getters for a scheduled amount of time (defined by settings).
-fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
-	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	let rpc_author = GlobalAuthorContainer.get().ok_or_else(|| {
-		error!("Failed to retrieve author mutex. It might not be initialized?");
-		Error::MutexAccess
-	})?;
-
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let stf_executor = StfExecutor::new(Arc::new(OcallApi), state_handler.clone());
-
-	let shards = state_handler.list_shards()?;
-	let mut remaining_shards = shards.len() as u32;
-	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	// Execute trusted getters for each shard. Each shard gets equal amount of time to execute
-	// getters.
-	for shard in shards.into_iter() {
-		let shard_exec_time = match remaining_time(ends_at)
-			.map(|r| r.checked_div(remaining_shards))
-			.flatten()
-		{
-			Some(t) => t,
-			None => {
-				info!("[Enclave] Could not execute trusted operations for all shards. Remaining number of shards: {}.", remaining_shards);
-				break
-			},
-		};
-
-		match execute_top_pool_trusted_getters_on_shard(
-			rpc_author.as_ref(),
-			&stf_executor,
-			&shard,
-			shard_exec_time,
-		) {
-			Ok(()) => {},
-			Err(e) => error!("Error in trusted getter execution for shard {:?}: {:?}", shard, e),
-		}
-
-		remaining_shards -= 1;
-	}
-
-	Ok(())
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
-	if let Err(e) = execute_top_pool_trusted_calls_internal::<Block>() {
-		return e.into()
-	}
-
-	sgx_status_t::SGX_SUCCESS
-}
-
-/// Internal [`execute_trusted_calls`] function to be able to use the `?` operator.
-///
-/// Executes `Aura::on_slot() for `slot` if it is this enclave's `Slot`.
-///
-/// This function makes an ocall that does the following:
-///
-/// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
-/// *   gossip produced sidechain blocks to peer validateers.
-fn execute_top_pool_trusted_calls_internal<PB>() -> Result<()>
-where
-	PB: BlockT<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-{
-	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
-	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
-	let (_light_client_lock, _side_chain_lock) = EnclaveLock::write_all()?;
-
-	let mut validator = LightClientSeal::<PB>::unseal()?;
-
-	let authority = Ed25519Seal::unseal()?;
-
-	let rpc_author = GlobalAuthorContainer.get().ok_or_else(|| {
-		error!("Failed to retrieve author mutex. Maybe it's not initialized?");
-		Error::MutexAccess
-	})?;
-
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-
-	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
-	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
-	let extrinsics_factory =
-		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
-
-	match yield_next_slot(duration_now(), SLOT_DURATION, latest_onchain_header, &mut LastSlotSeal)?
-	{
-		Some(slot) => {
-			let shards = state_handler.list_shards()?;
-			let env = ProposerFactory::new(rpc_author, stf_executor, authority.clone());
-
-			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _>(
-				slot,
-				authority,
-				&mut validator,
-				&extrinsics_factory,
-				OcallApi,
-				env,
-				shards,
-			)?
-		},
-		None => {
-			debug!("No slot yielded. Skipping block production.");
-			return Ok(())
-		},
-	};
-
-	LightClientSeal::seal(validator)?;
-
-	Ok(())
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
@@ -732,311 +584,6 @@ where
 fn create_processed_parentchain_block_call(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
 	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
-}
-
-/// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
-///
-/// For fairness, the [`max_exec_duration`] is split equally among all shards. Leftover time from
-/// the previous shard is evenly distributed to all remaining shards.
-///
-/// Todo: This will probably be used again if we decide to make sidechain optional?
-#[allow(unused)]
-fn execute_top_pool_trusted_calls_for_all_shards<
-	PB,
-	SB,
-	RpcAuthor,
-	StateHandler,
-	StfExecutor,
-	Signer,
->(
-	rpc_author: &RpcAuthor,
-	state_handler: &StateHandler,
-	stf_executor: &StfExecutor,
-	signer: Signer,
-	latest_onchain_header: &PB::Header,
-	max_exec_duration: Duration,
-) -> Result<(Vec<OpaqueCall>, Vec<SB>)>
-where
-	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = Signer::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	SB::Signature: From<Signer::Signature>,
-	RpcAuthor:
-		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StateHandler: QueryShardState,
-	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
-		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
-{
-	let shards = state_handler.list_shards()?;
-	let mut calls: Vec<OpaqueCall> = Vec::new();
-	let mut signed_blocks: Vec<SB> = Vec::with_capacity(shards.len());
-	let mut remaining_shards = shards.len() as u32;
-	let ends_at = duration_now() + max_exec_duration;
-
-	// execute pending calls from operation pool and create block
-	for shard in shards.into_iter() {
-		let shard_exec_time = match remaining_time(ends_at)
-			.map(|r| r.checked_div(remaining_shards))
-			.flatten()
-		{
-			Some(t) => t,
-			None => {
-				info!("[Enclave] Could not execute trusted operations for all shards. Remaining shards: {}.", remaining_shards);
-				break
-			},
-		};
-
-		match execute_top_pool_trusted_calls::<PB, SB, _, _, Signer>(
-			rpc_author,
-			stf_executor,
-			signer.clone(),
-			&latest_onchain_header,
-			shard,
-			shard_exec_time,
-		) {
-			Ok((confirm_calls, sb)) => {
-				calls.extend(confirm_calls);
-				if let Some(sb) = sb {
-					signed_blocks.push(sb);
-				}
-			},
-			Err(e) => error!("Error in top execution for shard {:?}: {:?}", shard, e),
-		}
-
-		remaining_shards -= 1;
-	}
-	Ok((calls, signed_blocks))
-}
-
-/// Execute pending trusted calls for the `shard` until `max_exec_duration` is reached.
-///
-/// This function returns:
-/// *   The parentchain calls produced by the `Stf` to be wrapped in an extrinsic and sent to the parentchain
-///     including the `confirm_block` call for the produced sidechain block.
-/// *   The produced sidechain block.
-///
-/// Todo: This function does too much, but it needs anyhow some refactoring here to make the code
-/// more readable.
-fn execute_top_pool_trusted_calls<PB, SB, RpcAuthor, StfExecutor, Signer>(
-	rpc_author: &RpcAuthor,
-	stf_executor: &StfExecutor,
-	signer: Signer,
-	latest_onchain_header: &PB::Header,
-	shard: H256,
-	max_exec_duration: Duration,
-) -> Result<(Vec<OpaqueCall>, Option<SB>)>
-where
-	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = Signer::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	SB::Signature: From<Signer::Signature>,
-	RpcAuthor: AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
-		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
-{
-	// retrieve trusted operations from pool
-	let trusted_calls = rpc_author.get_pending_tops_separated(shard)?.0;
-
-	// Todo: remove when we have proper on-boarding of new workers #273.
-	if trusted_calls.is_empty() {
-		info!("No trusted calls in top for shard: {:?}", shard);
-	// we return here when we actually import sidechain blocks because we currently have no
-	// means of worker on-boarding. Without on-boarding we have can't get a working multi
-	// worker-setup.
-	//
-	// But if we use this trick (only produce a sidechain block if there are trusted_calls), we
-	// we can simply wait with the submission of trusted calls until all workers are ready. Then
-	// we don't need to exchange any state and can have a functional multi-worker setup.
-	// return Ok(Default::default())
-	} else {
-		debug!("Got following trusted calls from pool: {:?}", trusted_calls);
-	}
-
-	let batch_execution_result = stf_executor.execute_timed_calls_batch::<PB, _>(
-		&trusted_calls,
-		latest_onchain_header,
-		&shard,
-		max_exec_duration,
-		|s| {
-			let mut sidechain_db = SidechainDB::<SB::Block, _>::new(s);
-			sidechain_db.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
-			sidechain_db.set_timestamp(&now_as_u64());
-			sidechain_db.ext
-		},
-	)?;
-
-	let mut extrinsic_callbacks = batch_execution_result.get_extrinsic_callbacks();
-	let executed_operation_hashes =
-		batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
-
-	for executed_operation in batch_execution_result.executed_operations.iter() {
-		rpc_author
-			.remove_top(
-				vec![executed_operation.trusted_operation_or_hash.clone()],
-				shard,
-				executed_operation.is_success(),
-			)
-			.map_err(|e| Error::Other(e.into()))?;
-	}
-
-	// Todo: this function should return here. Composing the block should be done by the caller.
-	// create new block (side-chain)
-	let block = match compose_block_and_confirmation::<PB, SB, Signer, _>(
-		latest_onchain_header,
-		executed_operation_hashes,
-		shard,
-		batch_execution_result.previous_state_hash,
-		signer,
-		stf_executor,
-	) {
-		Ok((block_confirm, signed_block)) => {
-			extrinsic_callbacks.push(block_confirm);
-
-			// Notify watching clients of InSidechainBlock
-			let block = signed_block.block();
-			rpc_author.on_block_created(block.signed_top_hashes(), block.hash());
-
-			Some(signed_block)
-		},
-		Err(e) => {
-			error!("Could not compose block confirmation: {:?}", e);
-			None
-		},
-	};
-
-	if block.is_none() {
-		info!("[Enclave] did not produce a block for shard {:?}", shard);
-	}
-
-	Ok((extrinsic_callbacks, block))
-}
-
-/// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
-fn execute_top_pool_trusted_getters_on_shard<RpcAuthor, StfExecutor>(
-	rpc_author: &RpcAuthor,
-	stf_executor: &StfExecutor,
-	shard: &ShardIdentifier,
-	max_exec_duration: Duration,
-) -> Result<()>
-where
-	RpcAuthor: AuthorApi<H256, H256> + SendState<Hash = H256>,
-	StfExecutor: StfExecuteTimedGettersBatch,
-{
-	// retrieve trusted operations from pool
-	let trusted_getters = rpc_author.get_pending_tops_separated(*shard)?.1;
-
-	type StfExecutorResult<T> = itp_stf_executor::error::Result<T>;
-
-	stf_executor
-		.execute_timed_getters_batch(
-			&trusted_getters,
-			&shard,
-			max_exec_duration,
-			|trusted_getter_signed: &TrustedGetterSigned,
-			 state_result: StfExecutorResult<Option<Vec<u8>>>| {
-				let hash_of_getter = rpc_author.hash_of(&trusted_getter_signed.clone().into());
-
-				match state_result {
-					Ok(r) => {
-						// let client know of current state
-						trace!("Updating client");
-						match rpc_author.send_state(hash_of_getter, r.encode()) {
-							Ok(_) => trace!("Successfully updated client"),
-							Err(e) => error!("Could not send state to client {:?}", e),
-						}
-					},
-					Err(e) => {
-						error!("failed to get stf state, skipping trusted getter ({:?})", e);
-					},
-				};
-
-				// remove getter from pool
-				if let Err(e) = rpc_author.remove_top(
-					vec![TrustedOperationOrHash::Hash(hash_of_getter)],
-					*shard,
-					false,
-				) {
-					error!("Error removing trusted operation from top pool: Error: {:?}", e);
-				}
-			},
-		)
-		.map_err(Error::StfExecution)
-}
-
-/// Composes a sidechain block of a shard
-fn compose_block_and_confirmation<PB, SB, Signer, StfExecutor>(
-	latest_onchain_header: &PB::Header,
-	top_call_hashes: Vec<H256>,
-	shard: ShardIdentifier,
-	state_hash_apriori: H256,
-	signer: Signer,
-	stf_executor: &StfExecutor,
-) -> Result<(OpaqueCall, SB)>
-where
-	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Signer::Public>,
-	SB::Signature: From<Signer::Signature>,
-	StfExecutor: StfExecuteGenericUpdate<Externalities = SgxExternalities>,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
-{
-	let author_public = signer.public();
-	let (block, _state_hash_new) = stf_executor.execute_update(&shard, |state| {
-		let mut db = SidechainDB::<SB::Block, _>::new(state);
-		let state_hash_new = db.state_hash();
-
-		let (block_number, parent_hash) = match db.get_last_block() {
-			Some(block) => (block.block_number() + 1, block.hash()),
-			None => {
-				info!("Seems to be first sidechain block.");
-				(1, Default::default())
-			},
-		};
-
-		if block_number != db.get_block_number().unwrap_or(0) {
-			return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
-		}
-
-		// create encrypted payload
-		let mut payload: Vec<u8> =
-			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
-				.encode();
-		AesSeal::unseal().map(|key| key.encrypt(&mut payload))??;
-
-		let block = SB::Block::new(
-			author_public,
-			block_number,
-			parent_hash,
-			latest_onchain_header.hash(),
-			shard,
-			top_call_hashes,
-			payload,
-			now_as_u64(),
-		);
-
-		db.set_last_block(&block);
-
-		// state diff has been written to block, clean it for the next block.
-		db.ext_mut().prune_state_diff();
-
-		Ok((db.ext, block))
-	})?;
-
-	let block_hash = block.hash();
-	debug!("Block hash {}", block_hash);
-
-	let opaque_call = create_proposed_sidechain_block_call(shard, block_hash);
-	Ok((opaque_call, block.sign_block(&signer)))
-}
-
-/// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
-fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
-	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
 }
 
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
