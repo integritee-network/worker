@@ -53,7 +53,7 @@ pub mod nonce_cache;
 
 pub type NonceValue = u32;
 
-/// Nonce type (newtype wrapper for u64)
+/// Nonce type (newtype wrapper for NonceValue)
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Nonce(pub NonceValue);
 
