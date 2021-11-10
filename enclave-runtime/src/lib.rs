@@ -985,7 +985,6 @@ where
 	Signer::Public: Encode,
 {
 	let author_public = signer.public();
-	// FIXME: remove state_hash_new return value -> check with Felix for rebase clashes
 	let (block, _state_hash_new) = stf_executor.execute_update(&shard, |state| {
 		let mut db = SidechainDB::<SB::Block, _>::new(state);
 		let state_hash_new = db.state_hash();
