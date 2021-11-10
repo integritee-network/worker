@@ -81,8 +81,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_submit_trusted_getter_to_top_pool,
 		test_differentiate_getter_and_call_works,
 		test_create_block_and_confirmation_works,
-		empty_extrinsic_vec_gives_zero_merkle_root,
-		some_extrinsics_vec_give_non_zero_merkle_root,
+		ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root,
+		ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root,
 		// needs node to be running.. unit tests?
 		// test_ocall_worker_request,
 		test_create_state_diff,
@@ -423,7 +423,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	assert_eq!(funds_new, funds_old);
 }
 
-fn empty_extrinsic_vec_gives_zero_merkle_root() {
+fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
 	// given
 	let block_hash = H256::from([1; 32]);
 	let extrinsics = Vec::new();
@@ -437,7 +437,7 @@ fn empty_extrinsic_vec_gives_zero_merkle_root() {
 	assert_eq!(call.0, expected_call);
 }
 
-fn some_extrinsics_vec_give_non_zero_merkle_root() {
+fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
 	// given
 	let block_hash = H256::from([1; 32]);
 	let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
