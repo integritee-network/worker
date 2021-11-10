@@ -10,6 +10,7 @@ resolver = "2"
 [features]
 default = ["std"]
 std = [
+    "log/std",
     "thiserror",
 ]
 sgx = [

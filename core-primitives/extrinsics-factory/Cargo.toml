@@ -12,6 +12,7 @@ default = ["std"]
 std = [
     "itp-nonce-cache/std",
     "itp-types/std",
+    "log/std",
     "substrate-api-client/std",
     "thiserror",
 ]
