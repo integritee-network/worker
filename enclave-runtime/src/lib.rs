@@ -684,52 +684,53 @@ where
 	ExtrinsicsFactory: CreateExtrinsics,
 {
 	let mut calls = Vec::<OpaqueCall>::new();
-	let mrenclave: ShardIdentifier = on_chain_ocall_api.get_mrenclave_of_self()?.m.into();
 
 	debug!("Syncing light client!");
 	for signed_block in blocks_to_sync.into_iter() {
-		validator
-			.check_xt_inclusion(validator.num_relays(), &signed_block.block)
-			.unwrap(); // panic can only happen if relay_id does not exist
+		let block = signed_block.block;
+		validator.check_xt_inclusion(validator.num_relays(), &block).unwrap(); // panic can only happen if relay_id does not exist
 
 		if let Err(e) = validator.submit_simple_header(
 			validator.num_relays(),
-			signed_block.block.header().clone(),
+			block.header().clone(),
 			signed_block.justifications.clone(),
 		) {
 			error!("Block verification failed. Error : {:?}", e);
 			return Err(e.into())
 		}
 
-		if let Err(e) = stf_executor.update_states::<PB>(&signed_block.block.header()) {
+		if let Err(e) = stf_executor.update_states::<PB>(&block.header()) {
 			error!("Error performing state updates upon block import");
 			return Err(e.into())
 		}
 
 		// execute indirect calls, incl. shielding and unshielding
-		match scan_block_for_relevant_xt(&signed_block.block, stf_executor) {
-			// push shield funds to opaque calls
-			Ok(c) => calls.extend(c.into_iter()),
+		match scan_block_for_relevant_xt(&block, stf_executor) {
+			Ok((unshielding_call_confirmations, executed_shielding_calls)) => {
+				// Include all unshieldung confirmations that need to be executed on the parentchain.
+				calls.extend(unshielding_call_confirmations.into_iter());
+				// Include a processed parentchain block confirmation for each block.
+				calls.push(processed_parentchain_block_extrinsic(
+					block.hash(),
+					executed_shielding_calls,
+				));
+			},
 			Err(_) => error!("Error executing relevant extrinsics"),
 		};
-
-		// Compose indirect block confirmation
-		let xt_block = [TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK];
-		let block_hash = signed_block.block.header().hash();
-		let prev_state_hash = signed_block.block.header().parent_hash();
-		calls.push(OpaqueCall::from_tuple(&(
-			xt_block,
-			mrenclave, // 'PROPOSED_SIDECHAIN_BLOCK' only accepts shard == mrenclave. Overall 'PROPOSED_SIDECHAIN_BLOCK' construct will be adjusted with #457
-			block_hash,
-			prev_state_hash.encode(),
-		)));
 	}
 
 	let xts = extrinsics_factory.create_extrinsics(calls.as_slice())?;
-
 	validator.send_extrinsics(on_chain_ocall_api, xts)?;
 
 	Ok(())
+}
+
+/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
+///
+/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
+fn processed_parentchain_block_extrinsic(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
+	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
+	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
 }
 
 /// Execute pending trusted operations for all shards until the [`max_exec_duration`] is reached.
@@ -984,7 +985,8 @@ where
 	Signer::Public: Encode,
 {
 	let author_public = signer.public();
-	let (block, state_hash_new) = stf_executor.execute_update(&shard, |state| {
+	// FIXME: remove state_hash_new return value -> check with Felix for rebase clashes
+	let (block, _state_hash_new) = stf_executor.execute_update(&shard, |state| {
 		let mut db = SidechainDB::<SB::Block, _>::new(state);
 		let state_hash_new = db.state_hash();
 
@@ -1028,19 +1030,22 @@ where
 	let block_hash = block.hash();
 	debug!("Block hash {}", block_hash);
 
-	let xt_block = [TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK];
-	let opaque_call =
-		OpaqueCall::from_tuple(&(xt_block, shard, block_hash, state_hash_new.encode()));
+	let opaque_call = proposed_sidechain_block_extrinsic(shard, block_hash);
 	Ok((opaque_call, block.sign_block(&signer)))
 }
 
+/// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
+fn proposed_sidechain_block_extrinsic(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
+	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
+}
+
 /// Scans blocks for extrinsics that ask the enclave to execute some actions.
-/// Executes indirect invocation calls, as well as shielding and unshielding calls
-/// Returns all unshielding call confirmations as opaque calls
+/// Executes indirect invocation calls, including shielding and unshielding calls.
+/// Returns all unshielding call confirmations as opaque calls and the hashes of executed shielding calls
 fn scan_block_for_relevant_xt<PB, StfExecutor>(
 	block: &PB,
 	stf_executor: &StfExecutor,
-) -> Result<Vec<OpaqueCall>>
+) -> Result<(Vec<OpaqueCall>, Vec<H256>)>
 where
 	PB: BlockT<Hash = H256>,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
@@ -1082,23 +1087,11 @@ where
 			}
 		}
 	}
-	opaque_calls
-		.push(processed_parentchain_block_extrinsic(block.hash(), executed_shielding_calls));
-
-	Ok(opaque_calls)
+	Ok((opaque_calls, executed_shielding_calls))
 }
 
 fn hash_of<T: Encode>(xt: T) -> H256 {
 	blake2_256(&xt.encode()).into()
-}
-
-/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and executed extrinsics.
-///
-/// Calculates the merkle root of the extrinsics. In case they are empty, the root will be a hash filled with zeros.
-fn processed_parentchain_block_extrinsic(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
-	// Calculate merkle proof out of all extrinsics. Will be zero for empty vector.
-	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
-	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
 }
 
 fn handle_shield_funds_xt<StfExecutor>(
