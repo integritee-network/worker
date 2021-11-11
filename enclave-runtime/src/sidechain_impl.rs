@@ -1,18 +1,35 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+*/
+
 //! Implement sidechain traits that can't be implemented outside.
 //!
 //! Todo: Once we have put the `top_pool` stuff in an entirely different crate we can
 //! move most parts here to the sidechain crate.
 
-use crate::{execute_top_pool_trusted_calls, Result as EnclaveResult};
+use crate::{
+	sidechain_block_composer::ComposeBlockAndConfirmation,
+	top_pool_operation_executor::ExecuteCallsOnTopPool, Result as EnclaveResult,
+};
 use codec::Encode;
 use core::time::Duration;
 use itc_light_client::{BlockNumberOps, LightClientState, NumberFor, Validator};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::{Aes, AesSeal};
-use itp_sgx_io::SealedIO;
-use itp_stf_executor::traits::{StfExecuteGenericUpdate, StfExecuteTimedCallsBatch};
+use itp_sgx_crypto::StateCrypto;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::OpaqueCall;
@@ -22,7 +39,6 @@ use its_sidechain::{
 	primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
 	slots::{PerShardSlotWorkerScheduler, SlotInfo},
 	state::SidechainDB,
-	top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState},
 	validateer_fetch::ValidateerFetch,
 };
 use log::error;
@@ -33,51 +49,46 @@ use sp_runtime::{traits::Block, MultiSignature};
 use std::{marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
-pub struct SlotProposer<PB: Block, SB: SignedBlock, Author, StfExecutor, Signer> {
-	author: Arc<Author>,
-	stf_executor: Arc<StfExecutor>,
+pub struct SlotProposer<PB: Block, SB: SignedBlock, TopPoolExecutor, BlockComposer> {
+	top_pool_executor: Arc<TopPoolExecutor>,
+	block_composer: Arc<BlockComposer>,
 	parentchain_header: PB::Header,
 	shard: ShardIdentifierFor<SB>,
-	signer: Signer,
 	_phantom: PhantomData<PB>,
 }
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`
-pub struct ProposerFactory<PB: Block, Author, StfExecutor, Signer> {
-	author: Arc<Author>,
-	stf_executor: Arc<StfExecutor>,
-	signer: Signer,
+pub struct ProposerFactory<PB: Block, TopPoolExecutor, BlockComposer> {
+	top_pool_executor: Arc<TopPoolExecutor>,
+	block_composer: Arc<BlockComposer>,
 	_phantom: PhantomData<PB>,
 }
 
-impl<PB: Block, Author, StfExecutor, Signer> ProposerFactory<PB, Author, StfExecutor, Signer> {
-	pub fn new(author: Arc<Author>, stf_executor: Arc<StfExecutor>, signer: Signer) -> Self {
-		Self { author, stf_executor, signer, _phantom: Default::default() }
+impl<PB: Block, TopPoolExecutor, BlockComposer>
+	ProposerFactory<PB, TopPoolExecutor, BlockComposer>
+{
+	pub fn new(
+		top_pool_executor: Arc<TopPoolExecutor>,
+		block_composer: Arc<BlockComposer>,
+	) -> Self {
+		Self { top_pool_executor, block_composer, _phantom: Default::default() }
 	}
 }
 
-impl<PB: Block<Hash = H256>, SB, Author, StfExecutor, Signer> Environment<PB, SB>
-	for ProposerFactory<PB, Author, StfExecutor, Signer>
+impl<PB: Block<Hash = H256>, SB, TopPoolExecutor, BlockComposer> Environment<PB, SB>
+	for ProposerFactory<PB, TopPoolExecutor, BlockComposer>
 where
 	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = Signer::Public, Signature = MultiSignature> + 'static,
+	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	SB::Signature: From<Signer::Signature>,
-	Author: AuthorApi<H256, PB::Hash>
-		+ SendState<Hash = PB::Hash>
-		+ OnBlockCreated<Hash = PB::Hash>
-		+ Send
-		+ Sync,
-	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
-		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>
+	TopPoolExecutor: ExecuteCallsOnTopPool<ParentchainBlockT = PB> + Send + Sync + 'static,
+	BlockComposer: ComposeBlockAndConfirmation<ParentchainBlockT = PB, SidechainBlockT = SB>
 		+ Send
 		+ Sync
 		+ 'static,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
 {
-	type Proposer = SlotProposer<PB, SB, Author, StfExecutor, Signer>;
+	type Proposer = SlotProposer<PB, SB, TopPoolExecutor, BlockComposer>;
 	type Error = ConsensusError;
 
 	fn init(
@@ -86,49 +97,54 @@ where
 		shard: ShardIdentifierFor<SB>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {
-			author: self.author.clone(),
-			stf_executor: self.stf_executor.clone(),
+			top_pool_executor: self.top_pool_executor.clone(),
+			block_composer: self.block_composer.clone(),
 			parentchain_header: parent_header,
 			shard,
-			signer: self.signer.clone(),
 			_phantom: PhantomData,
 		})
 	}
 }
 
-impl<PB, SB, Author, StfExecutor, Signer> Proposer<PB, SB>
-	for SlotProposer<PB, SB, Author, StfExecutor, Signer>
+impl<PB, SB, TopPoolExecutor, BlockComposer> Proposer<PB, SB>
+	for SlotProposer<PB, SB, TopPoolExecutor, BlockComposer>
 where
 	PB: Block<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = Signer::Public, Signature = MultiSignature>,
+	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	SB::Signature: From<Signer::Signature>,
-	Author:
-		AuthorApi<H256, PB::Hash> + SendState<Hash = PB::Hash> + OnBlockCreated<Hash = PB::Hash>,
-	StfExecutor: StfExecuteTimedCallsBatch<Externalities = SgxExternalities>
-		+ StfExecuteGenericUpdate<Externalities = SgxExternalities>
+	TopPoolExecutor: ExecuteCallsOnTopPool<ParentchainBlockT = PB> + Send + Sync + 'static,
+	BlockComposer: ComposeBlockAndConfirmation<ParentchainBlockT = PB, SidechainBlockT = SB>
 		+ Send
 		+ Sync
 		+ 'static,
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Public: Encode,
 {
 	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
-		let (calls, blocks) = execute_top_pool_trusted_calls::<PB, SB, _, _, Signer>(
-			self.author.as_ref(),
-			self.stf_executor.as_ref(),
-			self.signer.clone(),
-			&self.parentchain_header,
-			self.shard,
-			max_duration,
-		)
-		.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
+		let latest_onchain_header = &self.parentchain_header;
 
-		Ok(Proposal {
-			block: blocks.ok_or(ConsensusError::CannotPropose)?,
-			parentchain_effects: calls,
-		})
+		let batch_execution_result = self
+			.top_pool_executor
+			.execute_trusted_calls(latest_onchain_header, self.shard, max_duration)
+			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
+
+		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
+
+		let executed_operation_hashes =
+			batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
+
+		let (confirmation_extrinsic, sidechain_block) = self
+			.block_composer
+			.compose_block_and_confirmation(
+				latest_onchain_header,
+				executed_operation_hashes,
+				self.shard,
+				batch_execution_result.previous_state_hash,
+			)
+			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
+
+		parentchain_extrinsics.push(confirmation_extrinsic);
+
+		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
 	}
 }
 
@@ -193,7 +209,7 @@ where
 pub fn import_sidechain_blocks<PB, SB, O, BI>(
 	blocks: Vec<SB>,
 	latest_parentchain_header: &PB::Header,
-	mut block_importer: BI,
+	mut block_importer: &BI,
 	ocall_api: &O,
 ) -> EnclaveResult<()>
 where
@@ -215,20 +231,23 @@ where
 /// Implements `BlockImport`. This is not the definite version. This might change depending on the
 /// implementation of #423: https://github.com/integritee-network/worker/issues/423
 #[derive(Clone)]
-pub struct BlockImporter<A, PB, SB, O, ST, StateHandler> {
+pub struct BlockImporter<A, PB, SB, O, ST, StateHandler, StateKey> {
 	state_handler: Arc<StateHandler>,
+	state_key: StateKey,
 	_phantom: PhantomData<(A, PB, SB, ST, O)>,
 }
 
-impl<A, PB, SB, O, ST, StateHandler> BlockImporter<A, PB, SB, O, ST, StateHandler> {
+impl<A, PB, SB, O, ST, StateHandler, StateKey>
+	BlockImporter<A, PB, SB, O, ST, StateHandler, StateKey>
+{
 	#[allow(unused)]
-	pub fn new(state_handler: Arc<StateHandler>) -> Self {
-		Self { state_handler, _phantom: Default::default() }
+	pub fn new(state_handler: Arc<StateHandler>, state_key: StateKey) -> Self {
+		Self { state_handler, state_key, _phantom: Default::default() }
 	}
 }
 
-impl<A, PB, SB, O, StateHandler> BlockImport<PB, SB>
-	for BlockImporter<A, PB, SB, O, SidechainDB<SB::Block, SgxExternalities>, StateHandler>
+impl<A, PB, SB, O, StateHandler, StateKey> BlockImport<PB, SB>
+	for BlockImporter<A, PB, SB, O, SidechainDB<SB::Block, SgxExternalities>, StateHandler, StateKey>
 where
 	A: Pair,
 	A::Public: std::fmt::Debug,
@@ -237,10 +256,11 @@ where
 	SB::Block: SidechainBlockT<ShardIdentifier = H256>,
 	O: ValidateerFetch + GetStorageVerified + Send + Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
+	StateKey: StateCrypto + Copy,
 {
 	type Verifier = AuraVerifier<A, PB, SB, SidechainDB<SB::Block, SgxExternalities>, O>;
 	type SidechainState = SidechainDB<SB::Block, SgxExternalities>;
-	type StateCrypto = Aes;
+	type StateCrypto = StateKey;
 	type Context = O;
 
 	fn verifier(&self, state: Self::SidechainState) -> Self::Verifier {
@@ -269,8 +289,7 @@ where
 		Ok(())
 	}
 
-	fn state_key() -> Result<Self::StateCrypto, ConsensusError> {
-		AesSeal::unseal()
-			.map_err(|e| ConsensusError::Other(format!("Could not unseal: {:?}", e).into()))
+	fn state_key(&self) -> Self::StateCrypto {
+		self.state_key
 	}
 }

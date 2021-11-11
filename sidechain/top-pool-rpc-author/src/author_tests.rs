@@ -17,7 +17,7 @@
 
 use crate::{
 	author::Author,
-	test_utils::submit_and_execute_top,
+	test_utils::submit_operation_to_top_pool,
 	top_filter::{AllowAllTopsFilter, Filter, GettersOnlyFilter},
 };
 use codec::{Decode, Encode};
@@ -67,7 +67,7 @@ pub fn submitting_to_author_inserts_in_pool() {
 	let top = TrustedOperation::from(trusted_getter_signed());
 
 	let submit_response: H256 =
-		submit_and_execute_top(&author, &top, &shielding_key, shard_id()).unwrap();
+		submit_operation_to_top_pool(&author, &top, &shielding_key, shard_id()).unwrap();
 
 	assert!(!submit_response.is_zero());
 
@@ -79,7 +79,7 @@ pub fn submitting_call_to_author_when_top_is_filtered_returns_error() {
 	let (author, top_pool, shielding_key) = create_author_with_filter(GettersOnlyFilter);
 	let top = TrustedOperation::from(trusted_call_signed());
 
-	let submit_response = submit_and_execute_top(&author, &top, &shielding_key, shard_id());
+	let submit_response = submit_operation_to_top_pool(&author, &top, &shielding_key, shard_id());
 
 	assert!(submit_response.is_err());
 	assert!(top_pool.get_last_submitted_transactions().is_empty());
@@ -90,7 +90,7 @@ pub fn submitting_getter_to_author_when_top_is_filtered_inserts_in_pool() {
 	let top = TrustedOperation::from(trusted_getter_signed());
 
 	let submit_response =
-		submit_and_execute_top(&author, &top, &shielding_key, shard_id()).unwrap();
+		submit_operation_to_top_pool(&author, &top, &shielding_key, shard_id()).unwrap();
 
 	assert!(!submit_response.is_zero());
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());

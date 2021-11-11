@@ -57,7 +57,7 @@ where
 		F: FnOnce(Self::SidechainState) -> Result<Self::SidechainState, Error>;
 
 	/// key that is used for state encryption
-	fn state_key() -> Result<Self::StateCrypto, Error>;
+	fn state_key(&self) -> Self::StateCrypto;
 
 	/// import the block
 	fn import_block(
@@ -75,7 +75,7 @@ where
 
 			let update = state_update_from_encrypted(
 				block_import_params.block().state_payload(),
-				Self::state_key()?,
+				self.state_key(),
 			)?;
 
 			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;
