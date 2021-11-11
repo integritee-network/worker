@@ -534,13 +534,21 @@ fn print_events(events: Events, _sender: Sender<String>) {
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(sender, payload) => {
-						info!("[+] Received CallConfirmed event");
+					my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
+						sender,
+						block_hash,
+						merkle_root,
+					) => {
+						info!("[+] Received ProcessedParentchainBlock event");
 						debug!("    From:    {:?}", sender);
-						debug!("    Payload: {:?}", hex::encode(payload));
+						debug!("    Block Hash: {:?}", hex::encode(block_hash));
+						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(sender, payload) => {
-						info!("[+] Received BlockConfirmed event");
+					my_node_runtime::pallet_teerex::RawEvent::ProposedSidechainBlock(
+						sender,
+						payload,
+					) => {
+						info!("[+] Received ProposedSidechainBlock event");
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},

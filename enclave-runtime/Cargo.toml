@@ -106,6 +106,9 @@ sp-std = { version = "4.0.0-dev", default-features = false, git = "https://githu
 sp-utils = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-version = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-application-crypto = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+#beefy-merkle-tree = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = "keccak" }
+#remove as soon as we can import beefy-merkle-tree:
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
