@@ -690,24 +690,23 @@ fn listen(matches: &ArgMatches<'_>) {
 		let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
 		blocks += 1;
 		match _events {
-			Ok(evts) => {
+			Ok(evts) =>
 				for evr in &evts {
 					println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
 					match &evr.event {
-						/*                            Event::balances(be) => {
+						Event::Balances(be) => {
 							println!(">>>>>>>>>> balances event: {:?}", be);
 							match &be {
-								pallet_balances::RawEvent::Transfer(transactor, dest, value, fee) => {
-									println!("Transactor: {:?}", transactor);
-									println!("Destination: {:?}", dest);
+								pallet_balances::Event::Transfer(from, to, value) => {
+									println!("From: {:?}", from);
+									println!("To: {:?}", to);
 									println!("Value: {:?}", value);
-									println!("Fee: {:?}", fee);
-								}
+								},
 								_ => {
 									debug!("ignoring unsupported balances event");
-								}
+								},
 							}
-						},*/
+						},
 						Event::Teerex(ee) => {
 							println!(">>>>>>>>>> integritee event: {:?}", ee);
 							count += 1;
@@ -767,8 +766,7 @@ fn listen(matches: &ArgMatches<'_>) {
 						},
 						_ => debug!("ignoring unsupported module event: {:?}", evr.event),
 					}
-				}
-			},
+				},
 			Err(_) => error!("couldn't decode event record list"),
 		}
 	}
