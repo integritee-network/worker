@@ -30,7 +30,7 @@ use ita_stf::{
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
-	node::{BLOCK_CONFIRMED, TEEREX_MODULE},
+	node::{PROCESSED_PARENTCHAIN_BLOCK, PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE},
 };
 use itp_sgx_crypto::{AesSeal, StateCrypto};
 use itp_sgx_io::SealedIO;
@@ -81,6 +81,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_submit_trusted_getter_to_top_pool,
 		test_differentiate_getter_and_call_works,
 		test_create_block_and_confirmation_works,
+		ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root,
+		ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root,
 		// needs node to be running.. unit tests?
 		// test_ocall_worker_request,
 		test_create_state_diff,
@@ -144,7 +146,7 @@ fn test_compose_block_and_confirmation() {
 
 	// then
 	let expected_call = OpaqueCall::from_tuple(&(
-		[TEEREX_MODULE, BLOCK_CONFIRMED],
+		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
 		blake2_256(&signed_block.block().encode()),
 	));
@@ -255,7 +257,7 @@ fn test_create_block_and_confirmation_works() {
 	let opaque_call = confirm_calls[index].clone();
 
 	let expected_call = OpaqueCall::from_tuple(&(
-		[TEEREX_MODULE, BLOCK_CONFIRMED],
+		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
 		blake2_256(&signed_block.block().encode()),
 	));
@@ -419,6 +421,34 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 	assert_eq!(nonce, 0);
 	assert_eq!(funds_new, funds_old);
+}
+
+fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
+	// given
+	let block_hash = H256::from([1; 32]);
+	let extrinsics = Vec::new();
+	let expected_call =
+		([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
+
+	// when
+	let call = crate::create_processed_parentchain_block_call(block_hash, extrinsics);
+
+	// then
+	assert_eq!(call.0, expected_call);
+}
+
+fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
+	// given
+	let block_hash = H256::from([1; 32]);
+	let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
+	let zero_root_call =
+		([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
+
+	// when
+	let call = crate::create_processed_parentchain_block_call(block_hash, extrinsics);
+
+	// then
+	assert_ne!(call.0, zero_root_call);
 }
 
 fn get_current_shard_index<StateHandler: QueryShardState>(

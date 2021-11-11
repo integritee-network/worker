@@ -541,15 +541,15 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
 	decoder.register_type_size::<Hash>("H256").unwrap();
 
 	loop {
-		let ret: BlockConfirmedArgs = _chain_api
-			.wait_for_event::<BlockConfirmedArgs>(
+		let ret: ProposedSidechainBlockArgs = _chain_api
+			.wait_for_event::<ProposedSidechainBlockArgs>(
 				TEEREX,
-				"BlockConfirmed",
+				"ProposedSidechainBlock",
 				Some(decoder.clone()),
 				&events_out,
 			)
 			.unwrap();
-		info!("BlockConfirmed event received");
+		info!("ProposedSidechainBlock event received");
 		debug!("Expected stf block Hash: {:?}", block_hash);
 		debug!("Confirmed stf block Hash: {:?}", ret.payload);
 		if ret.payload == block_hash {
@@ -661,7 +661,7 @@ fn send_direct_request(
 
 #[allow(dead_code)]
 #[derive(Decode)]
-struct BlockConfirmedArgs {
+struct ProposedSidechainBlockArgs {
 	signer: AccountId,
 	payload: H256,
 }
@@ -728,39 +728,28 @@ fn listen(matches: &ArgMatches<'_>) {
 								) => {
 									println!("RemovedEnclave: {:?}", accountid);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::UpdatedIpfsHash(
-									shard,
-									idx,
-									ipfs_hash,
-								) => {
-									println!(
-										"UpdatedIpfsHash for shard {}, worker index {}, ipfs# {:?}",
-										shard.encode().to_base58(),
-										idx,
-										ipfs_hash
-									);
-								},
 								my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 									println!(
 										"Forwarded request for shard {}",
 										shard.encode().to_base58()
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
 									accountid,
-									call_hash,
+									block_hash,
+									merkle_root,
 								) => {
 									println!(
-										"CallConfirmed from {} with hash {:?}",
-										accountid, call_hash
+										"ProcessedParentchainBlock from {} with hash {:?} and merkle root {:?}",
+										accountid, block_hash, merkle_root
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::BlockConfirmed(
+								my_node_runtime::pallet_teerex::RawEvent::ProposedSidechainBlock(
 									accountid,
 									block_hash,
 								) => {
 									println!(
-										"BlockConfirmed from {} with hash {:?}",
+										"ProposedSidechainBlock from {} with hash {:?}",
 										accountid, block_hash
 									);
 								},
@@ -785,8 +774,10 @@ fn listen(matches: &ArgMatches<'_>) {
 	}
 }
 
-// subscribes to he pallet_teerex events of type CallConfirmed
-pub fn subscribe_to_call_confirmed<P: Pair, Client: 'static>(api: Api<P, Client>) -> H256
+// Subscribes to the pallet_teerex events of type ProcessedParentchainBlock.
+pub fn subscribe_to_processed_parentchain_block<P: Pair, Client: 'static>(
+	api: Api<P, Client>,
+) -> H256
 where
 	MultiSignature: From<P::Signature>,
 	Client: RpcClient + Subscriber + Send,
@@ -811,13 +802,14 @@ where
 			for evr in &evts {
 				info!("received event {:?}", evr.event);
 				if let Event::Teerex(pe) = &evr.event {
-					if let my_node_runtime::pallet_teerex::RawEvent::CallConfirmed(
+					if let my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
 						sender,
-						payload,
+						block_hash,
+						_merkle_root,
 					) = &pe
 					{
-						println!("[+] Received confirm call from {}", sender);
-						return payload.clone().to_owned()
+						println!("[+] Received processed parentchain block event from {}", sender);
+						return block_hash.clone().to_owned()
 					} else {
 						debug!("received unknown event from Teerex: {:?}", evr.event)
 					}

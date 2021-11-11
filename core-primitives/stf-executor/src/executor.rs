@@ -188,7 +188,6 @@ where
 		account: AccountId,
 		amount: Amount,
 		shard: &ShardIdentifier,
-		calls: &mut Vec<OpaqueCall>,
 	) -> Result<H256> {
 		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
 
@@ -201,7 +200,8 @@ where
 			Default::default(), //don't care about signature here
 		);
 
-		Stf::execute(&mut state, trusted_call, calls).map_err::<Error, _>(|e| e.into())?;
+		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
+			.map_err::<Error, _>(|e| e.into())?;
 
 		self.state_handler.write(state, state_lock, shard).map_err(|e| e.into())
 	}

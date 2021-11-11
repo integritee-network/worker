@@ -36,7 +36,6 @@ pub trait StfExecuteShieldFunds {
 		account: AccountId,
 		amount: Amount,
 		shard: &ShardIdentifier,
-		calls: &mut Vec<OpaqueCall>,
 	) -> Result<H256>;
 }
 
