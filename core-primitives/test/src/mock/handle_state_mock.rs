@@ -100,8 +100,13 @@ impl QueryShardState for HandleStateMock {
 pub mod tests {
 
 	use super::*;
-	use codec::Encode;
+	use codec::{Decode, Encode};
+	use ita_stf::Stf;
+	use itp_sgx_crypto::{Aes, StateCrypto};
 	use itp_types::ShardIdentifier;
+	use sgx_externalities::SgxExternalitiesType;
+	use sp_core::blake2_256;
+	use std::collections::HashMap;
 
 	pub fn initialized_shards_list_is_empty() {
 		let state_handler = HandleStateMock::default();
@@ -140,5 +145,76 @@ pub mod tests {
 		let inserted_value =
 			updated_state.get(key.encode().as_slice()).expect("value for key should exist");
 		assert_eq!(*inserted_value, value.encode());
+	}
+
+	// this is the same test as for the `GlobalFileStateHandler` to ensure we don't have any effects
+	// from having the state in-memory (as here) vs. in file (`GlobalFileStateHandler`)
+	pub fn ensure_subsequent_state_loads_have_same_hash() {
+		let state_handler = HandleStateMock::default();
+		let shard = ShardIdentifier::default();
+
+		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
+		let initial_state = Stf::init_state();
+		let initial_state_hash = hash_of(&initial_state.state);
+		state_handler.write(initial_state, lock, &shard).unwrap();
+
+		let state_loaded = state_handler.load_initialized(&shard).unwrap();
+		let loaded_state_hash = hash_of(&state_loaded.state);
+
+		assert_eq!(initial_state_hash, loaded_state_hash);
+	}
+
+	pub fn ensure_encode_and_encrypt_does_not_affect_state_hash() {
+		let mut state = Stf::init_state();
+		let initial_state_hash = hash_of(&state.state);
+
+		let encrypted_state = encrypt(&state.state);
+		let decrypted_state: SgxExternalitiesType = decrypt(encrypted_state);
+
+		let decrypted_state_hash = hash_of(&decrypted_state);
+
+		assert_eq!(initial_state_hash, decrypted_state_hash);
+	}
+
+	pub fn ensure_encoding_and_decoding_hash_map_results_in_same_hash() {
+		use sgx_serialize::{DeSerializable, DeSerializeHelper, Serializable, SerializeHelper};
+
+		let mut initial_hash_map = HashMap::<Vec<u8>, Vec<u8>>::new();
+		initial_hash_map.insert(Encode::encode("penguin"), Encode::encode("south_pole"));
+		initial_hash_map.insert(Encode::encode("zebra"), Encode::encode("savanna"));
+
+		let hash_map_encoded = SerializeHelper::new().encode(initial_hash_map.clone()).unwrap();
+		let decoded_hash_map =
+			DeSerializeHelper::<HashMap<Vec<u8>, Vec<u8>>>::new(hash_map_encoded.clone())
+				.decode()
+				.unwrap();
+		let second_time_encoded_hash_map =
+			SerializeHelper::new().encode(decoded_hash_map.clone()).unwrap();
+
+		assert_eq!(decoded_hash_map, initial_hash_map);
+
+		assert_eq!(
+			blake2_256(hash_map_encoded.as_slice()),
+			blake2_256(second_time_encoded_hash_map.as_slice())
+		);
+	}
+
+	fn hash_of<T: Encode>(encodable: &T) -> H256 {
+		encodable.using_encoded(blake2_256).into()
+	}
+
+	fn encrypt<T: Encode>(payload: &T) -> Vec<u8> {
+		let mut encoded_and_encrypted = payload.encode();
+		//encryption_key().encrypt(&mut encoded_and_encrypted).unwrap();
+		encoded_and_encrypted
+	}
+
+	fn decrypt<T: Decode>(mut cyphertext: Vec<u8>) -> T {
+		//encryption_key().decrypt(&mut cyphertext).unwrap();
+		T::decode(&mut cyphertext.as_slice()).unwrap()
+	}
+
+	fn encryption_key() -> Aes {
+		Aes::default()
 	}
 }

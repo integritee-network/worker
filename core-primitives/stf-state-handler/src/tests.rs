@@ -25,7 +25,7 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::{Decode, Encode};
-use ita_stf::{State as StfState, StateType as StfStateType};
+use ita_stf::{State as StfState, StateType as StfStateType, Stf};
 use itp_settings::files::SHARDS_PATH;
 use itp_types::{ShardIdentifier, H256};
 use sgx_externalities::SgxExternalitiesTrait;
@@ -82,10 +82,7 @@ pub fn test_write_and_load_state_works() {
 }
 
 // Fixme: This test fails, see https://github.com/integritee-network/worker/issues/421
-#[allow(unused)]
 pub fn test_ensure_subsequent_state_loads_have_same_hash() {
-	use log::*;
-
 	// given
 	ensure_no_empty_shard_directory_exists();
 
@@ -96,7 +93,7 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 
 	//state::write(state.clone(), &shard);
 	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
-	state_handler.write(initial_state.clone(), lock, &shard);
+	state_handler.write(initial_state.clone(), lock, &shard).unwrap();
 
 	let state_loaded = state_handler.load_initialized(&shard).unwrap();
 
@@ -105,13 +102,13 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	//error!("State1: {:?}", initial_state.state);
 	//error!("State2: {:?}", state_loaded.state);
 
-	assert_eq!(hash_of(initial_state), hash_of(state_loaded));
+	assert_eq!(hash_of(&initial_state.state), hash_of(&state_loaded.state));
 
 	// clean up
 	remove_shard_dir(&shard);
 }
 
-fn hash_of<T: Encode>(encodable: T) -> H256 {
+fn hash_of<T: Encode>(encodable: &T) -> H256 {
 	encodable.using_encoded(blake2_256).into()
 }
 
