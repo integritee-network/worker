@@ -540,6 +540,7 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
 	_chain_api.subscribe_events(events_in).unwrap();
 
 	let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
+	decoder.register_type_size::<Hash>("ShardIdentifier").unwrap();
 	decoder.register_type_size::<Hash>("H256").unwrap();
 
 	loop {
