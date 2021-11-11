@@ -85,6 +85,7 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
 	traits::{Block as BlockT, Header as HeaderT},
+	OpaqueExtrinsic,
 };
 use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::{
@@ -584,19 +585,38 @@ where
 //For now get the DOT/currency exchange rate from coingecko API
 #[no_mangle]
 pub unsafe extern "C" fn update_market_data_xt(
-	genesis_hash: *const u8,
-	genesis_hash_size: u32,
-	nonce: &mut u32,
 	currency: *const u8,
 	currency_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
-	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	let mut curr_slice = slice::from_raw_parts(currency, currency_size as usize);
 	let curr: String = Decode::decode(&mut curr_slice).unwrap();
+	let xts = match update_market_data_internal::<Block>(curr) {
+		Ok(xts) => xts,
+		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+	};
+
+	write_slice_and_whitespace_pad(extrinsic_slice, xts.encode());
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn update_market_data_internal<PB>(curr: String) -> Result<Vec<OpaqueExtrinsic>>
+where
+	PB: BlockT<Hash = H256>,
+{
+	let signer = Ed25519Seal::unseal()?;
+	let light_client_lock = EnclaveLock::write_light_client_db()?;
+	let validator = LightClientSeal::<PB>::unseal()?;
+	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
+	LightClientSeal::seal(validator)?;
+	std::mem::drop(light_client_lock);
+
+	let extrinsics_factory =
+		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
 
 	//For now polkadot
 	let coin = "polkadot";
@@ -606,33 +626,21 @@ pub unsafe extern "C" fn update_market_data_xt(
 	let mut coingecko_client = CoinGeckoClient::new(url);
 	let rate = match coingecko_client.get_exchange_rate(coin, &curr) {
 		Ok(r) => r,
-		Err(x) => {
-			error!("[-] Failed to get the newest exchange rate from coingecko. {:?}", x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		Err(e) => {
+			error!("[-] Failed to get the newest exchange rate from coingecko. {:?}", e);
+			return Err(Error::Other(e.into()))
 		},
 	};
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let signer = Ed25519Seal::unseal().unwrap();
-	let call =
-		([TEERACLE_MODULE, UPDATE_EXCHANGE_RATE], curr.encode(), Some(U32F32::from_num(rate)));
-
-	let xt = compose_extrinsic_offline!(
-		signer,
-		call,
-		*nonce,
-		Era::Immortal,
-		genesis_hash,
-		genesis_hash,
-		RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION
-	)
-	.encode();
-
-	*nonce += 1;
-	write_slice_and_whitespace_pad(extrinsic_slice, xt);
-	sgx_status_t::SGX_SUCCESS
+	let mut calls = Vec::<OpaqueCall>::new();
+	let call = OpaqueCall::from_tuple(&(
+		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
+		curr.encode(),
+		Some(U32F32::from_num(rate)),
+	));
+	calls.push(call);
+	let extrinsics = extrinsics_factory.create_extrinsics(calls.as_slice())?;
+	Ok(extrinsics)
 }
 
 /// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.

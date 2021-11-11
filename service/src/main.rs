@@ -475,11 +475,9 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	enclave: &E,
 ) {
 	let tee_accountid = enclave_account(enclave);
-	// get enclaves's account nonce
-	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 
 	//For now usd
-	let uxt = match enclave.update_market_data_xt(node_api.genesis_hash, nonce, "usd") {
+	let uxt = match enclave.update_market_data_xt("usd") {
 		Err(e) => {
 			error!("{:?}", e);
 			return

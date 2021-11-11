@@ -119,6 +119,12 @@ source = "git+https://github.com/whalelephant/base-x-rs?branch=no_std#906c9ac592
 [[package]]
 name = "base64"
 version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
+
+[[package]]
+name = "base64"
+version = "0.13.0"
 source = "git+https://github.com/mesalock-linux/rust-base64-sgx?tag=sgx_1.1.3#dc7389e10817b078f289386b3b6a852ab6c4c021"
 dependencies = [
  "sgx_tstd",
@@ -468,6 +474,7 @@ dependencies = [
  "hex",
  "httparse",
  "ipfs-unixfs",
+ "ita-exchange-oracle",
  "ita-stf",
  "itc-direct-rpc-server",
  "itc-light-client",
@@ -522,6 +529,7 @@ dependencies = [
  "sp-utils",
  "sp-version",
  "substrate-api-client",
+ "substrate-fixed",
  "tiny-keccak",
  "webpki",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
@@ -1022,6 +1030,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "http_req"
+version = "0.7.2"
+source = "git+https://github.com/mesalock-linux/http_req-sgx?tag=sgx_1.1.3#5d0f7474c73b70d2dbdda69c1db2a2e31aee6eb8"
+dependencies = [
+ "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
+ "sgx_tstd",
+ "unicase",
+ "webpki",
+ "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
+]
+
+[[package]]
 name = "httparse"
 version = "1.4.1"
 source = "git+https://github.com/integritee-network/httparse-sgx?branch=sgx-experimental#cc97e4b34d2c44a1e3df5bdebef446b9771f5cc3"
@@ -1117,6 +1137,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-exchange-oracle"
+version = "0.8.0"
+dependencies = [
+ "itc-rest-client",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "serde 1.0.130",
+ "serde_json 1.0.67",
+ "sgx_tstd",
+ "thiserror 1.0.9",
+ "url",
+]
+
+[[package]]
 name = "ita-stf"
 version = "0.8.0"
 dependencies = [
@@ -1180,6 +1213,22 @@ dependencies = [
  "sp-runtime",
  "sp-trie",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-rest-client"
+version = "0.8.0"
+dependencies = [
+ "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "http",
+ "http_req",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "serde 1.0.130",
+ "serde_json 1.0.67",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.9",
+ "url",
 ]
 
 [[package]]
@@ -3382,6 +3431,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-fixed"
+version = "0.5.6"
+source = "git+https://github.com/encointer/substrate-fixed?tag=v0.5.6#b33d186888c60f38adafcfc0ec3a21aab263aef1"
+dependencies = [
+ "parity-scale-codec",
+ "typenum",
+]
+
+[[package]]
 name = "subtle"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3608,6 +3666,15 @@ dependencies = [
  "crunchy",
  "hex",
  "static_assertions",
+]
+
+[[package]]
+name = "unicase"
+version = "2.6.0"
+source = "git+https://github.com/mesalock-linux/unicase-sgx#0b0519348572927118af47af3da4da9ffdca8ec6"
+dependencies = [
+ "sgx_tstd",
+ "version_check",
 ]
 
 [[package]]
