@@ -531,29 +531,31 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
 	// send and watch extrinsic until block is executed
 	let block_hash =
 		_chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
-	info!("stf call extrinsic sent. Block Hash: {:?}", block_hash);
-	info!("waiting for confirmation of stf call");
+	info!(
+		"Trusted call extrinsic sent and sucessfully included in parentchain block with hash {:?}.",
+		block_hash
+	);
+	info!("Waiting for execution confirmation from enclave...");
 	let (events_in, events_out) = channel();
 	_chain_api.subscribe_events(events_in).unwrap();
 
 	let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
-	decoder.register_type_size::<Hash>("ShardIdentifier").unwrap();
 	decoder.register_type_size::<Hash>("H256").unwrap();
 
 	loop {
-		let ret: ProposedSidechainBlockArgs = _chain_api
-			.wait_for_event::<ProposedSidechainBlockArgs>(
+		let ret: ProcessedParentchainBlockArgs = _chain_api
+			.wait_for_event::<ProcessedParentchainBlockArgs>(
 				TEEREX,
-				"ProposedSidechainBlock",
+				"ProcessedParentchainBlock",
 				Some(decoder.clone()),
 				&events_out,
 			)
 			.unwrap();
-		info!("ProposedSidechainBlock event received");
-		debug!("Expected stf block Hash: {:?}", block_hash);
-		debug!("Confirmed stf block Hash: {:?}", ret.payload);
-		if ret.payload == block_hash {
-			return Some(ret.payload.encode())
+		info!("Confirmation of ProcessedParentchainBlock received");
+		debug!("Expected block Hash: {:?}", block_hash);
+		debug!("Confirmed stf block Hash: {:?}", ret.block_hash);
+		if ret.block_hash == block_hash {
+			return Some(ret.block_hash.encode())
 		}
 	}
 }
@@ -661,9 +663,10 @@ fn send_direct_request(
 
 #[allow(dead_code)]
 #[derive(Decode)]
-struct ProposedSidechainBlockArgs {
+struct ProcessedParentchainBlockArgs {
 	signer: AccountId,
-	payload: H256,
+	block_hash: H256,
+	merkle_root: H256,
 }
 
 fn listen(matches: &ArgMatches<'_>) {
