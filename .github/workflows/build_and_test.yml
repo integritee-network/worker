@@ -32,7 +32,7 @@ jobs:
         run: rustup show
 
       - name: Build
-        run:  SGX_MODE=SW make
+        run:  env "MITIGATION-CVE-2020-0551=LOAD" "SGX_MODE=SW" make
       - name: Test Service & Client
         run: cargo test
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
@@ -200,7 +200,6 @@ jobs:
           echo "${{ env.TLS_PRIVATE_KEY }}" > end.rsa
           chmod 644 end.fullchain
           chmod 644 end.rsa
-          ls -al .
 
       - name: Run local setup
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.

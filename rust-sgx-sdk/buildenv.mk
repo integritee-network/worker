@@ -83,7 +83,7 @@ ifneq (,$(findstring 86,$(UNAME)))
         HOST_ARCH := x86_64
     endif
 else
-    $(info Unknown host CPU arhitecture $(UNAME))
+    $(info Unknown host CPU architecture $(UNAME))
     $(error Aborting)
 endif
 
