@@ -455,7 +455,8 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 	);
 }
 
-/// Send extrinsic to chain once per day with the newest market data (for now only echange rate)
+/// Send extrinsic to chain according to the market data update interval in the settings
+/// with the current market data (for now only exchange rate).
 fn start_interval_market_update<E: EnclaveBase + TeeracleApi>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: &E,
@@ -474,7 +475,7 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	node_api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave: &E,
 ) {
-	//For now usd
+	// Get market data for usd (hardcoded)
 	let uxt = match enclave.update_market_data_xt("usd") {
 		Err(e) => {
 			error!("{:?}", e);
@@ -486,7 +487,7 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	let mut xthex = hex::encode(uxt);
 	xthex.insert_str(0, "0x");
 
-	// send the extrinsic and wait for confirmation
+	// Send the extrinsic to the parentchain and wait for InBlock confirmation.
 	println!("[>] Update the exchange rate (send the extrinsic)");
 	let tx_hash = match node_api.send_extrinsic(xthex, XtStatus::InBlock) {
 		Err(e) => {
@@ -495,7 +496,7 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 		},
 		Ok(r) => r,
 	};
-	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+	println!("[<] Extrinsic got included into a block. Hash: {:?}\n", tx_hash);
 }
 
 /// Schedules a task on perpetually looping intervals.

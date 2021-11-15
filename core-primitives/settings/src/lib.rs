@@ -108,8 +108,8 @@ pub mod node {
 
 	pub static TEERACLE_MODULE: u8 = 52u8;
 	pub static UPDATE_EXCHANGE_RATE: u8 = 0u8;
-	//Send extrinsic to update market exchange rate on the parentchain once per day
+	// Send extrinsic to update market exchange rate on the parentchain once per day
 	//pub static MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
-	//For Demo: every block
+	// For easy visibility during a demo: update with every parentchain block.
 	pub static MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(6);
 }

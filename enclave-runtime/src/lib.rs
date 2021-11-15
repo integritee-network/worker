@@ -582,7 +582,7 @@ where
 	Ok(())
 }
 
-//For now get the DOT/currency exchange rate from coingecko API
+///For now get the DOT/currency exchange rate from coingecko API.
 #[no_mangle]
 pub unsafe extern "C" fn update_market_data_xt(
 	currency: *const u8,
@@ -600,12 +600,13 @@ pub unsafe extern "C" fn update_market_data_xt(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	//only one extrinsic to send over the node api directly. No need of ocall
+	//Only one extrinsic to send over the node api directly.
 	let xt = match xts.get(0) {
 		Some(xt) => xt,
 		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
+	// Save created extrinsic as slice in the return value unchecked_extrinsic.
 	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode());
 	sgx_status_t::SGX_SUCCESS
 }
@@ -624,11 +625,15 @@ where
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
 
-	//For now polkadot
+	// For now hardcoded polkadot
 	let coin = "polkadot";
 
-	//Get the exchange rate
-	let url = CoinGeckoClient::base_url().unwrap();
+	// Get the exchange rate
+	let url = match CoinGeckoClient::base_url() {
+		Ok(u) => u,
+		Err(e) => return Err(Error::Other(e.into())),
+	};
+
 	let mut coingecko_client = CoinGeckoClient::new(url);
 	let rate = match coingecko_client.get_exchange_rate(coin, &curr) {
 		Ok(r) => r,
@@ -639,12 +644,6 @@ where
 	};
 
 	let mut calls = Vec::<OpaqueCall>::new();
-	println!(
-		"update_market_data_internal values :coingecko value {}, currency {:?} and rate {:?}",
-		rate,
-		curr.encode(),
-		Some(U32F32::from_num(rate))
-	);
 	let call = OpaqueCall::from_tuple(&(
 		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
 		curr.encode(),

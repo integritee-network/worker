@@ -27,6 +27,6 @@ pub enum Error {
 	Other(Box<dyn std::error::Error>),
 	#[error("Could not retrieve any data")]
 	NoValidData,
-	#[error("Get null for the exchange rate")]
+	#[error("Value for exchange rate is null")]
 	EmptyExchangeRate,
 }

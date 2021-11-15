@@ -5,7 +5,7 @@ on:
   push:
     branches: [ exchange_rate_oracle ]
   pull_request:
-    branches: [ exchange_rate_oracle ]
+    branches: [ master, exchange_rate_oracle ]
 
 env:
   CARGO_TERM_COLOR: always
