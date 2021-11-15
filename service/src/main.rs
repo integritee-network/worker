@@ -474,8 +474,6 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	node_api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave: &E,
 ) {
-	let tee_accountid = enclave_account(enclave);
-
 	//For now usd
 	let uxt = match enclave.update_market_data_xt("usd") {
 		Err(e) => {
@@ -490,7 +488,13 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 
 	// send the extrinsic and wait for confirmation
 	println!("[>] Update the exchange rate (send the extrinsic)");
-	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::InBlock).unwrap();
+	let tx_hash = match node_api.send_extrinsic(xthex, XtStatus::InBlock) {
+		Err(e) => {
+			error!("{:?}: ", e);
+			return
+		},
+		Ok(r) => r,
+	};
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 }
 

@@ -600,7 +600,13 @@ pub unsafe extern "C" fn update_market_data_xt(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	write_slice_and_whitespace_pad(extrinsic_slice, xts.encode());
+	//only one extrinsic to send over the node api directly. No need of ocall
+	let xt = match xts.get(0) {
+		Some(xt) => xt,
+		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+	};
+
+	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode());
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -633,6 +639,12 @@ where
 	};
 
 	let mut calls = Vec::<OpaqueCall>::new();
+	println!(
+		"update_market_data_internal values :coingecko value {}, currency {:?} and rate {:?}",
+		rate,
+		curr.encode(),
+		Some(U32F32::from_num(rate))
+	);
 	let call = OpaqueCall::from_tuple(&(
 		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
 		curr.encode(),

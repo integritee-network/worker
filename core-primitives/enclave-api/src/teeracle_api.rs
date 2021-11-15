@@ -17,7 +17,7 @@
 
 use crate::{error::Error, Enclave, EnclaveResult};
 use codec::Encode;
-use frame_support::{ensure, sp_runtime::app_crypto::sp_core::H256};
+use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use sgx_types::*;
 
