@@ -134,7 +134,6 @@ sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/haerdib/in
 sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_trts = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_ucrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
