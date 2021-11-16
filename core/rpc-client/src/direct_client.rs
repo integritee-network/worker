@@ -158,7 +158,7 @@ impl DirectApi for DirectClient {
 		let method = "author_getShieldingKey".to_owned();
 		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(method, vec![]);
 
-		let response_str = match Self::get(&self, jsonrpc_call) {
+		let response_str = match Self::get(self, jsonrpc_call) {
 			Ok(resp) => resp,
 			Err(err_msg) =>
 				return Err(format! {"Could not retrieve shielding pubkey: {:?}", err_msg}),

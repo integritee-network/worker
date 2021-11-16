@@ -6,7 +6,7 @@ pub enum Error {
 	#[error("{0}")]
 	Codec(#[from] CodecError),
 	#[error("{0}")]
-	ApiClientError(#[from] ApiClientError),
+	ApiClient(#[from] ApiClientError),
 	#[error("Node API terminated subscription unexpectedly: {0}")]
 	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
 	#[error("{0}")]
@@ -14,9 +14,9 @@ pub enum Error {
 	#[error("{0}")]
 	Serialization(#[from] serde_json::Error),
 	#[error("{0}")]
-	FromUtf8Error(#[from] std::string::FromUtf8Error),
+	FromUtf8(#[from] std::string::FromUtf8Error),
 	#[error("Application setup error!")]
-	ApplicationSetupError,
+	ApplicationSetup,
 	#[error("Custom Error: {0}")]
 	Custom(Box<dyn std::error::Error>),
 }

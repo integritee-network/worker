@@ -45,7 +45,7 @@ impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<H
 		//write!(fmt, "imported_at: {:?}, ", self.imported_at)?;
 		write!(fmt, "operation: {:?}, ", self.operation)?;
 		write!(fmt, "missing_tags: {{")?;
-		let mut it = self.missing_tags.iter().map(|tag| HexDisplay::from(tag));
+		let mut it = self.missing_tags.iter().map(HexDisplay::from);
 		if let Some(tag) = it.next() {
 			write!(fmt, "{}", tag)?;
 		}

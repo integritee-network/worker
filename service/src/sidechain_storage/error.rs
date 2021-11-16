@@ -18,11 +18,11 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
 	/// File access error
 	#[error("Could not interact with file storage: {0:?}")]
-	OperationalError(#[from] rocksdb::Error),
+	Operational(#[from] rocksdb::Error),
 	/// Last block of shard not found
 	#[error("Last Block of shard: {0} not found")]
 	LastBlockNotFound(String),
 	/// Decoding Error
 	#[error("Could not decode: {0:?}")]
-	DecodeError(#[from] codec::Error),
+	Decode(#[from] codec::Error),
 }

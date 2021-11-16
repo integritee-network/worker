@@ -443,7 +443,7 @@ where
 		self.pool
 			.read()
 			.unwrap()
-			.by_hashes(&hashes, shard)
+			.by_hashes(hashes, shard)
 			.into_iter()
 			.map(|existing_in_pool| existing_in_pool.map(|operation| operation.provides.to_vec()))
 			.collect()
@@ -557,7 +557,7 @@ where
 		let now = Instant::now();
 		let to_remove = {
 			self.ready(shard)
-				.filter(|tx| self.rotator.ban_if_stale(&now, block_number, &tx))
+				.filter(|tx| self.rotator.ban_if_stale(&now, block_number, tx))
 				.map(|tx| tx.hash)
 				.collect::<Vec<_>>()
 		};
@@ -565,7 +565,7 @@ where
 			let p = self.pool.read().unwrap();
 			let mut hashes = Vec::new();
 			for tx in p.futures(shard) {
-				if self.rotator.ban_if_stale(&now, block_number, &tx) {
+				if self.rotator.ban_if_stale(&now, block_number, tx) {
 					hashes.push(tx.hash);
 				}
 			}

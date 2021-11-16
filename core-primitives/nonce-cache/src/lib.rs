@@ -54,15 +54,8 @@ pub mod nonce_cache;
 pub type NonceValue = u32;
 
 /// Nonce type (newtype wrapper for NonceValue)
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Default, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Nonce(pub NonceValue);
-
-impl Default for Nonce {
-	fn default() -> Self {
-		Nonce(0)
-	}
-}
-
 /// Trait to mutate a nonce.
 ///
 /// Used in a combination of loading a lock and then writing the updated

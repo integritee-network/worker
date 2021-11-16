@@ -119,7 +119,7 @@ where
 		)
 	);
 
-	let authorities = authorities::<_, AuthorityPair, PB>(ctx, &parentchain_head)?;
+	let authorities = authorities::<_, AuthorityPair, PB>(ctx, parentchain_head)?;
 
 	let expected_author = slot_author::<AuthorityPair>(*slot, &authorities)
 		.ok_or_else(|| ConsensusError::CouldNotGetAuthorities("No authorities found".into()))?;

@@ -152,7 +152,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			let mut batch = WriteBatch::default();
 			let mut current_block_number = block_number;
 			// Remove blocks from db until no block anymore
-			while let Some(block_hash) = self.get_block_hash(&shard, current_block_number)? {
+			while let Some(block_hash) = self.get_block_hash(shard, current_block_number)? {
 				self.delete_block(&mut batch, &block_hash, &current_block_number, shard);
 				current_block_number -= 1;
 			}
