@@ -65,8 +65,8 @@ itp-storage = { path = "../../core-primitives/storage", default-features = false
 its-primitives = { path = "../primitives", default-features = false }
 
 # scs deps
-sgx-externalities = { version = "0.4.0", default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "feature/fm-externalities-deterministic-serialization" }
-sp-io-sgx = { package = "sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { version = "0.4.0", default-features = false, git = "https://github.com/integritee-network/sgx-runtime", rev = "1b2f37eff8c179a43d1344cbe1f4779867acbade" }
+sp-io-sgx = { package = "sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", rev = "1b2f37eff8c179a43d1344cbe1f4779867acbade", optional = true }
 
 # substrate deps
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}

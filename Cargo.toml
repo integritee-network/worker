@@ -38,15 +38,6 @@ members = [
     "sidechain/validateer-fetch",
 ]
 
-#[patch."https://github.com/scs/substrate-api-client"]
-#substrate-api-client = { path = "../substrate-api-client" }
-#substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }
-
-#[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../sgx-runtime/runtime", default-features = false}
-#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-#sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities" }
-
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_tstd = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_alloc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}

@@ -33,7 +33,7 @@ test = []
 # sgx dependencies
 sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
-sgx-externalities = { version = "0.4.0", default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "feature/fm-externalities-deterministic-serialization", optional = true }
+sgx-externalities = { version = "0.4.0", default-features = false, git = "https://github.com/integritee-network/sgx-runtime", rev = "1b2f37eff8c179a43d1344cbe1f4779867acbade", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
