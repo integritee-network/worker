@@ -99,7 +99,7 @@ mod tests {
 	fn get_exchange_rate_for_undefined_coins_fails() {
 		let url = CoinGeckoClient::base_url().unwrap();
 		let mut coingecko_client = CoinGeckoClient::new(url);
-		let result = coingecko_client.get_exchange_rate("dot", "usd");
+		let result = coingecko_client.get_exchange_rate("invalid_coin", "usd");
 		assert_matches!(result, Err(Error::NoValidData));
 	}
 

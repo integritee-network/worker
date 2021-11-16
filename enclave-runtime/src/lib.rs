@@ -582,7 +582,7 @@ where
 	Ok(())
 }
 
-///For now get the DOT/currency exchange rate from coingecko API.
+/// For now get the DOT/currency exchange rate from coingecko API.
 #[no_mangle]
 pub unsafe extern "C" fn update_market_data_xt(
 	currency: *const u8,
@@ -600,7 +600,7 @@ pub unsafe extern "C" fn update_market_data_xt(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	//Only one extrinsic to send over the node api directly.
+	// Only one extrinsic to send over the node api directly.
 	let xt = match xts.get(0) {
 		Some(xt) => xt,
 		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
@@ -616,7 +616,7 @@ where
 	PB: BlockT<Hash = H256>,
 {
 	let signer = Ed25519Seal::unseal()?;
-	let light_client_lock = EnclaveLock::write_light_client_db()?;
+	let light_client_lock = EnclaveLock::read_light_client_db()?;
 	let validator = LightClientSeal::<PB>::unseal()?;
 	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
 	LightClientSeal::seal(validator)?;
@@ -643,14 +643,17 @@ where
 		},
 	};
 
-	let mut calls = Vec::<OpaqueCall>::new();
+	println!(
+		"Update the exchange rate: 1 DOT = {:?} {}",
+		Some(U32F32::from_num(rate)).unwrap(),
+		curr.to_uppercase()
+	);
 	let call = OpaqueCall::from_tuple(&(
 		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
 		curr.encode(),
 		Some(U32F32::from_num(rate)),
 	));
-	calls.push(call);
-	let extrinsics = extrinsics_factory.create_extrinsics(calls.as_slice())?;
+	let extrinsics = extrinsics_factory.create_extrinsics(vec![call].as_slice())?;
 	Ok(extrinsics)
 }
 
