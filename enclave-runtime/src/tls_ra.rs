@@ -192,7 +192,7 @@ fn send_files(
 	aes: &Aes,
 ) -> SgxResult<()> {
 	tls.write(&rsa_pair.len().to_le_bytes()).sgx_error()?;
-	tls.write(&rsa_pair).sgx_error()?;
+	tls.write(rsa_pair).sgx_error()?;
 	tls.write(&aes.key[..]).sgx_error()?;
 	tls.write(&aes.init_vec[..]).sgx_error()?;
 	Ok(())

@@ -46,9 +46,7 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 }
 
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
-	if data.len() > writable.len() {
-		panic!("not enough bytes in output buffer for return value");
-	}
+	assert!(!data.len() > writable.len(), "Not enough bytes in output buffer for return value");
 	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
 	// fill the right side with whitespace
@@ -63,8 +61,6 @@ pub fn check_files() {
 	let files =
 		vec![ENCLAVE_FILE, SHIELDING_KEY_FILE, SIGNING_KEY_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {
-		if !Path::new(f).exists() {
-			panic!("file doesn't exist: {}", f);
-		}
+		assert!(Path::new(f).exists(), "File doesn't exist: {}", f);
 	}
 }

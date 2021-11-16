@@ -134,7 +134,7 @@ impl<Block: BlockT> LightValidation<Block> {
 	}
 
 	fn schedule_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
-		if let Some(log) = pending_change::<Block>(&header.digest()) {
+		if let Some(log) = pending_change::<Block>(header.digest()) {
 			if relay.scheduled_change.is_some() {
 				error!(
 					"Tried to scheduled authorities change even though one is already scheduled!!"
@@ -301,7 +301,7 @@ where
 			},
 		}
 
-		Self::schedule_validator_set_change(&mut relay, &header);
+		Self::schedule_validator_set_change(relay, &header);
 
 		// a valid grandpa proof proofs finalization of all previous unjustified blocks
 		relay.header_hashes.append(&mut relay.unjustified_headers);
@@ -323,14 +323,14 @@ where
 		header: Block::Header,
 		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
-		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 
 		if relay.last_finalized_block_header.hash() != *header.parent_hash() {
 			return Err(Error::HeaderAncestryMismatch)
 		}
 		let ancestry_proof = vec![];
 
-		Self::apply_validator_set_change(&mut relay, &header);
+		Self::apply_validator_set_change(relay, &header);
 
 		let validator_set = relay.current_validator_set.clone();
 		let validator_set_id = relay.current_validator_set_id;

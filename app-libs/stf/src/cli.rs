@@ -340,9 +340,7 @@ fn get_keystore_path(matches: &ArgMatches<'_>) -> PathBuf {
 
 pub fn get_identifiers(matches: &ArgMatches<'_>) -> ([u8; 32], ShardIdentifier) {
 	let mut mrenclave = [0u8; 32];
-	if !matches.is_present("mrenclave") {
-		panic!("--mrenclave must be provided");
-	};
+	assert!(matches.is_present("mrenclave"), "--mrenclave must be provided");
 	mrenclave.copy_from_slice(
 		&matches
 			.value_of("mrenclave")

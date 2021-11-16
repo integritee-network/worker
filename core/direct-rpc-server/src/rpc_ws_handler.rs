@@ -100,6 +100,7 @@ pub mod tests {
 		rpc_connection_registry::ConnectionRegistry,
 	};
 	use codec::Encode;
+	use core::assert_matches::assert_matches;
 	use itp_types::{DirectRequestStatus, RpcReturnValue};
 	use jsonrpc_core::Params;
 	use serde_json::json;

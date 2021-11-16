@@ -551,7 +551,7 @@ where
 			return Err(e.into())
 		}
 
-		if let Err(e) = stf_executor.update_states::<PB>(&block.header()) {
+		if let Err(e) = stf_executor.update_states::<PB>(block.header()) {
 			error!("Error performing state updates upon block import");
 			return Err(e.into())
 		}
@@ -624,7 +624,7 @@ where
 					if let Err(e) = stf_executor.execute_trusted_call::<PB>(
 						&mut opaque_calls,
 						&decrypted_trusted_call,
-						&block.header(),
+						block.header(),
 						&shard,
 						StatePostProcessing::Prune, // we only want to store the state diff for direct stuff.
 					) {
@@ -654,7 +654,7 @@ where
     );
 
 	debug!("decrypt the call");
-	let account_vec = Rsa3072Seal::unseal().map(|key| key.decrypt(&account_encrypted))??;
+	let account_vec = Rsa3072Seal::unseal().map(|key| key.decrypt(account_encrypted))??;
 
 	let account = AccountId::decode(&mut account_vec.as_slice())
 		.sgx_error_with_log("[ShieldFunds] Could not decode account")?;

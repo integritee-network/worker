@@ -69,7 +69,7 @@ pub fn gen_ecc_cert(
 					writer.next().write_set(|writer| {
 						writer.next().write_sequence(|writer| {
 							writer.next().write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-							writer.next().write_utf8_string(&ISSUER);
+							writer.next().write_utf8_string(ISSUER);
 						});
 					});
 				});
@@ -87,7 +87,7 @@ pub fn gen_ecc_cert(
 					writer.next().write_set(|writer| {
 						writer.next().write_sequence(|writer| {
 							writer.next().write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-							writer.next().write_utf8_string(&SUBJECT);
+							writer.next().write_utf8_string(SUBJECT);
 						});
 					});
 				});
@@ -127,7 +127,7 @@ pub fn gen_ecc_cert(
 			// Signature
 			let sig = {
 				let tbs = &writer.buf[4..];
-				ecc_handle.ecdsa_sign_slice(tbs, &prv_k).unwrap()
+				ecc_handle.ecdsa_sign_slice(tbs, prv_k).unwrap()
 			};
 			let sig_der = yasna::construct_der(|writer| {
 				writer.write_sequence(|writer| {
@@ -274,7 +274,7 @@ where
 	}
 
 	// Verify the signature against the signing cert
-	match sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, &attn_report_raw, &sig) {
+	match sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, attn_report_raw, &sig) {
 		Ok(_) => info!("Signature good"),
 		Err(e) => {
 			error!("Signature verification error {:?}", e);

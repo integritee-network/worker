@@ -60,7 +60,7 @@ where
 			},
 			None => {
 				error!("Failed to get worker instance");
-				Err(Error::ApplicationSetupError)
+				Err(Error::ApplicationSetup)
 			},
 		}
 	}

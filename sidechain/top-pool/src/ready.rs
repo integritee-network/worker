@@ -135,7 +135,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// Borrows a map of tags that are provided by operations in this queue.
 	pub fn provided_tags(&self, shard: ShardIdentifier) -> Option<&HashMap<Tag, Hash>> {
 		if let Some(tag_pool) = &self.provided_tags.get(&shard) {
-			return Some(&tag_pool)
+			return Some(tag_pool)
 		}
 		None
 	}
@@ -352,7 +352,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 					for tag in &tx.operation.operation.requires {
 						if let Some(hash) = self.provided_tags.get(&shard).unwrap().get(tag) {
 							if let Some(tx) = ready.get_mut(hash) {
-								remove_item(&mut tx.unlocks, &hash);
+								remove_item(&mut tx.unlocks, hash);
 							}
 						}
 					}
@@ -411,7 +411,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 						let mut find_previous = |tag| -> Option<Vec<Tag>> {
 							let prev_hash = self.provided_tags.get(&shard).unwrap().get(tag)?;
 							let mut ready = self.ready.get_mut(&shard).unwrap().write();
-							let tx2 = ready.get_mut(&prev_hash)?;
+							let tx2 = ready.get_mut(prev_hash)?;
 							remove_item(&mut tx2.unlocks, hash);
 							// We eagerly prune previous operations as well.
 							// But it might not always be good.

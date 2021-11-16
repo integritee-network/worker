@@ -13,7 +13,7 @@ thiserror = { version = "1.0.26", optional = true }
 
 # sgx deps
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
-sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # substrate deps
 frame-metadata = { version = "14.0.0", features = ["v13"], default-features = false, git = "https://github.com/paritytech/frame-metadata.git", branch = "main" }

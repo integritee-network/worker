@@ -38,9 +38,9 @@ test = [ "itp-test/sgx" ]
 
 [dependencies]
 # sgx dependencies
-sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-crypto-helper = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
+sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx-crypto-helper = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -57,7 +57,7 @@ jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jso
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
-jsonrpc-core = { version = "16", optional = true }
+jsonrpc-core = { version = "18", optional = true }
 thiserror = { version = "1.0", optional = true }
 
 # no-std compatible libraries

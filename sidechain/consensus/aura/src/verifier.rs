@@ -119,7 +119,7 @@ where
 		)
 	);
 
-	let authorities = authorities::<_, AuthorityPair, PB>(ctx, &parentchain_head)?;
+	let authorities = authorities::<_, AuthorityPair, PB>(ctx, parentchain_head)?;
 
 	let expected_author = slot_author::<AuthorityPair>(*slot, &authorities)
 		.ok_or_else(|| ConsensusError::CouldNotGetAuthorities("No authorities found".into()))?;
@@ -171,6 +171,7 @@ mod tests {
 	use crate::mock::{
 		default_header, validateer, StateMock, TestAuraVerifier, TestBlockBuilder, SLOT_DURATION,
 	};
+	use core::assert_matches::assert_matches;
 	use frame_support::assert_ok;
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use its_primitives::traits::SignBlock;

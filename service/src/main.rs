@@ -136,7 +136,7 @@ fn main() {
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
-		let shard = extract_shard(&smatches, enclave.as_ref());
+		let shard = extract_shard(smatches, enclave.as_ref());
 
 		// Todo: Is this deprecated?? It is only used in remote attestation.
 		config.set_ext_api_url(
@@ -168,7 +168,7 @@ fn main() {
 			tokio_handle,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-		let shard = extract_shard(&smatches, enclave.as_ref());
+		let shard = extract_shard(smatches, enclave.as_ref());
 		let provider_url = smatches.value_of("provider").expect("provider must be specified");
 		request_keys(provider_url, &shard, enclave.as_ref(), smatches.is_present("skip-ra"));
 	} else if matches.is_present("shielding-key") {
@@ -201,7 +201,7 @@ fn main() {
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(_matches) = matches.subcommand_matches("init-shard") {
-		let shard = extract_shard(&_matches, enclave.as_ref());
+		let shard = extract_shard(_matches, enclave.as_ref());
 		init_shard(&shard);
 	} else if let Some(_matches) = matches.subcommand_matches("test") {
 		if _matches.is_present("provisioning-server") {
@@ -487,7 +487,7 @@ fn request_keys<E: TlsRemoteAttestation>(
 	enclave_request_key_provisioning(
 		enclave_api,
 		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-		&provider_url,
+		provider_url,
 		skip_ra,
 	)
 	.unwrap();
@@ -526,7 +526,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(sender, worker_url) => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", sender);
-						println!("    Registered URL: {:?}", str::from_utf8(&worker_url).unwrap());
+						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 					},
 					my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
 						println!(
@@ -611,7 +611,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
 	let (sender, receiver) = channel();
-	api.subscribe_finalized_heads(sender).map_err(Error::ApiClientError)?;
+	api.subscribe_finalized_heads(sender).map_err(Error::ApiClient)?;
 
 	loop {
 		let new_header: Header = match receiver.recv() {
@@ -755,7 +755,7 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair, WsRpcClient>, accountid
 	info!("    Alice's Account Nonce is {}", nonce);
 
 	// check account balance
-	let free = api.get_free_balance(&accountid).unwrap();
+	let free = api.get_free_balance(accountid).unwrap();
 	info!("TEE's free balance = {:?}", free);
 
 	let existential_deposit = api.get_existential_deposit().unwrap();
@@ -779,7 +779,7 @@ fn ensure_account_has_funds(api: &mut Api<sr25519::Pair, WsRpcClient>, accountid
 		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
 
 		//verify funds have arrived
-		let free = api.get_free_balance(&accountid);
+		let free = api.get_free_balance(accountid);
 		info!("TEE's NEW free balance = {:?}", free);
 
 		api.signer = signer_orig;

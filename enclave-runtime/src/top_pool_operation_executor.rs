@@ -114,7 +114,7 @@ where
 		self.stf_executor
 			.execute_timed_getters_batch(
 				&trusted_getters,
-				&shard,
+				shard,
 				max_exec_duration,
 				|trusted_getter_signed: &TrustedGetterSigned,
 				 state_result: StfExecutorResult<Option<Vec<u8>>>| {

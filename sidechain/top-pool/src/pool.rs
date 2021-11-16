@@ -359,7 +359,7 @@ where
 		// And finally - submit reverified operations back to the pool
 
 		self.validated_pool.resubmit_pruned(
-			&at,
+			at,
 			known_imported_hashes,
 			pruned_hashes,
 			reverified_transactions.into_iter().map(|(_, xt)| xt).collect(),

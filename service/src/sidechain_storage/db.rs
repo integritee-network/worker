@@ -42,7 +42,7 @@ impl SidechainDB {
 
 	/// writes a batch to the DB
 	pub fn write(&mut self, batch: WriteBatch) -> Result<()> {
-		self.db.write(batch).map_err(Error::OperationalError)
+		self.db.write(batch).map_err(Error::Operational)
 	}
 
 	/// adds a given key value pair to the batch
@@ -58,6 +58,6 @@ impl SidechainDB {
 	/// add an entry to the DB
 	#[cfg(test)]
 	pub fn put<K: Encode, V: Encode>(&mut self, key: K, value: V) -> Result<()> {
-		self.db.put(key.encode(), value.encode()).map_err(Error::OperationalError)
+		self.db.put(key.encode(), value.encode()).map_err(Error::Operational)
 	}
 }

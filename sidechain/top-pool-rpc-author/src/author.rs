@@ -115,7 +115,7 @@ where
 		}
 
 		// decrypt call
-		let request_vec = match self.encryption_key.decrypt(&ext.as_slice()) {
+		let request_vec = match self.encryption_key.decrypt(ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};

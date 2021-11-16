@@ -185,6 +185,7 @@ pub mod sgx {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use core::assert_matches::assert_matches;
 	use itp_sgx_io::SealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{

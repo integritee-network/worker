@@ -77,6 +77,7 @@ pub mod tests {
 		rpc_response_builder::RpcResponseBuilder, rpc_return_value_builder::RpcReturnValueBuilder,
 	};
 	use codec::Encode;
+	use core::assert_matches::assert_matches;
 	use itp_types::TrustedOperationStatus;
 
 	#[test]
