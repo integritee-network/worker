@@ -3,9 +3,9 @@ name: Build, Test, Clippy
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ master, exchange_rate_oracle ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, exchange_rate_oracle ]
 
 env:
   CARGO_TERM_COLOR: always

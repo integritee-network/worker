@@ -52,6 +52,7 @@ sp-io = { default-features = false, features = ["disable_oom", "disable_panic_ha
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "master" }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", features = ["sgx"] }
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
+substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed",tag = "v0.5.7"}
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
@@ -98,6 +99,7 @@ itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-featu
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
 itp-types = { path = "../core-primitives/types", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
+ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, features = ["sgx"] }
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
