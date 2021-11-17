@@ -166,26 +166,24 @@ pub mod tests {
 		let state = Stf::init_state();
 		let initial_state_hash = hash_of(&state.state);
 
-		let encrypted_state = encrypt(&state.state);
-		let decrypted_state: SgxExternalitiesType = decrypt(encrypted_state);
+		let encoded_state = encode(&state.state);
+		let decoded_state: SgxExternalitiesType = decode(encoded_state);
 
-		let decrypted_state_hash = hash_of(&decrypted_state);
+		let decoded_state_hash = hash_of(&decoded_state);
 
-		assert_eq!(initial_state_hash, decrypted_state_hash);
+		assert_eq!(initial_state_hash, decoded_state_hash);
 	}
 
 	fn hash_of<T: Encode>(encodable: &T) -> H256 {
 		encodable.using_encoded(blake2_256).into()
 	}
 
-	fn encrypt<T: Encode>(payload: &T) -> Vec<u8> {
+	fn encode<T: Encode>(payload: &T) -> Vec<u8> {
 		let encoded_and_encrypted = payload.encode();
-		//encryption_key().encrypt(&mut encoded_and_encrypted).unwrap();
 		encoded_and_encrypted
 	}
 
-	fn decrypt<T: Decode>(cyphertext: Vec<u8>) -> T {
-		//encryption_key().decrypt(&mut cyphertext).unwrap();
+	fn decode<T: Decode>(cyphertext: Vec<u8>) -> T {
 		T::decode(&mut cyphertext.as_slice()).unwrap()
 	}
 }

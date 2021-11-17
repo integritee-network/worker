@@ -90,16 +90,10 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 
 	let state_handler = GlobalFileStateHandler;
 
-	//state::write(state.clone(), &shard);
 	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
 	state_handler.write(initial_state.clone(), lock, &shard).unwrap();
 
 	let state_loaded = state_handler.load_initialized(&shard).unwrap();
-
-	// here we observe a different key order for the two states, which is why we get different hashes
-	// for the state.
-	//error!("State1: {:?}", initial_state.state);
-	//error!("State2: {:?}", state_loaded.state);
 
 	assert_eq!(hash_of(&initial_state.state), hash_of(&state_loaded.state));
 
