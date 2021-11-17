@@ -476,7 +476,7 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	enclave: &E,
 ) {
 	// Get market data for usd (hardcoded)
-	let uxt = match enclave.update_market_data_xt(node_api.genesis_hash, "usd") {
+	let updated_extrinsic = match enclave.update_market_data_xt(node_api.genesis_hash, "usd") {
 		Err(e) => {
 			error!("{:?}", e);
 			return
@@ -484,19 +484,19 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 		Ok(r) => r,
 	};
 
-	let mut xthex = hex::encode(uxt);
-	xthex.insert_str(0, "0x");
+	let mut hex_encoded_extrinsic = hex::encode(updated_extrinsic);
+	hex_encoded_extrinsic.insert_str(0, "0x");
 
 	// Send the extrinsic to the parentchain and wait for InBlock confirmation.
 	println!("[>] Update the exchange rate (send the extrinsic)");
-	let tx_hash = match node_api.send_extrinsic(xthex, XtStatus::InBlock) {
+	let extrinsic_hash = match node_api.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
 		Err(e) => {
 			error!("{:?}: ", e);
 			return
 		},
 		Ok(r) => r,
 	};
-	println!("[<] Extrinsic got included into a block. Hash: {:?}\n", tx_hash);
+	println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
 }
 
 /// Schedules a task on perpetually looping intervals.

@@ -587,7 +587,7 @@ where
 pub unsafe extern "C" fn update_market_data_xt(
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
-	currency: *const u8,
+	currency_ptr: *const u8,
 	currency_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
@@ -595,16 +595,16 @@ pub unsafe extern "C" fn update_market_data_xt(
 	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 
-	let mut curr_slice = slice::from_raw_parts(currency, currency_size as usize);
-	let curr: String = Decode::decode(&mut curr_slice).unwrap();
+	let mut currency_slice = slice::from_raw_parts(currency_ptr, currency_size as usize);
+	let currency: String = Decode::decode(&mut currency_slice).unwrap();
 
-	let xts = match update_market_data_internal(genesis_hash, curr) {
+	let extrinsics = match update_market_data_internal(genesis_hash, currency) {
 		Ok(xts) => xts,
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
 	// Only one extrinsic to send over the node api directly.
-	let xt = match xts.get(0) {
+	let extrinsic = match extrinsics.get(0) {
 		Some(xt) => xt,
 		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
@@ -613,7 +613,7 @@ pub unsafe extern "C" fn update_market_data_xt(
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
-	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode());
+	write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode());
 	sgx_status_t::SGX_SUCCESS
 }
 
