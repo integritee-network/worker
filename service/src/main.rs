@@ -623,8 +623,8 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
-			/// FIXME: to add as soon as worker, node, and pallet are compatible (based on the same substrate version)  
 			/*
+			/// FIXME: to add as soon as worker, node, and pallet are compatible (based on the same substrate version)
 						Event::Teeracle(re) => {
 							debug!("{:?}", re);
 							match &re {
