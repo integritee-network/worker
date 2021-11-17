@@ -30,7 +30,7 @@ use std::{
 	vec::Vec,
 };
 
-/// Mock implementation for the `HandleState` trait
+/// Mock implementation for the `HandleState` trait.
 ///
 /// Uses an in-memory state, in a `HashMap`. To be used in unit tests.
 pub struct HandleStateMock {
@@ -51,7 +51,7 @@ impl HandleState for HandleStateMock {
 		let maybe_state = self.state_map.read().unwrap().get(shard).map(|s| s.clone());
 
 		return match maybe_state {
-			// initialize with default state, if it doesn't exist yet
+			// Initialize with default state, if it doesn't exist yet.
 			None => {
 				self.state_map.write().unwrap().insert(shard.clone(), StfState::default());
 
@@ -96,7 +96,7 @@ impl QueryShardState for HandleStateMock {
 	}
 }
 
-// Since the mock itself has quite a bit of complexity, we also have tests for the mock
+// Since the mock itself has quite a bit of complexity, we also have tests for the mock.
 pub mod tests {
 
 	use super::*;
@@ -145,8 +145,8 @@ pub mod tests {
 		assert_eq!(*inserted_value, value.encode());
 	}
 
-	// this is the same test as for the `GlobalFileStateHandler` to ensure we don't have any effects
-	// from having the state in-memory (as here) vs. in file (`GlobalFileStateHandler`)
+	// This is the same test as for the `GlobalFileStateHandler` to ensure we don't have any effects
+	// from having the state in-memory (as here) vs. in file (`GlobalFileStateHandler`).
 	pub fn ensure_subsequent_state_loads_have_same_hash() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
@@ -166,7 +166,7 @@ pub mod tests {
 		let state = Stf::init_state();
 		let initial_state_hash = hash_of(&state.state);
 
-		let encoded_state = encode(&state.state);
+		let encoded_state = state.state.encode();
 		let decoded_state: SgxExternalitiesType = decode(encoded_state);
 
 		let decoded_state_hash = hash_of(&decoded_state);
@@ -178,12 +178,7 @@ pub mod tests {
 		encodable.using_encoded(blake2_256).into()
 	}
 
-	fn encode<T: Encode>(payload: &T) -> Vec<u8> {
-		let encoded_and_encrypted = payload.encode();
-		encoded_and_encrypted
-	}
-
-	fn decode<T: Decode>(cyphertext: Vec<u8>) -> T {
-		T::decode(&mut cyphertext.as_slice()).unwrap()
+	fn decode<T: Decode>(encoded: Vec<u8>) -> T {
+		T::decode(&mut encoded.as_slice()).unwrap()
 	}
 }
