@@ -81,7 +81,6 @@ pub fn test_write_and_load_state_works() {
 	remove_shard_dir(&shard);
 }
 
-// Fixme: This test fails, see https://github.com/integritee-network/worker/issues/421
 pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	// given
 	ensure_no_empty_shard_directory_exists();

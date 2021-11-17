@@ -15,6 +15,13 @@
 
 */
 
+use codec::Output;
+#[cfg(feature = "sgx")]
+use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
+
+#[cfg(feature = "std")]
+use std::sync::{RwLock, RwLockWriteGuard};
+
 use crate::{
 	error::{Error, Result},
 	file_io::{exists, list_shards, load_initialized_state, write as state_write},
@@ -24,10 +31,7 @@ use crate::{
 use ita_stf::State as StfState;
 use itp_types::{ShardIdentifier, H256};
 use lazy_static::lazy_static;
-use std::{
-	sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard},
-	vec::Vec,
-};
+use std::vec::Vec;
 
 lazy_static! {
 	// as long as we have a file backend, we use this 'dummy' lock,

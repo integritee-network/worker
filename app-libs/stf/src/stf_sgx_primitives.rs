@@ -20,8 +20,11 @@ use itp_types::H256;
 use std::prelude::v1::*;
 
 pub mod types {
+	#[cfg(feature = "sgx")]
 	pub use sgx_runtime::{Balance, Index};
+	#[cfg(feature = "sgx")]
 	pub type AccountData = balances::AccountData<Balance>;
+	#[cfg(feature = "sgx")]
 	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
 
 	pub type StateType = sgx_externalities::SgxExternalitiesType;
