@@ -191,7 +191,7 @@ where
 	Ok(())
 }
 
-/// Executes aura for the given `slot`
+/// Executes aura for the given `slot`.
 fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment, ExtrinsicsFactory>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
