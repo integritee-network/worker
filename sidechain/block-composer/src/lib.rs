@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-
+//! Sidechain block composing logic.
 #![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
