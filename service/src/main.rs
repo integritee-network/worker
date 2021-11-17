@@ -476,7 +476,7 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	enclave: &E,
 ) {
 	// Get market data for usd (hardcoded)
-	let uxt = match enclave.update_market_data_xt("usd") {
+	let uxt = match enclave.update_market_data_xt(node_api.genesis_hash, "usd") {
 		Err(e) => {
 			error!("{:?}", e);
 			return

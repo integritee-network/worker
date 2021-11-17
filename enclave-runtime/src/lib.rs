@@ -585,17 +585,20 @@ where
 /// For now get the DOT/currency exchange rate from coingecko API.
 #[no_mangle]
 pub unsafe extern "C" fn update_market_data_xt(
+	genesis_hash: *const u8,
+	genesis_hash_size: u32,
 	currency: *const u8,
 	currency_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let genesis_hash = hash_from_slice(genesis_hash_slice);
 
 	let mut curr_slice = slice::from_raw_parts(currency, currency_size as usize);
 	let curr: String = Decode::decode(&mut curr_slice).unwrap();
-	let xts = match update_market_data_internal::<Block>(curr) {
+
+	let xts = match update_market_data_internal(genesis_hash, curr) {
 		Ok(xts) => xts,
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
@@ -606,21 +609,16 @@ pub unsafe extern "C" fn update_market_data_xt(
 		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
 	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode());
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn update_market_data_internal<PB>(curr: String) -> Result<Vec<OpaqueExtrinsic>>
-where
-	PB: BlockT<Hash = H256>,
-{
+fn update_market_data_internal(genesis_hash: H256, curr: String) -> Result<Vec<OpaqueExtrinsic>> {
 	let signer = Ed25519Seal::unseal()?;
-	let light_client_lock = EnclaveLock::read_light_client_db()?;
-	let validator = LightClientSeal::<PB>::unseal()?;
-	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
-	LightClientSeal::seal(validator)?;
-	std::mem::drop(light_client_lock);
 
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
