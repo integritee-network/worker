@@ -623,7 +623,9 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
-			/*			Event::Teeracle(re) => {
+			/// FIXME: to add as soon as worker, node, and pallet are compatible (based on the same substrate version)  
+			/*
+						Event::Teeracle(re) => {
 							debug!("{:?}", re);
 							match &re {
 								my_node_runtime::pallet_teeracle::RawEvent::ExchangeRateUpdated(
