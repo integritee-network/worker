@@ -29,7 +29,7 @@ use sp_runtime::{
 use std::{marker::PhantomData, sync::Arc};
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
-/// next `Slot`
+/// next `Slot`.
 pub struct ProposerFactory<PB: Block, TopPoolExecutor, BlockComposer> {
 	top_pool_executor: Arc<TopPoolExecutor>,
 	block_composer: Arc<BlockComposer>,
