@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-
+//! General time utility functions.
 #![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
