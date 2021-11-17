@@ -3,7 +3,7 @@ name: Build, Test, Clippy
 on:
   workflow_dispatch:
   push:
-    branches: [ exchange_rate_oracle ]
+    branches: [ master, exchange_rate_oracle ]
   pull_request:
     branches: [ master, exchange_rate_oracle ]
 
