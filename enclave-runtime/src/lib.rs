@@ -45,6 +45,7 @@ use crate::{
 use base58::ToBase58;
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{alloc::string::String, Decode, Encode};
+use ita_exchange_oracle::{coingecko::CoinGeckoClient, GetExchangeRate};
 use ita_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -59,7 +60,8 @@ use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::node::{
 	CALL_WORKER, PROCESSED_PARENTCHAIN_BLOCK, REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION,
-	RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEEREX_MODULE,
+	RUNTIME_TRANSACTION_VERSION, SHIELD_FUNDS, TEERACLE_MODULE, TEEREX_MODULE,
+	UPDATE_EXCHANGE_RATE,
 };
 use itp_sgx_crypto::{aes, ed25519, rsa3072, Ed25519Seal, Rsa3072Seal, ShieldingCrypto};
 use itp_sgx_io as io;
@@ -83,11 +85,13 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
 	traits::{Block as BlockT, Header as HeaderT},
+	OpaqueExtrinsic,
 };
 use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::{
 	compose_extrinsic_offline, extrinsic::xt_primitives::UncheckedExtrinsicV4,
 };
+use substrate_fixed::types::U32F32;
 
 mod attestation;
 mod ipfs;
@@ -576,6 +580,79 @@ where
 	validator.send_extrinsics(on_chain_ocall_api, xts)?;
 
 	Ok(())
+}
+
+/// For now get the DOT/currency exchange rate from coingecko API.
+#[no_mangle]
+pub unsafe extern "C" fn update_market_data_xt(
+	genesis_hash: *const u8,
+	genesis_hash_size: u32,
+	currency_ptr: *const u8,
+	currency_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let genesis_hash = hash_from_slice(genesis_hash_slice);
+
+	let mut currency_slice = slice::from_raw_parts(currency_ptr, currency_size as usize);
+	let currency: String = Decode::decode(&mut currency_slice).unwrap();
+
+	let extrinsics = match update_market_data_internal(genesis_hash, currency) {
+		Ok(xts) => xts,
+		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+	};
+
+	// Only one extrinsic to send over the node api directly.
+	let extrinsic = match extrinsics.get(0) {
+		Some(xt) => xt,
+		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+	};
+
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	// Save created extrinsic as slice in the return value unchecked_extrinsic.
+	write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode());
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn update_market_data_internal(genesis_hash: H256, curr: String) -> Result<Vec<OpaqueExtrinsic>> {
+	let signer = Ed25519Seal::unseal()?;
+
+	let extrinsics_factory =
+		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
+
+	// For now hardcoded polkadot
+	let coin = "polkadot";
+
+	// Get the exchange rate
+	let url = match CoinGeckoClient::base_url() {
+		Ok(u) => u,
+		Err(e) => return Err(Error::Other(e.into())),
+	};
+
+	let mut coingecko_client = CoinGeckoClient::new(url);
+	let rate = match coingecko_client.get_exchange_rate(coin, &curr) {
+		Ok(r) => r,
+		Err(e) => {
+			error!("[-] Failed to get the newest exchange rate from coingecko. {:?}", e);
+			return Err(Error::Other(e.into()))
+		},
+	};
+
+	println!(
+		"Update the exchange rate: 1 DOT = {:?} {}",
+		Some(U32F32::from_num(rate)).unwrap(),
+		curr.to_uppercase()
+	);
+	let call = OpaqueCall::from_tuple(&(
+		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
+		curr.encode(),
+		Some(U32F32::from_num(rate)),
+	));
+	let extrinsics = extrinsics_factory.create_extrinsics(vec![call].as_slice())?;
+	Ok(extrinsics)
 }
 
 /// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.

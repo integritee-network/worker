@@ -2050,6 +2050,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
+ "substrate-fixed 0.5.6",
  "thiserror 1.0.29",
  "tokio",
  "ws",
@@ -2095,6 +2096,21 @@ dependencies = [
  "tracing",
  "typed-builder",
  "walkdir",
+]
+
+[[package]]
+name = "ita-exchange-oracle"
+version = "0.8.0"
+dependencies = [
+ "itc-rest-client",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.130",
+ "serde_json 1.0.67",
+ "sgx_tstd",
+ "thiserror 1.0.29",
+ "thiserror 1.0.9",
+ "url 2.1.1",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -3910,7 +3926,7 @@ dependencies = [
  "sp-io 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=master)",
  "sp-runtime",
  "sp-std",
- "substrate-fixed",
+ "substrate-fixed 0.5.7",
  "test-utils",
 ]
 
@@ -6378,6 +6394,15 @@ dependencies = [
  "sp-core",
  "sp-keyring",
  "sp-keystore",
+]
+
+[[package]]
+name = "substrate-fixed"
+version = "0.5.6"
+source = "git+https://github.com/encointer/substrate-fixed?tag=v0.5.6#b33d186888c60f38adafcfc0ec3a21aab263aef1"
+dependencies = [
+ "parity-scale-codec",
+ "typenum 1.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

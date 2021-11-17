@@ -91,6 +91,7 @@ pub mod enclave {
 
 /// Settings concerning the node
 pub mod node {
+	use core::time::Duration;
 	// you may have to update these indices upon new builds of the runtime
 	// you can get the index from metadata, counting modules starting with zero
 	pub static TEEREX_MODULE: u8 = 50u8;
@@ -104,4 +105,9 @@ pub mod node {
 	pub static RUNTIME_SPEC_VERSION: u32 = 3;
 	pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;
 	pub static UNSHIELD: u8 = 6u8;
+
+	pub static TEERACLE_MODULE: u8 = 52u8;
+	pub static UPDATE_EXCHANGE_RATE: u8 = 0u8;
+	// Send extrinsic to update market exchange rate on the parentchain once per day
+	pub static MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
 }

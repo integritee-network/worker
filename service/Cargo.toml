@@ -50,9 +50,11 @@ itp-enclave-api = { path = "../core-primitives/enclave-api" }
 its-primitives = { path = "../sidechain/primitives"}
 ita-stf = { path = "../app-libs/stf" }
 
+
 # scs / integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
+substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.6" }
 
 # Substrate dependencies
 sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
