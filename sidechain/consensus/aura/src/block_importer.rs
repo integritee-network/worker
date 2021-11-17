@@ -25,11 +25,9 @@ use its_consensus_common::{BlockImport, Error as ConsensusError};
 use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
 use its_state::SidechainDB;
 use its_validateer_fetch::ValidateerFetch;
+use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
-use sp_runtime::{
-	traits::{Block, NumberFor},
-	MultiSignature,
-};
+use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc};
 
 /// Implements `BlockImport`. This is not the definite version. This might change depending on the

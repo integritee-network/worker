@@ -30,7 +30,7 @@ use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as BlockT, MultiSignature};
-use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
+use std::{format, marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
 
 /// Trait to execute trusted calls from the top pool
 ///
@@ -207,7 +207,7 @@ where
 					shard,
 					executed_operation.is_success(),
 				)
-				.map_err(|e| Error::Other(e.into()))?;
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		}
 
 		Ok(batch_execution_result)

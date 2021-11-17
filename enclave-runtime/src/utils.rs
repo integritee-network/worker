@@ -16,7 +16,6 @@
 */
 use crate::Hash;
 use codec::{Decode, Error, Input};
-use its_sidechain::slots::duration_now;
 use log::*;
 use sgx_types::sgx_status_t;
 use std::{slice, vec::Vec};

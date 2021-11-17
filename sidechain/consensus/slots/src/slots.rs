@@ -26,7 +26,7 @@ use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{Block, SignedBlock as SignedSidechainBlock};
 use sp_runtime::traits::Block as ParentchainBlock;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 /// Returns the duration until the next slot from now.
 pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
@@ -182,7 +182,7 @@ mod tests {
 	};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
-	use std::fmt::Debug;
+	use std::{fmt::Debug, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
 

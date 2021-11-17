@@ -14,9 +14,8 @@
 	limitations under the License.
 
 */
-#[cfg(feature = "sgx")]
-use codec::{Decode, Encode};
 
+use codec::{Decode, Encode};
 use itp_types::H256;
 
 pub mod types {
@@ -36,34 +35,33 @@ pub mod types {
 
 use types::StateTypeDiff;
 
-/// payload to be sent to peers for a state update
-#[cfg_attr(not(feature = "std"), derive(Encode, Decode))] // given by externalities
-#[derive(PartialEq, Eq, Clone, Debug)]
+/// Payload to be sent to peers for a state update.
+#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
 pub struct StatePayload {
-	/// state hash before the `state_update` was applied.
+	/// State hash before the `state_update` was applied.
 	state_hash_apriori: H256,
-	/// state hash after the `state_update` was applied.
+	/// State hash after the `state_update` was applied.
 	state_hash_aposteriori: H256,
-	/// state diff applied to state with hash `state_hash_apriori`
-	/// leading to state with hash `state_hash_aposteriori`
+	/// State diff applied to state with hash `state_hash_apriori`
+	/// leading to state with hash `state_hash_aposteriori`.
 	state_update: StateTypeDiff,
 }
 
 impl StatePayload {
-	/// get state hash before the `state_update` was applied.
+	/// Get state hash before the `state_update` was applied.
 	pub fn state_hash_apriori(&self) -> H256 {
 		self.state_hash_apriori
 	}
-	/// get state hash after the `state_update` was applied.
+	/// Get state hash after the `state_update` was applied.
 	pub fn state_hash_aposteriori(&self) -> H256 {
 		self.state_hash_aposteriori
 	}
-	/// reference to the `state_update`
+	/// Reference to the `state_update`.
 	pub fn state_update(&self) -> &StateTypeDiff {
 		&self.state_update
 	}
 
-	/// create new `StatePayload` instance.
+	/// Create new `StatePayload` instance.
 	pub fn new(apriori: H256, aposteriori: H256, update: StateTypeDiff) -> StatePayload {
 		StatePayload {
 			state_hash_apriori: apriori,

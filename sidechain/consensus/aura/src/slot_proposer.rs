@@ -21,12 +21,11 @@ use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
 use its_top_pool_executor::top_pool_operation_executor::ExecuteCallsOnTopPool;
-use sp_core::ed;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
 };
-use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration, vec::Vec};
+use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration};
 
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
 pub struct SlotProposer<PB: Block, SB: SignedBlock, TopPoolExecutor, BlockComposer> {

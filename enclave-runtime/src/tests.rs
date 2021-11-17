@@ -16,12 +16,10 @@
 
 use crate::{
 	attestation,
-	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	ocall::OcallApi,
 	rpc,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
-	top_pool_operation_executor::{ExecuteCallsOnTopPool, TopPoolOperationExecutor},
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -43,12 +41,16 @@ use itp_test::mock::{
 };
 use itp_types::{Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
+	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	primitives::{
 		traits::{Block as BlockT, SignedBlock as SignedBlockT},
 		types::block::SignedBlock,
 	},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
+	top_pool_executor::top_pool_operation_executor::{
+		ExecuteCallsOnTopPool, TopPoolOperationExecutor,
+	},
 	top_pool_rpc_author::{
 		api::SidechainApi,
 		author::Author,

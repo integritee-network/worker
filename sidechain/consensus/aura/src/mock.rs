@@ -17,9 +17,9 @@
 
 use crate::{verifier::AuraVerifier, Aura};
 use itp_test::mock::onchain_mock::OnchainMock;
+use itp_time_utils::duration_now;
 use itp_types::{AccountId, Block as ParentchainBlock, Enclave, Header};
 use its_consensus_common::{Environment, Error as ConsensusError, Proposal, Proposer};
-use its_consensus_slots::duration_now;
 use its_primitives::{
 	traits::{Block as SidechainBlockT, SignBlock as SignBlockT, SignedBlock as SignedBlockT},
 	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},

@@ -19,15 +19,14 @@ use crate::slot_proposer::SlotProposer;
 use finality_grandpa::BlockNumberOps;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
-use its_consensus_common::Environment;
+use its_consensus_common::{Environment, Error as ConsensusError};
 use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
 use its_top_pool_executor::top_pool_operation_executor::ExecuteCallsOnTopPool;
-use sp_core::ed;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
 };
-use std::{marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
+use std::{marker::PhantomData, sync::Arc};
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`
