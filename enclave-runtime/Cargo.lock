@@ -1516,6 +1516,7 @@ dependencies = [
 name = "its-state"
 version = "0.8.0"
 dependencies = [
+ "frame-support",
  "itp-storage",
  "its-primitives",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",

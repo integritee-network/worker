@@ -45,6 +45,7 @@ sgx = [
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "chain-error"] }
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
@@ -71,5 +72,4 @@ sp-std = { version = "4.0.0-dev", default-features = false, git = "https://githu
 
 # test deps
 [dev-dependencies]
-frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}

@@ -20,6 +20,7 @@
 
 use crate::{Error, SidechainDB, SidechainState, StateHash, StateUpdate};
 use codec::{Decode, Encode};
+use frame_support::ensure;
 use itp_storage::keys::storage_value_key;
 use log::error;
 use sgx_externalities::SgxExternalitiesTrait;
@@ -87,8 +88,7 @@ impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
 	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		// Todo: how do we ensure that the apriori state hash matches: See #421
-		// ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
+		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 		let mut state2 = self.clone();
 
 		state2.execute_with(|| {
@@ -100,8 +100,7 @@ impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
 			})
 		});
 
-		// Todo: Consequence of #421
-		// ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
+		ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
 		*self = state2;
 		self.prune_state_diff();
 		Ok(())
@@ -175,7 +174,6 @@ pub mod tests {
 	}
 
 	#[test]
-	#[ignore = "does not work, related to #421?"]
 	pub fn apply_state_update_returns_storage_hash_mismatch_err() {
 		let mut state1 = default_db();
 		let mut state2 = default_db();
@@ -192,7 +190,6 @@ pub mod tests {
 	}
 
 	#[test]
-	#[ignore = "does not work, related to #421?"]
 	pub fn apply_state_update_returns_invalid_storage_diff_err() {
 		let mut state1 = default_db();
 		let mut state2 = default_db();

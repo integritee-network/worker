@@ -15,7 +15,6 @@
 
 */
 
-use codec::Output;
 #[cfg(feature = "sgx")]
 use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 
