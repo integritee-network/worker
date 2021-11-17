@@ -20,7 +20,7 @@
 //! move most parts here to the sidechain crate.
 
 use crate::{
-	sidechain_block_composer::ComposeBlockAndConfirmation,
+	block_composer::ComposeBlockAndConfirmation,
 	top_pool_operation_executor::ExecuteCallsOnTopPool, Result as EnclaveResult,
 };
 use codec::Encode;

@@ -14,10 +14,10 @@
 	limitations under the License.
 
 */
-
+#[cfg(feature = "sgx")]
 use codec::{Decode, Encode};
+
 use itp_types::H256;
-use std::prelude::v1::*;
 
 pub mod types {
 	#[cfg(feature = "sgx")]
@@ -37,7 +37,8 @@ pub mod types {
 use types::StateTypeDiff;
 
 /// payload to be sent to peers for a state update
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
+#[cfg_attr(not(feature = "std"), derive(Encode, Decode))] // given by externalities
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct StatePayload {
 	/// state hash before the `state_update` was applied.
 	state_hash_apriori: H256,

@@ -70,11 +70,6 @@ pub unsafe fn utf8_str_from_raw<'a>(
 	std::str::from_utf8(bytes)
 }
 
-/// returns current duration since unix epoch in millis as u64
-pub fn now_as_u64() -> u64 {
-	duration_now().as_millis() as u64
-}
-
 pub trait UnwrapOrSgxErrorUnexpected {
 	type ReturnType;
 	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t>;

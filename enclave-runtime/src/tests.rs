@@ -16,9 +16,9 @@
 
 use crate::{
 	attestation,
+	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	ocall::OcallApi,
 	rpc,
-	sidechain_block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
 	top_pool_operation_executor::{ExecuteCallsOnTopPool, TopPoolOperationExecutor},

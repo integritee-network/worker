@@ -17,7 +17,7 @@
 
 //! Aura worker for the sidechain.
 //!
-//! It is inspired by parity's implementation but has ben greatly amended.
+//! It is inspired by parity's implementation but has been greatly amended.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(test, feature(assert_matches))]
@@ -44,6 +44,9 @@ use sp_runtime::{
 };
 use std::{string::ToString, time::Duration, vec::Vec};
 
+pub mod block_importer;
+pub mod proposer_factory;
+pub mod slot_proposer;
 mod verifier;
 
 pub use verifier::*;

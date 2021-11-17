@@ -10,7 +10,7 @@ use itp_storage::{verify_storage_entries, Error as StorageError, StorageEntryVer
 use itp_types::WorkerRequest;
 use sp_core::H256;
 use sp_runtime::traits::Header;
-use sp_std::prelude::*;
+use sp_std::{prelude::*, vec};
 
 /// Very basic abstraction over storage access that returns a `StorageEntryVerified`. This enforces
 /// that the implementation of this trait uses the `itp_storage::VerifyStorageProof` trait

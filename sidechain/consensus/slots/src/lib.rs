@@ -33,6 +33,7 @@ extern crate sgx_tstd as std;
 
 use codec::Encode;
 use derive_more::From;
+use itp_time_utils::{duration_now, remaining_time};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlock};

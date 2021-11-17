@@ -16,9 +16,9 @@
 */
 
 use crate::{
+	block_composer::BlockComposer,
 	error::{Error, Result},
 	ocall::OcallApi,
-	sidechain_block_composer::BlockComposer,
 	sidechain_impl::{exec_aura_on_slot, ProposerFactory},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	top_pool_operation_executor::{ExecuteGettersOnTopPool, TopPoolOperationExecutor},
@@ -31,6 +31,7 @@ use itp_sgx_crypto::{AesSeal, Ed25519Seal};
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
+use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{Block, H256};
 use its_sidechain::{
 	primitives::types::block::SignedBlock as SignedSidechainBlock,
