@@ -50,7 +50,7 @@ ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant
 # scs / integritee
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true}
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "master" }
-sgx-externalities = { version = "0.4.0", default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "feature/fm-externalities-deterministic-serialization", features = ["sgx"] }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", features = ["sgx"] }
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
 
 # mesalock

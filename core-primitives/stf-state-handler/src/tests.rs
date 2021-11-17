@@ -25,7 +25,7 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::{Decode, Encode};
-use ita_stf::{State as StfState, StateType as StfStateType, Stf};
+use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_settings::files::SHARDS_PATH;
 use itp_types::{ShardIdentifier, H256};
 use sgx_externalities::SgxExternalitiesTrait;
