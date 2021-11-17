@@ -26,12 +26,12 @@ extern crate sgx_tstd as std;
 
 use std::time::{Duration, SystemTime};
 
-/// returns current duration since unix epoch in millis as u64
+/// Returns current duration since unix epoch in millis as u64.
 pub fn now_as_u64() -> u64 {
 	duration_now().as_millis() as u64
 }
 
-/// calculates the remaining time `until`.
+/// Calculates the remaining time `until`.
 pub fn remaining_time(until: Duration) -> Option<Duration> {
 	until.checked_sub(duration_now())
 }
