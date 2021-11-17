@@ -14,7 +14,8 @@
 	limitations under the License.
 
 */
-
+//! Implementation of the sidechain block importer struct.
+//! Imports sidechain blocks and applies the accompanying state diff to its state.
 use crate::AuraVerifier;
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
