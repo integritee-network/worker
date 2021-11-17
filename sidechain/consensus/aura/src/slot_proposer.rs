@@ -27,7 +27,7 @@ use sp_runtime::{
 };
 use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration};
 
-///! `SlotProposer` instance that has access to everything needed to propose a sidechain block
+///! `SlotProposer` instance that has access to everything needed to propose a sidechain block.
 pub struct SlotProposer<PB: Block, SB: SignedBlock, TopPoolExecutor, BlockComposer> {
 	pub(crate) top_pool_executor: Arc<TopPoolExecutor>,
 	pub(crate) block_composer: Arc<BlockComposer>,
