@@ -202,9 +202,8 @@ fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment, 
 	shards: Vec<ShardIdentifierFor<SB>>,
 ) -> Result<()>
 where
-	// setting the public type is necessary due to some non-generic downstream code.
 	PB: BlockT<Hash = H256>,
-	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static,
+	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
 	SB::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
