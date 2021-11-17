@@ -19,21 +19,14 @@
 //!
 //! This is used instead of `futures_timer::Interval` because it was unreliable.
 
+pub use sp_consensus_slots::Slot;
+
 use itp_sgx_io::SealedIO;
+use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{Block, SignedBlock as SignedSidechainBlock};
 use sp_runtime::traits::Block as ParentchainBlock;
-use std::time::{Duration, SystemTime};
-
-pub use sp_consensus_slots::Slot;
-
-/// Returns current duration since unix epoch.
-pub fn duration_now() -> Duration {
-	let now = SystemTime::now();
-	now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
-		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
-	})
-}
+use std::time::Duration;
 
 /// Returns the duration until the next slot from now.
 pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
@@ -47,11 +40,6 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 	let next_slot = (now + slot_duration.as_millis()) / slot_duration.as_millis();
 	let remaining_millis = next_slot * slot_duration.as_millis() - now;
 	Duration::from_millis(remaining_millis as u64)
-}
-
-/// calculates the remaining time `until`.
-pub fn remaining_time(until: Duration) -> Option<Duration> {
-	until.checked_sub(duration_now())
 }
 
 /// Information about a slot.
@@ -194,7 +182,7 @@ mod tests {
 	};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
-	use std::fmt::Debug;
+	use std::{fmt::Debug, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
 

@@ -94,17 +94,13 @@ mod ipfs;
 mod ocall;
 mod utils;
 
+mod beefy_merkle_tree;
 pub mod cert;
 pub mod error;
 pub mod rpc;
-mod sidechain_block_composer;
-mod sidechain_impl;
 mod sync;
 pub mod tls_ra;
 pub mod top_pool_execution;
-mod top_pool_operation_executor;
-
-mod beefy_merkle_tree;
 
 #[cfg(feature = "test")]
 pub mod test;

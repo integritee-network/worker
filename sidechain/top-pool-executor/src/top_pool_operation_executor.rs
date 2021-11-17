@@ -15,26 +15,22 @@
 
 */
 
-use crate::{
-	error::{Error, Result},
-	utils::now_as_u64,
-};
+use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::{hash::TrustedOperationOrHash, TrustedGetterSigned};
 use itp_stf_executor::{
 	traits::{StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch},
 	BatchExecutionResult,
 };
+use itp_time_utils::now_as_u64;
 use itp_types::{ShardIdentifier, H256};
-use its_sidechain::{
-	primitives::traits::{Block as SidechainBlockT, SignedBlock as SignedBlockT},
-	state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash},
-	top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState},
-};
+use its_primitives::traits::{Block as SidechainBlockT, SignedBlock as SignedBlockT};
+use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as BlockT, MultiSignature};
-use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
+use std::{format, marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
 
 /// Trait to execute trusted calls from the top pool
 ///
@@ -211,7 +207,7 @@ where
 					shard,
 					executed_operation.is_success(),
 				)
-				.map_err(|e| Error::Other(e.into()))?;
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		}
 
 		Ok(batch_execution_result)

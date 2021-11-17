@@ -14,32 +14,21 @@
 	limitations under the License.
 
 */
-
-//! Reexport all the sidechain stuff in one crate
-
+//!  Handles the execution of trusted calls and getters of the TOP pool
+#![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
-pub use its_block_composer as block_composer;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
 
-pub use its_consensus_aura as aura;
+// Re-export module to properly feature gate sgx and regular std environment.
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use thiserror_sgx as thiserror;
+}
 
-pub use its_consensus_common as consensus_common;
-
-pub use its_consensus_slots as slots;
-
-pub use its_primitives as primitives;
-
-pub use its_rpc_handler as rpc_handler;
-
-pub use its_state as state;
-
-pub use its_top_pool as top_pool;
-
-pub use its_top_pool_executor as top_pool_executor;
-
-pub use its_top_pool_rpc_author as top_pool_rpc_author;
-
-pub use its_validateer_fetch as validateer_fetch;
+pub mod error;
+pub mod top_pool_operation_executor;

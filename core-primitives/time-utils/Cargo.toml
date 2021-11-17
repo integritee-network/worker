@@ -1,0 +1,17 @@
+[package]
+name = "itp-time-utils"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+[features]
+default = ["std"]
+std = [
+]
+sgx = [
+    "sgx_tstd",
+]

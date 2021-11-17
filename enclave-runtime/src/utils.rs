@@ -16,7 +16,6 @@
 */
 use crate::Hash;
 use codec::{Decode, Error, Input};
-use its_sidechain::slots::duration_now;
 use log::*;
 use sgx_types::sgx_status_t;
 use std::{slice, vec::Vec};
@@ -68,11 +67,6 @@ pub unsafe fn utf8_str_from_raw<'a>(
 	let bytes = slice::from_raw_parts(data, len);
 
 	std::str::from_utf8(bytes)
-}
-
-/// returns current duration since unix epoch in millis as u64
-pub fn now_as_u64() -> u64 {
-	duration_now().as_millis() as u64
 }
 
 pub trait UnwrapOrSgxErrorUnexpected {

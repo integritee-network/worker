@@ -18,29 +18,41 @@
 use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
-	sidechain_block_composer::BlockComposer,
-	sidechain_impl::{exec_aura_on_slot, ProposerFactory},
 	sync::{EnclaveLock, EnclaveStateRWLock},
-	top_pool_operation_executor::{ExecuteGettersOnTopPool, TopPoolOperationExecutor},
 };
-use itc_light_client::{io::LightClientSeal, BlockNumberOps, LightClientState, NumberFor};
-use itp_extrinsics_factory::ExtrinsicsFactory;
+use codec::Encode;
+use itc_light_client::{
+	io::LightClientSeal, BlockNumberOps, LightClientState, NumberFor, Validator,
+};
+use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{AesSeal, Ed25519Seal};
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
-use itp_types::{Block, H256};
+use itp_time_utils::{duration_now, remaining_time};
+use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
-	primitives::types::block::SignedBlock as SignedSidechainBlock,
-	slots::{duration_now, remaining_time, sgx::LastSlotSeal, yield_next_slot},
+	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
+	block_composer::BlockComposer,
+	consensus_common::{Environment, Error as ConsensusError},
+	primitives::{
+		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
+		types::block::SignedBlock as SignedSidechainBlock,
+	},
+	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
+	top_pool_executor::top_pool_operation_executor::{
+		ExecuteGettersOnTopPool, TopPoolOperationExecutor,
+	},
 	top_pool_rpc_author::{global_author_container::GlobalAuthorContainer, traits::GetAuthor},
 };
 use log::*;
 use sgx_types::sgx_status_t;
-use sp_runtime::traits::Block as BlockT;
-use std::sync::Arc;
+use sp_core::Pair;
+use sp_runtime::{traits::Block as BlockT, MultiSignature};
+use std::{sync::Arc, vec::Vec};
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
@@ -175,6 +187,53 @@ where
 	};
 
 	LightClientSeal::seal(validator)?;
+
+	Ok(())
+}
+
+/// Executes aura for the given `slot`.
+fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment, ExtrinsicsFactory>(
+	slot: SlotInfo<PB>,
+	authority: Authority,
+	validator: &mut LightValidator,
+	extrinsics_factory: &ExtrinsicsFactory,
+	ocall_api: OCallApi,
+	proposer_environment: PEnvironment,
+	shards: Vec<ShardIdentifierFor<SB>>,
+) -> Result<()>
+where
+	PB: BlockT<Hash = H256>,
+	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
+	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
+	SB::Signature: From<Authority::Signature>,
+	Authority: Pair<Public = sp_core::ed25519::Public>,
+	Authority::Public: Encode,
+	OCallApi:
+		EnclaveSidechainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
+	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
+	NumberFor<PB>: BlockNumberOps,
+	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
+	ExtrinsicsFactory: CreateExtrinsics,
+{
+	log::info!("[Aura] Executing aura for slot: {:?}", slot);
+
+	let mut aura =
+		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api.clone(), proposer_environment)
+			.with_claim_strategy(SlotClaimStrategy::Always)
+			.with_allow_delayed_proposal(true);
+
+	let (blocks, xts): (Vec<_>, Vec<_>) =
+		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
+			.into_iter()
+			.map(|r| (r.block, r.parentchain_effects))
+			.unzip();
+
+	ocall_api.propose_sidechain_blocks(blocks)?;
+	let opaque_calls: Vec<OpaqueCall> = xts.into_iter().flatten().collect();
+
+	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
+
+	validator.send_extrinsics(&ocall_api, xts)?;
 
 	Ok(())
 }

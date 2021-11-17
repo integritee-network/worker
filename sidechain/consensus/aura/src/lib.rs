@@ -17,7 +17,7 @@
 
 //! Aura worker for the sidechain.
 //!
-//! It is inspired by parity's implementation but has ben greatly amended.
+//! It is inspired by parity's implementation but has been greatly amended.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(test, feature(assert_matches))]
@@ -31,6 +31,7 @@ extern crate sgx_tstd as std;
 
 use core::marker::PhantomData;
 use itp_storage_verifier::GetStorageVerified;
+use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
 use its_primitives::{
@@ -44,6 +45,9 @@ use sp_runtime::{
 };
 use std::{string::ToString, time::Duration, vec::Vec};
 
+pub mod block_importer;
+pub mod proposer_factory;
+pub mod slot_proposer;
 mod verifier;
 
 pub use verifier::*;
@@ -177,7 +181,7 @@ where
 	}
 
 	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<PB>) -> Duration {
-		proposing_remaining_duration(slot_info, its_consensus_slots::duration_now())
+		proposing_remaining_duration(slot_info, duration_now())
 	}
 }
 
@@ -241,7 +245,7 @@ mod tests {
 	use crate::mock::{default_header, validateer, EnvironmentMock, TestAura, SLOT_DURATION};
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use itp_types::Block as ParentchainBlock;
-	use its_consensus_slots::{duration_now, PerShardSlotWorkerScheduler};
+	use its_consensus_slots::PerShardSlotWorkerScheduler;
 	use sp_keyring::ed25519::Keyring;
 
 	fn get_aura(onchain_mock: OnchainMock) -> TestAura {

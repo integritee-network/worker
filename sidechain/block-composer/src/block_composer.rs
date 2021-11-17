@@ -15,21 +15,17 @@
 
 */
 
-use crate::{
-	error::{Error, Result},
-	utils::now_as_u64,
-};
+use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
 use itp_settings::node::{PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE};
 use itp_sgx_crypto::StateCrypto;
 use itp_stf_executor::traits::StfExecuteGenericUpdate;
+use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
-use its_sidechain::{
-	primitives::traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT},
-	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash},
-	top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState},
-};
+use its_primitives::traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT};
+use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::Pair;

@@ -24,8 +24,8 @@ sgx = [
 
 [dependencies]
 # sgx dependencies
-sgx_types = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "master" }
 
 # local dependencies

@@ -500,6 +500,7 @@ dependencies = [
  "itp-storage-verifier",
  "itp-teerex-storage",
  "itp-test",
+ "itp-time-utils",
  "itp-types",
  "its-sidechain",
  "jsonrpc-core",
@@ -1408,6 +1409,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-time-utils"
+version = "0.8.0"
+dependencies = [
+ "sgx_tstd",
+]
+
+[[package]]
 name = "itp-types"
 version = "0.8.0"
 dependencies = [
@@ -1425,18 +1433,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-block-composer"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itp-settings",
+ "itp-sgx-crypto",
+ "itp-stf-executor",
+ "itp-time-utils",
+ "itp-types",
+ "its-primitives",
+ "its-state",
+ "its-top-pool-rpc-author",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "its-consensus-aura"
 version = "0.8.0"
 dependencies = [
+ "finality-grandpa",
  "frame-support",
+ "itp-settings",
+ "itp-sgx-crypto",
+ "itp-stf-state-handler",
  "itp-storage-verifier",
+ "itp-time-utils",
+ "itp-types",
+ "its-block-composer",
  "its-consensus-common",
  "its-consensus-slots",
  "its-primitives",
  "its-state",
+ "its-top-pool-executor",
  "its-validateer-fetch",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "sgx-externalities",
  "sgx_tstd",
+ "sp-core",
  "sp-runtime",
 ]
 
@@ -1460,6 +1501,7 @@ version = "0.8.0"
 dependencies = [
  "derive_more",
  "itp-sgx-io",
+ "itp-time-utils",
  "itp-types",
  "its-consensus-common",
  "its-primitives",
@@ -1501,6 +1543,7 @@ dependencies = [
 name = "its-sidechain"
 version = "0.8.0"
 dependencies = [
+ "its-block-composer",
  "its-consensus-aura",
  "its-consensus-common",
  "its-consensus-slots",
@@ -1508,6 +1551,7 @@ dependencies = [
  "its-rpc-handler",
  "its-state",
  "its-top-pool",
+ "its-top-pool-executor",
  "its-top-pool-rpc-author",
  "its-validateer-fetch",
 ]
@@ -1549,6 +1593,27 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-top-pool-executor"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itp-stf-executor",
+ "itp-time-utils",
+ "itp-types",
+ "its-primitives",
+ "its-state",
+ "its-top-pool-rpc-author",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
  "sp-core",
  "sp-runtime",
  "thiserror 1.0.9",
