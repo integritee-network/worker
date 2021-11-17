@@ -24,7 +24,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
-    "sgx-externalities",
+    "sgx-externalities/sgx",
     "thiserror_sgx",
 ]
 test = []

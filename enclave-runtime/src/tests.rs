@@ -76,6 +76,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::tests::test_sgx_state_decode_encode_works,
 		itp_stf_state_handler::tests::test_encrypt_decrypt_state_type_works,
 		itp_stf_state_handler::tests::test_write_access_locks_read_until_finished,
+		itp_stf_state_handler::tests::test_ensure_subsequent_state_loads_have_same_hash,
 		test_compose_block_and_confirmation,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
@@ -89,12 +90,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_executing_call_updates_account_nonce,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
-		its_sidechain::state::tests::apply_state_update_works,
-		// Fixme: State hashes are flawed #421
-		// its_sidechain::state::tests::apply_state_update_returns_storage_hash_mismatch_err,
-		// its_sidechain::state::tests::apply_state_update_returns_invalid_storage_diff_err,
-		its_sidechain::state::tests::sp_io_storage_set_creates_storage_diff,
-		its_sidechain::state::tests::create_state_diff_without_setting_externalities_works,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
 		author_tests::top_encryption_works,
 		author_tests::submitting_to_author_inserts_in_pool,
@@ -104,6 +99,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		handle_state_mock::tests::shard_exists_after_inserting,
 		handle_state_mock::tests::load_initialized_inserts_default_state,
 		handle_state_mock::tests::load_mutate_and_write_works,
+		handle_state_mock::tests::ensure_subsequent_state_loads_have_same_hash,
+		handle_state_mock::tests::ensure_encode_and_encrypt_does_not_affect_state_hash,
 		// mra cert tests
 		test_verify_mra_cert_should_work,
 		test_verify_wrong_cert_is_err,
@@ -580,7 +577,7 @@ fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
 }
 
-pub fn test_account() -> spEd25519::Pair {
+fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
 }
 

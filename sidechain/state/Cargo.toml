@@ -21,6 +21,7 @@ std = [
     "its-primitives/std",
 
     # scs crates
+    "sp-io/std",
     "sgx-externalities/std",
 
     # optional std crates
@@ -35,18 +36,16 @@ sgx = [
     "itp-storage/sgx",
 
     # scs crates
-    "sp-io-sgx",
+    "sp-io/sgx",
+    "sgx-externalities/sgx",
 
     # sgx versions of std crates
     "thiserror_sgx",
 ]
-test = [
-    "frame-support",
-    "sp-runtime",
-]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "chain-error"] }
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
@@ -65,12 +64,12 @@ its-primitives = { path = "../primitives", default-features = false }
 
 # scs deps
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-sp-io-sgx = { package = "sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 
 # substrate deps
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # test deps
-frame-support = { version = "4.0.0-dev", default-features = false, optional = true, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, optional = true, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+[dev-dependencies]
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}

@@ -23,16 +23,13 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 mod error;
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
 mod impls;
 
 pub use error::*;
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use impls::*;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 mod sgx_reexports {
-	pub use sp_io_sgx as sp_io;
 	pub use thiserror_sgx as thiserror;
 }
 
@@ -64,8 +61,7 @@ impl<Block, E> SidechainDB<Block, E> {
 }
 
 /// Contains the necessary data to update the `SidechainDB` when importing a `SidechainBlock`.
-#[cfg_attr(feature = "sgx", derive(Encode, Decode))]
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
 pub struct StateUpdate {
 	/// state hash before the `state_update` was applied.
 	state_hash_apriori: H256,

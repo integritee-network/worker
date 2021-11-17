@@ -27,8 +27,9 @@ use base58::ToBase58;
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_settings::files::SHARDS_PATH;
-use itp_types::ShardIdentifier;
+use itp_types::{ShardIdentifier, H256};
 use sgx_externalities::SgxExternalitiesTrait;
+use sp_core::hashing::blake2_256;
 use std::{format, thread, vec::Vec};
 
 // Fixme: Move this test to sgx-runtime:
@@ -78,6 +79,30 @@ pub fn test_write_and_load_state_works() {
 
 	// clean up
 	remove_shard_dir(&shard);
+}
+
+pub fn test_ensure_subsequent_state_loads_have_same_hash() {
+	// given
+	ensure_no_empty_shard_directory_exists();
+
+	let shard: ShardIdentifier = [49u8; 32].into();
+	given_initialized_shard(&shard);
+
+	let state_handler = GlobalFileStateHandler;
+
+	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
+	state_handler.write(initial_state.clone(), lock, &shard).unwrap();
+
+	let state_loaded = state_handler.load_initialized(&shard).unwrap();
+
+	assert_eq!(hash_of(&initial_state.state), hash_of(&state_loaded.state));
+
+	// clean up
+	remove_shard_dir(&shard);
+}
+
+fn hash_of<T: Encode>(encodable: &T) -> H256 {
+	encodable.using_encoded(blake2_256).into()
 }
 
 pub fn test_write_access_locks_read_until_finished() {

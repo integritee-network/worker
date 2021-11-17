@@ -43,7 +43,7 @@ use sp_runtime::{
 	traits::{Block as BlockT, Header, UniqueSaturatedInto},
 };
 use std::{
-	collections::HashMap,
+	collections::BTreeMap,
 	fmt::Debug,
 	format,
 	marker::PhantomData,
@@ -409,7 +409,7 @@ where
 
 fn into_map(
 	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
-) -> HashMap<Vec<u8>, Option<Vec<u8>>> {
+) -> BTreeMap<Vec<u8>, Option<Vec<u8>>> {
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
 }
 

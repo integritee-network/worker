@@ -18,11 +18,10 @@
 use crate::{helpers::get_account_info, StfError};
 use itp_storage::storage_value_key;
 use log_sgx::*;
-use sgx_externalities::SgxExternalitiesTrait;
+use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_runtime::{Balance, Runtime};
 use sgx_tstd as std;
 use sp_core::{crypto::AccountId32, ed25519, Pair};
-use sp_io::SgxExternalities;
 use sp_runtime::MultiAddress;
 use std::{string::ToString, vec, vec::Vec};
 use support::traits::UnfilteredDispatchable;

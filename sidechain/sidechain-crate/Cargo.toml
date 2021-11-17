@@ -26,7 +26,7 @@ sgx = [
     "its-top-pool/sgx",
     "its-top-pool-rpc-author/sgx",
 ]
-test = ["its-state/test", "its-top-pool-rpc-author/test"]
+test = ["its-top-pool-rpc-author/test"]
 
 [dependencies]
 its-consensus-aura = { path = "../consensus/aura", default-features = false }

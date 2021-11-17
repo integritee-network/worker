@@ -34,6 +34,7 @@ its-top-pool = { path = "../../sidechain/top-pool", default-features = false }
 default = ["std"]
 std = [
     "codec/std",
+    "sgx-externalities/std",
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",
@@ -54,5 +55,5 @@ sgx = [
     "itp-stf-state-handler/sgx",
     "its-top-pool/sgx",
     "jsonrpc-core",
-    "sgx-externalities",
+    "sgx-externalities/sgx",
 ]

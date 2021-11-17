@@ -30,7 +30,7 @@ use std::{
 	vec::Vec,
 };
 
-/// Mock implementation for the `HandleState` trait
+/// Mock implementation for the `HandleState` trait.
 ///
 /// Uses an in-memory state, in a `HashMap`. To be used in unit tests.
 pub struct HandleStateMock {
@@ -51,7 +51,7 @@ impl HandleState for HandleStateMock {
 		let maybe_state = self.state_map.read().unwrap().get(shard).map(|s| s.clone());
 
 		return match maybe_state {
-			// initialize with default state, if it doesn't exist yet
+			// Initialize with default state, if it doesn't exist yet.
 			None => {
 				self.state_map.write().unwrap().insert(shard.clone(), StfState::default());
 
@@ -96,12 +96,15 @@ impl QueryShardState for HandleStateMock {
 	}
 }
 
-// Since the mock itself has quite a bit of complexity, we also have tests for the mock
+// Since the mock itself has quite a bit of complexity, we also have tests for the mock.
 pub mod tests {
 
 	use super::*;
-	use codec::Encode;
+	use codec::{Decode, Encode};
+	use ita_stf::Stf;
 	use itp_types::ShardIdentifier;
+	use sgx_externalities::SgxExternalitiesType;
+	use sp_core::blake2_256;
 
 	pub fn initialized_shards_list_is_empty() {
 		let state_handler = HandleStateMock::default();
@@ -140,5 +143,42 @@ pub mod tests {
 		let inserted_value =
 			updated_state.get(key.encode().as_slice()).expect("value for key should exist");
 		assert_eq!(*inserted_value, value.encode());
+	}
+
+	// This is the same test as for the `GlobalFileStateHandler` to ensure we don't have any effects
+	// from having the state in-memory (as here) vs. in file (`GlobalFileStateHandler`).
+	pub fn ensure_subsequent_state_loads_have_same_hash() {
+		let state_handler = HandleStateMock::default();
+		let shard = ShardIdentifier::default();
+
+		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
+		let initial_state = Stf::init_state();
+		let initial_state_hash = hash_of(&initial_state.state);
+		state_handler.write(initial_state, lock, &shard).unwrap();
+
+		let state_loaded = state_handler.load_initialized(&shard).unwrap();
+		let loaded_state_hash = hash_of(&state_loaded.state);
+
+		assert_eq!(initial_state_hash, loaded_state_hash);
+	}
+
+	pub fn ensure_encode_and_encrypt_does_not_affect_state_hash() {
+		let state = Stf::init_state();
+		let initial_state_hash = hash_of(&state.state);
+
+		let encoded_state = state.state.encode();
+		let decoded_state: SgxExternalitiesType = decode(encoded_state);
+
+		let decoded_state_hash = hash_of(&decoded_state);
+
+		assert_eq!(initial_state_hash, decoded_state_hash);
+	}
+
+	fn hash_of<T: Encode>(encodable: &T) -> H256 {
+		encodable.using_encoded(blake2_256).into()
+	}
+
+	fn decode<T: Decode>(encoded: Vec<u8>) -> T {
+		T::decode(&mut encoded.as_slice()).unwrap()
 	}
 }

@@ -1338,6 +1338,7 @@ dependencies = [
  "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",
+ "sp-core",
  "thiserror 1.0.9",
 ]
 
@@ -1525,7 +1526,6 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-io",
- "sp-runtime",
  "sp-std",
  "thiserror 1.0.9",
 ]
@@ -2198,6 +2198,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
+name = "postcard"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8863e251332eb18520388099b8b0acc4810ed6e602e3b6f674e8a46ba20e15c"
+dependencies = [
+ "postcard-cobs",
+ "serde 1.0.130",
+]
+
+[[package]]
+name = "postcard-cobs"
+version = "0.1.5-pre"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c68cb38ed13fd7bc9dd5db8f165b7c8d9c1a315104083a2b10f11354c2af97f"
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.6"
 source = "git+https://github.com/mesalock-linux/cryptocorrosion-sgx#32d7de50b5f03a10fe5a42167410be2dd3c2e389"
@@ -2730,15 +2746,15 @@ dependencies = [
 
 [[package]]
 name = "sgx-externalities"
-version = "0.3.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
+version = "0.4.0"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#2ed8f4bf64da509fdea43efe8c5a10ea5a659057"
 dependencies = [
  "derive_more",
  "environmental",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
- "sgx_serialize",
- "sgx_serialize_derive",
+ "postcard",
+ "serde 1.0.130",
  "sgx_tstd",
  "sgx_types",
 ]
@@ -2746,7 +2762,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#2ed8f4bf64da509fdea43efe8c5a10ea5a659057"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3205,7 +3221,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#eab70c0886966879aac1dba57f35be6d36e7e361"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#2ed8f4bf64da509fdea43efe8c5a10ea5a659057"
 dependencies = [
  "environmental",
  "hash-db",
