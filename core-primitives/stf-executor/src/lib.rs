@@ -103,7 +103,7 @@ impl ExecutedOperation {
 /// Contains multiple executed operations
 #[derive(Clone, Debug)]
 pub struct BatchExecutionResult {
-	pub previous_state_hash: H256,
+	pub initial_state_hash: H256,
 	pub executed_operations: Vec<ExecutedOperation>,
 }
 

@@ -68,7 +68,7 @@ where
 				latest_onchain_header,
 				executed_operation_hashes,
 				self.shard,
-				batch_execution_result.previous_state_hash,
+				batch_execution_result.initial_state_hash,
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 

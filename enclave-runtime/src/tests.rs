@@ -134,7 +134,7 @@ fn test_compose_block_and_confirmation() {
 	let (lock, state) = state_handler.load_for_mutation(&shard).unwrap();
 	let mut db = SidechainDB::<SignedBlock, _>::new(state);
 	db.set_block_number(&1);
-	let previous_state_hash = db.state_hash();
+	let initial_state_hash = db.state_hash();
 	state_handler.write(db.ext, lock, &shard).unwrap();
 
 	// when
@@ -143,7 +143,7 @@ fn test_compose_block_and_confirmation() {
 			&latest_parentchain_header(),
 			signed_top_hashes,
 			shard,
-			previous_state_hash,
+			initial_state_hash,
 		)
 		.unwrap();
 
@@ -286,7 +286,7 @@ fn test_create_block_and_confirmation_works() {
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
-			execution_result.previous_state_hash,
+			execution_result.initial_state_hash,
 		)
 		.unwrap();
 
@@ -349,7 +349,7 @@ fn test_create_state_diff() {
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
-			execution_result.previous_state_hash,
+			execution_result.initial_state_hash,
 		)
 		.unwrap();
 
