@@ -33,7 +33,7 @@ use sp_runtime::{traits::Block as BlockT, MultiSignature};
 use std::{format, marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
 
 /// Trait to execute trusted calls from the top pool
-pub trait ExecuteCallsOnTopPool {
+pub trait TopPoolCallOperator {
 	type ParentchainBlockT: BlockT;
 
 	/// Loads trusted calls from the top pool for a given shard
@@ -47,7 +47,7 @@ pub trait ExecuteCallsOnTopPool {
 }
 
 /// Trait to execute trusted getters from the top pool
-pub trait ExecuteGettersOnTopPool {
+pub trait TopPoolGetterOperator {
 	/// Loads trusted getters from the top pool for a given shard
 	/// and executes them until either all calls are executed or `max_exec_duration` is reached.
 	fn execute_trusted_getters_on_shard(
@@ -60,13 +60,13 @@ pub trait ExecuteGettersOnTopPool {
 /// Executes operations on the top pool
 ///
 /// Operations can either be Getters or Calls
-pub struct TopPoolOperationExecutor<PB, SB, RpcAuthor, StfExecutor> {
+pub struct TopPoolOperationHandler<PB, SB, RpcAuthor, StfExecutor> {
 	rpc_author: Arc<RpcAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	_phantom: PhantomData<(PB, SB)>,
 }
 
-impl<PB, SB, RpcAuthor, StfExecutor> TopPoolOperationExecutor<PB, SB, RpcAuthor, StfExecutor>
+impl<PB, SB, RpcAuthor, StfExecutor> TopPoolOperationHandler<PB, SB, RpcAuthor, StfExecutor>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
@@ -78,12 +78,12 @@ where
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 {
 	pub fn new(rpc_author: Arc<RpcAuthor>, stf_executor: Arc<StfExecutor>) -> Self {
-		TopPoolOperationExecutor { rpc_author, stf_executor, _phantom: Default::default() }
+		TopPoolOperationHandler { rpc_author, stf_executor, _phantom: Default::default() }
 	}
 }
 
-impl<PB, SB, RpcAuthor, StfExecutor> ExecuteGettersOnTopPool
-	for TopPoolOperationExecutor<PB, SB, RpcAuthor, StfExecutor>
+impl<PB, SB, RpcAuthor, StfExecutor> TopPoolGetterOperator
+	for TopPoolOperationHandler<PB, SB, RpcAuthor, StfExecutor>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
@@ -143,8 +143,8 @@ where
 	}
 }
 
-impl<PB, SB, RpcAuthor, StfExecutor> ExecuteCallsOnTopPool
-	for TopPoolOperationExecutor<PB, SB, RpcAuthor, StfExecutor>
+impl<PB, SB, RpcAuthor, StfExecutor> TopPoolCallOperator
+	for TopPoolOperationHandler<PB, SB, RpcAuthor, StfExecutor>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,

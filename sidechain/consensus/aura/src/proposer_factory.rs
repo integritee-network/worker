@@ -21,7 +21,7 @@ use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Environment, Error as ConsensusError};
 use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
-use its_top_pool_executor::top_pool_operation_executor::ExecuteCallsOnTopPool;
+use its_top_pool_executor::top_pool_operation_executor::TopPoolCallOperator;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
@@ -53,7 +53,7 @@ where
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	TopPoolExecutor: ExecuteCallsOnTopPool<ParentchainBlockT = PB> + Send + Sync + 'static,
+	TopPoolExecutor: TopPoolCallOperator<ParentchainBlockT = PB> + Send + Sync + 'static,
 	BlockComposer: ComposeBlockAndConfirmation<ParentchainBlockT = PB, SidechainBlockT = SB>
 		+ Send
 		+ Sync

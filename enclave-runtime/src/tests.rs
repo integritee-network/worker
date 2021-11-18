@@ -49,7 +49,7 @@ use its_sidechain::{
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
 	top_pool_executor::top_pool_operation_executor::{
-		ExecuteCallsOnTopPool, TopPoolOperationExecutor,
+		TopPoolCallOperator, TopPoolOperationHandler,
 	},
 	top_pool_rpc_author::{
 		api::SidechainApi,
@@ -248,7 +248,7 @@ fn test_create_block_and_confirmation_works() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let top_pool_executor = TopPoolOperationExecutor::<Block, SignedBlock, _, _>::new(
+	let top_pool_executor = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
@@ -311,7 +311,7 @@ fn test_create_state_diff() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let top_pool_executor = TopPoolOperationExecutor::<Block, SignedBlock, _, _>::new(
+	let top_pool_executor = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
@@ -377,7 +377,7 @@ fn test_executing_call_updates_account_nonce() {
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
 	let top_pool_executor =
-		TopPoolOperationExecutor::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
+		TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -409,7 +409,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
 	let top_pool_executor =
-		TopPoolOperationExecutor::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
+		TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
 
 	// create accounts
 	let sender = funded_pair();
@@ -445,7 +445,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let (rpc_author, mut state, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
 	let top_pool_executor =
-		TopPoolOperationExecutor::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
+		TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
 
 	let sender = funded_pair();
 	let sender_acc = sender.public().into();

@@ -44,7 +44,7 @@ use its_sidechain::{
 	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
 	top_pool_executor::top_pool_operation_executor::{
-		ExecuteGettersOnTopPool, TopPoolOperationExecutor,
+		TopPoolGetterOperator, TopPoolOperationHandler,
 	},
 	top_pool_rpc_author::{global_author_container::GlobalAuthorContainer, traits::GetAuthor},
 };
@@ -81,10 +81,8 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	let mut remaining_shards = shards.len() as u32;
 	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let top_pool_executor = TopPoolOperationExecutor::<Block, SignedSidechainBlock, _, _>::new(
-		rpc_author,
-		stf_executor,
-	);
+	let top_pool_executor =
+		TopPoolOperationHandler::<Block, SignedSidechainBlock, _, _>::new(rpc_author, stf_executor);
 
 	// Execute trusted getters for each shard. Each shard gets equal amount of time to execute
 	// getters.
@@ -156,7 +154,7 @@ where
 		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
 
 	let top_pool_executor =
-		Arc::new(TopPoolOperationExecutor::<PB, SignedSidechainBlock, _, _>::new(
+		Arc::new(TopPoolOperationHandler::<PB, SignedSidechainBlock, _, _>::new(
 			rpc_author.clone(),
 			stf_executor.clone(),
 		));
