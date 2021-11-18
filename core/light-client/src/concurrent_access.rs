@@ -15,6 +15,9 @@
 
 */
 
+//! Concurrent access mechanisms that ensure mutually exclusive read/write access
+//! to the light-client (validator) by employing RwLocks under the hood.
+
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
@@ -32,8 +35,8 @@ use sp_runtime::traits::{Block as BlockT, NumberFor};
 use std::marker::PhantomData;
 
 lazy_static! {
-	// as long as we have a file backend, we use this 'dummy' lock,
-	// which guards against concurrent read/write access
+	// As long as we have a file backend, we use this 'dummy' lock,
+	// which guards against concurrent read/write access.
 	pub static ref VALIDATOR_LOCK: RwLock<()> = Default::default();
 }
 
