@@ -32,7 +32,7 @@ use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use its_state::SidechainSystemExt;
-use log_sgx::*;
+use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::Runtime;
 use sgx_tstd as std;

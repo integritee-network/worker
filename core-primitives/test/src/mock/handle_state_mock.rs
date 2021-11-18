@@ -153,25 +153,25 @@ pub mod tests {
 
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 		let initial_state = Stf::init_state();
-		let initial_state_hash = hash_of(&initial_state.state);
+		let state_hash_before_execution = hash_of(&initial_state.state);
 		state_handler.write(initial_state, lock, &shard).unwrap();
 
 		let state_loaded = state_handler.load_initialized(&shard).unwrap();
 		let loaded_state_hash = hash_of(&state_loaded.state);
 
-		assert_eq!(initial_state_hash, loaded_state_hash);
+		assert_eq!(state_hash_before_execution, loaded_state_hash);
 	}
 
 	pub fn ensure_encode_and_encrypt_does_not_affect_state_hash() {
 		let state = Stf::init_state();
-		let initial_state_hash = hash_of(&state.state);
+		let state_hash_before_execution = hash_of(&state.state);
 
 		let encoded_state = state.state.encode();
 		let decoded_state: SgxExternalitiesType = decode(encoded_state);
 
 		let decoded_state_hash = hash_of(&decoded_state);
 
-		assert_eq!(initial_state_hash, decoded_state_hash);
+		assert_eq!(state_hash_before_execution, decoded_state_hash);
 	}
 
 	fn hash_of<T: Encode>(encodable: &T) -> H256 {

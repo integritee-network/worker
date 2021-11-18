@@ -29,7 +29,7 @@ pub fn add_import_block_rpc_method<ImportFn, Error>(
 	mut io_handler: IoHandler,
 ) -> IoHandler
 where
-	ImportFn: Fn(Vec<SignedBlock>) -> Result<(), Error> + Sync + Send + 'static,
+	ImportFn: Fn(SignedBlock) -> Result<(), Error> + Sync + Send + 'static,
 	Error: Debug,
 {
 	let sidechain_import_import_name: &str = "sidechain_importBlock";
@@ -47,9 +47,15 @@ where
 
 		info!("sidechain_importBlock. Blocks: {:?}", blocks);
 
-		let _ = import_fn(blocks).map_err(|e| {
-			jsonrpc_core::error::Error::invalid_params_with_details("Failed to import Block.", e)
-		})?;
+		for block in blocks {
+			let _ = import_fn(block).map_err(|e| {
+				let error = jsonrpc_core::error::Error::invalid_params_with_details(
+					"Failed to import Block.",
+					e,
+				);
+				error!("{:?}", error);
+			});
+		}
 
 		Ok(Value::String("ok".to_owned()))
 	});

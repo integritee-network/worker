@@ -37,20 +37,23 @@ use itp_settings::{
 	node::{PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE},
 };
 use itp_sgx_crypto::{Aes, StateCrypto};
-use itp_stf_executor::executor::StfExecutor;
+use itp_stf_executor::{
+	executor::StfExecutor,
+	traits::{StatePostProcessing, StateUpdateProposer, StfExecuteTrustedCall},
+};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
 	handle_state_mock, handle_state_mock::HandleStateMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
 };
-use itp_types::{Block, Header, MrEnclave, OpaqueCall};
+use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	primitives::{
 		traits::{Block as BlockT, SignedBlock as SignedBlockT},
 		types::block::SignedBlock,
 	},
-	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
+	state::{SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
 	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 	top_pool_rpc_author::{
@@ -67,7 +70,6 @@ use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};
-
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
 type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock>;
@@ -122,21 +124,19 @@ pub extern "C" fn test_main_entrance() -> size_t {
 fn test_compose_block_and_confirmation() {
 	// given
 	let (rpc_author, _, shard, _, _, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		state_key(),
 		rpc_author.clone(),
-		stf_executor,
 	);
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 
 	let (lock, state) = state_handler.load_for_mutation(&shard).unwrap();
-	let mut db = SidechainDB::<SignedBlock, _>::new(state);
+	let mut db = SidechainDB::<SignedBlock, _>::new(state.clone());
 	db.set_block_number(&1);
-	let initial_state_hash = db.state_hash();
-	state_handler.write(db.ext, lock, &shard).unwrap();
+	let state_hash_before_execution = db.state_hash();
+	state_handler.write(db.ext.clone(), lock, &shard).unwrap();
 
 	// when
 	let (opaque_call, signed_block) = block_composer
@@ -144,7 +144,8 @@ fn test_compose_block_and_confirmation() {
 			&latest_parentchain_header(),
 			signed_top_hashes,
 			shard,
-			initial_state_hash,
+			state_hash_before_execution,
+			db.ext,
 		)
 		.unwrap();
 
@@ -253,11 +254,10 @@ fn test_create_block_and_confirmation_works() {
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		state_key(),
 		rpc_author.clone(),
-		stf_executor,
 	);
 
 	let sender = funded_pair();
@@ -275,8 +275,20 @@ fn test_create_block_and_confirmation_works() {
 	.unwrap();
 
 	// when
-	let execution_result = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
+	let execution_result = stf_executor
+		.propose_state_update::<Block, _>(
+			&top_pool_calls,
+			&latest_parentchain_header(),
+			&shard,
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+			|s| {
+				let mut sidechain_db = SidechainDB::<SignedBlock, SgxExternalities>::new(s);
+				sidechain_db
+					.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
+				sidechain_db.ext
+			},
+		)
 		.unwrap();
 
 	let executed_operation_hashes =
@@ -287,7 +299,8 @@ fn test_create_block_and_confirmation_works() {
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
-			execution_result.initial_state_hash,
+			execution_result.state_hash_before_execution,
+			execution_result.state_after_execution,
 		)
 		.unwrap();
 
@@ -302,10 +315,6 @@ fn test_create_block_and_confirmation_works() {
 	assert_eq!(signed_block.block().block_number(), 1);
 	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
-
-	let db = SidechainDB::new(state_handler.load_initialized(&shard).unwrap());
-
-	assert_eq!(db.get_last_block(), Some(signed_block.block().clone()));
 }
 
 fn test_create_state_diff() {
@@ -316,11 +325,10 @@ fn test_create_state_diff() {
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		state_key(),
 		rpc_author.clone(),
-		stf_executor,
 	);
 
 	let sender = funded_pair();
@@ -338,8 +346,20 @@ fn test_create_state_diff() {
 	.unwrap();
 
 	// when
-	let execution_result = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
+	let execution_result = stf_executor
+		.propose_state_update::<Block, _>(
+			&top_pool_calls,
+			&latest_parentchain_header(),
+			&shard,
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+			|s| {
+				let mut sidechain_db = SidechainDB::<SignedBlock, SgxExternalities>::new(s);
+				sidechain_db
+					.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
+				sidechain_db.ext
+			},
+		)
 		.unwrap();
 
 	let executed_operation_hashes =
@@ -350,7 +370,8 @@ fn test_create_state_diff() {
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
-			execution_result.initial_state_hash,
+			execution_result.state_hash_before_execution,
+			execution_result.state_after_execution,
 		)
 		.unwrap();
 
@@ -364,21 +385,21 @@ fn test_create_state_diff() {
 	let receiver_acc_info: AccountInfo =
 		get_from_state_diff(&state_diff, &account_key_hash(&receiver.into()));
 
-	// (last_hash, block_number, timestamp, sender_funds, receiver_funds)
-	assert_eq!(state_diff.len(), 5);
+	// state diff should consist of the following updates:
+	// (last_hash, sidechain block_number, sender_funds, receiver_funds)
+	assert_eq!(state_diff.len(), 4);
 	assert_eq!(receiver_acc_info.data.free, 1000);
 	assert_eq!(sender_acc_info.data.free, 1000);
-
-	// Fixme: Fails #421
-	// assert_eq!(apriori_hash, state_payload.state_hash_apriori());
 }
 
 fn test_executing_call_updates_account_nonce() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let top_pool_executor =
-		TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
+	let top_pool_executor = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		rpc_author.clone(),
+		stf_executor.clone(),
+	);
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -395,9 +416,18 @@ fn test_executing_call_updates_account_nonce() {
 	.unwrap();
 
 	// when
-	let _ = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
-		.unwrap();
+	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
+	for call in top_pool_calls {
+		let _execution_result = stf_executor
+			.execute_trusted_call::<Block>(
+				&mut Vec::new(),
+				&call,
+				&latest_parentchain_header(),
+				&shard,
+				StatePostProcessing::Prune,
+			)
+			.unwrap();
+	}
 
 	// then
 	let mut state = state_handler.load_initialized(&shard).unwrap();
@@ -431,8 +461,10 @@ fn test_invalid_nonce_call_is_not_executed() {
 	// given
 	let (rpc_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let top_pool_executor =
-		TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
+	let top_pool_executor = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		rpc_author.clone(),
+		stf_executor.clone(),
+	);
 
 	// create accounts
 	let sender = funded_pair();
@@ -450,30 +482,32 @@ fn test_invalid_nonce_call_is_not_executed() {
 	.unwrap();
 
 	// when
-	let _ = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
+	let executed_batch = stf_executor
+		.propose_state_update::<Block, _>(
+			&top_pool_calls,
+			&latest_parentchain_header(),
+			&shard,
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+			|state| state,
+		)
 		.unwrap();
 
 	// then
-	let mut updated_state = state_handler.load_initialized(&shard).unwrap();
-	let nonce = Stf::account_nonce(&mut updated_state, &sender.public().into());
-	assert_eq!(nonce, 0);
-
-	let sender_data = Stf::account_data(&mut updated_state, &sender.public().into()).unwrap();
-	assert_eq!(sender_data.free, 2000);
+	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
-	let (rpc_author, mut state, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (rpc_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let top_pool_executor =
-		TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(rpc_author.clone(), stf_executor);
+	let top_pool_executor = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		rpc_author.clone(),
+		stf_executor.clone(),
+	);
 
 	let sender = funded_pair();
-	let sender_acc = sender.public().into();
-
-	let funds_old = Stf::account_data(&mut state, &sender_acc).unwrap().free;
+	let sender_acc: AccountId = sender.public().into();
 
 	let signed_call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc.clone(), 1000)
 		.sign(&sender.into(), 0, &mrenclave, &shard);
@@ -487,18 +521,18 @@ fn test_non_root_shielding_call_is_not_executed() {
 	.unwrap();
 
 	// when
-	let _ = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
+	let executed_batch = stf_executor
+		.propose_state_update::<Block, _>(
+			&top_pool_calls,
+			&latest_parentchain_header(),
+			&shard,
+			MAX_TRUSTED_OPS_EXEC_DURATION,
+			|state| state,
+		)
 		.unwrap();
-
 	// then
-	let mut updated_state = state_handler.load_initialized(&shard).unwrap();
-
-	let nonce = Stf::account_nonce(&mut updated_state, &sender_acc);
-	let funds_new = Stf::account_data(&mut updated_state, &sender_acc).unwrap().free;
-
-	assert_eq!(nonce, 0);
-	assert_eq!(funds_new, funds_old);
+	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
 /// returns an empty `State` with the corresponding `ShardIdentifier`
@@ -553,7 +587,6 @@ fn test_setup() -> (
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	let encryption_key = ShieldingCryptoMock::default();
-
 	(
 		Arc::new(TestRpcAuthor::new(
 			Arc::new(top_pool),

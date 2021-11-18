@@ -17,19 +17,23 @@
 //! Implementation of the sidechain block importer struct.
 //! Imports sidechain blocks and applies the accompanying state diff to its state.
 use crate::AuraVerifier;
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::H256;
-use its_consensus_common::{BlockImport, Error as ConsensusError};
-use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
+use its_consensus_common::Error as ConsensusError;
+use its_primitives::traits::{Block as BlockT, ShardIdentifierFor, SignedBlock as SignedBlockT};
 use its_state::SidechainDB;
 use its_validateer_fetch::ValidateerFetch;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
-use sp_runtime::traits::Block;
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{marker::PhantomData, sync::Arc};
+
+// Reexport BlockImport trait which implements fn block_import()
+pub use its_consensus_common::BlockImport;
 
 /// Implements `BlockImport`. This is not the definite version. This might change depending on the
 /// implementation of #423: https://github.com/integritee-network/worker/issues/423
@@ -54,10 +58,15 @@ impl<A, PB, SB, O, StateHandler, StateKey> BlockImport<PB, SB>
 where
 	A: Pair,
 	A::Public: std::fmt::Debug,
-	PB: Block<Hash = H256>,
-	SB: SignedBlock<Public = A::Public> + 'static,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256>,
-	O: ValidateerFetch + GetStorageVerified + Send + Sync,
+	PB: ParentchainBlockTrait<Hash = H256>,
+	SB: SignedBlockT<Public = A::Public> + 'static,
+	SB::Block: BlockT<ShardIdentifier = H256>,
+	O: EnclaveSidechainOCallApi
+		+ EnclaveAttestationOCallApi
+		+ ValidateerFetch
+		+ GetStorageVerified
+		+ Send
+		+ Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
 {
@@ -83,7 +92,7 @@ where
 			.load_for_mutation(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
-		let updated_state = mutating_function(SidechainDB::<SB::Block, _>::new(state))?;
+		let updated_state = mutating_function(Self::SidechainState::new(state))?;
 
 		self.state_handler
 			.write(updated_state.ext, write_lock, shard)

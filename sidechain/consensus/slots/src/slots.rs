@@ -32,7 +32,7 @@ use std::time::Duration;
 pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 	let now = duration_now().as_millis();
 
-	if slot_duration.as_millis() == Default::default() {
+	if slot_duration.as_millis() == u128::default() {
 		log::warn!("[Slots]: slot_duration.as_millis() is 0");
 		return Default::default()
 	}

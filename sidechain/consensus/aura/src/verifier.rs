@@ -98,16 +98,16 @@ where
 }
 
 /// Verify that the `blocks` author is the expected author when comparing with onchain data.
-fn verify_author<AuthorityPair, PB, SidechainBlock, Context>(
+fn verify_author<AuthorityPair, PB, SB, Context>(
 	slot: &Slot,
-	block: &SidechainBlock::Block,
+	block: &SB::Block,
 	parentchain_head: &PB::Header,
 	ctx: &Context,
 ) -> Result<(), ConsensusError>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
-	SidechainBlock: SignedBlock<Public = AuthorityPair::Public> + 'static,
+	SB: SignedBlock<Public = AuthorityPair::Public> + 'static,
 	PB: ParentchainBlock<Hash = BlockHash>,
 	Context: ValidateerFetch + GetStorageVerified,
 {

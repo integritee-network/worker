@@ -10,12 +10,19 @@ resolver = "2"
 [features]
 default = ["std"]
 std = [
+    # integritee
+    "sgx-externalities/std",
+    # local
     "ita-stf/std",
     "itp-ocall-api/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-storage-verifier/std",
-    "sgx-externalities/std",
+    "itp-types/std",
+    # crates.io
+    "log/std",
+    "codec/std",
+    # substrate
     "sp-runtime/std",
     "thiserror",
 ]
@@ -33,6 +40,8 @@ test = []
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
+
+# integritee dependencies
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 
 # local dependencies
@@ -52,4 +61,6 @@ thiserror = { version = "1.0", optional = true }
 # no-std dependencies
 log = { version = "0.4", default-features = false }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+
+# substrate dependencise
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}

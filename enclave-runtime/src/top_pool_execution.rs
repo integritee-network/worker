@@ -137,10 +137,10 @@ where
 
 	let validator_access = ValidatorAccessor::<PB>::default();
 
-	let (latest_onchain_header, genesis_hash) = validator_access.execute_on_validator(|v| {
-		let latest_onchain_header = v.latest_finalized_header(v.num_relays())?;
+	let (latest_parentchain_header, genesis_hash) = validator_access.execute_on_validator(|v| {
+		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
 		let genesis_hash = v.genesis_hash(v.num_relays())?;
-		Ok((latest_onchain_header, genesis_hash))
+		Ok((latest_parentchain_header, genesis_hash))
 	})?;
 
 	let authority = Ed25519Seal::unseal()?;
@@ -162,14 +162,17 @@ where
 			stf_executor.clone(),
 		));
 
-	let block_composer =
-		Arc::new(BlockComposer::new(authority.clone(), state_key, rpc_author, stf_executor));
+	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key, rpc_author));
 
-	match yield_next_slot(duration_now(), SLOT_DURATION, latest_onchain_header, &mut LastSlotSeal)?
-	{
+	match yield_next_slot(
+		duration_now(),
+		SLOT_DURATION,
+		latest_parentchain_header,
+		&mut LastSlotSeal,
+	)? {
 		Some(slot) => {
 			let shards = state_handler.list_shards()?;
-			let env = ProposerFactory::new(top_pool_executor, block_composer);
+			let env = ProposerFactory::new(top_pool_executor, stf_executor, block_composer);
 
 			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _>(
 				slot,

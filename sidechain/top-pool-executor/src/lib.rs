@@ -14,7 +14,15 @@
 	limitations under the License.
 
 */
-//!  Handles the execution of trusted calls and getters of the TOP pool
+
+//! Interface struct between sidechain and top pool
+//!
+//! This interface separates strictly between
+//! * Trusted Call
+//! * Trusted Getter
+//! Because in the near future the top pool will be refactored to store
+//! Trusted Calls & Getters separately as well (issue #229)
+
 #![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -37,7 +45,7 @@ pub mod getter_operator;
 pub use call_operator::TopPoolCallOperator;
 pub use getter_operator::TopPoolGetterOperator;
 
-use itp_stf_executor::traits::{StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch};
+use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_types::H256;
 use its_primitives::traits::{Block as SidechainBlockT, SignedBlock as SignedBlockT};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
@@ -62,8 +70,8 @@ where
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	RpcAuthor:
 		AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash> + SendState<Hash = PB::Hash>,
-	StfExecutor: StfExecuteTimedCallsBatch + StfExecuteTimedGettersBatch,
-	<StfExecutor as StfExecuteTimedCallsBatch>::Externalities:
+	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
+	<StfExecutor as StateUpdateProposer>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 {
 	pub fn new(rpc_author: Arc<RpcAuthor>, stf_executor: Arc<StfExecutor>) -> Self {

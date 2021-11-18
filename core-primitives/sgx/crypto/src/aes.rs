@@ -37,7 +37,7 @@ use std::{
 
 type AesOfb = Ofb<Aes128>;
 
-#[derive(Debug, Default, Encode, Decode)]
+#[derive(Debug, Default, Encode, Decode, Clone, Copy)]
 pub struct Aes {
 	pub key: [u8; 16],
 	pub init_vec: [u8; 16],

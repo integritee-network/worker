@@ -8,32 +8,55 @@ edition = "2018"
 default = ["std"]
 std = [
     "codec/std",
+    "log/std",
     "thiserror",
-    "sp-runtime/std",
+    # local
+    "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-types/std",
     "its-primitives/std",
     "its-state/std",
+    "ita-stf/std",
+    "its-top-pool-executor/std",
+    # substrate
+    "sp-core/std",
+    "sp-runtime/std",
 ]
 sgx = [
     "sgx_tstd",
     "thiserror-sgx",
     "itp-sgx-crypto/sgx",
     "its-state/sgx",
+    "ita-stf/sgx",
+    "its-top-pool-executor/sgx",
 ]
 
 [dependencies]
-thiserror = { version = "1.0.26", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+log = { version = "0.4.14", default-features = false }
+thiserror = { version = "1.0.26", optional = true }
 
 # local deps
-its-primitives = { path = "../../primitives", default-features = false }
-its-state = { path = "../../state", default-features = false }
+itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+its-primitives = { path = "../../primitives", default-features = false }
+its-state = { path = "../../state", default-features = false }
+ita-stf = { path = "../../../app-libs/stf", default-features = false }
+its-top-pool-executor = { path = "../../top-pool-executor", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
+
+# substrate deps
+sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+[dev-dependencies]
+its-consensus-aura = { path = "../aura" }
+itp-test = { path = "../../../core-primitives/test" }
+sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }

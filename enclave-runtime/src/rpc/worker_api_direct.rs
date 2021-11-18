@@ -132,9 +132,9 @@ where
 	io
 }
 
-pub fn side_chain_io_handler<ImportFn, Error>(import_fn: ImportFn) -> IoHandler
+pub fn sidechain_io_handler<ImportFn, Error>(import_fn: ImportFn) -> IoHandler
 where
-	ImportFn: Fn(Vec<SignedBlock>) -> Result<(), Error> + Sync + Send + 'static,
+	ImportFn: Fn(SignedBlock) -> Result<(), Error> + Sync + Send + 'static,
 	Error: std::fmt::Debug,
 {
 	let io = IoHandler::new();

@@ -140,6 +140,10 @@ enclave {
 	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
 	    );
 
+		sgx_status_t ocall_store_sidechain_blocks(
+	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
+	    );
+
         sgx_status_t ocall_send_to_parentchain(
             [in, size = extrinsics_size] uint8_t * extrinsics, uint32_t extrinsics_size
         );

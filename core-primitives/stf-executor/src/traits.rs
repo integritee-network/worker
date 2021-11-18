@@ -55,21 +55,23 @@ pub trait StfExecuteTrustedCall {
 		PB: BlockT<Hash = H256>;
 }
 
-/// Execute a batch of trusted calls within a given time window
-///
-/// If the time expires, any remaining trusted calls will be ignored
-/// All executed call hashes are returned.
-pub trait StfExecuteTimedCallsBatch {
+/// Trait allowing to tentatively (without permanent state change) execute
+/// trusted calls within a given time frame.
+pub trait StateUpdateProposer {
 	type Externalities: SgxExternalitiesTrait + Encode;
 
-	fn execute_timed_calls_batch<PB, F>(
+	/// Executes trusted calls within a given time frame without permanent state mutation.
+	///
+	/// All executed call hashes and the mutated state are returned.
+	/// If the time expires, any remaining trusted calls within the batch will be ignored.
+	fn propose_state_update<PB, F>(
 		&self,
 		trusted_calls: &[TrustedCallSigned],
 		header: &PB::Header,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult>
+	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
 		PB: BlockT<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities;

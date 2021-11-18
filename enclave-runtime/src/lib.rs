@@ -36,7 +36,8 @@ use crate::{
 	error::{Error, Result},
 	global_components::{EnclaveValidatorAccessor, GLOBAL_DISPATCHER_COMPONENT},
 	ocall::OcallApi,
-	rpc::worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
+	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
+	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw},
 };
 use base58::ToBase58;
@@ -50,19 +51,17 @@ use itc_parentchain::{
 	block_import_dispatcher::{immediate_dispatcher::ImmediateDispatcher, DispatchBlockImport},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
-	light_client::{
-		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
-	},
+	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{
 	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE,
 };
-use itp_sgx_crypto::{aes, ed25519, rsa3072, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::executor::StfExecutor;
@@ -71,12 +70,21 @@ use itp_stf_state_handler::{
 };
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
-use its_sidechain::top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT;
+use its_sidechain::{
+	aura::block_importer::{BlockImport, BlockImporter},
+	primitives::{
+		traits::SignedBlock as SignedSidechainBlockT,
+		types::block::SignedBlock as SignedSidechainBlock,
+	},
+	state::SidechainDB,
+	top_pool_executor::TopPoolOperationHandler,
+	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
+};
 use log::*;
+use sgx_externalities::SgxExternalities;
 use sgx_types::sgx_status_t;
-use sp_core::{crypto::Pair, H256};
+use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
-use sp_runtime::traits::Block as BlockT;
 use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::compose_extrinsic_offline;
 
@@ -273,7 +281,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 		},
 	};
 
-	let res = match side_chain_rpc_int::<Block, _>(request, OcallApi) {
+	let res = match sidechain_rpc_int(request) {
 		Ok(res) => res,
 		Err(e) => return e.into(),
 	};
@@ -284,27 +292,51 @@ pub unsafe extern "C" fn call_rpc_methods(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn side_chain_rpc_int<PB, O>(request: &str, _ocall_api: O) -> Result<String>
-where
-	PB: BlockT<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-	O: EnclaveOnChainOCallApi + 'static,
-{
-	// Skip sidechain import now until #423 is solved.
-	// let _ = EnclaveLock::read_all()?;
-	//
-	// let header = LightClientSeal::<PB>::unseal()
-	// 	.map(|v| v.latest_finalized_header(v.num_relays()).unwrap())?;
-	//
-	// let importer: BlockImporter<AuthorityPair, PB, _, O, _> = BlockImporter::default();
-	//
-	// let io = side_chain_io_handler(move |signed_blocks| {
-	// 	import_sidechain_blocks::<PB, _, _, _>(signed_blocks, &header, importer.clone(), &ocall_api)
-	// });
+fn sidechain_rpc_int(request: &str) -> Result<String> {
+	let _sidechain_lock = EnclaveLock::write_all()?;
 
-	let io = side_chain_io_handler::<_, crate::error::Error>(move |signed_blocks| {
-		log::info!("[sidechain] Imported blocks: {:?}", signed_blocks);
-		Ok(())
+	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
+
+	let (latest_parentchain_header, _genesis_hash) =
+		validator_access.execute_on_validator(|v| {
+			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+			let genesis_hash = v.genesis_hash(v.num_relays())?;
+			Ok((latest_parentchain_header, genesis_hash))
+		})?;
+
+	// FIXME: Where should all these things be defined? Not in the rpc interface I guess?
+	let state_key = AesSeal::unseal()?;
+	let rpc_author = match GLOBAL_RPC_AUTHOR_COMPONENT.get() {
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global top pool author");
+			return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+		},
+	};
+
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone())); // should be obsolete
+	let top_pool_executor = Arc::new(
+		TopPoolOperationHandler::<Block, SignedSidechainBlock, _, _>::new(rpc_author, stf_executor),
+	);
+
+	let importer: BlockImporter<
+		AuthorityPair,
+		Block,
+		SignedSidechainBlock,
+		_,
+		SidechainDB<<SignedSidechainBlock as SignedSidechainBlockT>::Block, SgxExternalities>,
+		GlobalFileStateHandler,
+		_,
+	> = BlockImporter::new(state_handler, state_key);
+
+	let io = sidechain_io_handler(move |signed_block| {
+		importer.import_block(
+			signed_block,
+			&latest_parentchain_header,
+			top_pool_executor.clone(),
+			&OcallApi,
+		)
 	});
 
 	// note: errors are still returned as Option<String>

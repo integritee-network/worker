@@ -18,9 +18,8 @@
 use crate::{
 	error::{Error, Result},
 	traits::{
-		StatePostProcessing, StfExecuteGenericUpdate, StfExecuteShieldFunds,
-		StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch, StfExecuteTrustedCall,
-		StfUpdateState,
+		StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate, StfExecuteShieldFunds,
+		StfExecuteTimedGettersBatch, StfExecuteTrustedCall, StfUpdateState,
 	},
 	BatchExecutionResult, ExecutedOperation, ExecutionStatus,
 };
@@ -275,7 +274,7 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedCallsBatch
+impl<OCallApi, StateHandler, ExternalitiesT> StateUpdateProposer
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
@@ -284,27 +283,29 @@ where
 {
 	type Externalities = ExternalitiesT;
 
-	fn execute_timed_calls_batch<PB, F>(
+	fn propose_state_update<PB, F>(
 		&self,
 		trusted_calls: &[TrustedCallSigned],
 		header: &PB::Header,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult>
+	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
 		PB: BlockT<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
 		let ends_at = duration_now() + max_exec_duration;
 
-		let (state_lock, state) = self.state_handler.load_for_mutation(shard)?;
+		let state = self.state_handler.load_initialized(shard)?;
 
-		let initial_state_hash: H256 = state.using_encoded(blake2_256).into();
+		let state_hash_before_execution: H256 = state.using_encoded(blake2_256).into();
 
-		let mut state = prepare_state_function(state); // execute any pre-processing steps
+		// Execute any pre-processing steps.
+		let mut state = prepare_state_function(state);
 		let mut executed_calls = Vec::<ExecutedOperation>::new();
 
+		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
 			match self.execute_trusted_call_on_stf::<PB, _>(
 				&mut state,
@@ -321,17 +322,17 @@ where
 				},
 			};
 
-			// Check time
+			// Break if allowed time window is over.
 			if ends_at < duration_now() {
 				break
 			}
 		}
 
-		self.state_handler
-			.write(state, state_lock, shard)
-			.map_err(|e| Error::StateHandler(e))?;
-
-		Ok(BatchExecutionResult { executed_operations: executed_calls, initial_state_hash })
+		Ok(BatchExecutionResult {
+			executed_operations: executed_calls,
+			state_hash_before_execution,
+			state_after_execution: state,
+		})
 	}
 }
 
