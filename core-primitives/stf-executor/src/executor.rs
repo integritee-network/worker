@@ -295,7 +295,7 @@ where
 
 		let (state_lock, state) = self.state_handler.load_for_mutation(shard)?;
 
-		let previous_state_hash: H256 = state.using_encoded(blake2_256).into();
+		let initial_state_hash: H256 = state.using_encoded(blake2_256).into();
 
 		let mut state = prepare_state_function(state); // execute any pre-processing steps
 		let mut executed_calls = Vec::<ExecutedOperation>::new();
@@ -326,7 +326,7 @@ where
 			.write(state, state_lock, shard)
 			.map_err(|e| Error::StateHandler(e))?;
 
-		Ok(BatchExecutionResult { executed_operations: executed_calls, previous_state_hash })
+		Ok(BatchExecutionResult { executed_operations: executed_calls, initial_state_hash })
 	}
 }
 

@@ -43,9 +43,9 @@ use sp_core::H256;
 use sp_std::prelude::Vec;
 use std::marker::PhantomData;
 
-/// Sidechain DB
+/// Sidechain wrapper and interface of the STF state.
 ///
-/// Todo: In the course of refactoring the STF (#269), verify if this struct is even needed.
+/// TODO: In the course of refactoring the STF (#269), verify if this struct is even needed.
 /// It might be that we could implement everything directly on `[SgxExternalities]`.
 #[derive(Clone, Debug, Default, Encode, Decode, PartialEq, Eq)]
 pub struct SidechainDB<Block, E> {

@@ -20,7 +20,7 @@ use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
-use its_top_pool_executor::top_pool_operation_executor::ExecuteCallsOnTopPool;
+use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
@@ -43,7 +43,7 @@ where
 	NumberFor<PB>: BlockNumberOps,
 	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	TopPoolExecutor: ExecuteCallsOnTopPool<ParentchainBlockT = PB> + Send + Sync + 'static,
+	TopPoolExecutor: TopPoolCallOperator<ParentchainBlockT = PB> + Send + Sync + 'static,
 	BlockComposer: ComposeBlockAndConfirmation<ParentchainBlockT = PB, SidechainBlockT = SB>
 		+ Send
 		+ Sync
@@ -54,7 +54,7 @@ where
 
 		let batch_execution_result = self
 			.top_pool_executor
-			.execute_trusted_calls(latest_onchain_header, self.shard, max_duration)
+			.execute_trusted_calls(latest_onchain_header, &self.shard, max_duration)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
 		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
@@ -68,7 +68,7 @@ where
 				latest_onchain_header,
 				executed_operation_hashes,
 				self.shard,
-				batch_execution_result.previous_state_hash,
+				batch_execution_result.initial_state_hash,
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 

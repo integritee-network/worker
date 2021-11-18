@@ -222,6 +222,7 @@ where
 		self.top_pool.shards()
 	}
 
+	// FIXME: Fix the "inblock" variable such that multiple inputs are allowed (& rename to remove_tops?)
 	fn remove_top(
 		&self,
 		bytes_or_hash: Vec<hash::TrustedOperationOrHash<TxHash<TopPool>>>,
