@@ -32,7 +32,7 @@ use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as BlockT, MultiSignature};
 use std::{format, marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
 
-/// Trait to execute trusted calls from the top pool
+/// Interface to the trusted calls within the top pool
 pub trait TopPoolCallOperator {
 	type ParentchainBlockT: BlockT;
 
@@ -49,7 +49,7 @@ pub trait TopPoolCallOperator {
 	fn get_trusted_calls(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedCallSigned>>;
 }
 
-/// Trait to execute trusted getters from the top pool
+/// Interface to the trusted getters within the top pool
 pub trait TopPoolGetterOperator {
 	/// Loads trusted getters from the top pool for a given shard
 	/// and executes them until either all calls are executed or `max_exec_duration` is reached.
@@ -100,7 +100,6 @@ where
 	<StfExecutor as StfExecuteTimedCallsBatch>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 {
-	/// Execute pending trusted getters for the `shard` until `max_exec_duration` is reached.
 	fn execute_trusted_getters_on_shard(
 		&self,
 		shard: &ShardIdentifier,
