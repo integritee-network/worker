@@ -54,7 +54,7 @@ where
 
 		let batch_execution_result = self
 			.top_pool_executor
-			.execute_trusted_calls(latest_onchain_header, self.shard, max_duration)
+			.execute_trusted_calls(latest_onchain_header, &self.shard, max_duration)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
 		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();

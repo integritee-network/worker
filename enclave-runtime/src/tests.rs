@@ -275,7 +275,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// when
 	let execution_result = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
 		.unwrap();
 
 	let executed_operation_hashes =
@@ -338,7 +338,7 @@ fn test_create_state_diff() {
 
 	// when
 	let execution_result = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
 		.unwrap();
 
 	let executed_operation_hashes =
@@ -395,7 +395,7 @@ fn test_executing_call_updates_account_nonce() {
 
 	// when
 	let _ = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
 		.unwrap();
 
 	// then
@@ -428,7 +428,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 	// when
 	let _ = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
 		.unwrap();
 
 	// then
@@ -465,7 +465,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 	// when
 	let _ = top_pool_executor
-		.execute_trusted_calls(&latest_parentchain_header(), shard, MAX_TRUSTED_OPS_EXEC_DURATION)
+		.execute_trusted_calls(&latest_parentchain_header(), &shard, MAX_TRUSTED_OPS_EXEC_DURATION)
 		.unwrap();
 
 	// then

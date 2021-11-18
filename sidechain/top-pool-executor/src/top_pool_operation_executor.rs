@@ -17,7 +17,7 @@
 
 use crate::error::{Error, Result};
 use codec::Encode;
-use ita_stf::{hash::TrustedOperationOrHash, TrustedGetterSigned};
+use ita_stf::{hash::TrustedOperationOrHash, TrustedCallSigned, TrustedGetterSigned};
 use itp_stf_executor::{
 	traits::{StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch},
 	BatchExecutionResult,
@@ -41,9 +41,12 @@ pub trait TopPoolCallOperator {
 	fn execute_trusted_calls(
 		&self,
 		latest_onchain_header: &<Self::ParentchainBlockT as BlockT>::Header,
-		shard: H256,
+		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 	) -> Result<BatchExecutionResult>;
+
+	/// Retrieves trusted calls from the top pool.
+	fn get_trusted_calls(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedCallSigned>>;
 }
 
 /// Trait to execute trusted getters from the top pool
@@ -55,6 +58,9 @@ pub trait TopPoolGetterOperator {
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 	) -> Result<()>;
+
+	/// Retrieves trusted getters from the top pool.
+	fn get_trusted_getters(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedGetterSigned>>;
 }
 
 /// Executes operations on the top pool
@@ -100,14 +106,11 @@ where
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 	) -> Result<()> {
-		// Retrieve trusted getters from top pool.
-		let trusted_getters = self.rpc_author.get_pending_tops_separated(*shard)?.1;
-
 		type StfExecutorResult<T> = itp_stf_executor::error::Result<T>;
 
 		self.stf_executor
 			.execute_timed_getters_batch(
-				&trusted_getters,
+				&self.get_trusted_getters(shard)?,
 				shard,
 				max_exec_duration,
 				|trusted_getter_signed: &TrustedGetterSigned,
@@ -141,6 +144,10 @@ where
 			)
 			.map_err(Error::StfExecution)
 	}
+
+	fn get_trusted_getters(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedGetterSigned>> {
+		Ok(self.rpc_author.get_pending_tops_separated(*shard)?.1)
+	}
 }
 
 impl<PB, SB, RpcAuthor, StfExecutor> TopPoolCallOperator
@@ -160,12 +167,10 @@ where
 	fn execute_trusted_calls(
 		&self,
 		latest_onchain_header: &PB::Header,
-		shard: H256,
+		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 	) -> Result<BatchExecutionResult> {
-		// Retrieve trusted calls from top pool.
-		let trusted_calls = self.rpc_author.get_pending_tops_separated(shard)?.0;
-
+		let trusted_calls = &self.get_trusted_calls(shard)?;
 		// TODO: remove when we have proper on-boarding of new workers #273.
 		if trusted_calls.is_empty() {
 			info!("No trusted calls in top for shard: {:?}", shard);
@@ -202,12 +207,16 @@ where
 			self.rpc_author
 				.remove_top(
 					vec![executed_operation.trusted_operation_or_hash.clone()],
-					shard,
+					*shard,
 					executed_operation.is_success(),
 				)
 				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		}
 
 		Ok(batch_execution_result)
+	}
+
+	fn get_trusted_calls(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedCallSigned>> {
+		Ok(self.rpc_author.get_pending_tops_separated(*shard)?.0)
 	}
 }
