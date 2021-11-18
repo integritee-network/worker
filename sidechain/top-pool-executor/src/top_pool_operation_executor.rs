@@ -33,12 +33,11 @@ use sp_runtime::{traits::Block as BlockT, MultiSignature};
 use std::{format, marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
 
 /// Trait to execute trusted calls from the top pool
-///
-/// Loads trusted calls from the top pool for a given shard
-/// and executes them until either all calls are executed or `max_exec_duration` is reached.
 pub trait ExecuteCallsOnTopPool {
 	type ParentchainBlockT: BlockT;
 
+	/// Loads trusted calls from the top pool for a given shard
+	/// and executes them until either all calls are executed or `max_exec_duration` is reached.
 	fn execute_trusted_calls(
 		&self,
 		latest_onchain_header: &<Self::ParentchainBlockT as BlockT>::Header,
@@ -48,10 +47,9 @@ pub trait ExecuteCallsOnTopPool {
 }
 
 /// Trait to execute trusted getters from the top pool
-///
-/// Loads trusted getters from the top pool for a given shard
-/// and executes them until either all calls are executed or `max_exec_duration` is reached.
 pub trait ExecuteGettersOnTopPool {
+	/// Loads trusted getters from the top pool for a given shard
+	/// and executes them until either all calls are executed or `max_exec_duration` is reached.
 	fn execute_trusted_getters_on_shard(
 		&self,
 		shard: &ShardIdentifier,
@@ -102,7 +100,7 @@ where
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 	) -> Result<()> {
-		// retrieve trusted operations from pool
+		// Retrieve trusted getters from top pool.
 		let trusted_getters = self.rpc_author.get_pending_tops_separated(*shard)?.1;
 
 		type StfExecutorResult<T> = itp_stf_executor::error::Result<T>;
@@ -165,13 +163,13 @@ where
 		shard: H256,
 		max_exec_duration: Duration,
 	) -> Result<BatchExecutionResult> {
-		// retrieve trusted operations from pool
+		// Retrieve trusted calls from top pool.
 		let trusted_calls = self.rpc_author.get_pending_tops_separated(shard)?.0;
 
-		// Todo: remove when we have proper on-boarding of new workers #273.
+		// TODO: remove when we have proper on-boarding of new workers #273.
 		if trusted_calls.is_empty() {
 			info!("No trusted calls in top for shard: {:?}", shard);
-		// we return here when we actually import sidechain blocks because we currently have no
+		// We return here when we actually import sidechain blocks because we currently have no
 		// means of worker on-boarding. Without on-boarding we have can't get a working multi
 		// worker-setup.
 		//
@@ -212,4 +210,3 @@ where
 
 		Ok(batch_execution_result)
 	}
-}
