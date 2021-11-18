@@ -26,11 +26,16 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[macro_use]
 extern crate sgx_tstd as std;
 
+// Re-export useful types.
+pub use finality_grandpa::BlockNumberOps;
+pub use sp_finality_grandpa::{AuthorityList, SetId};
+
 use crate::state::ScheduledChangeAtBlock;
 use codec::{Decode, Encode};
 use core::iter::Iterator;
 use error::Error;
 use finality_grandpa::voter_set::VoterSet;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use justification::GrandpaJustification;
 use log::*;
@@ -45,6 +50,7 @@ use sp_runtime::{
 use state::RelayState;
 use std::{collections::BTreeMap, fmt, vec::Vec};
 
+pub mod concurrent_access;
 pub mod error;
 pub mod justification;
 pub mod state;
@@ -52,10 +58,8 @@ pub mod state;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod io;
 
-// reexport useful types.
-pub use finality_grandpa::BlockNumberOps;
-use itp_ocall_api::EnclaveOnChainOCallApi;
-pub use sp_finality_grandpa::{AuthorityList, SetId};
+#[cfg(test)]
+mod mocks;
 
 pub type RelayId = u64;
 
@@ -69,6 +73,15 @@ pub type HashFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hash;
 /// Hashing function used to produce `HashOf<Block>`
 pub type HashingFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hashing;
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::concurrent_access::GlobalValidatorAccessor;
+
+/// Global validator accessor type
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub type ValidatorAccessor<PB> =
+	GlobalValidatorAccessor<LightValidation<PB>, PB, crate::io::LightClientSeal<PB>>;
+
+/// Validator trait
 pub trait Validator<Block: BlockT>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
@@ -103,7 +116,7 @@ where
 		extrinsic: OpaqueExtrinsic,
 	) -> Result<(), Error>;
 
-	/// sends encoded extrinsics to the parentchain
+	/// Sends encoded extrinsics to the parentchain.
 	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
 		&mut self,
 		ocall_api: &OCallApi,

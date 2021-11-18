@@ -2183,6 +2183,8 @@ dependencies = [
  "itp-settings",
  "itp-sgx-io",
  "itp-storage",
+ "itp-types",
+ "lazy_static",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.14",
  "parity-scale-codec",

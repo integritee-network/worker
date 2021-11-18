@@ -49,6 +49,8 @@ pub enum Error {
 	InvalidFinalityProof(#[from] JustificationError),
 	#[error("Header ancestry mismatch")]
 	HeaderAncestryMismatch,
+	#[error("Poisoned validator lock")]
+	PoisonedLock,
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

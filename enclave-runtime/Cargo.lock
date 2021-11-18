@@ -1184,6 +1184,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-io",
  "itp-storage",
+ "lazy_static",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "num-traits 0.2.14",
  "parity-scale-codec",
