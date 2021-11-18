@@ -48,9 +48,7 @@ use its_sidechain::{
 	},
 	state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash},
-	top_pool_executor::top_pool_operation_executor::{
-		TopPoolCallOperator, TopPoolOperationHandler,
-	},
+	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 	top_pool_rpc_author::{
 		api::SidechainApi,
 		author::Author,

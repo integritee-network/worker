@@ -20,7 +20,7 @@ use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
-use its_top_pool_executor::top_pool_operation_executor::TopPoolCallOperator;
+use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,

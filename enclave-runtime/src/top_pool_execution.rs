@@ -43,9 +43,7 @@ use its_sidechain::{
 		types::block::SignedBlock as SignedSidechainBlock,
 	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
-	top_pool_executor::top_pool_operation_executor::{
-		TopPoolGetterOperator, TopPoolOperationHandler,
-	},
+	top_pool_executor::{TopPoolGetterOperator, TopPoolOperationHandler},
 	top_pool_rpc_author::{global_author_container::GlobalAuthorContainer, traits::GetAuthor},
 };
 use log::*;
