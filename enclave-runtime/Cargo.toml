@@ -122,8 +122,8 @@ env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../sgx-runtime/runtime", default-features = false}
-#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
+#sgx-runtime = { path = "../../sgx-runtime/runtime", default-features = false}
+#sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 #sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]

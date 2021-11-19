@@ -17,7 +17,9 @@
 
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
-use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned};
+use ita_stf::{
+	AccountId, ParentchainHeader, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
+};
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::traits::Block as BlockT;
@@ -108,5 +110,5 @@ pub trait StfExecuteGenericUpdate {
 pub trait StfUpdateState {
 	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
 	where
-		PB: BlockT<Hash = H256>;
+		PB: BlockT<Hash = H256, Header = ParentchainHeader>;
 }

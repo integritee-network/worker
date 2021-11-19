@@ -17,11 +17,11 @@
 
 use crate::{
 	helpers::{
-		account_data, account_nonce, ensure_root, get_account_info, get_storage_value,
-		increment_nonce, root, validate_nonce,
+		account_data, account_nonce, ensure_root, get_account_info, increment_nonce, root,
+		validate_nonce,
 	},
-	AccountData, AccountId, Getter, Index, PublicGetter, ShardIdentifier, State, StateTypeDiff,
-	Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
+	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
+	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 };
 use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
@@ -29,7 +29,7 @@ use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sgx_runtime::{BlockNumber as L1BlockNumer, Runtime};
+use sgx_runtime::Runtime;
 use sgx_tstd as std;
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
@@ -230,20 +230,17 @@ impl Stf {
 		});
 	}
 
-	pub fn update_layer_one_block_number(
+	/// Updates the block number, block hash and parent hash of the parentchain block.
+	pub fn update_parentchain_block(
 		ext: &mut impl SgxExternalitiesTrait,
-		number: L1BlockNumer,
-	) {
+		header: ParentchainHeader,
+	) -> StfResult<()> {
 		ext.execute_with(|| {
-			let key = storage_value_key("System", "LayerOneNumber");
-			sp_io::storage::set(&key, &number.encode());
-		});
-	}
-
-	pub fn get_layer_one_block_number(
-		ext: &mut impl SgxExternalitiesTrait,
-	) -> Option<L1BlockNumer> {
-		ext.execute_with(|| get_storage_value("System", "LayerOneNumber"))
+			sgx_runtime::ParentchainCall::<Runtime>::set_block(header)
+				.dispatch_bypass_filter(sgx_runtime::Origin::root())
+				.map_err(|_| StfError::Dispatch("update_parentchain_block".to_string()))
+		})?;
+		Ok(())
 	}
 
 	pub fn get_storage_hashes_to_update(call: &TrustedCallSigned) -> Vec<Vec<u8>> {
@@ -298,8 +295,8 @@ pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u
 }
 
 pub fn shards_key_hash() -> Vec<u8> {
-	// here you have to point to a storage value containing a Vec of ShardIdentifiers
-	// the enclave uses this to autosubscribe to no shards
+	// here you have to point to a storage value containing a Vec of
+	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
 	vec![]
 }
 
