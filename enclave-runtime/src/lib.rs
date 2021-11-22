@@ -36,7 +36,6 @@ use crate::{
 	error::{Error, Result},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
-	sync::{EnclaveLock, LightClientRwLock},
 	utils::{
 		hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw,
 		UnwrapOrSgxErrorUnexpected,
@@ -51,7 +50,8 @@ use itc_direct_rpc_server::{
 	rpc_ws_handler::RpcWsHandler,
 };
 use itc_light_client::{
-	io::LightClientSeal, BlockNumberOps, LightClientState, NumberFor, Validator,
+	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
+	ValidatorAccessor,
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
@@ -491,34 +491,28 @@ where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
-	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
-	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
-	let _light_client_lock = EnclaveLock::write_light_client_db()?;
+	let validator_access = ValidatorAccessor::<PB>::default();
+	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
-	let mut validator = LightClientSeal::<PB>::unseal()?;
 	let signer = Ed25519Seal::unseal()?;
 	let stf_executor = StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler));
-	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
 
 	sync_blocks_on_light_client(
 		blocks_to_sync,
-		&mut validator,
+		&validator_access,
 		&extrinsics_factory,
 		&OcallApi,
 		&stf_executor,
 	)?;
 
-	// store updated state in light client in case we fail afterwards.
-	LightClientSeal::seal(validator)?;
-
 	Ok(())
 }
 
-fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor, ExtrinsicsFactory>(
+fn sync_blocks_on_light_client<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory>(
 	blocks_to_sync: Vec<SignedBlockG<PB>>,
-	validator: &mut V,
+	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 	on_chain_ocall_api: &OCallApi,
 	stf_executor: &StfExecutor,
@@ -526,7 +520,7 @@ fn sync_blocks_on_light_client<PB, V, OCallApi, StfExecutor, ExtrinsicsFactory>(
 where
 	PB: BlockT<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
-	V: Validator<PB> + LightClientState<PB>,
+	ValidatorAccessor: ValidatorAccess<PB>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -536,13 +530,13 @@ where
 	debug!("Syncing light client!");
 	for signed_block in blocks_to_sync.into_iter() {
 		let block = signed_block.block;
-		validator.check_xt_inclusion(validator.num_relays(), &block).unwrap(); // panic can only happen if relay_id does not exist
+		let justifications = signed_block.justifications.clone();
 
-		if let Err(e) = validator.submit_simple_header(
-			validator.num_relays(),
-			block.header().clone(),
-			signed_block.justifications.clone(),
-		) {
+		if let Err(e) = validator_access.execute_mut_on_validator(|v| {
+			v.check_xt_inclusion(v.num_relays(), &block)?;
+
+			v.submit_simple_header(v.num_relays(), block.header().clone(), justifications)
+		}) {
 			error!("Block verification failed. Error : {:?}", e);
 			return Err(e.into())
 		}
@@ -552,7 +546,7 @@ where
 			return Err(e.into())
 		}
 
-		// execute indirect calls, incl. shielding and unshielding
+		// Execute indirect calls, incl. shielding and unshielding.
 		match scan_block_for_relevant_xt(&block, stf_executor) {
 			Ok((unshielding_call_confirmations, executed_shielding_calls)) => {
 				// Include all unshieldung confirmations that need to be executed on the parentchain.
@@ -569,7 +563,8 @@ where
 
 	let xts = extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
-	validator.send_extrinsics(on_chain_ocall_api, xts)?;
+	// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
+	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(on_chain_ocall_api, xts))?;
 
 	Ok(())
 }

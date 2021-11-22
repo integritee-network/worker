@@ -22,7 +22,8 @@ use crate::{
 };
 use codec::Encode;
 use itc_light_client::{
-	io::LightClientSeal, BlockNumberOps, LightClientState, NumberFor, Validator,
+	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
+	ValidatorAccessor,
 };
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
@@ -131,9 +132,15 @@ where
 {
 	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
 	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
-	let (_light_client_lock, _side_chain_lock) = EnclaveLock::write_all()?;
+	let _side_chain_lock = EnclaveLock::write_all()?;
 
-	let mut validator = LightClientSeal::<PB>::unseal()?;
+	let validator_access = ValidatorAccessor::<PB>::default();
+
+	let (latest_onchain_header, genesis_hash) = validator_access.execute_on_validator(|v| {
+		let latest_onchain_header = v.latest_finalized_header(v.num_relays())?;
+		let genesis_hash = v.genesis_hash(v.num_relays())?;
+		Ok((latest_onchain_header, genesis_hash))
+	})?;
 
 	let authority = Ed25519Seal::unseal()?;
 	let state_key = AesSeal::unseal()?;
@@ -145,9 +152,6 @@ where
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-
-	let latest_onchain_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
-	let genesis_hash = validator.genesis_hash(validator.num_relays())?;
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
 
@@ -169,7 +173,7 @@ where
 			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _>(
 				slot,
 				authority,
-				&mut validator,
+				&validator_access,
 				&extrinsics_factory,
 				OcallApi,
 				env,
@@ -182,16 +186,22 @@ where
 		},
 	};
 
-	LightClientSeal::seal(validator)?;
-
 	Ok(())
 }
 
 /// Executes aura for the given `slot`.
-fn exec_aura_on_slot<Authority, PB, SB, OCallApi, LightValidator, PEnvironment, ExtrinsicsFactory>(
+fn exec_aura_on_slot<
+	Authority,
+	PB,
+	SB,
+	OCallApi,
+	ValidatorAccessor,
+	PEnvironment,
+	ExtrinsicsFactory,
+>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
-	validator: &mut LightValidator,
+	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 	ocall_api: OCallApi,
 	proposer_environment: PEnvironment,
@@ -206,7 +216,7 @@ where
 	Authority::Public: Encode,
 	OCallApi:
 		EnclaveSidechainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
-	LightValidator: Validator<PB> + LightClientState<PB> + Clone + Send + Sync + 'static,
+	ValidatorAccessor: ValidatorAccess<PB> + Clone + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -229,7 +239,7 @@ where
 
 	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
 
-	validator.send_extrinsics(&ocall_api, xts)?;
+	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
 
 	Ok(())
 }

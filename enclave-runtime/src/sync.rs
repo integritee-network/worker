@@ -34,7 +34,6 @@ use lazy_static::lazy_static;
 use std::sync::{SgxRwLock, SgxRwLockReadGuard, SgxRwLockWriteGuard};
 
 lazy_static! {
-	pub static ref LIGHT_CLIENT_LOCK: SgxRwLock<()> = Default::default();
 	pub static ref SIDECHAIN_DB_LOCK: SgxRwLock<()> = Default::default();
 }
 
@@ -50,32 +49,17 @@ impl SidechainRwLock for EnclaveLock {
 	}
 }
 
-impl LightClientRwLock for EnclaveLock {
-	fn read_light_client_db() -> EnclaveResult<SgxRwLockReadGuard<'static, ()>> {
-		LIGHT_CLIENT_LOCK.read().map_err(|e| Error::Other(e.into()))
-	}
-
-	fn write_light_client_db() -> EnclaveResult<SgxRwLockWriteGuard<'static, ()>> {
-		LIGHT_CLIENT_LOCK.write().map_err(|e| Error::Other(e.into()))
-	}
-}
-
 pub trait SidechainRwLock {
 	fn read_sidechain_db() -> EnclaveResult<SgxRwLockReadGuard<'static, ()>>;
 	fn write_sidechain_db() -> EnclaveResult<SgxRwLockWriteGuard<'static, ()>>;
 }
 
-pub trait LightClientRwLock {
-	fn read_light_client_db() -> EnclaveResult<SgxRwLockReadGuard<'static, ()>>;
-	fn write_light_client_db() -> EnclaveResult<SgxRwLockWriteGuard<'static, ()>>;
-}
-
 // simple type defs to prevent too long names
-type AggregatedReadGuards<'a> = (SgxRwLockReadGuard<'a, ()>, SgxRwLockReadGuard<'a, ()>);
-type AggregatedWriteGuards<'a> = (SgxRwLockWriteGuard<'a, ()>, SgxRwLockWriteGuard<'a, ()>);
+type AggregatedReadGuards<'a> = SgxRwLockReadGuard<'a, ()>;
+type AggregatedWriteGuards<'a> = SgxRwLockWriteGuard<'a, ()>;
 
 /// Useful, if all state must be accessed. Reduces the number of lines.
-pub trait EnclaveStateRWLock: SidechainRwLock + LightClientRwLock {
+pub trait EnclaveStateRWLock: SidechainRwLock {
 	/// return read locks of all enclave states
 	fn read_all() -> EnclaveResult<AggregatedReadGuards<'static>>;
 
@@ -83,13 +67,13 @@ pub trait EnclaveStateRWLock: SidechainRwLock + LightClientRwLock {
 	fn write_all() -> EnclaveResult<AggregatedWriteGuards<'static>>;
 }
 
-impl<T: SidechainRwLock + LightClientRwLock> EnclaveStateRWLock for T {
+impl<T: SidechainRwLock> EnclaveStateRWLock for T {
 	fn read_all() -> EnclaveResult<AggregatedReadGuards<'static>> {
-		Ok((Self::read_light_client_db()?, Self::read_sidechain_db()?))
+		Self::read_sidechain_db()
 	}
 
 	fn write_all() -> EnclaveResult<AggregatedWriteGuards<'static>> {
-		Ok((Self::write_light_client_db()?, Self::write_sidechain_db()?))
+		Self::write_sidechain_db()
 	}
 }
 
