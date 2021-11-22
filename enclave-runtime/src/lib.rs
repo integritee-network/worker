@@ -563,6 +563,7 @@ where
 
 	let xts = extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
+	// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(on_chain_ocall_api, xts))?;
 
 	Ok(())

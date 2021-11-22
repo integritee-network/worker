@@ -18,7 +18,7 @@
 use crate::{error::Error, mocks::validator_mock::ValidatorMock};
 use itp_sgx_io::SealedIO;
 
-/// A seal that return a mock validator.
+/// A seal that returns a mock validator.
 #[derive(Clone)]
 pub struct ValidatorMockSeal;
 

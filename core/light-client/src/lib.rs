@@ -116,7 +116,7 @@ where
 		extrinsic: OpaqueExtrinsic,
 	) -> Result<(), Error>;
 
-	/// Sends encoded extrinsics to the parentchain.
+	/// Sends encoded extrinsics to the parentchain and cache them internally for later confirmation.
 	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
 		&mut self,
 		ocall_api: &OCallApi,
