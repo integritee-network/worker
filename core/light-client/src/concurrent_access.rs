@@ -53,12 +53,12 @@ where
 {
 	type ValidatorType: Validator<PB> + LightClientState<PB>;
 
-	/// Execute a non-mutating function on the validator
+	/// Execute a non-mutating function on the validator.
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
 	where
 		F: FnOnce(&Self::ValidatorType) -> Result<R>;
 
-	/// Execute a mutating function on the validator
+	/// Execute a mutating function on the validator.
 	fn execute_mut_on_validator<F, R>(&self, mutating_function: F) -> Result<R>
 	where
 		F: FnOnce(&mut Self::ValidatorType) -> Result<R>;

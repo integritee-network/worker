@@ -546,7 +546,7 @@ where
 			return Err(e.into())
 		}
 
-		// execute indirect calls, incl. shielding and unshielding
+		// Execute indirect calls, incl. shielding and unshielding.
 		match scan_block_for_relevant_xt(&block, stf_executor) {
 			Ok((unshielding_call_confirmations, executed_shielding_calls)) => {
 				// Include all unshieldung confirmations that need to be executed on the parentchain.
