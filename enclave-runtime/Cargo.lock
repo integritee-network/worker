@@ -3898,8 +3898,3 @@ dependencies = [
  "syn 1.0.81",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "sgx_ucrypto"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=v1.1.4-testing#19355dc16d347331eb9949aec83ffe7103d9da94"
