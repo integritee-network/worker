@@ -43,9 +43,10 @@ pub trait ImportParentchainBlocks {
 	type ParentchainBlockType: BlockT;
 
 	/// Import parentchain blocks to the light-client (validator):
-	/// * iterates over parentchain blocks and scans for relevant extrinsics
-	/// * validates and execute those extrinsics (containing indirect calls), mutating state
-	/// * sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
+	/// * Scans the blocks for relevant extrinsics
+	/// * Validates and execute those extrinsics, mutating state
+	/// * Includes block headers into the light client
+	/// * Sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
 	fn import_parentchain_blocks(
 		&self,
 		blocks_to_import: Vec<SignedBlockG<Self::ParentchainBlockType>>,
@@ -154,12 +155,14 @@ impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCa
 				return Err(e.into())
 			}
 
+			// Perform state updates.
 			if let Err(e) = self.stf_executor.update_states::<PB>(block.header()) {
 				error!("Error performing state updates upon block import");
 				return Err(e.into())
 			}
 
-			// Execute indirect calls, incl. shielding and unshielding.
+			// Execute indirect calls that were found in the extrinsics of the block,
+			// incl. shielding and unshielding.
 			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(&block) {
 				Ok((unshielding_call_confirmations, executed_shielding_calls)) => {
 					// Include all unshielding confirmations that need to be executed on the parentchain.
@@ -174,6 +177,7 @@ impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCa
 			};
 		}
 
+		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
 		let parentchain_extrinsics = self.extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
 		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
