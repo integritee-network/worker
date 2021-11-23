@@ -23,7 +23,7 @@ use std::{boxed::Box, format};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-//! Indirect calls execution error.
+/// Indirect calls execution error.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("SGX error, status: {0}")]

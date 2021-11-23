@@ -68,7 +68,7 @@ where
 
 		debug!("decrypt the call");
 
-		let account_vec = self.shielding_key.decrypt(&account_encrypted)?;
+		let account_vec = self.shielding_key.decrypt(account_encrypted)?;
 
 		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
