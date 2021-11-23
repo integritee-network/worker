@@ -170,10 +170,10 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: ci.yml
-          name: integritee-node-dev-cdd2ce5a3938b1a41cb0578d034f742d368bd963
+          name: integritee-node-dev-c07b6aab6c45123802b994508f65eedfc20bf251
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1444153636
+          run_id: 1492039473
           path: node
           repo: integritee-network/integritee-node
 
