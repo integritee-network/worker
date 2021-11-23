@@ -96,6 +96,7 @@ itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default
 itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
 itp-types = { path = "../core-primitives/types", default-features = false, features = ["sgx"] }
+itpc-parentchain = { path = "../parentchain/parentchain-crate", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps
@@ -107,9 +108,6 @@ sp-std = { version = "4.0.0-dev", default-features = false, git = "https://githu
 sc-utils = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-version = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-application-crypto = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-#beefy-merkle-tree = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = "keccak" }
-#remove as soon as we can import beefy-merkle-tree:
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }

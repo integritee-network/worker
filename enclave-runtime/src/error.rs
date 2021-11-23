@@ -35,6 +35,7 @@ pub enum Error {
 	Stf(String),
 	StfStateHandler(itp_stf_state_handler::error::Error),
 	StfExecution(itp_stf_executor::error::Error),
+	ParentchainBlockImport(itpc_parentchain::block_importer::error::Error),
 	MutexAccess,
 	Other(Box<dyn std::error::Error>),
 }
