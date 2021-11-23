@@ -118,6 +118,7 @@ getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branc
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
+#sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]
 #sgx-runtime = { path = "../../sgx-runtime/runtime", default-features = false}
@@ -136,3 +137,6 @@ sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-tea
 sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+
+#[patch."https://github.com/integritee-network/pallets.git"]
+#pallet-parentchain = { path = '../../pallets/parentchain' }

@@ -68,11 +68,11 @@ fn endow(
 		for e in endowees.into_iter() {
 			let account = e.0;
 
-			sgx_runtime::BalancesCall::<Runtime>::set_balance(
-				MultiAddress::Id(account.clone()),
-				e.1,
-				e.2,
-			)
+			sgx_runtime::BalancesCall::<Runtime>::set_balance {
+				who: MultiAddress::Id(account.clone()),
+				new_free: e.1,
+				new_reserved: e.2,
+			}
 			.dispatch_bypass_filter(sgx_runtime::Origin::root())
 			.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
 			.unwrap();

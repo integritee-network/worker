@@ -56,7 +56,7 @@ use itp_types::SignedBlock;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
+use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -77,6 +77,7 @@ use std::{
 	time::{Duration, Instant},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
+use teerex_primitives::ShardIdentifier;
 
 mod config;
 mod enclave;
@@ -505,7 +506,11 @@ fn print_events(events: Events, _sender: Sender<String>) {
 				info!("[+] Received balances event");
 				debug!("{:?}", be);
 				match &be {
-					pallet_balances::Event::Transfer(transactor, dest, value) => {
+					pallet_balances::Event::Transfer {
+						from: transactor,
+						to: dest,
+						amount: value,
+					} => {
 						debug!("    Transactor:  {:?}", transactor.to_ss58check());
 						debug!("    Destination: {:?}", dest.to_ss58check());
 						debug!("    Value:       {:?}", value);

@@ -532,9 +532,9 @@ pub mod tests {
 	/// Index of a transaction.
 	//pub type Index = u64;
 	/// The item of a block digest.
-	pub type DigestItem = sp_runtime::generic::DigestItem<H256>;
+	pub type DigestItem = sp_runtime::generic::DigestItem;
 	/// The digest of a block.
-	pub type Digest = sp_runtime::generic::Digest<H256>;
+	pub type Digest = sp_runtime::generic::Digest;
 	/// A test block's header.
 	pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 	/// A test block.

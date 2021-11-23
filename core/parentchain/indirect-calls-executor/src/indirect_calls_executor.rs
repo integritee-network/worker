@@ -28,7 +28,7 @@ use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as BlockT, Header};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
+use substrate_api_client::UncheckedExtrinsicV4;
 
 /// Trait to execute the indirect calls found in the extrinsics of a block.
 pub trait ExecuteIndirectCalls {
