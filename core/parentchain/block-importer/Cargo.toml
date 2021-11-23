@@ -1,5 +1,5 @@
 [package]
-name = "itpc-block-importer"
+name = "itc-parentchain-block-importer"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
@@ -11,14 +11,14 @@ sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teacla
 sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
-itc-light-client = { path = "../../core/light-client", default-features = false }
-itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", default-features = false }
-itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../core-primitives/settings", default-features = false }
-itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
-itpc-indirect-calls-executor = { path = "../indirect-calls-executor", default-features = false }
+ita-stf = { path = "../../../app-libs/stf", default-features = false }
+itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor", default-features = false }
+itc-parentchain-light-client = { path = "../light-client", default-features = false }
+itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
+itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
+itp-settings = { path = "../../../core-primitives/settings", default-features = false }
+itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
+itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -38,22 +38,22 @@ tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 default = ["std"]
 std = [
     "ita-stf/std",
-    "itc-light-client/std",
+    "itc-parentchain-indirect-calls-executor/std",
+    "itc-parentchain-light-client/std",
     "itp-extrinsics-factory/std",
     "itp-ocall-api/std",
     "itp-stf-executor/std",
     "itp-types/std",
-    "itpc-indirect-calls-executor/std",
     "log/std",
     "thiserror",
 ]
 sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
-    "itc-light-client/sgx",
+    "itc-parentchain-indirect-calls-executor/sgx",
+    "itc-parentchain-light-client/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
     "itp-types/sgx",
-    "itpc-indirect-calls-executor/sgx",
     "thiserror_sgx",
 ]

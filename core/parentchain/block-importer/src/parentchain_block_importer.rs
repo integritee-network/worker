@@ -22,7 +22,8 @@ use crate::{
 	error::Result,
 };
 use ita_stf::ParentchainHeader;
-use itc_light_client::{
+use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
+use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, Validator,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -30,7 +31,6 @@ use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::node::{PROCESSED_PARENTCHAIN_BLOCK, TEEREX_MODULE};
 use itp_stf_executor::traits::{StfExecuteShieldFunds, StfExecuteTrustedCall, StfUpdateState};
 use itp_types::{OpaqueCall, H256};
-use itpc_indirect_calls_executor::ExecuteIndirectCalls;
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,

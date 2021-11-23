@@ -22,6 +22,8 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
-pub use itpc_block_importer as block_importer;
+pub use itc_parentchain_block_importer as block_importer;
 
-pub use itpc_indirect_calls_executor as indirect_calls_executor;
+pub use itc_parentchain_indirect_calls_executor as indirect_calls_executor;
+
+pub use itc_parentchain_light_client as light_client;

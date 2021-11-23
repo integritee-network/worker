@@ -33,7 +33,7 @@ pub enum Error {
 	#[error("STF execution error: {0}")]
 	StfExecution(#[from] itp_stf_executor::error::Error),
 	#[error("Light-client error: {0}")]
-	LightClient(#[from] itc_light_client::error::Error),
+	LightClient(#[from] itc_parentchain_light_client::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

@@ -64,7 +64,7 @@ where
 	fn handle_shield_funds_xt(&self, xt: &UncheckedExtrinsicV4<ShieldFundsFn>) -> Result<()> {
 		let (call, account_encrypted, amount, shard) = &xt.function;
 		info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
-        	call, account_encrypted, amount, shard.encode().to_base58(),);
+        	call, account_encrypted, amount, shard.encode().to_base58());
 
 		debug!("decrypt the call");
 
@@ -83,9 +83,7 @@ where
 		let (call, request) = xt.function;
 		let (shard, cyphertext) = (request.shard, request.cyphertext);
 		debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
-        call,
-        shard.encode().to_base58(),
-        cyphertext);
+        	call, shard.encode().to_base58(), cyphertext);
 
 		debug!("decrypt the call");
 		//let request_vec = Rsa3072KeyPair::decrypt(&cyphertext)?;

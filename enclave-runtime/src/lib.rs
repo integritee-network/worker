@@ -45,9 +45,13 @@ use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
 };
-use itc_light_client::{
-	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
-	ValidatorAccessor,
+use itc_parentchain::{
+	block_importer::{ImportParentchainBlocks, ParentchainBlockImporter},
+	indirect_calls_executor::IndirectCallsExecutor,
+	light_client::{
+		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
+		ValidatorAccessor,
+	},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -65,10 +69,6 @@ use itp_stf_state_handler::{
 };
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
-use itpc_parentchain::{
-	block_importer::{ImportParentchainBlocks, ParentchainBlockImporter},
-	indirect_calls_executor::IndirectCallsExecutor,
-};
 use its_sidechain::top_pool_rpc_author::{
 	global_author_container::GlobalAuthorContainer, traits::GetAuthor,
 };
@@ -444,7 +444,7 @@ pub unsafe extern "C" fn init_light_client(
 		},
 	};
 
-	match itc_light_client::io::read_or_init_validator::<Block>(header, auth, proof) {
+	match itc_parentchain::light_client::io::read_or_init_validator::<Block>(header, auth, proof) {
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
 		Err(e) => return e.into(),
 	}
