@@ -39,10 +39,7 @@ use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
-use my_node_runtime::{
-	pallet_teerex::Request, AccountId, BalancesCall, Call, Event, Hash, Signature,
-};
-
+use my_node_runtime::{BalancesCall, Call, Event, Hash, Signature};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
@@ -59,6 +56,7 @@ use substrate_api_client::{
 	utils::FromHexString,
 	Api, Metadata, RpcClient, XtStatus,
 };
+use teerex_primitives::{AccountId, Request};
 
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
@@ -183,13 +181,14 @@ fn main() {
 					let mut nonce = _api.get_nonce().unwrap();
 					for account in accounts {
 						let to = get_accountid_from_str(account);
+						GenericAddress::Id(to.clone());
 						#[allow(clippy::redundant_clone)]
 						let xt: UncheckedExtrinsicV4<_> = compose_extrinsic_offline!(
 							_api.clone().signer.unwrap(),
-							Call::Balances(BalancesCall::transfer(
-								GenericAddress::Id(to.clone()),
-								PREFUNDING_AMOUNT
-							)),
+							Call::Balances(BalancesCall::transfer {
+								dest: GenericAddress::Id(to.clone()),
+								value: PREFUNDING_AMOUNT
+							}),
 							nonce,
 							Era::Immortal,
 							_api.genesis_hash,

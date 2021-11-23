@@ -56,7 +56,7 @@ use itp_settings::{
 use itp_types::SignedBlock;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
-use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
+use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
 use sidechain_storage::{BlockPruner, SidechainStorageLock};
 use sp_core::{
@@ -78,6 +78,7 @@ use std::{
 	time::{Duration, Instant},
 };
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
+use teerex_primitives::ShardIdentifier;
 
 mod config;
 mod direct_invocation;
