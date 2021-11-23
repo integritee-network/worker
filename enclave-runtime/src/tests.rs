@@ -23,9 +23,13 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{
-	helpers::account_key_hash, test_genesis::test_account as funded_pair, AccountInfo,
-	ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall, TrustedCallSigned,
-	TrustedGetter, TrustedOperation,
+	helpers::{
+		account_key_hash, get_parentchain_blockhash, get_parentchain_number,
+		get_parentchain_parenthash,
+	},
+	test_genesis::test_account as funded_pair,
+	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
+	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
@@ -88,6 +92,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// test_ocall_worker_request,
 		test_create_state_diff,
 		test_executing_call_updates_account_nonce,
+		test_call_set_update_parentchain_block,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
@@ -400,6 +405,28 @@ fn test_executing_call_updates_account_nonce() {
 	let mut state = state_handler.load_initialized(&shard).unwrap();
 	let nonce = Stf::account_nonce(&mut state, &sender.public().into());
 	assert_eq!(nonce, 1);
+}
+
+fn test_call_set_update_parentchain_block() {
+	let (_, _, shard, _, _, state_handler) = test_setup();
+	let mut state = state_handler.load_initialized(&shard).unwrap();
+
+	let block_number = 3;
+	let parent_hash = H256::from([1; 32]);
+
+	let header: Header = HeaderT::new(
+		block_number,
+		Default::default(),
+		Default::default(),
+		parent_hash,
+		Default::default(),
+	);
+
+	Stf::update_parentchain_block(&mut state, header.clone()).unwrap();
+
+	assert_eq!(header.hash(), state.execute_with(|| get_parentchain_blockhash().unwrap()));
+	assert_eq!(parent_hash, state.execute_with(|| get_parentchain_parenthash().unwrap()));
+	assert_eq!(block_number, state.execute_with(|| get_parentchain_number().unwrap()));
 }
 
 fn test_invalid_nonce_call_is_not_executed() {

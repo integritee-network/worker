@@ -3909,6 +3909,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-parentchain"
+version = "0.9.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=teaclave-1.1.3#1a529c857854a8569c367fdbd8fe6fb416cbd483"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=master)",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-proxy"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#b391b82954ad95a927a921035e3017c4a0aad516"
@@ -5429,7 +5444,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#2ed8f4bf64da509fdea43efe8c5a10ea5a659057"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#f864715987f723b27e48144c32fdf2480bf9761c"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5444,7 +5459,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#2ed8f4bf64da509fdea43efe8c5a10ea5a659057"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#f864715987f723b27e48144c32fdf2480bf9761c"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -5453,6 +5468,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
+ "pallet-parentchain",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
@@ -6030,7 +6046,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#2ed8f4bf64da509fdea43efe8c5a10ea5a659057"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#f864715987f723b27e48144c32fdf2480bf9761c"
 dependencies = [
  "environmental",
  "futures 0.3.17",

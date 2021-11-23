@@ -28,20 +28,17 @@ use codec::{Decode, Encode};
 use ita_stf::{
 	hash::TrustedOperationOrHash,
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, ShardIdentifier, StateTypeDiff, Stf, TrustedCall, TrustedCallSigned,
-	TrustedGetterSigned,
+	AccountId, ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
+	TrustedCallSigned, TrustedGetterSigned,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-use itp_stf_state_handler::handle_state::HandleState;
+use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::{
-	app_crypto::sp_core::blake2_256,
-	traits::{Block as BlockT, Header, UniqueSaturatedInto},
-};
+use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Block as BlockT};
 use std::{
 	collections::BTreeMap,
 	fmt::Debug,
@@ -211,12 +208,12 @@ impl<OCallApi, StateHandler, ExternalitiesT> StfUpdateState
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT> + QueryShardState,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
 	where
-		PB: BlockT<Hash = H256>,
+		PB: BlockT<Hash = H256, Header = ParentchainHeader>,
 	{
 		debug!("Update STF storage upon block import!");
 		let storage_hashes = Stf::storage_hashes_to_update_on_block();
@@ -231,6 +228,15 @@ where
 			.get_multiple_storages_verified(storage_hashes, header)
 			.map(into_map)?
 			.into();
+
+		// Update parentchain block on all states.
+		let shards = self.state_handler.list_shards()?;
+		for shard_id in shards {
+			let (_, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
+			if let Err(e) = Stf::update_parentchain_block(&mut state, header.clone()) {
+				error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
+			}
+		}
 
 		// look for new shards an initialize them
 		if let Some(maybe_shards) = state_diff_update.get(&shards_key_hash()) {
@@ -252,13 +258,9 @@ where
 
 						Stf::update_storage(&mut state, &per_shard_update.into());
 						Stf::update_storage(&mut state, &state_diff_update);
-
-						// block number is purged from the substrate state so it can't be read like other storage values
-						// The number conversion is a bit unfortunate, but I wanted to prevent making the stf generic for now
-						Stf::update_layer_one_block_number(
-							&mut state,
-							(*header.number()).unique_saturated_into(),
-						);
+						if let Err(e) = Stf::update_parentchain_block(&mut state, header.clone()) {
+							error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
+						}
 
 						self.state_handler.write(state, state_lock, &shard_id)?;
 					}

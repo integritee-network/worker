@@ -44,7 +44,7 @@ use crate::{
 use base58::ToBase58;
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{alloc::string::String, Decode, Encode};
-use ita_stf::{AccountId, Getter, ShardIdentifier, Stf, TrustedCallSigned};
+use ita_stf::{AccountId, Getter, ParentchainHeader, ShardIdentifier, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -488,7 +488,7 @@ pub unsafe extern "C" fn sync_parentchain(
 /// * sends `confirm_blocks` xt's for every synced parentchain block
 fn sync_parentchain_internal<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>, _nonce: u32) -> Result<()>
 where
-	PB: BlockT<Hash = H256>,
+	PB: BlockT<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<PB>: BlockNumberOps,
 {
 	let validator_access = ValidatorAccessor::<PB>::default();
@@ -518,7 +518,7 @@ fn sync_blocks_on_light_client<PB, ValidatorAccessor, OCallApi, StfExecutor, Ext
 	stf_executor: &StfExecutor,
 ) -> Result<()>
 where
-	PB: BlockT<Hash = H256>,
+	PB: BlockT<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<PB>: BlockNumberOps,
 	ValidatorAccessor: ValidatorAccess<PB>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
