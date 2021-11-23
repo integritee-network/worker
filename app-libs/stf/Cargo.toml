@@ -52,7 +52,7 @@ itp-storage = { path = "../../core-primitives/storage", default-features = false
 itp-types = { default-features = false, path = "../../core-primitives/types" }
 its-primitives = { default-features = false, path = "../../sidechain/primitives" }
 its-state = { default-features = false, path = "../../sidechain/state", optional = true }
-itp-settings = { path = "../../core-primitives/settings", default-features = false }
+itp-settings = { path = "../../core-primitives/settings" }
 
 # Substrate dependencies
 sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = ["full_crypto"] }

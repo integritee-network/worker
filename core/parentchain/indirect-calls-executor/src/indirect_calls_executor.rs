@@ -66,7 +66,7 @@ where
 		info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         	call, account_encrypted, amount, shard.encode().to_base58());
 
-		debug!("decrypt the call");
+		debug!("decrypt the account id");
 
 		let account_vec = self.shielding_key.decrypt(account_encrypted)?;
 

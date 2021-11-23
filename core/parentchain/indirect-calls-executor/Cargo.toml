@@ -14,7 +14,7 @@ sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclav
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings", default-features = false }
+itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
@@ -39,6 +39,7 @@ substrate-api-client = { git = "https://github.com/scs/substrate-api-client", br
 [features]
 default = ["std"]
 std = [
+    "codec/std",
     "ita-stf/std",
     "itp-extrinsics-factory/std",
     "itp-ocall-api/std",
@@ -47,6 +48,8 @@ std = [
     "itp-types/std",
     "log/std",
     "rust-base58",
+    "sp-core/std",
+    "sp-runtime/std",
     "substrate-api-client/std",
     "thiserror",
 ]

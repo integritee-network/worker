@@ -37,7 +37,7 @@ sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclav
 sgx_tcrypto = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
-itp-settings = { path = "../../core-primitives/settings", default-features = false }
+itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }

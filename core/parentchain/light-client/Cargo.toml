@@ -51,7 +51,7 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 
 # local deps
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings", default-features = false }
+itp-settings = { path = "../../../core-primitives/settings" }
 itp-storage = { path = "../../../core-primitives/storage", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 

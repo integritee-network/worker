@@ -30,7 +30,7 @@ substrate-api-client = { default-features = false, git = "https://github.com/scs
 
 # local dependencies
 itp-nonce-cache = { path = "../nonce-cache", default-features = false }
-itp-settings = { path = "../settings", default-features = false }
+itp-settings = { path = "../settings" }
 itp-types = { path = "../types", default-features = false }
 
 # sgx enabled external libraries

@@ -16,7 +16,7 @@ itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor",
 itc-parentchain-light-client = { path = "../light-client", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings", default-features = false }
+itp-settings = { path = "../../../core-primitives/settings" }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
@@ -37,6 +37,7 @@ tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 [features]
 default = ["std"]
 std = [
+    "codec/std",
     "ita-stf/std",
     "itc-parentchain-indirect-calls-executor/std",
     "itc-parentchain-light-client/std",
@@ -45,6 +46,7 @@ std = [
     "itp-stf-executor/std",
     "itp-types/std",
     "log/std",
+    "sp-runtime/std",
     "thiserror",
 ]
 sgx = [

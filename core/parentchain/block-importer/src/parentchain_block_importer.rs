@@ -45,8 +45,7 @@ pub trait ImportParentchainBlocks {
 	/// Import parentchain blocks to the light-client (validator):
 	/// * iterates over parentchain blocks and scans for relevant extrinsics
 	/// * validates and execute those extrinsics (containing indirect calls), mutating state
-	/// * sends `confirm_call` xt's of the executed unshielding calls
-	/// * sends `confirm_blocks` xt's for every imported parentchain block
+	/// * sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
 	fn import_parentchain_blocks(
 		&self,
 		blocks_to_import: Vec<SignedBlockG<Self::ParentchainBlockType>>,
@@ -175,11 +174,12 @@ impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCa
 			};
 		}
 
-		let xts = self.extrinsics_factory.create_extrinsics(calls.as_slice())?;
+		let parentchain_extrinsics = self.extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
 		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
-		self.validator_accessor
-			.execute_mut_on_validator(|v| v.send_extrinsics(self.ocall_api.as_ref(), xts))?;
+		self.validator_accessor.execute_mut_on_validator(|v| {
+			v.send_extrinsics(self.ocall_api.as_ref(), parentchain_extrinsics)
+		})?;
 
 		Ok(())
 	}
