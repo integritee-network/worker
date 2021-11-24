@@ -27,7 +27,6 @@ extern crate sgx_tstd as std;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
-	pub use rust_base58_sgx as rust_base58;
 	pub use thiserror_sgx as thiserror;
 }
 

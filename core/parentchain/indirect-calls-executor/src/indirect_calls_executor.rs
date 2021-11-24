@@ -17,9 +17,6 @@
 
 //! Execute indirect calls, i.e. extrinsics extracted from parentchain blocks
 
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-
 use crate::error::Result;
 use codec::{Decode, Encode};
 use ita_stf::{AccountId, TrustedCallSigned};
@@ -28,7 +25,6 @@ use itp_sgx_crypto::ShieldingCrypto;
 use itp_stf_executor::traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall};
 use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
-use rust_base58::ToBase58;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as BlockT, Header};
 use std::{sync::Arc, vec::Vec};
@@ -64,7 +60,7 @@ where
 	fn handle_shield_funds_xt(&self, xt: &UncheckedExtrinsicV4<ShieldFundsFn>) -> Result<()> {
 		let (call, account_encrypted, amount, shard) = &xt.function;
 		info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
-        	call, account_encrypted, amount, shard.encode().to_base58());
+        	call, account_encrypted, amount, bs58::encode(shard.encode()).into_string());
 
 		debug!("decrypt the account id");
 
@@ -83,7 +79,7 @@ where
 		let (call, request) = xt.function;
 		let (shard, cyphertext) = (request.shard, request.cyphertext);
 		debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
-        	call, shard.encode().to_base58(), cyphertext);
+        	call, bs58::encode(shard.encode()).into_string(), cyphertext);
 
 		debug!("decrypt the call");
 		//let request_vec = Rsa3072KeyPair::decrypt(&cyphertext)?;
