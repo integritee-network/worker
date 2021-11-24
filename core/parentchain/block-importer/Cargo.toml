@@ -59,3 +59,5 @@ sgx = [
     "itp-types/sgx",
     "thiserror_sgx",
 ]
+# feature to export mock implementations, only to be used for dev-dependencies!
+mocks = []

@@ -1,0 +1,45 @@
+[package]
+name = "itc-parentchain-block-import-dispatcher"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+# sgx dependencies
+sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# local dependencies
+itc-parentchain-block-import-queue = { path = "../block-import-queue", default-features = false }
+itc-parentchain-block-importer = { path = "../block-importer", default-features = false }
+
+# sgx enabled external libraries
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+thiserror = { version = "1.0", optional = true }
+
+# no-std compatible libraries
+log = { version = "0.4", default-features = false }
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+[dev-dependencies]
+itp-types = { path = "../../../core-primitives/types" }
+itc-parentchain-block-importer = { path = "../block-importer", features = ["mocks"] }
+
+[features]
+default = ["std"]
+std = [
+    "itc-parentchain-block-import-queue/std",
+    "itc-parentchain-block-importer/std",
+    "log/std",
+    "sp-runtime/std",
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "itc-parentchain-block-import-queue/sgx",
+    "itc-parentchain-block-importer/sgx",
+    "thiserror_sgx",
+]

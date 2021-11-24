@@ -47,7 +47,7 @@ impl AtomicContainer {
 	}
 
 	/// load an item from the container, returning a mutex
-	pub fn load<T>(&self) -> Option<&'static Mutex<T>> {
+	pub fn load<T>(&self) -> Option<&Mutex<T>> {
 		let ptr = self.atomic_ptr.load(Ordering::SeqCst) as *mut Mutex<T>;
 		if ptr.is_null() {
 			None

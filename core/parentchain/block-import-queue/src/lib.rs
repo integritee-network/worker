@@ -14,8 +14,8 @@
 	limitations under the License.
 
 */
+//! Queueing of block imports.
 
-#![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
@@ -27,26 +27,35 @@ extern crate sgx_tstd as std;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
-	pub use jsonrpc_core_sgx as jsonrpc_core;
 	pub use thiserror_sgx as thiserror;
 }
 
-pub mod api;
-pub mod author;
-pub mod client_error;
+pub mod block_import_queue;
 pub mod error;
-pub mod pool_types;
-pub mod top_filter;
-pub mod traits;
 
-#[cfg(feature = "sgx")]
-pub mod initializer;
+pub use block_import_queue::*;
 
-#[cfg(feature = "sgx")]
-pub mod global_author_container;
+use error::Result;
+use std::vec::Vec;
 
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod author_tests;
+/// Trait to push parentchain blocks to an import queue.
+pub trait PushToBlockQueue {
+	type BlockType;
 
-#[cfg(feature = "test")]
-pub mod test_utils;
+	/// Push multiple blocks to the queue, ordering from the Vec is preserved.
+	fn push_multiple(&self, blocks: Vec<Self::BlockType>) -> Result<()>;
+
+	/// Push a single block to the queue.
+	fn push_single(&self, block: Self::BlockType) -> Result<()>;
+}
+
+/// Trait to pop parentchain blocks from the import queue.
+pub trait PopFromBlockQueue {
+	type BlockType;
+
+	/// Pop (i.e. removes and returns) all but the last block from the import queue
+	fn pop_all_but_last(&self) -> Result<Vec<Self::BlockType>>;
+
+	/// Pop (i.e. removes and returns) all blocks from the import queue
+	fn pop_all(&self) -> Result<Vec<Self::BlockType>>;
+}

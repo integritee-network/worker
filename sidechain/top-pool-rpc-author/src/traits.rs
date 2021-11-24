@@ -23,7 +23,7 @@ use ita_stf::{hash, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use its_top_pool::primitives::PoolFuture;
 use jsonrpc_core::Error as RpcError;
-use std::{sync::Arc, vec::Vec};
+use std::vec::Vec;
 
 /// Trait alias for a full STF author API
 pub trait FullAuthor = AuthorApi<H256, H256>
@@ -32,13 +32,6 @@ pub trait FullAuthor = AuthorApi<H256, H256>
 	+ Send
 	+ Sync
 	+ 'static;
-
-/// Getter trait for the RPC author
-pub trait GetAuthor: Send + Sync + 'static {
-	type AuthorType: FullAuthor;
-
-	fn get(&self) -> Option<Arc<Self::AuthorType>>;
-}
 
 /// Authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {

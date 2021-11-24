@@ -15,16 +15,27 @@
 
 */
 
-use crate::{
-	author::{Author, AuthorTopFilter},
-	pool_types::BPool,
-};
-use itp_component_container::ComponentContainer;
-use itp_stf_state_handler::GlobalFileStateHandler;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
 
-pub type EnclaveRpcAuthor = Author<BPool, AuthorTopFilter, GlobalFileStateHandler, Rsa3072KeyPair>;
+use sgx_types::sgx_status_t;
+use std::boxed::Box;
 
-/// Global instance of the RPC author (only usable in `sgx` feature).
-pub static GLOBAL_RPC_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
-	ComponentContainer::new();
+pub type Result<T> = core::result::Result<T, Error>;
+
+/// Parentchain block importer error.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("SGX error, status: {0}")]
+	Sgx(sgx_status_t),
+	#[error("Queue lock is poisoned")]
+	PoisonedLock,
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<sgx_status_t> for Error {
+	fn from(sgx_status: sgx_status_t) -> Self {
+		Self::Sgx(sgx_status)
+	}
+}

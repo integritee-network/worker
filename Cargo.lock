@@ -2175,9 +2175,38 @@ dependencies = [
 name = "itc-parentchain"
 version = "0.8.0"
 dependencies = [
+ "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-block-import-queue",
  "itc-parentchain-block-importer",
  "itc-parentchain-indirect-calls-executor",
  "itc-parentchain-light-client",
+]
+
+[[package]]
+name = "itc-parentchain-block-import-dispatcher"
+version = "0.8.0"
+dependencies = [
+ "itc-parentchain-block-import-queue",
+ "itc-parentchain-block-importer",
+ "itp-types",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-parentchain-block-import-queue"
+version = "0.8.0"
+dependencies = [
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2357,6 +2386,13 @@ dependencies = [
  "sp-finality-grandpa",
  "sp-runtime",
  "substrate-api-client",
+]
+
+[[package]]
+name = "itp-component-container"
+version = "0.8.0"
+dependencies = [
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -2807,6 +2843,7 @@ dependencies = [
  "ita-stf",
  "itc-direct-rpc-server",
  "itc-tls-websocket-server",
+ "itp-component-container",
  "itp-sgx-crypto",
  "itp-stf-state-handler",
  "itp-test",

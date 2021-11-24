@@ -14,8 +14,8 @@
 	limitations under the License.
 
 */
+//! Dispatching of block imports.
 
-#![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
@@ -27,26 +27,22 @@ extern crate sgx_tstd as std;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
-	pub use jsonrpc_core_sgx as jsonrpc_core;
 	pub use thiserror_sgx as thiserror;
 }
 
-pub mod api;
-pub mod author;
-pub mod client_error;
 pub mod error;
-pub mod pool_types;
-pub mod top_filter;
-pub mod traits;
+pub mod immediate_dispatcher;
+pub mod retain_latest_dispatcher;
 
-#[cfg(feature = "sgx")]
-pub mod initializer;
+use error::Result;
+use std::vec::Vec;
 
-#[cfg(feature = "sgx")]
-pub mod global_author_container;
+/// Trait to dispatch blocks for import into the local light-client
+pub trait DispatchBlockImport {
+	type SignedBlockType;
 
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod author_tests;
-
-#[cfg(feature = "test")]
-pub mod test_utils;
+	/// Dispatch blocks to be imported.
+	///
+	/// The blocks may be imported immediately, get queued, delayed or grouped.
+	fn dispatch_blocks(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()>;
+}

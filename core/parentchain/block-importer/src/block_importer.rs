@@ -20,6 +20,7 @@
 use crate::{
 	beefy_merkle_tree::{merkle_root, Keccak256},
 	error::Result,
+	ImportParentchainBlocks,
 };
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
@@ -37,21 +38,6 @@ use sp_runtime::{
 	traits::{Block as BlockT, NumberFor},
 };
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
-
-/// Block import from the parentchain.
-pub trait ImportParentchainBlocks {
-	type ParentchainBlockType: BlockT;
-
-	/// Import parentchain blocks to the light-client (validator):
-	/// * Scans the blocks for relevant extrinsics
-	/// * Validates and execute those extrinsics, mutating state
-	/// * Includes block headers into the light client
-	/// * Sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
-	fn import_parentchain_blocks(
-		&self,
-		blocks_to_import: Vec<SignedBlockG<Self::ParentchainBlockType>>,
-	) -> Result<()>;
-}
 
 /// Parentchain block import implementation.
 pub struct ParentchainBlockImporter<
@@ -131,11 +117,11 @@ impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCa
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
-	type ParentchainBlockType = PB;
+	type SignedBlockType = SignedBlockG<PB>;
 
 	fn import_parentchain_blocks(
 		&self,
-		blocks_to_import: Vec<SignedBlockG<Self::ParentchainBlockType>>,
+		blocks_to_import: Vec<Self::SignedBlockType>,
 	) -> Result<()> {
 		let mut calls = Vec::<OpaqueCall>::new();
 

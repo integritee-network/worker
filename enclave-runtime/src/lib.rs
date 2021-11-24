@@ -34,26 +34,28 @@ use sgx_types::size_t;
 
 use crate::{
 	error::{Error, Result},
+	global_components::{EnclaveValidatorAccessor, GLOBAL_DISPATCHER_COMPONENT},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
 	utils::{hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw},
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
-use ita_stf::{Getter, ParentchainHeader, ShardIdentifier, Stf};
+use ita_stf::{Getter, ShardIdentifier, Stf};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
-	block_importer::{ImportParentchainBlocks, ParentchainBlockImporter},
+	block_import_dispatcher::{immediate_dispatcher::ImmediateDispatcher, DispatchBlockImport},
+	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{
 		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
-		ValidatorAccessor,
 	},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
+use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
@@ -69,18 +71,17 @@ use itp_stf_state_handler::{
 };
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
-use its_sidechain::top_pool_rpc_author::{
-	global_author_container::GlobalAuthorContainer, traits::GetAuthor,
-};
+use its_sidechain::top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT;
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::{crypto::Pair, H256};
 use sp_finality_grandpa::VersionedAuthorityList;
-use sp_runtime::{generic::SignedBlock as SignedBlockG, traits::Block as BlockT};
+use sp_runtime::traits::Block as BlockT;
 use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::compose_extrinsic_offline;
 
 mod attestation;
+mod global_components;
 mod ipfs;
 mod ocall;
 mod utils;
@@ -386,7 +387,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		rsa_shielding_key,
 	);
 
-	let rpc_author = match GlobalAuthorContainer.get() {
+	let rpc_author = match GLOBAL_RPC_AUTHOR_COMPONENT.get() {
 		Some(a) => a,
 		None => {
 			error!("Failed to retrieve global top pool author");
@@ -448,6 +449,50 @@ pub unsafe extern "C" fn init_light_client(
 		Ok(header) => write_slice_and_whitespace_pad(latest_header_slice, header.encode()),
 		Err(e) => return e.into(),
 	}
+
+	// Initialize the global parentchain block import dispatcher instance.
+	let signer = match Ed25519Seal::unseal() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("Error retrieving signer key pair: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let shielding_key = match Rsa3072Seal::unseal() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("Error retrieving shielding key: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
+	let genesis_hash =
+		match validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays())) {
+			Ok(g) => g,
+			Err(e) => {
+				error!("Error retrieving genesis hash: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+
+	let stf_executor =
+		Arc::new(StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler)));
+	let extrinsics_factory =
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
+	let indirect_calls_executor =
+		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
+	let parentchain_block_importer = Arc::new(ParentchainBlockImporter::new(
+		validator_access,
+		Arc::new(OcallApi),
+		stf_executor,
+		extrinsics_factory,
+		indirect_calls_executor,
+	));
+	let block_import_dispatcher = Arc::new(ImmediateDispatcher::new(parentchain_block_importer));
+
+	GLOBAL_DISPATCHER_COMPONENT.initialize(block_import_dispatcher);
+
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -462,7 +507,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	if let Err(e) = sync_parentchain_internal::<Block>(blocks_to_sync) {
+	if let Err(e) = sync_parentchain_internal(blocks_to_sync) {
 		return e.into()
 	}
 
@@ -476,31 +521,9 @@ pub unsafe extern "C" fn sync_parentchain(
 /// * validates and execute those extrinsics (containing indirect calls), mutating state
 /// * sends `confirm_call` xt's of the executed unshielding calls
 /// * sends `confirm_blocks` xt's for every synced parentchain block
-fn sync_parentchain_internal<PB>(blocks_to_sync: Vec<SignedBlockG<PB>>) -> Result<()>
-where
-	PB: BlockT<Hash = H256, Header = ParentchainHeader>,
-	NumberFor<PB>: BlockNumberOps,
-{
-	let validator_access = Arc::new(ValidatorAccessor::<PB>::default());
-	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
+fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
+	let block_import_dispatcher =
+		GLOBAL_DISPATCHER_COMPONENT.get().ok_or(Error::ComponentNotInitialized)?;
 
-	let signer = Ed25519Seal::unseal()?;
-	let shielding_key = Rsa3072Seal::unseal()?;
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler)));
-	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
-	let indirect_calls_executor =
-		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
-	let parentchain_block_importer = ParentchainBlockImporter::new(
-		validator_access,
-		Arc::new(OcallApi),
-		stf_executor,
-		extrinsics_factory,
-		indirect_calls_executor,
-	);
-
-	parentchain_block_importer
-		.import_parentchain_blocks(blocks_to_sync)
-		.map_err(|e| e.into())
+	block_import_dispatcher.dispatch_blocks(blocks_to_sync).map_err(|e| e.into())
 }

@@ -15,7 +15,6 @@
 
 */
 
-#![feature(trait_alias)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
@@ -24,29 +23,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use jsonrpc_core_sgx as jsonrpc_core;
-	pub use thiserror_sgx as thiserror;
-}
+mod atomic_container;
+pub mod component_container;
 
-pub mod api;
-pub mod author;
-pub mod client_error;
-pub mod error;
-pub mod pool_types;
-pub mod top_filter;
-pub mod traits;
-
-#[cfg(feature = "sgx")]
-pub mod initializer;
-
-#[cfg(feature = "sgx")]
-pub mod global_author_container;
-
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod author_tests;
-
-#[cfg(feature = "test")]
-pub mod test_utils;
+pub use component_container::*;
