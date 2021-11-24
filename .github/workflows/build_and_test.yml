@@ -207,7 +207,7 @@ jobs:
         run: |
           touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
-          sleep 30
+          sleep 45
 
       - name: ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.
