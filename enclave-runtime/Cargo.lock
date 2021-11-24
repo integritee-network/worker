@@ -249,6 +249,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
+name = "bs58"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
+
+[[package]]
 name = "byte-slice-cast"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -485,7 +491,7 @@ dependencies = [
  "ipfs-unixfs",
  "ita-stf",
  "itc-direct-rpc-server",
- "itc-light-client",
+ "itc-parentchain",
  "itc-tls-websocket-server",
  "itertools",
  "itp-extrinsics-factory",
@@ -538,7 +544,6 @@ dependencies = [
  "sp-std",
  "sp-version",
  "substrate-api-client",
- "tiny-keccak",
  "webpki",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna",
@@ -1173,7 +1178,59 @@ dependencies = [
 ]
 
 [[package]]
-name = "itc-light-client"
+name = "itc-parentchain"
+version = "0.8.0"
+dependencies = [
+ "itc-parentchain-block-importer",
+ "itc-parentchain-indirect-calls-executor",
+ "itc-parentchain-light-client",
+]
+
+[[package]]
+name = "itc-parentchain-block-importer"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itc-parentchain-indirect-calls-executor",
+ "itc-parentchain-light-client",
+ "itp-extrinsics-factory",
+ "itp-ocall-api",
+ "itp-settings",
+ "itp-stf-executor",
+ "itp-types",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.9",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "itc-parentchain-indirect-calls-executor"
+version = "0.8.0"
+dependencies = [
+ "bs58",
+ "ita-stf",
+ "itp-extrinsics-factory",
+ "itp-ocall-api",
+ "itp-settings",
+ "itp-sgx-crypto",
+ "itp-stf-executor",
+ "itp-types",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "substrate-api-client",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-parentchain-light-client"
 version = "0.8.0"
 dependencies = [
  "derive_more",

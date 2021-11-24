@@ -1,5 +1,5 @@
 [package]
-name = "itc-light-client"
+name = "itc-parentchain-light-client"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
@@ -50,10 +50,10 @@ sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teacla
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
 # local deps
-itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
-itp-settings = { path = "../../core-primitives/settings", default-features = false }
-itp-storage = { path = "../../core-primitives/storage", default-features = false }
-itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
+itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
+itp-settings = { path = "../../../core-primitives/settings" }
+itp-storage = { path = "../../../core-primitives/storage", default-features = false }
+itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 
 # substrate deps
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -64,4 +64,4 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 sp-trie = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [dev-dependencies]
-itp-types = { path = "../../core-primitives/types" }
+itp-types = { path = "../../../core-primitives/types" }

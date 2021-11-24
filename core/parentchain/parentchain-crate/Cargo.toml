@@ -1,0 +1,24 @@
+[package]
+name = "itc-parentchain"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+itc-parentchain-block-importer = { path = "../block-importer", default-features = false }
+itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor", default-features = false }
+itc-parentchain-light-client = { path = "../light-client", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "itc-parentchain-block-importer/std",
+    "itc-parentchain-indirect-calls-executor/std",
+    "itc-parentchain-light-client/std",
+]
+sgx = [
+    "itc-parentchain-block-importer/sgx",
+    "itc-parentchain-indirect-calls-executor/sgx",
+    "itc-parentchain-light-client/sgx",
+]

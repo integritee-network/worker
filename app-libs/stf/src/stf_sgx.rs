@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(feature = "test")]
+use crate::test_genesis::test_genesis_setup;
+
 use crate::{
 	helpers::{
 		account_data, account_nonce, ensure_root, get_account_info, increment_nonce, root,
@@ -27,6 +30,8 @@ use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
+use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
+use its_state::SidechainSystemExt;
 use log_sgx::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::Runtime;
@@ -35,11 +40,6 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
-
-#[cfg(feature = "test")]
-use crate::test_genesis::test_genesis_setup;
-use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
-use its_state::SidechainSystemExt;
 
 impl Stf {
 	pub fn init_state() -> State {

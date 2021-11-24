@@ -21,7 +21,7 @@ use crate::{
 	sync::{EnclaveLock, EnclaveStateRWLock},
 };
 use codec::Encode;
-use itc_light_client::{
+use itc_parentchain::light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
 	ValidatorAccessor,
 };
