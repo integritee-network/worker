@@ -18,11 +18,11 @@
 
 use crate::{
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
-	sidechain_storage::BlockStorage,
 	sync_block_gossiper::GossipBlocks,
 };
 use codec::Decode;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use its_storage::BlockStorage;
 use log::*;
 use std::sync::Arc;
 
