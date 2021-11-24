@@ -233,10 +233,9 @@ where
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
-			if let Err(e) = Stf::update_parentchain_block(&mut state, header.clone()) {
-				error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
-			} else {
-				self.state_handler.write(state, state_lock, &shard_id)?;
+			match Stf::update_parentchain_block(&mut state, header.clone()) {
+				Ok(_) => self.state_handler.write(state, state_lock, &shard_id)?,
+				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
 			}
 		}
 
