@@ -119,12 +119,7 @@ getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branc
 [patch."https://github.com/paritytech/substrate"]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
-sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
-
-#[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../../sgx-runtime/runtime", default-features = false}
-#sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-#sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
+sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_tstd = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
@@ -138,3 +133,9 @@ sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-tea
 sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
 sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
+
+
+[patch."https://github.com/integritee-network/sgx-runtime"]
+sgx-runtime = { path = "../../sgx-runtime/runtime"}
+sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
+sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}

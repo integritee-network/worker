@@ -39,7 +39,7 @@ use clap::{AppSettings, Arg, ArgMatches};
 use clap_nested::{Command, Commander};
 use codec::{Decode, Encode};
 use log::*;
-use my_node_runtime::{BalancesCall, Call, Event, Hash, Signature};
+use my_node_runtime::{AccountId, BalancesCall, Call, Event, Hash, Signature};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
@@ -48,15 +48,11 @@ use sp_runtime::{
 use std::{convert::TryFrom, result::Result as StdResult, sync::mpsc::channel, thread};
 use substrate_api_client::{
 	compose_extrinsic, compose_extrinsic_offline,
-	extrinsic::xt_primitives::{GenericAddress, UncheckedExtrinsicV4},
-	rpc::{
-		ws_client::{EventsDecoder, Subscriber},
-		WsRpcClient,
-	},
+	rpc::{ws_client::Subscriber, WsRpcClient},
 	utils::FromHexString,
-	Api, Metadata, RpcClient, XtStatus,
+	Api, GenericAddress, Metadata, RpcClient, UncheckedExtrinsicV4, XtStatus,
 };
-use teerex_primitives::{AccountId, Request};
+use teerex_primitives::Request;
 
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
@@ -181,7 +177,6 @@ fn main() {
 					let mut nonce = _api.get_nonce().unwrap();
 					for account in accounts {
 						let to = get_accountid_from_str(account);
-						GenericAddress::Id(to.clone());
 						#[allow(clippy::redundant_clone)]
 						let xt: UncheckedExtrinsicV4<_> = compose_extrinsic_offline!(
 							_api.clone().signer.unwrap(),
@@ -538,16 +533,17 @@ fn send_request(matches: &ArgMatches<'_>, call: TrustedCallSigned) -> Option<Vec
 	let (events_in, events_out) = channel();
 	_chain_api.subscribe_events(events_in).unwrap();
 
-	let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
-	decoder.register_type_size::<Hash>("ShardIdentifier").unwrap();
-	decoder.register_type_size::<Hash>("H256").unwrap();
+	//let mut decoder = EventsDecoder::new(_chain_api.metadata.clone());
+	//let mut decoder = EventsDecoder::try_from(_chain_api.metadata.clone()).unwrap();
+	//decoder.register_type_size::<Hash>("ShardIdentifier").unwrap();
+	//decoder.register_type_size::<Hash>("H256").unwrap();
 
 	loop {
 		let ret: ProcessedParentchainBlockArgs = _chain_api
 			.wait_for_event::<ProcessedParentchainBlockArgs>(
 				TEEREX,
 				"ProcessedParentchainBlock",
-				Some(decoder.clone()),
+				None,
 				&events_out,
 			)
 			.unwrap();
@@ -700,10 +696,10 @@ fn listen(matches: &ArgMatches<'_>) {
 						Event::Balances(be) => {
 							println!(">>>>>>>>>> balances event: {:?}", be);
 							match &be {
-								pallet_balances::Event::Transfer(from, to, value) => {
+								pallet_balances::Event::Transfer { from, to, amount } => {
 									println!("From: {:?}", from);
 									println!("To: {:?}", to);
-									println!("Value: {:?}", value);
+									println!("Value: {:?}", amount);
 								},
 								_ => {
 									debug!("ignoring unsupported balances event");
