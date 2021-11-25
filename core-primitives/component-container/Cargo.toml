@@ -11,9 +11,8 @@ sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclav
 
 [features]
 default = ["std"]
-std = [
-
-]
+std = []
 sgx = [
+    # sgx
     "sgx_tstd",
 ]

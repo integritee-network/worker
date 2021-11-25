@@ -23,11 +23,17 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 [features]
 default = ["std"]
 std = [
+    # no-std compatible libraries
     "log/std",
     "sp-runtime/std",
+
+    # std compatible external libraries
     "thiserror",
 ]
 sgx = [
+    # sgx
     "sgx_tstd",
+
+    # sgx enabled external libraries
     "thiserror_sgx",
 ]

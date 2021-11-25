@@ -15,6 +15,8 @@
 
 */
 
+//! Generic component containers.
+
 #[cfg(feature = "sgx")]
 use std::sync::SgxMutex as Mutex;
 
@@ -24,26 +26,35 @@ use std::sync::Mutex;
 use crate::atomic_container::AtomicContainer;
 use std::{marker::PhantomData, sync::Arc};
 
+/// Trait to initialize a generic component.
 pub trait ComponentInitializer {
 	type ComponentT;
 
 	fn initialize(&self, component: Arc<Self::ComponentT>);
 }
 
+/// Trait to retrieve a generic component.
 pub trait ComponentGetter {
 	type ComponentT;
 
+	/// Try to get a specific component, returns `None` if component has not been initialized.
 	fn get(&self) -> Option<Arc<Self::ComponentT>>;
 }
 
+/// Workaround to make `new()` a `const fn`.
+/// Is required in order to have the `ComponentContainer` in a static variable.
 struct Invariant<T>(T);
 
+/// Component container implementation. Can be used in a global static context.
 pub struct ComponentContainer<Component> {
 	container: AtomicContainer,
 	_phantom: PhantomData<Invariant<Component>>,
 }
 
 impl<Component> ComponentContainer<Component> {
+	/// Create a new container instance.
+	///
+	/// Has to be `const` in order to be used in a `static` context.
 	pub const fn new() -> Self {
 		ComponentContainer { container: AtomicContainer::new(), _phantom: PhantomData }
 	}

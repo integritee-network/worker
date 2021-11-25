@@ -15,6 +15,8 @@
 
 */
 
+//! Container for a generic item, held by an AtomicPtr.
+
 #[cfg(feature = "sgx")]
 use std::sync::SgxMutex as Mutex;
 
@@ -29,7 +31,7 @@ use std::{
 	},
 };
 
-/// Generic atomic container that holds an item in a container
+/// Generic atomic container that holds an item in a container.
 pub struct AtomicContainer {
 	atomic_ptr: AtomicPtr<()>,
 }
@@ -39,14 +41,14 @@ impl AtomicContainer {
 		AtomicContainer { atomic_ptr: AtomicPtr::new(0 as *mut ()) }
 	}
 
-	/// store and item in the container
+	/// Store and item in the container.
 	pub fn store<T>(&self, item: T) {
 		let pool_ptr = Arc::new(Mutex::<T>::new(item));
 		let ptr = Arc::into_raw(pool_ptr);
 		self.atomic_ptr.store(ptr as *mut (), Ordering::SeqCst);
 	}
 
-	/// load an item from the container, returning a mutex
+	/// Load an item from the container, returning a mutex.
 	pub fn load<T>(&self) -> Option<&Mutex<T>> {
 		let ptr = self.atomic_ptr.load(Ordering::SeqCst) as *mut Mutex<T>;
 		if ptr.is_null() {

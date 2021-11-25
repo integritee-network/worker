@@ -37,7 +37,7 @@ tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 [features]
 default = ["std"]
 std = [
-    "codec/std",
+    # local
     "ita-stf/std",
     "itc-parentchain-indirect-calls-executor/std",
     "itc-parentchain-light-client/std",
@@ -45,19 +45,30 @@ std = [
     "itp-ocall-api/std",
     "itp-stf-executor/std",
     "itp-types/std",
+
+    # no-std compatible libraries
+    "codec/std",
     "log/std",
     "sp-runtime/std",
+
+    # std compatible external
     "thiserror",
 ]
 sgx = [
+    # sgx
     "sgx_tstd",
+
+    # local
     "ita-stf/sgx",
     "itc-parentchain-indirect-calls-executor/sgx",
     "itc-parentchain-light-client/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
     "itp-types/sgx",
+
+    # sgx enabled external libraries
     "thiserror_sgx",
 ]
+
 # feature to export mock implementations, only to be used for dev-dependencies!
 mocks = []
