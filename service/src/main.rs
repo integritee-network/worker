@@ -55,10 +55,10 @@ use itp_settings::{
 };
 use itp_types::SignedBlock;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{pallet_teerex::ShardIdentifier, Event, Hash, Header};
 use sgx_types::*;
-use sidechain_storage::{BlockPruner, SidechainStorageLock};
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519, Pair,
@@ -86,7 +86,6 @@ mod error;
 mod globals;
 mod node_api_factory;
 mod ocall_bridge;
-mod sidechain_storage;
 mod sync_block_gossiper;
 mod tests;
 mod utils;
@@ -384,7 +383,7 @@ fn start_worker<E, T, D>(
 	thread::Builder::new()
 		.name("sidechain_pruning_loop".to_owned())
 		.spawn(move || {
-			sidechain_storage::start_sidechain_pruning_loop(
+			start_sidechain_pruning_loop(
 				&sidechain_storage,
 				SIDECHAIN_PURGE_INTERVAL,
 				SIDECHAIN_PURGE_LIMIT,

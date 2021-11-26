@@ -2048,6 +2048,7 @@ dependencies = [
  "itp-settings",
  "itp-types",
  "its-primitives",
+ "its-storage",
  "jsonrpsee",
  "lazy_static",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2057,7 +2058,6 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "primitive-types",
- "rocksdb",
  "rust-crypto",
  "serde 1.0.130",
  "serde_derive 1.0.130",
@@ -2746,6 +2746,21 @@ dependencies = [
  "sp-std",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-storage"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "its-primitives",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mockall",
+ "parity-scale-codec",
+ "parking_lot 0.11.2",
+ "rocksdb",
+ "sp-core",
+ "thiserror 1.0.30",
 ]
 
 [[package]]
