@@ -37,7 +37,7 @@ pub mod retain_latest_dispatcher;
 use error::Result;
 use std::vec::Vec;
 
-/// Trait to dispatch blocks for import into the local light-client
+/// Trait to dispatch blocks for import into the local light-client.
 pub trait DispatchBlockImport {
 	type SignedBlockType;
 
