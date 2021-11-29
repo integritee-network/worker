@@ -15,6 +15,11 @@
 
 */
 
+//! Defines all concrete types and global components of the enclave.
+//!
+//! This allows the crates themselves to stay as generic as possible
+//! and ensures that the global instances are initialized once.
+
 use crate::ocall::OcallApi;
 use itc_parentchain::{
 	block_import_dispatcher::immediate_dispatcher::ImmediateDispatcher,
@@ -30,11 +35,6 @@ use itp_types::Block;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
 use sp_core::ed25519::Pair;
-
-//! Defines all concrete types and global components of the enclave.
-//!
-//! This allows the crates themselves to stay as generic as possible
-//! and ensures that the global instances are initialized once.
 
 pub type EnclaveStfExecutor = StfExecutor<OcallApi, GlobalFileStateHandler, SgxExternalities>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
