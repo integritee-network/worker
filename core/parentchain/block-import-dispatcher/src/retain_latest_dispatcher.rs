@@ -85,7 +85,7 @@ where
 		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>,
 {
 	fn import_latest(&self) -> Result<()> {
-		// with this trigger, we import all blocks from the queue, including the latest one
+		// With this trigger, we import all blocks from the queue, including the latest one.
 		let blocks_to_import =
 			self.block_import_queue.pop_all().map_err(Error::BlockImportQueue)?;
 
