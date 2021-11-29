@@ -31,11 +31,11 @@ use crate::{
 		sidechain_ocall::SidechainOCall,
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
-	sidechain_storage::BlockStorage,
 	sync_block_gossiper::GossipBlocks,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use its_storage::BlockStorage;
 use std::sync::Arc;
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
