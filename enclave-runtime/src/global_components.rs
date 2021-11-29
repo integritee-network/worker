@@ -31,8 +31,11 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
 use sp_core::ed25519::Pair;
 
-/// Here we define all the concrete types that we use in the enclave.
-/// Required in order to instantiate the components we use in a global context.
+//! Defines all concrete types and global components of the enclave.
+//!
+//! This allows the crates themselves to stay as generic as possible
+//! and ensures that the global instances are initialized once.
+
 pub type EnclaveStfExecutor = StfExecutor<OcallApi, GlobalFileStateHandler, SgxExternalities>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<Rsa3072KeyPair, EnclaveStfExecutor>;
