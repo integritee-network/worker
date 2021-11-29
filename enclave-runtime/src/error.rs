@@ -25,6 +25,7 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
 	Rpc(its_sidechain::top_pool_rpc_author::error::Error),
 	Codec(codec::Error),
+	ComponentNotInitialized,
 	Crypto(itp_sgx_crypto::Error),
 	ChainStorage(itp_storage_verifier::Error),
 	ExtrinsicsFactory(itp_extrinsics_factory::error::Error),
@@ -35,7 +36,7 @@ pub enum Error {
 	Stf(String),
 	StfStateHandler(itp_stf_state_handler::error::Error),
 	StfExecution(itp_stf_executor::error::Error),
-	ParentchainBlockImport(itc_parentchain::block_importer::error::Error),
+	ParentchainBlockImportDispatch(itc_parentchain::block_import_dispatcher::error::Error),
 	MutexAccess,
 	Other(Box<dyn std::error::Error>),
 }

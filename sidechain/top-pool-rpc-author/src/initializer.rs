@@ -18,10 +18,11 @@
 use crate::{
 	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
-	global_author_container::GlobalAuthorContainer,
+	global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
 	pool_types::{BPool, EnclaveRpcConnectionRegistry},
 };
 use itc_direct_rpc_server::rpc_responder::RpcResponder;
+use itp_component_container::ComponentInitializer;
 use itp_stf_state_handler::GlobalFileStateHandler;
 use its_top_pool::pool::Options as PoolOptions;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -45,5 +46,5 @@ pub fn initialize_top_pool_rpc_author(
 	let rpc_author =
 		Arc::new(Author::new(top_pool, AuthorTopFilter {}, state_handler, shielding_key));
 
-	GlobalAuthorContainer::initialize(rpc_author.clone());
+	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author);
 }

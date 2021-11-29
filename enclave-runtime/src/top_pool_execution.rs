@@ -25,6 +25,7 @@ use itc_parentchain::light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
 	ValidatorAccessor,
 };
+use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
@@ -45,7 +46,7 @@ use its_sidechain::{
 	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
 	top_pool_executor::{TopPoolGetterOperator, TopPoolOperationHandler},
-	top_pool_rpc_author::{global_author_container::GlobalAuthorContainer, traits::GetAuthor},
+	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
 };
 use log::*;
 use sgx_types::sgx_status_t;
@@ -68,7 +69,7 @@ pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let rpc_author = GlobalAuthorContainer.get().ok_or_else(|| {
+	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
 		error!("Failed to retrieve author mutex. It might not be initialized?");
 		Error::MutexAccess
 	})?;
@@ -145,7 +146,7 @@ where
 	let authority = Ed25519Seal::unseal()?;
 	let state_key = AesSeal::unseal()?;
 
-	let rpc_author = GlobalAuthorContainer.get().ok_or_else(|| {
+	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
 		error!("Failed to retrieve author mutex. Maybe it's not initialized?");
 		Error::MutexAccess
 	})?;

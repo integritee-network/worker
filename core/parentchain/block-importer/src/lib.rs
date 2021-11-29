@@ -31,7 +31,26 @@ pub mod sgx_reexport_prelude {
 }
 
 mod beefy_merkle_tree;
+pub mod block_importer;
 pub mod error;
-pub mod parentchain_block_importer;
 
-pub use parentchain_block_importer::*;
+#[cfg(feature = "mocks")]
+pub mod block_importer_mock;
+
+pub use block_importer::*;
+
+use error::Result;
+use std::vec::Vec;
+
+/// Block import from the parentchain.
+pub trait ImportParentchainBlocks {
+	type SignedBlockType;
+
+	/// Import parentchain blocks to the light-client (validator):
+	/// * Scans the blocks for relevant extrinsics
+	/// * Validates and execute those extrinsics, mutating state
+	/// * Includes block headers into the light client
+	/// * Sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
+	fn import_parentchain_blocks(&self, blocks_to_import: Vec<Self::SignedBlockType>)
+		-> Result<()>;
+}
