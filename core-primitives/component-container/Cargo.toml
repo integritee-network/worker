@@ -7,7 +7,7 @@ resolver = "2"
 
 [dependencies]
 # sgx dependencies
-sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 [features]
 default = ["std"]

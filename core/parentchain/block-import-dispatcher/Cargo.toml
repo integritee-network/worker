@@ -7,8 +7,8 @@ resolver = "2"
 
 [dependencies]
 # sgx dependencies
-sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
 itc-parentchain-block-import-queue = { path = "../block-import-queue", default-features = false }

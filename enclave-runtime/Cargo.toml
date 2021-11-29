@@ -24,17 +24,17 @@ test = [
 ]
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tse = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"] }
-sgx_rand = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_trts = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tseal = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tcrypto = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_serialize = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_serialize_derive = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tunittest = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx-crypto-helper = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
+sgx_tse = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"] }
+sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_trts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tseal = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_serialize = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_serialize_derive = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tunittest = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
 
 [dependencies]
 codec  = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
@@ -125,14 +125,14 @@ sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "m
 #sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_alloc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_libc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_serialize = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_trts = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
-sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "v1.1.4-testing"}
+sgx_tstd = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_alloc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_libc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_trts = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}

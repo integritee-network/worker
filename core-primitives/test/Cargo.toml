@@ -8,9 +8,9 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 derive_more = { version = "0.99.5" }
 
 # sgx deps
-sgx_types = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-crypto-helper = { branch = "v1.1.4-testing", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 jsonrpc-core = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
 
