@@ -17,10 +17,10 @@ itc-parentchain-block-importer = { path = "../block-importer", default-features 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
-# no-std compatible libraries (make sure these versions match with the sgx-enabled ones above)
+# crates.io std-only compatible libraries (make sure these versions match with the sgx-enabled ones above)
 thiserror = { version = "1.0", optional = true }
 
-# no-std compatible libraries
+# crates.io no-std compatible libraries
 log = { version = "0.4", default-features = false }
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
@@ -34,22 +34,18 @@ std = [
     # local
     "itc-parentchain-block-import-queue/std",
     "itc-parentchain-block-importer/std",
-
     # no-std compatible libraries
     "log/std",
     "sp-runtime/std",
-
-    # no-std compatible libraries
+    # std-only compatible libraries
     "thiserror",
 ]
 sgx = [
     # sgx
     "sgx_tstd",
-
     # local
     "itc-parentchain-block-import-queue/sgx",
     "itc-parentchain-block-importer/sgx",
-
     # sgx enabled external libraries
     "thiserror_sgx",
 ]
