@@ -28,17 +28,17 @@ use std::{marker::PhantomData, sync::Arc};
 
 /// Trait to initialize a generic component.
 pub trait ComponentInitializer {
-	type ComponentT;
+	type ComponentType;
 
-	fn initialize(&self, component: Arc<Self::ComponentT>);
+	fn initialize(&self, component: Arc<Self::ComponentType>);
 }
 
 /// Trait to retrieve a generic component.
 pub trait ComponentGetter {
-	type ComponentT;
+	type ComponentType;
 
 	/// Try to get a specific component, returns `None` if component has not been initialized.
-	fn get(&self) -> Option<Arc<Self::ComponentT>>;
+	fn get(&self) -> Option<Arc<Self::ComponentType>>;
 }
 
 /// Workaround to make `new()` a `const fn`.
@@ -61,18 +61,18 @@ impl<Component> ComponentContainer<Component> {
 }
 
 impl<Component> ComponentInitializer for ComponentContainer<Component> {
-	type ComponentT = Component;
+	type ComponentType = Component;
 
-	fn initialize(&self, component: Arc<Self::ComponentT>) {
+	fn initialize(&self, component: Arc<Self::ComponentType>) {
 		self.container.store(component)
 	}
 }
 
 impl<Component> ComponentGetter for ComponentContainer<Component> {
-	type ComponentT = Component;
+	type ComponentType = Component;
 
-	fn get(&self) -> Option<Arc<Self::ComponentT>> {
-		let component_mutex: &Mutex<Arc<Self::ComponentT>> = self.container.load()?;
+	fn get(&self) -> Option<Arc<Self::ComponentType>> {
+		let component_mutex: &Mutex<Arc<Self::ComponentType>> = self.container.load()?;
 		Some(component_mutex.lock().unwrap().clone())
 	}
 }
