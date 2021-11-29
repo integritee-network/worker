@@ -15,8 +15,6 @@
 
 */
 
-pub mod rpc_ocall;
-
 mod attestation_ocall;
 mod ffi;
 mod ipfs_ocall;

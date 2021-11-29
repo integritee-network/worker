@@ -25,8 +25,6 @@ pub trait DirectRequest: Send + Sync + 'static {
 	// Todo: Vec<u8> shall be replaced by D: Decode, E: Encode but this is currently
 	// not compatible with the direct_api_server...
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>>;
-
-	fn initialize_pool(&self) -> EnclaveResult<()>;
 }
 
 impl DirectRequest for Enclave {
@@ -50,16 +48,5 @@ impl DirectRequest for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 		Ok(response)
-	}
-
-	fn initialize_pool(&self) -> EnclaveResult<()> {
-		let mut retval = sgx_status_t::SGX_SUCCESS;
-
-		let result = unsafe { ffi::initialize_pool(self.eid, &mut retval) };
-
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-
-		Ok(())
 	}
 }

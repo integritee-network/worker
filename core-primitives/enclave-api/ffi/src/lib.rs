@@ -131,6 +131,4 @@ extern "C" {
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: c_int,
 	) -> sgx_status_t;
-
-	pub fn initialize_pool(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 }

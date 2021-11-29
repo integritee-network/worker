@@ -17,14 +17,11 @@
 */
 
 use crate::{
-	direct_invocation::{
-		direct_invocation_ocall::DirectInvocationOCall, watch_list_service::WatchList,
-	},
 	node_api_factory::CreateNodeApi,
 	ocall_bridge::{
 		bridge_api::{
-			DirectInvocationBridge, GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge,
-			SidechainBridge, WorkerOnChainBridge,
+			GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge, SidechainBridge,
+			WorkerOnChainBridge,
 		},
 		ipfs_ocall::IpfsOCall,
 		remote_attestation_ocall::RemoteAttestationOCall,
@@ -41,37 +38,28 @@ use std::sync::Arc;
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
 /// our dependency graph is worker -> ocall bridge
-pub struct OCallBridgeComponentFactory<N, B, W, E, D> {
+pub struct OCallBridgeComponentFactory<N, B, E, D> {
 	node_api_factory: Arc<N>,
 	block_gossiper: Arc<B>,
-	watch_list: Arc<W>,
 	enclave_api: Arc<E>,
 	block_storage: Arc<D>,
 }
 
-impl<N, B, W, E, D> OCallBridgeComponentFactory<N, B, W, E, D> {
+impl<N, B, E, D> OCallBridgeComponentFactory<N, B, E, D> {
 	pub fn new(
 		node_api_factory: Arc<N>,
 		block_gossiper: Arc<B>,
-		watch_list: Arc<W>,
 		enclave_api: Arc<E>,
 		block_storage: Arc<D>,
 	) -> Self {
-		OCallBridgeComponentFactory {
-			node_api_factory,
-			block_gossiper,
-			watch_list,
-			enclave_api,
-			block_storage,
-		}
+		OCallBridgeComponentFactory { node_api_factory, block_gossiper, enclave_api, block_storage }
 	}
 }
 
-impl<N, B, W, E, D> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B, W, E, D>
+impl<N, B, E, D> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B, E, D>
 where
 	N: CreateNodeApi + 'static,
 	B: GossipBlocks + 'static,
-	W: WatchList + 'static,
 	E: RemoteAttestationCallBacks + 'static,
 	D: BlockStorage<SignedSidechainBlock> + 'static,
 {
@@ -89,9 +77,5 @@ where
 
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {
 		Arc::new(IpfsOCall {})
-	}
-
-	fn get_direct_invocation_api(&self) -> Arc<dyn DirectInvocationBridge> {
-		Arc::new(DirectInvocationOCall::new(self.watch_list.clone()))
 	}
 }
