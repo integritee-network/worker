@@ -63,7 +63,7 @@ where
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
-	fn dispatch_blocks(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
 		// Push all the blocks to be dispatched into the queue.
 		self.block_import_queue.push_multiple(blocks).map_err(Error::BlockImportQueue)?;
 
@@ -110,7 +110,7 @@ mod tests {
 	fn dispatching_blocks_imports_all_but_latest() {
 		let (dispatcher, block_importer, import_queue) = test_fixtures();
 
-		dispatcher.dispatch_blocks(vec![1, 2, 3, 4, 5]).unwrap();
+		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5]).unwrap();
 
 		assert_eq!(block_importer.get_all_imported_blocks(), vec![1, 2, 3, 4]);
 		assert!(!import_queue.is_empty().unwrap());
@@ -120,8 +120,8 @@ mod tests {
 	fn dispatching_blocks_multiple_times_imports_all_but_very_last() {
 		let (dispatcher, block_importer, import_queue) = test_fixtures();
 
-		dispatcher.dispatch_blocks(vec![1, 2, 3, 4, 5]).unwrap();
-		dispatcher.dispatch_blocks(vec![6, 7, 8]).unwrap();
+		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5]).unwrap();
+		dispatcher.dispatch_import(vec![6, 7, 8]).unwrap();
 
 		assert_eq!(block_importer.get_all_imported_blocks(), vec![1, 2, 3, 4, 5, 6, 7]);
 		assert_eq!(import_queue.pop_all().unwrap(), vec![8]);
@@ -131,7 +131,7 @@ mod tests {
 	fn triggering_import_of_latest_imports_all_remaining_blocks_in_queue() {
 		let (dispatcher, block_importer, import_queue) = test_fixtures();
 
-		dispatcher.dispatch_blocks(vec![1, 2, 3, 4, 5]).unwrap();
+		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5]).unwrap();
 		dispatcher.import_latest().unwrap();
 
 		assert_eq!(block_importer.get_all_imported_blocks(), vec![1, 2, 3, 4, 5]);

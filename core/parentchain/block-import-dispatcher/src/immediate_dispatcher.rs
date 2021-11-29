@@ -36,7 +36,7 @@ where
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
-	fn dispatch_blocks(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
 		self.block_importer.import_parentchain_blocks(blocks).map_err(|e| e.into())
 	}
 }

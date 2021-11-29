@@ -525,5 +525,5 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 	let block_import_dispatcher =
 		GLOBAL_DISPATCHER_COMPONENT.get().ok_or(Error::ComponentNotInitialized)?;
 
-	block_import_dispatcher.dispatch_blocks(blocks_to_sync).map_err(|e| e.into())
+	block_import_dispatcher.dispatch_import(blocks_to_sync).map_err(|e| e.into())
 }

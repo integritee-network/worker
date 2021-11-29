@@ -44,5 +44,5 @@ pub trait DispatchBlockImport {
 	/// Dispatch blocks to be imported.
 	///
 	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_blocks(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()>;
+	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()>;
 }
