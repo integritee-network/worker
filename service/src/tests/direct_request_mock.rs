@@ -23,8 +23,4 @@ impl DirectRequest for DirectRequestMock {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
 		Ok(request)
 	}
-
-	fn initialize_pool(&self) -> EnclaveResult<()> {
-		Ok(())
-	}
 }

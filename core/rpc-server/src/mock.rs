@@ -13,10 +13,6 @@ impl DirectRequest for TestEnclave {
 	fn rpc(&self, _request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
 		Ok(RpcResponse { jsonrpc: "mock_response".into(), result: "null".encode(), id: 1 }.encode())
 	}
-
-	fn initialize_pool(&self) -> EnclaveResult<()> {
-		unreachable!()
-	}
 }
 
 // todo: this is a duplicate that is also defined in the worker. We should extract an independent

@@ -25,18 +25,7 @@ use its_sidechain::{
 	top_pool_rpc_author::traits::AuthorApi,
 };
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
-use sgx_types::sgx_status_t;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
-
-// TODO: remove this e-call - includes EDL file and e-call bridge on untrusted worker side
-#[no_mangle]
-// initialise tx pool and store within static atomic pointer
-pub unsafe extern "C" fn initialize_pool() -> sgx_status_t {
-	// doesn't do anything anymore, the top pool is initialized when the RPC direct server is initialized
-	// see init_direct_invocation_server()
-
-	sgx_status_t::SGX_SUCCESS
-}
 
 fn compute_encoded_return_error(error_msg: &str) -> Vec<u8> {
 	RpcReturnValue::from_error_message(error_msg).encode()
