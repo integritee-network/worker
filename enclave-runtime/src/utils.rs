@@ -16,8 +16,6 @@
 */
 use crate::Hash;
 use codec::{Decode, Error, Input};
-use log::*;
-use sgx_types::sgx_status_t;
 use std::{slice, vec::Vec};
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
@@ -67,50 +65,4 @@ pub unsafe fn utf8_str_from_raw<'a>(
 	let bytes = slice::from_raw_parts(data, len);
 
 	std::str::from_utf8(bytes)
-}
-
-pub trait UnwrapOrSgxErrorUnexpected {
-	type ReturnType;
-	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t>;
-	fn sgx_error_with_log(self, err_mgs: &str) -> Result<Self::ReturnType, sgx_status_t>;
-}
-
-impl<T> UnwrapOrSgxErrorUnexpected for Option<T> {
-	type ReturnType = T;
-	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> {
-		match self {
-			Some(r) => Ok(r),
-			None => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-		}
-	}
-
-	fn sgx_error_with_log(self, log_msg: &str) -> Result<Self::ReturnType, sgx_status_t> {
-		match self {
-			Some(r) => Ok(r),
-			None => {
-				error!("{}", log_msg);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			},
-		}
-	}
-}
-
-impl<T, S> UnwrapOrSgxErrorUnexpected for Result<T, S> {
-	type ReturnType = T;
-	fn sgx_error(self) -> Result<Self::ReturnType, sgx_status_t> {
-		match self {
-			Ok(r) => Ok(r),
-			Err(_) => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-		}
-	}
-
-	fn sgx_error_with_log(self, log_msg: &str) -> Result<Self::ReturnType, sgx_status_t> {
-		match self {
-			Ok(r) => Ok(r),
-			Err(_) => {
-				error!("{}", log_msg);
-				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			},
-		}
-	}
 }
