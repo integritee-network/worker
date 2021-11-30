@@ -82,16 +82,6 @@ impl Bridge {
 			.get_ipfs_api()
 	}
 
-	pub fn get_direct_invocation_api() -> Arc<dyn DirectInvocationBridge> {
-		debug!("Requesting direct invocation OCall API instance");
-
-		COMPONENT_FACTORY
-			.read()
-			.as_ref()
-			.expect("Component factory has not been set. Use `initialize()`")
-			.get_direct_invocation_api()
-	}
-
 	pub fn initialize(component_factory: Arc<dyn GetOCallBridgeComponents + Send + Sync>) {
 		debug!("Initializing OCall bridge with component factory");
 
@@ -113,9 +103,6 @@ pub trait GetOCallBridgeComponents {
 
 	/// ipfs OCall API
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge>;
-
-	/// direct invocation API
-	fn get_direct_invocation_api(&self) -> Arc<dyn DirectInvocationBridge>;
 }
 
 /// OCall bridge errors

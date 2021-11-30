@@ -15,7 +15,6 @@
 
 */
 use crate::{
-	direct_invocation::{watch_list_service::WatchListService, watching_client::WsWatchingClient},
 	error::Error,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
@@ -80,7 +79,6 @@ use std::{
 use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
 
 mod config;
-mod direct_invocation;
 mod enclave;
 mod error;
 mod globals;
@@ -122,14 +120,12 @@ fn main() {
 			.unwrap(),
 	);
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
-	let direct_invocation_watch_list = Arc::new(WatchListService::<WsWatchingClient>::new());
 	let enclave = Arc::new(enclave_init().unwrap());
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
 		sync_block_gossiper,
-		direct_invocation_watch_list,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
 	)));

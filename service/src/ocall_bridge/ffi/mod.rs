@@ -26,7 +26,5 @@ pub mod get_update_info;
 pub mod init_quote;
 pub mod ipfs;
 pub mod propose_sidechain_blocks;
-pub mod send_status;
 pub mod send_to_parentchain;
-pub mod update_status_event;
 pub mod worker_request;

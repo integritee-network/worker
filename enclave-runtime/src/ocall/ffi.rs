@@ -43,22 +43,6 @@ extern "C" {
 		p_quote_len: *mut u32,
 	) -> sgx_status_t;
 
-	pub fn ocall_update_status_event(
-		ret_val: *mut sgx_status_t,
-		hash_encoded: *const u8,
-		hash_size: u32,
-		status_update_encoded: *const u8,
-		status_size: u32,
-	) -> sgx_status_t;
-
-	pub fn ocall_send_status(
-		ret_val: *mut sgx_status_t,
-		hash_encoded: *const u8,
-		hash_size: u32,
-		status_update_encoded: *const u8,
-		status_size: u32,
-	) -> sgx_status_t;
-
 	pub fn ocall_get_update_info(
 		ret_val: *mut sgx_status_t,
 		platform_blob: *const sgx_platform_info_t,
