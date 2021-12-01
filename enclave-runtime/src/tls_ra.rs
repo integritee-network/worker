@@ -1,9 +1,8 @@
 use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
-	error::Result as EnclaveResult,
+	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
-	utils::UnwrapOrSgxErrorUnexpected,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{Aes, AesSeal, Rsa3072Seal};
@@ -125,12 +124,12 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 
 	let cfg = match tls_server_config(sign_type, OcallApi, skip_ra == 1) {
 		Ok(cfg) => cfg,
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	let (mut sess, mut conn) = match tls_server_sesssion_stream(socket_fd, cfg) {
 		Ok(sc) => sc,
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
@@ -138,12 +137,12 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 
 	let (rsa_pair, aes) = match read_files_to_send() {
 		Ok((r, a)) => (r, a),
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	match send_files(&mut tls, &rsa_pair, &aes) {
 		Ok(_) => println!("    [Enclave] (MU-RA-Server) Successfully provisioned keys!\n"),
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -152,9 +151,9 @@ pub unsafe extern "C" fn run_key_provisioning_server(
 fn tls_server_sesssion_stream(
 	socket_fd: i32,
 	cfg: ServerConfig,
-) -> SgxResult<(ServerSession, TcpStream)> {
+) -> EnclaveResult<(ServerSession, TcpStream)> {
 	let sess = rustls::ServerSession::new(&Arc::new(cfg));
-	let conn = TcpStream::new(socket_fd).sgx_error()?;
+	let conn = TcpStream::new(socket_fd).map_err(|e| EnclaveError::Other(e.into()))?;
 	Ok((sess, conn))
 }
 
@@ -162,22 +161,21 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
 	ocall_api: A,
 	skip_ra: bool,
-) -> SgxResult<ServerConfig> {
-	let (key_der, cert_der) =
-		create_ra_report_and_signature(sign_type, &ocall_api, skip_ra).sgx_error()?;
+) -> EnclaveResult<ServerConfig> {
+	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, &ocall_api, skip_ra)?;
 
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];
 	let privkey = rustls::PrivateKey(key_der);
 	cfg.set_single_cert_with_ocsp_and_sct(certs, privkey, vec![], vec![])
-		.sgx_error()?;
+		.map_err(|e| EnclaveError::Other(e.into()))?;
 	Ok(cfg)
 }
 
-fn read_files_to_send() -> SgxResult<(Vec<u8>, Aes)> {
-	let shielding_key = Rsa3072Seal::unseal().sgx_error()?;
-	let aes = AesSeal::unseal().sgx_error()?;
-	let rsa_pair = serde_json::to_vec(&shielding_key).sgx_error()?;
+fn read_files_to_send() -> EnclaveResult<(Vec<u8>, Aes)> {
+	let shielding_key = Rsa3072Seal::unseal()?;
+	let aes = AesSeal::unseal()?;
+	let rsa_pair = serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))?;
 
 	let rsa_len = rsa_pair.len();
 	info!("    [Enclave] Read Shielding Key: {:?}", rsa_len);
@@ -190,11 +188,11 @@ fn send_files(
 	tls: &mut Stream<ServerSession, TcpStream>,
 	rsa_pair: &[u8],
 	aes: &Aes,
-) -> SgxResult<()> {
-	tls.write(&rsa_pair.len().to_le_bytes()).sgx_error()?;
-	tls.write(rsa_pair).sgx_error()?;
-	tls.write(&aes.key[..]).sgx_error()?;
-	tls.write(&aes.init_vec[..]).sgx_error()?;
+) -> EnclaveResult<()> {
+	tls.write(&rsa_pair.len().to_le_bytes())?;
+	tls.write(rsa_pair)?;
+	tls.write(&aes.key[..])?;
+	tls.write(&aes.init_vec[..])?;
 	Ok(())
 }
 
@@ -208,12 +206,12 @@ pub extern "C" fn request_key_provisioning(
 
 	let cfg = match tls_client_config(sign_type, OcallApi, skip_ra == 1) {
 		Ok(cfg) => cfg,
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	let (mut sess, mut conn) = match tls_client_session_stream(socket_fd, cfg) {
 		Ok(sc) => (sc),
-		Err(e) => return e,
+		Err(e) => return e.into(),
 	};
 
 	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
@@ -232,29 +230,24 @@ pub extern "C" fn request_key_provisioning(
 fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> EnclaveResult<()> {
 	let mut key_len_arr = [0u8; 8];
 
-	let key_len = tls
-		.read(&mut key_len_arr)
-		.map(|_| usize::from_le_bytes(key_len_arr))
-		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving shielding key length")?;
+	let key_len = tls.read(&mut key_len_arr).map(|_| usize::from_le_bytes(key_len_arr))?;
 
 	let mut rsa_pair = vec![0u8; key_len];
-	tls.read(&mut rsa_pair)
-		.map(|_| info!("    [Enclave] Received Shielding key"))
-		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving shielding key")?;
+	tls.read(&mut rsa_pair).map(|_| info!("    [Enclave] Received Shielding key"))?;
 
-	let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair)
-		.sgx_error_with_log("    [Enclave] Received Invalid RSA key")?;
+	let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair).map_err(|e| {
+		error!("    [Enclave] Received Invalid RSA key");
+		EnclaveError::Other(e.into())
+	})?;
 	Rsa3072Seal::seal(key)?;
 
 	let mut aes_key = [0u8; 16];
 	tls.read(&mut aes_key)
-		.map(|_| info!("    [Enclave] (MU-RA-Client)Received AES key: {:?}", &aes_key[..]))
-		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes key ")?;
+		.map(|_| info!("    [Enclave] (MU-RA-Client)Received AES key: {:?}", &aes_key[..]))?;
 
 	let mut aes_iv = [0u8; 16];
 	tls.read(&mut aes_iv)
-		.map(|_| info!("    [Enclave] (MU-RA-Client) Received AES IV: {:?}", &aes_iv[..]))
-		.sgx_error_with_log("    [Enclave] (MU-RA-Client) Error receiving aes iv")?;
+		.map(|_| info!("    [Enclave] (MU-RA-Client) Received AES IV: {:?}", &aes_iv[..]))?;
 
 	AesSeal::seal(Aes::new(aes_key, aes_iv))?;
 
@@ -266,10 +259,11 @@ fn receive_files(tls: &mut Stream<ClientSession, TcpStream>) -> EnclaveResult<()
 fn tls_client_session_stream(
 	socket_fd: i32,
 	cfg: ClientConfig,
-) -> SgxResult<(ClientSession, TcpStream)> {
-	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).sgx_error()?;
+) -> EnclaveResult<(ClientSession, TcpStream)> {
+	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
+		.map_err(|e| EnclaveError::Other(e.into()))?;
 	let sess = rustls::ClientSession::new(&Arc::new(cfg), dns_name);
-	let conn = TcpStream::new(socket_fd).sgx_error()?;
+	let conn = TcpStream::new(socket_fd)?;
 	Ok((sess, conn))
 }
 
@@ -277,9 +271,8 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
 	ocall_api: A,
 	skip_ra: bool,
-) -> SgxResult<ClientConfig> {
-	let (key_der, cert_der) =
-		create_ra_report_and_signature(sign_type, &ocall_api, skip_ra).sgx_error()?;
+) -> EnclaveResult<ClientConfig> {
+	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, &ocall_api, skip_ra)?;
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];

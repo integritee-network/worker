@@ -29,8 +29,8 @@
 use crate::{
 	cert, io,
 	ocall::OcallApi,
-	utils::{hash_from_slice, write_slice_and_whitespace_pad, UnwrapOrSgxErrorUnexpected},
-	Result as EnclaveResult,
+	utils::{hash_from_slice, write_slice_and_whitespace_pad},
+	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::Encode;
 use core::default::Default;
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) 
 	}
 }
 
-fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, String, String)> {
+fn parse_response_attn_report(resp: &[u8]) -> EnclaveResult<(String, String, String)> {
 	debug!("    [Enclave] Entering parse_response_attn_report");
 	let mut headers = [httparse::EMPTY_HEADER; 16];
 	let mut respp = httparse::Response::new(&mut headers);
@@ -104,13 +104,17 @@ fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, String, String)
 		//println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
 		match h.name {
 			"Content-Length" => {
-				let len_str = String::from_utf8(h.value.to_vec()).sgx_error()?;
-				len_num = len_str.parse::<u32>().sgx_error()?;
+				let len_str = String::from_utf8(h.value.to_vec())
+					.map_err(|e| EnclaveError::Other(e.into()))?;
+				len_num = len_str.parse::<u32>().map_err(|e| EnclaveError::Other(e.into()))?;
 				debug!("    [Enclave] Content length = {}", len_num);
 			},
-			"X-IASReport-Signature" => sig = String::from_utf8(h.value.to_vec()).sgx_error()?,
+			"X-IASReport-Signature" =>
+				sig = String::from_utf8(h.value.to_vec())
+					.map_err(|e| EnclaveError::Other(e.into()))?,
 			"X-IASReport-Signing-Certificate" =>
-				cert = String::from_utf8(h.value.to_vec()).sgx_error()?,
+				cert = String::from_utf8(h.value.to_vec())
+					.map_err(|e| EnclaveError::Other(e.into()))?,
 			_ => (),
 		}
 	}
@@ -124,9 +128,10 @@ fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, String, String)
 	if len_num != 0 {
 		// The unwrap is safe. It resolves to the https::Status' unwrap function which only panics
 		// if the the response is not complete, which cannot happen if the result is Ok().
-		let header_len = result.sgx_error()?.unwrap();
+		let header_len = result.map_err(|e| EnclaveError::Other(e.into()))?.unwrap();
 		let resp_body = &resp[header_len..];
-		attn_report = String::from_utf8(resp_body.to_vec()).sgx_error()?;
+		attn_report =
+			String::from_utf8(resp_body.to_vec()).map_err(|e| EnclaveError::Other(e.into()))?;
 		debug!("    [Enclave] Attestation report = {}", attn_report);
 	}
 
@@ -154,7 +159,7 @@ fn log_resp_code(resp_code: &mut Option<u16>) {
 	debug!("    [Enclave] msg = {}", msg);
 }
 
-fn parse_response_sigrl(resp: &[u8]) -> SgxResult<Vec<u8>> {
+fn parse_response_sigrl(resp: &[u8]) -> EnclaveResult<Vec<u8>> {
 	debug!("    [Enclave] Entering parse_response_sigrl");
 	let mut headers = [httparse::EMPTY_HEADER; 16];
 	let mut respp = httparse::Response::new(&mut headers);
@@ -169,8 +174,9 @@ fn parse_response_sigrl(resp: &[u8]) -> SgxResult<Vec<u8>> {
 	for i in 0..respp.headers.len() {
 		let h = respp.headers[i];
 		if h.name == "content-length" {
-			let len_str = String::from_utf8(h.value.to_vec()).sgx_error()?;
-			len_num = len_str.parse::<u32>().sgx_error()?;
+			let len_str =
+				String::from_utf8(h.value.to_vec()).map_err(|e| EnclaveError::Other(e.into()))?;
+			len_num = len_str.parse::<u32>().map_err(|e| EnclaveError::Other(e.into()))?;
 			debug!("    [Enclave] Content length = {}", len_num);
 		}
 	}
@@ -178,11 +184,12 @@ fn parse_response_sigrl(resp: &[u8]) -> SgxResult<Vec<u8>> {
 	if len_num != 0 {
 		// The unwrap is safe. It resolves to the https::Status' unwrap function which only panics
 		// if the the response is not complete, which cannot happen if the result is Ok().
-		let header_len = result.sgx_error()?.unwrap();
+		let header_len = result.map_err(|e| EnclaveError::Other(e.into()))?.unwrap();
 		let resp_body = &resp[header_len..];
 		debug!("    [Enclave] Base64-encoded SigRL: {:?}", resp_body);
 
-		return base64::decode(str::from_utf8(resp_body).sgx_error()?).sgx_error()
+		let resp_str = str::from_utf8(resp_body).map_err(|e| EnclaveError::Other(e.into()))?;
+		return base64::decode(resp_str).map_err(|e| EnclaveError::Other(e.into()))
 	}
 
 	// len_num == 0
@@ -196,7 +203,7 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 	config
 }
 
-pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> SgxResult<Vec<u8>> {
+pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> EnclaveResult<Vec<u8>> {
 	debug!("    [Enclave] Entering get_sigrl_from_intel. fd = {:?}", fd);
 	let config = make_ias_client_config();
 	//let sigrl_arg = SigRLArg { group_id : gid };
@@ -210,9 +217,10 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> SgxResult<Vec<u8>> {
 					  ias_key);
 	debug!("    [Enclave]  request = {}", req);
 
-	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).sgx_error()?;
+	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
+		.map_err(|e| EnclaveError::Other(e.into()))?;
 	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-	let mut sock = TcpStream::new(fd).sgx_error()?;
+	let mut sock = TcpStream::new(fd)?;
 	let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
 	let _result = tls.write(req.as_bytes());
@@ -220,11 +228,11 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> SgxResult<Vec<u8>> {
 
 	debug!("    [Enclave] tls.write complete");
 
-	tls.read_to_end(&mut plaintext)
-		.sgx_error_with_log("    [Enclave] tls.read_to_end")?;
+	tls.read_to_end(&mut plaintext)?;
 
 	debug!("    [Enclave] tls.read_to_end complete");
-	let resp_string = String::from_utf8(plaintext.clone()).sgx_error()?;
+	let resp_string =
+		String::from_utf8(plaintext.clone()).map_err(|e| EnclaveError::Other(e.into()))?;
 
 	debug!("    [Enclave] resp_string = {}", resp_string);
 
@@ -232,7 +240,7 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> SgxResult<Vec<u8>> {
 }
 
 // TODO: support pse
-pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, String, String)> {
+pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> EnclaveResult<(String, String, String)> {
 	debug!("    [Enclave] Entering get_report_from_intel. fd = {:?}", fd);
 	let config = make_ias_client_config();
 	let encoded_quote = base64::encode(&quote[..]);
@@ -247,15 +255,12 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
 					  encoded_json.len(),
 					  encoded_json);
 	debug!("    [Enclave] Req = {}", req);
-	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
-		.sgx_error_with_log("Invalid DEV_HOSTNAME")?;
+	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).map_err(|e| {
+		error!("Invalid DEV_HOSTNAME");
+		EnclaveError::Other(e.into())
+	})?;
 	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-	let mut sock = TcpStream::new(fd)
-		.map_err(|e| {
-			error!("    [Enclave] failed to create TcpStream: {:?}", e);
-			e
-		})
-		.sgx_error()?;
+	let mut sock = TcpStream::new(fd)?;
 	let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
 	let _result = tls.write(req.as_bytes());
@@ -263,11 +268,12 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> SgxResult<(String, St
 
 	debug!("    [Enclave] tls.write complete");
 
-	tls.read_to_end(&mut plaintext)
-		.sgx_error_with_log("    [Enclave] error reading tls to end")?;
+	tls.read_to_end(&mut plaintext)?;
 	debug!("    [Enclave] tls.read_to_end complete");
-	let resp_string = String::from_utf8(plaintext.clone())
-		.sgx_error_with_log("    [Enclave] error decoding tls answer to string")?;
+	let resp_string = String::from_utf8(plaintext.clone()).map_err(|e| {
+		error!("    [Enclave] error decoding tls answer to string");
+		EnclaveError::Other(e.into())
+	})?;
 
 	debug!("    [Enclave] resp_string = {}", resp_string);
 
@@ -330,7 +336,7 @@ pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
 	};
 
 	let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-	let mut os_rng = os::SgxRng::new().sgx_error()?;
+	let mut os_rng = os::SgxRng::new().map_err(|e| EnclaveError::Other(e.into()))?;
 	os_rng.fill_bytes(&mut quote_nonce.rand);
 
 	// (3) Generate the quote
@@ -432,11 +438,10 @@ fn decode_spid(hex_encoded_string: &str) -> SgxResult<sgx_spid_t> {
 	Ok(spid)
 }
 
-fn get_ias_api_key() -> SgxResult<String> {
+fn get_ias_api_key() -> EnclaveResult<String> {
 	io::read_to_string(RA_API_KEY_FILE)
 		.map(|key| key.trim_end().to_owned())
-		.map_err(|e| error!("Error fetching ias api key: {:?}", e))
-		.sgx_error()
+		.map_err(|e| EnclaveError::Other(e.into()))
 }
 
 pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(

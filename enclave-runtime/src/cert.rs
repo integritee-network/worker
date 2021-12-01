@@ -1,5 +1,5 @@
 use super::CERTEXPIRYDAYS;
-use crate::utils::UnwrapOrSgxErrorUnexpected;
+use crate::{Error as EnclaveError, Result as EnclaveResult};
 use arrayvec::ArrayVec;
 use bit_vec::BitVec;
 use chrono::{prelude::*, Duration, TimeZone, Utc as TzUtc};
@@ -173,13 +173,14 @@ pub fn gen_ecc_cert(
 	Ok((key_der, cert_der))
 }
 
-pub fn percent_decode(orig: String) -> SgxResult<String> {
+pub fn percent_decode(orig: String) -> EnclaveResult<String> {
 	let v: Vec<&str> = orig.split('%').collect();
 	let mut ret = String::new();
 	ret.push_str(v[0]);
 	if v.len() > 1 {
 		for s in v[1..].iter() {
-			ret.push(u8::from_str_radix(&s[0..2], 16).sgx_error()? as char);
+			ret.push(u8::from_str_radix(&s[0..2], 16).map_err(|e| EnclaveError::Other(e.into()))?
+				as char);
 			ret.push_str(&s[2..]);
 		}
 	}
@@ -198,7 +199,7 @@ where
 	let mut offset = cert_der
 		.windows(prime256v1_oid.len())
 		.position(|window| window == prime256v1_oid)
-		.sgx_error()?;
+		.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 	offset += 11; // 10 + TAG (0x03)
 
 	// Obtain Public Key length
@@ -217,7 +218,7 @@ where
 	let mut offset = cert_der
 		.windows(ns_cmt_oid.len())
 		.position(|window| window == ns_cmt_oid)
-		.sgx_error()?;
+		.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 	offset += 12; // 11 + TAG (0x04)
 
 	// Obtain Netscape Comment length
@@ -233,12 +234,13 @@ where
 
 	// Extract each field
 	let mut iter = payload.split(|x| *x == 0x7C);
-	let attn_report_raw = iter.next().sgx_error()?;
-	let sig_raw = iter.next().sgx_error()?;
-	let sig = base64::decode(&sig_raw).sgx_error()?;
+	let attn_report_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+	let sig_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+	let sig = base64::decode(&sig_raw).map_err(|e| EnclaveError::Other(e.into()))?;
 
-	let sig_cert_raw = iter.next().sgx_error()?;
-	let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD).sgx_error()?;
+	let sig_cert_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+	let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD)
+		.map_err(|e| EnclaveError::Other(e.into()))?;
 	let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
 
 	// Verify if the signing cert is issued by Intel CA
@@ -248,7 +250,8 @@ where
 	let tail_len = "-----END CERTIFICATE-----".len();
 	let full_len = ias_ca_stripped.len();
 	let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
-	let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).sgx_error()?;
+	let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD)
+		.map_err(|e| EnclaveError::Other(e.into()))?;
 
 	let mut ca_reader = BufReader::new(IAS_REPORT_CA);
 
@@ -264,7 +267,7 @@ where
 		SUPPORTED_SIG_ALGS,
 		&webpki::TLSServerTrustAnchors(&trust_anchors),
 		&[ias_cert_dec.as_slice()],
-		now_func.sgx_error()?,
+		now_func.map_err(|e| EnclaveError::Other(e.into()))?,
 	) {
 		Ok(_) => info!("Cert is good"),
 		Err(e) => {
@@ -295,13 +298,17 @@ where
 {
 	// Verify attestation report
 	// 1. Check timestamp is within 24H (90day is recommended by Intel)
-	let attn_report: Value = serde_json::from_slice(report_raw).sgx_error()?;
+	let attn_report: Value =
+		serde_json::from_slice(report_raw).map_err(|e| EnclaveError::Other(e.into()))?;
 	if let Value::String(time) = &attn_report["timestamp"] {
 		let time_fixed = time.clone() + "+0000";
 		let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")
-			.sgx_error()?
+			.map_err(|e| EnclaveError::Other(e.into()))?
 			.timestamp();
-		let now = SystemTime::now().duration_since(UNIX_EPOCH).sgx_error()?.as_secs() as i64;
+		let now = SystemTime::now()
+			.duration_since(UNIX_EPOCH)
+			.map_err(|e| EnclaveError::Other(e.into()))?
+			.as_secs() as i64;
 		info!("Time diff = {}", now - ts);
 	} else {
 		error!("Failed to fetch timestamp from attestation report");
@@ -322,7 +329,8 @@ where
 					let n = (pib.len() - 8) / 2;
 					for i in 0..n {
 						buf.try_push(
-							u8::from_str_radix(&pib[(i * 2 + 8)..(i * 2 + 10)], 16).sgx_error()?,
+							u8::from_str_radix(&pib[(i * 2 + 8)..(i * 2 + 10)], 16)
+								.map_err(|e| EnclaveError::Other(e.into()))?,
 						)
 						.map_err(|e| {
 							error!("failed to push element to platform info blob buffer, exceeding buffer size ({})", e);
@@ -352,12 +360,12 @@ where
 
 	// 3. Verify quote body
 	if let Value::String(quote_raw) = &attn_report["isvEnclaveQuoteBody"] {
-		let quote = base64::decode(&quote_raw).sgx_error()?;
+		let quote = base64::decode(&quote_raw).map_err(|e| EnclaveError::Other(e.into()))?;
 		debug!("Quote = {:?}", quote);
 		// TODO: lack security check here
 		let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
 
-		let ti = attestation_ocall.get_mrenclave_of_self().sgx_error()?;
+		let ti = attestation_ocall.get_mrenclave_of_self()?;
 		if sgx_quote.report_body.mr_enclave.m != ti.m {
 			error!(
 				"mr_enclave is not equal to self {:?} != {:?}",
