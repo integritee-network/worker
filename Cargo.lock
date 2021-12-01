@@ -2722,6 +2722,7 @@ dependencies = [
  "env_logger 0.9.0",
  "finality-grandpa",
  "frame-support",
+ "ita-stf",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
@@ -2751,7 +2752,6 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
- "ita-stf",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-test",
@@ -2759,13 +2759,11 @@ dependencies = [
  "its-consensus-aura",
  "its-primitives",
  "its-state",
- "its-top-pool-executor",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_tstd",
  "sgx_types",
- "sp-core",
  "sp-keyring",
  "sp-runtime",
  "thiserror 1.0.30",

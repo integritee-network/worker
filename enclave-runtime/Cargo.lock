@@ -1569,6 +1569,7 @@ version = "0.8.0"
 dependencies = [
  "finality-grandpa",
  "frame-support",
+ "ita-stf",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
@@ -1595,18 +1596,15 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
- "ita-stf",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-types",
  "its-primitives",
  "its-state",
- "its-top-pool-executor",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
- "sp-core",
  "sp-runtime",
  "thiserror 1.0.9",
 ]

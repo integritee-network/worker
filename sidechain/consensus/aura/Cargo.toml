@@ -18,6 +18,7 @@ sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_c
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
+ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
@@ -43,6 +44,7 @@ itp-storage = { path = "../../../core-primitives/storage" }
 [features]
 default = ["std"]
 std = [
+   "ita-stf/std",
    "itp-ocall-api/std",
    "itp-sgx-crypto/std",
    "itp-stf-executor/std",
@@ -62,6 +64,7 @@ std = [
 ]
 sgx = [
    "sgx_tstd",
+   "ita-stf/sgx",
    "itp-sgx-crypto/sgx",
    "itp-stf-executor/sgx",
    "itp-stf-state-handler/sgx",

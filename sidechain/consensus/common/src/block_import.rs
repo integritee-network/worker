@@ -19,18 +19,14 @@
 
 use crate::{Error, Verifier};
 use codec::Decode;
-use ita_stf::hash::TrustedOperationOrHash;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
 use itp_sgx_crypto::StateCrypto;
 use its_primitives::traits::{
 	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockT,
 };
 use its_state::{LastBlockExt, SidechainState};
-use its_top_pool_executor::call_operator::{ExecutedOperation, TopPoolCallOperator};
-use log::*;
-use sp_core::{Public, H256};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::{sync::Arc, vec::Vec};
+use std::vec::Vec;
 
 pub trait BlockImport<PB, SB>
 where
@@ -64,24 +60,28 @@ where
 	/// Key that is used for state encryption.
 	fn state_key(&self) -> Self::StateCrypto;
 
+	/// Getter for the context.
+	fn get_context(&self) -> &Self::Context;
+
+	/// Cleanup task after import is done.
+	fn cleanup(&self, signed_sidechain_block: &SB) -> Result<(), Error>;
+
 	/// Import a sidechain block and mutate state by `apply_state_update`.
-	fn import_block<TopPoolExecutor>(
+	fn import_block(
 		&self,
 		signed_sidechain_block: SB,
 		parentchain_header: &PB::Header,
-		top_pool_executor: Arc<TopPoolExecutor>,
-		ctx: &Self::Context,
-	) -> Result<(), Error>
-	where
-		TopPoolExecutor: TopPoolCallOperator<PB, SB> + Send + Sync + 'static,
-	{
+	) -> Result<(), Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.shard_id();
 		self.apply_state_update(&shard, |mut state| {
 			let mut verifier = self.verifier(state.clone());
 
-			let block_import_params =
-				verifier.verify(signed_sidechain_block.clone(), parentchain_header, ctx)?;
+			let block_import_params = verifier.verify(
+				signed_sidechain_block.clone(),
+				parentchain_header,
+				self.get_context(),
+			)?;
 
 			let update = state_update_from_encrypted(
 				block_import_params.block().state_payload(),
@@ -95,19 +95,10 @@ where
 			Ok(state)
 		})?;
 
-		// If the block has been proposed by this enclave, remove all successfully applied
-		// trusted calls from the top pool.
-		if block_author_is_equal_to_self::<SB, Self::Context>(ctx, sidechain_block.block_author())?
-		{
-			remove_calls_from_top_pool::<PB, SB, TopPoolExecutor>(
-				top_pool_executor,
-				sidechain_block.signed_top_hashes(),
-				&shard,
-			)
-		}
+		self.cleanup(&signed_sidechain_block)?;
 
 		// Store block in storage.
-		ctx.store_sidechain_blocks(vec![signed_sidechain_block])?;
+		self.get_context().store_sidechain_blocks(vec![signed_sidechain_block])?;
 
 		Ok(())
 	}
@@ -123,47 +114,8 @@ fn state_update_from_encrypted<Key: StateCrypto, StateUpdate: Decode>(
 	Ok(Decode::decode(&mut payload.as_slice())?)
 }
 
-fn block_author_is_equal_to_self<SB, OcallApi>(
-	ocall_api: &OcallApi,
-	block_author: &<SB::Block as SidechainBlockT>::Public,
-) -> Result<bool, Error>
-where
-	SB: SignedSidechainBlockT,
-	OcallApi: EnclaveAttestationOCallApi,
-{
-	let mrenclave = ocall_api.get_mrenclave_of_self()?.m.to_vec();
-	Ok(mrenclave == block_author.to_raw_vec())
-}
-
-fn remove_calls_from_top_pool<PB, SB, TopPoolExecutor>(
-	top_pool_executor: Arc<TopPoolExecutor>,
-	signed_top_hashes: &[H256],
-	shard: &ShardIdentifierFor<SB>,
-) where
-	PB: ParentchainBlockTrait,
-	SB: SignedSidechainBlockT,
-	TopPoolExecutor: TopPoolCallOperator<PB, SB> + Send + Sync + 'static,
-{
-	let unremoved_calls = top_pool_executor.remove_calls_from_pool(
-		shard,
-		signed_top_hashes
-			.iter()
-			.map(|hash| {
-				// Only successfully executed operations are included in a block.
-				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
-			})
-			.collect(),
-	);
-	for unremoved_call in unremoved_calls {
-		error!(
-			"Could not remove call {:?} from top pool",
-			unremoved_call.trusted_operation_or_hash
-		);
-	}
-}
-
 #[cfg(test)]
-pub mod tests {
+mod tests {
 	/* use super::*;
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use its_consensus_aura::AuraVerifier;
@@ -175,12 +127,12 @@ pub mod tests {
 	use sp_core::{ed25519, H256};
 	use sp_runtime::generic::SignedBlock as ParentchainBlock;
 
-	 type SidechainDB =
+	type SidechainDB =
 		GenericSidechainDB<<SidechainBlock as SidechainBlockT>::Block, SgxExternalities>;
 
 	type AuthorityPair = ed25519::Pair;
 
-	pub type TestAuraVerifier =
+	type TestAuraVerifier =
 		AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainDB, OnchainMock>;
 
 	struct MockKey {}
@@ -198,7 +150,7 @@ pub mod tests {
 	}
 
 	#[test]
-	pub fn import_block_works() {
+	fn import_block_works() {
 		let mut state = SidechainDB::default();
 	}
 
