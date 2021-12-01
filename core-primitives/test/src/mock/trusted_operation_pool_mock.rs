@@ -16,6 +16,15 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
 use codec::Encode;
 use core::{future::Future, pin::Pin};
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
@@ -33,14 +42,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{BlakeTwo256, Hash, NumberFor},
 };
-use std::{
-	boxed::Box,
-	collections::HashMap,
-	string::String,
-	sync::{Arc, SgxRwLock as RwLock},
-	vec,
-	vec::Vec,
-};
+use std::{boxed::Box, collections::HashMap, string::String, sync::Arc, vec, vec::Vec};
 
 /// Mock for the trusted operation pool
 ///

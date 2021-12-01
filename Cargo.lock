@@ -2656,6 +2656,7 @@ dependencies = [
  "itp-types",
  "its-top-pool",
  "jsonrpc-core 16.1.0",
+ "jsonrpc-core 18.0.0",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_tcrypto_helper",
