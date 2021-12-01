@@ -36,10 +36,11 @@ its-top-pool-executor = { path = "../../top-pool-executor", default-features = f
 its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
 
 [dev-dependencies]
-itp-test = { path = "../../../core-primitives/test" }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 env_logger = "0.9.0"
 itp-storage = { path = "../../../core-primitives/storage" }
+itp-test = { path = "../../../core-primitives/test" }
+its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
+sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [features]
 default = ["std"]

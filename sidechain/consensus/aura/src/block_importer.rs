@@ -93,7 +93,7 @@ where
 		}
 	}
 
-	fn remove_calls_from_top_pool(
+	pub(crate) fn remove_calls_from_top_pool(
 		&self,
 		signed_top_hashes: &[H256],
 		shard: &ShardIdentifierFor<SB>,
@@ -202,7 +202,7 @@ impl<Authority, PB, SB, OCallApi, StateHandler, StateKey, TopPoolExecutor> Block
 	}
 }
 
-fn block_author_is_equal_to_self<SB, OcallApi>(
+pub(crate) fn block_author_is_equal_to_self<SB, OcallApi>(
 	ocall_api: &OcallApi,
 	block_author: &SB::Public,
 ) -> Result<bool, ConsensusError>
@@ -213,6 +213,3 @@ where
 	let mrenclave = ocall_api.get_mrenclave_of_self()?.m.to_vec();
 	Ok(mrenclave == block_author.to_raw_vec())
 }
-
-#[cfg(test)]
-mod tests {}

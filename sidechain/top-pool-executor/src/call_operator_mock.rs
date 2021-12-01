@@ -1,0 +1,80 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+//! Call operator mock implementation.
+
+use crate::{
+	call_operator::{ExecutedOperation, TopPoolCallOperator},
+	error::Result,
+};
+use core::marker::PhantomData;
+use ita_stf::TrustedCallSigned;
+use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedBlockT};
+use sp_runtime::traits::Block as BlockT;
+use std::collections::HashMap;
+
+#[derive(Clone)]
+pub struct TopPoolCallOperatorMock<PB, SB>
+where
+	PB: BlockT,
+	SB: SignedBlockT,
+{
+	trusted_calls: HashMap<ShardIdentifierFor<SB>, Vec<TrustedCallSigned>>,
+	_phantom: PhantomData<PB>,
+}
+
+impl<PB, SB> Default for TopPoolCallOperatorMock<PB, SB>
+where
+	PB: BlockT,
+	SB: SignedBlockT,
+{
+	fn default() -> Self {
+		TopPoolCallOperatorMock { trusted_calls: Default::default(), _phantom: Default::default() }
+	}
+}
+
+impl<PB, SB> TopPoolCallOperatorMock<PB, SB>
+where
+	PB: BlockT,
+	SB: SignedBlockT,
+{
+	pub fn add_trusted_calls(
+		&mut self,
+		shard: ShardIdentifierFor<SB>,
+		trusted_calls: Vec<TrustedCallSigned>,
+	) {
+		self.trusted_calls.insert(shard, trusted_calls);
+	}
+}
+
+impl<PB, SB> TopPoolCallOperator<PB, SB> for TopPoolCallOperatorMock<PB, SB>
+where
+	PB: BlockT,
+	SB: SignedBlockT,
+{
+	fn get_trusted_calls(&self, shard: &ShardIdentifierFor<SB>) -> Result<Vec<TrustedCallSigned>> {
+		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or(Default::default()))
+	}
+
+	fn remove_calls_from_pool(
+		&self,
+		_shard: &ShardIdentifierFor<SB>,
+		_calls: Vec<ExecutedOperation>,
+	) -> Vec<ExecutedOperation> {
+		Default::default()
+	}
+}

@@ -41,6 +41,9 @@ pub mod call_operator;
 pub mod error;
 pub mod getter_operator;
 
+#[cfg(feature = "mocks")]
+pub mod call_operator_mock;
+
 // Re-exports
 pub use call_operator::TopPoolCallOperator;
 pub use getter_operator::TopPoolGetterOperator;

@@ -55,6 +55,9 @@ pub use verifier::*;
 #[cfg(test)]
 mod mock;
 
+#[cfg(test)]
+mod block_importer_tests;
+
 /// Aura consensus struct.
 pub struct Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi> {
 	authority_pair: AuthorityPair,

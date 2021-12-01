@@ -16,11 +16,10 @@ pub mod sgx_reexport_prelude {
 	pub use serde_sgx as serde;
 }
 
+pub mod aes;
 pub mod error;
 pub mod traits;
 
-#[cfg(feature = "sgx")]
-pub mod aes;
 #[cfg(feature = "sgx")]
 pub mod ed25519;
 #[cfg(feature = "sgx")]

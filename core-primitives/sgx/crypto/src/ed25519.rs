@@ -14,19 +14,27 @@
 	limitations under the License.
 
 */
+
+#[cfg(feature = "sgx")]
+use sgx_rand::{Rng, StdRng};
+
+#[cfg(feature = "sgx")]
+use std::{path::Path, sgxfs::SgxFile};
+
+#[cfg(feature = "sgx")]
+use itp_sgx_io::{seal, unseal, SealedIO};
+
 use crate::error::{Error, Result};
 use codec::Encode;
 use derive_more::Display;
 use itp_settings::files::SEALED_SIGNER_SEED_FILE;
-use itp_sgx_io::{seal, unseal, SealedIO};
 use log::*;
-use sgx_rand::{Rng, StdRng};
 use sp_core::{crypto::Pair, ed25519};
-use std::{path::Path, sgxfs::SgxFile};
 
 #[derive(Copy, Clone, Debug, Display)]
 pub struct Ed25519Seal;
 
+#[cfg(feature = "sgx")]
 impl SealedIO for Ed25519Seal {
 	type Error = Error;
 	type Unsealed = ed25519::Pair;
@@ -45,6 +53,7 @@ impl SealedIO for Ed25519Seal {
 	}
 }
 
+#[cfg(feature = "sgx")]
 pub fn create_sealed_if_absent() -> Result<()> {
 	if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
 		if Path::new(SEALED_SIGNER_SEED_FILE).exists() {
@@ -56,6 +65,7 @@ pub fn create_sealed_if_absent() -> Result<()> {
 	Ok(())
 }
 
+#[cfg(feature = "sgx")]
 pub fn create_sealed_seed() -> Result<()> {
 	let mut seed = [0u8; 32];
 	let mut rand = StdRng::new()?;

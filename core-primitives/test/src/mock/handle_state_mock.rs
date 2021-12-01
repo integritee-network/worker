@@ -15,6 +15,12 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
+
+#[cfg(feature = "std")]
+use std::sync::{RwLock, RwLockWriteGuard};
+
 use ita_stf::{ShardIdentifier, State as StfState};
 use itp_stf_state_handler::{
 	error::{Error, Result},
@@ -22,25 +28,14 @@ use itp_stf_state_handler::{
 	query_shard_state::QueryShardState,
 };
 use itp_types::H256;
-use sgx_externalities::SgxExternalitiesTrait;
-use std::{
-	collections::HashMap,
-	format,
-	sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard},
-	vec::Vec,
-};
+use std::{collections::HashMap, format, vec::Vec};
 
 /// Mock implementation for the `HandleState` trait.
 ///
 /// Uses an in-memory state, in a `HashMap`. To be used in unit tests.
+#[derive(Default)]
 pub struct HandleStateMock {
 	state_map: RwLock<HashMap<ShardIdentifier, StfState>>,
-}
-
-impl Default for HandleStateMock {
-	fn default() -> Self {
-		HandleStateMock { state_map: Default::default() }
-	}
 }
 
 impl HandleState for HandleStateMock {
@@ -48,14 +43,14 @@ impl HandleState for HandleStateMock {
 	type StateT = StfState;
 
 	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
-		let maybe_state = self.state_map.read().unwrap().get(shard).map(|s| s.clone());
+		let maybe_state = self.state_map.read().unwrap().get(shard).cloned();
 
 		return match maybe_state {
 			// Initialize with default state, if it doesn't exist yet.
 			None => {
-				self.state_map.write().unwrap().insert(shard.clone(), StfState::default());
+				self.state_map.write().unwrap().insert(*shard, StfState::default());
 
-				self.state_map.read().unwrap().get(shard).map(|s| s.clone()).ok_or_else(|| {
+				self.state_map.read().unwrap().get(shard).cloned().ok_or_else(|| {
 					Error::Other(
 						format!("state does not exist after inserting it, shard {:?}", shard)
 							.into(),
@@ -81,7 +76,7 @@ impl HandleState for HandleStateMock {
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<H256> {
-		state_lock.insert(shard.clone(), state);
+		state_lock.insert(*shard, state);
 		Ok(H256::default())
 	}
 }
@@ -92,18 +87,19 @@ impl QueryShardState for HandleStateMock {
 	}
 
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
-		Ok(self.state_map.read().unwrap().iter().map(|(k, _)| k.clone()).collect())
+		Ok(self.state_map.read().unwrap().iter().map(|(k, _)| *k).collect())
 	}
 }
 
 // Since the mock itself has quite a bit of complexity, we also have tests for the mock.
+#[cfg(feature = "sgx")]
 pub mod tests {
 
 	use super::*;
 	use codec::{Decode, Encode};
 	use ita_stf::Stf;
 	use itp_types::ShardIdentifier;
-	use sgx_externalities::SgxExternalitiesType;
+	use sgx_externalities::{SgxExternalitiesTrait, SgxExternalitiesType};
 	use sp_core::blake2_256;
 
 	pub fn initialized_shards_list_is_empty() {

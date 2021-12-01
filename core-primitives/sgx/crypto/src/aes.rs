@@ -15,6 +15,21 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sgxfs::SgxFile;
+
+#[cfg(feature = "sgx")]
+use sgx_rand::{Rng, StdRng};
+
+#[cfg(feature = "sgx")]
+use itp_sgx_io::{seal, unseal, SealedIO};
+
+#[cfg(feature = "sgx")]
+use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
+
+#[cfg(feature = "sgx")]
+use log::info;
+
 use crate::{
 	error::{Error, Result},
 	traits::StateCrypto,
@@ -22,18 +37,11 @@ use crate::{
 use aes::Aes128;
 use codec::{Decode, Encode};
 use derive_more::Display;
-use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
-use itp_sgx_io::{seal, unseal, SealedIO};
-use log::info;
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},
 	Ofb,
 };
-use sgx_rand::{Rng, StdRng};
-use std::{
-	convert::{TryFrom, TryInto},
-	sgxfs::SgxFile,
-};
+use std::convert::{TryFrom, TryInto};
 
 type AesOfb = Ofb<Aes128>;
 
@@ -52,6 +60,7 @@ impl Aes {
 #[derive(Copy, Clone, Debug, Display)]
 pub struct AesSeal;
 
+#[cfg(feature = "sgx")]
 impl SealedIO for AesSeal {
 	type Error = Error;
 	type Unsealed = Aes;
@@ -81,10 +90,11 @@ impl TryFrom<&Aes> for AesOfb {
 	type Error = Error;
 
 	fn try_from(aes: &Aes) -> std::result::Result<Self, Self::Error> {
-		Ok(AesOfb::new_var(&aes.key, &aes.init_vec).map_err(|_| Error::InvalidNonceKeyLength)?)
+		AesOfb::new_var(&aes.key, &aes.init_vec).map_err(|_| Error::InvalidNonceKeyLength)
 	}
 }
 
+#[cfg(feature = "sgx")]
 pub fn create_sealed_if_absent() -> Result<()> {
 	if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
 		info!("[Enclave] Keyfile not found, creating new! {}", AES_KEY_FILE_AND_INIT_V);
@@ -93,6 +103,7 @@ pub fn create_sealed_if_absent() -> Result<()> {
 	Ok(())
 }
 
+#[cfg(feature = "sgx")]
 pub fn create_sealed() -> Result<()> {
 	let mut key = [0u8; 16];
 	let mut iv = [0u8; 16];
@@ -106,5 +117,5 @@ pub fn create_sealed() -> Result<()> {
 
 /// If AES acts on the encrypted data it decrypts and vice versa
 pub fn de_or_encrypt(aes: &Aes, data: &mut [u8]) -> Result<()> {
-	Ok(aes.try_into().map(|mut ofb: AesOfb| ofb.apply_keystream(data))?)
+	aes.try_into().map(|mut ofb: AesOfb| ofb.apply_keystream(data))
 }

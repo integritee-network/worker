@@ -15,13 +15,9 @@
 
 */
 
-#[cfg(feature = "sgx")]
 pub mod handle_state_mock;
-
 pub mod onchain_mock;
+pub mod trusted_operation_pool_mock;
 
 #[cfg(feature = "sgx")]
 pub mod shielding_crypto_mock;
-
-#[cfg(feature = "sgx")]
-pub mod trusted_operation_pool_mock;
