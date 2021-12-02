@@ -32,6 +32,7 @@ itp-types = { path = "../../../core-primitives/types", default-features = false 
 [dev-dependencies]
 itp-types = { path = "../../../core-primitives/types" }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+tokio = "*"
 
 
 [features]

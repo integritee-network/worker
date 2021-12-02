@@ -48,3 +48,42 @@ impl SlotStream {
 		self.inner_delay = Some(Delay::new(ends_in));
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::{thread, time::Instant};
+	use tokio;
+
+	const SLOT_DURATION: Duration = Duration::from_millis(300);
+	const SLOT_DURATION_PLUS: Duration = Duration::from_millis(310);
+
+	#[tokio::test]
+	async fn slot_stream_call_one_block() {
+		let mut slot_stream = SlotStream::new(SLOT_DURATION);
+
+		slot_stream.next_slot().await;
+		let now = Instant::now();
+		thread::sleep(Duration::from_millis(200));
+		slot_stream.next_slot().await;
+
+		let elapsed = now.elapsed();
+		assert!(elapsed >= SLOT_DURATION);
+		assert!(elapsed <= SLOT_DURATION_PLUS);
+	}
+
+	#[tokio::test]
+	async fn slot_stream_long_call() {
+		let mut slot_stream = SlotStream::new(SLOT_DURATION);
+
+		slot_stream.next_slot().await;
+		let now = Instant::now();
+		thread::sleep(Duration::from_millis(500));
+		slot_stream.next_slot().await;
+		slot_stream.next_slot().await;
+
+		let elapsed = now.elapsed();
+		assert!(elapsed >= 2 * SLOT_DURATION);
+		assert!(elapsed <= 2 * SLOT_DURATION_PLUS);
+	}
+}

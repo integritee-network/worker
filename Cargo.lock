@@ -2765,7 +2765,7 @@ name = "its-consensus-slots"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "futures 0.3.17",
+ "futures 0.3.18",
  "futures-timer",
  "itp-sgx-io",
  "itp-time-utils",
@@ -2779,6 +2779,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-keyring",
  "sp-runtime",
+ "tokio",
 ]
 
 [[package]]
