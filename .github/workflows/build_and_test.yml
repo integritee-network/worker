@@ -170,10 +170,10 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: ci.yml
-          name: integritee-node-dev-c07b6aab6c45123802b994508f65eedfc20bf251
+          name: integritee-node-dev-5b2868e0269181e7bd31f4e3970bf7b6fd5166de
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1492039473
+          run_id: 1503342881
           path: node
           repo: integritee-network/integritee-node
 
@@ -207,7 +207,7 @@ jobs:
         run: |
           touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
-          sleep 45
+          sleep 60
 
       - name: ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.
