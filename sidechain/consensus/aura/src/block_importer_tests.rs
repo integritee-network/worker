@@ -28,7 +28,7 @@ use itp_test::{
 	mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
 };
 use itp_time_utils::duration_now;
-use itp_types::{Block as ParentchainBlock, H256};
+use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::BlockImport;
 use its_primitives::{
 	traits::{SignBlock, SignedBlock},
@@ -95,20 +95,35 @@ fn empty_encrypted_state_update(state_handler: &HandleStateMock) -> Vec<u8> {
 	state_update
 }
 
-#[test]
-fn simple_block_import_works() {
-	let (block_importer, state_handler, _) = test_fixtures();
+fn signed_block(
+	parentchain_header: &ParentchainHeader,
+	state_handler: &HandleStateMock,
+	signer: Pair,
+) -> SignedSidechainBlock {
+	let state_update = empty_encrypted_state_update(state_handler);
 
-	let parentchain_header = ParentchainHeaderBuilder::default().build();
-	let state_update = empty_encrypted_state_update(state_handler.as_ref());
-
-	let signed_sidechain_block = TestBlockBuilder::new()
+	TestBlockBuilder::new()
 		.with_timestamp(duration_now().as_millis() as u64)
 		.with_layer1_head(parentchain_header.hash())
 		.with_parent_hash(H256::default())
 		.with_shard(shard())
 		.with_encrypted_payload(state_update)
-		.build_signed(default_authority());
+		.build_signed(signer)
+}
+
+fn default_authority_signed_block(
+	parentchain_header: &ParentchainHeader,
+	state_handler: &HandleStateMock,
+) -> SignedSidechainBlock {
+	signed_block(parentchain_header, state_handler, default_authority())
+}
+
+#[test]
+fn simple_block_import_works() {
+	let (block_importer, state_handler, _) = test_fixtures();
+	let parentchain_header = ParentchainHeaderBuilder::default().build();
+	let signed_sidechain_block =
+		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
 
 	block_importer
 		.import_block(signed_sidechain_block.clone(), &parentchain_header)
@@ -138,4 +153,28 @@ fn block_import_with_invalid_signature_fails() {
 	assert!(block_importer
 		.import_block(invalid_signature_block, &parentchain_header)
 		.is_err());
+}
+
+#[test]
+fn if_block_author_is_self_remove_tops_from_pool() {
+	let (block_importer, state_handler, top_pool_call_operator) = test_fixtures();
+	let parentchain_header = ParentchainHeaderBuilder::default().build();
+	let signed_sidechain_block =
+		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
+
+	block_importer.cleanup(&signed_sidechain_block).unwrap();
+
+	assert_eq!(1, top_pool_call_operator.remove_calls_invoked().len());
+}
+
+#[test]
+fn if_block_author_is_not_self_do_not_remove_tops() {
+	let (block_importer, state_handler, top_pool_call_operator) = test_fixtures();
+	let parentchain_header = ParentchainHeaderBuilder::default().build();
+	let signed_sidechain_block =
+		signed_block(&parentchain_header, state_handler.as_ref(), Keyring::Bob.pair());
+
+	block_importer.cleanup(&signed_sidechain_block).unwrap();
+
+	assert!(top_pool_call_operator.remove_calls_invoked().is_empty());
 }

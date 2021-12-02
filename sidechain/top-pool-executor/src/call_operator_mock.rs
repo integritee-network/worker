@@ -25,15 +25,15 @@ use core::marker::PhantomData;
 use ita_stf::TrustedCallSigned;
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedBlockT};
 use sp_runtime::traits::Block as BlockT;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
 
-#[derive(Clone)]
 pub struct TopPoolCallOperatorMock<PB, SB>
 where
 	PB: BlockT,
 	SB: SignedBlockT,
 {
 	trusted_calls: HashMap<ShardIdentifierFor<SB>, Vec<TrustedCallSigned>>,
+	remove_calls_invoked: RwLock<Vec<(ShardIdentifierFor<SB>, Vec<ExecutedOperation>)>>,
 	_phantom: PhantomData<PB>,
 }
 
@@ -43,7 +43,11 @@ where
 	SB: SignedBlockT,
 {
 	fn default() -> Self {
-		TopPoolCallOperatorMock { trusted_calls: Default::default(), _phantom: Default::default() }
+		TopPoolCallOperatorMock {
+			trusted_calls: Default::default(),
+			remove_calls_invoked: Default::default(),
+			_phantom: Default::default(),
+		}
 	}
 }
 
@@ -59,6 +63,10 @@ where
 	) {
 		self.trusted_calls.insert(shard, trusted_calls);
 	}
+
+	pub fn remove_calls_invoked(&self) -> Vec<(ShardIdentifierFor<SB>, Vec<ExecutedOperation>)> {
+		self.remove_calls_invoked.read().unwrap().clone()
+	}
 }
 
 impl<PB, SB> TopPoolCallOperator<PB, SB> for TopPoolCallOperatorMock<PB, SB>
@@ -72,9 +80,11 @@ where
 
 	fn remove_calls_from_pool(
 		&self,
-		_shard: &ShardIdentifierFor<SB>,
-		_calls: Vec<ExecutedOperation>,
+		shard: &ShardIdentifierFor<SB>,
+		calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation> {
+		let mut remove_call_invoked_lock = self.remove_calls_invoked.write().unwrap();
+		remove_call_invoked_lock.push((*shard, calls));
 		Default::default()
 	}
 }
