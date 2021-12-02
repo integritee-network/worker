@@ -495,7 +495,7 @@ pub unsafe extern "C" fn init_light_client(
 	let ocall_api = Arc::new(OcallApi);
 	let stf_executor = Arc::new(StfExecutor::new(ocall_api.clone(), file_state_handler.clone()));
 	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
 	let indirect_calls_executor =
 		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
 	let parentchain_block_importer = Arc::new(ParentchainBlockImporter::new(
@@ -517,6 +517,7 @@ pub unsafe extern "C" fn init_light_client(
 	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
 		file_state_handler,
 		state_key,
+		signer,
 		top_pool_executor,
 		ocall_api,
 	));

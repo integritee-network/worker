@@ -17,6 +17,7 @@
 */
 
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::{GetStorageVerified, Result};
@@ -35,6 +36,7 @@ use std::collections::HashMap;
 #[derive(Default, Clone, Debug)]
 pub struct OnchainMock {
 	inner: HashMap<Vec<u8>, Vec<u8>>,
+	mr_enclave: [u8; SGX_HASH_SIZE],
 }
 
 impl OnchainMock {
@@ -49,6 +51,11 @@ impl OnchainMock {
 		let set = set.unwrap_or_else(validateer_set);
 		self.inner.insert(TeeRexStorage::enclave_count(), (set.len() as u64).encode());
 		self.with_storage_entries(into_key_value_storage(set))
+	}
+
+	pub fn with_mr_enclave(mut self, mr_enclave: [u8; SGX_HASH_SIZE]) -> Self {
+		self.mr_enclave = mr_enclave;
+		self
 	}
 
 	pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) {
@@ -119,7 +126,7 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 	}
 
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
-		Ok(sgx_measurement_t { m: [1u8; SGX_HASH_SIZE] })
+		Ok(sgx_measurement_t { m: self.mr_enclave })
 	}
 }
 

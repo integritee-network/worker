@@ -25,6 +25,7 @@ use its_primitives::{
 	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
 use its_state::LastBlockExt;
+use sp_core::Pair;
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::{app_crypto::ed25519, testing::H256, traits::Header as HeaderT};
 use std::time::Duration;
@@ -76,7 +77,7 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 				.with_layer1_head(H256::random())
 				.with_parent_hash(H256::random())
 				.with_shard(H256::random())
-				.build_signed(),
+				.build_signed(Keyring::Alice.pair()),
 			parentchain_effects: Default::default(),
 		})
 	}
@@ -157,6 +158,11 @@ impl TestBlockBuilder {
 		self
 	}
 
+	pub fn with_encrypted_payload(mut self, payload: Vec<u8>) -> Self {
+		self.encrypted_payload = payload;
+		self
+	}
+
 	pub fn build(self) -> SidechainBlock {
 		SidechainBlock::new(
 			self.author,
@@ -170,9 +176,19 @@ impl TestBlockBuilder {
 		)
 	}
 
-	pub fn build_signed(self) -> SignedSidechainBlock {
-		self.build().sign_block(&Keyring::Alice.pair())
+	/// Build a signed block. Sets the author to Alice and signs it by Alice.
+	pub fn build_signed(mut self, authority: AuthorityPair) -> SignedSidechainBlock {
+		self.author = authority.public();
+		self.build().sign_block(&authority)
 	}
+}
+
+#[test]
+fn build_signed_block_has_valid_signature() {
+	let signed_block = TestBlockBuilder::new()
+		.with_layer1_head(H256::random())
+		.build_signed(Keyring::Bob.pair());
+	assert!(signed_block.verify_signature());
 }
 
 pub fn default_header() -> Header {

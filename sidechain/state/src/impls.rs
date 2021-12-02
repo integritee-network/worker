@@ -15,8 +15,7 @@
 
 */
 
-//! Implement the sidechain state traits. This is only sgx-compatible due to [`SgxExternalities`]
-//! missing some features in `std`.
+//! Implement the sidechain state traits.
 
 use crate::{Error, SidechainDB, SidechainState, StateHash, StateUpdate};
 use codec::{Decode, Encode};

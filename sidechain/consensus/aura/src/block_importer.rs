@@ -36,7 +36,7 @@ use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
 use sgx_externalities::SgxExternalities;
-use sp_core::{Pair, Public};
+use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
@@ -55,9 +55,10 @@ pub struct BlockImporter<
 > {
 	state_handler: Arc<StateHandler>,
 	state_key: StateKey,
+	authority: Authority,
 	top_pool_executor: Arc<TopPoolExecutor>,
 	ocall_api: Arc<OCallApi>,
-	_phantom: PhantomData<(Authority, PB, SB, SidechainState)>,
+	_phantom: PhantomData<(PB, SB, SidechainState)>,
 }
 
 impl<Authority, PB, SB, OCallApi, SidechainState, StateHandler, StateKey, TopPoolExecutor>
@@ -81,12 +82,14 @@ where
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		state_key: StateKey,
+		authority: Authority,
 		top_pool_executor: Arc<TopPoolExecutor>,
 		ocall_api: Arc<OCallApi>,
 	) -> Self {
 		Self {
 			state_handler,
 			state_key,
+			authority,
 			top_pool_executor,
 			ocall_api,
 			_phantom: Default::default(),
@@ -115,6 +118,10 @@ where
 				unremoved_call.trusted_operation_or_hash
 			);
 		}
+	}
+
+	pub(crate) fn block_author_is_self(&self, block_author: &SB::Public) -> bool {
+		self.authority.public() == *block_author
 	}
 }
 
@@ -189,10 +196,7 @@ impl<Authority, PB, SB, OCallApi, StateHandler, StateKey, TopPoolExecutor> Block
 
 		// If the block has been proposed by this enclave, remove all successfully applied
 		// trusted calls from the top pool.
-		if block_author_is_equal_to_self::<SB, Self::Context>(
-			self.get_context(),
-			sidechain_block.block_author(),
-		)? {
+		if self.block_author_is_self(sidechain_block.block_author()) {
 			self.remove_calls_from_top_pool(
 				sidechain_block.signed_top_hashes(),
 				&sidechain_block.shard_id(),
@@ -200,16 +204,4 @@ impl<Authority, PB, SB, OCallApi, StateHandler, StateKey, TopPoolExecutor> Block
 		}
 		Ok(())
 	}
-}
-
-pub(crate) fn block_author_is_equal_to_self<SB, OcallApi>(
-	ocall_api: &OcallApi,
-	block_author: &SB::Public,
-) -> Result<bool, ConsensusError>
-where
-	SB: SignedBlockT,
-	OcallApi: EnclaveAttestationOCallApi,
-{
-	let mrenclave = ocall_api.get_mrenclave_of_self()?.m.to_vec();
-	Ok(mrenclave == block_author.to_raw_vec())
 }

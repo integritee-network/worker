@@ -36,6 +36,7 @@ its-top-pool-executor = { path = "../../top-pool-executor", default-features = f
 its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
 
 [dev-dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 env_logger = "0.9.0"
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
