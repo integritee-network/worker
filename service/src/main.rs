@@ -51,6 +51,7 @@ use itp_settings::{
 		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
+	sidechain::SLOT_DURATION,
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use itp_types::SignedBlock;
@@ -344,7 +345,6 @@ fn start_worker<E, T, D>(
 	// ------------------------------------------------------------------------
 	// start interval block production (execution of trusted calls, sidechain block production)
 	let side_chain_enclave_api = enclave.clone();
-	use itp_settings::sidechain::SLOT_DURATION;
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
 		.spawn(move || {

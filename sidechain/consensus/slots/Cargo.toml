@@ -40,14 +40,16 @@ default = ["std"]
 std = [
     "codec/std",
     "log/std",
+    # only for slot-stream
+    "futures",
+    "futures-timer",
+    # local deps
     "sp-consensus-slots/std",
     "sp-runtime/std",
     "its-primitives/std",
     "its-consensus-common/std",
     "itp-time-utils/std",
     "itp-sgx-io/std",
-    "futures",
-    "futures-timer",
 ]
 sgx = [
     "sgx_tstd",
