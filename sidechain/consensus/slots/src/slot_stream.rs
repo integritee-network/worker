@@ -5,7 +5,7 @@ use std::time::Duration;
 /// Triggers the enclave to produce a block based on a fixed time schedule.
 pub async fn start_interval_block_production<F>(trusted_call: F, slot_duration: Duration)
 where
-	F: Fn() -> (),
+	F: Fn(),
 {
 	let mut slot_stream = SlotStream::new(slot_duration);
 
