@@ -46,6 +46,7 @@ itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" 
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
+its-consensus-slots = { path = "../sidechain/consensus/slots"}
 its-primitives = { path = "../sidechain/primitives"}
 its-storage = { path = "../sidechain/storage" }
 ita-stf = { path = "../app-libs/stf" }

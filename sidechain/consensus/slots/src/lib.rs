@@ -42,8 +42,12 @@ pub use slots::*;
 use sp_runtime::traits::{Block as ParentchainBlock, Header};
 use std::{fmt::Debug, time::Duration, vec::Vec};
 
+#[cfg(feature = "std")]
+mod slot_stream;
 mod slots;
 
+#[cfg(feature = "std")]
+pub use slot_stream::*;
 pub use slots::*;
 
 /// The result of [`SlotWorker::on_slot`].
