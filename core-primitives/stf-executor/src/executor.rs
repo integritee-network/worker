@@ -30,7 +30,7 @@ use ita_stf::{
 	AccountId, ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::GetStorageVerified;
@@ -49,10 +49,6 @@ use std::{
 	vec::Vec,
 };
 
-/// STF Executor implementation
-///
-/// FIXME: Next time we change this class, we should add some unit tests
-/// (where they make sense and can be done with reasonable effort)
 pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
@@ -61,7 +57,7 @@ pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -132,7 +128,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTrustedCall
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -175,7 +171,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteShieldFunds
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -206,7 +202,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfUpdateState
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT> + QueryShardState,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -277,7 +273,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StateUpdateProposer
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -339,7 +335,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedGettersBatch
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -384,7 +380,6 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteGenericUpdate
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -448,4 +443,188 @@ fn get_stf_state<E: SgxExternalitiesTrait>(
 
 	debug!("calling into STF to get state");
 	Ok(Stf::get_state(state, trusted_getter_signed.clone().into()))
+}
+
+#[cfg(all(feature = "test", feature = "sgx"))]
+pub mod tests {
+	use super::*;
+	use ita_stf::{
+		test_genesis::{test_account, test_genesis_setup, TEST_ACC_FUNDS},
+		Balance, State, TrustedGetter,
+	};
+	use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
+	use itp_types::Header;
+	use sgx_tstd::panic;
+	use sp_core::Pair;
+	use sp_runtime::traits::Header as HeaderTrait;
+	use std::vec;
+	// 	pub fn propose_state_update() {
+	// 		// given
+	// 		let sender = test_account();
+	// 		let signed_call = TrustedCall::balance_set_balance(
+	// 			sender.public().into(),
+	// 			sender.public().into(),
+	// 			42,
+	// 			42,
+	// 		)
+	// 		.sign(&sender.into(), 0, &mrenclave, &shard);
+	// 		let shard = ShardIdentifier::default();
+	// 		let stf_executor = stf_executor();
+	// 		let execution_duration = Duration::from_secs(10000);
+	//
+	// 		// when
+	// 		stf_executor
+	// 			.propose_state_update(
+	// 				&vec![signed_call.clone()],
+	// 				&parentchain_header(),
+	// 				&shard,
+	// 				execution_duration,
+	// 				|_state| {
+	// 					// then
+	// 					assert_eq!(*trusted_getter_signed, trusted_getter);
+	// 				},
+	// 			)
+	// 			.unwrap();
+	// 	}
+
+	pub fn execute_timed_getters_batch_executes_if_enough_time() {
+		// given
+		let sender = test_account();
+		let trusted_getter =
+			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+		let shard = ShardIdentifier::default();
+		let stf_executor = stf_executor();
+		let execution_duration = Duration::from_secs(10000);
+
+		// when
+		assert!(panic::catch_unwind(|| {
+			stf_executor.execute_timed_getters_batch(
+				&vec![trusted_getter.clone()],
+				&shard,
+				execution_duration,
+				|trusted_getter_signed: &TrustedGetterSigned,
+				 _state_result: Result<Option<Vec<u8>>>| {
+					// then
+					assert_eq!(*trusted_getter_signed, trusted_getter);
+					panic!("test should enter here");
+				},
+			)
+		})
+		.is_err());
+	}
+
+	pub fn execute_timed_getters_does_not_execute_more_than_once_if_not_enough_time() {
+		// given
+		let sender = test_account();
+		let trusted_getter =
+			TrustedGetter::free_balance(sender.public().into()).sign(&sender.clone().into());
+		let trusted_getter_two =
+			TrustedGetter::reserved_balance(sender.public().into()).sign(&sender.into());
+		let shard = ShardIdentifier::default();
+		let stf_executor = stf_executor();
+		let execution_duration = Duration::ZERO;
+
+		// when
+		stf_executor
+			.execute_timed_getters_batch(
+				&vec![trusted_getter.clone(), trusted_getter_two],
+				&shard,
+				execution_duration,
+				|trusted_getter_signed: &TrustedGetterSigned,
+				 _state_result: Result<Option<Vec<u8>>>| {
+					// then (second getter should not be executed)
+					assert_eq!(*trusted_getter_signed, trusted_getter);
+				},
+			)
+			.unwrap();
+	}
+
+	pub fn execute_timed_getters_batch_returns_early_when_no_getter() {
+		// given
+		let shard = ShardIdentifier::default();
+		let stf_executor = stf_executor();
+		let execution_duration = Duration::from_secs(10000);
+
+		// when
+		stf_executor
+			.execute_timed_getters_batch(
+				&vec![],
+				&shard,
+				execution_duration,
+				|_trusted_getter_signed: &TrustedGetterSigned,
+				 _state_result: Result<Option<Vec<u8>>>| {
+					// then
+					panic!("Test should not enter here");
+				},
+			)
+			.unwrap();
+	}
+
+	pub fn execute_update_works() {
+		// given
+		let shard = ShardIdentifier::default();
+		let stf_executor = stf_executor();
+		let key = "my_key".encode();
+		let value = "my_value".encode();
+		let old_state_hash =
+			state_hash(stf_executor.state_handler.load_initialized(&shard).unwrap());
+
+		// when
+		let (result, updated_state_hash) = stf_executor
+			.execute_update::<_, _, Error>(&shard, |mut state| {
+				state.insert(key.clone(), value.clone());
+				Ok((state, 0))
+			})
+			.unwrap();
+
+		// then
+		assert_eq!(result, 0);
+		assert_ne!(updated_state_hash, old_state_hash);
+
+		// Ensure that state has been written.
+		let updated_state = stf_executor.state_handler.load_initialized(&shard).unwrap();
+		let retrieved_vale = updated_state.get(key.as_slice()).unwrap();
+		assert_eq!(*retrieved_vale, value);
+	}
+
+	pub fn get_stf_state_works() {
+		let sender = test_account();
+		let signed_getter =
+			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+		let mut state = test_state();
+
+		let encoded_balance = get_stf_state(&signed_getter, &mut state).unwrap().unwrap();
+
+		let balance = Balance::decode(&mut encoded_balance.as_slice()).unwrap();
+
+		assert_eq!(balance, TEST_ACC_FUNDS);
+	}
+
+	pub fn upon_false_signature_get_stf_state_errs() {
+		let sender = AccountId::default();
+		let wrong_signer = test_account();
+		let signed_getter = TrustedGetter::free_balance(sender).sign(&wrong_signer.into());
+		let mut state = test_state();
+
+		assert!(get_stf_state(&signed_getter, &mut state).is_err());
+	}
+
+	// Helper Functions
+	fn stf_executor() -> StfExecutor<OnchainMock, HandleStateMock, State> {
+		StfExecutor::new(Arc::new(OnchainMock::default()), Arc::new(HandleStateMock::default()))
+	}
+
+	fn test_state() -> State {
+		let mut state = Stf::init_state();
+		test_genesis_setup(&mut state);
+		state
+	}
+
+	fn state_hash(state: State) -> H256 {
+		state.using_encoded(blake2_256).into()
+	}
+
+	fn parentchain_header() -> Header {
+		Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default())
+	}
 }

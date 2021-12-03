@@ -5,7 +5,38 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+# sgx dependencies
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
+
+# integritee dependencies
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+
+# local dependencies
+ita-stf = { path = "../../app-libs/stf", default-features = false }
+itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
+itp-storage-verifier = { path = "../storage-verified", default-features = false }
+itp-types = { path = "../types", default-features = false }
+
+# sgx enabled external libraries
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+thiserror = { version = "1.0", optional = true }
+
+# no-std dependencies
+log = { version = "0.4", default-features = false }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+
+# substrate dependencies
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+# dev dependencies
+sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master", optional = true }
+itp-test = { path = "../test", default-features = false, optional = true }
 
 [features]
 default = ["std"]
@@ -34,33 +65,7 @@ sgx = [
     "sgx-externalities/sgx",
     "thiserror_sgx",
 ]
-test = []
-
-[dependencies]
-# sgx dependencies
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
-
-# integritee dependencies
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
-
-# local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
-itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
-itp-storage = { path = "../storage", default-features = false }
-itp-storage-verifier = { path = "../storage-verified", default-features = false }
-itp-types = { path = "../types", default-features = false }
-
-# sgx enabled external libraries
-thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
-
-# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
-thiserror = { version = "1.0", optional = true }
-
-# no-std dependencies
-log = { version = "0.4", default-features = false }
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-
-# substrate dependencise
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+test = [
+    "itp-test",
+    "sp-core",
+]

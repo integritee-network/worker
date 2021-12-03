@@ -37,6 +37,8 @@ const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
 const ALICE_FUNDS: Balance = 1000000000000000;
 
+pub const TEST_ACC_FUNDS: Balance = 2000;
+
 pub fn test_account() -> ed25519::Pair {
 	ed25519::Pair::from_seed(&TEST_SEED)
 }
@@ -47,7 +49,7 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
-		(test_account().public().into(), 2000, 2000),
+		(test_account().public().into(), TEST_ACC_FUNDS, TEST_ACC_FUNDS),
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 

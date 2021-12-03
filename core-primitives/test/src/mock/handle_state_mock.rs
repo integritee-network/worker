@@ -21,6 +21,7 @@ use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 #[cfg(feature = "std")]
 use std::sync::{RwLock, RwLockWriteGuard};
 
+use codec::Encode;
 use ita_stf::{ShardIdentifier, State as StfState};
 use itp_stf_state_handler::{
 	error::{Error, Result},
@@ -28,6 +29,7 @@ use itp_stf_state_handler::{
 	query_shard_state::QueryShardState,
 };
 use itp_types::H256;
+use sp_core::blake2_256;
 use std::{collections::HashMap, format, vec::Vec};
 
 /// Mock implementation for the `HandleState` trait.
@@ -76,8 +78,8 @@ impl HandleState for HandleStateMock {
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<H256> {
-		state_lock.insert(*shard, state);
-		Ok(H256::default())
+		state_lock.insert(*shard, state.clone());
+		Ok(state.using_encoded(blake2_256).into())
 	}
 }
 

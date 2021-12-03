@@ -113,6 +113,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// sync tests
 		sidechain_rw_lock_works,
 		enclave_rw_lock_works,
+		stf_executor_tests::get_stf_state_works,
+		stf_executor_tests::upon_false_signature_get_stf_state_errs,
+		stf_executor_tests::execute_update_works,
+		stf_executor_tests::execute_timed_getters_batch_executes_if_enough_time,
+		stf_executor_tests::execute_timed_getters_does_not_execute_more_than_once_if_not_enough_time,
+		stf_executor_tests::execute_timed_getters_batch_returns_early_when_no_getter,
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
