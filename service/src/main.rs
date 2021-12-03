@@ -55,7 +55,7 @@ use itp_settings::{
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use itp_types::SignedBlock;
-use its_consensus_slots::start_interval_block_production;
+use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
 use log::*;
@@ -348,7 +348,7 @@ fn start_worker<E, T, D>(
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
 		.spawn(move || {
-			let future = start_interval_block_production(
+			let future = start_slot_worker(
 				|| execute_trusted_calls(side_chain_enclave_api.as_ref()),
 				SLOT_DURATION,
 			);

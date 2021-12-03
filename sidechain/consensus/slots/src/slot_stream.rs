@@ -17,8 +17,8 @@ use crate::time_until_next_slot;
 use futures_timer::Delay;
 use std::time::Duration;
 
-/// Triggers the enclave to produce a block based on a fixed time schedule.
-pub async fn start_interval_block_production<F>(trusted_call: F, slot_duration: Duration)
+/// Executes given `task` repeatedly when the next slot becomes available.
+pub async fn start_slot_worker<F>(task: F, slot_duration: Duration)
 where
 	F: Fn(),
 {
@@ -26,11 +26,11 @@ where
 
 	loop {
 		slot_stream.next_slot().await;
-		trusted_call();
+		task();
 	}
 }
 
-/// Stream to calculate the slot schedule with
+/// Stream to calculate the slot schedule with.
 pub struct SlotStream {
 	slot_duration: Duration,
 	inner_delay: Option<Delay>,
@@ -46,7 +46,7 @@ impl SlotStream {
 	pub async fn next_slot(&mut self) {
 		self.inner_delay = match self.inner_delay.take() {
 			None => {
-				// Delay is not initializes in this case,
+				// Delay is not initialized in this case,
 				// so we have to initialize with the time until the next slot.
 				let wait_dur = time_until_next_slot(self.slot_duration);
 				Some(Delay::new(wait_dur))
@@ -73,7 +73,7 @@ mod tests {
 	use tokio;
 
 	const SLOT_DURATION: Duration = Duration::from_millis(300);
-	const SLOT_DURATION_PLUS: Duration = Duration::from_millis(310);
+	const SLOT_TOLERANCE: Duration = Duration::from_millis(10);
 
 	#[tokio::test]
 	async fn slot_stream_call_one_block() {
@@ -85,8 +85,8 @@ mod tests {
 		slot_stream.next_slot().await;
 
 		let elapsed = now.elapsed();
-		assert!(elapsed >= SLOT_DURATION);
-		assert!(elapsed <= SLOT_DURATION_PLUS);
+		assert!(elapsed >= SLOT_DURATION - SLOT_TOLERANCE);
+		assert!(elapsed <= SLOT_DURATION + SLOT_TOLERANCE);
 	}
 
 	#[tokio::test]
@@ -100,7 +100,7 @@ mod tests {
 		slot_stream.next_slot().await;
 
 		let elapsed = now.elapsed();
-		assert!(elapsed >= 2 * SLOT_DURATION);
-		assert!(elapsed <= 2 * SLOT_DURATION_PLUS);
+		assert!(elapsed >= 2 * SLOT_DURATION - SLOT_TOLERANCE);
+		assert!(elapsed <= 2 * SLOT_DURATION + SLOT_TOLERANCE);
 	}
 }
