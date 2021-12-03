@@ -4,24 +4,20 @@
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
 use async_trait::async_trait;
+use itp_api_client_extensions::PalletTeerexApi;
+use itp_types::Enclave as EnclaveMetadata;
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::*;
-use std::num::ParseIntError;
-
-use itp_api_client_extensions::PalletTeerexApi;
-use itp_types::Enclave as EnclaveMetadata;
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use std::{num::ParseIntError, thread};
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;
 
 pub type WorkerResult<T> = Result<T, Error>;
-
-// don't put any trait bounds here. It is good practise to only enforce them where needed. This
-// also serves a guide when traits should be split into subtraits.
 pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
 	_config: Config,
 	node_api: NodeApi, // todo: Depending on system design, all the api fields should be Arc<Api>
@@ -72,21 +68,22 @@ where
 
 		let peers = self.peers()?;
 		debug!("Gossiping sidechain blocks to peers: {:?}", peers);
+		let blocks_json = vec![to_json_value(blocks)?];
 
 		for p in peers.iter() {
 			// Todo: once the two direct servers are merged, remove this.
 			let url = worker_url_into_async_rpc_url(&p.url)?;
 			trace!("Gossiping block to peer with address: {:?}", url);
+			// FIXME: Websocket connectionto a worker  should stay once etablished.
 			let client = WsClientBuilder::default().build(&url).await?;
-			let response: String = client
-				.request::<Vec<u8>>(
-					"sidechain_importBlock",
-					vec![to_json_value(blocks.clone())?].into(),
-				)
-				.await
-				.map(String::from_utf8)?
-				.map(|s| s.trim_end().to_string())?; // remove whitespace padding
-			debug!("sidechain_importBlock response: {:?}", response);
+			let blocks = blocks_json.clone();
+			thread::spawn(move || async move {
+				if let Err(e) =
+					client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()).await
+				{
+					debug!("sidechain_importBlock failed: {:?}", e);
+				}
+			});
 		}
 		Ok(())
 	}

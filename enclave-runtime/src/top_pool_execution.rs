@@ -28,7 +28,7 @@ use itc_parentchain::light_client::{
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{AesSeal, Ed25519Seal};
 use itp_sgx_io::SealedIO;
@@ -51,7 +51,7 @@ use its_sidechain::{
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::Pair;
-use sp_runtime::{traits::Block as BlockT, MultiSignature};
+use sp_runtime::{traits::Block as BlockTrait, MultiSignature};
 use std::{sync::Arc, vec::Vec};
 
 #[no_mangle]
@@ -128,12 +128,12 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 /// *   gossip produced sidechain blocks to peer validateers.
 fn execute_top_pool_trusted_calls_internal<PB>() -> Result<()>
 where
-	PB: BlockT<Hash = H256>,
+	PB: BlockTrait<Hash = H256>,
 	NumberFor<PB>: BlockNumberOps,
 {
 	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
 	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
-	let _side_chain_lock = EnclaveLock::write_all()?;
+	let _sidechain_lock = EnclaveLock::write_all()?;
 
 	let validator_access = ValidatorAccessor::<PB>::default();
 
@@ -174,14 +174,17 @@ where
 			let shards = state_handler.list_shards()?;
 			let env = ProposerFactory::new(top_pool_executor, stf_executor, block_composer);
 
-			exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _>(
-				slot,
-				authority,
+			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _>(
+				slot, authority, OcallApi, env, shards,
+			)?;
+			// Drop sidechain lock as soon as we don't need it anymore.
+			drop(_sidechain_lock);
+			send_blocks_and_extrinsics::<PB, _, _, _, _>(
+				blocks,
+				opaque_calls,
+				OcallApi,
 				&validator_access,
 				&extrinsics_factory,
-				OcallApi,
-				env,
-				shards,
 			)?
 		},
 		None => {
@@ -194,41 +197,28 @@ where
 }
 
 /// Executes aura for the given `slot`.
-fn exec_aura_on_slot<
-	Authority,
-	PB,
-	SB,
-	OCallApi,
-	ValidatorAccessor,
-	PEnvironment,
-	ExtrinsicsFactory,
->(
+fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
-	validator_access: &ValidatorAccessor,
-	extrinsics_factory: &ExtrinsicsFactory,
 	ocall_api: OCallApi,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SB>>,
-) -> Result<()>
+) -> Result<(Vec<SB>, Vec<OpaqueCall>)>
 where
-	PB: BlockT<Hash = H256>,
+	PB: BlockTrait<Hash = H256>,
 	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
 	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
 	SB::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
-	OCallApi:
-		EnclaveSidechainOCallApi + EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + 'static,
-	ValidatorAccessor: ValidatorAccess<PB> + Clone + Send + Sync + 'static,
+	OCallApi: EnclaveOnChainOCallApi + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
-	ExtrinsicsFactory: CreateExtrinsics,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
 	let mut aura =
-		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api.clone(), proposer_environment)
+		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api, proposer_environment)
 			.with_claim_strategy(SlotClaimStrategy::Always)
 			.with_allow_delayed_proposal(true);
 
@@ -238,12 +228,29 @@ where
 			.map(|r| (r.block, r.parentchain_effects))
 			.unzip();
 
-	ocall_api.propose_sidechain_blocks(blocks)?;
 	let opaque_calls: Vec<OpaqueCall> = xts.into_iter().flatten().collect();
+	Ok((blocks, opaque_calls))
+}
+
+fn send_blocks_and_extrinsics<PB, SB, OCallApi, ValidatorAccessor, ExtrinsicsFactory>(
+	blocks: Vec<SB>,
+	opaque_calls: Vec<OpaqueCall>,
+	ocall_api: OCallApi,
+	validator_access: &ValidatorAccessor,
+	extrinsics_factory: &ExtrinsicsFactory,
+) -> Result<()>
+where
+	PB: BlockTrait,
+	SB: SignedBlock + 'static,
+	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
+	ValidatorAccessor: ValidatorAccess<PB> + Clone + Send + Sync + 'static,
+	NumberFor<PB>: BlockNumberOps,
+	ExtrinsicsFactory: CreateExtrinsics,
+{
+	ocall_api.propose_sidechain_blocks(blocks)?;
 
 	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
 
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
-
 	Ok(())
 }
