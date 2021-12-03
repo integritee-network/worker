@@ -108,7 +108,7 @@ where
 				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
 			})
 			.collect();
-
+		// FIXME: we should take the rpc author here directly #547
 		let unremoved_calls =
 			self.top_pool_executor.remove_calls_from_pool(shard, executed_operations);
 
