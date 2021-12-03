@@ -133,7 +133,7 @@ where
 {
 	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
 	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
-	let _sidechain_lock = EnclaveLock::write_all()?;
+	let _enclave_write_lock = EnclaveLock::write_all()?;
 
 	let validator_access = ValidatorAccessor::<PB>::default();
 
@@ -177,8 +177,8 @@ where
 			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _>(
 				slot, authority, OcallApi, env, shards,
 			)?;
-			// Drop sidechain lock as soon as we don't need it anymore.
-			drop(_sidechain_lock);
+			// Drop lock as soon as we don't need it anymore.
+			drop(_enclave_write_lock);
 			send_blocks_and_extrinsics::<PB, _, _, _, _>(
 				blocks,
 				opaque_calls,
@@ -232,6 +232,7 @@ where
 	Ok((blocks, opaque_calls))
 }
 
+/// Gossips sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
 fn send_blocks_and_extrinsics<PB, SB, OCallApi, ValidatorAccessor, ExtrinsicsFactory>(
 	blocks: Vec<SB>,
 	opaque_calls: Vec<OpaqueCall>,
