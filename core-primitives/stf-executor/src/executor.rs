@@ -50,8 +50,8 @@ use std::{
 };
 
 pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
-	ocall_api: Arc<OCallApi>,
-	state_handler: Arc<StateHandler>,
+	pub ocall_api: Arc<OCallApi>,
+	pub state_handler: Arc<StateHandler>,
 	_phantom_externalities: PhantomData<ExternalitiesT>,
 }
 
@@ -295,7 +295,7 @@ where
 
 		// Execute any pre-processing steps.
 		let mut state = prepare_state_function(state);
-		let mut executed_calls = Vec::<ExecutedOperation>::new();
+		let mut executed_and_failed_calls = Vec::<ExecutedOperation>::new();
 
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
@@ -306,11 +306,11 @@ where
 				shard,
 				StatePostProcessing::None,
 			) {
-				Ok(executed_call) => {
-					executed_calls.push(executed_call);
+				Ok(executed_or_failed_call) => {
+					executed_and_failed_calls.push(executed_or_failed_call);
 				},
 				Err(e) => {
-					error!("Error executing trusted call (will not push top hash): {:?}", e);
+					error!("Fatal Error. Failed to attempt call execution: {:?}", e);
 				},
 			};
 
@@ -321,7 +321,7 @@ where
 		}
 
 		Ok(BatchExecutionResult {
-			executed_operations: executed_calls,
+			executed_operations: executed_and_failed_calls,
 			state_hash_before_execution,
 			state_after_execution: state,
 		})
@@ -428,7 +428,7 @@ fn top_or_hash<H>(tcs: TrustedCallSigned, direct: bool) -> TrustedOperationOrHas
 ///
 /// Also verifies the signature of the trusted getter and returns an error
 /// if it's invalid.
-fn get_stf_state<E: SgxExternalitiesTrait>(
+pub(crate) fn get_stf_state<E: SgxExternalitiesTrait>(
 	trusted_getter_signed: &TrustedGetterSigned,
 	state: &mut E,
 ) -> Result<Option<Vec<u8>>> {
@@ -439,190 +439,4 @@ fn get_stf_state<E: SgxExternalitiesTrait>(
 
 	debug!("calling into STF to get state");
 	Ok(Stf::get_state(state, trusted_getter_signed.clone().into()))
-}
-
-#[cfg(all(feature = "test", feature = "sgx"))]
-pub mod tests {
-	use super::*;
-	use ita_stf::{
-		test_genesis::{test_account, test_genesis_setup, TEST_ACC_FUNDS},
-		Balance, State, TrustedGetter,
-	};
-	use itp_test::{
-		builders::parentchain_header_builder::ParentchainHeaderBuilder,
-		mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
-	};
-	use sgx_tstd::panic;
-	use sp_core::Pair;
-	use std::vec;
-
-	// 	pub fn propose_state_update() {
-	// 		// given
-	// 		let onchain_mock = OnchainMock::default();
-	// 		let mrenclave = onchain_mock.get_mrenclave_of_self().unwrap().m;
-	// 		let shard = ShardIdentifier::default();
-	// 		let sender = test_account();
-	// 		let signed_call = TrustedCall::balance_set_balance(
-	// 			sender.public().into(),
-	// 			sender.public().into(),
-	// 			42,
-	// 			42,
-	// 		)
-	// 		.sign(&sender.into(), 0, &mrenclave, &shard);
-	// 		let shard = ShardIdentifier::default();
-	// 		let stf_executor = stf_executor();
-	// 		let execution_duration = Duration::from_secs(10000);
-	//
-	// 		// when
-	// 		stf_executor
-	// 			.propose_state_update(
-	// 				&vec![signed_call.clone()],
-	// 				&ParentchainHeaderBuilder::default().build(),
-	// 				&shard,
-	// 				execution_duration,
-	// 				|state| {
-	// 					// then
-	// 					//assert_eq!(*trusted_getter_signed, trusted_getter);
-	// 					state
-	// 				},
-	// 			)
-	// 			.unwrap();
-	// 	}
-
-	pub fn execute_timed_getters_batch_executes_if_enough_time() {
-		// given
-		let sender = test_account();
-		let trusted_getter =
-			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
-		let shard = ShardIdentifier::default();
-		let stf_executor = stf_executor();
-		let execution_duration = Duration::from_secs(10000);
-
-		// when
-		assert!(panic::catch_unwind(|| {
-			stf_executor.execute_timed_getters_batch(
-				&vec![trusted_getter.clone()],
-				&shard,
-				execution_duration,
-				|trusted_getter_signed: &TrustedGetterSigned,
-				 _state_result: Result<Option<Vec<u8>>>| {
-					// then
-					assert_eq!(*trusted_getter_signed, trusted_getter);
-					panic!("test should enter here");
-				},
-			)
-		})
-		.is_err());
-	}
-
-	pub fn execute_timed_getters_does_not_execute_more_than_once_if_not_enough_time() {
-		// given
-		let sender = test_account();
-		let trusted_getter =
-			TrustedGetter::free_balance(sender.public().into()).sign(&sender.clone().into());
-		let trusted_getter_two =
-			TrustedGetter::reserved_balance(sender.public().into()).sign(&sender.into());
-		let shard = ShardIdentifier::default();
-		let stf_executor = stf_executor();
-		let execution_duration = Duration::ZERO;
-
-		// when
-		stf_executor
-			.execute_timed_getters_batch(
-				&vec![trusted_getter.clone(), trusted_getter_two],
-				&shard,
-				execution_duration,
-				|trusted_getter_signed: &TrustedGetterSigned,
-				 _state_result: Result<Option<Vec<u8>>>| {
-					// then (second getter should not be executed)
-					assert_eq!(*trusted_getter_signed, trusted_getter);
-				},
-			)
-			.unwrap();
-	}
-
-	pub fn execute_timed_getters_batch_returns_early_when_no_getter() {
-		// given
-		let shard = ShardIdentifier::default();
-		let stf_executor = stf_executor();
-		let execution_duration = Duration::from_secs(10000);
-
-		// when
-		stf_executor
-			.execute_timed_getters_batch(
-				&vec![],
-				&shard,
-				execution_duration,
-				|_trusted_getter_signed: &TrustedGetterSigned,
-				 _state_result: Result<Option<Vec<u8>>>| {
-					// then
-					panic!("Test should not enter here");
-				},
-			)
-			.unwrap();
-	}
-
-	pub fn execute_update_works() {
-		// given
-		let shard = ShardIdentifier::default();
-		let stf_executor = stf_executor();
-		let key = "my_key".encode();
-		let value = "my_value".encode();
-		let old_state_hash =
-			state_hash(stf_executor.state_handler.load_initialized(&shard).unwrap());
-
-		// when
-		let (result, updated_state_hash) = stf_executor
-			.execute_update::<_, _, Error>(&shard, |mut state| {
-				state.insert(key.clone(), value.clone());
-				Ok((state, 0))
-			})
-			.unwrap();
-
-		// then
-		assert_eq!(result, 0);
-		assert_ne!(updated_state_hash, old_state_hash);
-
-		// Ensure that state has been written.
-		let updated_state = stf_executor.state_handler.load_initialized(&shard).unwrap();
-		let retrieved_vale = updated_state.get(key.as_slice()).unwrap();
-		assert_eq!(*retrieved_vale, value);
-	}
-
-	pub fn get_stf_state_works() {
-		let sender = test_account();
-		let signed_getter =
-			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
-		let mut state = test_state();
-
-		let encoded_balance = get_stf_state(&signed_getter, &mut state).unwrap().unwrap();
-
-		let balance = Balance::decode(&mut encoded_balance.as_slice()).unwrap();
-
-		assert_eq!(balance, TEST_ACC_FUNDS);
-	}
-
-	pub fn upon_false_signature_get_stf_state_errs() {
-		let sender = AccountId::default();
-		let wrong_signer = test_account();
-		let signed_getter = TrustedGetter::free_balance(sender).sign(&wrong_signer.into());
-		let mut state = test_state();
-
-		assert!(get_stf_state(&signed_getter, &mut state).is_err());
-	}
-
-	// Helper Functions
-	fn stf_executor() -> StfExecutor<OnchainMock, HandleStateMock, State> {
-		StfExecutor::new(Arc::new(OnchainMock::default()), Arc::new(HandleStateMock::default()))
-	}
-
-	fn test_state() -> State {
-		let mut state = Stf::init_state();
-		test_genesis_setup(&mut state);
-		state
-	}
-
-	fn state_hash(state: State) -> H256 {
-		state.using_encoded(blake2_256).into()
-	}
 }

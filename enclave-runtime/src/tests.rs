@@ -27,7 +27,7 @@ use ita_stf::{
 		account_key_hash, get_parentchain_blockhash, get_parentchain_number,
 		get_parentchain_parenthash,
 	},
-	test_genesis::test_account as funded_pair,
+	test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
@@ -39,6 +39,7 @@ use itp_settings::{
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_stf_executor::{
 	executor::StfExecutor,
+	executor_tests as stf_executor_tests,
 	traits::{StatePostProcessing, StateUpdateProposer, StfExecuteTrustedCall},
 };
 use itp_stf_state_handler::handle_state::HandleState;
@@ -119,6 +120,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::execute_timed_getters_batch_executes_if_enough_time,
 		stf_executor_tests::execute_timed_getters_does_not_execute_more_than_once_if_not_enough_time,
 		stf_executor_tests::execute_timed_getters_batch_returns_early_when_no_getter,
+		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
+		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
+		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
