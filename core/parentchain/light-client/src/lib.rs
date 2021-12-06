@@ -43,7 +43,7 @@ use sp_finality_grandpa::{
 	AuthorityId, AuthorityWeight, ConsensusLog, ScheduledChange, GRANDPA_ENGINE_ID,
 };
 use sp_runtime::{
-	generic::{Digest as DigestG, OpaqueDigestItemId},
+	generic::{Digest, OpaqueDigestItemId},
 	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
 	Justification, Justifications, OpaqueExtrinsic,
 };
@@ -454,16 +454,12 @@ impl<Block: BlockT> LightClientState<Block> for LightValidation<Block> {
 	}
 }
 
-pub fn grandpa_log<Block: BlockT>(
-	digest: &DigestG<HashFor<Block>>,
-) -> Option<ConsensusLog<NumberFor<Block>>> {
+pub fn grandpa_log<Block: BlockT>(digest: &Digest) -> Option<ConsensusLog<NumberFor<Block>>> {
 	let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
 	digest.convert_first(|l| l.try_to::<ConsensusLog<NumberFor<Block>>>(id))
 }
 
-pub fn pending_change<Block: BlockT>(
-	digest: &DigestG<HashFor<Block>>,
-) -> Option<ScheduledChange<NumberFor<Block>>> {
+pub fn pending_change<Block: BlockT>(digest: &Digest) -> Option<ScheduledChange<NumberFor<Block>>> {
 	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }
 

@@ -126,11 +126,11 @@ impl Stf {
 						free_balance,
 						reserved_balance
 					);
-					sgx_runtime::BalancesCall::<Runtime>::set_balance(
-						MultiAddress::Id(who),
-						free_balance,
-						reserved_balance,
-					)
+					sgx_runtime::BalancesCall::<Runtime>::set_balance {
+						who: MultiAddress::Id(who),
+						new_free: free_balance,
+						new_reserved: reserved_balance,
+					}
 					.dispatch_bypass_filter(sgx_runtime::Origin::root())
 					.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
 					Ok(())
@@ -143,9 +143,12 @@ impl Stf {
 					} else {
 						debug!("sender balance is zero");
 					}
-					sgx_runtime::BalancesCall::<Runtime>::transfer(MultiAddress::Id(to), value)
-						.dispatch_bypass_filter(origin)
-						.map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+					sgx_runtime::BalancesCall::<Runtime>::transfer {
+						dest: MultiAddress::Id(to),
+						value,
+					}
+					.dispatch_bypass_filter(origin)
+					.map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
 					Ok(())
 				},
 				TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -181,18 +184,18 @@ impl Stf {
 
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
 		match get_account_info(&account) {
-			Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-				MultiAddress::Id(account),
-				account_info.data.free + amount,
-				account_info.data.reserved,
-			)
+			Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance {
+				who: MultiAddress::Id(account),
+				new_free: account_info.data.free + amount,
+				new_reserved: account_info.data.reserved,
+			}
 			.dispatch_bypass_filter(sgx_runtime::Origin::root())
 			.map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
-			None => sgx_runtime::BalancesCall::<Runtime>::set_balance(
-				MultiAddress::Id(account),
-				amount,
-				0,
-			)
+			None => sgx_runtime::BalancesCall::<Runtime>::set_balance {
+				who: MultiAddress::Id(account),
+				new_free: amount,
+				new_reserved: 0,
+			}
 			.dispatch_bypass_filter(sgx_runtime::Origin::root())
 			.map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?,
 		};
@@ -206,11 +209,11 @@ impl Stf {
 					return Err(StfError::MissingFunds)
 				}
 
-				sgx_runtime::BalancesCall::<Runtime>::set_balance(
-					MultiAddress::Id(account),
-					account_info.data.free - amount,
-					account_info.data.reserved,
-				)
+				sgx_runtime::BalancesCall::<Runtime>::set_balance {
+					who: MultiAddress::Id(account),
+					new_free: account_info.data.free - amount,
+					new_reserved: account_info.data.reserved,
+				}
 				.dispatch_bypass_filter(sgx_runtime::Origin::root())
 				.map_err(|_| StfError::Dispatch("unshield_funds::set_balance".to_string()))?;
 				Ok(())
@@ -236,7 +239,7 @@ impl Stf {
 		header: ParentchainHeader,
 	) -> StfResult<()> {
 		ext.execute_with(|| {
-			sgx_runtime::ParentchainCall::<Runtime>::set_block(header)
+			sgx_runtime::ParentchainCall::<Runtime>::set_block { header }
 				.dispatch_bypass_filter(sgx_runtime::Origin::root())
 				.map_err(|_| StfError::Dispatch("update_parentchain_block".to_string()))
 		})?;

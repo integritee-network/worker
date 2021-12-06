@@ -25,7 +25,7 @@ use substrate_api_client::XtStatus;
 use itp_types::{CallWorkerFn, Request, ShieldFundsFn};
 use my_node_runtime::Header;
 use std::{thread::sleep, time::Duration};
-use substrate_api_client::{compose_extrinsic, extrinsic::xt_primitives::UncheckedExtrinsicV4};
+use substrate_api_client::{compose_extrinsic, UncheckedExtrinsicV4};
 
 use crate::tests::commons::*;
 use itp_api_client_extensions::TEEREX;
