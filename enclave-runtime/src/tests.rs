@@ -425,7 +425,7 @@ fn test_executing_call_updates_account_nonce() {
 	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
 	for call in top_pool_calls {
 		let _execution_result = stf_executor
-			.execute_trusted_call::<Block>(
+			.execute_trusted_call(
 				&mut Vec::new(),
 				&call,
 				&latest_parentchain_header(),

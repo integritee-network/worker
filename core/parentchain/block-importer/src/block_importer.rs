@@ -142,7 +142,7 @@ impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCa
 			}
 
 			// Perform state updates.
-			if let Err(e) = self.stf_executor.update_states::<PB>(block.header()) {
+			if let Err(e) = self.stf_executor.update_states(block.header()) {
 				error!("Error performing state updates upon block import");
 				return Err(e.into())
 			}

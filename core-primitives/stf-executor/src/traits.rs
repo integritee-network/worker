@@ -22,7 +22,7 @@ use ita_stf::{
 };
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::traits::{Block as BlockT, Header as HeaderTrait};
+use sp_runtime::traits::Header as HeaderTrait;
 use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
 
 /// Post-processing steps after executing STF
@@ -43,16 +43,16 @@ pub trait StfExecuteShieldFunds {
 
 /// Execute a trusted call on the STF
 pub trait StfExecuteTrustedCall {
-	fn execute_trusted_call<PB>(
+	fn execute_trusted_call<PH>(
 		&self,
 		calls: &mut Vec<OpaqueCall>,
 		stf_call_signed: &TrustedCallSigned,
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<Option<H256>>
 	where
-		PB: BlockT<Hash = H256>;
+		PH: HeaderTrait<Hash = H256>;
 }
 
 /// Trait allowing to tentatively (without permanent state change) execute
@@ -108,9 +108,9 @@ pub trait StfExecuteGenericUpdate {
 		ErrorT: Debug;
 }
 
+/// Updates the sgx-runtime for a specifc header.
 ///
+/// Can not be implemented for a generic header currently, because sgx-runtime does expect a ParentchainHeader.
 pub trait StfUpdateState {
-	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
-	where
-		PB: BlockT<Hash = H256, Header = ParentchainHeader>;
+	fn update_states(&self, header: &ParentchainHeader) -> Result<()>;
 }

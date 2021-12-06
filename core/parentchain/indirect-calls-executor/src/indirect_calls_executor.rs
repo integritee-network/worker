@@ -128,7 +128,7 @@ where
 					if let Ok((decrypted_trusted_call, shard)) =
 						self.decrypt_unchecked_extrinsic(xt)
 					{
-						if let Err(e) = self.stf_executor.execute_trusted_call::<PB>(
+						if let Err(e) = self.stf_executor.execute_trusted_call(
 							&mut opaque_calls,
 							&decrypted_trusted_call,
 							block.header(),

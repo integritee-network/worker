@@ -37,10 +37,7 @@ use itp_storage_verifier::GetStorageVerified;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::{
-	app_crypto::sp_core::blake2_256,
-	traits::{Block as BlockT, Header as HeaderTrait},
-};
+use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};
 use std::{
 	collections::BTreeMap,
 	fmt::Debug,
@@ -134,16 +131,16 @@ where
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	fn execute_trusted_call<PB>(
+	fn execute_trusted_call<PH>(
 		&self,
 		calls: &mut Vec<OpaqueCall>,
 		stf_call_signed: &TrustedCallSigned,
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<Option<H256>>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 	{
 		// load state before executing any calls
 		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
@@ -208,10 +205,7 @@ where
 	StateHandler: HandleState<StateT = ExternalitiesT> + QueryShardState,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
-	where
-		PB: BlockT<Hash = H256, Header = ParentchainHeader>,
-	{
+	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
 		debug!("Update STF storage upon block import!");
 		let storage_hashes = Stf::storage_hashes_to_update_on_block();
 
@@ -458,7 +452,6 @@ pub mod tests {
 		builders::parentchain_header_builder::ParentchainHeaderBuilder,
 		mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
 	};
-	use itp_types::Header;
 	use sgx_tstd::panic;
 	use sp_core::Pair;
 	use std::vec;
