@@ -46,6 +46,8 @@ impl SlotStream {
 	}
 }
 
+/// Waits for the duration of `inner_delay`.
+/// Upon timeout, `inner_delay` is reset according to the time left until next slot.
 impl SlotStream {
 	pub async fn next_slot(&mut self) {
 		self.inner_delay = match self.inner_delay.take() {
@@ -61,8 +63,6 @@ impl SlotStream {
 		if let Some(inner_delay) = self.inner_delay.take() {
 			inner_delay.await;
 		}
-		// Waits for the duration of `inner_delay`.
-		// Upon timeout, `inner_delay` is reset according to the time left until next slot.
 
 		let ends_in = time_until_next_slot(self.slot_duration);
 
