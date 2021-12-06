@@ -37,7 +37,10 @@ use itp_storage_verifier::GetStorageVerified;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Block as BlockT};
+use sp_runtime::{
+	app_crypto::sp_core::blake2_256,
+	traits::{Block as BlockT, Header as HeaderTrait},
+};
 use std::{
 	collections::BTreeMap,
 	fmt::Debug,
@@ -71,21 +74,20 @@ where
 	/// an invalid trusted call, which results in `Ok(ExecutionStatus::Failure)`. The latter
 	/// can be used to remove the trusted call from a queue. In the former case we might keep the
 	/// trusted call and just re-try the operation.
-	fn execute_trusted_call_on_stf<PB, E>(
+	fn execute_trusted_call_on_stf<PH, E>(
 		&self,
 		state: &mut E,
 		stf_call_signed: &TrustedCallSigned,
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<ExecutedOperation>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 		E: SgxExternalitiesTrait,
 	{
 		debug!("query mrenclave of self");
 		let mrenclave = self.ocall_api.get_mrenclave_of_self()?;
-		//debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 
 		let top_or_hash = top_or_hash::<H256>(stf_call_signed.clone(), true);
 
@@ -146,7 +148,7 @@ where
 		// load state before executing any calls
 		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
 
-		let executed_call = self.execute_trusted_call_on_stf::<PB, _>(
+		let executed_call = self.execute_trusted_call_on_stf(
 			&mut state,
 			stf_call_signed,
 			header,
@@ -279,16 +281,16 @@ where
 {
 	type Externalities = ExternalitiesT;
 
-	fn propose_state_update<PB, F>(
+	fn propose_state_update<PH, F>(
 		&self,
 		trusted_calls: &[TrustedCallSigned],
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
 		let ends_at = duration_now() + max_exec_duration;
@@ -303,7 +305,7 @@ where
 
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
-			match self.execute_trusted_call_on_stf::<PB, _>(
+			match self.execute_trusted_call_on_stf(
 				&mut state,
 				&trusted_call_signed,
 				header,
@@ -452,14 +454,20 @@ pub mod tests {
 		test_genesis::{test_account, test_genesis_setup, TEST_ACC_FUNDS},
 		Balance, State, TrustedGetter,
 	};
-	use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
+	use itp_test::{
+		builders::parentchain_header_builder::ParentchainHeaderBuilder,
+		mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
+	};
 	use itp_types::Header;
 	use sgx_tstd::panic;
 	use sp_core::Pair;
-	use sp_runtime::traits::Header as HeaderTrait;
 	use std::vec;
+
 	// 	pub fn propose_state_update() {
 	// 		// given
+	// 		let onchain_mock = OnchainMock::default();
+	// 		let mrenclave = onchain_mock.get_mrenclave_of_self().unwrap().m;
+	// 		let shard = ShardIdentifier::default();
 	// 		let sender = test_account();
 	// 		let signed_call = TrustedCall::balance_set_balance(
 	// 			sender.public().into(),
@@ -476,12 +484,13 @@ pub mod tests {
 	// 		stf_executor
 	// 			.propose_state_update(
 	// 				&vec![signed_call.clone()],
-	// 				&parentchain_header(),
+	// 				&ParentchainHeaderBuilder::default().build(),
 	// 				&shard,
 	// 				execution_duration,
-	// 				|_state| {
+	// 				|state| {
 	// 					// then
-	// 					assert_eq!(*trusted_getter_signed, trusted_getter);
+	// 					//assert_eq!(*trusted_getter_signed, trusted_getter);
+	// 					state
 	// 				},
 	// 			)
 	// 			.unwrap();
@@ -622,9 +631,5 @@ pub mod tests {
 
 	fn state_hash(state: State) -> H256 {
 		state.using_encoded(blake2_256).into()
-	}
-
-	fn parentchain_header() -> Header {
-		Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default())
 	}
 }

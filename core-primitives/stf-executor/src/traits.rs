@@ -22,7 +22,7 @@ use ita_stf::{
 };
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::traits::{Block as BlockT, Header as HeaderTrait};
 use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
 
 /// Post-processing steps after executing STF
@@ -64,16 +64,16 @@ pub trait StateUpdateProposer {
 	///
 	/// All executed call hashes and the mutated state are returned.
 	/// If the time expires, any remaining trusted calls within the batch will be ignored.
-	fn propose_state_update<PB, F>(
+	fn propose_state_update<PH, F>(
 		&self,
 		trusted_calls: &[TrustedCallSigned],
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities;
 }
 

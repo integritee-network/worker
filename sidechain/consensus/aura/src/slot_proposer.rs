@@ -92,7 +92,7 @@ where
 		// 2) Execute trusted calls.
 		let batch_execution_result = self
 			.stf_executor
-			.propose_state_update::<PB, _>(
+			.propose_state_update(
 				&trusted_calls,
 				latest_parentchain_header,
 				&self.shard,

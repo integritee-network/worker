@@ -283,7 +283,7 @@ fn test_create_block_and_confirmation_works() {
 	// when
 	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
 	let execution_result = stf_executor
-		.propose_state_update::<Block, _>(
+		.propose_state_update(
 			&top_pool_calls,
 			&latest_parentchain_header(),
 			&shard,
@@ -354,7 +354,7 @@ fn test_create_state_diff() {
 	// when
 	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
 	let execution_result = stf_executor
-		.propose_state_update::<Block, _>(
+		.propose_state_update(
 			&top_pool_calls,
 			&latest_parentchain_header(),
 			&shard,
@@ -490,7 +490,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	// when
 	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
 	let executed_batch = stf_executor
-		.propose_state_update::<Block, _>(
+		.propose_state_update(
 			&top_pool_calls,
 			&latest_parentchain_header(),
 			&shard,
@@ -529,7 +529,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	// when
 	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
 	let executed_batch = stf_executor
-		.propose_state_update::<Block, _>(
+		.propose_state_update(
 			&top_pool_calls,
 			&latest_parentchain_header(),
 			&shard,
