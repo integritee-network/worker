@@ -27,7 +27,7 @@ pub struct ParentchainHeaderBuilder {
 	parent_hash: H256,
 	state_root: H256,
 	extrinsic_root: H256,
-	digest: Digest<H256>,
+	digest: Digest,
 }
 
 impl ParentchainHeaderBuilder {
