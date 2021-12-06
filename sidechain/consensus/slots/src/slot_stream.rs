@@ -81,11 +81,12 @@ mod tests {
 	const SLOT_TOLERANCE: Duration = Duration::from_millis(10);
 
 	#[tokio::test]
-	async fn slot_stream_call_one_block() {
+	async fn short_task_execution_does_not_influence_next_slot() {
 		let mut slot_stream = SlotStream::new(SLOT_DURATION);
 
 		slot_stream.next_slot().await;
 		let now = Instant::now();
+		// task execution shorter than slot duration
 		thread::sleep(Duration::from_millis(200));
 		slot_stream.next_slot().await;
 
@@ -95,11 +96,12 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn slot_stream_long_call() {
+	async fn long_task_execution_does_not_cause_drift() {
 		let mut slot_stream = SlotStream::new(SLOT_DURATION);
 
 		slot_stream.next_slot().await;
 		let now = Instant::now();
+		// task execution is longer than slot duration
 		thread::sleep(Duration::from_millis(500));
 		slot_stream.next_slot().await;
 		slot_stream.next_slot().await;
