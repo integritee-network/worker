@@ -11,7 +11,11 @@
 	limitations under the License.
 */
 
-//! Implementation of schedule of the slots to time so that trusted calls can be aligned.
+//! Slots functionality for Substrate.
+//!
+//! Some consensus algorithms have a concept of *slots*, which are intervals in
+//! time during which certain events can and/or must occur.  This crate
+//! provides generic functionality for slots.
 
 use crate::time_until_next_slot;
 use futures_timer::Delay;
@@ -57,7 +61,8 @@ impl SlotStream {
 		if let Some(inner_delay) = self.inner_delay.take() {
 			inner_delay.await;
 		}
-		// timeout has fired.
+		// Waits for the duration of `inner_delay`.
+		// Upon timeout, `inner_delay` is reset according to the time left until next slot.
 
 		let ends_in = time_until_next_slot(self.slot_duration);
 
