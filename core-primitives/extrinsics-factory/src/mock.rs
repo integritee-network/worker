@@ -15,6 +15,23 @@
 
 */
 
-pub mod validator_access_mock;
-pub mod validator_mock;
-pub mod validator_mock_seal;
+use crate::{error::Result, CreateExtrinsics};
+use itp_types::OpaqueCall;
+use sp_runtime::OpaqueExtrinsic;
+use std::vec::Vec;
+
+/// Mock of an extrinsics factory. To be used in unit tests.
+///
+/// Returns an empty extrinsic.
+#[derive(Default, Clone)]
+pub struct ExtrinsicsFactoryMock;
+
+impl CreateExtrinsics for ExtrinsicsFactoryMock {
+	fn create_extrinsics(&self, _calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>> {
+		// Ok(calls
+		// 	.iter()
+		// 	.map(|_| OpaqueExtrinsic::from_bytes(Vec::new().as_slice()).unwrap())
+		// 	.collect())
+		Ok(Vec::new())
+	}
+}

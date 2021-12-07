@@ -34,6 +34,7 @@ use itp_sgx_crypto::{AesSeal, Ed25519Seal};
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
+use itp_storage_verifier::GetStorageVerified;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
@@ -47,6 +48,7 @@ use its_sidechain::{
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
 	top_pool_executor::{TopPoolGetterOperator, TopPoolOperationHandler},
 	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
+	validateer_fetch::ValidateerFetch,
 };
 use log::*;
 use sgx_types::sgx_status_t;
@@ -197,7 +199,7 @@ where
 }
 
 /// Executes aura for the given `slot`.
-fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment>(
+pub(crate) fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
 	ocall_api: OCallApi,
@@ -211,7 +213,7 @@ where
 	SB::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
-	OCallApi: EnclaveOnChainOCallApi + 'static,
+	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
 {
@@ -233,7 +235,7 @@ where
 }
 
 /// Gossips sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
-fn send_blocks_and_extrinsics<PB, SB, OCallApi, ValidatorAccessor, ExtrinsicsFactory>(
+pub(crate) fn send_blocks_and_extrinsics<PB, SB, OCallApi, ValidatorAccessor, ExtrinsicsFactory>(
 	blocks: Vec<SB>,
 	opaque_calls: Vec<OpaqueCall>,
 	ocall_api: OCallApi,
@@ -244,7 +246,7 @@ where
 	PB: BlockTrait,
 	SB: SignedBlock + 'static,
 	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
-	ValidatorAccessor: ValidatorAccess<PB> + Clone + Send + Sync + 'static,
+	ValidatorAccessor: ValidatorAccess<PB> + Send + Sync + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {

@@ -19,6 +19,7 @@ itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-storage-verifier = { path = "../storage-verified", default-features = false }
+itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
 
 # sgx enabled external libraries
@@ -50,6 +51,7 @@ std = [
     "itp-storage/std",
     "itp-storage-verifier/std",
     "itp-types/std",
+    "itp-time-utils/std",
     # crates.io
     "log/std",
     "codec/std",
@@ -62,6 +64,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
+    "itp-time-utils/sgx",
     "sgx-externalities/sgx",
     "thiserror_sgx",
 ]

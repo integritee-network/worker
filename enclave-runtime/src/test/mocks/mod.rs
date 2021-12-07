@@ -18,4 +18,6 @@
 
 pub mod attestation_ocall_mock;
 pub mod enclave_rpc_ocall_mock;
+pub mod propose_to_import_call_mock;
 pub mod rpc_responder_mock;
+pub mod types;

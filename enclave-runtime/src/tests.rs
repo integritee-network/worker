@@ -19,7 +19,10 @@ use crate::{
 	ocall::OcallApi,
 	rpc,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
-	test::{cert_tests::*, mocks::rpc_responder_mock::RpcResponderMock},
+	test::{
+		cert_tests::*, fixtures::initialize_test_state::init_state,
+		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests,
+	},
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -71,6 +74,7 @@ use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};
+
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
 type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock>;
@@ -123,6 +127,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
+		// sidechain integration tests
+		sidechain_aura_tests::produce_sidechain_block_and_import_it,
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
@@ -543,22 +549,6 @@ fn test_non_root_shielding_call_is_not_executed() {
 		.unwrap();
 	// then
 	assert!(!executed_batch.executed_operations[0].is_success());
-}
-
-/// returns an empty `State` with the corresponding `ShardIdentifier`
-fn init_state<S: HandleState<StateT = SgxExternalities>>(
-	state_handler: &S,
-) -> (State, ShardIdentifier) {
-	let shard = ShardIdentifier::default();
-
-	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
-
-	let mut state = Stf::init_state();
-	state.prune_state_diff();
-
-	state_handler.write(state.clone(), lock, &shard).unwrap();
-
-	(state, shard)
 }
 
 fn test_top_pool() -> TestTopPool {

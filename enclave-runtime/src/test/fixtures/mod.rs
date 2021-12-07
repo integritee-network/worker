@@ -1,5 +1,6 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,6 +16,4 @@
 
 */
 
-pub mod validator_access_mock;
-pub mod validator_mock;
-pub mod validator_mock_seal;
+pub mod initialize_test_state;

@@ -16,9 +16,23 @@
 
 */
 
-pub mod cert_tests;
-pub mod fixtures;
-pub mod ipfs_tests;
-pub mod mocks;
-pub mod on_chain_ocall_tests;
-pub mod sidechain_aura_tests;
+use ita_stf::{State, Stf};
+use itp_stf_state_handler::handle_state::HandleState;
+use itp_types::ShardIdentifier;
+use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+
+/// Returns an empty `State` with the corresponding `ShardIdentifier`.
+pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
+	state_handler: &S,
+) -> (State, ShardIdentifier) {
+	let shard = ShardIdentifier::default();
+
+	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
+
+	let mut state = Stf::init_state();
+	state.prune_state_diff();
+
+	state_handler.write(state.clone(), lock, &shard).unwrap();
+
+	(state, shard)
+}

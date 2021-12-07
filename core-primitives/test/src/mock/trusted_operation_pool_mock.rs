@@ -175,7 +175,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		_shard: ShardIdentifier,
 		_inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>> {
-		todo!()
+		Vec::new()
 	}
 
 	fn status(&self, shard: ShardIdentifier) -> PoolStatus {

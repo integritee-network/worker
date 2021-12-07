@@ -140,6 +140,19 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 	}
 }
 
+// impl EnclaveOnChainOCallApi for OnchainMock {
+// 	fn send_to_parentchain(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
+// 		Ok(())
+// 	}
+//
+// 	fn worker_request<V: Encode + Decode>(
+// 		&self,
+// 		_req: Vec<WorkerRequest>,
+// 	) -> SgxResult<Vec<WorkerResponse<V>>> {
+// 		Ok(Vec::new())
+// 	}
+// }
+
 pub fn validateer_set() -> Vec<Enclave> {
 	vec![Default::default(), Default::default(), Default::default(), Default::default()]
 }

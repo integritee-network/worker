@@ -34,19 +34,14 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::GetStorageVerified;
+use itp_time_utils::duration_now;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};
 use std::{
-	collections::BTreeMap,
-	fmt::Debug,
-	format,
-	marker::PhantomData,
-	result::Result as StdResult,
-	sync::Arc,
-	time::{Duration, SystemTime},
-	vec::Vec,
+	collections::BTreeMap, fmt::Debug, format, marker::PhantomData, result::Result as StdResult,
+	sync::Arc, time::Duration, vec::Vec,
 };
 
 pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
@@ -290,8 +285,7 @@ where
 		let ends_at = duration_now() + max_exec_duration;
 
 		let state = self.state_handler.load_initialized(shard)?;
-
-		let state_hash_before_execution: H256 = state.using_encoded(blake2_256).into();
+		let state_hash_before_execution = state_hash(&state);
 
 		// Execute any pre-processing steps.
 		let mut state = prepare_state_function(state);
@@ -410,18 +404,18 @@ fn into_map(
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
 }
 
-/// Returns current duration since unix epoch.
-///
-/// TODO: Duplicated from sidechain/consensus/slots. Extract to a crate where it can be shared.
-fn duration_now() -> Duration {
-	let now = SystemTime::now();
-	now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
-		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
-	})
-}
-
 fn top_or_hash<H>(tcs: TrustedCallSigned, direct: bool) -> TrustedOperationOrHash<H> {
 	TrustedOperationOrHash::<H>::Operation(tcs.into_trusted_operation(direct))
+}
+
+/// Compute the state hash.
+///
+/// TODO: This should be implemented on the State itself. We have multiple implementations,
+/// the other one being in the sidechain.
+pub(crate) fn state_hash<ExternalitiesT: SgxExternalitiesTrait + Encode>(
+	state: &ExternalitiesT,
+) -> H256 {
+	state.state().using_encoded(blake2_256).into()
 }
 
 /// Execute a trusted getter on a state and return its value, if available.

@@ -63,7 +63,7 @@ pub fn propose_state_update_executes_all_calls_given_enough_time() {
 	let call_operation_hash_two: H256 =
 		blake2_256(&signed_call_two.clone().into_trusted_operation(true).encode()).into();
 
-	let old_state_hash = state_hash(state_handler.load_initialized(&shard).unwrap());
+	let old_state_hash = state_hash(&state_handler.load_initialized(&shard).unwrap());
 
 	// when
 	let batch_execution_result = stf_executor
@@ -111,7 +111,7 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
-	let old_state_hash = state_hash(state_handler.load_initialized(&shard).unwrap());
+	let old_state_hash = state_hash(&state_handler.load_initialized(&shard).unwrap());
 
 	// when
 	let batch_execution_result = stf_executor
@@ -141,7 +141,7 @@ pub fn propose_state_update_always_executes_preprocessing_step() {
 	let (stf_executor, _, state_handler) = stf_executor();
 	let key = "my_key".encode();
 	let value = "my_value".encode();
-	let old_state_hash = state_hash(state_handler.load_initialized(&shard).unwrap());
+	let old_state_hash = state_hash(&state_handler.load_initialized(&shard).unwrap());
 
 	// when
 	let batch_execution_result = stf_executor
@@ -246,7 +246,7 @@ pub fn execute_update_works() {
 	let (stf_executor, _ocall_api, state_handler) = stf_executor();
 	let key = "my_key".encode();
 	let value = "my_value".encode();
-	let old_state_hash = state_hash(state_handler.load_initialized(&shard).unwrap());
+	let old_state_hash = state_hash(&state_handler.load_initialized(&shard).unwrap());
 
 	// when
 	let (result, updated_state_hash) = stf_executor
@@ -300,10 +300,6 @@ fn test_state() -> State {
 	let mut state = State::new();
 	test_genesis_setup(&mut state);
 	state
-}
-
-fn state_hash(state: State) -> H256 {
-	state.using_encoded(blake2_256).into()
 }
 
 /// Returns a test setup initialized `State` with the corresponding `ShardIdentifier`.

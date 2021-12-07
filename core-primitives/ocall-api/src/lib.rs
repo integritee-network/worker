@@ -21,13 +21,12 @@ pub extern crate alloc;
 
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
-use core::fmt::Debug;
 use itp_types::{TrustedOperationStatus, WorkerRequest, WorkerResponse};
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 
 /// Trait for the enclave to make o-calls related to remote attestation
-pub trait EnclaveAttestationOCallApi: Clone + Debug + Send + Sync {
+pub trait EnclaveAttestationOCallApi: Clone + Send + Sync {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
 	fn get_ias_socket(&self) -> SgxResult<i32>;
@@ -51,7 +50,7 @@ pub trait EnclaveAttestationOCallApi: Clone + Debug + Send + Sync {
 }
 
 /// trait for o-calls related to RPC
-pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
+pub trait EnclaveRpcOCallApi: Clone + Send + Sync + Default {
 	fn update_status_event<H: Encode>(
 		&self,
 		hash: H,
@@ -62,7 +61,7 @@ pub trait EnclaveRpcOCallApi: Clone + Debug + Send + Sync + Default {
 }
 
 /// trait for o-calls related to on-chain interactions
-pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
+pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()>;
 
 	fn worker_request<V: Encode + Decode>(
@@ -71,7 +70,7 @@ pub trait EnclaveOnChainOCallApi: Clone + Debug + Send + Sync {
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
 }
 
-pub trait EnclaveSidechainOCallApi: Clone + Debug + Send + Sync {
+pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
 	fn store_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
 }
@@ -80,7 +79,7 @@ pub trait EnclaveSidechainOCallApi: Clone + Debug + Send + Sync {
 pub struct IpfsCid(pub [u8; 46]);
 
 /// trait for o-call related to IPFS
-pub trait EnclaveIpfsOCallApi: Clone + Debug + Send + Sync {
+pub trait EnclaveIpfsOCallApi: Clone + Send + Sync {
 	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<IpfsCid>;
 
 	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()>;

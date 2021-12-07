@@ -25,7 +25,7 @@ use std::vec::Vec;
 type Header = <Block as BlockT>::Header;
 
 /// Validator mock to be used in tests.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ValidatorMock;
 
 impl Validator<Block> for ValidatorMock {
@@ -47,7 +47,7 @@ impl Validator<Block> for ValidatorMock {
 		_validator_set_id: SetId,
 		_justifications: Option<Justifications>,
 	) -> Result<()> {
-		todo!()
+		Ok(())
 	}
 
 	fn submit_simple_header(
@@ -56,7 +56,7 @@ impl Validator<Block> for ValidatorMock {
 		_header: Header,
 		_justifications: Option<Justifications>,
 	) -> Result<()> {
-		todo!()
+		Ok(())
 	}
 
 	fn submit_xt_to_be_included(
@@ -64,7 +64,7 @@ impl Validator<Block> for ValidatorMock {
 		_relay_id: RelayId,
 		_extrinsic: OpaqueExtrinsic,
 	) -> Result<()> {
-		todo!()
+		Ok(())
 	}
 
 	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
@@ -72,11 +72,11 @@ impl Validator<Block> for ValidatorMock {
 		_ocall_api: &OCallApi,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 	) -> Result<()> {
-		todo!()
+		Ok(())
 	}
 
 	fn check_xt_inclusion(&mut self, _relay_id: RelayId, _block: &Block) -> Result<()> {
-		todo!()
+		Ok(())
 	}
 }
 
