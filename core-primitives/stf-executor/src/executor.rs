@@ -50,8 +50,8 @@ use std::{
 };
 
 pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
-	pub ocall_api: Arc<OCallApi>,
-	pub state_handler: Arc<StateHandler>,
+	ocall_api: Arc<OCallApi>,
+	state_handler: Arc<StateHandler>,
 	_phantom_externalities: PhantomData<ExternalitiesT>,
 }
 
