@@ -43,6 +43,10 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(genesis_header)
 	}
 
+	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
 	fn set_nonce(&self, _: u32) -> EnclaveResult<()> {
 		unimplemented!()
 	}

@@ -35,9 +35,8 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		EnclaveParentchainBlockImportDispatcher, EnclaveSidechainBlockImporter,
-		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor, GLOBAL_DISPATCHER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT,
+		EnclaveSidechainBlockImporter, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
@@ -52,7 +51,11 @@ use itc_direct_rpc_server::{
 	rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
-	block_import_dispatcher::{immediate_dispatcher::ImmediateDispatcher, DispatchBlockImport},
+	block_import_dispatcher::{
+		triggered_dispatcher::{TriggerParentchainBlockImport, TriggeredDispatcher},
+		DispatchBlockImport,
+	},
+	block_import_queue::BlockImportQueue,
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
@@ -505,11 +508,11 @@ pub unsafe extern "C" fn init_light_client(
 		extrinsics_factory,
 		indirect_calls_executor,
 	));
+	let block_queue = Arc::new(BlockImportQueue::<SignedBlock>::default());
+	let block_import_dispatcher =
+		Arc::new(TriggeredDispatcher::new(parentchain_block_importer, block_queue));
 
-	let block_import_dispatcher = Arc::<EnclaveParentchainBlockImportDispatcher>::new(
-		ImmediateDispatcher::new(parentchain_block_importer),
-	);
-	GLOBAL_DISPATCHER_COMPONENT.initialize(block_import_dispatcher);
+	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.initialize(block_import_dispatcher.clone());
 
 	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
 		TopPoolOperationHandler::new(rpc_author, stf_executor),
@@ -519,6 +522,7 @@ pub unsafe extern "C" fn init_light_client(
 		state_key,
 		signer,
 		top_pool_executor,
+		block_import_dispatcher,
 		ocall_api,
 	));
 	GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT.initialize(sidechain_block_importer);
@@ -552,8 +556,29 @@ pub unsafe extern "C" fn sync_parentchain(
 /// * sends `confirm_call` xt's of the executed unshielding calls
 /// * sends `confirm_blocks` xt's for every synced parentchain block
 fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
-	let block_import_dispatcher =
-		GLOBAL_DISPATCHER_COMPONENT.get().ok_or(Error::ComponentNotInitialized)?;
+	let block_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+		.get()
+		.ok_or(Error::ComponentNotInitialized)?;
 
 	block_import_dispatcher.dispatch_import(blocks_to_sync).map_err(|e| e.into())
+}
+
+/// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
+/// with sidechain block production.
+///
+/// Imports all blocks in the queue except the latest one, which has to be triggered by the sidechain component.
+/// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
+/// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
+#[no_mangle]
+pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
+	match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
+		Some(dispatcher) => match dispatcher.import_all_but_latest() {
+			Ok(_) => sgx_status_t::SGX_SUCCESS,
+			Err(e) => {
+				error!("Failed to trigger import of parentchain blocks: {:?}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		},
+		None => (Error::ComponentNotInitialized).into(),
+	}
 }

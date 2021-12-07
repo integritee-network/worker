@@ -17,13 +17,17 @@
 
 use crate::{
 	error::{Error, Result},
+	global_components::GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
 };
 use codec::Encode;
-use itc_parentchain::light_client::{
-	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
-	ValidatorAccessor,
+use itc_parentchain::{
+	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
+	light_client::{
+		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
+		ValidatorAccessor,
+	},
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
@@ -53,7 +57,9 @@ use its_sidechain::{
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::Pair;
-use sp_runtime::{traits::Block as BlockTrait, MultiSignature};
+use sp_runtime::{
+	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
+};
 use std::{sync::Arc, vec::Vec};
 
 #[no_mangle]
@@ -113,7 +119,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
-	if let Err(e) = execute_top_pool_trusted_calls_internal::<Block>() {
+	if let Err(e) = execute_top_pool_trusted_calls_internal() {
 		return e.into()
 	}
 
@@ -126,19 +132,23 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 ///
 /// This function makes an ocall that does the following:
 ///
-/// *   sends sidechain `confirm_block` xt's with the produced sidechain blocks
-/// *   gossip produced sidechain blocks to peer validateers.
-fn execute_top_pool_trusted_calls_internal<PB>() -> Result<()>
-where
-	PB: BlockTrait<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-{
-	// we acquire lock explicitly (variable binding), since '_' will drop the lock after the statement
-	// see https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
+/// *   Import all pending parentchain blocks.
+/// *   Sends sidechain `confirm_block` xt's with the produced sidechain blocks.
+/// *   Gossip produced sidechain blocks to peer validateers.
+fn execute_top_pool_trusted_calls_internal() -> Result<()> {
+	// We acquire lock explicitly (variable binding), since '_' will drop the lock after the statement.
+	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
 
-	let validator_access = ValidatorAccessor::<PB>::default();
+	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+		.get()
+		.ok_or(Error::ComponentNotInitialized)?;
 
+	let validator_access = ValidatorAccessor::<Block>::default();
+
+	// This gets the latest imported block. We accept that all of AURA, up until the block production
+	// itself, will  operate on a parentchain block that is potentially outdated by one block
+	// (in case we have a block in the queue, but not imported yet).
 	let (latest_parentchain_header, genesis_hash) = validator_access.execute_on_validator(|v| {
 		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
 		let genesis_hash = v.genesis_hash(v.num_relays())?;
@@ -150,7 +160,7 @@ where
 
 	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
 		error!("Failed to retrieve author mutex. Maybe it's not initialized?");
-		Error::MutexAccess
+		Error::ComponentNotInitialized
 	})?;
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
@@ -159,7 +169,7 @@ where
 		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
 
 	let top_pool_executor =
-		Arc::new(TopPoolOperationHandler::<PB, SignedSidechainBlock, _, _>::new(
+		Arc::new(TopPoolOperationHandler::<Block, SignedSidechainBlock, _, _>::new(
 			rpc_author.clone(),
 			stf_executor.clone(),
 		));
@@ -174,14 +184,25 @@ where
 	)? {
 		Some(slot) => {
 			let shards = state_handler.list_shards()?;
-			let env = ProposerFactory::new(top_pool_executor, stf_executor, block_composer);
+			let env = ProposerFactory::<Block, _, _, _>::new(
+				top_pool_executor,
+				stf_executor,
+				block_composer,
+			);
 
-			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _>(
-				slot, authority, OcallApi, env, shards,
+			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+				slot,
+				authority,
+				OcallApi,
+				parentchain_import_dispatcher,
+				env,
+				shards,
 			)?;
+
 			// Drop lock as soon as we don't need it anymore.
 			drop(_enclave_write_lock);
-			send_blocks_and_extrinsics::<PB, _, _, _, _>(
+
+			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
 				opaque_calls,
 				OcallApi,
@@ -199,10 +220,11 @@ where
 }
 
 /// Executes aura for the given `slot`.
-pub(crate) fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment>(
+pub(crate) fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment, BlockImportTrigger>(
 	slot: SlotInfo<PB>,
 	authority: Authority,
 	ocall_api: OCallApi,
+	block_import_trigger: Arc<BlockImportTrigger>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SB>>,
 ) -> Result<(Vec<SB>, Vec<OpaqueCall>)>
@@ -216,13 +238,18 @@ where
 	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
 	NumberFor<PB>: BlockNumberOps,
 	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
+	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<PB>>,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let mut aura =
-		Aura::<_, _, SB, PEnvironment, _>::new(authority, ocall_api, proposer_environment)
-			.with_claim_strategy(SlotClaimStrategy::Always)
-			.with_allow_delayed_proposal(true);
+	let mut aura = Aura::<_, PB, SB, PEnvironment, _, _>::new(
+		authority,
+		ocall_api,
+		block_import_trigger,
+		proposer_environment,
+	)
+	.with_claim_strategy(SlotClaimStrategy::Always)
+	.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)

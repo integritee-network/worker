@@ -63,6 +63,17 @@ where
 	/// Getter for the context.
 	fn get_context(&self) -> &Self::Context;
 
+	/// Import parentchain blocks up to and including the one we see in the sidechain block that
+	/// is scheduled for import.
+	///
+	/// Returns the latest header. If no block was imported with the trigger,
+	/// we return `last_imported_parentchain_header`.
+	fn import_parentchain_block(
+		&self,
+		sidechain_block: &SB::Block,
+		last_imported_parentchain_header: &PB::Header,
+	) -> Result<PB::Header, Error>;
+
 	/// Cleanup task after import is done.
 	fn cleanup(&self, signed_sidechain_block: &SB) -> Result<(), Error>;
 
@@ -74,12 +85,16 @@ where
 	) -> Result<(), Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.shard_id();
+
+		let latest_parentchain_header =
+			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
+
 		self.apply_state_update(&shard, |mut state| {
 			let mut verifier = self.verifier(state.clone());
 
 			let block_import_params = verifier.verify(
 				signed_sidechain_block.clone(),
-				parentchain_header,
+				&latest_parentchain_header,
 				self.get_context(),
 			)?;
 

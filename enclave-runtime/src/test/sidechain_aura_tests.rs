@@ -19,14 +19,7 @@
 use crate::{
 	test::{
 		fixtures::initialize_test_state::init_state,
-		mocks::{
-			propose_to_import_call_mock::ProposeToImportOCallApi,
-			types::{
-				TestBlockComposer, TestBlockImporter, TestOCallApi, TestRpcAuthor,
-				TestRpcResponder, TestShieldingKey, TestSidechainDb, TestSigner, TestStateHandler,
-				TestStateKey, TestStfExecutor, TestTopPool, TestTopPoolExecutor,
-			},
-		},
+		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
@@ -62,6 +55,11 @@ use sgx_crypto_helper::RsaKeyPair;
 use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 
+/// Integration test for sidechain block production and block import.
+///
+/// - Create trusted calls and add them to the TOP pool.
+/// - Run AURA on a valid and claimed slot, which executes the trusted operations and produces a new block.
+/// - Import the new sidechain block, which updates the state.
 pub fn produce_sidechain_block_and_import_it() {
 	let _ = env_logger::builder().is_test(true).try_init();
 	info!("Setting up test.");
@@ -88,11 +86,13 @@ pub fn produce_sidechain_block_and_import_it() {
 	));
 	let top_pool_operation_handler =
 		Arc::new(TestTopPoolExecutor::new(rpc_author.clone(), stf_executor.clone()));
+	let parentchain_block_import_trigger = Arc::new(TestParentchainBlockImportTrigger::default());
 	let block_importer = Arc::new(TestBlockImporter::new(
 		state_handler.clone(),
 		state_key,
 		signer.clone(),
 		top_pool_operation_handler.clone(),
+		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
 	let block_composer =
@@ -143,10 +143,11 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
-		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _>(
+		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
 			slot_info,
 			signer,
 			ocall_api.as_ref().clone(),
+			parentchain_block_import_trigger.clone(),
 			proposer_environment,
 			shards,
 		)
@@ -162,6 +163,9 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hashes_from_block(blocks.first().unwrap(), &state_key);
 	assert_ne!(state_hash_before_block_production, aposteriori_state_hash_in_block);
 	assert_eq!(state_hash_before_block_production, apriori_state_hash_in_block);
+
+	// Ensure we have triggered the parentchain block import, because we claimed the slot.
+	assert!(parentchain_block_import_trigger.has_import_been_called());
 
 	// Ensure that invalid calls are removed from pool. Valid calls should only be removed upon block import.
 	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());

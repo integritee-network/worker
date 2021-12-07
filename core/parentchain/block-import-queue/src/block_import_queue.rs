@@ -32,54 +32,63 @@ use std::{collections::VecDeque, vec::Vec};
 /// Block import queue.
 ///
 /// Uses RwLock internally to guard against concurrent access and ensure all operations are atomic.
-pub struct BlockImportQueue<PB> {
-	queue: RwLock<VecDeque<PB>>,
+pub struct BlockImportQueue<SignedBlock> {
+	queue: RwLock<VecDeque<SignedBlock>>,
 }
 
-impl<PB> BlockImportQueue<PB> {
+impl<SignedBlock> BlockImportQueue<SignedBlock> {
 	pub fn is_empty(&self) -> Result<bool> {
 		let queue_lock = self.queue.read().map_err(|_| Error::PoisonedLock)?;
 		Ok(queue_lock.is_empty())
 	}
 }
 
-impl<PB> Default for BlockImportQueue<PB> {
+impl<SignedBlock> Default for BlockImportQueue<SignedBlock> {
 	fn default() -> Self {
 		BlockImportQueue { queue: Default::default() }
 	}
 }
 
-impl<PB> PushToBlockQueue for BlockImportQueue<PB> {
-	type BlockType = PB;
-
-	fn push_multiple(&self, blocks: Vec<PB>) -> Result<()> {
+impl<SignedBlock> PushToBlockQueue<SignedBlock> for BlockImportQueue<SignedBlock> {
+	fn push_multiple(&self, blocks: Vec<SignedBlock>) -> Result<()> {
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
 		queue_lock.extend(blocks);
 		Ok(())
 	}
 
-	fn push_single(&self, block: PB) -> Result<()> {
+	fn push_single(&self, block: SignedBlock) -> Result<()> {
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
 		queue_lock.push_back(block);
 		Ok(())
 	}
 }
 
-impl<PB> PopFromBlockQueue for BlockImportQueue<PB> {
-	type BlockType = PB;
+impl<SignedBlock> PopFromBlockQueue for BlockImportQueue<SignedBlock> {
+	type BlockType = SignedBlock;
 
-	fn pop_all_but_last(&self) -> Result<Vec<PB>> {
+	fn pop_all_but_last(&self) -> Result<Vec<SignedBlock>> {
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
 		let queue_length = queue_lock.len();
 		if queue_length < 2 {
-			return Ok(Vec::<PB>::default())
+			return Ok(Vec::<SignedBlock>::default())
 		}
 		Ok(queue_lock.drain(..queue_length - 1).collect::<Vec<_>>())
 	}
 
-	fn pop_all(&self) -> Result<Vec<PB>> {
+	fn pop_all(&self) -> Result<Vec<SignedBlock>> {
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
 		Ok(queue_lock.drain(..).collect::<Vec<_>>())
+	}
+
+	fn pop_until<MatchingF>(&self, matching_func: MatchingF) -> Result<Vec<Self::BlockType>>
+	where
+		MatchingF: FnMut(&Self::BlockType) -> bool,
+	{
+		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
+		match queue_lock.iter().position(matching_func) {
+			None => Ok(Vec::new()),
+			Some(p) => Ok(queue_lock.drain(..p + 1).collect::<Vec<_>>()),
+		}
 	}
 }
 
@@ -140,5 +149,37 @@ mod tests {
 		assert_eq!(3, queue.pop_all_but_last().unwrap().len());
 		assert!(!queue.is_empty().unwrap());
 		assert_eq!(7, queue.pop_all().unwrap()[0]);
+	}
+
+	#[test]
+	fn pop_until_returns_empty_vec_if_nothing_matches() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 3, 5, 7]).unwrap();
+
+		let popped_elements = queue.pop_until(|i| i > &10u32).unwrap();
+		assert!(popped_elements.is_empty());
+	}
+
+	#[test]
+	fn pop_until_returns_elements_until_and_including_match() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 2, 3, 10]).unwrap();
+
+		assert_eq!(queue.pop_until(|i| i == &3).unwrap(), vec![1, 2, 3]);
+	}
+
+	#[test]
+	fn pop_until_returns_all_elements_if_last_matches() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 2, 3, 10]).unwrap();
+
+		assert_eq!(queue.pop_until(|i| i == &10).unwrap(), vec![1, 2, 3, 10]);
+	}
+
+	#[test]
+	fn pop_until_returns_first_element_if_it_matches() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_single(4).unwrap();
+		assert_eq!(queue.pop_until(|i| i == &4).unwrap(), vec![4])
 	}
 }

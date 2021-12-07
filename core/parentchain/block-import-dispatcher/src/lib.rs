@@ -32,7 +32,10 @@ pub mod sgx_reexport_prelude {
 
 pub mod error;
 pub mod immediate_dispatcher;
-pub mod retain_latest_dispatcher;
+pub mod triggered_dispatcher;
+
+#[cfg(feature = "mocks")]
+pub mod trigger_parentchain_block_import_mock;
 
 use error::Result;
 use std::vec::Vec;

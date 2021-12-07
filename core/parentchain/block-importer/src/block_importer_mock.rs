@@ -41,7 +41,10 @@ where
 	}
 }
 
-impl<SignedBlockT> ImportParentchainBlocks for ParentchainBlockImporterMock<SignedBlockT> {
+impl<SignedBlockT> ImportParentchainBlocks for ParentchainBlockImporterMock<SignedBlockT>
+where
+	SignedBlockT: Clone,
+{
 	type SignedBlockType = SignedBlockT;
 
 	fn import_parentchain_blocks(

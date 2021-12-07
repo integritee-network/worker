@@ -51,6 +51,8 @@ enclave {
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
+        public sgx_status_t trigger_parentchain_block_import();
+
         public sgx_status_t execute_trusted_getters();
 
         public sgx_status_t execute_trusted_calls();
