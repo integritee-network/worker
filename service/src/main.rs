@@ -147,6 +147,7 @@ fn main() {
 
 		println!("Worker Config: {:?}", config);
 		let skip_ra = smatches.is_present("skip-ra");
+		let dev = smatches.is_present("dev");
 
 		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
 
@@ -163,6 +164,7 @@ fn main() {
 			enclave,
 			sidechain_blockstorage,
 			skip_ra,
+			dev,
 			node_api,
 			tokio_handle,
 		);
@@ -238,6 +240,7 @@ fn start_worker<E, T, D>(
 	enclave: Arc<E>,
 	sidechain_storage: Arc<D>,
 	skip_ra: bool,
+	dev: bool,
 	mut node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle: Arc<T>,
 ) where
@@ -306,7 +309,10 @@ fn start_worker<E, T, D>(
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
 	let tee_accountid = enclave_account(enclave.as_ref());
-	ensure_account_has_funds(&mut node_api, &tee_accountid);
+	if !has_account_enough_funds(&mut node_api, &tee_accountid, dev) {
+		println!("Starting worker failed: enclave account has not enough funds to register.");
+		return
+	}
 
 	// ------------------------------------------------------------------------
 	// perform a remote attestation and get an unchecked extrinsic back
@@ -660,46 +666,64 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	AccountId32::from(*tee_public.as_array_ref())
 }
 
-// Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(api: &mut Api<sr25519::Pair, WsRpcClient>, accountid: &AccountId32) {
-	let alice = AccountKeyring::Alice.pair();
-	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
-	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
-	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
-
-	let alice_free = api.get_free_balance(&alice_acc);
-	info!("    Alice's free balance = {:?}", alice_free);
-	let nonce = api.get_nonce_of(&alice_acc).unwrap();
-	info!("    Alice's Account Nonce is {}", nonce);
-
+// Alice plays the faucet and sends some funds to the account if balance is low and bootstrap_funds is true
+fn has_account_enough_funds(
+	api: &mut Api<sr25519::Pair, WsRpcClient>,
+	accountid: &AccountId32,
+	bootstrap_funds: bool,
+) -> bool {
 	// check account balance
 	let free = api.get_free_balance(accountid).unwrap();
 	info!("TEE's free balance = {:?}", free);
 
 	let existential_deposit = api.get_existential_deposit().unwrap();
 	info!("Existential deposit is = {:?}", existential_deposit);
-	let funding_amount = existential_deposit * MIN_FUND_INCREASE_FACTOR - free;
+	let min_fund = existential_deposit * MIN_FUND_INCREASE_FACTOR;
+	let funding_amount = min_fund - free;
 	info!("Funding amount is = {:?}", funding_amount);
-	if funding_amount > alice_free.unwrap() {
-		error!(
-			"funding amount is to high: please change MIN_FUND_INCREASE_FACTOR ({:?})",
-			funding_amount
-		);
-	}
 
 	if free < funding_amount {
-		let signer_orig = api.signer.clone();
-		api.signer = Some(alice);
+		if bootstrap_funds {
+			let alice = AccountKeyring::Alice.pair();
+			info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
+			let alice_acc = AccountId32::from(*alice.public().as_array_ref());
+			info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-		println!("[+] bootstrap funding Enclave form Alice's funds");
-		let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
-		let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
-		info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
+			let alice_free = api.get_free_balance(&alice_acc);
+			info!("    Alice's free balance = {:?}", alice_free);
+			let nonce = api.get_nonce_of(&alice_acc).unwrap();
+			info!("    Alice's Account Nonce is {}", nonce);
 
-		//verify funds have arrived
-		let free = api.get_free_balance(accountid);
-		info!("TEE's NEW free balance = {:?}", free);
+			if funding_amount > alice_free.unwrap() {
+				error!(
+					"funding amount is to high: please change MIN_FUND_INCREASE_FACTOR ({:?})",
+					funding_amount
+				);
+				return false
+			}
 
-		api.signer = signer_orig;
+			let signer_orig = api.signer.clone();
+			api.signer = Some(alice);
+
+			println!("[+] bootstrap funding Enclave form Alice's funds");
+			let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
+			let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
+			info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
+
+			//verify funds have arrived
+			let free = api.get_free_balance(accountid);
+			info!("TEE's NEW free balance = {:?}", free);
+
+			api.signer = signer_orig;
+		} else {
+			error!(
+				"Enclave account: {:}, free balance {:?}, minimal required fund {:?}",
+				accountid.to_ss58check(),
+				free,
+				min_fund
+			);
+			return false
+		}
 	}
+	true
 }
