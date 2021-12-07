@@ -36,6 +36,7 @@ use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
+use futures::executor::block_on;
 use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi};
 use itp_enclave_api::{
@@ -50,9 +51,11 @@ use itp_settings::{
 		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
+	sidechain::SLOT_DURATION,
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
 use itp_types::SignedBlock;
+use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
 use log::*;
@@ -344,7 +347,13 @@ fn start_worker<E, T, D>(
 	let side_chain_enclave_api = enclave.clone();
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
-		.spawn(move || start_interval_block_production(side_chain_enclave_api.as_ref()))
+		.spawn(move || {
+			let future = start_slot_worker(
+				|| execute_trusted_calls(side_chain_enclave_api.as_ref()),
+				SLOT_DURATION,
+			);
+			block_on(future);
+		})
 		.unwrap();
 
 	// ------------------------------------------------------------------------
@@ -409,18 +418,6 @@ fn start_worker<E, T, D>(
 			}
 		}
 	}
-}
-
-/// Triggers the enclave to produce a block based on a fixed time schedule.
-fn start_interval_block_production<E: EnclaveBase + Sidechain>(enclave_api: &E) {
-	use itp_settings::sidechain::SLOT_DURATION;
-
-	schedule_on_repeating_intervals(
-		|| {
-			execute_trusted_calls(enclave_api);
-		},
-		SLOT_DURATION,
-	);
 }
 
 /// Starts the execution of trusted getters in repeating intervals.

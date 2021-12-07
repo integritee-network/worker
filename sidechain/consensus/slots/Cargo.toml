@@ -11,6 +11,10 @@ codec = { package = "parity-scale-codec", version = "2.2.0", default-features = 
 derive_more = "0.99.16"
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
+# only for slot-stream
+futures = { version = "0.3.9", optional = true }
+futures-timer = { version = "3.0.1", optional = true }
+
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 
@@ -28,6 +32,7 @@ itp-types = { path = "../../../core-primitives/types", default-features = false 
 [dev-dependencies]
 itp-types = { path = "../../../core-primitives/types" }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+tokio = "*"
 
 
 [features]
@@ -35,6 +40,10 @@ default = ["std"]
 std = [
     "codec/std",
     "log/std",
+    # only for slot-stream
+    "futures",
+    "futures-timer",
+    # local deps
     "sp-consensus-slots/std",
     "sp-runtime/std",
     "its-primitives/std",

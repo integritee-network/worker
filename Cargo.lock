@@ -2106,6 +2106,7 @@ dependencies = [
  "itp-enclave-api",
  "itp-settings",
  "itp-types",
+ "its-consensus-slots",
  "its-primitives",
  "its-storage",
  "jsonrpsee",
@@ -2764,6 +2765,8 @@ name = "its-consensus-slots"
 version = "0.8.0"
 dependencies = [
  "derive_more",
+ "futures 0.3.18",
+ "futures-timer",
  "itp-sgx-io",
  "itp-time-utils",
  "itp-types",
@@ -2776,6 +2779,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-keyring",
  "sp-runtime",
+ "tokio",
 ]
 
 [[package]]

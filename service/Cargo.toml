@@ -12,7 +12,7 @@ log = "0.4"
 env_logger = "0.7"
 base58 = "0.1"
 rust-crypto = "0.2"
-clap = { version = "2.33", features = [ "yaml" ] }
+clap = { version = "2.33", features = ["yaml"] }
 lazy_static = "1.4.0"
 parking_lot = "0.11.1"
 thiserror = "1.0"
@@ -21,7 +21,7 @@ dirs = "1.0.2"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
-jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"]}
+jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
 async-trait = "0.1.50"
 tokio = { version = "1.6.1", features = ["full"] }
 
@@ -46,6 +46,7 @@ itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" 
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
+its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-primitives = { path = "../sidechain/primitives"}
 its-storage = { path = "../sidechain/storage" }
 ita-stf = { path = "../app-libs/stf" }
