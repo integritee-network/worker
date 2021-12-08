@@ -555,23 +555,6 @@ fn test_non_root_shielding_call_is_not_executed() {
 }
 
 // helper functions
-
-/// returns an empty `State` with the corresponding `ShardIdentifier`
-pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
-	state_handler: &S,
-) -> (State, ShardIdentifier) {
-	let shard = ShardIdentifier::default();
-
-	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
-
-	let mut state = Stf::init_state();
-	state.prune_state_diff();
-
-	state_handler.write(state.clone(), lock, &shard).unwrap();
-
-	(state, shard)
-}
-
 pub fn test_top_pool() -> TestTopPool {
 	let chain_api = Arc::new(SidechainApi::<Block>::new());
 	let top_pool =
