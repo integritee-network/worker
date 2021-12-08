@@ -24,6 +24,7 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
+	parentchain_block_syncer::ParentchainBlockSyncer,
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker::worker_url_into_async_rpc_url,
@@ -88,13 +89,13 @@ mod error;
 mod globals;
 mod node_api_factory;
 mod ocall_bridge;
+mod parentchain_block_syncer;
 mod sync_block_gossiper;
 mod tests;
 mod utils;
 mod worker;
 
 /// how many blocks will be synced before storing the chain db to disk
-const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
@@ -591,7 +592,8 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 
 	info!("Finished initializing light client, syncing parent chain...");
 
-	let latest_synced_header = sync_parentchain(enclave_api, api, latest);
+	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone());
+	let latest_synced_header = parentchain_block_syncer.sync_parentchain(enclave_api, latest);
 
 	enclave_api.trigger_parentchain_block_import().map_err(Error::EnclaveApi)?;
 
@@ -619,50 +621,10 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			new_header.number
 		);
 
-		last_synced_header = sync_parentchain(enclave_api, api, last_synced_header);
+		let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone());
+		last_synced_header =
+			parentchain_block_syncer.sync_parentchain(enclave_api, last_synced_header);
 	}
-}
-
-/// Gets the amount of blocks to sync from the parentchain and feeds them to the enclave.
-///
-///
-pub fn sync_parentchain<E: EnclaveBase + Sidechain>(
-	enclave_api: &E,
-	node_api: &Api<sr25519::Pair, WsRpcClient>,
-	last_synced_header: Header,
-) -> Header {
-	let tee_accountid = enclave_account(enclave_api);
-
-	trace!("Getting current head");
-	let curr_head: SignedBlock = node_api.last_finalized_block().unwrap().unwrap();
-	let head_block_number = curr_head.block.header.number;
-
-	let blocks_to_sync = get_blocks_to_sync(node_api, &last_synced_header, &curr_head);
-
-	println!("[+] Found {} block(s) to sync", blocks_to_sync.len());
-
-	let mut synced_header_until = last_synced_header;
-
-	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
-	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-		let tee_nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
-
-		if let Err(e) = enclave_api.sync_parentchain(chunk, tee_nonce) {
-			error!("{:?}", e);
-			// enclave might not have synced
-			return synced_header_until
-		};
-
-		synced_header_until =
-			chunk.last().map(|b| b.block.header.clone()).expect("Chunk can't be empty; qed");
-
-		println!(
-			"Synced {} out of {} finalized parentchain blocks",
-			synced_header_until.number, head_block_number,
-		)
-	}
-
-	synced_header_until
 }
 
 /// Execute trusted operations in the enclave
@@ -672,43 +634,6 @@ fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
 	if let Err(e) = enclave_api.execute_trusted_calls() {
 		error!("{:?}", e);
 	};
-}
-
-/// gets a list of blocks that need to be synced, ordered from oldest to most recent header
-/// blocks that need to be synced are all blocks from the current header to the last synced header, iterating over parent
-fn get_blocks_to_sync(
-	api: &Api<sr25519::Pair, WsRpcClient>,
-	last_synced_head: &Header,
-	curr_head: &SignedBlock,
-) -> Vec<SignedBlock> {
-	let mut blocks_to_sync = Vec::<SignedBlock>::new();
-
-	// add blocks to sync if not already up to date
-	if curr_head.block.header.hash() != last_synced_head.hash() {
-		blocks_to_sync.push((*curr_head).clone());
-
-		// Todo: Check, is this dangerous such that it could be an eternal or too big loop?
-		let mut head = (*curr_head).clone();
-		let no_blocks_to_sync = head.block.header.number - last_synced_head.number;
-		if no_blocks_to_sync > 1 {
-			println!("light client is synced until block: {:?}", last_synced_head.number);
-			println!("Last finalized block number: {:?}\n", head.block.header.number);
-		}
-		while head.block.header.parent_hash != last_synced_head.hash() {
-			debug!("Getting head of hash: {:?}", head.block.header.parent_hash);
-			head = api.signed_block(Some(head.block.header.parent_hash)).unwrap().unwrap();
-			blocks_to_sync.push(head.clone());
-
-			if head.block.header.number % BLOCK_SYNC_BATCH_SIZE == 0 {
-				println!(
-					"Remaining blocks to fetch until last synced header: {:?}",
-					head.block.header.number - last_synced_head.number
-				)
-			}
-		}
-		blocks_to_sync.reverse();
-	}
-	blocks_to_sync
 }
 
 fn init_shard(shard: &ShardIdentifier) {
