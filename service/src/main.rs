@@ -310,7 +310,7 @@ fn start_worker<E, T, D>(
 
 	let tee_accountid = enclave_account(enclave.as_ref());
 	if !has_account_enough_funds(&mut node_api, &tee_accountid, dev) {
-		println!("Starting worker failed: enclave account has not enough funds to register.");
+		println!("Starting worker failed: enclave does not have enough funds on the parentchain to register.");
 		return
 	}
 
