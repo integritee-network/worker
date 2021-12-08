@@ -21,7 +21,7 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*, fixtures::initialize_test_state::init_state,
-		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests, top_pool_tests,
+		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests,
 	},
 };
 use codec::{Decode, Encode};
@@ -118,8 +118,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// sync tests
 		sidechain_rw_lock_works,
 		enclave_rw_lock_works,
-		// integration top pool tes
-		top_pool_tests::upon_proposing_and_importing_sidechain_block_calls_are_removed_from_pool,
 		// unit tests of stf_executor
 		stf_executor_tests::get_stf_state_works,
 		stf_executor_tests::upon_false_signature_get_stf_state_errs,

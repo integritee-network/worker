@@ -32,7 +32,7 @@ use crate::{
 };
 use codec::Encode;
 use ita_stf::{
-	test_genesis::{endowed_account, unendowed_account},
+	test_genesis::{endowed_account, unendowed_account, second_endowed_account},
 	KeyPair, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
@@ -102,15 +102,19 @@ pub fn produce_sidechain_block_and_import_it() {
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();
 	let validator_access = ValidatorAccessMock::default();
 
-	info!("Create trusted operation..");
-	let trusted_call_signed =
-		encrypted_trusted_operation_set_balance(ocall_api.as_ref(), &shard_id, &shielding_key);
-	info!("Add trusted operation to TOP pool..");
-	let author_submit_future = async { rpc_author.submit_top(trusted_call_signed, shard_id).await };
+	info!("Create trusted operations..");
+	let trusted_operation =
+		encrypted_trusted_operation_transfer_balance(ocall_api.as_ref(), &shard_id, &shielding_key);
+	let invalid_trusted_operation =
+		invalid_encrypted_trusted_operation_transfer_balance(ocall_api.as_ref(), &shard_id, &shielding_key);
+	info!("Add trusted operations to TOP pool..");
+	let author_submit_future = async { rpc_author.submit_top(trusted_operation, shard_id).await };
+	executor::block_on(author_submit_future).unwrap();
+	let author_submit_future = async { rpc_author.submit_top(invalid_trusted_operation, shard_id).await };
 	executor::block_on(author_submit_future).unwrap();
 
-	// Ensure we have exactly one trusted call in our TOP pool, and no getters.
-	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
+	assert_eq!(2, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 	assert!(rpc_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
 
 	info!("Setup AURA SlotInfo");
@@ -140,8 +144,8 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	// We must have the trusted call still in our TOP pool, it will be remove upon import.
-	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	// Ensure that only invalid calls are removed from pool. Valid calls should only be removed upon block import.
+	//assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
@@ -166,7 +170,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	);
 }
 
-fn encrypted_trusted_operation_set_balance<
+fn encrypted_trusted_operation_transfer_balance<
 	AttestationApi: EnclaveAttestationOCallApi,
 	ShieldingKey: ShieldingCrypto,
 >(
@@ -182,6 +186,31 @@ fn encrypted_trusted_operation_set_balance<
 		from_account.public().into(),
 		to_account.public().into(),
 		1000,
+	)
+	.sign(&KeyPair::Ed25519(from_account), 0, &mr_enclave.m, shard_id);
+
+	let trusted_operation = TrustedOperation::direct_call(call);
+	let encoded_operation = trusted_operation.encode();
+
+	shielding_key.encrypt(encoded_operation.as_slice()).unwrap()
+}
+
+fn invalid_encrypted_trusted_operation_transfer_balance<
+	AttestationApi: EnclaveAttestationOCallApi,
+	ShieldingKey: ShieldingCrypto,
+>(
+	attestation_api: &AttestationApi,
+	shard_id: &ShardIdentifier,
+	shielding_key: &ShieldingKey,
+) -> Vec<u8> {
+	let from_account = second_endowed_account();
+	let to_account = unendowed_account();
+	let mr_enclave = attestation_api.get_mrenclave_of_self().unwrap();
+
+	let call = TrustedCall::balance_transfer(
+		from_account.public().into(),
+		to_account.public().into(),
+		20000,
 	)
 	.sign(&KeyPair::Ed25519(from_account), 0, &mr_enclave.m, shard_id);
 

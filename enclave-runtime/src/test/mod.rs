@@ -22,4 +22,3 @@ pub mod ipfs_tests;
 pub mod mocks;
 pub mod on_chain_ocall_tests;
 pub mod sidechain_aura_tests;
-pub mod top_pool_tests;
