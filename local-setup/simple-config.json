@@ -15,7 +15,8 @@
         "2000"
       ],
       "subcommand_flags": [
-        "--skip-ra"
+        "--skip-ra",
+        "--dev"
       ]
     },
     {
@@ -25,7 +26,8 @@
         "3000"
       ],
       "subcommand_flags": [
-        "--skip-ra"
+        "--skip-ra",
+        "--dev"
       ]
     }
   ]
