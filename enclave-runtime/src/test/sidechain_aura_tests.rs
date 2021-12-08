@@ -32,7 +32,7 @@ use crate::{
 };
 use codec::Encode;
 use ita_stf::{
-	test_genesis::{endowed_account, unendowed_account, second_endowed_account},
+	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
 	KeyPair, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
@@ -105,12 +105,16 @@ pub fn produce_sidechain_block_and_import_it() {
 	info!("Create trusted operations..");
 	let trusted_operation =
 		encrypted_trusted_operation_transfer_balance(ocall_api.as_ref(), &shard_id, &shielding_key);
-	let invalid_trusted_operation =
-		invalid_encrypted_trusted_operation_transfer_balance(ocall_api.as_ref(), &shard_id, &shielding_key);
+	let invalid_trusted_operation = invalid_encrypted_trusted_operation_transfer_balance(
+		ocall_api.as_ref(),
+		&shard_id,
+		&shielding_key,
+	);
 	info!("Add trusted operations to TOP pool..");
 	let author_submit_future = async { rpc_author.submit_top(trusted_operation, shard_id).await };
 	executor::block_on(author_submit_future).unwrap();
-	let author_submit_future = async { rpc_author.submit_top(invalid_trusted_operation, shard_id).await };
+	let author_submit_future =
+		async { rpc_author.submit_top(invalid_trusted_operation, shard_id).await };
 	executor::block_on(author_submit_future).unwrap();
 
 	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
