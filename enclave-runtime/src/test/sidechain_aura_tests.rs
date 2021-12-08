@@ -148,8 +148,8 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	// Ensure that only invalid calls are removed from pool. Valid calls should only be removed upon block import.
-	//assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	// Ensure that invalid calls are removed from pool. Valid calls should only be removed upon block import.
+	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
