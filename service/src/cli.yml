@@ -60,7 +60,7 @@ subcommands:
             - dev:
                 long: dev
                 short: d
-                help: Alice is faucet for development purposes. Bootstrap enclave funds from //Alice account.
+                help: Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
     - request-keys:
         about: join a shard by requesting key provisioning from another worker
         args:
