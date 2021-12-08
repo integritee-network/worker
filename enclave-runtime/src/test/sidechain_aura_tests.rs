@@ -33,7 +33,7 @@ use crate::{
 use codec::Encode;
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	KeyPair, TrustedCall, TrustedOperation,
+	Balance, KeyPair, Stf, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
@@ -46,7 +46,7 @@ use itp_test::{
 	mock::handle_state_mock::HandleStateMock,
 };
 use itp_time_utils::duration_now;
-use itp_types::{Block as ParentchainBlock, Enclave, ShardIdentifier};
+use itp_types::{AccountId, Block as ParentchainBlock, Enclave, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
 	primitives::types::SignedBlock as SignedSidechainBlock,
@@ -59,7 +59,7 @@ use jsonrpc_core::futures::executor;
 use log::*;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
-use sp_core::Pair;
+use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 
 pub fn produce_sidechain_block_and_import_it() {
@@ -103,12 +103,25 @@ pub fn produce_sidechain_block_and_import_it() {
 	let validator_access = ValidatorAccessMock::default();
 
 	info!("Create trusted operations..");
-	let trusted_operation =
-		encrypted_trusted_operation_transfer_balance(ocall_api.as_ref(), &shard_id, &shielding_key);
-	let invalid_trusted_operation = invalid_encrypted_trusted_operation_transfer_balance(
+	let sender = endowed_account();
+	let sender_with_low_balance = second_endowed_account();
+	let receiver = unendowed_account();
+	let transfered_amount: Balance = 1000;
+	let trusted_operation = encrypted_trusted_operation_transfer_balance(
 		ocall_api.as_ref(),
 		&shard_id,
 		&shielding_key,
+		sender,
+		receiver.public().into(),
+		transfered_amount,
+	);
+	let invalid_trusted_operation = encrypted_trusted_operation_transfer_balance(
+		ocall_api.as_ref(),
+		&shard_id,
+		&shielding_key,
+		sender_with_low_balance,
+		receiver.public().into(),
+		200000,
 	);
 	info!("Add trusted operations to TOP pool..");
 	let author_submit_future = async { rpc_author.submit_top(trusted_operation, shard_id).await };
@@ -172,6 +185,9 @@ pub fn produce_sidechain_block_and_import_it() {
 		state_hash_before_block_production,
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
+	let mut state = state_handler.load_initialized(&shard_id).unwrap();
+	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).unwrap().free;
+	assert_eq!(free_balance, transfered_amount);
 }
 
 fn encrypted_trusted_operation_transfer_balance<
@@ -181,42 +197,20 @@ fn encrypted_trusted_operation_transfer_balance<
 	attestation_api: &AttestationApi,
 	shard_id: &ShardIdentifier,
 	shielding_key: &ShieldingKey,
+	from: ed25519::Pair,
+	to: AccountId,
+	amount: Balance,
 ) -> Vec<u8> {
-	let from_account = endowed_account();
-	let to_account = unendowed_account();
+	//let from_account = endowed_account();
+	//let to_account = unendowed_account();
 	let mr_enclave = attestation_api.get_mrenclave_of_self().unwrap();
 
-	let call = TrustedCall::balance_transfer(
-		from_account.public().into(),
-		to_account.public().into(),
-		1000,
-	)
-	.sign(&KeyPair::Ed25519(from_account), 0, &mr_enclave.m, shard_id);
-
-	let trusted_operation = TrustedOperation::direct_call(call);
-	let encoded_operation = trusted_operation.encode();
-
-	shielding_key.encrypt(encoded_operation.as_slice()).unwrap()
-}
-
-fn invalid_encrypted_trusted_operation_transfer_balance<
-	AttestationApi: EnclaveAttestationOCallApi,
-	ShieldingKey: ShieldingCrypto,
->(
-	attestation_api: &AttestationApi,
-	shard_id: &ShardIdentifier,
-	shielding_key: &ShieldingKey,
-) -> Vec<u8> {
-	let from_account = second_endowed_account();
-	let to_account = unendowed_account();
-	let mr_enclave = attestation_api.get_mrenclave_of_self().unwrap();
-
-	let call = TrustedCall::balance_transfer(
-		from_account.public().into(),
-		to_account.public().into(),
-		20000,
-	)
-	.sign(&KeyPair::Ed25519(from_account), 0, &mr_enclave.m, shard_id);
+	let call = TrustedCall::balance_transfer(from.public().into(), to, amount).sign(
+		&KeyPair::Ed25519(from),
+		0,
+		&mr_enclave.m,
+		shard_id,
+	);
 
 	let trusted_operation = TrustedOperation::direct_call(call);
 	let encoded_operation = trusted_operation.encode();
@@ -232,8 +226,8 @@ fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -
 
 fn create_top_pool() -> Arc<TestTopPool> {
 	let rpc_responder = Arc::new(TestRpcResponder::new());
-	let side_chain_api = Arc::new(SidechainApi::<ParentchainBlock>::new());
-	Arc::new(TestTopPool::create(PoolOptions::default(), side_chain_api, rpc_responder))
+	let sidechain_api = Arc::new(SidechainApi::<ParentchainBlock>::new());
+	Arc::new(TestTopPool::create(PoolOptions::default(), sidechain_api, rpc_responder))
 }
 
 fn create_ocall_api(signer: &TestSigner) -> Arc<TestOCallApi> {
