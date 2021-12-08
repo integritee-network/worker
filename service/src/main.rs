@@ -717,7 +717,7 @@ fn bootstrap_funds_from_alice(
 	let signer_orig = api.signer.clone();
 	api.signer = Some(alice);
 
-	println!("[+] bootstrap funding Enclave form Alice's funds");
+	println!("[+] bootstrap funding Enclave from Alice's funds");
 	let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
 	let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
 	info!("[<] Extrinsic got finalized. Hash: {:?}\n", xt_hash);
