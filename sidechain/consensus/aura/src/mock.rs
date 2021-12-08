@@ -71,7 +71,12 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 		_max_duration: Duration,
 	) -> Result<Proposal<SignedSidechainBlock>, ConsensusError> {
 		Ok(Proposal {
-			block: test_block_with_time_stamp(duration_now().as_millis() as u64),
+			block: TestBlockBuilder::new()
+				.with_timestamp(duration_now().as_millis() as u64)
+				.with_layer1_head(H256::random())
+				.with_parent_hash(H256::random())
+				.with_shard(H256::random())
+				.build_signed(),
 			parentchain_effects: Default::default(),
 		})
 	}
@@ -110,8 +115,8 @@ impl Default for TestBlockBuilder {
 			parent_hash: Default::default(),
 			layer_one_head: Default::default(),
 			shard: Default::default(),
-			signed_top_hashes: vec![],
-			encrypted_payload: vec![],
+			signed_top_hashes: Default::default(),
+			encrypted_payload: Default::default(),
 			timestamp: 0,
 		}
 	}
@@ -147,6 +152,11 @@ impl TestBlockBuilder {
 		self
 	}
 
+	pub fn with_shard(mut self, shard: H256) -> Self {
+		self.shard = shard;
+		self
+	}
+
 	pub fn build(self) -> SidechainBlock {
 		SidechainBlock::new(
 			self.author,
@@ -159,20 +169,10 @@ impl TestBlockBuilder {
 			self.timestamp,
 		)
 	}
-}
 
-pub fn test_block_with_time_stamp(timestamp: u64) -> SignedSidechainBlock {
-	SidechainBlock::new(
-		Default::default(),
-		1,
-		H256::random(),
-		H256::random(),
-		H256::random(),
-		Default::default(),
-		Default::default(),
-		timestamp,
-	)
-	.sign_block(&Keyring::Alice.pair())
+	pub fn build_signed(self) -> SignedSidechainBlock {
+		self.build().sign_block(&Keyring::Alice.pair())
+	}
 }
 
 pub fn default_header() -> Header {
