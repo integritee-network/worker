@@ -34,6 +34,7 @@ const ALICE_ENCODED: Seed = [
 ];
 
 const ENDOWED_SEED: Seed = *b"12345678901234567890123456789012";
+const SECOND_ENDOWED_SEED: Seed = *b"22345678901234567890123456789012";
 const UNENDOWED_SEED: Seed = *b"92345678901234567890123456789012";
 
 const ALICE_FUNDS: Balance = 1000000000000000;
@@ -41,6 +42,9 @@ pub const ENDOWED_ACC_FUNDS: Balance = 2000;
 
 pub fn endowed_account() -> ed25519::Pair {
 	ed25519::Pair::from_seed(&ENDOWED_SEED)
+}
+pub fn second_endowed_account() -> ed25519::Pair {
+	ed25519::Pair::from_seed(&SECOND_ENDOWED_SEED)
 }
 
 pub fn unendowed_account() -> ed25519::Pair {
@@ -54,6 +58,7 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
 		(endowed_account().public().into(), ENDOWED_ACC_FUNDS, ENDOWED_ACC_FUNDS),
+		(second_endowed_account().public().into(), ENDOWED_ACC_FUNDS, ENDOWED_ACC_FUNDS),
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 

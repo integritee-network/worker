@@ -21,7 +21,7 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*, fixtures::initialize_test_state::init_state,
-		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests,
+		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests, top_pool_tests,
 	},
 };
 use codec::{Decode, Encode};
@@ -118,6 +118,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// sync tests
 		sidechain_rw_lock_works,
 		enclave_rw_lock_works,
+		// integration top pool tes
+		top_pool_tests::upon_proposing_and_importing_sidechain_block_calls_are_removed_from_pool,
+		// unit tests of stf_executor
 		stf_executor_tests::get_stf_state_works,
 		stf_executor_tests::upon_false_signature_get_stf_state_errs,
 		stf_executor_tests::execute_update_works,
@@ -551,7 +554,25 @@ fn test_non_root_shielding_call_is_not_executed() {
 	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
-fn test_top_pool() -> TestTopPool {
+// helper functions
+
+/// returns an empty `State` with the corresponding `ShardIdentifier`
+pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
+	state_handler: &S,
+) -> (State, ShardIdentifier) {
+	let shard = ShardIdentifier::default();
+
+	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
+
+	let mut state = Stf::init_state();
+	state.prune_state_diff();
+
+	state_handler.write(state.clone(), lock, &shard).unwrap();
+
+	(state, shard)
+}
+
+pub fn test_top_pool() -> TestTopPool {
 	let chain_api = Arc::new(SidechainApi::<Block>::new());
 	let top_pool =
 		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
@@ -560,20 +581,20 @@ fn test_top_pool() -> TestTopPool {
 }
 
 /// Decrypt `encrypted` and decode it into `StatePayload`
-fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
+pub fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
 	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
 	let state_key = state_key();
 	state_key.decrypt(&mut encrypted_payload).unwrap();
 	StatePayload::decode(&mut encrypted_payload.as_slice()).unwrap()
 }
 
-fn state_key() -> Aes {
+pub fn state_key() -> Aes {
 	Aes::default()
 }
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`
-fn test_setup() -> (
+pub fn test_setup() -> (
 	Arc<TestRpcAuthor>,
 	State,
 	ShardIdentifier,
@@ -603,26 +624,26 @@ fn test_setup() -> (
 }
 
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.
-fn unfunded_public() -> spEd25519::Public {
+pub fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
 }
 
-fn test_account() -> spEd25519::Pair {
+pub fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`
-fn direct_top(call: TrustedCallSigned) -> TrustedOperation {
+pub fn direct_top(call: TrustedCallSigned) -> TrustedOperation {
 	call.into_trusted_operation(true)
 }
 
 /// Just some random onchain header
-fn latest_parentchain_header() -> Header {
+pub fn latest_parentchain_header() -> Header {
 	Header::new(1, Default::default(), Default::default(), [69; 32].into(), Default::default())
 }
 
 /// Reads the value at `key_hash` from `state_diff` and decodes it into `D`
-fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -> D {
+pub fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -> D {
 	// fixme: what's up here with the wrapping??
 	state_diff
 		.get(key_hash)
