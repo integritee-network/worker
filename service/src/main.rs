@@ -312,12 +312,9 @@ fn start_worker<E, T, D>(
 
 	if dev {
 		//dev mode, the faucet will ensure that the enclave has enough fund
-		match ensure_account_has_funds(&mut node_api, &tee_accountid) {
-			Err(x) => {
-				error!("Starting worker failed: {:?}", x);
-				return
-			},
-			_ => {},
+		if let Err(x) = ensure_account_has_funds(&mut node_api, &tee_accountid) {
+			error!("Starting worker failed: {:?}", x);
+			return
 		}
 	} else {
 		//production mode, there is no faucet.
