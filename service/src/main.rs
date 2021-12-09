@@ -55,7 +55,6 @@ use itp_settings::{
 	sidechain::SLOT_DURATION,
 	worker::MIN_FUND_INCREASE_FACTOR,
 };
-use itp_types::SignedBlock;
 use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
@@ -340,7 +339,7 @@ fn start_worker<E, T, D>(
 	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-	let last_synced_header = init_light_client(&node_api, enclave.as_ref()).unwrap();
+	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client\n");
 
 	// ------------------------------------------------------------------------
@@ -365,7 +364,7 @@ fn start_worker<E, T, D>(
 		.name("parent_chain_sync_loop".to_owned())
 		.spawn(move || {
 			if let Err(e) = subscribe_to_parentchain_new_headers(
-				parentchain_sync_enclave_api.as_ref(),
+				parentchain_sync_enclave_api,
 				&api4,
 				last_synced_header,
 			) {
@@ -574,7 +573,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 
 pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
-	enclave_api: &E,
+	enclave_api: Arc<E>,
 ) -> Result<Header, Error> {
 	let genesis_hash = api.get_genesis_hash().unwrap();
 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
@@ -592,8 +591,8 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 
 	info!("Finished initializing light client, syncing parent chain...");
 
-	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone());
-	let latest_synced_header = parentchain_block_syncer.sync_parentchain(enclave_api, latest);
+	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api.clone());
+	let latest_synced_header = parentchain_block_syncer.sync_parentchain(latest);
 
 	enclave_api.trigger_parentchain_block_import().map_err(Error::EnclaveApi)?;
 
@@ -603,13 +602,14 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
-	enclave_api: &E,
+	enclave_api: Arc<E>,
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
 	let (sender, receiver) = channel();
 	api.subscribe_finalized_heads(sender).map_err(Error::ApiClient)?;
 
+	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api.clone());
 	loop {
 		let new_header: Header = match receiver.recv() {
 			Ok(header_str) => serde_json::from_str(&header_str).map_err(Error::Serialization),
@@ -621,9 +621,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			new_header.number
 		);
 
-		let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone());
-		last_synced_header =
-			parentchain_block_syncer.sync_parentchain(enclave_api, last_synced_header);
+		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 	}
 }
 
