@@ -140,6 +140,10 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 	}
 }
 
+// We cannot implement EnclaveOnChainOCallApi specifically here, because OnchainMock already
+// implements `GetStorageVerified`. And all implementers of `EnclaveOnChainOCallApi` automatically
+// implement GetStorageVerified too (-> see `core-primitives/storage-verified/src/lib.rs`),
+// so it results in duplicate implementations.
 // impl EnclaveOnChainOCallApi for OnchainMock {
 // 	fn send_to_parentchain(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
 // 		Ok(())
