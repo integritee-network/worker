@@ -201,8 +201,6 @@ fn encrypted_trusted_operation_transfer_balance<
 	to: AccountId,
 	amount: Balance,
 ) -> Vec<u8> {
-	//let from_account = endowed_account();
-	//let to_account = unendowed_account();
 	let mr_enclave = attestation_api.get_mrenclave_of_self().unwrap();
 
 	let call = TrustedCall::balance_transfer(from.public().into(), to, amount).sign(
