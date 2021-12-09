@@ -22,7 +22,7 @@ pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, SidechainBlockT};
 use ita_stf::hash::TrustedOperationOrHash;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
 use itp_stf_executor::ExecutedOperation;
@@ -69,12 +69,7 @@ where
 	PB: ParentchainBlockTrait<Hash = H256>,
 	SB: SignedBlockT<Public = Authority::Public> + 'static,
 	SB::Block: BlockT<ShardIdentifier = H256>,
-	OCallApi: EnclaveSidechainOCallApi
-		+ EnclaveAttestationOCallApi
-		+ ValidateerFetch
-		+ GetStorageVerified
-		+ Send
-		+ Sync,
+	OCallApi: EnclaveSidechainOCallApi + ValidateerFetch + GetStorageVerified + Send + Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor: TopPoolCallOperator<PB, SB> + Send + Sync + 'static,
@@ -141,12 +136,7 @@ impl<Authority, PB, SB, OCallApi, StateHandler, StateKey, TopPoolExecutor> Block
 	PB: ParentchainBlockTrait<Hash = H256>,
 	SB: SignedBlockT<Public = Authority::Public> + 'static,
 	SB::Block: BlockT<ShardIdentifier = H256>,
-	OCallApi: EnclaveSidechainOCallApi
-		+ EnclaveAttestationOCallApi
-		+ ValidateerFetch
-		+ GetStorageVerified
-		+ Send
-		+ Sync,
+	OCallApi: EnclaveSidechainOCallApi + ValidateerFetch + GetStorageVerified + Send + Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor: TopPoolCallOperator<PB, SB> + Send + Sync + 'static,

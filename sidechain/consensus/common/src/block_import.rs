@@ -19,7 +19,7 @@
 
 use crate::{Error, Verifier};
 use codec::Decode;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_sgx_crypto::StateCrypto;
 use its_primitives::traits::{
 	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockT,
@@ -43,7 +43,7 @@ where
 	type StateCrypto: StateCrypto;
 
 	/// Context needed to derive verifier relevant data.
-	type Context: EnclaveAttestationOCallApi + EnclaveSidechainOCallApi;
+	type Context: EnclaveSidechainOCallApi;
 
 	/// Get a verifier instance.
 	fn verifier(&self, state: Self::SidechainState) -> Self::Verifier;
