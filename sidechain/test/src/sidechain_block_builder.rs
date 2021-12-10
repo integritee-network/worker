@@ -111,17 +111,29 @@ impl SidechainBlockBuilder {
 		self
 	}
 
-	pub fn build(self) -> SignedBlock {
+	pub fn build(&self) -> Block {
 		Block::new(
 			self.signer.public(),
 			self.number,
 			self.parent_hash,
 			self.parentchain_block_hash,
 			self.shard,
-			self.signed_top_hashes,
-			self.encrypted_payload,
+			self.signed_top_hashes.clone(),
+			self.encrypted_payload.clone(),
 			self.timestamp,
 		)
-		.sign_block(&self.signer)
 	}
+
+	pub fn build_signed(&self) -> SignedBlock {
+		let signer = &self.signer.clone();
+		self.build().sign_block(signer)
+	}
+}
+
+#[test]
+fn build_signed_block_has_valid_signature() {
+	use its_primitives::traits::SignedBlock as SignedBlockTrait;
+
+	let signed_block = SidechainBlockBuilder::default().build_signed();
+	assert!(signed_block.verify_signature());
 }

@@ -2744,6 +2744,7 @@ dependencies = [
  "its-consensus-slots",
  "its-primitives",
  "its-state",
+ "its-test",
  "its-top-pool-executor",
  "its-validateer-fetch",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",

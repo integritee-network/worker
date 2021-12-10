@@ -164,7 +164,9 @@ mod tests {
 
 		let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, Arc::new(()), ());
 
-		let resp = worker.gossip_blocks(vec![SidechainBlockBuilder::default().build()]).await;
+		let resp = worker
+			.gossip_blocks(vec![SidechainBlockBuilder::default().build_signed()])
+			.await;
 		assert_ok!(resp);
 	}
 }
