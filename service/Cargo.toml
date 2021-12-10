@@ -40,16 +40,16 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
-itp-settings = { path = "../core-primitives/settings" }
-itp-types = { path = "../core-primitives/types" }
-itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
+ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
+itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
+itp-settings = { path = "../core-primitives/settings" }
+itp-types = { path = "../core-primitives/types" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-primitives = { path = "../sidechain/primitives"}
 its-storage = { path = "../sidechain/storage" }
-ita-stf = { path = "../app-libs/stf" }
 
 # scs / integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
@@ -72,4 +72,5 @@ production = ['itp-settings/production']
 
 [dev-dependencies]
 anyhow = "1.0.40"
+its-test = { path = "../sidechain/test" }
 mockall = "0.10.1"

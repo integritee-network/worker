@@ -120,6 +120,7 @@ pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
 mod tests {
 	use frame_support::assert_ok;
 	use its_primitives::types::SignedBlock as SignedSidechainBlock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
 	use std::net::SocketAddr;
@@ -127,7 +128,7 @@ mod tests {
 
 	use crate::{
 		tests::{
-			commons::{local_worker_config, test_sidechain_block},
+			commons::local_worker_config,
 			mock::{TestNodeApi, W1_URL, W2_URL},
 		},
 		worker::{worker_url_into_async_rpc_url, Worker, WorkerT},
@@ -163,7 +164,7 @@ mod tests {
 
 		let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, Arc::new(()), ());
 
-		let resp = worker.gossip_blocks(vec![test_sidechain_block()]).await;
+		let resp = worker.gossip_blocks(vec![SidechainBlockBuilder::default().build()]).await;
 		assert_ok!(resp);
 	}
 }
