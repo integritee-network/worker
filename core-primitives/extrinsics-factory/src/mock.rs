@@ -32,6 +32,7 @@ impl CreateExtrinsics for ExtrinsicsFactoryMock {
 		// so the output vector has the same size as the input one (and thus can be tested from the outside).
 		// However, it doesn't seem to be possible to construct an empty of dummy OpaqueExtrinsic,
 		// `from_bytes` expects a valid encoded OpaqueExtrinsic.
+		// The following could work: opaque_call = OpaqueCall(xt.encode());
 		// Ok(calls
 		// 	.iter()
 		// 	.map(|_| OpaqueExtrinsic::from_bytes(Vec::new().as_slice()).unwrap())

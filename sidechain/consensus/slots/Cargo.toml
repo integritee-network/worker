@@ -26,8 +26,8 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
-its-primitives = { path = "../../primitives", default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
+its-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -46,11 +46,11 @@ std = [
     "sp-consensus-slots/std",
     "sp-runtime/std",
     # local
-    "its-primitives/std",
-    "its-consensus-common/std",
-    "itp-time-utils/std",
     "itp-sgx-io/std",
+    "itp-time-utils/std",
     "itp-types/std",
+    "its-consensus-common/std",
+    "its-primitives/std",
 ]
 sgx = [
     "itp-sgx-io/sgx",

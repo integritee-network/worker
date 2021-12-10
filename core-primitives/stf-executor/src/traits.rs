@@ -55,8 +55,7 @@ pub trait StfExecuteTrustedCall {
 		PH: HeaderTrait<Hash = H256>;
 }
 
-/// Trait allowing to tentatively (without permanent state change) execute
-/// trusted calls within a given time frame.
+/// Proposes a state update to `Externalities`.
 pub trait StateUpdateProposer {
 	type Externalities: SgxExternalitiesTrait + Encode;
 
