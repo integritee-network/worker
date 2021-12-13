@@ -80,12 +80,12 @@ impl<SignedBlock> PopFromBlockQueue for BlockImportQueue<SignedBlock> {
 		Ok(queue_lock.drain(..).collect::<Vec<_>>())
 	}
 
-	fn pop_until<MatchingF>(&self, matching_func: MatchingF) -> Result<Vec<Self::BlockType>>
+	fn pop_until<Predicate>(&self, predicate: Predicate) -> Result<Vec<Self::BlockType>>
 	where
-		MatchingF: FnMut(&Self::BlockType) -> bool,
+		Predicate: FnMut(&Self::BlockType) -> bool,
 	{
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
-		match queue_lock.iter().position(matching_func) {
+		match queue_lock.iter().position(predicate) {
 			None => Ok(Vec::new()),
 			Some(p) => Ok(queue_lock.drain(..p + 1).collect::<Vec<_>>()),
 		}

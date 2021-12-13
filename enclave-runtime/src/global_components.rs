@@ -32,7 +32,7 @@ use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::Aes;
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::GlobalFileStateHandler;
-use itp_types::{Block as ParentchainBlock, SignedBlock};
+use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
 	primitives::{
@@ -59,7 +59,7 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
 >;
-pub type EnclaveBlockImportQueue = BlockImportQueue<SignedBlock>;
+pub type EnclaveBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveBlockImportQueue>;
 

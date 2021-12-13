@@ -501,14 +501,14 @@ pub unsafe extern "C" fn init_light_client(
 		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
 	let indirect_calls_executor =
 		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
-	let parentchain_block_importer = Arc::new(ParentchainBlockImporter::new(
+	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,
 		ocall_api.clone(),
 		stf_executor.clone(),
 		extrinsics_factory,
 		indirect_calls_executor,
-	));
-	let block_queue = Arc::new(BlockImportQueue::<SignedBlock>::default());
+	);
+	let block_queue = BlockImportQueue::<SignedBlock>::default();
 	let block_import_dispatcher =
 		Arc::new(TriggeredDispatcher::new(parentchain_block_importer, block_queue));
 

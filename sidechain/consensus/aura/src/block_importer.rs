@@ -225,6 +225,8 @@ impl<
 		sidechain_block: &SB::Block,
 		last_imported_parentchain_header: &PB::Header,
 	) -> Result<PB::Header, ConsensusError> {
+		// We trigger the import of parentchain blocks up until the last one we've seen in the
+		// sidechain block that we're importing. This is done to prevent forks in the sidechain (#423)
 		let maybe_latest_imported_block = self
 			.parentchain_block_import_trigger
 			.import_until(|signed_parentchain_block| {

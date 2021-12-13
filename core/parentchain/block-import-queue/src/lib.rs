@@ -58,7 +58,7 @@ pub trait PopFromBlockQueue {
 	fn pop_all(&self) -> Result<Vec<Self::BlockType>>;
 
 	/// Pop (front) until specified block is found. If no block matches, empty Vec is returned.
-	fn pop_until<MatchingF>(&self, matching_func: MatchingF) -> Result<Vec<Self::BlockType>>
+	fn pop_until<Predicate>(&self, predicate: Predicate) -> Result<Vec<Self::BlockType>>
 	where
-		MatchingF: Fn(&Self::BlockType) -> bool;
+		Predicate: Fn(&Self::BlockType) -> bool;
 }

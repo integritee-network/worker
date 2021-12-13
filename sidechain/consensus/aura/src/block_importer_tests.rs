@@ -198,7 +198,7 @@ fn if_block_author_is_not_self_do_not_remove_tops() {
 }
 
 #[test]
-fn block_import_triggers_parentchain_block_import() {
+fn sidechain_block_import_triggers_parentchain_block_import() {
 	let previous_parentchain_header = ParentchainHeaderBuilder::default().with_number(4).build();
 	let latest_parentchain_header = ParentchainHeaderBuilder::default()
 		.with_number(5)
