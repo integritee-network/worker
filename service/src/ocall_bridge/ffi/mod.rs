@@ -27,4 +27,5 @@ pub mod init_quote;
 pub mod ipfs;
 pub mod propose_sidechain_blocks;
 pub mod send_to_parentchain;
+pub mod store_sidechain_blocks;
 pub mod worker_request;

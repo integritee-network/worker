@@ -28,3 +28,7 @@ sgx = [
     "itc-parentchain-indirect-calls-executor/sgx",
     "itc-parentchain-light-client/sgx",
 ]
+mocks = [
+    "itc-parentchain-block-import-dispatcher/mocks",
+    "itc-parentchain-light-client/mocks",
+]

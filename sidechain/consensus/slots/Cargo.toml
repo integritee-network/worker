@@ -23,14 +23,13 @@ sp-consensus-slots = { version = "0.10.0-dev", default-features = false, git = "
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
-its-primitives = { path = "../../primitives", default-features = false }
-its-consensus-common = { path = "../common", default-features = false }
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+its-consensus-common = { path = "../common", default-features = false }
+its-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
-itp-types = { path = "../../../core-primitives/types" }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 tokio = "*"
 
@@ -43,17 +42,19 @@ std = [
     # only for slot-stream
     "futures",
     "futures-timer",
-    # local deps
+    # substrate
     "sp-consensus-slots/std",
     "sp-runtime/std",
-    "its-primitives/std",
-    "its-consensus-common/std",
-    "itp-time-utils/std",
+    # local
     "itp-sgx-io/std",
+    "itp-time-utils/std",
+    "itp-types/std",
+    "its-consensus-common/std",
+    "its-primitives/std",
 ]
 sgx = [
-    "sgx_tstd",
-    "itp-time-utils/sgx",
     "itp-sgx-io/sgx",
+    "itp-time-utils/sgx",
     "its-consensus-common/sgx",
+    "sgx_tstd",
 ]

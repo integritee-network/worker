@@ -18,9 +18,8 @@
 use crate::{
 	error::{Error, Result},
 	traits::{
-		StatePostProcessing, StfExecuteGenericUpdate, StfExecuteShieldFunds,
-		StfExecuteTimedCallsBatch, StfExecuteTimedGettersBatch, StfExecuteTrustedCall,
-		StfUpdateState,
+		StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate, StfExecuteShieldFunds,
+		StfExecuteTimedGettersBatch, StfExecuteTrustedCall, StfUpdateState,
 	},
 	BatchExecutionResult, ExecutedOperation, ExecutionStatus,
 };
@@ -31,29 +30,20 @@ use ita_stf::{
 	AccountId, ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned,
 };
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::GetStorageVerified;
+use itp_time_utils::duration_now;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Block as BlockT};
+use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};
 use std::{
-	collections::BTreeMap,
-	fmt::Debug,
-	format,
-	marker::PhantomData,
-	result::Result as StdResult,
-	sync::Arc,
-	time::{Duration, SystemTime},
-	vec::Vec,
+	collections::BTreeMap, fmt::Debug, format, marker::PhantomData, result::Result as StdResult,
+	sync::Arc, time::Duration, vec::Vec,
 };
 
-/// STF Executor implementation
-///
-/// FIXME: Next time we change this class, we should add some unit tests
-/// (where they make sense and can be done with reasonable effort)
 pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
@@ -62,7 +52,7 @@ pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -76,21 +66,20 @@ where
 	/// an invalid trusted call, which results in `Ok(ExecutionStatus::Failure)`. The latter
 	/// can be used to remove the trusted call from a queue. In the former case we might keep the
 	/// trusted call and just re-try the operation.
-	fn execute_trusted_call_on_stf<PB, E>(
+	fn execute_trusted_call_on_stf<PH, E>(
 		&self,
 		state: &mut E,
 		stf_call_signed: &TrustedCallSigned,
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<ExecutedOperation>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 		E: SgxExternalitiesTrait,
 	{
 		debug!("query mrenclave of self");
 		let mrenclave = self.ocall_api.get_mrenclave_of_self()?;
-		//debug!("MRENCLAVE of self is {}", mrenclave.m.to_base58());
 
 		let top_or_hash = top_or_hash::<H256>(stf_call_signed.clone(), true);
 
@@ -133,25 +122,25 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTrustedCall
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	fn execute_trusted_call<PB>(
+	fn execute_trusted_call<PH>(
 		&self,
 		calls: &mut Vec<OpaqueCall>,
 		stf_call_signed: &TrustedCallSigned,
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<Option<H256>>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 	{
 		// load state before executing any calls
 		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
 
-		let executed_call = self.execute_trusted_call_on_stf::<PB, _>(
+		let executed_call = self.execute_trusted_call_on_stf(
 			&mut state,
 			stf_call_signed,
 			header,
@@ -176,7 +165,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteShieldFunds
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -207,14 +196,11 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfUpdateState
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT> + QueryShardState,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
-	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
-	where
-		PB: BlockT<Hash = H256, Header = ParentchainHeader>,
-	{
+	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
 		debug!("Update STF storage upon block import!");
 		let storage_hashes = Stf::storage_hashes_to_update_on_block();
 
@@ -275,70 +261,71 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedCallsBatch
+impl<OCallApi, StateHandler, ExternalitiesT> StateUpdateProposer
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	type Externalities = ExternalitiesT;
 
-	fn execute_timed_calls_batch<PB, F>(
+	fn propose_state_update<PH, F>(
 		&self,
 		trusted_calls: &[TrustedCallSigned],
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult>
+	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
 		let ends_at = duration_now() + max_exec_duration;
 
-		let (state_lock, state) = self.state_handler.load_for_mutation(shard)?;
+		let state = self.state_handler.load_initialized(shard)?;
+		let state_hash_before_execution = state_hash(&state);
 
-		let initial_state_hash: H256 = state.using_encoded(blake2_256).into();
+		// Execute any pre-processing steps.
+		let mut state = prepare_state_function(state);
+		let mut executed_and_failed_calls = Vec::<ExecutedOperation>::new();
 
-		let mut state = prepare_state_function(state); // execute any pre-processing steps
-		let mut executed_calls = Vec::<ExecutedOperation>::new();
-
+		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
-			match self.execute_trusted_call_on_stf::<PB, _>(
+			match self.execute_trusted_call_on_stf(
 				&mut state,
 				&trusted_call_signed,
 				header,
 				shard,
 				StatePostProcessing::None,
 			) {
-				Ok(executed_call) => {
-					executed_calls.push(executed_call);
+				Ok(executed_or_failed_call) => {
+					executed_and_failed_calls.push(executed_or_failed_call);
 				},
 				Err(e) => {
-					error!("Error executing trusted call (will not push top hash): {:?}", e);
+					error!("Fatal Error. Failed to attempt call execution: {:?}", e);
 				},
 			};
 
-			// Check time
+			// Break if allowed time window is over.
 			if ends_at < duration_now() {
 				break
 			}
 		}
 
-		self.state_handler
-			.write(state, state_lock, shard)
-			.map_err(|e| Error::StateHandler(e))?;
-
-		Ok(BatchExecutionResult { executed_operations: executed_calls, initial_state_hash })
+		Ok(BatchExecutionResult {
+			executed_operations: executed_and_failed_calls,
+			state_hash_before_execution,
+			state_after_execution: state,
+		})
 	}
 }
 
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedGettersBatch
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
+	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -383,7 +370,6 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteGenericUpdate
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + GetStorageVerified,
 	StateHandler: HandleState<StateT = ExternalitiesT>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
@@ -418,25 +404,25 @@ fn into_map(
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
 }
 
-/// Returns current duration since unix epoch.
-///
-/// TODO: Duplicated from sidechain/consensus/slots. Extract to a crate where it can be shared.
-fn duration_now() -> Duration {
-	let now = SystemTime::now();
-	now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
-		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
-	})
-}
-
 fn top_or_hash<H>(tcs: TrustedCallSigned, direct: bool) -> TrustedOperationOrHash<H> {
 	TrustedOperationOrHash::<H>::Operation(tcs.into_trusted_operation(direct))
+}
+
+/// Compute the state hash.
+///
+/// TODO: This should be implemented on the State itself. We have multiple implementations,
+/// the other one being in the sidechain.
+pub(crate) fn state_hash<ExternalitiesT: SgxExternalitiesTrait + Encode>(
+	state: &ExternalitiesT,
+) -> H256 {
+	state.state().using_encoded(blake2_256).into()
 }
 
 /// Execute a trusted getter on a state and return its value, if available.
 ///
 /// Also verifies the signature of the trusted getter and returns an error
 /// if it's invalid.
-fn get_stf_state<E: SgxExternalitiesTrait>(
+pub(crate) fn get_stf_state<E: SgxExternalitiesTrait>(
 	trusted_getter_signed: &TrustedGetterSigned,
 	state: &mut E,
 ) -> Result<Option<Vec<u8>>> {

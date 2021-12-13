@@ -155,6 +155,15 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	/// Remove when #447 is resolved.
 	fn allow_delayed_proposal(&self) -> bool;
 
+	/// Trigger the import of the latest parentchain block.
+	///
+	/// Returns the header of the latest imported block. In case no block was imported with this trigger,
+	/// the `current_latest_imported_header` is returned.
+	fn import_latest_parentchain_block(
+		&self,
+		current_latest_imported_header: &B::Header,
+	) -> Result<B::Header, ConsensusError>;
+
 	/// Implements [`SlotWorker::on_slot`]. This is an adaption from
 	/// substrate's sc-consensus-slots implementation. There, the slot worker handles all the
 	/// scheduling itself. Unfortunately, we can't use the same principle in the enclave due to some
@@ -180,13 +189,15 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 			return None
 		}
 
-		let epoch_data = match self.epoch_data(&slot_info.parentchain_head, slot) {
+		// The parentchain block header we use here is potentially outdated by one block.
+		// Importing is triggered by the worker that claims the current slot.
+		let epoch_data = match self.epoch_data(&slot_info.last_imported_parentchain_head, slot) {
 			Ok(epoch_data) => epoch_data,
 			Err(e) => {
 				warn!(
 					target: logging_target,
 					"Unable to fetch epoch data at block {:?}: {:?}",
-					slot_info.parentchain_head.hash(),
+					slot_info.last_imported_parentchain_head.hash(),
 					e,
 				);
 
@@ -203,9 +214,23 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 			);
 		}
 
-		let _ = self.claim_slot(&slot_info.parentchain_head, slot, &epoch_data)?;
+		let _claim =
+			self.claim_slot(&slot_info.last_imported_parentchain_head, slot, &epoch_data)?;
 
-		let proposer = match self.proposer(slot_info.parentchain_head.clone(), shard) {
+		// Import and retrieve the parentchain header on which the new sidechain block will be based on.
+		let latest_imported_parentchain_header =
+			match self.import_latest_parentchain_block(&slot_info.last_imported_parentchain_head) {
+				Ok(p) => p,
+				Err(e) => {
+					warn!(
+						target: logging_target,
+						"Failed to import and retrieve latest parentchain block header: {:?}", e
+					);
+					return None
+				},
+			};
+
+		let proposer = match self.proposer(latest_imported_parentchain_header, shard) {
 			Ok(p) => p,
 			Err(e) => {
 				warn!(target: logging_target, "Could not create proposer: {:?}", e);
@@ -272,7 +297,7 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 
 			// important to check against millis here. We had the corner-case in production
 			// setup where `shard_remaining_duration` contained only nanos.
-			if shard_remaining_duration.as_millis() == Default::default() {
+			if shard_remaining_duration.as_millis() == u128::default() {
 				info!(
 					target: logging_target,
 					"⌛️ Could not produce blocks for all shards; block production took too long",
@@ -285,7 +310,7 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 				slot_info.slot,
 				duration_now(),
 				shard_remaining_duration,
-				slot_info.parentchain_head.clone(),
+				slot_info.last_imported_parentchain_head.clone(),
 			);
 
 			match SimpleSlotWorker::on_slot(self, shard_slot, shard) {

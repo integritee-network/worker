@@ -95,6 +95,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 	type InPoolOperation = TrustedOperation<TxHash<Self>, StfTrustedOperation>;
 	type Error = Error;
 
+	#[allow(clippy::type_complexity)]
 	fn submit_at(
 		&self,
 		at: &BlockId<Self::Block>,
@@ -103,15 +104,12 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		shard: ShardIdentifier,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
 		let mut transactions = self.submitted_transactions.write().unwrap();
-		transactions.insert(
-			shard.clone(),
-			TxPayload { block_id: at.clone(), source, xts: xts.clone(), shard },
-		);
+		transactions.insert(shard, TxPayload { block_id: *at, source, xts: xts.clone(), shard });
 
 		let top_hashes: Vec<Result<TxHash<Self>, Self::Error>> =
 			xts.iter().map(|top| Ok(hash_of_top(top))).collect();
 
-		return Box::pin(ready(Ok(top_hashes)))
+		Box::pin(ready(Ok(top_hashes)))
 	}
 
 	fn submit_one(
@@ -122,14 +120,12 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		shard: ShardIdentifier,
 	) -> PoolFuture<TxHash<Self>, Self::Error> {
 		let mut transactions = self.submitted_transactions.write().unwrap();
-		transactions.insert(
-			shard.clone(),
-			TxPayload { block_id: at.clone(), source, xts: vec![xt.clone()], shard },
-		);
+		transactions
+			.insert(shard, TxPayload { block_id: *at, source, xts: vec![xt.clone()], shard });
 
 		let top_hash = hash_of_top(&xt);
 
-		return Box::pin(ready(Ok(top_hash)))
+		Box::pin(ready(Ok(top_hash)))
 	}
 
 	fn submit_and_watch(
@@ -142,6 +138,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		self.submit_one(at, source, xt, shard)
 	}
 
+	#[allow(clippy::type_complexity)]
 	fn ready_at(
 		&self,
 		_at: NumberFor<Self::Block>,
@@ -154,6 +151,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		unimplemented!()
 	}
 
+	#[allow(clippy::type_complexity)]
 	fn ready(
 		&self,
 		shard: ShardIdentifier,
@@ -161,14 +159,14 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		let transactions = self.submitted_transactions.read().unwrap();
 		let ready_transactions = transactions
 			.get(&shard)
-			.map(|payload| payload.xts.iter().map(|xt| Self::map_stf_top_to_tx(xt)).collect())
-			.unwrap_or_else(|| vec![]);
+			.map(|payload| payload.xts.iter().map(Self::map_stf_top_to_tx).collect())
+			.unwrap_or_else(Vec::new);
 		Box::new(ready_transactions.into_iter())
 	}
 
 	fn shards(&self) -> Vec<ShardIdentifier> {
 		let transactions = self.submitted_transactions.read().unwrap();
-		transactions.iter().map(|(shard, _)| shard.clone()).collect()
+		transactions.iter().map(|(shard, _)| *shard).collect()
 	}
 
 	fn remove_invalid(
@@ -177,7 +175,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		_shard: ShardIdentifier,
 		_inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>> {
-		todo!()
+		Vec::new()
 	}
 
 	fn status(&self, shard: ShardIdentifier) -> PoolStatus {

@@ -30,6 +30,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use core::marker::PhantomData;
+use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_storage_verifier::GetStorageVerified;
 use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
@@ -41,9 +42,10 @@ use its_primitives::{
 use its_validateer_fetch::ValidateerFetch;
 use sp_runtime::{
 	app_crypto::{sp_core::H256, Pair, Public},
+	generic::SignedBlock as SignedParentchainBlock,
 	traits::Block as ParentchainBlock,
 };
-use std::{string::ToString, time::Duration, vec::Vec};
+use std::{string::ToString, sync::Arc, time::Duration, vec::Vec};
 
 pub mod block_importer;
 pub mod proposer_factory;
@@ -55,10 +57,21 @@ pub use verifier::*;
 #[cfg(test)]
 mod mock;
 
+#[cfg(test)]
+mod block_importer_tests;
+
 /// Aura consensus struct.
-pub struct Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi> {
+pub struct Aura<
+	AuthorityPair,
+	ParentchainBlock,
+	SidechainBlock,
+	Environment,
+	OcallApi,
+	ImportTrigger,
+> {
 	authority_pair: AuthorityPair,
 	ocall_api: OcallApi,
+	parentchain_import_trigger: Arc<ImportTrigger>,
 	environment: Environment,
 	claim_strategy: SlotClaimStrategy,
 	/// Remove when #447 is resolved.
@@ -66,17 +79,19 @@ pub struct Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, Oc
 	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock)>,
 }
 
-impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi>
-	Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi>
+impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, ImportTrigger>
+	Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, ImportTrigger>
 {
 	pub fn new(
 		authority_pair: AuthorityPair,
 		ocall_api: OcallApi,
+		parentchain_import_trigger: Arc<ImportTrigger>,
 		environment: Environment,
 	) -> Self {
 		Self {
 			authority_pair,
 			ocall_api,
+			parentchain_import_trigger,
 			environment,
 			claim_strategy: SlotClaimStrategy::RoundRobin,
 			allow_delayed_proposal: false,
@@ -113,8 +128,8 @@ pub enum SlotClaimStrategy {
 type AuthorityId<P> = <P as Pair>::Public;
 type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as SidechainBlockT>::ShardIdentifier;
 
-impl<AuthorityPair, PB, SB, E, OcallApi> SimpleSlotWorker<PB>
-	for Aura<AuthorityPair, PB, SB, E, OcallApi>
+impl<AuthorityPair, PB, SB, E, OcallApi, ImportTrigger> SimpleSlotWorker<PB>
+	for Aura<AuthorityPair, PB, SB, E, OcallApi, ImportTrigger>
 where
 	AuthorityPair: Pair,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
@@ -123,6 +138,7 @@ where
 	E::Proposer: Proposer<PB, SB>,
 	SB: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
+	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<PB>>,
 {
 	type Proposer = E::Proposer;
 	type Claim = AuthorityPair::Public;
@@ -176,12 +192,26 @@ where
 		self.environment.init(header, shard)
 	}
 
+	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<PB>) -> Duration {
+		proposing_remaining_duration(slot_info, duration_now())
+	}
+
 	fn allow_delayed_proposal(&self) -> bool {
 		self.allow_delayed_proposal
 	}
 
-	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<PB>) -> Duration {
-		proposing_remaining_duration(slot_info, duration_now())
+	fn import_latest_parentchain_block(
+		&self,
+		current_latest_imported_header: &PB::Header,
+	) -> Result<PB::Header, ConsensusError> {
+		let maybe_latest_imported_header = self
+			.parentchain_import_trigger
+			.import_all()
+			.map_err(|e| ConsensusError::Other(e.into()))?;
+
+		Ok(maybe_latest_imported_header
+			.map(|b| b.block.header().clone())
+			.unwrap_or_else(|| current_latest_imported_header.clone()))
 	}
 }
 
@@ -243,13 +273,31 @@ fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&A
 mod tests {
 	use super::*;
 	use crate::mock::{default_header, validateer, EnvironmentMock, TestAura, SLOT_DURATION};
-	use itp_test::mock::onchain_mock::OnchainMock;
-	use itp_types::Block as ParentchainBlock;
+	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
+	use itp_test::{
+		builders::{
+			parentchain_block_builder::ParentchainBlockBuilder,
+			parentchain_header_builder::ParentchainHeaderBuilder,
+		},
+		mock::onchain_mock::OnchainMock,
+	};
+	use itp_types::{
+		Block as ParentchainBlock, Header as ParentchainHeader,
+		SignedBlock as SignedParentchainBlock,
+	};
 	use its_consensus_slots::PerShardSlotWorkerScheduler;
+	use sp_core::ed25519::Public;
 	use sp_keyring::ed25519::Keyring;
 
-	fn get_aura(onchain_mock: OnchainMock) -> TestAura {
-		Aura::new(Keyring::Alice.pair(), onchain_mock, EnvironmentMock)
+	fn get_aura(
+		onchain_mock: OnchainMock,
+		trigger_parentchain_import: Arc<TriggerParentchainBlockImportMock<SignedParentchainBlock>>,
+	) -> TestAura {
+		Aura::new(Keyring::Alice.pair(), onchain_mock, trigger_parentchain_import, EnvironmentMock)
+	}
+
+	fn get_default_aura() -> TestAura {
+		get_aura(Default::default(), Default::default())
 	}
 
 	fn now_slot(slot: Slot) -> SlotInfo<ParentchainBlock> {
@@ -258,8 +306,36 @@ mod tests {
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			parentchain_head: default_header(),
+			last_imported_parentchain_head: default_header(),
 		}
+	}
+
+	fn default_authorities() -> Vec<Public> {
+		vec![
+			Keyring::Alice.public().into(),
+			Keyring::Bob.public().into(),
+			Keyring::Charlie.public().into(),
+		]
+	}
+
+	fn onchain_mock(authorities: Vec<Public>) -> OnchainMock {
+		let validateers = authorities.iter().map(|a| validateer(a.clone().into())).collect();
+		OnchainMock::default().with_validateer_set(Some(validateers))
+	}
+
+	fn onchain_mock_with_default_authorities() -> OnchainMock {
+		onchain_mock(default_authorities())
+	}
+
+	fn create_import_trigger_with_header(
+		header: ParentchainHeader,
+	) -> Arc<TriggerParentchainBlockImportMock<SignedParentchainBlock>> {
+		let latest_parentchain_block =
+			ParentchainBlockBuilder::default().with_header(header.clone()).build_signed();
+		Arc::new(
+			TriggerParentchainBlockImportMock::default()
+				.with_latest_imported(Some(latest_parentchain_block.clone())),
+		)
 	}
 
 	#[test]
@@ -269,8 +345,7 @@ mod tests {
 			Keyring::Charlie.public().into(),
 			Keyring::Alice.public().into(),
 		];
-
-		let aura = get_aura(Default::default());
+		let aura = get_default_aura();
 
 		assert!(aura.claim_slot(&default_header(), 0.into(), &authorities).is_none());
 		assert!(aura.claim_slot(&default_header(), 1.into(), &authorities).is_none());
@@ -285,13 +360,8 @@ mod tests {
 
 	#[test]
 	fn current_authority_should_claim_all_slots() {
-		let authorities = vec![
-			Keyring::Bob.public().into(),
-			Keyring::Charlie.public().into(),
-			Keyring::Alice.public().into(),
-		];
-
-		let aura = get_aura(Default::default()).with_claim_strategy(SlotClaimStrategy::Always);
+		let authorities = default_authorities();
+		let aura = get_default_aura().with_claim_strategy(SlotClaimStrategy::Always);
 
 		assert!(aura.claim_slot(&default_header(), 0.into(), &authorities).is_some());
 		assert!(aura.claim_slot(&default_header(), 1.into(), &authorities).is_some());
@@ -304,20 +374,10 @@ mod tests {
 	fn on_slot_returns_block() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let onchain_mock = OnchainMock::default().with_validateer_set(Some(vec![
-			validateer(Keyring::Alice.public().into()),
-			validateer(Keyring::Bob.public().into()),
-			validateer(Keyring::Charlie.public().into()),
-		]));
-		let mut aura = get_aura(onchain_mock);
+		let onchain_mock = onchain_mock_with_default_authorities();
+		let mut aura = get_aura(onchain_mock, Default::default());
 
-		let slot_info = SlotInfo {
-			slot: 0.into(),
-			timestamp: duration_now(),
-			duration: SLOT_DURATION,
-			ends_at: duration_now() + SLOT_DURATION,
-			parentchain_head: default_header(),
-		};
+		let slot_info = now_slot(0.into());
 
 		assert!(SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default()).is_some());
 	}
@@ -326,20 +386,10 @@ mod tests {
 	fn on_slot_for_multiple_shards_returns_blocks() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let onchain_mock = OnchainMock::default().with_validateer_set(Some(vec![
-			validateer(Keyring::Alice.public().into()),
-			validateer(Keyring::Bob.public().into()),
-			validateer(Keyring::Charlie.public().into()),
-		]));
-		let mut aura = get_aura(onchain_mock);
+		let onchain_mock = onchain_mock_with_default_authorities();
+		let mut aura = get_aura(onchain_mock, Default::default());
 
-		let slot_info = SlotInfo {
-			slot: 0.into(),
-			timestamp: duration_now(),
-			duration: SLOT_DURATION,
-			ends_at: duration_now() + SLOT_DURATION,
-			parentchain_head: default_header(),
-		};
+		let slot_info = now_slot(0.into());
 
 		let result = PerShardSlotWorkerScheduler::on_slot(
 			&mut aura,
@@ -354,7 +404,7 @@ mod tests {
 	fn on_slot_with_nano_second_remaining_duration_does_not_panic() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let mut aura = get_aura(OnchainMock::default());
+		let mut aura = get_default_aura();
 
 		let nano_dur = Duration::from_nanos(999);
 		let now = duration_now();
@@ -364,7 +414,7 @@ mod tests {
 			timestamp: now,
 			duration: nano_dur,
 			ends_at: now + nano_dur,
-			parentchain_head: default_header(),
+			last_imported_parentchain_head: default_header(),
 		};
 
 		let result = PerShardSlotWorkerScheduler::on_slot(
@@ -374,6 +424,46 @@ mod tests {
 		);
 
 		assert_eq!(result.len(), 0);
+	}
+
+	#[test]
+	fn on_slot_triggers_parentchain_block_import_if_slot_is_claimed() {
+		let _ = env_logger::builder().is_test(true).try_init();
+		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(84).build();
+		let parentchain_block_import_trigger =
+			create_import_trigger_with_header(latest_parentchain_header.clone());
+
+		let mut aura = get_aura(
+			onchain_mock_with_default_authorities(),
+			parentchain_block_import_trigger.clone(),
+		);
+
+		let slot_info = now_slot(0.into());
+
+		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default()).unwrap();
+
+		assert_eq!(result.block.block.layer_one_head, latest_parentchain_header.hash());
+		assert!(parentchain_block_import_trigger.has_import_been_called());
+	}
+
+	#[test]
+	fn on_slot_does_not_trigger_parentchain_block_import_if_slot_is_not_claimed() {
+		let _ = env_logger::builder().is_test(true).try_init();
+		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(84).build();
+		let parentchain_block_import_trigger =
+			create_import_trigger_with_header(latest_parentchain_header.clone());
+
+		let mut aura = get_aura(
+			onchain_mock_with_default_authorities(),
+			parentchain_block_import_trigger.clone(),
+		);
+
+		let slot_info = now_slot(2.into());
+
+		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default());
+
+		assert!(result.is_none());
+		assert!(!parentchain_block_import_trigger.has_import_been_called());
 	}
 
 	#[test]

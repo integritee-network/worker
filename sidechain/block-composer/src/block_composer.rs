@@ -20,7 +20,6 @@ use codec::Encode;
 use ita_stf::StatePayload;
 use itp_settings::node::{PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE};
 use itp_sgx_crypto::StateCrypto;
-use itp_stf_executor::traits::StfExecuteGenericUpdate;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{Block as SidechainBlockT, SignBlock, SignedBlock as SignedBlockT};
@@ -37,30 +36,28 @@ use std::{format, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Compose a sidechain block and corresponding confirmation extrinsic for the parentchain
 ///
-pub trait ComposeBlockAndConfirmation {
+pub trait ComposeBlockAndConfirmation<Externalities, PB: BlockT> {
 	type SidechainBlockT: SignedBlockT;
-	type ParentchainBlockT: BlockT;
 
 	fn compose_block_and_confirmation(
 		&self,
-		latest_onchain_header: &<Self::ParentchainBlockT as BlockT>::Header,
+		latest_parentchain_header: &<PB as BlockT>::Header,
 		top_call_hashes: Vec<H256>,
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
+		aposteriori_state: Externalities,
 	) -> Result<(OpaqueCall, Self::SidechainBlockT)>;
 }
 
 /// Block composer implementation for the sidechain
-pub struct BlockComposer<PB, SB, Signer, StateKey, RpcAuthor, StfExecutor> {
+pub struct BlockComposer<PB, SB, Signer, StateKey, RpcAuthor> {
 	signer: Signer,
 	state_key: StateKey,
 	rpc_author: Arc<RpcAuthor>,
-	stf_executor: Arc<StfExecutor>,
 	_phantom: PhantomData<(PB, SB)>,
 }
 
-impl<PB, SB, Signer, StateKey, RpcAuthor, StfExecutor>
-	BlockComposer<PB, SB, Signer, StateKey, RpcAuthor, StfExecutor>
+impl<PB, SB, Signer, StateKey, RpcAuthor> BlockComposer<PB, SB, Signer, StateKey, RpcAuthor>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = Signer::Public, Signature = MultiSignature>,
@@ -68,25 +65,18 @@ where
 	SB::Signature: From<Signer::Signature>,
 	RpcAuthor:
 		AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash> + SendState<Hash = PB::Hash>,
-	StfExecutor: StfExecuteGenericUpdate,
-	<StfExecutor as StfExecuteGenericUpdate>::Externalities:
-		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
 	StateKey: StateCrypto,
 {
-	pub fn new(
-		signer: Signer,
-		state_key: StateKey,
-		rpc_author: Arc<RpcAuthor>,
-		stf_executor: Arc<StfExecutor>,
-	) -> Self {
-		BlockComposer { signer, state_key, rpc_author, stf_executor, _phantom: Default::default() }
+	pub fn new(signer: Signer, state_key: StateKey, rpc_author: Arc<RpcAuthor>) -> Self {
+		BlockComposer { signer, state_key, rpc_author, _phantom: Default::default() }
 	}
 }
 
-impl<PB, SB, Signer, StateKey, RpcAuthor, StfExecutor> ComposeBlockAndConfirmation
-	for BlockComposer<PB, SB, Signer, StateKey, RpcAuthor, StfExecutor>
+impl<PB, SB, Signer, StateKey, RpcAuthor, Externalities>
+	ComposeBlockAndConfirmation<Externalities, PB>
+	for BlockComposer<PB, SB, Signer, StateKey, RpcAuthor>
 where
 	PB: BlockT<Hash = H256>,
 	SB: SignedBlockT<Public = Signer::Public, Signature = MultiSignature>,
@@ -94,75 +84,57 @@ where
 	SB::Signature: From<Signer::Signature>,
 	RpcAuthor:
 		AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash> + SendState<Hash = PB::Hash>,
-	StfExecutor: StfExecuteGenericUpdate,
-	<StfExecutor as StfExecuteGenericUpdate>::Externalities:
-		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
+	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
 	StateKey: StateCrypto,
 {
 	type SidechainBlockT = SB;
-	type ParentchainBlockT = PB;
 
 	fn compose_block_and_confirmation(
 		&self,
-		latest_onchain_header: &PB::Header,
+		latest_parentchain_header: &PB::Header,
 		top_call_hashes: Vec<H256>,
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
+		aposteriori_state: Externalities,
 	) -> Result<(OpaqueCall, Self::SidechainBlockT)> {
 		let author_public = self.signer.public();
-		let (block, _) = self.stf_executor.execute_update(&shard, |state| {
-			let mut db = SidechainDB::<
-				SB::Block,
-				<StfExecutor as StfExecuteGenericUpdate>::Externalities,
-			>::new(state);
-			let state_hash_new = db.state_hash();
 
-			let (block_number, parent_hash) = match db.get_last_block() {
-				Some(block) => (block.block_number() + 1, block.hash()),
-				None => {
-					info!("Seems to be first sidechain block.");
-					(1, Default::default())
-				},
-			};
+		let db = SidechainDB::<SB::Block, Externalities>::new(aposteriori_state);
+		let state_hash_new = db.state_hash();
 
-			if block_number != db.get_block_number().unwrap_or(0) {
-				return Err(Error::Other(
-					"[Sidechain] BlockNumber is not LastBlock's Number + 1".into(),
-				))
-			}
+		let (block_number, parent_hash) = match db.get_last_block() {
+			Some(block) => (block.block_number() + 1, block.hash()),
+			None => {
+				info!("Seems to be first sidechain block.");
+				(1, Default::default())
+			},
+		};
 
-			// create encrypted payload
-			let mut payload: Vec<u8> = StatePayload::new(
-				state_hash_apriori,
-				state_hash_new,
-				db.ext().state_diff().clone(),
-			)
-			.encode();
+		if block_number != db.get_block_number().unwrap_or(0) {
+			return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
+		}
 
-			self.state_key.encrypt(&mut payload).map_err(|e| {
-				Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
-			})?;
+		// create encrypted payload
+		let mut payload: Vec<u8> =
+			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
+				.encode();
 
-			let block = SB::Block::new(
-				author_public,
-				block_number,
-				parent_hash,
-				latest_onchain_header.hash(),
-				shard,
-				top_call_hashes,
-				payload,
-				now_as_u64(),
-			);
-
-			db.set_last_block(&block);
-
-			// state diff has been written to block, clean it for the next block.
-			db.ext_mut().prune_state_diff();
-
-			Ok((db.ext, block))
+		self.state_key.encrypt(&mut payload).map_err(|e| {
+			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
+
+		let block = SB::Block::new(
+			author_public,
+			block_number,
+			parent_hash,
+			latest_parentchain_header.hash(),
+			shard,
+			top_call_hashes,
+			payload,
+			now_as_u64(),
+		);
 
 		let block_hash = block.hash();
 		debug!("Block hash {}", block_hash);

@@ -34,9 +34,13 @@ use sgx_types::size_t;
 
 use crate::{
 	error::{Error, Result},
-	global_components::{EnclaveValidatorAccessor, GLOBAL_DISPATCHER_COMPONENT},
+	global_components::{
+		EnclaveSidechainBlockImporter, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT,
+	},
 	ocall::OcallApi,
-	rpc::worker_api_direct::{public_api_rpc_handler, side_chain_io_handler},
+	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
+	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw},
 };
 use base58::ToBase58;
@@ -47,22 +51,24 @@ use itc_direct_rpc_server::{
 	rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
-	block_import_dispatcher::{immediate_dispatcher::ImmediateDispatcher, DispatchBlockImport},
+	block_import_dispatcher::{
+		triggered_dispatcher::{TriggerParentchainBlockImport, TriggeredDispatcher},
+		DispatchBlockImport,
+	},
+	block_import_queue::BlockImportQueue,
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
-	light_client::{
-		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
-	},
+	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{
 	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE,
 };
-use itp_sgx_crypto::{aes, ed25519, rsa3072, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
 use itp_stf_executor::executor::StfExecutor;
@@ -71,12 +77,15 @@ use itp_stf_state_handler::{
 };
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
-use its_sidechain::top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT;
+use its_sidechain::{
+	aura::block_importer::{BlockImport, BlockImporter},
+	top_pool_executor::TopPoolOperationHandler,
+	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
+};
 use log::*;
 use sgx_types::sgx_status_t;
-use sp_core::{crypto::Pair, H256};
+use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
-use sp_runtime::traits::Block as BlockT;
 use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::compose_extrinsic_offline;
 
@@ -273,7 +282,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 		},
 	};
 
-	let res = match side_chain_rpc_int::<Block, _>(request, OcallApi) {
+	let res = match sidechain_rpc_int(request) {
 		Ok(res) => res,
 		Err(e) => return e.into(),
 	};
@@ -284,27 +293,22 @@ pub unsafe extern "C" fn call_rpc_methods(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn side_chain_rpc_int<PB, O>(request: &str, _ocall_api: O) -> Result<String>
-where
-	PB: BlockT<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-	O: EnclaveOnChainOCallApi + 'static,
-{
-	// Skip sidechain import now until #423 is solved.
-	// let _ = EnclaveLock::read_all()?;
-	//
-	// let header = LightClientSeal::<PB>::unseal()
-	// 	.map(|v| v.latest_finalized_header(v.num_relays()).unwrap())?;
-	//
-	// let importer: BlockImporter<AuthorityPair, PB, _, O, _> = BlockImporter::default();
-	//
-	// let io = side_chain_io_handler(move |signed_blocks| {
-	// 	import_sidechain_blocks::<PB, _, _, _>(signed_blocks, &header, importer.clone(), &ocall_api)
-	// });
+fn sidechain_rpc_int(request: &str) -> Result<String> {
+	let _sidechain_lock = EnclaveLock::write_all()?;
 
-	let io = side_chain_io_handler::<_, crate::error::Error>(move |signed_blocks| {
-		log::info!("[sidechain] Imported blocks: {:?}", signed_blocks);
-		Ok(())
+	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
+
+	let latest_parentchain_header = validator_access.execute_on_validator(|v| {
+		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+		Ok(latest_parentchain_header)
+	})?;
+
+	let sidechain_block_importer = GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT
+		.get()
+		.ok_or(Error::ComponentNotInitialized)?;
+
+	let io = sidechain_io_handler(move |signed_block| {
+		sidechain_block_importer.import_block(signed_block, &latest_parentchain_header)
 	});
 
 	// note: errors are still returned as Option<String>
@@ -351,7 +355,7 @@ pub unsafe extern "C" fn get_state(
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Call this once at worker startup to initialize the TOP pool and direct invocation RPC server
+/// Call this once at worker startup to initialize the TOP pool and direct invocation RPC server.
 ///
 /// This function will run the RPC server on the same thread as it is called and will loop there.
 /// That means that this function will not return as long as the RPC server is running. The calling
@@ -465,6 +469,20 @@ pub unsafe extern "C" fn init_light_client(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
+	let state_key = match AesSeal::unseal() {
+		Ok(k) => k,
+		Err(e) => {
+			error!("Failed to unseal state key: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let rpc_author = match GLOBAL_RPC_AUTHOR_COMPONENT.get() {
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global top pool author");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
 	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
 	let genesis_hash =
@@ -476,22 +494,38 @@ pub unsafe extern "C" fn init_light_client(
 			},
 		};
 
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), Arc::new(GlobalFileStateHandler)));
+	let file_state_handler = Arc::new(GlobalFileStateHandler);
+	let ocall_api = Arc::new(OcallApi);
+	let stf_executor = Arc::new(StfExecutor::new(ocall_api.clone(), file_state_handler.clone()));
 	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
 	let indirect_calls_executor =
 		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
-	let parentchain_block_importer = Arc::new(ParentchainBlockImporter::new(
+	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,
-		Arc::new(OcallApi),
-		stf_executor,
+		ocall_api.clone(),
+		stf_executor.clone(),
 		extrinsics_factory,
 		indirect_calls_executor,
-	));
-	let block_import_dispatcher = Arc::new(ImmediateDispatcher::new(parentchain_block_importer));
+	);
+	let block_queue = BlockImportQueue::<SignedBlock>::default();
+	let block_import_dispatcher =
+		Arc::new(TriggeredDispatcher::new(parentchain_block_importer, block_queue));
 
-	GLOBAL_DISPATCHER_COMPONENT.initialize(block_import_dispatcher);
+	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.initialize(block_import_dispatcher.clone());
+
+	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
+		TopPoolOperationHandler::new(rpc_author, stf_executor),
+	);
+	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
+		file_state_handler,
+		state_key,
+		signer,
+		top_pool_executor,
+		block_import_dispatcher,
+		ocall_api,
+	));
+	GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT.initialize(sidechain_block_importer);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -522,8 +556,29 @@ pub unsafe extern "C" fn sync_parentchain(
 /// * sends `confirm_call` xt's of the executed unshielding calls
 /// * sends `confirm_blocks` xt's for every synced parentchain block
 fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
-	let block_import_dispatcher =
-		GLOBAL_DISPATCHER_COMPONENT.get().ok_or(Error::ComponentNotInitialized)?;
+	let block_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+		.get()
+		.ok_or(Error::ComponentNotInitialized)?;
 
 	block_import_dispatcher.dispatch_import(blocks_to_sync).map_err(|e| e.into())
+}
+
+/// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
+/// with sidechain block production.
+///
+/// Imports all blocks in the queue except the latest one, which has to be triggered by the sidechain component.
+/// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
+/// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
+#[no_mangle]
+pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
+	match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
+		Some(dispatcher) => match dispatcher.import_all_but_latest() {
+			Ok(_) => sgx_status_t::SGX_SUCCESS,
+			Err(e) => {
+				error!("Failed to trigger import of parentchain blocks: {:?}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		},
+		None => (Error::ComponentNotInitialized).into(),
+	}
 }

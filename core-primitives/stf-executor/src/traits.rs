@@ -22,7 +22,7 @@ use ita_stf::{
 };
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::traits::Header as HeaderTrait;
 use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
 
 /// Post-processing steps after executing STF
@@ -43,35 +43,36 @@ pub trait StfExecuteShieldFunds {
 
 /// Execute a trusted call on the STF
 pub trait StfExecuteTrustedCall {
-	fn execute_trusted_call<PB>(
+	fn execute_trusted_call<PH>(
 		&self,
 		calls: &mut Vec<OpaqueCall>,
 		stf_call_signed: &TrustedCallSigned,
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<Option<H256>>
 	where
-		PB: BlockT<Hash = H256>;
+		PH: HeaderTrait<Hash = H256>;
 }
 
-/// Execute a batch of trusted calls within a given time window
-///
-/// If the time expires, any remaining trusted calls will be ignored
-/// All executed call hashes are returned.
-pub trait StfExecuteTimedCallsBatch {
+/// Proposes a state update to `Externalities`.
+pub trait StateUpdateProposer {
 	type Externalities: SgxExternalitiesTrait + Encode;
 
-	fn execute_timed_calls_batch<PB, F>(
+	/// Executes trusted calls within a given time frame without permanent state mutation.
+	///
+	/// All executed call hashes and the mutated state are returned.
+	/// If the time expires, any remaining trusted calls within the batch will be ignored.
+	fn propose_state_update<PH, F>(
 		&self,
 		trusted_calls: &[TrustedCallSigned],
-		header: &PB::Header,
+		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult>
+	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
-		PB: BlockT<Hash = H256>,
+		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities;
 }
 
@@ -106,9 +107,9 @@ pub trait StfExecuteGenericUpdate {
 		ErrorT: Debug;
 }
 
+/// Updates the STF state for a specific header.
 ///
+/// Cannot be implemented for a generic header currently, because the runtime expects a ParentchainHeader.
 pub trait StfUpdateState {
-	fn update_states<PB>(&self, header: &PB::Header) -> Result<()>
-	where
-		PB: BlockT<Hash = H256, Header = ParentchainHeader>;
+	fn update_states(&self, header: &ParentchainHeader) -> Result<()>;
 }

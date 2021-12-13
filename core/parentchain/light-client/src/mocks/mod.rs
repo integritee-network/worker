@@ -15,5 +15,6 @@
 
 */
 
+pub mod validator_access_mock;
 pub mod validator_mock;
 pub mod validator_mock_seal;

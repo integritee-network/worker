@@ -8,7 +8,7 @@ pub trait StateCrypto {
 }
 
 pub trait ShieldingCrypto {
-	type Error;
+	type Error: Debug;
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
 }

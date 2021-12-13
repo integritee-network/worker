@@ -22,7 +22,7 @@ use std::vec::Vec;
 /// Trusted operation Or hash
 ///
 /// Allows to refer to trusted calls either by its raw representation or its hash.
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 pub enum TrustedOperationOrHash<Hash> {
 	/// The hash of the call.
 	Hash(Hash),

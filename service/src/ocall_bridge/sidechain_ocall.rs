@@ -67,15 +67,34 @@ where
 			debug!("Enclave did not produce sidechain blocks");
 		}
 
-		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks.clone()) {
+		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
 			error!("Error gossiping blocks: {:?}", e);
 			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 
+		status
+	}
+
+	fn store_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
+		// TODO: improve error handling, using a mut status is not good design?
+		let mut status: OCallBridgeResult<()> = Ok(());
+
+		let signed_blocks: Vec<SignedSidechainBlock> =
+			match Decode::decode(&mut signed_blocks_encoded.as_slice()) {
+				Ok(blocks) => blocks,
+				Err(_) => {
+					status = Err(OCallBridgeError::ProposeSidechainBlock(
+						"Could not decode signed blocks".to_string(),
+					));
+					vec![]
+				},
+			};
+
 		if let Err(e) = self.block_storage.store_blocks(signed_blocks) {
 			error!("Error storing blocks: {:?}", e);
 		}
+
 		status
 	}
 }

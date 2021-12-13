@@ -41,6 +41,9 @@ use substrate_api_client::compose_extrinsic_offline;
 
 pub mod error;
 
+#[cfg(feature = "mocks")]
+pub mod mock;
+
 /// Create extrinsics from opaque calls
 ///
 /// Also increases the nonce counter for each extrinsic that is created.

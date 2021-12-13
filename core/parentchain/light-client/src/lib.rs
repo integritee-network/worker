@@ -61,6 +61,9 @@ pub mod io;
 #[cfg(test)]
 mod mocks;
 
+#[cfg(feature = "mocks")]
+pub mod mocks;
+
 pub type RelayId = u64;
 
 pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];

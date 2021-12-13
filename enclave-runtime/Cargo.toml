@@ -17,6 +17,9 @@ default = []
 production = ["itp-settings/production"]
 test = [
     "ita-stf/test",
+    "itc-parentchain/mocks",
+    "itp-extrinsics-factory/mocks",
+    "itp-stf-executor/test",
     "itp-stf-state-handler/test",
     "itp-storage/test",
     "itp-test/sgx",

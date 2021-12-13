@@ -40,4 +40,22 @@ impl EnclaveSidechainOCallApi for OcallApi {
 
 		Ok(())
 	}
+
+	fn store_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		let signed_blocks_encoded = signed_blocks.encode();
+
+		let res = unsafe {
+			ffi::ocall_store_sidechain_blocks(
+				&mut rt as *mut sgx_status_t,
+				signed_blocks_encoded.as_ptr(),
+				signed_blocks_encoded.len() as u32,
+			)
+		};
+
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
+
+		Ok(())
+	}
 }

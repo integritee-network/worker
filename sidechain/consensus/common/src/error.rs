@@ -18,6 +18,7 @@
 //! Error types in sidechain Consensus
 
 use its_primitives::types::block::BlockHash;
+use sgx_types::sgx_status_t;
 use std::{
 	boxed::Box,
 	error,
@@ -33,6 +34,8 @@ pub use thiserror_sgx as thiserror;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
+	#[error("SGX error, status: {0}")]
+	Sgx(sgx_status_t),
 	#[error("Unable to create block proposal.")]
 	CannotPropose,
 	#[error("Message sender {0} is not a valid authority")]
@@ -60,5 +63,11 @@ impl core::convert::From<std::io::Error> for Error {
 impl core::convert::From<codec::Error> for Error {
 	fn from(e: codec::Error) -> Self {
 		Self::Other(e.to_string().into())
+	}
+}
+
+impl From<sgx_status_t> for Error {
+	fn from(sgx_status: sgx_status_t) -> Self {
+		Self::Sgx(sgx_status)
 	}
 }

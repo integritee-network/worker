@@ -17,7 +17,7 @@
 
 use crate::{helpers::get_account_info, StfError};
 use itp_storage::storage_value_key;
-use log_sgx::*;
+use log::*;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_runtime::{Balance, Runtime};
 use sgx_tstd as std;
@@ -33,12 +33,23 @@ const ALICE_ENCODED: Seed = [
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
 
-const TEST_SEED: Seed = *b"12345678901234567890123456789012";
+const ENDOWED_SEED: Seed = *b"12345678901234567890123456789012";
+const SECOND_ENDOWED_SEED: Seed = *b"22345678901234567890123456789012";
+const UNENDOWED_SEED: Seed = *b"92345678901234567890123456789012";
 
 const ALICE_FUNDS: Balance = 1000000000000000;
+pub const ENDOWED_ACC_FUNDS: Balance = 2000;
+pub const SECOND_ENDOWED_ACC_FUNDS: Balance = 1000;
 
-pub fn test_account() -> ed25519::Pair {
-	ed25519::Pair::from_seed(&TEST_SEED)
+pub fn endowed_account() -> ed25519::Pair {
+	ed25519::Pair::from_seed(&ENDOWED_SEED)
+}
+pub fn second_endowed_account() -> ed25519::Pair {
+	ed25519::Pair::from_seed(&SECOND_ENDOWED_SEED)
+}
+
+pub fn unendowed_account() -> ed25519::Pair {
+	ed25519::Pair::from_seed(&UNENDOWED_SEED)
 }
 
 pub fn test_genesis_setup(state: &mut SgxExternalities) {
@@ -47,7 +58,12 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
-		(test_account().public().into(), 2000, 2000),
+		(endowed_account().public().into(), ENDOWED_ACC_FUNDS, ENDOWED_ACC_FUNDS),
+		(
+			second_endowed_account().public().into(),
+			SECOND_ENDOWED_ACC_FUNDS,
+			SECOND_ENDOWED_ACC_FUNDS,
+		),
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 

@@ -17,18 +17,26 @@
 */
 
 use codec::{Decode, Encode};
+use core::fmt::Debug;
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::{GetStorageVerified, Result};
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use itp_types::Enclave;
+use sgx_types::{
+	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
+	sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_target_info_t, sgx_update_info_bit_t,
+	SgxResult, SGX_HASH_SIZE,
+};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::*;
 use std::collections::HashMap;
 
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct OnchainMock {
 	inner: HashMap<Vec<u8>, Vec<u8>>,
+	mr_enclave: [u8; SGX_HASH_SIZE],
 }
 
 impl OnchainMock {
@@ -43,6 +51,11 @@ impl OnchainMock {
 		let set = set.unwrap_or_else(validateer_set);
 		self.inner.insert(TeeRexStorage::enclave_count(), (set.len() as u64).encode());
 		self.with_storage_entries(into_key_value_storage(set))
+	}
+
+	pub fn with_mr_enclave(mut self, mr_enclave: [u8; SGX_HASH_SIZE]) -> Self {
+		self.mr_enclave = mr_enclave;
+		self
 	}
 
 	pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) {
@@ -83,6 +96,66 @@ impl GetStorageVerified for OnchainMock {
 		Ok(entries)
 	}
 }
+
+impl EnclaveAttestationOCallApi for OnchainMock {
+	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
+		todo!()
+	}
+
+	fn get_ias_socket(&self) -> SgxResult<i32> {
+		Ok(42)
+	}
+
+	fn get_quote(
+		&self,
+		_sig_rl: Vec<u8>,
+		_report: sgx_report_t,
+		_sign_type: sgx_quote_sign_type_t,
+		_spid: sgx_spid_t,
+		_quote_nonce: sgx_quote_nonce_t,
+	) -> SgxResult<(sgx_report_t, Vec<u8>)> {
+		todo!()
+	}
+
+	fn get_update_info(
+		&self,
+		_platform_info: sgx_platform_info_t,
+		_enclave_trusted: i32,
+	) -> SgxResult<sgx_update_info_bit_t> {
+		todo!()
+	}
+
+	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
+		Ok(sgx_measurement_t { m: self.mr_enclave })
+	}
+}
+
+impl EnclaveSidechainOCallApi for OnchainMock {
+	fn propose_sidechain_blocks<SB: Encode>(&self, _signed_blocks: Vec<SB>) -> SgxResult<()> {
+		Ok(())
+	}
+
+	fn store_sidechain_blocks<SB: Encode>(&self, _signed_blocks: Vec<SB>) -> SgxResult<()> {
+		Ok(())
+	}
+}
+
+// We cannot implement EnclaveOnChainOCallApi specifically here, because OnchainMock already
+// implements `GetStorageVerified`. And all implementers of `EnclaveOnChainOCallApi` automatically
+// implement GetStorageVerified too (-> see `core-primitives/storage-verified/src/lib.rs`),
+// so it results in duplicate implementations.
+// impl EnclaveOnChainOCallApi for OnchainMock {
+// 	fn send_to_parentchain(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
+// 		Ok(())
+// 	}
+//
+// 	fn worker_request<V: Encode + Decode>(
+// 		&self,
+// 		_req: Vec<WorkerRequest>,
+// 	) -> SgxResult<Vec<WorkerResponse<V>>> {
+// 		Ok(Vec::new())
+// 	}
+// }
 
 pub fn validateer_set() -> Vec<Enclave> {
 	vec![Default::default(), Default::default(), Default::default(), Default::default()]

@@ -182,6 +182,7 @@ pub trait WorkerOnChainBridge {
 #[cfg_attr(test, automock)]
 pub trait SidechainBridge {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+	fn store_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
 /// type for IPFS

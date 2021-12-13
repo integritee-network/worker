@@ -7,7 +7,7 @@ pub enum Error {
 	IO(std::io::Error),
 	InvalidNonceKeyLength,
 	Codec(codec::Error),
-	Other(Box<dyn std::error::Error>),
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

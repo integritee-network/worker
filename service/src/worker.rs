@@ -4,26 +4,22 @@
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
 use async_trait::async_trait;
+use itp_api_client_extensions::PalletTeerexApi;
+use itp_types::Enclave as EnclaveMetadata;
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::*;
-use std::num::ParseIntError;
-
-use itp_api_client_extensions::PalletTeerexApi;
-use itp_types::Enclave as EnclaveMetadata;
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use std::{num::ParseIntError, thread};
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;
 
 pub type WorkerResult<T> = Result<T, Error>;
-
-// don't put any trait bounds here. It is good practise to only enforce them where needed. This
-// also serves a guide when traits should be split into subtraits.
 pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
-	config: Config,
+	_config: Config,
 	node_api: NodeApi, // todo: Depending on system design, all the api fields should be Arc<Api>
 	// unused yet, but will be used when more methods are migrated to the worker
 	_enclave_api: Arc<Enclave>,
@@ -32,12 +28,12 @@ pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
 
 impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
 	pub fn new(
-		config: Config,
+		_config: Config,
 		node_api: NodeApi,
 		_enclave_api: Arc<Enclave>,
 		_worker_api_direct: WorkerApiDirect,
 	) -> Self {
-		Self { config, node_api, _enclave_api, _worker_api_direct }
+		Self { _config, node_api, _enclave_api, _worker_api_direct }
 	}
 
 	// will soon be used.
@@ -49,7 +45,10 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
 
 #[async_trait]
 pub trait WorkerT {
+	/// Gossip Sidechain blocks to peers.
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+
+	/// Returns all enclave urls registered on the parentchain.
 	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>>;
 }
 
@@ -69,32 +68,28 @@ where
 
 		let peers = self.peers()?;
 		debug!("Gossiping sidechain blocks to peers: {:?}", peers);
+		let blocks_json = vec![to_json_value(blocks)?];
 
 		for p in peers.iter() {
 			// Todo: once the two direct servers are merged, remove this.
 			let url = worker_url_into_async_rpc_url(&p.url)?;
 			trace!("Gossiping block to peer with address: {:?}", url);
+			// FIXME: Websocket connectionto a worker  should stay once etablished.
 			let client = WsClientBuilder::default().build(&url).await?;
-			let response: String = client
-				.request::<Vec<u8>>(
-					"sidechain_importBlock",
-					vec![to_json_value(blocks.clone())?].into(),
-				)
-				.await
-				.map(String::from_utf8)?
-				.map(|s| s.trim_end().to_string())?; // remove whitespace padding
-			debug!("sidechain_importBlock response: {:?}", response);
+			let blocks = blocks_json.clone();
+			thread::spawn(move || {
+				if let Err(e) = futures::executor::block_on(
+					client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()),
+				) {
+					error!("sidechain_importBlock failed: {:?}", e);
+				}
+			});
 		}
 		Ok(())
 	}
 
 	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>> {
-		let mut peers = self.node_api.all_enclaves()?;
-		peers.retain(|e| {
-			e.url.trim_start_matches("ws://").trim_start_matches("wss://")
-				!= self.config.worker_url()
-		});
-		Ok(peers)
+		Ok(self.node_api.all_enclaves()?)
 	}
 }
 
@@ -163,6 +158,7 @@ mod tests {
 	#[tokio::test]
 	async fn gossip_blocks_works() {
 		init();
+		run_server(worker_url_into_async_rpc_url(W1_URL).unwrap()).await.unwrap();
 		run_server(worker_url_into_async_rpc_url(W2_URL).unwrap()).await.unwrap();
 
 		let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, Arc::new(()), ());

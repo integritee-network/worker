@@ -51,6 +51,8 @@ enclave {
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
+        public sgx_status_t trigger_parentchain_block_import();
+
         public sgx_status_t execute_trusted_getters();
 
         public sgx_status_t execute_trusted_calls();
@@ -137,6 +139,10 @@ enclave {
 	    );
 
 		sgx_status_t ocall_propose_sidechain_blocks(
+	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
+	    );
+
+		sgx_status_t ocall_store_sidechain_blocks(
 	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
 	    );
 

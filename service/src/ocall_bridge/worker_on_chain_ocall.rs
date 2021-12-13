@@ -91,7 +91,9 @@ where
 		if !extrinsics.is_empty() {
 			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
 			for call in extrinsics.into_iter() {
-				api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready).unwrap();
+				if let Err(e) = api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready) {
+					error!("Could not send extrsinic to node: {:?}", e);
+				}
 			}
 		}
 

@@ -32,19 +32,23 @@ use sp_runtime::traits::Header;
 
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
-	/// initialize the enclave (needs to be called once at application startup)
+	/// Initialize the enclave (needs to be called once at application startup).
 	fn init(&self) -> EnclaveResult<()>;
 
-	/// initialize the direct invocation RPC server
+	/// Initialize the direct invocation RPC server.
 	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
 
-	/// initialize the light client (needs to be called once at application startup)
+	/// Initialize the light client (needs to be called once at application startup).
 	fn init_light_client<SpHeader: Header>(
 		&self,
 		genesis_header: SpHeader,
 		authority_list: VersionedAuthorityList,
 		authority_proof: Vec<Vec<u8>>,
 	) -> EnclaveResult<SpHeader>;
+
+	/// Trigger the import of parentchain block explicitly. Used when initializing a light-client
+	/// with a triggered import dispatcher.
+	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()>;
 
 	fn set_nonce(&self, nonce: u32) -> EnclaveResult<()>;
 
@@ -113,6 +117,17 @@ impl EnclaveBase for Enclave {
 		info!("Latest Header {:?}", latest);
 
 		Ok(latest)
+	}
+
+	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let result = unsafe { ffi::trigger_parentchain_block_import(self.eid, &mut retval) };
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
 	}
 
 	fn set_nonce(&self, nonce: u32) -> EnclaveResult<()> {

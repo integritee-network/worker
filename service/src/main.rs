@@ -339,7 +339,7 @@ fn start_worker<E, T, D>(
 	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-	let last_synced_header = init_light_client(&node_api, enclave.as_ref());
+	let last_synced_header = init_light_client(&node_api, enclave.as_ref()).unwrap();
 	println!("*** [+] Finished syncing light client\n");
 
 	// ------------------------------------------------------------------------
@@ -574,7 +574,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: &E,
-) -> Header {
+) -> Result<Header, Error> {
 	let genesis_hash = api.get_genesis_hash().unwrap();
 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
 	info!("Got genesis Header: \n {:?} \n", genesis_header);
@@ -593,15 +593,13 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 
 	let latest_synced_header = sync_parentchain(enclave_api, api, latest);
 
-	info!("Execute trusted operations for the first time and start side chain block production");
+	enclave_api.trigger_parentchain_block_import().map_err(Error::EnclaveApi)?;
 
-	execute_trusted_calls(enclave_api);
-
-	latest_synced_header
+	Ok(latest_synced_header)
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
-/// upon receiving a new header
+/// upon receiving a new header.
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	enclave_api: &E,
 	api: &Api<sr25519::Pair, WsRpcClient>,
@@ -630,16 +628,16 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 ///
 pub fn sync_parentchain<E: EnclaveBase + Sidechain>(
 	enclave_api: &E,
-	api: &Api<sr25519::Pair, WsRpcClient>,
+	node_api: &Api<sr25519::Pair, WsRpcClient>,
 	last_synced_header: Header,
 ) -> Header {
 	let tee_accountid = enclave_account(enclave_api);
 
 	trace!("Getting current head");
-	let curr_head: SignedBlock = api.last_finalized_block().unwrap().unwrap();
+	let curr_head: SignedBlock = node_api.last_finalized_block().unwrap().unwrap();
 	let head_block_number = curr_head.block.header.number;
 
-	let blocks_to_sync = get_blocks_to_sync(api, &last_synced_header, &curr_head);
+	let blocks_to_sync = get_blocks_to_sync(node_api, &last_synced_header, &curr_head);
 
 	println!("[+] Found {} block(s) to sync", blocks_to_sync.len());
 
@@ -647,7 +645,7 @@ pub fn sync_parentchain<E: EnclaveBase + Sidechain>(
 
 	// only feed BLOCK_SYNC_BATCH_SIZE blocks at a time into the enclave to save enclave state regularly
 	for chunk in blocks_to_sync.chunks(BLOCK_SYNC_BATCH_SIZE as usize) {
-		let tee_nonce = api.get_nonce_of(&tee_accountid).unwrap();
+		let tee_nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 
 		if let Err(e) = enclave_api.sync_parentchain(chunk, tee_nonce) {
 			error!("{:?}", e);

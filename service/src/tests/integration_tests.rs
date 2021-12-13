@@ -98,7 +98,7 @@ pub fn forward_encrypted_unshield_works<E: EnclaveBase + Sidechain>(
 
 pub fn init_light_client<E: EnclaveBase + Sidechain>(port: &str, enclave_api: &E) -> Header {
 	let (api, _, _) = setup(enclave_api, None, port);
-	crate::init_light_client(&api, enclave_api)
+	crate::init_light_client(&api, enclave_api).unwrap()
 }
 
 pub fn shield_funds_workds<E: EnclaveBase + Sidechain>(
