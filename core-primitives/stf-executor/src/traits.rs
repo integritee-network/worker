@@ -107,9 +107,9 @@ pub trait StfExecuteGenericUpdate {
 		ErrorT: Debug;
 }
 
-/// Updates the sgx-runtime for a specifc header.
+/// Updates the STF state for a specific header.
 ///
-/// Can not be implemented for a generic header currently, because sgx-runtime does expect a ParentchainHeader.
+/// Cannot be implemented for a generic header currently, because sgx-runtime expects a ParentchainHeader.
 pub trait StfUpdateState {
 	fn update_states(&self, header: &ParentchainHeader) -> Result<()>;
 }
