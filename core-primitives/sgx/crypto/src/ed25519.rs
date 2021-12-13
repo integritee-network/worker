@@ -15,61 +15,61 @@
 
 */
 
-#[cfg(feature = "sgx")]
-use sgx_rand::{Rng, StdRng};
-
-#[cfg(feature = "sgx")]
-use std::{path::Path, sgxfs::SgxFile};
-
-#[cfg(feature = "sgx")]
-use itp_sgx_io::{seal, unseal, SealedIO};
-
-use crate::error::{Error, Result};
-use codec::Encode;
 use derive_more::Display;
-use itp_settings::files::SEALED_SIGNER_SEED_FILE;
-use log::*;
-use sp_core::{crypto::Pair, ed25519};
 
 #[derive(Copy, Clone, Debug, Display)]
 pub struct Ed25519Seal;
 
 #[cfg(feature = "sgx")]
-impl SealedIO for Ed25519Seal {
-	type Error = Error;
-	type Unsealed = ed25519::Pair;
-
-	fn unseal() -> Result<ed25519::Pair> {
-		let raw = unseal(SEALED_SIGNER_SEED_FILE)?;
-
-		let key = ed25519::Pair::from_seed_slice(&raw)
-			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-
-		Ok(key.into())
-	}
-
-	fn seal(unsealed: Self::Unsealed) -> Result<()> {
-		Ok(unsealed.seed().using_encoded(|bytes| seal(bytes, SEALED_SIGNER_SEED_FILE))?)
-	}
-}
+pub use sgx::*;
 
 #[cfg(feature = "sgx")]
-pub fn create_sealed_if_absent() -> Result<()> {
-	if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
-		if Path::new(SEALED_SIGNER_SEED_FILE).exists() {
-			panic!("[Enclave] Keyfile {} exists but can't be opened. has it been written by the same enclave?", SEALED_SIGNER_SEED_FILE);
+pub mod sgx {
+
+	use super::*;
+	use crate::error::{Error, Result};
+	use codec::Encode;
+	use itp_settings::files::SEALED_SIGNER_SEED_FILE;
+	use itp_sgx_io::{seal, unseal, SealedIO};
+	use log::*;
+	use sgx_rand::{Rng, StdRng};
+	use sp_core::{crypto::Pair, ed25519};
+	use std::{path::Path, sgxfs::SgxFile};
+
+	impl SealedIO for Ed25519Seal {
+		type Error = Error;
+		type Unsealed = ed25519::Pair;
+
+		fn unseal() -> Result<ed25519::Pair> {
+			let raw = unseal(SEALED_SIGNER_SEED_FILE)?;
+
+			let key = ed25519::Pair::from_seed_slice(&raw)
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+
+			Ok(key.into())
 		}
-		info!("[Enclave] Keyfile not found, creating new! {}", SEALED_SIGNER_SEED_FILE);
-		return create_sealed_seed()
+
+		fn seal(unsealed: Self::Unsealed) -> Result<()> {
+			Ok(unsealed.seed().using_encoded(|bytes| seal(bytes, SEALED_SIGNER_SEED_FILE))?)
+		}
 	}
-	Ok(())
-}
 
-#[cfg(feature = "sgx")]
-pub fn create_sealed_seed() -> Result<()> {
-	let mut seed = [0u8; 32];
-	let mut rand = StdRng::new()?;
-	rand.fill_bytes(&mut seed);
+	pub fn create_sealed_if_absent() -> Result<()> {
+		if SgxFile::open(SEALED_SIGNER_SEED_FILE).is_err() {
+			if Path::new(SEALED_SIGNER_SEED_FILE).exists() {
+				panic!("[Enclave] Keyfile {} exists but can't be opened. has it been written by the same enclave?", SEALED_SIGNER_SEED_FILE);
+			}
+			info!("[Enclave] Keyfile not found, creating new! {}", SEALED_SIGNER_SEED_FILE);
+			return create_sealed_seed()
+		}
+		Ok(())
+	}
 
-	Ok(seal(&seed, SEALED_SIGNER_SEED_FILE)?)
+	pub fn create_sealed_seed() -> Result<()> {
+		let mut seed = [0u8; 32];
+		let mut rand = StdRng::new()?;
+		rand.fill_bytes(&mut seed);
+
+		Ok(seal(&seed, SEALED_SIGNER_SEED_FILE)?)
+	}
 }

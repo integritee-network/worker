@@ -17,11 +17,10 @@ pub mod sgx_reexport_prelude {
 }
 
 pub mod aes;
+pub mod ed25519;
 pub mod error;
 pub mod traits;
 
-#[cfg(feature = "sgx")]
-pub mod ed25519;
 #[cfg(feature = "sgx")]
 pub mod rsa3072;
 

@@ -124,11 +124,8 @@ pub fn produce_sidechain_block_and_import_it() {
 		200000,
 	);
 	info!("Add trusted operations to TOP pool..");
-	let author_submit_future = async { rpc_author.submit_top(trusted_operation, shard_id).await };
-	executor::block_on(author_submit_future).unwrap();
-	let author_submit_future =
-		async { rpc_author.submit_top(invalid_trusted_operation, shard_id).await };
-	executor::block_on(author_submit_future).unwrap();
+	executor::block_on(rpc_author.submit_top(trusted_operation, shard_id)).unwrap();
+	executor::block_on(rpc_author.submit_top(invalid_trusted_operation, shard_id)).unwrap();
 
 	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
 	assert_eq!(2, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());

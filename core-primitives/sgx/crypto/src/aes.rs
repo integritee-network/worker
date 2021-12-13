@@ -15,21 +15,6 @@
 
 */
 
-#[cfg(feature = "sgx")]
-use std::sgxfs::SgxFile;
-
-#[cfg(feature = "sgx")]
-use sgx_rand::{Rng, StdRng};
-
-#[cfg(feature = "sgx")]
-use itp_sgx_io::{seal, unseal, SealedIO};
-
-#[cfg(feature = "sgx")]
-use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
-
-#[cfg(feature = "sgx")]
-use log::info;
-
 use crate::{
 	error::{Error, Result},
 	traits::StateCrypto,
@@ -60,20 +45,6 @@ impl Aes {
 #[derive(Copy, Clone, Debug, Display)]
 pub struct AesSeal;
 
-#[cfg(feature = "sgx")]
-impl SealedIO for AesSeal {
-	type Error = Error;
-	type Unsealed = Aes;
-
-	fn unseal() -> Result<Self::Unsealed> {
-		Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
-	}
-
-	fn seal(unsealed: Self::Unsealed) -> Result<()> {
-		Ok(unsealed.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
-	}
-}
-
 impl StateCrypto for Aes {
 	type Error = Error;
 
@@ -94,28 +65,53 @@ impl TryFrom<&Aes> for AesOfb {
 	}
 }
 
-#[cfg(feature = "sgx")]
-pub fn create_sealed_if_absent() -> Result<()> {
-	if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
-		info!("[Enclave] Keyfile not found, creating new! {}", AES_KEY_FILE_AND_INIT_V);
-		return create_sealed()
-	}
-	Ok(())
-}
-
-#[cfg(feature = "sgx")]
-pub fn create_sealed() -> Result<()> {
-	let mut key = [0u8; 16];
-	let mut iv = [0u8; 16];
-
-	let mut rand = StdRng::new()?;
-
-	rand.fill_bytes(&mut key);
-	rand.fill_bytes(&mut iv);
-	AesSeal::seal(Aes::new(key, iv))
-}
-
 /// If AES acts on the encrypted data it decrypts and vice versa
 pub fn de_or_encrypt(aes: &Aes, data: &mut [u8]) -> Result<()> {
 	aes.try_into().map(|mut ofb: AesOfb| ofb.apply_keystream(data))
+}
+
+#[cfg(feature = "sgx")]
+pub use sgx::*;
+
+#[cfg(feature = "sgx")]
+pub mod sgx {
+
+	use super::*;
+	use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
+	use itp_sgx_io::{seal, unseal, SealedIO};
+	use log::info;
+	use sgx_rand::{Rng, StdRng};
+	use std::sgxfs::SgxFile;
+
+	impl SealedIO for AesSeal {
+		type Error = Error;
+		type Unsealed = Aes;
+
+		fn unseal() -> Result<Self::Unsealed> {
+			Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
+		}
+
+		fn seal(unsealed: Self::Unsealed) -> Result<()> {
+			Ok(unsealed.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
+		}
+	}
+
+	pub fn create_sealed_if_absent() -> Result<()> {
+		if SgxFile::open(AES_KEY_FILE_AND_INIT_V).is_err() {
+			info!("[Enclave] Keyfile not found, creating new! {}", AES_KEY_FILE_AND_INIT_V);
+			return create_sealed()
+		}
+		Ok(())
+	}
+
+	pub fn create_sealed() -> Result<()> {
+		let mut key = [0u8; 16];
+		let mut iv = [0u8; 16];
+
+		let mut rand = StdRng::new()?;
+
+		rand.fill_bytes(&mut key);
+		rand.fill_bytes(&mut iv);
+		AesSeal::seal(Aes::new(key, iv))
+	}
 }

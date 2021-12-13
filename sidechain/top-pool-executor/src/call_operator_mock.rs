@@ -75,7 +75,7 @@ where
 	SB: SignedBlockT,
 {
 	fn get_trusted_calls(&self, shard: &ShardIdentifierFor<SB>) -> Result<Vec<TrustedCallSigned>> {
-		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or(Default::default()))
+		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or_default())
 	}
 
 	fn remove_calls_from_pool(
