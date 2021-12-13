@@ -223,7 +223,7 @@ fn main() {
 			.unwrap();
 			println!("[+] Done!");
 		} else {
-			tests::run_enclave_tests(_matches, &config.node_port);
+			tests::run_enclave_tests(_matches);
 		}
 	} else {
 		println!("For options: use --help");
