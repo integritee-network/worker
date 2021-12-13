@@ -223,7 +223,7 @@ mod tests {
 	fn test_fixtures() -> TestDispatcher {
 		let import_queue = BlockImportQueue::<SignedBlockType>::default();
 		let block_importer = ParentchainBlockImporterMock::<SignedBlockType>::default();
-		let dispatcher = TriggeredDispatcher::new(block_importer.clone(), import_queue.clone());
+		let dispatcher = TriggeredDispatcher::new(block_importer, import_queue);
 		dispatcher
 	}
 }
