@@ -729,12 +729,12 @@ fn enclave_registration_fees(
 			Some(fee) => Ok(fee.inclusion_fee()),
 			None => {
 				println!("Inclusion fee for the registration of the enclave is None!");
-				return Err(Error::ApplicationSetup)
+				Err(Error::ApplicationSetup)
 			},
 		},
 		None => {
 			println!("Fee Details for the registration of the enclave is None !");
-			return Err(Error::ApplicationSetup)
+			Err(Error::ApplicationSetup)
 		},
 	}
 }
