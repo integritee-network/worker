@@ -69,8 +69,11 @@ pub mod worker {
 	pub const SIGNING_KEY_SIZE: usize = 32;
 	// size of the MR enclave
 	pub const MR_ENCLAVE_SIZE: usize = 32;
-	// factor to tune the amount of enclave funding: funding_amount = MIN_FUND_INCREASE_FACTOR*existential_deposit - balance.free
+	// factors to tune the initial amount of enclave funding
+	// min_funding = MIN_FUND_INCREASE_FACTOR*existential_deposit
 	pub const MIN_FUND_INCREASE_FACTOR: u128 = 10_000;
+	// min_funding = MIN_FUND_FACTOR* "enclave registering fee"
+	pub const MIN_FUND_FACTOR: u128 = 10;
 }
 
 pub mod sidechain {

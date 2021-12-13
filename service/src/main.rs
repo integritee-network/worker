@@ -53,7 +53,7 @@ use itp_settings::{
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
 	sidechain::SLOT_DURATION,
-	worker::MIN_FUND_INCREASE_FACTOR,
+	worker::{MIN_FUND_FACTOR, MIN_FUND_INCREASE_FACTOR},
 };
 use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
@@ -310,34 +310,6 @@ fn start_worker<E, T, D>(
 
 	let tee_accountid = enclave_account(enclave.as_ref());
 
-	if dev {
-		//dev mode, the faucet will ensure that the enclave has enough fund
-		if let Err(x) = ensure_account_has_funds(&mut node_api, &tee_accountid) {
-			error!("Starting worker failed: {:?}", x);
-			return
-		}
-	} else {
-		//production mode, there is no faucet.
-		let missing_funds = match amount_to_be_funded(&mut node_api, &tee_accountid) {
-			Err(x) => {
-				error!("Starting worker failed: {:?}", x);
-				return
-			},
-			Ok(f) => f,
-		};
-		if missing_funds > 0 {
-			//if not enough funds,then the user can send the missing TEER to the enclave adress and start again
-			error!("Starting worker failed: enclave does not have enough funds on the parentchain to register.");
-			println!(
-				"Enclave account: {:}, missing funds {}",
-				&tee_accountid.to_ss58check(),
-				missing_funds
-			);
-			//return. Don't try to register the enclave. This will fail and the transaction will be banned for 30 mn.
-			return
-		}
-	}
-
 	// ------------------------------------------------------------------------
 	// perform a remote attestation and get an unchecked extrinsic back
 
@@ -363,6 +335,42 @@ fn start_worker<E, T, D>(
 
 	let mut xthex = hex::encode(uxt);
 	xthex.insert_str(0, "0x");
+
+	//Account funds
+	if dev {
+		//dev mode, the faucet will ensure that the enclave has enough fund
+		if let Err(x) = ensure_account_has_funds(&mut node_api, &tee_accountid) {
+			error!("Starting worker failed: {:?}", x);
+			return
+		}
+	} else {
+		//production mode, there is no faucet.
+		let registration_fees = match enclave_registration_fees(&mut node_api, &xthex.clone()) {
+			Err(x) => {
+				error!("Starting worker failed: {:?}", x);
+				return
+			},
+			Ok(f) => f,
+		};
+		info!("Registration fees = {:?}", registration_fees);
+		let free = node_api.get_free_balance(&tee_accountid).unwrap();
+		info!("TEE's free balance = {:?}", free);
+
+		let missing_funds = registration_fees.saturating_mul(MIN_FUND_FACTOR).saturating_sub(free);
+		info!("Missing funds to continue ... : {:?}", missing_funds);
+
+		if missing_funds > 0 {
+			//if not enough funds,then the user can send the missing TEER to the enclave adress and start again
+			error!("Starting worker failed: enclave does not have enough funds on the parentchain to register.");
+			println!(
+				"Enclave account: {:}, missing funds {}",
+				&tee_accountid.to_ss58check(),
+				missing_funds
+			);
+			//return. Don't try to register the enclave. This will fail and the transaction will be banned for 30 mn.
+			return
+		}
+	}
 
 	// send the extrinsic and wait for confirmation
 	println!("[>] Register the enclave (send the extrinsic)");
@@ -695,27 +703,40 @@ fn ensure_account_has_funds(
 	api: &mut Api<sr25519::Pair, WsRpcClient>,
 	accountid: &AccountId32,
 ) -> Result<(), Error> {
-	let funding_amount = amount_to_be_funded(api, accountid)?;
-	if 0 < funding_amount {
-		bootstrap_funds_from_alice(api, accountid, funding_amount)?;
-	}
-	Ok(())
-}
-
-// Amount that needs to be funded for this account to have at least existential_deposit * MIN_FUND_INCREASE_FACTOR (1_000_000_000_000)
-fn amount_to_be_funded(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-) -> Result<u128, Error> {
 	// check account balance
 	let free = api.get_free_balance(accountid)?;
 	info!("TEE's free balance = {:?}", free);
 
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("Existential deposit is = {:?}", existential_deposit);
-	let funding_amount = existential_deposit * MIN_FUND_INCREASE_FACTOR - free;
-	info!("Funding amount is = {:?}", funding_amount);
-	Ok(funding_amount)
+	let funding_amount = existential_deposit
+		.saturating_mul(MIN_FUND_INCREASE_FACTOR)
+		.saturating_sub(free);
+
+	if 0 < funding_amount {
+		bootstrap_funds_from_alice(api, accountid, funding_amount)?;
+	}
+	Ok(())
+}
+
+fn enclave_registration_fees(
+	api: &mut Api<sr25519::Pair, WsRpcClient>,
+	xthex_prefixed: &str,
+) -> Result<u128, Error> {
+	let reg_fee_details = api.get_fee_details(xthex_prefixed, None)?;
+	match reg_fee_details {
+		Some(details) => match details.inclusion_fee {
+			Some(fee) => Ok(fee.inclusion_fee()),
+			None => {
+				println!("Inclusion fee for the registration of the enclave is None!");
+				return Err(Error::ApplicationSetup)
+			},
+		},
+		None => {
+			println!("Fee Details for the registration of the enclave is None !");
+			return Err(Error::ApplicationSetup)
+		},
+	}
 }
 
 // Alice sends some funds to the account
