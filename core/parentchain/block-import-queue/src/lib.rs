@@ -39,23 +39,26 @@ use error::Result;
 use std::vec::Vec;
 
 /// Trait to push parentchain blocks to an import queue.
-pub trait PushToBlockQueue {
-	type BlockType;
-
+pub trait PushToBlockQueue<BlockType> {
 	/// Push multiple blocks to the queue, ordering from the Vec is preserved.
-	fn push_multiple(&self, blocks: Vec<Self::BlockType>) -> Result<()>;
+	fn push_multiple(&self, blocks: Vec<BlockType>) -> Result<()>;
 
 	/// Push a single block to the queue.
-	fn push_single(&self, block: Self::BlockType) -> Result<()>;
+	fn push_single(&self, block: BlockType) -> Result<()>;
 }
 
 /// Trait to pop parentchain blocks from the import queue.
 pub trait PopFromBlockQueue {
 	type BlockType;
 
-	/// Pop (i.e. removes and returns) all but the last block from the import queue
+	/// Pop (i.e. removes and returns) all but the last block from the import queue.
 	fn pop_all_but_last(&self) -> Result<Vec<Self::BlockType>>;
 
-	/// Pop (i.e. removes and returns) all blocks from the import queue
+	/// Pop (i.e. removes and returns) all blocks from the import queue.
 	fn pop_all(&self) -> Result<Vec<Self::BlockType>>;
+
+	/// Pop (front) until specified block is found. If no block matches, empty Vec is returned.
+	fn pop_until<Predicate>(&self, predicate: Predicate) -> Result<Vec<Self::BlockType>>
+	where
+		Predicate: Fn(&Self::BlockType) -> bool;
 }

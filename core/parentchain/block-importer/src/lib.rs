@@ -44,7 +44,7 @@ use std::vec::Vec;
 
 /// Block import from the parentchain.
 pub trait ImportParentchainBlocks {
-	type SignedBlockType;
+	type SignedBlockType: Clone;
 
 	/// Import parentchain blocks to the light-client (validator):
 	/// * Scans the blocks for relevant extrinsics

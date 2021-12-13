@@ -192,7 +192,7 @@ mod tests {
 	fn block1_builder(author: ed25519::Public) -> TestBlockBuilder {
 		TestBlockBuilder::new()
 			.with_author(author)
-			.with_layer1_head(default_header().hash())
+			.with_parentchain_head(default_header().hash())
 			.with_block_number(1)
 			.with_timestamp(0)
 	}

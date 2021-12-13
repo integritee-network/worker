@@ -22,9 +22,9 @@
 
 use crate::ocall::OcallApi;
 use itc_parentchain::{
-	block_import_dispatcher::immediate_dispatcher::ImmediateDispatcher,
-	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
-	light_client::ValidatorAccessor,
+	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
+	block_import_queue::BlockImportQueue, block_importer::ParentchainBlockImporter,
+	indirect_calls_executor::IndirectCallsExecutor, light_client::ValidatorAccessor,
 };
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -32,7 +32,7 @@ use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::Aes;
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::GlobalFileStateHandler;
-use itp_types::Block as ParentchainBlock;
+use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
 	primitives::{
@@ -59,9 +59,9 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
 >;
-//pub type EnclaveBlockImportQueue = BlockImportQueue<Block>;
+pub type EnclaveBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
-	ImmediateDispatcher<EnclaveParentChainBlockImporter>;
+	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveBlockImportQueue>;
 
 /// Sidechain types
 pub type EnclaveSidechainState =
@@ -81,9 +81,10 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	GlobalFileStateHandler,
 	Aes,
 	EnclaveTopPoolOperationHandler,
+	EnclaveParentchainBlockImportDispatcher,
 >;
 
-pub static GLOBAL_DISPATCHER_COMPONENT: ComponentContainer<
+pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new();
 

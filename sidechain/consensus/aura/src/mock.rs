@@ -16,6 +16,7 @@
 */
 
 use crate::{verifier::AuraVerifier, Aura};
+use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_time_utils::duration_now;
 use itp_types::{AccountId, Block as ParentchainBlock, Enclave, Header};
@@ -27,14 +28,18 @@ use its_primitives::{
 use its_state::LastBlockExt;
 use sp_core::Pair;
 use sp_keyring::ed25519::Keyring;
-use sp_runtime::{app_crypto::ed25519, testing::H256, traits::Header as HeaderT};
+use sp_runtime::{
+	app_crypto::ed25519, generic::SignedBlock, testing::H256, traits::Header as HeaderT,
+};
 use std::time::Duration;
 
 pub const SLOT_DURATION: Duration = Duration::from_millis(300);
 
 type AuthorityPair = ed25519::Pair;
 pub struct EnvironmentMock;
-pub struct ProposerMock;
+pub struct ProposerMock {
+	parentchain_header: Header,
+}
 
 pub type ShardIdentifierFor<SB> = <<SB as SignedBlockT>::Block as SidechainBlockT>::ShardIdentifier;
 
@@ -42,8 +47,14 @@ pub struct StateMock<SB: SidechainBlockT> {
 	pub last_block: Option<SB>,
 }
 
-pub type TestAura =
-	Aura<AuthorityPair, ParentchainBlock, SignedSidechainBlock, EnvironmentMock, OnchainMock>;
+pub type TestAura = Aura<
+	AuthorityPair,
+	ParentchainBlock,
+	SignedSidechainBlock,
+	EnvironmentMock,
+	OnchainMock,
+	TriggerParentchainBlockImportMock<SignedBlock<ParentchainBlock>>,
+>;
 
 pub type TestAuraVerifier = AuraVerifier<
 	AuthorityPair,
@@ -59,10 +70,10 @@ impl Environment<ParentchainBlock, SignedSidechainBlock> for EnvironmentMock {
 
 	fn init(
 		&mut self,
-		_: Header,
+		header: Header,
 		_: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Self::Proposer, Self::Error> {
-		Ok(ProposerMock)
+		Ok(ProposerMock { parentchain_header: header })
 	}
 }
 
@@ -74,7 +85,7 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 		Ok(Proposal {
 			block: TestBlockBuilder::new()
 				.with_timestamp(duration_now().as_millis() as u64)
-				.with_layer1_head(H256::random())
+				.with_parentchain_head(self.parentchain_header.hash())
 				.with_parent_hash(H256::random())
 				.with_shard(H256::random())
 				.build_signed(Keyring::Alice.pair()),
@@ -101,7 +112,7 @@ pub struct TestBlockBuilder {
 	author: ed25519::Public,
 	block_number: u64,
 	parent_hash: H256,
-	layer_one_head: H256,
+	parentchain_head: H256,
 	shard: H256,
 	signed_top_hashes: Vec<H256>,
 	encrypted_payload: Vec<u8>,
@@ -114,7 +125,7 @@ impl Default for TestBlockBuilder {
 			author: Default::default(),
 			block_number: 1,
 			parent_hash: Default::default(),
-			layer_one_head: Default::default(),
+			parentchain_head: Default::default(),
 			shard: Default::default(),
 			signed_top_hashes: Default::default(),
 			encrypted_payload: Default::default(),
@@ -138,8 +149,8 @@ impl TestBlockBuilder {
 		self
 	}
 
-	pub fn with_layer1_head(mut self, header: H256) -> Self {
-		self.layer_one_head = header;
+	pub fn with_parentchain_head(mut self, header: H256) -> Self {
+		self.parentchain_head = header;
 		self
 	}
 
@@ -168,7 +179,7 @@ impl TestBlockBuilder {
 			self.author,
 			self.block_number,
 			self.parent_hash,
-			self.layer_one_head,
+			self.parentchain_head,
 			self.shard,
 			self.signed_top_hashes,
 			self.encrypted_payload,
@@ -186,7 +197,7 @@ impl TestBlockBuilder {
 #[test]
 fn build_signed_block_has_valid_signature() {
 	let signed_block = TestBlockBuilder::new()
-		.with_layer1_head(H256::random())
+		.with_parentchain_head(H256::random())
 		.build_signed(Keyring::Bob.pair());
 	assert!(signed_block.verify_signature());
 }

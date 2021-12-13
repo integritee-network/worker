@@ -53,8 +53,8 @@ pub struct SlotInfo<B: ParentchainBlock> {
 	pub duration: Duration,
 	/// The time at which the slot ends.
 	pub ends_at: Duration,
-	/// Parentchain header this slot is based on.
-	pub parentchain_head: B::Header,
+	/// Last imported parentchain header, potentially outdated.
+	pub last_imported_parentchain_head: B::Header,
 }
 
 impl<B: ParentchainBlock> SlotInfo<B> {
@@ -72,7 +72,7 @@ impl<B: ParentchainBlock> SlotInfo<B> {
 			timestamp,
 			duration,
 			ends_at: timestamp + time_until_next_slot(duration),
-			parentchain_head,
+			last_imported_parentchain_head: parentchain_head,
 		}
 	}
 }
@@ -222,7 +222,7 @@ mod tests {
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			parentchain_head: ParentchainHeader {
+			last_imported_parentchain_head: ParentchainHeader {
 				parent_hash: Default::default(),
 				number: 1,
 				state_root: Default::default(),

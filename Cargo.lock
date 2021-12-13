@@ -2726,6 +2726,7 @@ dependencies = [
  "finality-grandpa",
  "frame-support",
  "ita-stf",
+ "itc-parentchain-block-import-dispatcher",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",

@@ -9,6 +9,8 @@ pub enum Error {
 	ApiClient(#[from] ApiClientError),
 	#[error("Node API terminated subscription unexpectedly: {0}")]
 	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
+	#[error("Enclave API error: {0}")]
+	EnclaveApi(#[from] itp_enclave_api::error::Error),
 	#[error("{0}")]
 	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
 	#[error("{0}")]
