@@ -30,16 +30,16 @@ use crate::{
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
-use codec::Encode;
+use codec::{Decode, Encode};
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	Balance, KeyPair, Stf, TrustedCall, TrustedOperation,
+	Balance, KeyPair, StatePayload, Stf, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{Aes, ShieldingCrypto, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::{
 	builders::parentchain_header_builder::ParentchainHeaderBuilder,
@@ -158,6 +158,11 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
+	let (apriori_state_hash_in_block, aposteriori_state_hash_in_block) =
+		get_state_hashes_from_block(blocks.first().unwrap(), &state_key);
+	assert_ne!(state_hash_before_block_production, aposteriori_state_hash_in_block);
+	assert_eq!(state_hash_before_block_production, apriori_state_hash_in_block);
+
 	// Ensure that invalid calls are removed from pool. Valid calls should only be removed upon block import.
 	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 
@@ -178,10 +183,13 @@ pub fn produce_sidechain_block_and_import_it() {
 	assert!(rpc_author.get_pending_tops_separated(shard_id).unwrap().0.is_empty());
 
 	// After importing the block, the state hash must be changed.
+	// We don't have a way to directly compare state hashes, because calculating the state hash
+	// would also involve applying set_last_block action, which updates the state upon import.
 	assert_ne!(
 		state_hash_before_block_production,
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
+
 	let mut state = state_handler.load_initialized(&shard_id).unwrap();
 	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).unwrap().free;
 	assert_eq!(free_balance, transfered_amount);
@@ -211,6 +219,16 @@ fn encrypted_trusted_operation_transfer_balance<
 	let encoded_operation = trusted_operation.encode();
 
 	shielding_key.encrypt(encoded_operation.as_slice()).unwrap()
+}
+
+fn get_state_hashes_from_block(
+	signed_block: &SignedSidechainBlock,
+	state_key: &Aes,
+) -> (H256, H256) {
+	let mut state_payload = signed_block.block.state_payload.clone();
+	state_key.decrypt(&mut state_payload).unwrap();
+	let decoded_state = StatePayload::decode(&mut state_payload.as_slice()).unwrap();
+	(decoded_state.state_hash_apriori(), decoded_state.state_hash_aposteriori())
 }
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
