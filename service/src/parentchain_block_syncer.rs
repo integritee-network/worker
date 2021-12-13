@@ -25,6 +25,7 @@ use std::{cmp::min, sync::Arc};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 
+/// Supplies functionality to sync parentchain blocks.
 pub(crate) struct ParentchainBlockSyncer<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,

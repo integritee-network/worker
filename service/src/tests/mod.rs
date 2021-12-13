@@ -32,6 +32,9 @@ pub mod worker;
 #[cfg(test)]
 pub mod mocks;
 
+#[cfg(test)]
+pub mod parentchain_block_syncer_test;
+
 pub fn run_enclave_tests(matches: &ArgMatches) {
 	println!("*** Starting Test enclave");
 	let enclave = enclave_init().unwrap();

@@ -13,6 +13,10 @@ pub type StorageProof = Vec<Vec<u8>>;
 pub trait ChainApi {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>>;
 	fn signed_block(&self, hash: Option<H256>) -> ApiResult<Option<SignedBlock>>;
+
+	/// Fetch blocks from parentchain with blocknumber from until to, including both boundaries.
+	/// Returns a vector with one element if from equals to.
+	/// Returns an empty vector if from is greater than to.
 	fn get_blocks(&self, from: u32, to: u32) -> ApiResult<Vec<SignedBlock>>;
 	fn grandpa_authorities(&self, hash: Option<H256>) -> ApiResult<AuthorityList>;
 	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;

@@ -609,7 +609,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	let (sender, receiver) = channel();
 	api.subscribe_finalized_heads(sender).map_err(Error::ApiClient)?;
 
-	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api.clone());
+	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api);
 	loop {
 		let new_header: Header = match receiver.recv() {
 			Ok(header_str) => serde_json::from_str(&header_str).map_err(Error::Serialization),

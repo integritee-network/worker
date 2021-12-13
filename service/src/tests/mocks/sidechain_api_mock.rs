@@ -15,7 +15,26 @@
 
 */
 
-pub mod direct_request_mock;
-pub mod enclave_api_mock;
-pub mod parentchain_api_mock;
-pub mod sidechain_api_mock;
+use frame_support::sp_runtime::traits::Block;
+use itp_enclave_api::{sidechain::Sidechain, EnclaveResult};
+
+/// Mock for Parentchain Api
+pub struct SidechainApiMock;
+
+impl Sidechain for SidechainApiMock {
+	fn sync_parentchain<PB: Block>(
+		&self,
+		_blocks: &[sp_runtime::generic::SignedBlock<PB>],
+		_nonce: u32,
+	) -> EnclaveResult<()> {
+		Ok(())
+	}
+
+	fn execute_trusted_getters(&self) -> EnclaveResult<()> {
+		todo!()
+	}
+
+	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
+		todo!()
+	}
+}
