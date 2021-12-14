@@ -26,7 +26,8 @@ async fn test_client_calls() {
 	let response: Vec<u8> = client
 		.request(
 			"sidechain_importBlock",
-			vec![to_json_value(vec![SidechainBlockBuilder::default().build()]).unwrap()].into(),
+			vec![to_json_value(vec![SidechainBlockBuilder::default().build_signed()]).unwrap()]
+				.into(),
 		)
 		.await
 		.unwrap();

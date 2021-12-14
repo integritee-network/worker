@@ -26,7 +26,7 @@ use its_primitives::{
 };
 use its_state::LastBlockExt;
 use its_test::sidechain_block_builder::SidechainBlockBuilder;
-use sp_runtime::{app_crypto::ed25519, traits::Header as HeaderT};
+use sp_runtime::{app_crypto::ed25519, generic::SignedBlock, traits::Header as HeaderT};
 use std::time::Duration;
 
 pub const SLOT_DURATION: Duration = Duration::from_millis(300);
@@ -79,7 +79,10 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 		_max_duration: Duration,
 	) -> Result<Proposal<SignedSidechainBlock>, ConsensusError> {
 		Ok(Proposal {
-			block: SidechainBlockBuilder::random().build_signed(),
+			block: SidechainBlockBuilder::random()
+				.with_parentchain_block_hash(self.parentchain_header.hash())
+				.build_signed(),
+
 			parentchain_effects: Default::default(),
 		})
 	}

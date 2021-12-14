@@ -47,7 +47,7 @@ impl Default for SidechainBlockBuilder {
 	fn default() -> Self {
 		SidechainBlockBuilder {
 			signer: Pair::from_seed(&ENCLAVE_SEED),
-			number: Default::default(),
+			number: 1,
 			parent_hash: BlockHash::default(),
 			parentchain_block_hash: Default::default(),
 			signed_top_hashes: Default::default(),
@@ -62,7 +62,7 @@ impl SidechainBlockBuilder {
 	pub fn random() -> Self {
 		SidechainBlockBuilder {
 			signer: Pair::from_seed(&ENCLAVE_SEED),
-			number: 17,
+			number: 42,
 			parent_hash: BlockHash::random(),
 			parentchain_block_hash: BlockHash::random(),
 			signed_top_hashes: vec![H256::random(), H256::random()],
