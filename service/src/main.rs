@@ -92,6 +92,7 @@ mod node_api_factory;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod sync_block_gossiper;
+mod sync_state;
 mod tests;
 mod utils;
 mod worker;
@@ -173,7 +174,12 @@ fn main() {
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
 		let shard = extract_shard(smatches, enclave.as_ref());
 		let provider_url = smatches.value_of("provider").expect("provider must be specified");
-		request_keys(provider_url, &shard, enclave.as_ref(), smatches.is_present("skip-ra"));
+		sync_state::request_keys(
+			provider_url,
+			&shard,
+			enclave.as_ref(),
+			smatches.is_present("skip-ra"),
+		);
 	} else if matches.is_present("shielding-key") {
 		info!("*** Get the public key from the TEE\n");
 		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
@@ -477,32 +483,6 @@ where
 			thread::sleep(sleep_time);
 		}
 	}
-}
-
-fn request_keys<E: TlsRemoteAttestation>(
-	provider_url: &str,
-	_shard: &ShardIdentifier,
-	enclave_api: &E,
-	skip_ra: bool,
-) {
-	// FIXME: we now assume that keys are equal for all shards
-
-	// initialize the enclave
-	#[cfg(feature = "production")]
-	println!("*** Starting enclave in production mode");
-	#[cfg(not(feature = "production"))]
-	println!("*** Starting enclave in development mode");
-
-	println!("Requesting key provisioning from worker at {}", provider_url);
-
-	enclave_request_key_provisioning(
-		enclave_api,
-		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-		provider_url,
-		skip_ra,
-	)
-	.unwrap();
-	println!("key provisioning successfully performed");
 }
 
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
