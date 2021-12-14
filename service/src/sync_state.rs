@@ -21,7 +21,6 @@ use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 
 pub(crate) fn request_keys<E: TlsRemoteAttestation>(
-	provider_url: &str,
 	_shard: &ShardIdentifier,
 	enclave_api: &E,
 	skip_ra: bool,
@@ -34,14 +33,19 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation>(
 	#[cfg(not(feature = "production"))]
 	println!("*** Starting enclave in development mode");
 
-	println!("Requesting key provisioning from worker at {}", provider_url);
+	let provider_url = get_worker_url_of_last_finalized_sidechain_block();
+	println!("Requesting key provisioning from worker at {}", &provider_url);
 
 	enclave_request_key_provisioning(
 		enclave_api,
 		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-		provider_url,
+		&provider_url,
 		skip_ra,
 	)
 	.unwrap();
 	println!("key provisioning successfully performed");
+}
+
+fn get_worker_url_of_last_finalized_sidechain_block() -> String {
+	String::new()
 }

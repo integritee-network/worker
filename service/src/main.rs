@@ -172,11 +172,8 @@ fn main() {
 			tokio_handle,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-		let shard = extract_shard(smatches, enclave.as_ref());
-		let provider_url = smatches.value_of("provider").expect("provider must be specified");
 		sync_state::request_keys(
-			provider_url,
-			&shard,
+			&extract_shard(smatches, enclave.as_ref()),
 			enclave.as_ref(),
 			smatches.is_present("skip-ra"),
 		);
