@@ -31,11 +31,6 @@ use substrate_api_client::{rpc::WsRpcClient, Api};
 
 #[cfg(test)]
 use crate::config::Config;
-#[cfg(test)]
-use its_primitives::{
-	traits::{Block as BlockT, SignBlock},
-	types::{Block, SignedBlock},
-};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -142,33 +137,6 @@ pub fn get_nonce(api: &Api<sr25519::Pair, WsRpcClient>, who: &AccountId32) -> u3
 	} else {
 		0
 	}
-}
-
-#[cfg(test)]
-pub fn test_sidechain_block() -> SignedBlock {
-	use sp_core::{Pair, H256};
-
-	let signer_pair = sp_core::ed25519::Pair::from_string("//Alice", None).unwrap();
-	let author = signer_pair.public();
-	let block_number: u64 = 0;
-	let parent_hash = H256::random();
-	let layer_one_head = H256::random();
-	let signed_top_hashes = vec![];
-	let encrypted_payload: Vec<u8> = vec![];
-	let shard = ShardIdentifier::default();
-
-	// when
-	let block = Block::new(
-		author,
-		block_number,
-		parent_hash.clone(),
-		layer_one_head.clone(),
-		shard.clone(),
-		signed_top_hashes.clone(),
-		encrypted_payload.clone(),
-		1000,
-	);
-	block.sign_block(&signer_pair)
 }
 
 /// Local Worker config. Fields are the default values except for

@@ -331,10 +331,10 @@ mod tests {
 		header: ParentchainHeader,
 	) -> Arc<TriggerParentchainBlockImportMock<SignedParentchainBlock>> {
 		let latest_parentchain_block =
-			ParentchainBlockBuilder::default().with_header(header.clone()).build_signed();
+			ParentchainBlockBuilder::default().with_header(header).build_signed();
 		Arc::new(
 			TriggerParentchainBlockImportMock::default()
-				.with_latest_imported(Some(latest_parentchain_block.clone())),
+				.with_latest_imported(Some(latest_parentchain_block)),
 		)
 	}
 
@@ -451,7 +451,7 @@ mod tests {
 		let _ = env_logger::builder().is_test(true).try_init();
 		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(84).build();
 		let parentchain_block_import_trigger =
-			create_import_trigger_with_header(latest_parentchain_header.clone());
+			create_import_trigger_with_header(latest_parentchain_header);
 
 		let mut aura = get_aura(
 			onchain_mock_with_default_authorities(),

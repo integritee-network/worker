@@ -8,7 +8,8 @@ use jsonrpsee::{
 use parity_scale_codec::Decode;
 
 use itp_types::RpcResponse;
-use mock::{test_sidechain_block, TestEnclave};
+use its_test::sidechain_block_builder::SidechainBlockBuilder;
+use mock::TestEnclave;
 
 fn init() {
 	let _ = env_logger::builder().is_test(true).try_init();
@@ -25,7 +26,8 @@ async fn test_client_calls() {
 	let response: Vec<u8> = client
 		.request(
 			"sidechain_importBlock",
-			vec![to_json_value(vec![test_sidechain_block()]).unwrap()].into(),
+			vec![to_json_value(vec![SidechainBlockBuilder::default().build_signed()]).unwrap()]
+				.into(),
 		)
 		.await
 		.unwrap();

@@ -42,6 +42,7 @@ env_logger = "0.9.0"
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
+its-test = { path = "../../test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 

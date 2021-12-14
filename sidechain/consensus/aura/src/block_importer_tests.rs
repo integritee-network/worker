@@ -15,11 +15,7 @@
 
 */
 
-use crate::{
-	block_importer::BlockImporter,
-	mock::{validateer, TestBlockBuilder},
-	ShardIdentifierFor,
-};
+use crate::{block_importer::BlockImporter, mock::validateer, ShardIdentifierFor};
 use codec::Encode;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_sgx_crypto::{aes::Aes, StateCrypto};
@@ -39,6 +35,7 @@ use its_primitives::{
 	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
 use its_state::{SidechainDB, SidechainState, StateUpdate};
+use its_test::sidechain_block_builder::SidechainBlockBuilder;
 use its_top_pool_executor::call_operator_mock::TopPoolCallOperatorMock;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use sp_core::{blake2_256, ed25519::Pair};
@@ -118,13 +115,14 @@ fn signed_block(
 ) -> SignedSidechainBlock {
 	let state_update = empty_encrypted_state_update(state_handler);
 
-	TestBlockBuilder::new()
+	SidechainBlockBuilder::default()
 		.with_timestamp(duration_now().as_millis() as u64)
-		.with_parentchain_head(parentchain_header.hash())
+		.with_parentchain_block_hash(parentchain_header.hash())
 		.with_parent_hash(H256::default())
 		.with_shard(shard())
-		.with_encrypted_payload(state_update)
-		.build_signed(signer)
+		.with_payload(state_update)
+		.with_signer(signer)
+		.build_signed()
 }
 
 fn default_authority_signed_block(
@@ -142,7 +140,7 @@ fn simple_block_import_works() {
 		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
 
 	block_importer
-		.import_block(signed_sidechain_block.clone(), &parentchain_header)
+		.import_block(signed_sidechain_block, &parentchain_header)
 		.unwrap();
 }
 
@@ -153,13 +151,13 @@ fn block_import_with_invalid_signature_fails() {
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let state_update = empty_encrypted_state_update(state_handler.as_ref());
 
-	let block = TestBlockBuilder::new()
+	let block = SidechainBlockBuilder::default()
 		.with_timestamp(duration_now().as_millis() as u64)
-		.with_parentchain_head(parentchain_header.hash())
-		.with_author(Keyring::Charlie.public())
+		.with_parentchain_block_hash(parentchain_header.hash())
+		.with_signer(Keyring::Charlie.pair())
 		.with_parent_hash(H256::default())
 		.with_shard(shard())
-		.with_encrypted_payload(state_update)
+		.with_payload(state_update)
 		.build();
 
 	// Bob signs the block, but Charlie is set as the author -> invalid signature.

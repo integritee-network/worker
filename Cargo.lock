@@ -2109,6 +2109,7 @@ dependencies = [
  "its-consensus-slots",
  "its-primitives",
  "its-storage",
+ "its-test",
  "jsonrpsee",
  "lazy_static",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2386,6 +2387,7 @@ dependencies = [
  "itp-enclave-api",
  "itp-types",
  "its-primitives",
+ "its-test",
  "jsonrpsee",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -2742,6 +2744,7 @@ dependencies = [
  "its-consensus-slots",
  "its-primitives",
  "its-state",
+ "its-test",
  "its-top-pool-executor",
  "its-validateer-fetch",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2876,6 +2879,17 @@ dependencies = [
  "rocksdb",
  "sp-core",
  "thiserror 1.0.30",
+]
+
+[[package]]
+name = "its-test"
+version = "0.8.0"
+dependencies = [
+ "itp-time-utils",
+ "itp-types",
+ "its-primitives",
+ "sgx_tstd",
+ "sp-core",
 ]
 
 [[package]]

@@ -17,6 +17,7 @@ itp-enclave-api = { path = "../../core-primitives/enclave-api" }
 its-primitives = { path = "../../sidechain/primitives" }
 itp-types = { path = "../../core-primitives/types" }
 
+
 [features]
 default = ["std"]
 std = []
@@ -24,3 +25,4 @@ std = []
 [dev-dependencies]
 env_logger = { version = "*" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+its-test = { path = "../../sidechain/test" }
