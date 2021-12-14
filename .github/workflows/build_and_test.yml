@@ -5,7 +5,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master, separate-block-production-from-state-mutation ]
+    branches: [ master ]
 
 env:
   CARGO_TERM_COLOR: always
