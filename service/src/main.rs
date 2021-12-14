@@ -336,40 +336,11 @@ fn start_worker<E, T, D>(
 	let mut xthex = hex::encode(uxt);
 	xthex.insert_str(0, "0x");
 
-	//Account funds
-	if dev {
-		//dev mode, the faucet will ensure that the enclave has enough fund
-		if let Err(x) = ensure_account_has_funds(&mut node_api, &tee_accountid) {
-			error!("Starting worker failed: {:?}", x);
-			return
-		}
-	} else {
-		//production mode, there is no faucet.
-		let registration_fees = match enclave_registration_fees(&mut node_api, &xthex.clone()) {
-			Err(x) => {
-				error!("Starting worker failed: {:?}", x);
-				return
-			},
-			Ok(f) => f,
-		};
-		info!("Registration fees = {:?}", registration_fees);
-		let free = node_api.get_free_balance(&tee_accountid).unwrap();
-		info!("TEE's free balance = {:?}", free);
-
-		let missing_funds = registration_fees.saturating_mul(MIN_FUND_FACTOR).saturating_sub(free);
-		info!("Missing funds to continue ... : {:?}", missing_funds);
-
-		if missing_funds > 0 {
-			//if not enough funds,then the user can send the missing TEER to the enclave adress and start again
-			error!("Starting worker failed: enclave does not have enough funds on the parentchain to register.");
-			println!(
-				"Enclave account: {:}, missing funds {}",
-				&tee_accountid.to_ss58check(),
-				missing_funds
-			);
-			//return. Don't try to register the enclave. This will fail and the transaction will be banned for 30 mn.
-			return
-		}
+	// Account funds
+	if let Err(x) = account_funding(&mut node_api, &tee_accountid, xthex.clone(), dev) {
+		error!("Starting worker failed: {:?}", x);
+		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
+		return
 	}
 
 	// send the extrinsic and wait for confirmation
@@ -698,6 +669,39 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	AccountId32::from(*tee_public.as_array_ref())
 }
 
+fn account_funding(
+	api: &mut Api<sr25519::Pair, WsRpcClient>,
+	accountid: &AccountId32,
+	extrinsic_prefix: String,
+	dev: bool,
+) -> Result<(), Error> {
+	// Account funds
+	if dev {
+		// Development mode, the faucet will ensure that the enclave has enough funds
+		ensure_account_has_funds(api, accountid)?;
+	} else {
+		// Production mode, there is no faucet.
+		let registration_fees = enclave_registration_fees(api, &extrinsic_prefix)?;
+		info!("Registration fees = {:?}", registration_fees);
+		let free = api.get_free_balance(accountid)?;
+		info!("TEE's free balance = {:?}", free);
+
+		let missing_funds = registration_fees.saturating_mul(MIN_FUND_FACTOR).saturating_sub(free);
+		info!("Missing funds to continue ... : {:?}", missing_funds);
+
+		if missing_funds > 0 {
+			info!("Enclave does not have enough funds on the parentchain to register.");
+			// If there are not enough funds, then the user can send the missing TEER to the enclave address and start again.
+			println!(
+				"Enclave account: {:}, missing funds {}",
+				accountid.to_ss58check(),
+				missing_funds
+			);
+			return Err(Error::ApplicationSetup)
+		}
+	}
+	Ok(())
+}
 // Alice plays the faucet and sends some funds to the account if balance is low
 fn ensure_account_has_funds(
 	api: &mut Api<sr25519::Pair, WsRpcClient>,
