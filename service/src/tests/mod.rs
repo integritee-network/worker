@@ -19,24 +19,23 @@ use clap::ArgMatches;
 
 use crate::enclave::api::*;
 
-use self::{ecalls::*, integration_tests::*};
+use self::ecalls::*;
 use itp_enclave_api::enclave_test::EnclaveTest;
 
 pub mod commons;
 pub mod ecalls;
-pub mod integration_tests;
 pub mod mock;
 
 #[cfg(test)]
 pub mod worker;
 
 #[cfg(test)]
-pub mod enclave_api_mock;
+pub mod mocks;
 
 #[cfg(test)]
-pub mod direct_request_mock;
+pub mod parentchain_block_syncer_test;
 
-pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
+pub fn run_enclave_tests(matches: &ArgMatches) {
 	println!("*** Starting Test enclave");
 	let enclave = enclave_init().unwrap();
 
@@ -53,20 +52,5 @@ pub fn run_enclave_tests(matches: &ArgMatches, port: &str) {
 		println!("[+] Ecall tests ended!");
 	}
 
-	if matches.is_present("all") || matches.is_present("integration") {
-		// Fixme: It is not nice to need to forward the port. Better: setup a node running on some port before
-		// running the tests.
-		println!("Running integration Tests");
-		println!("  testing perform_ra()");
-		perform_ra_works(&enclave, port);
-		println!("  init light_client");
-		let mut head = init_light_client(port, &enclave);
-		println!("  testing process_forwarded_payload()");
-		head = call_worker_encrypted_set_balance_works(&enclave, port, head);
-		println!("  testing execute_stf_unshield_balance()");
-		head = forward_encrypted_unshield_works(&enclave, port, head);
-		println!("  testing shield_funds");
-		let _head = shield_funds_workds(&enclave, port, head);
-	}
 	println!("[+] All tests ended!");
 }
