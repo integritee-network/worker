@@ -57,7 +57,9 @@ use itp_settings::{
 };
 use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
-use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
+use its_storage::{
+	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,
+};
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
@@ -249,7 +251,7 @@ fn start_worker<E, T, D>(
 		+ TlsRemoteAttestation
 		+ TeerexApi
 		+ Clone,
-	D: BlockPruner + Sync + Send + 'static,
+	D: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
 {
 	println!("IntegriTEE Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
@@ -296,10 +298,15 @@ fn start_worker<E, T, D>(
 
 	let handle = tokio_handle.get_handle();
 	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let sidechain_storage_for_rpc = sidechain_storage.clone();
 	handle.spawn(async move {
-		itc_rpc_server::run_server(&url, enclave_for_block_gossip_rpc_server)
-			.await
-			.unwrap()
+		itc_rpc_server::run_server(
+			&url,
+			enclave_for_block_gossip_rpc_server,
+			sidechain_storage_for_rpc,
+		)
+		.await
+		.unwrap()
 	});
 	// ------------------------------------------------------------------------
 	// start the substrate-api-client to communicate with the node
