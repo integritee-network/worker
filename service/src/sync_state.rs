@@ -16,12 +16,27 @@
 
 //! Handles all state syncing mission of a worker before start up.
 use crate::enclave::tls_ra::enclave_request_key_provisioning;
+use itp_api_client_extensions::PalletTeerexApi;
 use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
 use itp_types::ShardIdentifier;
+use log::*;
 use sgx_types::sgx_quote_sign_type_t;
+use std::string::String;
+use substrate_api_client::ApiClientError;
 
-pub(crate) fn request_keys<E: TlsRemoteAttestation>(
-	_shard: &ShardIdentifier,
+#[derive(Debug, thiserror::Error)]
+enum Error {
+	#[error("ApiClient Error: {0}")]
+	ApiClient(#[from] ApiClientError),
+	#[error("Could not fetch any data.")]
+	EmptyValue,
+}
+
+type StateSyncResult<T> = Result<T, Error>;
+
+pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
+	node_api: &NodeApi,
+	shard: &ShardIdentifier,
 	enclave_api: &E,
 	skip_ra: bool,
 ) {
@@ -33,7 +48,7 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation>(
 	#[cfg(not(feature = "production"))]
 	println!("*** Starting enclave in development mode");
 
-	let provider_url = get_worker_url_of_last_finalized_sidechain_block();
+	let provider_url = get_author_url_of_last_finalized_sidechain_block(node_api, shard).unwrap();
 	println!("Requesting key provisioning from worker at {}", &provider_url);
 
 	enclave_request_key_provisioning(
@@ -46,6 +61,16 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation>(
 	println!("key provisioning successfully performed");
 }
 
-fn get_worker_url_of_last_finalized_sidechain_block() -> String {
-	String::new()
+/// Returns the url of the last sidechain block author that has been stored
+/// in the parentchain state as "worker for shard".
+///
+/// Note: The sidechainblock author will only change whenever a new parentchain block is
+/// produced. And even then, it might be the same as the last block. So if several workers
+/// are started in a timely manner, they all will all get the same url.
+fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi>(
+	node_api: &NodeApi,
+	shard: &ShardIdentifier,
+) -> StateSyncResult<String> {
+	let enclave = node_api.worker_for_shard(shard)?.ok_or(Error::EmptyValue)?;
+	Ok(enclave.url)
 }

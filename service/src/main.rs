@@ -172,7 +172,9 @@ fn main() {
 			tokio_handle,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
+		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
 		sync_state::request_keys(
+			&node_api,
 			&extract_shard(smatches, enclave.as_ref()),
 			enclave.as_ref(),
 			smatches.is_present("skip-ra"),
