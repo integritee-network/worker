@@ -12,7 +12,7 @@ use jsonrpsee::{
 	ws_client::WsClientBuilder,
 };
 use log::*;
-use std::{num::ParseIntError, thread};
+use std::num::ParseIntError;
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;
@@ -77,13 +77,10 @@ where
 			// FIXME: Websocket connectionto a worker  should stay once etablished.
 			let client = WsClientBuilder::default().build(&url).await?;
 			let blocks = blocks_json.clone();
-			thread::spawn(move || {
-				if let Err(e) = futures::executor::block_on(
-					client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()),
-				) {
-					error!("sidechain_importBlock failed: {:?}", e);
-				}
-			});
+			if let Err(e) = client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()).await
+			{
+				error!("sidechain_importBlock failed: {:?}", e);
+			}
 		}
 		Ok(())
 	}
