@@ -53,7 +53,7 @@ use itp_settings::{
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
 	sidechain::SLOT_DURATION,
-	worker::{MIN_FUND_FACTOR, MIN_FUND_INCREASE_FACTOR},
+	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
 use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
@@ -683,21 +683,23 @@ fn account_funding(
 		// Production mode, there is no faucet.
 		let registration_fees = enclave_registration_fees(api, &extrinsic_prefix)?;
 		info!("Registration fees = {:?}", registration_fees);
-		let free = api.get_free_balance(accountid)?;
-		info!("TEE's free balance = {:?}", free);
+		let free_balance = api.get_free_balance(accountid)?;
+		info!("TEE's free balance = {:?}", free_balance);
 
-		let missing_funds = registration_fees.saturating_mul(MIN_FUND_FACTOR).saturating_sub(free);
-		info!("Missing funds to continue ... : {:?}", missing_funds);
+		let min_required_funds =
+			registration_fees.saturating_mul(REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS);
+		let missing_funds = min_required_funds.saturating_sub(free_balance);
 
 		if missing_funds > 0 {
-			info!("Enclave does not have enough funds on the parentchain to register.");
 			// If there are not enough funds, then the user can send the missing TEER to the enclave address and start again.
 			println!(
 				"Enclave account: {:}, missing funds {}",
 				accountid.to_ss58check(),
 				missing_funds
 			);
-			return Err(Error::ApplicationSetup)
+			return Err(Error::Custom(
+				"Enclave does not have enough funds on the parentchain to register.".into(),
+			))
 		}
 	}
 	Ok(())
@@ -708,17 +710,18 @@ fn ensure_account_has_funds(
 	accountid: &AccountId32,
 ) -> Result<(), Error> {
 	// check account balance
-	let free = api.get_free_balance(accountid)?;
-	info!("TEE's free balance = {:?}", free);
+	let free_balance = api.get_free_balance(accountid)?;
+	info!("TEE's free balance = {:?}", free_balance);
 
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("Existential deposit is = {:?}", existential_deposit);
-	let funding_amount = existential_deposit
-		.saturating_mul(MIN_FUND_INCREASE_FACTOR)
-		.saturating_sub(free);
 
-	if 0 < funding_amount {
-		bootstrap_funds_from_alice(api, accountid, funding_amount)?;
+	let min_required_funds =
+		existential_deposit.saturating_mul(EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS);
+	let missing_funds = min_required_funds.saturating_sub(free_balance);
+
+	if missing_funds > 0 {
+		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
 	}
 	Ok(())
 }
@@ -731,15 +734,12 @@ fn enclave_registration_fees(
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
 			Some(fee) => Ok(fee.inclusion_fee()),
-			None => {
-				println!("Inclusion fee for the registration of the enclave is None!");
-				Err(Error::ApplicationSetup)
-			},
+			None => Err(Error::Custom(
+				"Inclusion fee for the registration of the enclave is None!".into(),
+			)),
 		},
-		None => {
-			println!("Fee Details for the registration of the enclave is None !");
-			Err(Error::ApplicationSetup)
-		},
+		None =>
+			Err(Error::Custom("Fee Details for the registration of the enclave is None !".into())),
 	}
 }
 
@@ -776,8 +776,8 @@ fn bootstrap_funds_from_alice(
 	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
 
 	// Verify funds have arrived.
-	let free = api.get_free_balance(accountid);
-	info!("TEE's NEW free balance = {:?}", free);
+	let free_balance = api.get_free_balance(accountid);
+	info!("TEE's NEW free balance = {:?}", free_balance);
 
 	api.signer = signer_orig;
 	Ok(())
