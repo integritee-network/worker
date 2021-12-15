@@ -1,14 +1,18 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
+
 		http://www.apache.org/licenses/LICENSE-2.0
+
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	See the License for the specific language governing permissions and
 	limitations under the License.
+
 */
 
 use super::{db::SidechainDB, Error, Result};
@@ -97,6 +101,57 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		self.db.get(block_hash)
 	}
 
+	/// Get all blocks following (i.e. children of) a specified blocks
+	pub fn get_blocks_following(
+		&self,
+		block_hash: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		// Ensure we find the block in storage (otherwise we would return all blocks for a specific shard).
+		if self.get_block(block_hash)?.is_none() {
+			warn!("Could not find starting block in storage, returning empty vector");
+			return Ok(Vec::new())
+		}
+
+		// We get the latest block and then traverse the parents until we find our starting block.
+		let latest_block = match self.last_block_of_shard(shard_identifier) {
+			None =>
+				return Err(Error::LastBlockNotFound(
+					"Failed to find last block information".to_string(),
+				)),
+			Some(last_block_ref) => match self.get_block(&last_block_ref.hash)? {
+				None =>
+					return Err(Error::LastBlockNotFound(
+						"Failed to retrieve last block from storage".to_string(),
+					)),
+				Some(last_block) => last_block,
+			},
+		};
+
+		let mut current_block = latest_block;
+		let mut blocks_to_return = Vec::<SignedBlock>::new();
+		while &current_block.hash() != block_hash {
+			let parent_block_hash = current_block.block().parent_hash();
+
+			// Break in case we're at the genesis block
+			if parent_block_hash == BlockHash::default() {
+				break
+			}
+
+			blocks_to_return.push(current_block);
+
+			current_block = match self.get_block(&parent_block_hash)? {
+				None => return Err(Error::FailedToFindParentBlock),
+				Some(b) => b,
+			}
+		}
+
+		// Reverse because we iterate from newest to oldest, but result should be oldest first.
+		blocks_to_return.reverse();
+
+		Ok(blocks_to_return)
+	}
+
 	/// update sidechain storage
 	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedBlock>) -> Result<()> {
 		let mut batch = WriteBatch::default();
@@ -162,11 +217,11 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	}
 
 	/// prunes all shards except for the newest blocks (according to blocknumber)
-	pub fn prune_shards(&mut self, blocks_to_keep: BlockNumber) {
+	pub fn prune_shards(&mut self, number_of_blocks_to_keep: BlockNumber) {
 		for shard in self.shards().clone() {
 			// get last block:
 			if let Some(last_block) = self.last_block_of_shard(&shard) {
-				let threshold_block = last_block.number - blocks_to_keep;
+				let threshold_block = last_block.number - number_of_blocks_to_keep;
 				if let Err(e) = self.prune_shard_from_block_number(&shard, threshold_block) {
 					error!("Could not purge shard {:?} due to {:?}", shard, e);
 				}
@@ -310,9 +365,10 @@ mod test {
 	use super::*;
 	use itp_types::ShardIdentifier;
 	use its_primitives::{
-		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
-		types::{Block, SignedBlock},
+		traits::{Block as BlockT, SignedBlock as SignedBlockT},
+		types::SignedBlock,
 	};
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use rocksdb::{Options, DB};
 	use sp_core::{crypto::Pair, ed25519, H256};
 	use std::{
@@ -1194,23 +1250,13 @@ mod test {
 	}
 
 	fn create_signed_block(block_number: u64, shard: ShardIdentifier) -> SignedBlock {
-		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author = signer_pair.public();
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-
-		let block = Block::new(
-			author,
-			block_number,
-			parent_hash,
-			layer_one_head,
-			shard,
-			signed_top_hashes,
-			encrypted_payload,
-			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
-		);
-		block.sign_block(&signer_pair)
+		SidechainBlockBuilder::default()
+			.with_signer(ed25519::Pair::from_string("//Alice", None).unwrap())
+			.with_parent_hash(H256::random())
+			.with_parentchain_block_hash(H256::random())
+			.with_timestamp(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64)
+			.with_shard(shard)
+			.with_number(block_number)
+			.build_signed()
 	}
 }

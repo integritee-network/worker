@@ -2392,6 +2392,7 @@ dependencies = [
  "itp-enclave-api",
  "itp-types",
  "its-primitives",
+ "its-storage",
  "its-test",
  "jsonrpsee",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2888,6 +2889,7 @@ version = "0.8.0"
 dependencies = [
  "itp-types",
  "its-primitives",
+ "its-test",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mockall",
  "parity-scale-codec",
