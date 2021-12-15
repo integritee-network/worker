@@ -258,7 +258,7 @@ where
 		block_import_trigger,
 		proposer_environment,
 	)
-	.with_claim_strategy(SlotClaimStrategy::Always)
+	.with_claim_strategy(SlotClaimStrategy::RoundRobin)
 	.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
