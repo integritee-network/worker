@@ -5,7 +5,7 @@
 - integritee-node built with `cargo build --release`
 
 ## Steps
-Create your own config file, as in the example of `simple-config.json`. Be mindful of the ports in case you're running the script on a server multiple people are working on.
+Adapt or create your own config file, as in the example of `simple-config.json`. Be mindful of the ports in case you're running the script on a server multiple people are working on.
 
 ### Launch worker and node in terminal one
 You can launch the workers and the node with:
@@ -13,9 +13,7 @@ You can launch the workers and the node with:
 cd <worker directory>
 ./local-setup/launch.py ./local-setup/simple-config.json
 ```
-wait a little until all workers have been launched
-
-You can stop the worker & node simply by pressing `Ctrl + c`.
+wait a little until all workers have been launched. You can stop the worker and node simply by pressing `Ctrl + c`.
 
 ### Open a second terminal to show logs
 ```bash
