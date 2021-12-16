@@ -94,6 +94,7 @@ impl GetExchangeRate for CoinGeckoClient {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use core::assert_matches::assert_matches;
 
 	#[test]
 	fn get_exchange_rate_for_undefined_coins_fails() {
