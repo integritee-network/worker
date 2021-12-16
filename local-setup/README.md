@@ -2,7 +2,8 @@
 
 ## Prerequisite
 - worker built with `make`
-- integritee-node built with `cargo build --release`
+- integritee-node built with `cargo build --release --features skip-ias-check`
+(in case you have a valid intel key, you can omit the `--features skip-ias-check`)
 
 ## Steps
 Adapt or create your own config file, as in the example of `simple-config.json`. Be mindful of the ports in case you're running the script on a server multiple people are working on.
