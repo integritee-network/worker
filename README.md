@@ -7,6 +7,8 @@ This is part of [Integritee](https://integritee.network)
 ## Build and Run
 Please see our [Integritee Book](https://book.integritee.network/howto_worker.html) to learn how to build and run this.
 
+To start multiple worker and a node with one simple command: Check out [this README](https://github.com/integritee-network/worker/blob/master/local-setup/README.md).
+
 ## Tests
 ### environment
 Unit tests within the enclave can't be run by `cargo test`. All unit and integration tests can be run by the worker binary
