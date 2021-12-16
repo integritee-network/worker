@@ -1,7 +1,7 @@
 #  How to use the local-setup
 
 ## Prerequisite
-- worker built with `make`
+- worker built with `make SGX_MODE=SW`
 - integritee-node built with `cargo build --release --features skip-ias-check`
 
 In case you have
