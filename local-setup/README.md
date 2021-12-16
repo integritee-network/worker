@@ -11,7 +11,6 @@ Adapt or create your own config file, as in the example of `simple-config.json`.
 ### Launch worker and node in terminal one
 You can launch the workers and the node with:
 ```bash
-cd <worker directory>
 ./local-setup/launch.py ./local-setup/simple-config.json
 ```
 wait a little until all workers have been launched. You can stop the worker and node simply by pressing `Ctrl + c`.
