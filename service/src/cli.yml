@@ -57,6 +57,10 @@ subcommands:
                 required: false
                 index: 1
                 help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
+            - dev:
+                long: dev
+                short: d
+                help: Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
     - request-keys:
         about: join a shard by requesting key provisioning from another worker
         args:
