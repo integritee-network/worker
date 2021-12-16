@@ -1,13 +1,13 @@
 #  How to use the local-setup
 
 ## Prerequisite
-- worker built with `make SGX_MODE=SW`
+- worker built with ` SGX_MODE=SW make`
 - integritee-node built with `cargo build --release --features skip-ias-check`
 
 In case you have
 - a sgx hardware and compile the worker with `SGX_MODE=HW` (default mode)
 - a valid intel IAS key (development key is fine)
-you can omit the `--features skip-ias-check` when building the node, but you must not use the subcommand flag `--skip-ra` in the config.json for the worker startup.
+you can omit the `--features skip-ias-check` when building the node, but you must not use the subcommand flag `--skip-ra` in the json file (sse [`simple-config.json`](simple-config.json)) you're using to start the worker.
 
 ## Steps
 Adapt or create your own config file, as in the example of `simple-config.json`. Be mindful of the ports in case you're running the script on a server multiple people are working on.
