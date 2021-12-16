@@ -17,11 +17,7 @@ wait a little until all workers have been launched. You can stop the worker and 
 
 ### Open a second terminal to show logs
 ```bash
-cd <worker directory>/local-setup
-# If you work with docker: exec into the running container:
-docker exec -it [container-id] bash
-cd work
-# run the tmux logger script with:
+cd local-setup
 ./tmux_logger.sh
 ```
 
