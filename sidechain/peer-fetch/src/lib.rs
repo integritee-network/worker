@@ -15,9 +15,28 @@
 
 */
 
-pub mod direct_client;
+#![cfg_attr(not(feature = "std"), no_std)]
+
 pub mod error;
-#[cfg(test)]
-pub mod mock;
-pub mod url_utils;
-pub mod ws_client;
+pub mod peer_fetch_client;
+pub mod peer_fetch_server;
+
+use crate::error::Result;
+use async_trait::async_trait;
+use its_primitives::{
+	traits::SignedBlock,
+	types::{BlockHash, ShardIdentifier},
+};
+use std::vec::Vec;
+
+/// Trait to fetch block from peer validateers.
+#[async_trait]
+pub trait FetchBlocksFromPeer {
+	type SignedBlockType: SignedBlock;
+
+	async fn fetch_blocks_from_peer(
+		&self,
+		last_known_block_hash: BlockHash,
+		shard_identifier: ShardIdentifier,
+	) -> Result<Vec<Self::SignedBlockType>>;
+}

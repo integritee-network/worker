@@ -18,6 +18,7 @@
 use super::*;
 use crate::mock::MockSidechainBlockFetcher;
 use itp_types::RpcResponse;
+use its_primitives::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use its_test::sidechain_block_builder::SidechainBlockBuilder;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
@@ -44,7 +45,7 @@ async fn test_client_calls() {
 	let client = WsClientBuilder::default().build(&url).await.unwrap();
 	let response: Vec<u8> = client
 		.request(
-			"sidechain_importBlock",
+			RPC_METHOD_NAME_IMPORT_BLOCKS,
 			vec![to_json_value(vec![SidechainBlockBuilder::default().build_signed()]).unwrap()]
 				.into(),
 		)

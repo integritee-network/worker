@@ -17,8 +17,10 @@
 
 use itp_enclave_api::direct_request::DirectRequest;
 use itp_types::RpcRequest;
-use its_primitives::types::{
-	BlockHash, ShardIdentifier, SignedBlock, SignedBlock as SignedSidechainBlock,
+use its_peer_fetch::peer_fetch_server::PeerFetchServerModuleBuilder;
+use its_primitives::{
+	constants::RPC_METHOD_NAME_IMPORT_BLOCKS,
+	types::{SignedBlock, SignedBlock as SignedSidechainBlock},
 };
 use its_storage::interface::FetchBlocks;
 use jsonrpsee::{
@@ -48,31 +50,26 @@ where
 
 	// FIXME: import block should be moved to trusted side.
 	let mut import_sidechain_block_module = RpcModule::new(enclave);
-	import_sidechain_block_module.register_method("sidechain_importBlock", |params, enclave| {
-		debug!("sidechain_importBlock params: {:?}", params);
+	import_sidechain_block_module.register_method(
+		RPC_METHOD_NAME_IMPORT_BLOCKS,
+		|params, enclave| {
+			debug!("{} params: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, params);
 
-		let enclave_req = RpcRequest::compose_jsonrpc_call(
-			"sidechain_importBlock".into(),
-			params.one::<Vec<SignedBlock>>()?.encode(),
-		);
+			let enclave_req = RpcRequest::compose_jsonrpc_call(
+				RPC_METHOD_NAME_IMPORT_BLOCKS.into(),
+				params.one::<Vec<SignedBlock>>()?.encode(),
+			);
 
-		enclave
-			.rpc(enclave_req.as_bytes().to_vec())
-			.map_err(|e| CallError::Failed(e.into()))
-	})?;
-	server.register_module(import_sidechain_block_module).unwrap();
-
-	let mut fetch_sidechain_blocks_module = RpcModule::new(sidechain_block_fetcher);
-	fetch_sidechain_blocks_module.register_method(
-		"sidechain_fetchBlocksFromPeer",
-		|params, sidechain_block_fetcher| {
-			debug!("sidechain_fetchBlocksFromPeer: {:?}", params);
-			let (block_hash, shard_identifier) = params.one::<(BlockHash, ShardIdentifier)>()?;
-			sidechain_block_fetcher
-				.fetch_all_blocks_following(&block_hash, &shard_identifier)
+			enclave
+				.rpc(enclave_req.as_bytes().to_vec())
 				.map_err(|e| CallError::Failed(e.into()))
 		},
 	)?;
+	server.register_module(import_sidechain_block_module).unwrap();
+
+	let fetch_sidechain_blocks_module = PeerFetchServerModuleBuilder::new(sidechain_block_fetcher)
+		.build()
+		.map_err(|_| CallError::InvalidParams)?; // TODO this is just a shortcut, because the underlying error types do not have the necessary trait bounds.
 	server.register_module(fetch_sidechain_blocks_module).unwrap();
 
 	let socket_addr = server.local_addr()?;

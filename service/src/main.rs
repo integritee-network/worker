@@ -38,6 +38,7 @@ use enclave::{
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
 use futures::executor::block_on;
+use itc_rpc_client::{direct_client::DirectClient, url_utils::worker_url_into_async_rpc_url};
 use itp_api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,

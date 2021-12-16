@@ -1,0 +1,31 @@
+[package]
+name = "its-peer-fetch"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+# local
+itc-rpc-client = { path = "../../core/rpc-client" }
+itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions" }
+its-primitives = { path = "../primitives" }
+its-storage = { path = "../storage" }
+# crates.io
+async-trait = { version = "0.1.50" }
+jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
+log = { version = "0.4.14" }
+serde = "1.0"
+serde_json = "1.0"
+thiserror = { version = "1.0" }
+tokio = { version = "1.6.1", features = ["full"] }
+
+[dev-dependencies]
+# crates.io
+anyhow = "1.0.40"
+# local
+itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions", features = ["mocks"] }
+
+[features]
+default = ["std"]
+std = []

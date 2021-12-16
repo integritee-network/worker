@@ -1,19 +1,41 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+use crate::{config::Config, error::Error};
 ///! Integritee worker. Inspiration for this design came from parity's substrate Client.
 ///
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
 use async_trait::async_trait;
-use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
+use itc_rpc_client::{
+	direct_client::{DirectApi, DirectClient as DirectWorkerApi},
+	url_utils::worker_url_into_async_rpc_url,
+};
 use itp_api_client_extensions::PalletTeerexApi;
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use itp_types::Enclave as EnclaveMetadata;
+use its_primitives::{
+	constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock as SignedSidechainBlock,
+};
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::*;
-
-use crate::{config::Config, error::Error};
 use std::sync::Arc;
 
 pub type WorkerResult<T> = Result<T, Error>;
@@ -68,9 +90,10 @@ where
 			// FIXME: Websocket connection to a worker should stay, once etablished.
 			let client = WsClientBuilder::default().build(url).await?;
 			let blocks = blocks_json.clone();
-			if let Err(e) = client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()).await
+			if let Err(e) =
+				client.request::<Vec<u8>>(RPC_METHOD_NAME_IMPORT_BLOCKS, blocks.into()).await
 			{
-				error!("sidechain_importBlock failed: {:?}", e);
+				error!("{} failed: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, e);
 			}
 		}
 		Ok(())
@@ -109,14 +132,7 @@ where
 }
 #[cfg(test)]
 mod tests {
-	use frame_support::assert_ok;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
-	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
-	use log::debug;
-	use std::net::SocketAddr;
-	use tokio::net::ToSocketAddrs;
-
+	use super::*;
 	use crate::{
 		tests::{
 			commons::local_worker_config,
@@ -124,7 +140,13 @@ mod tests {
 		},
 		worker::{AsyncBlockGossiper, Worker},
 	};
-	use std::sync::Arc;
+	use frame_support::assert_ok;
+	use its_primitives::types::SignedBlock as SignedSidechainBlock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
+	use log::debug;
+	use std::{net::SocketAddr, sync::Arc};
+	use tokio::net::ToSocketAddrs;
 
 	fn init() {
 		let _ = env_logger::builder().is_test(true).try_init();
@@ -134,8 +156,8 @@ mod tests {
 		let mut server = WsServerBuilder::default().build(addr).await?;
 		let mut module = RpcModule::new(());
 
-		module.register_method("sidechain_importBlock", |params, _| {
-			debug!("sidechain_importBlock params: {:?}", params);
+		module.register_method(RPC_METHOD_NAME_IMPORT_BLOCKS, |params, _| {
+			debug!("{} params: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, params);
 			let _blocks: Vec<SignedSidechainBlock> = params.one()?;
 			Ok("ok".as_bytes().to_vec())
 		})?;

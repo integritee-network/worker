@@ -16,6 +16,7 @@ parity-scale-codec = "2.1.3"
 # local
 itp-enclave-api = { path = "../../core-primitives/enclave-api" }
 itp-types = { path = "../../core-primitives/types" }
+its-peer-fetch = { path = "../../sidechain/peer-fetch" }
 its-primitives = { path = "../../sidechain/primitives" }
 its-storage = { path = "../../sidechain/storage" }
 
