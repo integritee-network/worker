@@ -90,13 +90,17 @@ where
 #[cfg(test)]
 mod tests {
 
-	// use super::*;
-	// use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
-	// use log::*;
-	// use std::{net::SocketAddr, sync::Arc};
-	// use tokio::net::ToSocketAddrs;
-	//
-	// const W1_URL: &str = "127.0.0.1:2233";
+	use super::*;
+	use crate::peer_fetch_server::PeerFetchServerModuleBuilder;
+	use itp_api_client_extensions::pallet_teerex_api_mock::PalletTeerexApiMock;
+	use itp_test::builders::enclave_gen_builder::EnclaveGenBuilder;
+	use its_primitives::types::SignedBlock;
+	use its_storage::fetch_blocks_mock::FetchBlocksMock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use jsonrpsee::ws_server::WsServerBuilder;
+	use std::{net::SocketAddr, sync::Arc};
+
+	const W1_URL: &str = "127.0.0.1:2233";
 
 	// fn init() {
 	// 	let _ = env_logger::builder().is_test(true).try_init();
@@ -104,34 +108,39 @@ mod tests {
 
 	// TODO write a test where we setup a server using the builder from `peer_fetch_server`
 
-	// async fn run_server(addr: impl ToSocketAddrs) -> anyhow::Result<SocketAddr> {
-	// 	let mut server = WsServerBuilder::default().build(addr).await?;
-	// 	let mut module = RpcModule::new(());
-	//
-	// 	module.register_method(RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER, |params, _| {
-	// 		debug!("{} params: {:?}", RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER, params);
-	// 		let _blocks: Vec<SignedSidechainBlock> = params.one()?;
-	// 		Ok("ok".as_bytes().to_vec())
-	// 	})?;
-	//
-	// 	server.register_module(module).unwrap();
-	//
-	// 	let socket_addr = server.local_addr()?;
-	// 	tokio::spawn(async move { server.start().await });
-	// 	Ok(socket_addr)
-	// }
-	//
-	// #[tokio::test]
-	// async fn gossip_blocks_works() {
-	// 	init();
-	// 	run_server(worker_url_into_async_rpc_url(W1_URL).unwrap()).await.unwrap();
-	// 	run_server(worker_url_into_async_rpc_url(W2_URL).unwrap()).await.unwrap();
-	//
-	// 	let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, Arc::new(()), ());
-	//
-	// 	let resp = worker
-	// 		.gossip_blocks(vec![SidechainBlockBuilder::default().build_signed()])
-	// 		.await;
-	// 	assert_ok!(resp);
-	// }
+	async fn run_server(blocks: Vec<SignedBlock>) -> anyhow::Result<SocketAddr> {
+		let mut server = WsServerBuilder::default()
+			.build(worker_url_into_async_rpc_url(W1_URL).unwrap())
+			.await?;
+
+		let storage_block_fetcher = Arc::new(FetchBlocksMock::default().with_blocks(blocks));
+		let module = PeerFetchServerModuleBuilder::new(storage_block_fetcher).build().unwrap();
+
+		server.register_module(module).unwrap();
+
+		let socket_addr = server.local_addr()?;
+		tokio::spawn(async move { server.start().await });
+		Ok(socket_addr)
+	}
+
+	#[tokio::test]
+	async fn fetch_blocks_from_peer() {
+		let blocks_to_fetch = vec![
+			SidechainBlockBuilder::random().build_signed(),
+			SidechainBlockBuilder::random().build_signed(),
+		];
+		run_server(blocks_to_fetch.clone()).await.unwrap();
+
+		let node_api_mock = PalletTeerexApiMock::default()
+			.with_enclaves(vec![EnclaveGenBuilder::default().build()]);
+
+		let peer_fetcher_client = PeerFetcher::<SignedBlock, _>::new(node_api_mock);
+
+		let blocks_fetched = peer_fetcher_client
+			.fetch_blocks_from_peer(BlockHash::default(), ShardIdentifier::default())
+			.await
+			.unwrap();
+
+		assert_eq!(blocks_to_fetch, blocks_fetched);
+	}
 }

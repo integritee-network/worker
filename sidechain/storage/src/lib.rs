@@ -35,6 +35,9 @@ mod storage_tests_get_blocks_following;
 #[cfg(test)]
 mod test_db_fixture;
 
+#[cfg(feature = "mocks")]
+pub mod fetch_blocks_mock;
+
 pub use error::{Error, Result};
 pub use interface::{BlockPruner, BlockStorage, SidechainStorageLock};
 

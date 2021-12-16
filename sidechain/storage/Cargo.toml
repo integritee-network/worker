@@ -21,3 +21,6 @@ sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrat
 mockall = { version = "0.10.1" }
 itp-types = { path = "../../core-primitives/types" }
 its-test = { path = "../test" }
+
+[features]
+mocks = []

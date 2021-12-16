@@ -25,6 +25,9 @@ tokio = { version = "1.6.1", features = ["full"] }
 anyhow = "1.0.40"
 # local
 itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions", features = ["mocks"] }
+itp-test = { path = "../../core-primitives/test" }
+its-storage = { path = "../storage", features = ["mocks"] }
+its-test = { path = "../test" }
 
 [features]
 default = ["std"]
