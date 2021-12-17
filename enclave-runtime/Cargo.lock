@@ -513,6 +513,7 @@ dependencies = [
  "itp-extrinsics-factory",
  "itp-nonce-cache",
  "itp-ocall-api",
+ "itp-primitives-cache",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-io",
@@ -1379,6 +1380,16 @@ dependencies = [
  "sgx_types",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "itp-primitives-cache"
+version = "0.8.0"
+dependencies = [
+ "lazy_static",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "sgx_tstd",
+ "thiserror 1.0.9",
 ]
 
 [[package]]

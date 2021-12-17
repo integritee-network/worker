@@ -17,6 +17,7 @@
 
 use codec::Encode;
 use core::result::Result;
+use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
 use its_sidechain::{
@@ -71,6 +72,21 @@ where
 		};
 		let json_value =
 			RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.encode()))
+	});
+
+	// author_getShieldingKey
+	let mu_ra_url_name: &str = "author_getMuRaUrl";
+	io.add_sync_method(mu_ra_url_name, move |_: Params| {
+		let url = match GLOBAL_PRIMITIVES_CACHE.get_mu_ra_url() {
+			Ok(url) => url,
+			Err(status) => {
+				let error_msg: String = format!("Could not get mu ra url due to: {}", status);
+				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+			},
+		};
+
+		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.encode()))
 	});
 

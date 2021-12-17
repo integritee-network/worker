@@ -127,7 +127,7 @@ fn main() {
 			.unwrap(),
 	);
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
-	let enclave = Arc::new(enclave_init().unwrap());
+	let enclave = Arc::new(enclave_init(&config).unwrap());
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
