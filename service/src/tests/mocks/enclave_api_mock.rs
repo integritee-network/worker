@@ -26,7 +26,7 @@ use sp_runtime::traits::Header;
 pub struct EnclaveBaseMock;
 
 impl EnclaveBase for EnclaveBaseMock {
-	fn init(&self) -> EnclaveResult<()> {
+	fn init(&self, _mu_ra_url: &str) -> EnclaveResult<()> {
 		Ok(())
 	}
 
