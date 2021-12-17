@@ -16,9 +16,12 @@
 
 //! Handles all state syncing mission of a worker before start up.
 use crate::enclave::tls_ra::enclave_request_key_provisioning;
+use codec::{Decode, Error as CodecError};
+use futures::executor;
 use itp_api_client_extensions::PalletTeerexApi;
 use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
 use itp_types::ShardIdentifier;
+use jsonrpsee::{types::traits::Client, ws_client::WsClientBuilder};
 use log::*;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
@@ -28,8 +31,14 @@ use substrate_api_client::ApiClientError;
 enum Error {
 	#[error("ApiClient Error: {0}")]
 	ApiClient(#[from] ApiClientError),
+	#[error("{0}")]
+	Codec(#[from] CodecError),
 	#[error("Could not fetch any data.")]
 	EmptyValue,
+	#[error("{0}")]
+	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
+	#[error("{0}")]
+	Serialization(#[from] serde_json::Error),
 }
 
 type StateSyncResult<T> = Result<T, Error>;
@@ -48,7 +57,9 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 	#[cfg(not(feature = "production"))]
 	println!("*** Starting enclave in development mode");
 
-	let provider_url = get_author_url_of_last_finalized_sidechain_block(node_api, shard).unwrap();
+	let provider_url =
+		executor::block_on(get_author_url_of_last_finalized_sidechain_block(node_api, shard))
+			.unwrap();
 	println!("Requesting key provisioning from worker at {}", &provider_url);
 
 	enclave_request_key_provisioning(
@@ -67,10 +78,14 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 /// Note: The sidechainblock author will only change whenever a new parentchain block is
 /// produced. And even then, it might be the same as the last block. So if several workers
 /// are started in a timely manner, they all will all get the same url.
-fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi>(
+async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
 ) -> StateSyncResult<String> {
 	let enclave = node_api.worker_for_shard(shard)?.ok_or(Error::EmptyValue)?;
-	Ok(enclave.url)
+	let client = WsClientBuilder::default().build(&enclave.url).await?;
+	let mu_ra_url_encoded =
+		client.request::<Vec<u8>>("author_getMuRaUrl", Vec::new().into()).await?;
+	let mu_ra_url = String::decode(&mut mu_ra_url_encoded.as_slice())?;
+	Ok(mu_ra_url)
 }

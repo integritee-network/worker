@@ -4,7 +4,12 @@ use sgx_types::{c_int, sgx_enclave_id_t, sgx_quote_sign_type_t, sgx_status_t};
 
 extern "C" {
 
-	pub fn init(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+	pub fn init(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		mu_ra_addr: *const u8,
+		mu_ra_addr_size: u32,
+	) -> sgx_status_t;
 
 	pub fn get_state(
 		eid: sgx_enclave_id_t,

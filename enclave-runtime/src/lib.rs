@@ -65,6 +65,7 @@ use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_primitives_cache::{MutatePrimitives, Primitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_settings::node::{
 	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE,
 };
@@ -121,14 +122,13 @@ pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
 #[no_mangle]
-pub unsafe extern "C" fn init() -> sgx_status_t {
-	// initialize the logging environment in the enclave
+pub unsafe extern "C" fn init(mu_ra_addr: *const u8, mu_ra_addr_size: u32) -> sgx_status_t {
+	// Initialize the logging environment in the enclave.
 	env_logger::init();
 
 	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
 		return e.into()
 	}
-
 	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
@@ -139,23 +139,43 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 		return e.into()
 	}
 
-	// create the aes key that is used for state encryption such that a key is always present in tests.
-	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker
+	// Create the aes key that is used for state encryption such that a key is always present in tests.
+	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker.
 	if let Err(e) = aes::create_sealed_if_absent().map_err(Error::Crypto) {
 		return e.into()
 	}
 
 	let state_handler = GlobalFileStateHandler;
 
-	// for debug purposes, list shards. no problem to panic if fails
+	// For debug purposes, list shards. no problem to panic if fails.
 	let shards = state_handler.list_shards().unwrap();
 	debug!("found the following {} shards on disk:", shards.len());
 	for s in shards {
 		debug!("{}", s.encode().to_base58())
 	}
-	//shards.into_iter().map(|s| debug!("{}", s.encode().to_base58()));
+
+	let mu_ra_url =
+		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
+			.map_err(Error::Codec)
+		{
+			Ok(addr) => addr,
+			Err(e) => return e.into(),
+		};
+
+	if let Err(e) = set_primitives(&mu_ra_url) {
+		return e.into()
+	}
 
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn set_primitives(mu_ra_url: &str) -> Result<()> {
+	let primitives = Primitives::new(mu_ra_url);
+	let mut rw_lock = GLOBAL_PRIMITIVES_CACHE.load_for_mutation()?;
+
+	*rw_lock = primitives;
+
+	Ok(())
 }
 
 #[no_mangle]
