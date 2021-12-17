@@ -7,6 +7,7 @@
 In case you have
 - a sgx hardware and compile the worker with `SGX_MODE=HW` (default mode)
 - a valid intel IAS key (development key is fine)
+
 you can omit the `--features skip-ias-check` when building the node, but you must not use the subcommand flag `--skip-ra` in the json file (see [`simple-config.json`](simple-config.json)) you're using to start the worker.
 
 ## Steps
