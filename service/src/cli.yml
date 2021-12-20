@@ -26,7 +26,7 @@ args:
         default_value: "9944"
     - ws-external:
         long: ws-external
-        help: let worker api listen to external requests too      
+        help: let worker api listen to external requests too
     - mu-ra-port:
         short: r
         long: mu-ra-port
@@ -39,7 +39,7 @@ args:
         help: Set the websocket port where the worker rpc direct invocations port listens
         takes_value: true
         default_value: "2000"
-    
+
 subcommands:
     - run:
         about: Start the integritee-service
@@ -64,10 +64,6 @@ subcommands:
     - request-keys:
         about: join a shard by requesting key provisioning from another worker
         args:
-            - provider:
-                required: true
-                index: 1
-                help: URL and port of a peer worker providing provisioning (i.e. 'my.server.io:3443')
             - shard:
                 long: shard
                 short: s

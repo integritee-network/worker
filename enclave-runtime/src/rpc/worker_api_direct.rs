@@ -75,7 +75,7 @@ where
 		Ok(json!(json_value.encode()))
 	});
 
-	// author_getShieldingKey
+	// author_getMuRaUrl
 	let mu_ra_url_name: &str = "author_getMuRaUrl";
 	io.add_sync_method(mu_ra_url_name, move |_: Params| {
 		let url = match GLOBAL_PRIMITIVES_CACHE.get_mu_ra_url() {
