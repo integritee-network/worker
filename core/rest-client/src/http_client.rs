@@ -439,6 +439,9 @@ mod tests {
 		let base_url = Url::parse("https://self-signed.badssl.com").unwrap();
 		let result = get_for_test_certificates(base_url);
 		assert_matches!(result, Err(Error::HttpReqError(_)));
+		let msg = format!("error {:?}", result.err());
+		println!("{}", msg);
+		assert!(msg.contains("UnknownIssuer"));
 	}
 
 	#[test]
