@@ -2375,6 +2375,7 @@ dependencies = [
  "serde_derive 1.0.130",
  "serde_json 1.0.72",
  "sgx_crypto_helper",
+ "thiserror 1.0.30",
  "url 2.2.2",
  "ws",
 ]

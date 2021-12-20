@@ -36,6 +36,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+// FIXME: deprecated server. Should be migrated to direct-rpc-server.
 pub async fn run_server<Enclave>(
 	addr: impl ToSocketAddrs,
 	enclave: Arc<Enclave>,
