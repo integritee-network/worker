@@ -2526,6 +2526,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-primitives-cache"
+version = "0.8.0"
+dependencies = [
+ "lazy_static",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_tstd",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "itp-settings"
 version = "0.8.0"
 
