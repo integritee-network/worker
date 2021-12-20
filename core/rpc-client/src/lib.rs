@@ -15,3 +15,5 @@
 
 */
 pub mod direct_client;
+pub mod error;
+pub mod ws_client;

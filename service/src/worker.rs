@@ -92,7 +92,7 @@ where
 
 /// Temporary method that transforms the workers rpc port of the direct api defined in rpc/direct_client
 /// to the new version in rpc/server. Remove this, when all the methods have been migrated to the new one
-/// in rpc/server.
+/// in core/direct-rpc-server.
 pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
 	// [Option("ws(s)"), //ip, port]
 	let mut url_vec: Vec<&str> = url.split(':').collect();

@@ -457,10 +457,10 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
 
 	let direct_api = get_worker_api_direct(matches);
 	let (sender, receiver) = channel();
-	match direct_api.watch(jsonrpc_call, sender) {
+	thread::spawn(move || match direct_api.watch(&jsonrpc_call, &sender) {
 		Ok(_) => {},
-		Err(_) => panic!("Error when sending direct invocation call"),
-	}
+		Err(e) => panic!("Error when sending direct invocation call: {:?}", e),
+	});
 
 	loop {
 		match receiver.recv() {
@@ -494,7 +494,7 @@ fn encode_encrypt<E: Encode>(
 	let worker_api_direct = get_worker_api_direct(matches);
 	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
 		Ok(key) => key,
-		Err(err_msg) => return Err(err_msg),
+		Err(err_msg) => return Err(err_msg.to_string()),
 	};
 
 	let encoded = to_encrypt.encode();
@@ -606,10 +606,10 @@ fn send_direct_request(
 
 	debug!("setup sender and receiver");
 	let (sender, receiver) = channel();
-	match direct_api.watch(jsonrpc_call, sender) {
+	thread::spawn(move || match direct_api.watch(&jsonrpc_call, &sender) {
 		Ok(_) => {},
-		Err(_) => panic!("Error when sending direct invocation call"),
-	}
+		Err(e) => panic!("Error when sending direct invocation call: {:?}", e),
+	});
 
 	debug!("waiting for rpc response");
 	loop {
