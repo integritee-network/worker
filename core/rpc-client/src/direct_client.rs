@@ -33,6 +33,7 @@ pub struct DirectClient {
 pub trait DirectApi {
 	fn watch(&self, request: &str, sender: &MpscSender<String>) -> Result<()>;
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey>;
+	fn get_mu_ra_url(&self) -> Result<String>;
 }
 
 impl DirectClient {
@@ -58,67 +59,39 @@ impl DirectApi for DirectClient {
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
-		// compose jsonrpc call
-		let method = "author_getShieldingKey".to_owned();
-		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(method, vec![]);
+		let jsonrpc_call: String =
+			RpcRequest::compose_jsonrpc_call("author_getShieldingKey".to_string(), vec![]);
 
+		// Send json rpc call to ws server.
 		let response_str = Self::get(self, &jsonrpc_call)?;
 
-		// decode result
-		let response: RpcResponse = serde_json::from_str(&response_str)?;
-		let return_value = RpcReturnValue::decode(&mut response.result.as_slice())?;
-		let shielding_pubkey_string: String = match return_value.status {
-			DirectRequestStatus::Ok => String::decode(&mut return_value.value.as_slice())?,
-			_ => {
-				let error_message = String::decode(&mut return_value.value.as_slice())?;
-				return Err(Error::Status(error_message))
-			},
-		};
+		let shielding_pubkey_string = decode_from_rpc_response(&response_str)?;
 		let shielding_pubkey: Rsa3072PubKey = serde_json::from_str(&shielding_pubkey_string)?;
 
 		info!("[+] Got RSA public key of enclave");
 		Ok(shielding_pubkey)
 	}
 
-	/* fn get_mu_ra_url(&self) -> Result<String> {
-		// compose jsonrpc call
-		let method = "author_getMuRaUrl".to_owned();
-		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(method, vec![]);
+	fn get_mu_ra_url(&self) -> Result<String> {
+		let jsonrpc_call: String =
+			RpcRequest::compose_jsonrpc_call("author_getMuRaUrl".to_string(), vec![]);
 
-		let response_str = match Self::get(self, jsonrpc_call) {
-			Ok(resp) => resp,
-			Err(err_msg) =>
-				return Err(format! {"Could not retrieve shielding pubkey: {:?}", err_msg}),
-		};
+		// Send json rpc call to ws server.
+		let response_str = Self::get(self, &jsonrpc_call)?;
 
-		// decode result
-		let response: RpcResponse = match serde_json::from_str(&response_str) {
-			Ok(resp) => resp,
-			Err(err_msg) =>
-				return Err(format! {"Could not retrieve shielding pubkey: {:?}", err_msg}),
-		};
-		let return_value = match RpcReturnValue::decode(&mut response.result.as_slice()) {
-			Ok(val) => val,
-			Err(err_msg) =>
-				return Err(format! {"Could not retrieve shielding pubkey: {:?}", err_msg}),
-		};
-		let shielding_pubkey_string: String = match return_value.status {
-			DirectRequestStatus::Ok => match String::decode(&mut return_value.value.as_slice()) {
-				Ok(key) => key,
-				Err(err) => return Err(format! {"Could not retrieve shielding pubkey: {:?}", err}),
-			},
-			_ => match String::decode(&mut return_value.value.as_slice()) {
-				Ok(err_msg) =>
-					return Err(format! {"Could not retrieve shielding pubkey: {}", err_msg}),
-				Err(err) => return Err(format! {"Could not retrieve shielding pubkey: {:?}", err}),
-			},
-		};
-		let shielding_pubkey: Rsa3072PubKey = match serde_json::from_str(&shielding_pubkey_string) {
-			Ok(key) => key,
-			Err(err) => return Err(format! {"Could not retrieve shielding pubkey: {:?}", err}),
-		};
+		let mu_ra_url: String = decode_from_rpc_response(&response_str)?;
 
-		info!("[+] Got RSA public key of enclave");
-		Ok(shielding_pubkey)
-	} */
+		info!("[+] Got mutual remote attestation url of enclave: {}", mu_ra_url);
+		Ok(mu_ra_url)
+	}
+}
+
+fn decode_from_rpc_response(json_rpc_response: &str) -> Result<String> {
+	let rpc_response: RpcResponse = serde_json::from_str(json_rpc_response)?;
+	let rpc_return_value = RpcReturnValue::decode(&mut rpc_response.result.as_slice())?;
+	let response_message = String::decode(&mut rpc_return_value.value.as_slice())?;
+	match rpc_return_value.status {
+		DirectRequestStatus::Ok => Ok(response_message),
+		_ => Err(Error::Status(response_message)),
+	}
 }
