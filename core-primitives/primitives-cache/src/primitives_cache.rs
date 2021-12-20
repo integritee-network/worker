@@ -74,9 +74,10 @@ pub mod tests {
 	pub fn set_primitives_works() {
 		let cache = PrimitivesCache::default();
 		let mut lock = cache.load_for_mutation().unwrap();
+		let mu_ra_url = "hello";
 
 		let primitives = Primitives::new(mu_ra_url);
-		*lock = &primitives;
+		*lock = primitives.clone();
 		std::mem::drop(lock);
 		assert_eq!(primitives, cache.get_primitives().unwrap());
 	}
@@ -94,12 +95,13 @@ pub mod tests {
 		// the new primitves are written. We can verify this, by trying to read the primitives variable
 		// that will be inserted further down below.
 		let new_thread_cache = cache.clone();
+		let primitives_one = primitives.clone();
 		let join_handle = thread::spawn(move || {
 			let read = new_thread_cache.get_primitives().unwrap();
-			assert_eq!(primitives, read);
+			assert_eq!(primitives_one, read);
 		});
 
-		*write_lock = &primitives;
+		*write_lock = primitives;
 		std::mem::drop(write_lock);
 
 		join_handle.join().unwrap();
