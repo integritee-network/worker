@@ -16,12 +16,14 @@
 
 //! Handles all state syncing mission of a worker before start up.
 use crate::enclave::tls_ra::enclave_request_key_provisioning;
-use codec::{Decode, Error as CodecError};
+use codec::Error as CodecError;
 use futures::executor;
+use itc_rpc_client::direct_client::{
+	DirectApi, DirectClient as DirectWorkerApi, Error as DirectRpcClientError,
+};
 use itp_api_client_extensions::PalletTeerexApi;
 use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
 use itp_types::ShardIdentifier;
-use jsonrpsee::{types::traits::Client, ws_client::WsClientBuilder};
 use log::*;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
@@ -39,6 +41,8 @@ enum Error {
 	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
 	#[error("{0}")]
 	Serialization(#[from] serde_json::Error),
+	#[error("{0}")]
+	DirectRpcClient(#[from] DirectRpcClientError),
 }
 
 type StateSyncResult<T> = Result<T, Error>;
@@ -69,7 +73,7 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 		skip_ra,
 	)
 	.unwrap();
-	println!("key provisioning successfully performed");
+	println!("[+] Key provisioning successfully performed.");
 }
 
 /// Returns the url of the last sidechain block author that has been stored
@@ -83,9 +87,6 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 	shard: &ShardIdentifier,
 ) -> StateSyncResult<String> {
 	let enclave = node_api.worker_for_shard(shard)?.ok_or(Error::EmptyValue)?;
-	let client = WsClientBuilder::default().build(&enclave.url).await?;
-	let mu_ra_url_encoded =
-		client.request::<Vec<u8>>("author_getMuRaUrl", Vec::new().into()).await?;
-	let mu_ra_url = String::decode(&mut mu_ra_url_encoded.as_slice())?;
-	Ok(mu_ra_url)
+	let worker_api_direct = DirectWorkerApi::new(enclave.url);
+	Ok(worker_api_direct.get_mu_ra_url()?)
 }
