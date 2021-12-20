@@ -145,7 +145,7 @@ fn main() {
 			smatches
 				.value_of("w-server")
 				.map(ToString::to_string)
-				.unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port)),
+				.unwrap_or_else(|| format!("wss://127.0.0.1:{}", config.worker_rpc_port)),
 		);
 
 		println!("Worker Config: {:?}", config);
@@ -172,6 +172,7 @@ fn main() {
 			tokio_handle,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
+		println!("*** Requesting keys from a registered worker \n");
 		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
 		sync_state::request_keys(
 			&node_api,
