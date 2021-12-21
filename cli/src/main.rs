@@ -279,10 +279,10 @@ fn main() {
 				.description("query enclave registry and list all workers")
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let api = get_chain_api(matches);
-					let wcount = api.enclave_count().unwrap();
+					let wcount = api.enclave_count(None).unwrap();
 					println!("number of workers registered: {}", wcount);
 					for w in 1..=wcount {
-						let enclave = api.enclave(w).unwrap();
+						let enclave = api.enclave(w, None).unwrap();
 						if enclave.is_none() {
 							println!("error reading enclave data");
 							continue

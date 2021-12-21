@@ -86,7 +86,7 @@ where
 	}
 
 	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>> {
-		Ok(self.node_api.all_enclaves()?)
+		Ok(self.node_api.all_enclaves(None)?)
 	}
 }
 
