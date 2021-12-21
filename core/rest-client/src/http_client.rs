@@ -228,6 +228,7 @@ fn add_to_headers(headers: &mut Headers, key: HeaderName, value: HeaderValue) {
 mod tests {
 
 	use super::*;
+	use core::assert_matches::assert_matches;
 	use http::header::CONNECTION;
 	use serde::{Deserialize, Serialize};
 	use std::vec::Vec;
@@ -431,5 +432,69 @@ mod tests {
 		serde_json::from_slice::<'a, T>(encoded_body).map_err(|err| {
 			Error::DeserializeParseError(err, String::from_utf8_lossy(encoded_body).to_string())
 		})
+	}
+
+	#[test]
+	fn get_from_site_with_self_signed_certificate_fails() {
+		let base_url = Url::parse("https://self-signed.badssl.com").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+		let msg = format!("error {:?}", result.err());
+		assert!(msg.contains("UnknownIssuer"));
+	}
+
+	#[test]
+	fn get_from_site_with_letsencrypt_isrgrootx1_valid_certificate_fails() {
+		let base_url = Url::parse("https://valid-isrgrootx1.letsencrypt.org").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+	}
+
+	#[test]
+	fn get_from_site_with_letsencrypt_isrgrootx1_revoked_certificate_fails() {
+		let base_url = Url::parse("https://revoked-isrgrootx1.letsencrypt.org").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+	}
+
+	#[test]
+	fn get_from_site_with_letsencrypt_isrgrootx1_expired_certificate_fails() {
+		let base_url = Url::parse("https://expired-isrgrootx1.letsencrypt.org").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+	}
+
+	#[test]
+	fn get_from_site_with_letsencrypt_isrgrootx2_valid_certificate_fails() {
+		let base_url = Url::parse("https://valid-isrgrootx2.letsencrypt.org").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+	}
+
+	#[test]
+	fn get_from_site_with_letsencrypt_isrgrootx2_revoked_certificate_fails() {
+		let base_url = Url::parse("https://revoked-isrgrootx2.letsencrypt.org").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+	}
+
+	#[test]
+	fn get_from_site_with_letsencrypt_isrgrootx2_expired_certificate_fails() {
+		let base_url = Url::parse("https://expired-isrgrootx2.letsencrypt.org").unwrap();
+		let result = send_http_get_request(base_url);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+	}
+
+	fn send_http_get_request(base_url: Url) -> Result<(Response, EncodedBody), Error> {
+		#[derive(Serialize, Deserialize, Debug)]
+		struct HttpTestResponse {}
+
+		impl RestPath<()> for HttpTestResponse {
+			fn get_path(_: ()) -> Result<String, Error> {
+				Ok(format!("anything"))
+			}
+		}
+		let http_client = HttpClient::new(true, Some(Duration::from_secs(3u64)), None, None);
+		http_client.send_request::<(), HttpTestResponse>(base_url, Method::GET, (), None, None)
 	}
 }
