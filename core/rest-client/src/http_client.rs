@@ -440,7 +440,6 @@ mod tests {
 		let result = get_for_test_certificates(base_url);
 		assert_matches!(result, Err(Error::HttpReqError(_)));
 		let msg = format!("error {:?}", result.err());
-		println!("{}", msg);
 		assert!(msg.contains("UnknownIssuer"));
 	}
 
