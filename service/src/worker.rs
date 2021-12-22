@@ -57,7 +57,7 @@ impl<NodeApi, Enclave, WorkerApiDirect> WorkerT
 where
 	NodeApi: PalletTeerexApi + Send + Sync,
 	Enclave: Send + Sync,
-	WorkerApiDirect: Send + Sync,
+	WorkerApiDirect: Send + Sync + DirectApi,
 {
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		if blocks.is_empty() {
@@ -98,6 +98,7 @@ where
 #[cfg(test)]
 mod tests {
 	use frame_support::assert_ok;
+	use itc_rpc_client::mock::DirectClientMock;
 	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
@@ -140,8 +141,14 @@ mod tests {
 		init();
 		run_server(W1_URL).await.unwrap();
 		run_server(W2_URL).await.unwrap();
+		let untrusted_worker_port = "4000".to_string();
 
-		let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, Arc::new(()), ());
+		let worker = Worker::new(
+			local_worker_config(W1_URL.into(), untrusted_worker_port.clone(), "30".to_string()),
+			TestNodeApi,
+			Arc::new(()),
+			DirectClientMock::default().with_untrusted_worker_url(untrusted_worker_port),
+		);
 
 		let resp = worker
 			.gossip_blocks(vec![SidechainBlockBuilder::default().build_signed()])

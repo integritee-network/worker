@@ -320,17 +320,15 @@ fn start_worker<E, T, D>(
 	enclave
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
-
+	let trusted_url = format!("wss://{}", config.trusted_worker_url());
 	let uxt = if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
-		enclave
-			.mock_register_xt(node_api.genesis_hash, nonce, &config.trusted_worker_url())
-			.unwrap()
+		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
 		enclave
-			.perform_ra(genesis_hash, nonce, config.trusted_worker_url().as_bytes().to_vec())
+			.perform_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
 			.unwrap()
 	};
 

@@ -38,15 +38,15 @@ impl Config {
 	}
 
 	pub fn trusted_worker_url(&self) -> String {
-		format!("wss://{}:{}", self.worker_ip, self.worker_rpc_port)
+		format!("{}:{}", self.worker_ip, self.worker_rpc_port)
 	}
 
 	pub fn untrusted_worker_url(&self) -> String {
-		format!("ws://{}:{}", self.worker_ip, self.untrusted_worker_port)
+		format!("{}:{}", self.worker_ip, self.untrusted_worker_port)
 	}
 
 	pub fn mu_ra_url(&self) -> String {
-		format!("ws://{}:{}", self.worker_ip, self.worker_mu_ra_port)
+		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
 	}
 }
 

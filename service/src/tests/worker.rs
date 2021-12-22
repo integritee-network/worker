@@ -23,7 +23,7 @@ fn worker_rw_lock_works() {
 	{
 		let mut w = WORKER.write();
 		*w = Some(TestWorker::new(
-			local_worker_config(W2_URL.into()),
+			local_worker_config(W2_URL.into(), "10".to_string(), "20".to_string()),
 			TestNodeApi,
 			Arc::new(()),
 			(),
