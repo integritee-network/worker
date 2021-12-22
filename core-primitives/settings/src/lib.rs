@@ -107,8 +107,8 @@ pub mod node {
 	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 4u8;
 	pub static SHIELD_FUNDS: u8 = 5u8;
 	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 5;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 1;
+	pub static RUNTIME_SPEC_VERSION: u32 = 6;
+	pub static RUNTIME_TRANSACTION_VERSION: u32 = 2;
 	pub static UNSHIELD: u8 = 6u8;
 
 	pub static TEERACLE_MODULE: u8 = 52u8;
