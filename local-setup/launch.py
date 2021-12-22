@@ -43,6 +43,7 @@ def run_worker(config, i: int):
     w = setup_worker(f'/tmp/w{i}', config["source"], log)
 
     if i > 1:
+        sleep(30) # Give worker 1 some time to register itself.
         print(f'Worker {i} fetching keys from registered worker.')
         skip_ra = "--skip-ra" in config["subcommand_flags"]
         print(f'Skip remote attestation: {skip_ra}')
