@@ -26,7 +26,7 @@ use crate::{
 	},
 	parentchain_block_syncer::ParentchainBlockSyncer,
 	sync_block_gossiper::SyncBlockGossiper,
-	utils::{check_files, extract_shard},
+	utils::{check_files, extract_shard, parse_time},
 	worker::worker_url_into_async_rpc_url,
 };
 use base58::ToBase58;
@@ -53,6 +53,7 @@ use itp_settings::{
 		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
+	node::MARKET_DATA_UPDATE_INTERVAL,
 	sidechain::SLOT_DURATION,
 	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
@@ -149,6 +150,18 @@ fn main() {
 		println!("Worker Config: {:?}", config);
 		let skip_ra = smatches.is_present("skip-ra");
 		let dev = smatches.is_present("dev");
+		let set_interval = smatches.is_present("interval");
+
+		let mut interval = MARKET_DATA_UPDATE_INTERVAL;
+		if set_interval {
+			let i = parse_time(smatches);
+			if i.is_none() {
+				error!("Interval input value is wrong !");
+				return
+			}
+			interval = i.unwrap();
+		}
+		println!("Update exchange rate interval is {:?}", interval);
 
 		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
 
@@ -166,6 +179,7 @@ fn main() {
 			sidechain_blockstorage,
 			skip_ra,
 			dev,
+			interval,
 			node_api,
 			tokio_handle,
 		);
@@ -242,6 +256,7 @@ fn start_worker<E, T, D>(
 	sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	dev: bool,
+	interval: Duration,
 	mut node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle: Arc<T>,
 ) where
@@ -312,7 +327,7 @@ fn start_worker<E, T, D>(
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
 	let tee_accountid = enclave_account(enclave.as_ref());
-
+	println!("MRENCLAVE account {:} ", &tee_accountid.to_ss58check());
 	// ------------------------------------------------------------------------
 	// perform a remote attestation and get an unchecked extrinsic back
 
@@ -416,7 +431,7 @@ fn start_worker<E, T, D>(
 	thread::Builder::new()
 		.name("update_market_data".to_owned())
 		.spawn(move || {
-			start_interval_market_update(&api5, market_enclave_api.as_ref());
+			start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
 		})
 		.unwrap();
 	// ------------------------------------------------------------------------
@@ -462,15 +477,14 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 /// with the current market data (for now only exchange rate).
 fn start_interval_market_update<E: EnclaveBase + TeeracleApi>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
+	interval: Duration,
 	enclave_api: &E,
 ) {
-	use itp_settings::node::MARKET_DATA_UPDATE_INTERVAL;
-
 	schedule_on_repeating_intervals(
 		|| {
 			execute_update_market(api, enclave_api);
 		},
-		MARKET_DATA_UPDATE_INTERVAL,
+		interval,
 	);
 }
 

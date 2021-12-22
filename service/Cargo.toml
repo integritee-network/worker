@@ -24,6 +24,7 @@ serde_derive = "1.0"
 jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
 async-trait = "0.1.50"
 tokio = { version = "1.6.1", features = ["full"] }
+parse_duration = "2.1.1"
 
 # ipfs
 ipfs-api = "0.11.0"
