@@ -791,7 +791,7 @@ fn bootstrap_funds_from_alice(
 }
 
 /// In case this is the first validateer on the specified parentchain, we need to trigger
-/// the parentchain block import to import until the block where we have registered ourselves.
+/// the parentchain block import up until the block where we have registered ourselves.
 fn bootstrap_parentchain_blocks_for_primary_validateer<E: EnclaveBase + TeerexApi + Sidechain>(
 	node_api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: Arc<E>,
