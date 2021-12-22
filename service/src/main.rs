@@ -398,7 +398,7 @@ fn start_worker<E, T, D>(
 	let api4 = node_api.clone();
 	let parentchain_sync_enclave_api = enclave.clone();
 	thread::Builder::new()
-		.name("parent_chain_sync_loop".to_owned())
+		.name("parentchain_sync_loop".to_owned())
 		.spawn(move || {
 			if let Err(e) = subscribe_to_parentchain_new_headers(
 				parentchain_sync_enclave_api,

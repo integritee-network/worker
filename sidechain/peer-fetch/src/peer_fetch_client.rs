@@ -102,12 +102,6 @@ mod tests {
 
 	const W1_URL: &str = "127.0.0.1:2233";
 
-	// fn init() {
-	// 	let _ = env_logger::builder().is_test(true).try_init();
-	// }
-
-	// TODO write a test where we setup a server using the builder from `peer_fetch_server`
-
 	async fn run_server(blocks: Vec<SignedBlock>) -> anyhow::Result<SocketAddr> {
 		let mut server = WsServerBuilder::default()
 			.build(worker_url_into_async_rpc_url(W1_URL).unwrap())
