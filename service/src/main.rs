@@ -495,14 +495,14 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	enclave: &E,
 ) {
 	// Get market data for usd (hardcoded)
-	let updated_extrinsic = match enclave.update_market_data_xt(node_api.genesis_hash, "DOT", "USD")
-	{
-		Err(e) => {
-			error!("{:?}", e);
-			return
-		},
-		Ok(r) => r,
-	};
+	let updated_extrinsic =
+		match enclave.update_market_data_xt(node_api.genesis_hash, "TEER", "USD") {
+			Err(e) => {
+				error!("{:?}", e);
+				return
+			},
+			Ok(r) => r,
+		};
 
 	let mut hex_encoded_extrinsic = hex::encode(updated_extrinsic);
 	hex_encoded_extrinsic.insert_str(0, "0x");
