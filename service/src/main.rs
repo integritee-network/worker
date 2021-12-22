@@ -27,7 +27,6 @@ use crate::{
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
-	worker::worker_url_into_async_rpc_url,
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
@@ -107,7 +106,7 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let mut config = Config::from(&matches);
+	let config = Config::from(&matches);
 
 	GlobalTokioHandle::initialize();
 
@@ -140,14 +139,6 @@ fn main() {
 	if let Some(smatches) = matches.subcommand_matches("run") {
 		let shard = extract_shard(smatches, enclave.as_ref());
 
-		// Todo: Is this deprecated?? It is only used in remote attestation.
-		config.set_ext_api_url(
-			smatches
-				.value_of("w-server")
-				.map(ToString::to_string)
-				.unwrap_or_else(|| format!("wss://127.0.0.1:{}", config.worker_rpc_port)),
-		);
-
 		println!("Worker Config: {:?}", config);
 		let skip_ra = smatches.is_present("skip-ra");
 		let dev = smatches.is_present("dev");
@@ -158,7 +149,7 @@ fn main() {
 			config.clone(),
 			node_api.clone(),
 			enclave.clone(),
-			DirectClient::new(config.worker_url()),
+			DirectClient::new(config.trusted_worker_url()),
 		));
 
 		start_worker(
@@ -274,7 +265,7 @@ fn start_worker<E, T, D>(
 
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
-	println!("MU-RA server listening on ws://{}", config.mu_ra_url());
+	println!("MU-RA server listening on {}", config.mu_ra_url());
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
 	thread::spawn(move || {
@@ -287,12 +278,12 @@ fn start_worker<E, T, D>(
 	});
 
 	// ------------------------------------------------------------------------
-	// start worker api direct invocation server
-	let direct_invocation_server_addr = config.worker_url();
+	// Start trusted worker rpc server.
+	let direct_invocation_server_addr = config.trusted_worker_url();
 	let enclave_for_direct_invocation = enclave.clone();
 	thread::spawn(move || {
 		println!(
-			"[+] RPC direction invocation server listening on wss://{}",
+			"[+] Trusted RPC direction invocation server listening on {}",
 			direct_invocation_server_addr
 		);
 		enclave_for_direct_invocation
@@ -301,27 +292,29 @@ fn start_worker<E, T, D>(
 		println!("[+] RPC direction invocation server shut down");
 	});
 
-	// listen for sidechain_block import request. Later the `start_worker_api_direct_server`
-	// should be merged into this one.
-	let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
-
+	// ------------------------------------------------------------------------
+	// Start untrusted worker rpc server.
 	let handle = tokio_handle.get_handle();
+	// FIXME: this should be removed - this server should only handle untrusted things.
+	// i.e move sidechain block importing to trusted worker.
 	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let untrusted_url = config.untrusted_worker_url();
+	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
 	handle.spawn(async move {
-		itc_rpc_server::run_server(&url, enclave_for_block_gossip_rpc_server)
+		itc_rpc_server::run_server(&untrusted_url, enclave_for_block_gossip_rpc_server)
 			.await
 			.unwrap()
 	});
+
 	// ------------------------------------------------------------------------
-	// start the substrate-api-client to communicate with the node
+	// Start the substrate-api-client to communicate with the node.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
-	// perform a remote attestation and get an unchecked extrinsic back
+	// Perform a remote attestation and get an unchecked extrinsic back.
 
-	// get enclaves's account nonce
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -333,11 +326,11 @@ fn start_worker<E, T, D>(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
 		enclave
-			.mock_register_xt(node_api.genesis_hash, nonce, &config.ext_api_url.unwrap())
+			.mock_register_xt(node_api.genesis_hash, nonce, &config.trusted_worker_url())
 			.unwrap()
 	} else {
 		enclave
-			.perform_ra(genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec())
+			.perform_ra(genesis_hash, nonce, config.trusted_worker_url().as_bytes().to_vec())
 			.unwrap()
 	};
 

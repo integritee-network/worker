@@ -34,6 +34,7 @@ pub trait DirectApi {
 	fn watch(&self, request: &str, sender: &MpscSender<String>) -> Result<()>;
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey>;
 	fn get_mu_ra_url(&self) -> Result<String>;
+	fn get_untrusted_worker_url(&self) -> Result<String>;
 }
 
 impl DirectClient {
@@ -83,6 +84,19 @@ impl DirectApi for DirectClient {
 
 		info!("[+] Got mutual remote attestation url of enclave: {}", mu_ra_url);
 		Ok(mu_ra_url)
+	}
+
+	fn get_untrusted_worker_url(&self) -> Result<String> {
+		let jsonrpc_call: String =
+			RpcRequest::compose_jsonrpc_call("author_getUnstrustedUrl".to_string(), vec![]);
+
+		// Send json rpc call to ws server.
+		let response_str = Self::get(self, &jsonrpc_call)?;
+
+		let untrusted_url: String = decode_from_rpc_response(&response_str)?;
+
+		info!("[+] Got untrusted websocket url of worker: {}", untrusted_url);
+		Ok(untrusted_url)
 	}
 }
 

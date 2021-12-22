@@ -36,9 +36,15 @@ args:
     - worker-rpc-port:
         short: P
         long: worker-rpc-port
-        help: Set the websocket port where the worker rpc direct invocations port listens
+        help: Set the trusted websocket port of the worker, running directly in the enclave.
         takes_value: true
         default_value: "2000"
+    - untrusted-worker-port:
+        short: U
+        long: untrusted-worker-port
+        help: Set the untrsuted websocket port of the worker
+        takes_value: true
+        default_value: "2001"
 
 subcommands:
     - run:
@@ -48,11 +54,6 @@ subcommands:
                 long: skip-ra
                 short: s
                 help: skip remote attestation. Set this flag if running enclave in SW mode
-            - w-server:
-                short: U
-                long: worker-url
-                help: Set the worker's IP address to be advertised in onchain registry. Include port if not 443
-                takes_value: true
             - shard:
                 required: false
                 index: 1

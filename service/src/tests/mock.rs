@@ -8,8 +8,8 @@ pub const W2_URL: &str = "127.0.0.1:3333";
 
 pub fn enclaves() -> Vec<Enclave> {
 	vec![
-		Enclave::new([0; 32].into(), [1; 32], 1, format!("ws://{}", W1_URL)),
-		Enclave::new([2; 32].into(), [3; 32], 2, format!("ws://{}", W2_URL)),
+		Enclave::new([0; 32].into(), [1; 32], 1, format!("wss://{}", W1_URL)),
+		Enclave::new([2; 32].into(), [3; 32], 2, format!("wss://{}", W2_URL)),
 	]
 }
 

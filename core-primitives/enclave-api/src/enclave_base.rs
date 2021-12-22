@@ -33,7 +33,7 @@ use sp_runtime::traits::Header;
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
 	/// Initialize the enclave (needs to be called once at application startup).
-	fn init(&self, mu_ra_addr: &str) -> EnclaveResult<()>;
+	fn init(&self, mu_ra_addr: &str, unstrusted_worker_addr: &str) -> EnclaveResult<()>;
 
 	/// Initialize the direct invocation RPC server.
 	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
@@ -63,10 +63,11 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 /// EnclaveApi implementation for Enclave struct
 impl EnclaveBase for Enclave {
-	fn init(&self, mu_ra_addr: &str) -> EnclaveResult<()> {
+	fn init(&self, mu_ra_addr: &str, unstrusted_worker_addr: &str) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let encoded_mu_ra_addr = mu_ra_addr.encode();
+		let encoded_unstrusted_worker_addr = unstrusted_worker_addr.encode();
 
 		let result = unsafe {
 			ffi::init(
@@ -74,6 +75,8 @@ impl EnclaveBase for Enclave {
 				&mut retval,
 				encoded_mu_ra_addr.as_ptr(),
 				encoded_mu_ra_addr.len() as u32,
+				encoded_unstrusted_worker_addr.as_ptr(),
+				encoded_unstrusted_worker_addr.len() as u32,
 			)
 		};
 

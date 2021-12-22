@@ -122,7 +122,12 @@ pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
 #[no_mangle]
-pub unsafe extern "C" fn init(mu_ra_addr: *const u8, mu_ra_addr_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn init(
+	mu_ra_addr: *const u8,
+	mu_ra_addr_size: u32,
+	untrusted_worker_addr: *const u8,
+	untrusted_worker_addr_size: u32,
+) -> sgx_status_t {
 	// Initialize the logging environment in the enclave.
 	env_logger::init();
 
@@ -161,16 +166,25 @@ pub unsafe extern "C" fn init(mu_ra_addr: *const u8, mu_ra_addr_size: u32) -> sg
 			Ok(addr) => addr,
 			Err(e) => return e.into(),
 		};
+	let unstrusted_worker_url = match String::decode(&mut slice::from_raw_parts(
+		untrusted_worker_addr,
+		untrusted_worker_addr_size as usize,
+	))
+	.map_err(Error::Codec)
+	{
+		Ok(addr) => addr,
+		Err(e) => return e.into(),
+	};
 
-	if let Err(e) = set_primitives(&mu_ra_url) {
+	if let Err(e) = set_primitives(&mu_ra_url, &unstrusted_worker_url) {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn set_primitives(mu_ra_url: &str) -> Result<()> {
-	let primitives = Primitives::new(mu_ra_url);
+fn set_primitives(mu_ra_url: &str, unstrusted_worker_url: &str) -> Result<()> {
+	let primitives = Primitives::new(mu_ra_url, unstrusted_worker_url);
 	let mut rw_lock = GLOBAL_PRIMITIVES_CACHE.load_for_mutation()?;
 
 	*rw_lock = primitives;

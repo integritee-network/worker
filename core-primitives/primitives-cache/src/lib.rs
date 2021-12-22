@@ -62,15 +62,23 @@ pub mod primitives_cache;
 #[derive(Default, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Primitives {
 	mu_ra_url: String,
+	untrusted_worker_url: String,
 }
 
 impl Primitives {
-	pub fn new(mu_ra_url: &str) -> Primitives {
-		Primitives { mu_ra_url: mu_ra_url.to_string() }
+	pub fn new(mu_ra_url: &str, untrusted_worker_url: &str) -> Primitives {
+		Primitives {
+			mu_ra_url: mu_ra_url.to_string(),
+			untrusted_worker_url: untrusted_worker_url.to_string(),
+		}
 	}
 
 	pub fn mu_ra_url(&self) -> &str {
 		&self.mu_ra_url
+	}
+
+	pub fn untrusted_worker_url(&self) -> &str {
+		&self.untrusted_worker_url
 	}
 }
 
@@ -88,4 +96,6 @@ pub trait GetPrimitives {
 	fn get_primitives(&self) -> Result<Primitives>;
 
 	fn get_mu_ra_url(&self) -> Result<String>;
+
+	fn get_untrusted_worker_url(&self) -> Result<String>;
 }

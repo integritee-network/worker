@@ -63,6 +63,11 @@ impl GetPrimitives for PrimitivesCache {
 		let primitives_lock = self.primitives_lock.read().map_err(|_| Error::LockPoisoning)?;
 		Ok(primitives_lock.mu_ra_url().to_string())
 	}
+
+	fn get_untrusted_worker_url(&self) -> Result<String> {
+		let primitives_lock = self.primitives_lock.read().map_err(|_| Error::LockPoisoning)?;
+		Ok(primitives_lock.untrusted_worker_url().to_string())
+	}
 }
 
 #[cfg(test)]

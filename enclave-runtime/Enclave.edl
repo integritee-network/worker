@@ -33,7 +33,8 @@ enclave {
 	trusted {
 		/* define ECALLs here. */
 		public sgx_status_t init(
-			[in, size=mu_ra_addr_size] uint8_t* mu_ra_addr, uint32_t mu_ra_addr_size
+			[in, size=mu_ra_addr_size] uint8_t* mu_ra_addr, uint32_t mu_ra_addr_size,
+			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
 		);
 
 		public sgx_status_t get_state(

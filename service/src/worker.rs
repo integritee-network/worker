@@ -4,15 +4,14 @@
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
 use async_trait::async_trait;
+use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_api_client_extensions::PalletTeerexApi;
-use itp_types::Enclave as EnclaveMetadata;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::*;
-use std::num::ParseIntError;
 
 use crate::{config::Config, error::Error};
 use std::sync::Arc;
@@ -49,7 +48,7 @@ pub trait WorkerT {
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 
 	/// Returns all enclave urls registered on the parentchain.
-	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>>;
+	fn peers(&self) -> WorkerResult<Vec<String>>;
 }
 
 #[async_trait]
@@ -70,12 +69,10 @@ where
 		debug!("Gossiping sidechain blocks to peers: {:?}", peers);
 		let blocks_json = vec![to_json_value(blocks)?];
 
-		for p in peers.iter() {
-			// Todo: once the two direct servers are merged, remove this.
-			let url = worker_url_into_async_rpc_url(&p.url)?;
+		for url in peers.iter() {
 			trace!("Gossiping block to peer with address: {:?}", url);
-			// FIXME: Websocket connectionto a worker  should stay once etablished.
-			let client = WsClientBuilder::default().build(&url).await?;
+			// FIXME: Websocket connection to a worker should stay, once etablished.
+			let client = WsClientBuilder::default().build(url).await?;
 			let blocks = blocks_json.clone();
 			if let Err(e) = client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()).await
 			{
@@ -85,34 +82,19 @@ where
 		Ok(())
 	}
 
-	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>> {
-		Ok(self.node_api.all_enclaves(None)?)
+	fn peers(&self) -> WorkerResult<Vec<String>> {
+		let enclaves = self.node_api.all_enclaves(None)?;
+		// FIXME: This is highly ineffcient. But because import block should be moved to trusted side anyway,
+		// this is only temporary. Additionally - once etablished, as ws connection should be kept open. So
+		// fetching ws urls for every block gossip is temporary as well.
+		let mut peer_urls = Vec::<String>::new();
+		for enclave in enclaves {
+			let worker_api_direct = DirectWorkerApi::new(enclave.url);
+			peer_urls.push(worker_api_direct.get_untrusted_worker_url()?);
+		}
+		Ok(peer_urls)
 	}
 }
-
-/// Temporary method that transforms the workers rpc port of the direct api defined in rpc/direct_client
-/// to the new version in rpc/server. Remove this, when all the methods have been migrated to the new one
-/// in core/direct-rpc-server.
-pub fn worker_url_into_async_rpc_url(url: &str) -> WorkerResult<String> {
-	// [Option("ws(s)"), //ip, port]
-	let mut url_vec: Vec<&str> = url.split(':').collect();
-	match url_vec.len() {
-		3 | 2 => (),
-		_ => return Err(Error::Custom("Invalid worker url format".into())),
-	};
-
-	let ip = if url_vec.len() == 3 {
-		format!("{}:{}", url_vec.remove(0), url_vec.remove(0))
-	} else {
-		url_vec.remove(0).into()
-	};
-
-	let port: i32 =
-		url_vec.remove(0).parse().map_err(|e: ParseIntError| Error::Custom(e.into()))?;
-
-	Ok(format!("{}:{}", ip, (port + 1)))
-}
-
 #[cfg(test)]
 mod tests {
 	use frame_support::assert_ok;
@@ -128,7 +110,7 @@ mod tests {
 			commons::local_worker_config,
 			mock::{TestNodeApi, W1_URL, W2_URL},
 		},
-		worker::{worker_url_into_async_rpc_url, Worker, WorkerT},
+		worker::{Worker, WorkerT},
 	};
 	use std::sync::Arc;
 
@@ -156,8 +138,8 @@ mod tests {
 	#[tokio::test]
 	async fn gossip_blocks_works() {
 		init();
-		run_server(worker_url_into_async_rpc_url(W1_URL).unwrap()).await.unwrap();
-		run_server(worker_url_into_async_rpc_url(W2_URL).unwrap()).await.unwrap();
+		run_server(W1_URL).await.unwrap();
+		run_server(W2_URL).await.unwrap();
 
 		let worker = Worker::new(local_worker_config(W1_URL.into()), TestNodeApi, Arc::new(()), ());
 

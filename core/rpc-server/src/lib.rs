@@ -36,7 +36,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-// FIXME: deprecated server. Should be migrated to direct-rpc-server.
 pub async fn run_server<Enclave>(
 	addr: impl ToSocketAddrs,
 	enclave: Arc<Enclave>,
@@ -48,6 +47,7 @@ where
 
 	let mut module = RpcModule::new(enclave);
 
+	// FIXME: import block should be moved to trusted side.
 	module.register_method("sidechain_importBlock", |params, enclave| {
 		debug!("sidechain_importBlock params: {:?}", params);
 

@@ -75,13 +75,26 @@ where
 		Ok(json!(json_value.encode()))
 	});
 
-	// author_getMuRaUrl
 	let mu_ra_url_name: &str = "author_getMuRaUrl";
 	io.add_sync_method(mu_ra_url_name, move |_: Params| {
 		let url = match GLOBAL_PRIMITIVES_CACHE.get_mu_ra_url() {
 			Ok(url) => url,
 			Err(status) => {
 				let error_msg: String = format!("Could not get mu ra url due to: {}", status);
+				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+			},
+		};
+
+		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.encode()))
+	});
+
+	let untrusted_url_name: &str = "author_getUntrustedUrl";
+	io.add_sync_method(untrusted_url_name, move |_: Params| {
+		let url = match GLOBAL_PRIMITIVES_CACHE.get_untrusted_worker_url() {
+			Ok(url) => url,
+			Err(status) => {
+				let error_msg: String = format!("Could not get untrusted url due to: {}", status);
 				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
 			},
 		};
