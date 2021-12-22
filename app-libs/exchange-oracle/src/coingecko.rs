@@ -163,7 +163,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_exchange_rate_for_undefined_geckocoin_crypto_currency_fails() {
+	fn get_exchange_rate_for_undefined_coingecko_crypto_currency_fails() {
 		let url = CoinGeckoClient::base_url().unwrap();
 		let mut coingecko_client = CoinGeckoClient::new(url);
 		let trading_pair = TradingPair {
