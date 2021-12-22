@@ -143,15 +143,15 @@ class Worker:
     def write_signer_pub(self):
         return run_subprocess(self.cli + ['signing-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
-    def request_keys(self, skip_ra: bool = False):
+    def request_keys(self, flags: [str] = None, skip_ra: bool = False):
         """ Returns the keys from another worker. """
 
         if skip_ra:
-            flags = ['request-keys', '--skip-ra']
+            subcommand_flags = ['request-keys', '--skip-ra']
         else:
-            flags = ['request-keys']
+            subcommand_flags = ['request-keys']
 
-        return run_subprocess(self.cli + flags, stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
+        return run_subprocess(self.cli + flags + subcommand_flags, stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')

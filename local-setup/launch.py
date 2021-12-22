@@ -43,12 +43,11 @@ def run_worker(config, i: int):
     w = setup_worker(f'/tmp/w{i}', config["source"], log)
 
     if i > 1:
-        sleep(30) # Give worker 1 some time to register itself.
         print(f'Worker {i} fetching keys from registered worker.')
         skip_ra = "--skip-ra" in config["subcommand_flags"]
         print(f'Skip remote attestation: {skip_ra}')
 
-        w.request_keys(skip_ra=skip_ra)
+        w.request_keys(flags=config["flags"], skip_ra=skip_ra)
 
     print(f'Starting worker {i} in background')
     w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
@@ -67,6 +66,9 @@ def main(processes, config_path):
         processes.append(run_worker(w_conf, i))
         # sleep to prevent nonce clash when bootstrapping the enclave's account
         sleep(6)
+        if i == 1:
+             # Give worker 1 some time to register itself, otherwise key & state sharing will not work.
+            sleep(60)
 
         i += 1
 
