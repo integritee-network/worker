@@ -566,12 +566,6 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 /// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
 /// with sidechain block production.
 ///
-/// Imports all blocks in the current queue. This ensures the first validateer of a parentchain
-/// syncs up to the parentchain block where itself is registered. Otherwise the `authority_set` will
-/// return None, resulting in not importing any parentchain blocks and an endless loop (#589).
-/// Should only be used for the first validateer as this is a bootstrapping problem. For all validateers
-/// following, the sidechain block import should be the parentchain block import trigger until they are up to date.
-///
 /// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]

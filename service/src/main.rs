@@ -355,7 +355,7 @@ fn start_worker<E, T, D>(
 	// ------------------------------------------------------------------------
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 
-	let last_synced_header = bootstrap_parentchain_blocks_for_primary_valdiateer(
+	let last_synced_header = bootstrap_parentchain_blocks_for_primary_validateer(
 		&node_api,
 		enclave.clone(),
 		&last_synced_header,
@@ -792,7 +792,7 @@ fn bootstrap_funds_from_alice(
 
 /// In case this is the first validateer on the specified parentchain, we need to trigger
 /// the parentchain block import to import until the block where we have registered ourselves.
-fn bootstrap_parentchain_blocks_for_primary_valdiateer<E: EnclaveBase + TeerexApi + Sidechain>(
+fn bootstrap_parentchain_blocks_for_primary_validateer<E: EnclaveBase + TeerexApi + Sidechain>(
 	node_api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: Arc<E>,
 	last_synced_header: &Header,
@@ -804,8 +804,10 @@ fn bootstrap_parentchain_blocks_for_primary_valdiateer<E: EnclaveBase + TeerexAp
 	let enclave_count_of_previous_block =
 		node_api.enclave_count(Some(*registry_header.parent_hash()))?;
 
-	// If we're first in line, we must sync and import atleast until the block we have registered ourselves.
 	if enclave_count_of_previous_block == 0 {
+		info!(
+			"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
+		);
 		let parentchain_block_syncer =
 			ParentchainBlockSyncer::new(node_api.clone(), enclave_api.clone());
 		while last_synced_header.number() < registry_header.number() {
