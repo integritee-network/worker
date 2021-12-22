@@ -31,13 +31,12 @@ use crate::{
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
-use codec::{Decode, Encode};
+use codec::Encode;
 use config::Config;
 use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
-use futures::executor::block_on;
 use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi};
 use itp_enclave_api::{
@@ -50,18 +49,16 @@ use itp_enclave_api::{
 };
 use itp_settings::{
 	files::{
-		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
-		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
+		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH,
+		SIGNING_KEY_FILE,
 	},
 	node::MARKET_DATA_UPDATE_INTERVAL,
-	sidechain::SLOT_DURATION,
 	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
-use its_consensus_slots::start_slot_worker;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
-use its_storage::{start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock};
+use its_storage::{BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::{Event, Hash, Header};
+use my_node_runtime::Header;
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -74,14 +71,11 @@ use std::{
 	io::{stdin, Write},
 	path::{Path, PathBuf},
 	str,
-	sync::{
-		mpsc::{channel, Sender},
-		Arc,
-	},
+	sync::Arc,
 	thread,
 	time::{Duration, Instant},
 };
-use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
+use substrate_api_client::{rpc::WsRpcClient, Api, GenericAddress, XtStatus};
 use teerex_primitives::ShardIdentifier;
 
 mod config;
@@ -253,7 +247,7 @@ fn start_worker<E, T, D>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
-	sidechain_storage: Arc<D>,
+	_sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	dev: bool,
 	interval: Duration,
@@ -366,97 +360,105 @@ fn start_worker<E, T, D>(
 	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
 
-	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
-	println!("*** [+] Finished syncing light client\n");
-
-	// ------------------------------------------------------------------------
-	// start interval block production (execution of trusted calls, sidechain block production)
-	let side_chain_enclave_api = enclave.clone();
-	thread::Builder::new()
-		.name("interval_block_production_timer".to_owned())
-		.spawn(move || {
-			let future = start_slot_worker(
-				|| execute_trusted_calls(side_chain_enclave_api.as_ref()),
-				SLOT_DURATION,
-			);
-			block_on(future);
-		})
-		.unwrap();
-
-	// ------------------------------------------------------------------------
-	// start parentchain syncing loop (subscribe to header updates)
-	let api4 = node_api.clone();
-	let parentchain_sync_enclave_api = enclave.clone();
-	thread::Builder::new()
-		.name("parent_chain_sync_loop".to_owned())
-		.spawn(move || {
-			if let Err(e) = subscribe_to_parentchain_new_headers(
-				parentchain_sync_enclave_api,
-				&api4,
-				last_synced_header,
-			) {
-				error!("Parentchain block syncing terminated with a failure: {:?}", e);
-			}
-			println!("[+] Parentchain block syncing has terminated");
-		})
-		.unwrap();
-
-	//-------------------------------------------------------------------------
-	// start execution of trusted getters
-	let trusted_getters_enclave_api = enclave.clone();
-	thread::Builder::new()
-		.name("trusted_getters_execution".to_owned())
-		.spawn(move || {
-			start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
-		})
-		.unwrap();
-
-	// ------------------------------------------------------------------------
-	// start sidechain pruning loop
-	thread::Builder::new()
-		.name("sidechain_pruning_loop".to_owned())
-		.spawn(move || {
-			start_sidechain_pruning_loop(
-				&sidechain_storage,
-				SIDECHAIN_PURGE_INTERVAL,
-				SIDECHAIN_PURGE_LIMIT,
-			);
-		})
-		.unwrap();
-
-	// ------------------------------------------------------------------------
 	// start update exchange rate loop
 	let api5 = node_api.clone();
 	let market_enclave_api = enclave;
-	thread::Builder::new()
-		.name("update_market_data".to_owned())
-		.spawn(move || {
-			start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
-		})
-		.unwrap();
-	// ------------------------------------------------------------------------
-	// subscribe to events and react on firing
-	println!("*** Subscribing to events");
-	let (sender, receiver) = channel();
-	let sender2 = sender.clone();
-	let _eventsubscriber = thread::Builder::new()
-		.name("eventsubscriber".to_owned())
-		.spawn(move || {
-			node_api.subscribe_events(sender2).unwrap();
-		})
-		.unwrap();
+	start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
 
-	println!("[+] Subscribed to events. waiting...");
-	let timeout = Duration::from_millis(10);
-	loop {
-		if let Ok(msg) = receiver.recv_timeout(timeout) {
-			if let Ok(events) = parse_events(msg.clone()) {
-				print_events(events, sender.clone())
-			}
-		}
-	}
+	/*
+	   let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
+	   println!("*** [+] Finished syncing light client\n");
+
+	   // ------------------------------------------------------------------------
+	   // start interval block production (execution of trusted calls, sidechain block production)
+	   let side_chain_enclave_api = enclave.clone();
+	   thread::Builder::new()
+		   .name("interval_block_production_timer".to_owned())
+		   .spawn(move || {
+			   let future = start_slot_worker(
+				   || execute_trusted_calls(side_chain_enclave_api.as_ref()),
+				   SLOT_DURATION,
+			   );
+			   block_on(future);
+		   })
+		   .unwrap();
+
+	   // ------------------------------------------------------------------------
+	   // start parentchain syncing loop (subscribe to header updates)
+	   let api4 = node_api.clone();
+	   let parentchain_sync_enclave_api = enclave.clone();
+	   thread::Builder::new()
+		   .name("parent_chain_sync_loop".to_owned())
+		   .spawn(move || {
+			   if let Err(e) = subscribe_to_parentchain_new_headers(
+				   parentchain_sync_enclave_api,
+				   &api4,
+				   last_synced_header,
+			   ) {
+				   error!("Parentchain block syncing terminated with a failure: {:?}", e);
+			   }
+			   println!("[+] Parentchain block syncing has terminated");
+		   })
+		   .unwrap();
+
+	   //-------------------------------------------------------------------------
+	   // start execution of trusted getters
+	   let trusted_getters_enclave_api = enclave.clone();
+	   thread::Builder::new()
+		   .name("trusted_getters_execution".to_owned())
+		   .spawn(move || {
+			   start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
+		   })
+		   .unwrap();
+
+	   // ------------------------------------------------------------------------
+	   // start sidechain pruning loop
+	   thread::Builder::new()
+		   .name("sidechain_pruning_loop".to_owned())
+		   .spawn(move || {
+			   start_sidechain_pruning_loop(
+				   &sidechain_storage,
+				   SIDECHAIN_PURGE_INTERVAL,
+				   SIDECHAIN_PURGE_LIMIT,
+			   );
+		   })
+		   .unwrap();
+
+	   // ------------------------------------------------------------------------
+	   // start update exchange rate loop
+	   let api5 = node_api.clone();
+	   let market_enclave_api = enclave;
+	   thread::Builder::new()
+		   .name("update_market_data".to_owned())
+		   .spawn(move || {
+			   start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
+		   })
+		   .unwrap();
+	   // ------------------------------------------------------------------------
+	   // subscribe to events and react on firing
+	   println!("*** Subscribing to events");
+	   let (sender, receiver) = channel();
+	   let sender2 = sender.clone();
+	   let _eventsubscriber = thread::Builder::new()
+		   .name("eventsubscriber".to_owned())
+		   .spawn(move || {
+			   node_api.subscribe_events(sender2).unwrap();
+		   })
+		   .unwrap();
+
+	   println!("[+] Subscribed to events. waiting...");
+	   let timeout = Duration::from_millis(10);
+	   loop {
+		   if let Ok(msg) = receiver.recv_timeout(timeout) {
+			   if let Ok(events) = parse_events(msg.clone()) {
+				   print_events(events, sender.clone())
+			   }
+		   }
+	   }
+	*/
 }
 
+/*
 /// Starts the execution of trusted getters in repeating intervals.
 ///
 /// The getters are executed in a pre-defined slot duration.
@@ -472,7 +474,7 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 		TRUSTED_GETTERS_SLOT_DURATION,
 	);
 }
-
+*/
 /// Send extrinsic to chain according to the market data update interval in the settings
 /// with the current market data (for now only exchange rate).
 fn start_interval_market_update<E: EnclaveBase + TeeracleApi>(
@@ -568,6 +570,7 @@ fn request_keys<E: TlsRemoteAttestation>(
 	println!("key provisioning successfully performed");
 }
 
+/*
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
 fn parse_events(event: String) -> Result<Events, String> {
@@ -667,6 +670,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 		}
 	}
 }
+*/
 
 pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
@@ -696,6 +700,7 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	Ok(latest_synced_header)
 }
 
+/*
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
@@ -730,6 +735,7 @@ fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
 		error!("{:?}", e);
 	};
 }
+*/
 
 fn init_shard(shard: &ShardIdentifier) {
 	let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
