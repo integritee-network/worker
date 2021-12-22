@@ -131,8 +131,10 @@ mod tests {
 		];
 		run_server(blocks_to_fetch.clone()).await.unwrap();
 
-		let node_api_mock = PalletTeerexApiMock::default()
-			.with_enclaves(vec![EnclaveGenBuilder::default().build()]);
+		let node_api_mock =
+			PalletTeerexApiMock::default().with_enclaves(vec![EnclaveGenBuilder::default()
+				.with_url(format!("ws://{}", W1_URL))
+				.build()]);
 
 		let peer_fetcher_client = PeerFetcher::<SignedBlock, _>::new(node_api_mock);
 
