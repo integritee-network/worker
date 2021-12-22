@@ -602,7 +602,7 @@ dependencies = [
 [[package]]
 name = "claims-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "parity-scale-codec",
  "rustc-hex",
@@ -671,6 +671,14 @@ dependencies = [
  "mime_guess",
  "rand 0.8.4",
  "thiserror 1.0.30",
+]
+
+[[package]]
+name = "common-primitives"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
+dependencies = [
+ "sp-std",
 ]
 
 [[package]]
@@ -1897,7 +1905,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "base64 0.11.0",
  "chrono",
@@ -2042,7 +2050,6 @@ dependencies = [
 [[package]]
 name = "integritee-node-runtime"
 version = "1.0.5"
-source = "git+https://github.com/integritee-network/integritee-node?branch=master#a97ddbce0048a9b48eef76799f3e42e37690c334"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2187,7 +2194,9 @@ name = "ita-exchange-oracle"
 version = "0.8.0"
 dependencies = [
  "itc-rest-client",
+ "lazy_static",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
  "serde 1.0.130",
  "serde_json 1.0.72",
  "sgx_tstd",
@@ -4116,7 +4125,7 @@ dependencies = [
 [[package]]
 name = "pallet-claims"
 version = "0.9.12"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "claims-primitives",
  "frame-support",
@@ -4171,7 +4180,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4266,7 +4275,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4288,7 +4297,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6837,8 +6846,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
+ "common-primitives",
  "sp-std",
  "substrate-fixed",
 ]
@@ -6846,7 +6856,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "ias-verify",
  "parity-scale-codec",
@@ -6895,7 +6905,7 @@ checksum = "13a4ec180a2de59b57434704ccfad967f789b12737738798fa08798cd5824c16"
 [[package]]
 name = "test-utils"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "hex-literal",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",

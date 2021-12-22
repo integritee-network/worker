@@ -61,11 +61,6 @@ sgx_ucrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-t
 sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-#[patch."https://github.com/integritee-network/integritee-node"]
-#my-node-runtime = { path = "../integritee-node/runtime", package = "integritee-node-runtime"}
-
-#[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-teerex = { path = "../pallets/teerex" }
 
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../substrate-api-client" }
@@ -76,8 +71,8 @@ sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incub
 #sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 #sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities" }
 
-#[patch."https://github.com/integritee-network/integritee-node"]
-#my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
+[patch."https://github.com/integritee-network/integritee-node"]
+my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
 
 #[patch."https://github.com/integritee-network/pallets.git"]
 #pallet-claims = { path = '../pallets/claims' }

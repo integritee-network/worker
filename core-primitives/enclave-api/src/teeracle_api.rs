@@ -23,16 +23,31 @@ use sgx_types::*;
 
 pub trait TeeracleApi: Send + Sync + 'static {
 	/// update the currency market data for the token oracle.
-	fn update_market_data_xt(&self, genesis_hash: H256, currency: &str) -> EnclaveResult<Vec<u8>>;
+	fn update_market_data_xt(
+		&self,
+		genesis_hash: H256,
+		crypto_currency: &str,
+		fiat_currency: &str,
+	) -> EnclaveResult<Vec<u8>>;
 }
 
 impl TeeracleApi for Enclave {
-	fn update_market_data_xt(&self, genesis_hash: H256, currency: &str) -> EnclaveResult<Vec<u8>> {
+	fn update_market_data_xt(
+		&self,
+		genesis_hash: H256,
+		crypto_currency: &str,
+		fiat_currency: &str,
+	) -> EnclaveResult<Vec<u8>> {
+		println!(
+			"TeeracleApi update_market_data_xt in with crypto {} and fiat {}",
+			crypto_currency, fiat_currency
+		);
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let response_len = 8192;
 		let mut response: Vec<u8> = vec![0u8; response_len as usize];
 
-		let curr = currency.encode();
+		let crypto_curr = crypto_currency.encode();
+		let fiat_curr = fiat_currency.encode();
 		let gen = genesis_hash.as_bytes().to_vec();
 
 		let res = unsafe {
@@ -41,8 +56,10 @@ impl TeeracleApi for Enclave {
 				&mut retval,
 				gen.as_ptr(),
 				gen.len() as u32,
-				curr.as_ptr(),
-				curr.len() as u32,
+				crypto_curr.as_ptr(),
+				crypto_curr.len() as u32,
+				fiat_curr.as_ptr(),
+				fiat_curr.len() as u32,
 				response.as_mut_ptr(),
 				response_len,
 			)

@@ -45,7 +45,7 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
-use ita_exchange_oracle::{coingecko::CoinGeckoClient, GetExchangeRate};
+use ita_exchange_oracle::{coingecko::CoinGeckoClient, types::TradingPair, GetExchangeRate};
 use ita_stf::{Getter, ShardIdentifier, Stf};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -592,18 +592,26 @@ pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 pub unsafe extern "C" fn update_market_data_xt(
 	genesis_hash: *const u8,
 	genesis_hash_size: u32,
-	currency_ptr: *const u8,
-	currency_size: u32,
+	crypto_currency_ptr: *const u8,
+	crypto_currency_size: u32,
+	fiat_currency_ptr: *const u8,
+	fiat_currency_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
 	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 
-	let mut currency_slice = slice::from_raw_parts(currency_ptr, currency_size as usize);
-	let currency: String = Decode::decode(&mut currency_slice).unwrap();
+	let mut crypto_currency_slice =
+		slice::from_raw_parts(crypto_currency_ptr, crypto_currency_size as usize);
+	let crypto_currency: String = Decode::decode(&mut crypto_currency_slice).unwrap();
 
-	let extrinsics = match update_market_data_internal(genesis_hash, currency) {
+	let mut fiat_currency_slice =
+		slice::from_raw_parts(fiat_currency_ptr, fiat_currency_size as usize);
+	let fiat_currency: String = Decode::decode(&mut fiat_currency_slice).unwrap();
+
+	let extrinsics = match update_market_data_internal(genesis_hash, crypto_currency, fiat_currency)
+	{
 		Ok(xts) => xts,
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
@@ -622,14 +630,15 @@ pub unsafe extern "C" fn update_market_data_xt(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn update_market_data_internal(genesis_hash: H256, curr: String) -> Result<Vec<OpaqueExtrinsic>> {
+fn update_market_data_internal(
+	genesis_hash: H256,
+	crypto_currency: String,
+	fiat_currency: String,
+) -> Result<Vec<OpaqueExtrinsic>> {
 	let signer = Ed25519Seal::unseal()?;
 
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
-
-	// For now hardcoded polkadot
-	let coin = "polkadot";
 
 	// Get the exchange rate
 	let url = match CoinGeckoClient::base_url() {
@@ -637,8 +646,9 @@ fn update_market_data_internal(genesis_hash: H256, curr: String) -> Result<Vec<O
 		Err(e) => return Err(Error::Other(e.into())),
 	};
 
-	let mut coingecko_client = CoinGeckoClient::new(url);
-	let rate = match coingecko_client.get_exchange_rate(coin, &curr) {
+	let trading_pair = TradingPair { crypto_currency, fiat_currency };
+	let mut coingecko_client = CoinGeckoClient::new(url.clone());
+	let rate = match coingecko_client.get_exchange_rate(trading_pair.clone()) {
 		Ok(r) => r,
 		Err(e) => {
 			error!("[-] Failed to get the newest exchange rate from coingecko. {:?}", e);
@@ -646,16 +656,22 @@ fn update_market_data_internal(genesis_hash: H256, curr: String) -> Result<Vec<O
 		},
 	};
 
+	let src = url.as_str();
+
 	println!(
-		"Update the exchange rate: 1 DOT = {:?} {}",
+		"Update the exchange rate:  {} = {:?} for source {}",
+		trading_pair.clone().key(),
 		Some(U32F32::from_num(rate)).unwrap(),
-		curr.to_uppercase()
+		src,
 	);
+
 	let call = OpaqueCall::from_tuple(&(
 		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
-		curr.encode(),
+		src.as_bytes().to_vec(),
+		trading_pair.key().as_bytes().to_vec(),
 		Some(U32F32::from_num(rate)),
 	));
+
 	let extrinsics = extrinsics_factory.create_extrinsics(vec![call].as_slice())?;
 	Ok(extrinsics)
 }

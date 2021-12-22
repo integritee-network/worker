@@ -265,6 +265,7 @@ fn start_worker<E, T, D>(
 	// initialize the enclave
 	let mrenclave = enclave.get_mrenclave().unwrap();
 	println!("MRENCLAVE={}", mrenclave.to_base58());
+	println!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
 
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
@@ -478,7 +479,8 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	enclave: &E,
 ) {
 	// Get market data for usd (hardcoded)
-	let updated_extrinsic = match enclave.update_market_data_xt(node_api.genesis_hash, "usd") {
+	let updated_extrinsic = match enclave.update_market_data_xt(node_api.genesis_hash, "DOT", "USD")
+	{
 		Err(e) => {
 			error!("{:?}", e);
 			return

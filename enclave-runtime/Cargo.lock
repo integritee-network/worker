@@ -1191,7 +1191,9 @@ name = "ita-exchange-oracle"
 version = "0.8.0"
 dependencies = [
  "itc-rest-client",
+ "lazy_static",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
  "serde 1.0.130",
  "serde_json 1.0.71",
  "sgx_tstd",
@@ -2257,7 +2259,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#31cf747a0240a319b141580eabadb52794d3e509"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#a15965982f65b86a4ca2532391cf76d4137558f8"
 dependencies = [
  "frame-support",
  "frame-system",

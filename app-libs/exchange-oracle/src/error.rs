@@ -29,4 +29,6 @@ pub enum Error {
 	NoValidData,
 	#[error("Value for exchange rate is null")]
 	EmptyExchangeRate,
+	#[error("Invalid id for crypto currency")]
+	InvalidCryptoCurrencyId,
 }

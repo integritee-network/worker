@@ -126,8 +126,10 @@ extern "C" {
 		retval: *mut sgx_status_t,
 		genesis_hash: *const u8,
 		genesis_hash_size: u32,
-		currency: *const u8,
-		currency_size: u32,
+		crypto_currency: *const u8,
+		crypto_currency_size: u32,
+		fiat_currency: *const u8,
+		fiat_currency_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32,
 	) -> sgx_status_t;
