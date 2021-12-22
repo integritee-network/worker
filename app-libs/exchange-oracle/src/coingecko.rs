@@ -163,7 +163,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_exchange_rate_for_undefined_crypto_currency_fails() {
+	fn get_exchange_rate_for_undefined_geckocoin_crypto_currency_fails() {
 		let url = CoinGeckoClient::base_url().unwrap();
 		let mut coingecko_client = CoinGeckoClient::new(url);
 		let trading_pair = TradingPair {
@@ -171,7 +171,7 @@ mod tests {
 			fiat_currency: "USD".to_string(),
 		};
 		let result = coingecko_client.get_exchange_rate(trading_pair);
-		assert_matches!(result, Err(Error::NoValidData));
+		assert_matches!(result, Err(Error::InvalidCryptoCurrencyId));
 	}
 
 	#[test]
