@@ -32,5 +32,5 @@ fn worker_rw_lock_works() {
 
 	let w = WORKER.read();
 	// call some random function to see how the worker needs to be called.
-	assert_eq!(w.as_ref().unwrap().node_api().all_enclaves().unwrap(), enclaves())
+	assert_eq!(w.as_ref().unwrap().node_api().all_enclaves(None).unwrap(), enclaves())
 }
