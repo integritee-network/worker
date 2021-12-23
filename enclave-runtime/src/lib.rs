@@ -166,6 +166,7 @@ pub unsafe extern "C" fn init(
 			Ok(addr) => addr,
 			Err(e) => return e.into(),
 		};
+
 	let unstrusted_worker_url = match String::decode(&mut slice::from_raw_parts(
 		untrusted_worker_addr,
 		untrusted_worker_addr_size as usize,

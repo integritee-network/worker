@@ -42,7 +42,7 @@ pub fn local_worker_config(
 	untrusted_worker_port: String,
 	mu_ra_port: String,
 ) -> Config {
-	let mut url = worker_url.split(":");
+	let mut url = worker_url.split(':');
 	Config::new(
 		Default::default(),
 		Default::default(),

@@ -77,7 +77,7 @@ mod tests {
 
 		let handle = GlobalTokioHandle.get_handle();
 
-		let result = handle.spawn_blocking(|| format!("now running on a worker thread")).await;
+		let result = handle.spawn_blocking(|| "now running on a worker thread").await;
 
 		assert!(result.is_ok());
 		assert!(!result.unwrap().is_empty())
