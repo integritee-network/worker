@@ -16,6 +16,7 @@
 */
 
 use crate::{
+	parentchain_block_syncer::SyncParentchainBlocks,
 	tests::mocks::{
 		parentchain_api_mock::ParentchainApiMock, sidechain_api_mock::SidechainApiMock,
 	},
