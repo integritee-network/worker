@@ -72,10 +72,22 @@ where
 
 		for p in peers.iter() {
 			// Todo: once the two direct servers are merged, remove this.
-			let url = worker_url_into_async_rpc_url(&p.url)?;
+			let url = match worker_url_into_async_rpc_url(&p.url) {
+				Ok(url) => url,
+				Err(e) => {
+					error!("Could not create async rpc url: {:?}", e);
+					continue
+				},
+			};
 			trace!("Gossiping block to peer with address: {:?}", url);
-			// FIXME: Websocket connectionto a worker  should stay once etablished.
-			let client = WsClientBuilder::default().build(&url).await?;
+			// FIXME: Websocket connection to a worker should stay once established.
+			let client = match WsClientBuilder::default().build(&url).await {
+				Ok(c) => c,
+				Err(e) => {
+					error!("Could not establish connection to peer: {:?}", e);
+					continue
+				},
+			};
 			let blocks = blocks_json.clone();
 			if let Err(e) = client.request::<Vec<u8>>("sidechain_importBlock", blocks.into()).await
 			{
