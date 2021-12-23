@@ -811,8 +811,6 @@ fn bootstrap_parentchain_blocks_for_primary_validateer<E: EnclaveBase + TeerexAp
 		let parentchain_block_syncer =
 			ParentchainBlockSyncer::new(node_api.clone(), enclave_api.clone());
 		while last_synced_header.number() < registry_header.number() {
-			// Otherwise we're spamming syncing messages.
-			thread::sleep(Duration::from_secs(1));
 			last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 		}
 		enclave_api.trigger_parentchain_block_import()?;
