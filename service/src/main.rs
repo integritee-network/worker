@@ -352,11 +352,12 @@ fn start_worker<E, T, D>(
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parent chain...");
 
-	// Syncing all prentchain blocks, this might take a while..
+	// Syncing all parentchain blocks, this might take a while..
 	let parentchain_block_syncer =
 		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
 	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 
+	// If we're the first validateer to register, also trigger parentchain block import.
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
 	if primary_validateer(&node_api, &register_enclave_xt_header).unwrap() {
