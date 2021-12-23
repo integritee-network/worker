@@ -153,7 +153,7 @@ mod tests {
 		run_server(W1_URL).await.unwrap();
 		run_server(W2_URL).await.unwrap();
 		let untrusted_worker_port = "4000".to_string();
-		let peers = vec![format!("wss://{}", W1_URL), format!("wss://{}", W2_URL)];
+		let peers = vec![format!("ws://{}", W1_URL), format!("ws://{}", W2_URL)];
 
 		let worker = Worker::new(
 			local_worker_config(W1_URL.into(), untrusted_worker_port.clone(), "30".to_string()),

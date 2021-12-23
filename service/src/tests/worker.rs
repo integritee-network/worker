@@ -12,7 +12,7 @@ use crate::{
 };
 use std::sync::Arc;
 
-type TestWorker = WorkerGen<Config, TestNodeApi, (), ()>;
+type TestWorker = WorkerGen<Config, TestNodeApi, ()>;
 
 lazy_static! {
 	static ref WORKER: RwLock<Option<TestWorker>> = RwLock::new(None);
@@ -26,7 +26,7 @@ fn worker_rw_lock_works() {
 			local_worker_config(W2_URL.into(), "10".to_string(), "20".to_string()),
 			TestNodeApi,
 			Arc::new(()),
-			(),
+			Vec::new(),
 		));
 	}
 
