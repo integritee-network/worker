@@ -21,7 +21,8 @@ use clap::ArgMatches;
 use ita_stf::ShardIdentifier;
 use itp_enclave_api::enclave_base::EnclaveBase;
 use log::{debug, info};
-use std::path::Path;
+use parse_duration::parse;
+use std::{path::Path, time::Duration};
 
 pub fn extract_shard<E: EnclaveBase>(m: &ArgMatches<'_>, enclave_api: &E) -> ShardIdentifier {
 	match m.value_of("shard") {
@@ -62,5 +63,24 @@ pub fn check_files() {
 		vec![ENCLAVE_FILE, SHIELDING_KEY_FILE, SIGNING_KEY_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {
 		assert!(Path::new(f).exists(), "File doesn't exist: {}", f);
+	}
+}
+
+pub fn parse_time(m: &ArgMatches) -> Option<Duration> {
+	match m.value_of("interval") {
+		Some(value) => {
+			debug!("Interval is {}", value);
+			match parse(value) {
+				Ok(d) => Some(d),
+				Err(e) => {
+					info!("Interval parsing error {:?}", e);
+					None
+				},
+			}
+		},
+		_ => {
+			debug!("No Interval !!");
+			None
+		},
 	}
 }

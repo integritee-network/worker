@@ -32,16 +32,13 @@ pub mod sgx_reexport_prelude {
 	pub use url_sgx as url;
 }
 
-use crate::error::Error;
+use crate::{error::Error, types::TradingPair};
 
 pub mod coingecko;
 pub mod error;
+pub mod types;
 
 pub trait GetExchangeRate {
 	/// Get the cryptocurrency/fiat_currency exchange rate
-	fn get_exchange_rate(
-		&mut self,
-		cryptocurrency: &str,
-		fiat_currency: &str,
-	) -> Result<f32, Error>;
+	fn get_exchange_rate(&mut self, trading_pair: TradingPair) -> Result<f32, Error>;
 }

@@ -17,11 +17,17 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::Error, GetExchangeRate};
+use crate::{
+	error::Error,
+	types::{TradingPair, TradingPairId},
+	GetExchangeRate,
+};
 use itc_rest_client::{http_client::HttpClient, rest_client::RestClient, RestGet, RestPath};
+use lazy_static::lazy_static;
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::{
+	collections::HashMap,
 	string::{String, ToString},
 	time::Duration,
 	vec::Vec,
@@ -33,7 +39,15 @@ const COINGECKO_PARAM_CURRENCY: &str = "vs_currency";
 const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
 const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
-
+//TODO from API ?
+lazy_static! {
+	static ref SYMBOL_ID: HashMap<&'static str, &'static str> = HashMap::from([
+		("DOT", "polkadot"),
+		("TEER", "integritee"),
+		("KSM", "kusama"),
+		("BTC", "bitcoin"),
+	]);
+}
 /// REST client to make requests to CoinGecko.
 pub struct CoinGeckoClient {
 	client: RestClient<HttpClient>,
@@ -46,6 +60,16 @@ impl CoinGeckoClient {
 	}
 	pub fn base_url() -> Result<Url, Error> {
 		Url::parse(COINGECKO_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
+	}
+}
+
+impl TradingPairId for CoinGeckoClient {
+	fn crypto_currency_id(&mut self, trading_pair: TradingPair) -> Result<String, Error> {
+		let key = trading_pair.crypto_currency;
+		match SYMBOL_ID.get(&key as &str) {
+			Some(v) => Ok(v.to_string()),
+			None => Err(Error::InvalidCryptoCurrencyId),
+		}
 	}
 }
 
@@ -68,23 +92,25 @@ impl RestPath<String> for CoinGeckoMarket {
 }
 
 impl GetExchangeRate for CoinGeckoClient {
-	fn get_exchange_rate(&mut self, coin: &str, currency: &str) -> Result<f32, Error> {
+	fn get_exchange_rate(&mut self, trading_pair: TradingPair) -> Result<f32, Error> {
+		let curr_id = self.fiat_currency_id(trading_pair.clone())?;
+		let crypto_id = self.crypto_currency_id(trading_pair.clone())?;
 		let response = self
 			.client
 			.get_with::<String, CoinGeckoMarket>(
 				COINGECKO_PATH.to_string(),
-				&[(COINGECKO_PARAM_CURRENCY, currency), (COINGECKO_PARAM_COIN, coin)],
+				&[(COINGECKO_PARAM_CURRENCY, &curr_id), (COINGECKO_PARAM_COIN, &crypto_id)],
 			)
 			.map_err(Error::RestClient)?;
 		let list = response.0;
 		if list.is_empty() {
-			error!("Got no market data from coinGecko. Check params {},{}", currency, coin);
+			error!("Got no market data from coinGecko. Check params {:?} ", trading_pair);
 			return Err(Error::NoValidData)
 		}
 		match list[0].current_price {
 			Some(r) => Ok(r),
 			None => {
-				error!("Failed to get the exchange rate of {} to {}", currency, coin);
+				error!("Failed to get the exchange rate {}", TradingPair::key(trading_pair));
 				Err(Error::EmptyExchangeRate)
 			},
 		}
@@ -96,19 +122,65 @@ mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
 
-	#[test]
-	fn get_exchange_rate_for_undefined_coins_fails() {
+	fn get_coingecko_coin_id(crypto_currency: &str) -> Result<String, Error> {
 		let url = CoinGeckoClient::base_url().unwrap();
 		let mut coingecko_client = CoinGeckoClient::new(url);
-		let result = coingecko_client.get_exchange_rate("invalid_coin", "usd");
-		assert_matches!(result, Err(Error::NoValidData));
+		let trading_pair = TradingPair {
+			crypto_currency: crypto_currency.to_string(),
+			fiat_currency: "USD".to_string(),
+		};
+		coingecko_client.crypto_currency_id(trading_pair)
 	}
 
 	#[test]
-	fn get_exchange_rate_for_undefined_currency_fails() {
+	fn crypto_currency_id_works_for_dot() {
+		let coin_id = get_coingecko_coin_id("DOT").unwrap();
+		assert_eq!(&coin_id, "polkadot");
+	}
+
+	#[test]
+	fn crypto_currency_id_works_for_teer() {
+		let coin_id = get_coingecko_coin_id("TEER").unwrap();
+		assert_eq!(&coin_id, "integritee");
+	}
+
+	#[test]
+	fn crypto_currency_id_works_for_ksm() {
+		let coin_id = get_coingecko_coin_id("KSM").unwrap();
+		assert_eq!(&coin_id, "kusama");
+	}
+
+	#[test]
+	fn crypto_currency_id_works_for_btc() {
+		let coin_id = get_coingecko_coin_id("BTC").unwrap();
+		assert_eq!(&coin_id, "bitcoin");
+	}
+
+	#[test]
+	fn crypto_currency_id_error_for_undefined_crypto_currency() {
+		let coin_id = get_coingecko_coin_id("Undefined");
+		assert_matches!(coin_id, Err(Error::InvalidCryptoCurrencyId));
+	}
+
+	#[test]
+	fn get_exchange_rate_for_undefined_coingecko_crypto_currency_fails() {
 		let url = CoinGeckoClient::base_url().unwrap();
 		let mut coingecko_client = CoinGeckoClient::new(url);
-		let result = coingecko_client.get_exchange_rate("polkadot", "ch");
+		let trading_pair = TradingPair {
+			crypto_currency: "invalid_coin".to_string(),
+			fiat_currency: "USD".to_string(),
+		};
+		let result = coingecko_client.get_exchange_rate(trading_pair);
+		assert_matches!(result, Err(Error::InvalidCryptoCurrencyId));
+	}
+
+	#[test]
+	fn get_exchange_rate_for_undefined_fiat_currency_fails() {
+		let url = CoinGeckoClient::base_url().unwrap();
+		let mut coingecko_client = CoinGeckoClient::new(url);
+		let trading_pair =
+			TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "CH".to_string() };
+		let result = coingecko_client.get_exchange_rate(trading_pair);
 		assert_matches!(result, Err(Error::RestClient(_)));
 	}
 
@@ -116,13 +188,21 @@ mod tests {
 	fn get_exchange_rate_from_coingecko_works() {
 		let url = CoinGeckoClient::base_url().unwrap();
 		let mut coingecko_client = CoinGeckoClient::new(url);
-		let dot_usd = coingecko_client.get_exchange_rate("polkadot", "usd").unwrap();
+		let dot_to_usd =
+			TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "USD".to_string() };
+		let dot_usd = coingecko_client.get_exchange_rate(dot_to_usd).unwrap();
 		assert!(dot_usd > 0f32);
-		let bit_usd = coingecko_client.get_exchange_rate("bitcoin", "usd").unwrap();
+		let btc_to_usd =
+			TradingPair { crypto_currency: "BTC".to_string(), fiat_currency: "USD".to_string() };
+		let bit_usd = coingecko_client.get_exchange_rate(btc_to_usd).unwrap();
 		assert!(bit_usd > 0f32);
-		let dot_chf = coingecko_client.get_exchange_rate("polkadot", "chf").unwrap();
+		let dot_to_chf =
+			TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "chf".to_string() };
+		let dot_chf = coingecko_client.get_exchange_rate(dot_to_chf).unwrap();
 		assert!(dot_chf > 0f32);
-		let bit_chf = coingecko_client.get_exchange_rate("bitcoin", "chf").unwrap();
+		let bit_to_chf =
+			TradingPair { crypto_currency: "BTC".to_string(), fiat_currency: "chf".to_string() };
+		let bit_chf = coingecko_client.get_exchange_rate(bit_to_chf).unwrap();
 		assert!(bit_chf > 0f32);
 		assert_eq!(
 			(dot_usd * 100000. / bit_usd).round() / 100000.,
