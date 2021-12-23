@@ -59,7 +59,7 @@ impl Config {
 	}
 
 	pub fn mu_ra_url_for_client(&self) -> String {
-		format!("ws://{}:{}", self.worker_ip, self.worker_mu_ra_port)
+		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
 	}
 }
 
