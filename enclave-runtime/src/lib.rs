@@ -566,13 +566,12 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 /// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
 /// with sidechain block production.
 ///
-/// Imports all blocks in the queue except the latest one, which has to be triggered by the sidechain component.
 /// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
 pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 	match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
-		Some(dispatcher) => match dispatcher.import_all_but_latest() {
+		Some(dispatcher) => match dispatcher.import_all() {
 			Ok(_) => sgx_status_t::SGX_SUCCESS,
 			Err(e) => {
 				error!("Failed to trigger import of parentchain blocks: {:?}", e);

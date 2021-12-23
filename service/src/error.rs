@@ -19,6 +19,8 @@ pub enum Error {
 	FromUtf8(#[from] std::string::FromUtf8Error),
 	#[error("Application setup error!")]
 	ApplicationSetup,
+	#[error("Retrieved empty value")]
+	EmptyValue,
 	#[error("Custom Error: {0}")]
 	Custom(Box<dyn std::error::Error>),
 }

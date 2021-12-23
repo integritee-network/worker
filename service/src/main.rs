@@ -24,7 +24,7 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
-	parentchain_block_syncer::ParentchainBlockSyncer,
+	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker::worker_url_into_async_rpc_url,
@@ -39,7 +39,7 @@ use enclave::{
 };
 use futures::executor::block_on;
 use itc_rpc_client::direct_client::DirectClient;
-use itp_api_client_extensions::{AccountApi, ChainApi};
+use itp_api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -79,7 +79,9 @@ use std::{
 	thread,
 	time::{Duration, Instant},
 };
-use substrate_api_client::{rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, XtStatus};
+use substrate_api_client::{
+	rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, Header as HeaderTrait, XtStatus,
+};
 use teerex_primitives::ShardIdentifier;
 
 mod config;
@@ -343,22 +345,39 @@ fn start_worker<E, T, D>(
 		return
 	}
 
-	// send the extrinsic and wait for confirmation
 	println!("[>] Register the enclave (send the extrinsic)");
-	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
-	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+	let register_enclave_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_enclave_xt_hash);
 
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
-	println!("*** [+] Finished syncing light client\n");
+	println!("*** [+] Finished syncing light client, syncing parent chain...");
+
+	// Syncing all parentchain blocks, this might take a while..
+	let parentchain_block_syncer =
+		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
+	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+
+	// If we're the first validateer to register, also trigger parentchain block import.
+	let register_enclave_xt_header =
+		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
+	if primary_validateer(&node_api, &register_enclave_xt_header).unwrap() {
+		last_synced_header = import_parentchain_blocks_until_self_registry(
+			enclave.clone(),
+			parentchain_block_syncer,
+			&last_synced_header,
+			&register_enclave_xt_header,
+		)
+		.unwrap();
+	}
 
 	// ------------------------------------------------------------------------
-	// start interval block production (execution of trusted calls, sidechain block production)
-	let side_chain_enclave_api = enclave.clone();
+	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
+	let sidechain_enclave_api = enclave.clone();
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
 		.spawn(move || {
 			let future = start_slot_worker(
-				|| execute_trusted_calls(side_chain_enclave_api.as_ref()),
+				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
 				SLOT_DURATION,
 			);
 			block_on(future);
@@ -594,18 +613,9 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 
 	let authority_list = VersionedAuthorityList::from(grandpas);
 
-	let latest = enclave_api
+	Ok(enclave_api
 		.init_light_client(genesis_header, authority_list, grandpa_proof)
-		.unwrap();
-
-	info!("Finished initializing light client, syncing parent chain...");
-
-	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api.clone());
-	let latest_synced_header = parentchain_block_syncer.sync_parentchain(latest);
-
-	enclave_api.trigger_parentchain_block_import().map_err(Error::EnclaveApi)?;
-
-	Ok(latest_synced_header)
+		.unwrap())
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
@@ -781,4 +791,37 @@ fn bootstrap_funds_from_alice(
 
 	api.signer = signer_orig;
 	Ok(())
+}
+
+/// Ensure we're synced up until the parentchain block where we have registered ourselves.
+fn import_parentchain_blocks_until_self_registry<
+	E: EnclaveBase + TeerexApi + Sidechain,
+	ParentchainSyncer: SyncParentchainBlocks,
+>(
+	enclave_api: Arc<E>,
+	parentchain_block_syncer: Arc<ParentchainSyncer>,
+	last_synced_header: &Header,
+	register_enclave_xt_header: &Header,
+) -> Result<Header, Error> {
+	info!(
+		"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
+	);
+	let mut last_synced_header = last_synced_header.clone();
+
+	while last_synced_header.number() < register_enclave_xt_header.number() {
+		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+	}
+	enclave_api.trigger_parentchain_block_import()?;
+
+	Ok(last_synced_header)
+}
+
+// Checks if we are the first validateer to register on the parentchain.
+fn primary_validateer(
+	node_api: &Api<sr25519::Pair, WsRpcClient>,
+	register_enclave_xt_header: &Header,
+) -> Result<bool, Error> {
+	let enclave_count_of_previous_block =
+		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
+	Ok(enclave_count_of_previous_block == 0)
 }
