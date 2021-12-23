@@ -76,7 +76,7 @@ where
 		}
 
 		if let Err(e) = self.peer_updater.update_peers() {
-			error!("Error gossiping blocks: {:?}", e);
+			error!("Error updating peers: {:?}", e);
 			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}

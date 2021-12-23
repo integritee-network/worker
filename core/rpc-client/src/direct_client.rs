@@ -89,7 +89,7 @@ impl DirectApi for DirectClient {
 
 	fn get_untrusted_worker_url(&self) -> Result<String> {
 		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getUnstrustedUrl".to_string(), vec![]);
+			RpcRequest::compose_jsonrpc_call("author_getUntrustedUrl".to_string(), vec![]);
 
 		// Send json rpc call to ws server.
 		let response_str = Self::get(self, &jsonrpc_call)?;
