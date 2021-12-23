@@ -17,14 +17,13 @@
 */
 
 use crate::{config::Config, worker::Worker as WorkerGen};
-use itc_rpc_client::direct_client::DirectClient;
 use itp_enclave_api::Enclave;
 use lazy_static::lazy_static;
-use parking_lot::{RwLock, RwLockReadGuard};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use sp_core::sr25519;
 use substrate_api_client::{rpc::WsRpcClient, Api};
 
-pub type Worker = WorkerGen<Config, Api<sr25519::Pair, WsRpcClient>, Enclave, DirectClient>;
+pub type Worker = WorkerGen<Config, Api<sr25519::Pair, WsRpcClient>, Enclave>;
 
 lazy_static! {
 	static ref WORKER: RwLock<Option<Worker>> = RwLock::new(None);
@@ -34,6 +33,12 @@ lazy_static! {
 /// Prefer injecting this trait instead of using the associated functions of WorkerAccessorImpl
 pub trait GetWorker {
 	fn get_worker<'a>(&self) -> RwLockReadGuard<'a, Option<Worker>>;
+}
+
+/// Trait for accessing a worker instance
+/// Prefer injecting this trait instead of using the associated functions of WorkerAccessorImpl
+pub trait GetMutWorker {
+	fn get_mut_worker<'a>(&self) -> RwLockWriteGuard<'a, Option<Worker>>;
 }
 
 pub struct GlobalWorker;
@@ -48,10 +53,20 @@ impl GlobalWorker {
 	fn read_worker<'a>() -> RwLockReadGuard<'a, Option<Worker>> {
 		WORKER.read()
 	}
+
+	fn write_worker<'a>() -> RwLockWriteGuard<'a, Option<Worker>> {
+		WORKER.write()
+	}
 }
 
 impl GetWorker for GlobalWorker {
 	fn get_worker<'a>(&self) -> RwLockReadGuard<'a, Option<Worker>> {
 		GlobalWorker::read_worker()
+	}
+}
+
+impl GetMutWorker for GlobalWorker {
+	fn get_mut_worker<'a>(&self) -> RwLockWriteGuard<'a, Option<Worker>> {
+		GlobalWorker::write_worker()
 	}
 }

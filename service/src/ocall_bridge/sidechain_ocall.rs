@@ -17,6 +17,7 @@
 */
 
 use crate::{
+	global_peer_updater::UpdateWorkerPeers,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
 	sync_block_gossiper::GossipBlocks,
 };
@@ -26,21 +27,28 @@ use its_storage::BlockStorage;
 use log::*;
 use std::sync::Arc;
 
-pub struct SidechainOCall<S, D> {
-	block_gossiper: Arc<S>,
-	block_storage: Arc<D>,
+pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater> {
+	block_gossiper: Arc<BlockGossiper>,
+	block_storage: Arc<Storage>,
+	peer_updater: Arc<PeerUpdater>,
 }
 
-impl<S, D> SidechainOCall<S, D> {
-	pub fn new(block_gossiper: Arc<S>, block_storage: Arc<D>) -> Self {
-		SidechainOCall { block_gossiper, block_storage }
+impl<BlockGossiper, Storage, PeerUpdater> SidechainOCall<BlockGossiper, Storage, PeerUpdater> {
+	pub fn new(
+		block_gossiper: Arc<BlockGossiper>,
+		block_storage: Arc<Storage>,
+		peer_updater: Arc<PeerUpdater>,
+	) -> Self {
+		SidechainOCall { block_gossiper, block_storage, peer_updater }
 	}
 }
 
-impl<S, D> SidechainBridge for SidechainOCall<S, D>
+impl<BlockGossiper, Storage, PeerUpdater> SidechainBridge
+	for SidechainOCall<BlockGossiper, Storage, PeerUpdater>
 where
-	S: GossipBlocks,
-	D: BlockStorage<SignedSidechainBlock>,
+	BlockGossiper: GossipBlocks,
+	Storage: BlockStorage<SignedSidechainBlock>,
+	PeerUpdater: UpdateWorkerPeers,
 {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
@@ -65,6 +73,12 @@ where
 			);
 		} else {
 			debug!("Enclave did not produce sidechain blocks");
+		}
+
+		if let Err(e) = self.peer_updater.update_peers() {
+			error!("Error gossiping blocks: {:?}", e);
+			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
+			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 
 		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {

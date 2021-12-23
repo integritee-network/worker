@@ -50,6 +50,10 @@ impl DirectClientMock {
 }
 
 impl DirectApi for DirectClientMock {
+	fn get(&self, _request: &str) -> Result<String> {
+		Ok("Hello_world".to_string())
+	}
+
 	fn watch(&self, _request: &str, _sender: &MpscSender<String>) -> Result<()> {
 		Ok(())
 	}

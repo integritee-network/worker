@@ -16,6 +16,7 @@
 */
 use crate::{
 	error::Error,
+	global_peer_updater::GlobalPeerUpdater,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 		worker::{GlobalWorker, Worker},
@@ -37,7 +38,6 @@ use enclave::{
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
 use futures::executor::block_on;
-use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
@@ -86,6 +86,7 @@ use teerex_primitives::ShardIdentifier;
 mod config;
 mod enclave;
 mod error;
+mod global_peer_updater;
 mod globals;
 mod node_api_factory;
 mod ocall_bridge;
@@ -120,7 +121,9 @@ fn main() {
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
-	let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
+	let sync_block_gossiper =
+		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
+	let peer_updater = Arc::new(GlobalPeerUpdater::new(worker));
 	let sidechain_blockstorage = Arc::new(
 		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
 			.unwrap(),
@@ -134,6 +137,7 @@ fn main() {
 		sync_block_gossiper,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
+		peer_updater,
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
@@ -149,7 +153,7 @@ fn main() {
 			config.clone(),
 			node_api.clone(),
 			enclave.clone(),
-			DirectClient::new(config.trusted_worker_url()),
+			Vec::new(),
 		));
 
 		start_worker(
@@ -320,7 +324,7 @@ fn start_worker<E, T, D>(
 	enclave
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
-	let trusted_url = format!("wss://{}", config.trusted_worker_url());
+	let trusted_url = config.trusted_worker_url_for_client();
 	let uxt = if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."

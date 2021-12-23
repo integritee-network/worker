@@ -17,22 +17,23 @@ use crate::{config::Config, error::Error};
 use std::sync::Arc;
 
 pub type WorkerResult<T> = Result<T, Error>;
-pub struct Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
+pub type Url = String;
+pub struct Worker<Config, NodeApi, Enclave> {
 	_config: Config,
 	node_api: NodeApi, // todo: Depending on system design, all the api fields should be Arc<Api>
 	// unused yet, but will be used when more methods are migrated to the worker
 	_enclave_api: Arc<Enclave>,
-	_worker_api_direct: WorkerApiDirect,
+	peers: Vec<Url>,
 }
 
-impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave, WorkerApiDirect> {
+impl<Config, NodeApi, Enclave> Worker<Config, NodeApi, Enclave> {
 	pub fn new(
 		_config: Config,
 		node_api: NodeApi,
 		_enclave_api: Arc<Enclave>,
-		_worker_api_direct: WorkerApiDirect,
+		peers: Vec<Url>,
 	) -> Self {
-		Self { _config, node_api, _enclave_api, _worker_api_direct }
+		Self { _config, node_api, _enclave_api, peers }
 	}
 
 	// will soon be used.
@@ -43,21 +44,16 @@ impl<Config, NodeApi, Enclave, WorkerApiDirect> Worker<Config, NodeApi, Enclave,
 }
 
 #[async_trait]
-pub trait WorkerT {
-	/// Gossip Sidechain blocks to peers.
+/// Gossip Sidechain blocks to peers.
+pub trait AsyncBlockGossiper {
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
-
-	/// Returns all enclave urls registered on the parentchain.
-	fn peers(&self) -> WorkerResult<Vec<String>>;
 }
 
 #[async_trait]
-impl<NodeApi, Enclave, WorkerApiDirect> WorkerT
-	for Worker<Config, NodeApi, Enclave, WorkerApiDirect>
+impl<NodeApi, Enclave> AsyncBlockGossiper for Worker<Config, NodeApi, Enclave>
 where
 	NodeApi: PalletTeerexApi + Send + Sync,
 	Enclave: Send + Sync,
-	WorkerApiDirect: Send + Sync + DirectApi,
 {
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		if blocks.is_empty() {
@@ -65,11 +61,9 @@ where
 			return Ok(())
 		}
 
-		let peers = self.peers()?;
-		debug!("Gossiping sidechain blocks to peers: {:?}", peers);
 		let blocks_json = vec![to_json_value(blocks)?];
 
-		for url in peers.iter() {
+		for url in self.peers.iter() {
 			trace!("Gossiping block to peer with address: {:?}", url);
 			// FIXME: Websocket connection to a worker should stay, once etablished.
 			let client = WsClientBuilder::default().build(url).await?;
@@ -81,24 +75,41 @@ where
 		}
 		Ok(())
 	}
+}
 
-	fn peers(&self) -> WorkerResult<Vec<String>> {
+/// Looks for new peers and updates them.
+pub trait UpdatePeers {
+	fn search_peers(&self) -> WorkerResult<Vec<Url>>;
+	fn store_peers(&mut self, peers: Vec<Url>) -> WorkerResult<()>;
+	fn update_peers(&mut self) -> WorkerResult<()> {
+		let peers = self.search_peers()?;
+		self.store_peers(peers)
+	}
+}
+
+impl<NodeApi, Enclave> UpdatePeers for Worker<Config, NodeApi, Enclave>
+where
+	NodeApi: PalletTeerexApi + Send + Sync,
+{
+	fn search_peers(&self) -> WorkerResult<Vec<String>> {
 		let enclaves = self.node_api.all_enclaves(None)?;
-		// FIXME: This is highly ineffcient. But because import block should be moved to trusted side anyway,
-		// this is only temporary. Additionally - once etablished, as ws connection should be kept open. So
-		// fetching ws urls for every block gossip is temporary as well.
 		let mut peer_urls = Vec::<String>::new();
 		for enclave in enclaves {
+			// FIXME: This is temporary only, as block gossiping should be moved to trusted ws server.
 			let worker_api_direct = DirectWorkerApi::new(enclave.url);
 			peer_urls.push(worker_api_direct.get_untrusted_worker_url()?);
 		}
 		Ok(peer_urls)
 	}
+
+	fn store_peers(&mut self, peers: Vec<Url>) -> WorkerResult<()> {
+		self.peers = peers;
+		Ok(())
+	}
 }
 #[cfg(test)]
 mod tests {
 	use frame_support::assert_ok;
-	use itc_rpc_client::mock::DirectClientMock;
 	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
@@ -111,7 +122,7 @@ mod tests {
 			commons::local_worker_config,
 			mock::{TestNodeApi, W1_URL, W2_URL},
 		},
-		worker::{Worker, WorkerT},
+		worker::{AsyncBlockGossiper, Worker},
 	};
 	use std::sync::Arc;
 
@@ -142,12 +153,13 @@ mod tests {
 		run_server(W1_URL).await.unwrap();
 		run_server(W2_URL).await.unwrap();
 		let untrusted_worker_port = "4000".to_string();
+		let peers = vec![format!("wss://{}", W1_URL), format!("wss://{}", W2_URL)];
 
 		let worker = Worker::new(
 			local_worker_config(W1_URL.into(), untrusted_worker_port.clone(), "30".to_string()),
 			TestNodeApi,
 			Arc::new(()),
-			DirectClientMock::default().with_untrusted_worker_url(untrusted_worker_port),
+			peers,
 		);
 
 		let resp = worker

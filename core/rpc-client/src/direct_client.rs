@@ -31,6 +31,9 @@ pub struct DirectClient {
 	url: String,
 }
 pub trait DirectApi {
+	/// Server connection with only one response.
+	fn get(&self, request: &str) -> Result<String>;
+	/// Server connection with more than one response.
 	fn watch(&self, request: &str, sender: &MpscSender<String>) -> Result<()>;
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey>;
 	fn get_mu_ra_url(&self) -> Result<String>;
@@ -41,19 +44,17 @@ impl DirectClient {
 	pub fn new(url: String) -> Self {
 		Self { url }
 	}
+}
 
-	/// Server connection with only one response.
-	pub fn get(&self, request: &str) -> Result<String> {
+impl DirectApi for DirectClient {
+	fn get(&self, request: &str) -> Result<String> {
 		let (port_in, port_out) = channel();
 
 		info!("[WorkerApi Direct]: (get) Sending request: {:?}", request);
 		WsClient::connect(&self.url, request, &port_in, false)?;
 		port_out.recv().map_err(Error::MspcReceiver)
 	}
-}
 
-impl DirectApi for DirectClient {
-	/// Server connection with more than one response.
 	fn watch(&self, request: &str, sender: &MpscSender<String>) -> Result<()> {
 		info!("[WorkerApi Direct]: (watch) Sending request: {:?}", request);
 		WsClient::connect(&self.url, request, sender, true).map_err(Error::WsClientError)

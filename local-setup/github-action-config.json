@@ -12,7 +12,9 @@
       "source": "bin",
       "flags": [
         "-P",
-        "2000"
+        "2000",
+        "-U",
+        "2001"
       ],
       "subcommand_flags": [
         "--skip-ra",
@@ -23,7 +25,9 @@
       "source": "bin",
       "flags": [
         "-P",
-        "3000"
+        "3000",
+        "-U",
+        "3001"
       ],
       "subcommand_flags": [
         "--skip-ra",

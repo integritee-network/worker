@@ -33,6 +33,7 @@ impl Config {
 		}
 	}
 
+	/// Gives back the client url for the node (including ws://)
 	pub fn node_url(&self) -> String {
 		format!("{}:{}", self.node_ip, self.node_port)
 	}
@@ -41,12 +42,24 @@ impl Config {
 		format!("{}:{}", self.worker_ip, self.worker_rpc_port)
 	}
 
+	pub fn trusted_worker_url_for_client(&self) -> String {
+		format!("wss://{}:{}", self.worker_ip, self.worker_rpc_port)
+	}
+
 	pub fn untrusted_worker_url(&self) -> String {
 		format!("{}:{}", self.worker_ip, self.untrusted_worker_port)
 	}
 
+	pub fn untrusted_worker_url_for_client(&self) -> String {
+		format!("ws://{}:{}", self.worker_ip, self.untrusted_worker_port)
+	}
+
 	pub fn mu_ra_url(&self) -> String {
 		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
+	}
+
+	pub fn mu_ra_url_for_client(&self) -> String {
+		format!("ws://{}:{}", self.worker_ip, self.worker_mu_ra_port)
 	}
 }
 
