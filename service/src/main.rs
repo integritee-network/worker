@@ -91,8 +91,8 @@ mod globals;
 mod node_api_factory;
 mod ocall_bridge;
 mod parentchain_block_syncer;
+mod request_keys;
 mod sync_block_gossiper;
-mod sync_state;
 mod tests;
 mod utils;
 mod worker;
@@ -169,7 +169,7 @@ fn main() {
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
 		println!("*** Requesting keys from a registered worker \n");
 		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
-		sync_state::request_keys(
+		request_keys::request_keys(
 			&node_api,
 			&extract_shard(smatches, enclave.as_ref()),
 			enclave.as_ref(),

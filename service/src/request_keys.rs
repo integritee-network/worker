@@ -14,7 +14,8 @@
 	limitations under the License.
 */
 
-//! Handles all state syncing mission of a worker before start up.
+//! Request state keys from a fellow validateer.
+
 use crate::enclave::tls_ra::enclave_request_key_provisioning;
 use codec::Error as CodecError;
 use futures::executor;
@@ -81,7 +82,7 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 ///
 /// Note: The sidechainblock author will only change whenever a new parentchain block is
 /// produced. And even then, it might be the same as the last block. So if several workers
-/// are started in a timely manner, they all will all get the same url.
+/// are started in a timely manner, they will all get the same url.
 async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
