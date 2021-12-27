@@ -45,8 +45,8 @@ impl<Worker> GlobalPeerUpdater<Worker> {
 	}
 }
 
-// FIXME: We should write unit tests for this one here - but with the gloabl worker sturct, which is not yet made to be mocked,
-// this would take some extreme changes.
+// FIXME: We should write unit tests for this one here - but with the global worker struct, which is not yet made to be mocked,
+// this would require a lot of changes.
 impl<Worker> UpdateWorkerPeers for GlobalPeerUpdater<Worker>
 where
 	Worker: GetMutWorker,
