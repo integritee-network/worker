@@ -80,10 +80,10 @@ where
 /// Looks for new peers and updates them.
 pub trait UpdatePeers {
 	fn search_peers(&self) -> WorkerResult<Vec<Url>>;
-	fn store_peers(&mut self, peers: Vec<Url>) -> WorkerResult<()>;
+	fn set_peers(&mut self, peers: Vec<Url>) -> WorkerResult<()>;
 	fn update_peers(&mut self) -> WorkerResult<()> {
 		let peers = self.search_peers()?;
-		self.store_peers(peers)
+		self.set_peers(peers)
 	}
 }
 
@@ -102,7 +102,7 @@ where
 		Ok(peer_urls)
 	}
 
-	fn store_peers(&mut self, peers: Vec<Url>) -> WorkerResult<()> {
+	fn set_peers(&mut self, peers: Vec<Url>) -> WorkerResult<()> {
 		self.peers = peers;
 		Ok(())
 	}
