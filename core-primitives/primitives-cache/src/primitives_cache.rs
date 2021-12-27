@@ -86,7 +86,7 @@ pub mod tests {
 		let primitives = Primitives::new(mu_ra_url, untrusted_url);
 		*lock = primitives.clone();
 		std::mem::drop(lock);
-		assert_eq!(primitives, cache.get_primitives().unwrap());
+		assert_eq!(primitives, *cache.get_primitives().unwrap());
 	}
 
 	#[test]
@@ -106,7 +106,7 @@ pub mod tests {
 		let primitives_one = primitives.clone();
 		let join_handle = thread::spawn(move || {
 			let read = new_thread_cache.get_primitives().unwrap();
-			assert_eq!(primitives_one, read);
+			assert_eq!(primitives_one, *read);
 		});
 
 		*write_lock = primitives;
