@@ -99,3 +99,17 @@ pub trait GetPrimitives {
 
 	fn get_untrusted_worker_url(&self) -> Result<String>;
 }
+
+// Helper function to set primitives of a given cache.
+pub fn set_primitives<E: MutatePrimitives>(
+	cache: &E,
+	mu_ra_url: &str,
+	untrusted_worker_url: &str,
+) -> Result<()> {
+	let primitives = Primitives::new(mu_ra_url, untrusted_worker_url);
+	let mut rw_lock = cache.load_for_mutation()?;
+
+	*rw_lock = primitives;
+
+	Ok(())
+}

@@ -65,7 +65,7 @@ use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_primitives_cache::{MutatePrimitives, Primitives, GLOBAL_PRIMITIVES_CACHE};
+use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::node::{
 	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE,
 };
@@ -177,20 +177,17 @@ pub unsafe extern "C" fn init(
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = set_primitives(&mu_ra_url, &untrusted_worker_url) {
+	if let Err(e) = itp_primitives_cache::set_primitives(
+		GLOBAL_PRIMITIVES_CACHE.as_ref(),
+		&mu_ra_url,
+		&untrusted_worker_url,
+	)
+	.map_err(Error::PrimitivesAccess)
+	{
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
-}
-
-fn set_primitives(mu_ra_url: &str, untrusted_worker_url: &str) -> Result<()> {
-	let primitives = Primitives::new(mu_ra_url, untrusted_worker_url);
-	let mut rw_lock = GLOBAL_PRIMITIVES_CACHE.load_for_mutation()?;
-
-	*rw_lock = primitives;
-
-	Ok(())
 }
 
 #[no_mangle]
