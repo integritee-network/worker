@@ -15,10 +15,10 @@
 
 */
 
-//! stores all primitives of the enclave that do need to be accessed frequently, but should
+//! Stores all primitives of the enclave that do need to be accessed often, but are
 //! not be frequently mutated, such as keys and server urls.
 //!
-//! TODO: For now only the mu-ra server url is stored here. Keys and such could also be stored here.
+//! TODO: For now only the mu-ra server and untrusted wokrer url is stored here. Keys and such could also be stored here.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(assert_matches)]
