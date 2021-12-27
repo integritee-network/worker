@@ -16,37 +16,17 @@
 
 //! Request state keys from a fellow validateer.
 
-use crate::enclave::tls_ra::enclave_request_key_provisioning;
-use codec::Error as CodecError;
-use futures::executor;
-use itc_rpc_client::direct_client::{
-	DirectApi, DirectClient as DirectWorkerApi, Error as DirectRpcClientError,
+use crate::{
+	enclave::tls_ra::enclave_request_key_provisioning,
+	error::{Error, ServiceResult as Result},
 };
+use futures::executor;
+use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_api_client_extensions::PalletTeerexApi;
 use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
 use itp_types::ShardIdentifier;
-use log::*;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
-use substrate_api_client::ApiClientError;
-
-#[derive(Debug, thiserror::Error)]
-enum Error {
-	#[error("ApiClient Error: {0}")]
-	ApiClient(#[from] ApiClientError),
-	#[error("{0}")]
-	Codec(#[from] CodecError),
-	#[error("Could not fetch any data.")]
-	EmptyValue,
-	#[error("{0}")]
-	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
-	#[error("{0}")]
-	Serialization(#[from] serde_json::Error),
-	#[error("{0}")]
-	DirectRpcClient(#[from] DirectRpcClientError),
-}
-
-type StateSyncResult<T> = Result<T, Error>;
 
 pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
@@ -86,7 +66,7 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
-) -> StateSyncResult<String> {
+) -> Result<String> {
 	let enclave = node_api.worker_for_shard(shard, None)?.ok_or(Error::EmptyValue)?;
 	let worker_api_direct = DirectWorkerApi::new(enclave.url);
 	Ok(worker_api_direct.get_mu_ra_url()?)

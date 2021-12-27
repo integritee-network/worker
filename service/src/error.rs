@@ -1,6 +1,8 @@
 use codec::Error as CodecError;
 use substrate_api_client::ApiClientError;
 
+pub type ServiceResult<T> = Result<T, Error>;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("{0}")]
