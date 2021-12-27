@@ -213,7 +213,7 @@ fn main() {
 			enclave_run_key_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.worker_mu_ra_port),
+				&format!("localhost:{}", config.mu_ra_url()),
 				_matches.is_present("skip-ra"),
 			);
 			println!("[+] Done!");
@@ -222,7 +222,7 @@ fn main() {
 			enclave_request_key_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.worker_mu_ra_port),
+				&format!("localhost:{}", config.mu_ra_url_for_client()),
 				_matches.is_present("skip-ra"),
 			)
 			.unwrap();

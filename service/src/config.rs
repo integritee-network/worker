@@ -7,11 +7,11 @@ pub struct Config {
 	pub node_port: String,
 	pub worker_ip: String,
 	/// Port to directly communicate with the trusted tls server inside the enclave.
-	pub worker_rpc_port: String,
+	pub trusted_worker_port: String,
 	/// Port to the untrusted ws of the validateer.
 	pub untrusted_worker_port: String,
 	/// Port for mutual-remote attestation requests.
-	pub worker_mu_ra_port: String,
+	pub mu_ra_port: String,
 }
 
 impl Config {
@@ -19,17 +19,17 @@ impl Config {
 		node_ip: String,
 		node_port: String,
 		worker_ip: String,
-		worker_rpc_port: String,
+		trusted_worker_port: String,
 		untrusted_worker_port: String,
-		worker_mu_ra_port: String,
+		mu_ra_port: String,
 	) -> Self {
 		Self {
 			node_ip,
 			node_port,
 			worker_ip,
-			worker_rpc_port,
+			trusted_worker_port,
 			untrusted_worker_port,
-			worker_mu_ra_port,
+			mu_ra_port,
 		}
 	}
 
@@ -39,11 +39,11 @@ impl Config {
 	}
 
 	pub fn trusted_worker_url(&self) -> String {
-		format!("{}:{}", self.worker_ip, self.worker_rpc_port)
+		format!("{}:{}", self.worker_ip, self.trusted_worker_port)
 	}
 
 	pub fn trusted_worker_url_for_client(&self) -> String {
-		format!("wss://{}:{}", self.worker_ip, self.worker_rpc_port)
+		format!("wss://{}:{}", self.worker_ip, self.trusted_worker_port)
 	}
 
 	pub fn untrusted_worker_url(&self) -> String {
@@ -55,11 +55,11 @@ impl Config {
 	}
 
 	pub fn mu_ra_url(&self) -> String {
-		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
+		format!("{}:{}", self.worker_ip, self.mu_ra_port)
 	}
 
 	pub fn mu_ra_url_for_client(&self) -> String {
-		format!("{}:{}", self.worker_ip, self.worker_mu_ra_port)
+		format!("{}:{}", self.worker_ip, self.mu_ra_port)
 	}
 }
 
