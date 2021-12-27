@@ -32,9 +32,9 @@ use crate::{
 	GetPrimitives, MutatePrimitives, Primitives,
 };
 
-/// Local primitives cache
+/// Local primitives cache.
 ///
-/// stores the primitives internally, protected by a RW lock for concurrent access
+/// Stores the primitives internally, protected by a RW lock for concurrent access.
 #[derive(Default)]
 pub struct PrimitivesCache {
 	primitives_lock: RwLock<Primitives>,

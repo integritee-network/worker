@@ -56,7 +56,7 @@ pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 ) {
 	// FIXME: we now assume that keys are equal for all shards
 
-	// initialize the enclave
+	// Initialize the enclave.
 	#[cfg(feature = "production")]
 	println!("*** Starting enclave in production mode");
 	#[cfg(not(feature = "production"))]

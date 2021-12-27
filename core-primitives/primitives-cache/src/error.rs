@@ -22,7 +22,6 @@ use std::boxed::Box;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// nonce cache error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("Primitives lock is poisoned")]

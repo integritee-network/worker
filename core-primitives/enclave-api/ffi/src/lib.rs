@@ -10,7 +10,7 @@ extern "C" {
 		mu_ra_addr: *const u8,
 		mu_ra_addr_size: u32,
 		untrusted_worker_addr: *const u8,
-		untrusted_worker_addr: u32,
+		untrusted_worker_addr_size: u32,
 	) -> sgx_status_t;
 
 	pub fn get_state(
