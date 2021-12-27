@@ -97,8 +97,17 @@ where
 		Ok(())
 	}
 
+	/// Returns a list of peers. The address of the worker self is replaced by ws://localhost.
 	fn peers(&self) -> WorkerResult<Vec<EnclaveMetadata>> {
-		Ok(self.node_api.all_enclaves(None)?)
+		let mut peers = self.node_api.all_enclaves(None)?;
+		peers.iter_mut().for_each(|e| {
+			if e.url.trim_start_matches("ws://").trim_start_matches("wss://")
+				== self._config.worker_url()
+			{
+				e.url = format!("ws://localhost:{}", self._config.worker_rpc_port);
+			}
+		});
+		Ok(peers)
 	}
 }
 
