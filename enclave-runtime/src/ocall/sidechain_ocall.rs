@@ -19,8 +19,9 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::Encode;
 use frame_support::ensure;
-use itp_ocall_api::{alloc::prelude::v1::Vec, EnclaveSidechainOCallApi};
+use itp_ocall_api::EnclaveSidechainOCallApi;
 use sgx_types::{sgx_status_t, SgxResult};
+use std::vec::Vec;
 
 impl EnclaveSidechainOCallApi for OcallApi {
 	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
