@@ -36,7 +36,12 @@ pub mod sgx_reexport_prelude {
 }
 
 #[cfg(feature = "std")]
+use std::sync::RwLockReadGuard;
+#[cfg(feature = "std")]
 use std::sync::RwLockWriteGuard;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxRwLockReadGuard as RwLockReadGuard;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::sync::SgxRwLockWriteGuard as RwLockWriteGuard;
 
@@ -93,7 +98,7 @@ pub trait MutatePrimitives {
 /// Trait to get the primitives.
 pub trait GetPrimitives {
 	/// Returns a clone of the full Primitives struct.
-	fn get_primitives(&self) -> Result<Primitives>;
+	fn get_primitives(&self) -> Result<RwLockReadGuard<Primitives>>;
 
 	fn get_mu_ra_url(&self) -> Result<String>;
 

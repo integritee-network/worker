@@ -18,10 +18,14 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::sync::SgxRwLock as RwLock;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxRwLockReadGuard as RwLockReadGuard;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::sync::SgxRwLockWriteGuard as RwLockWriteGuard;
 
 #[cfg(feature = "std")]
 use std::sync::RwLock;
+#[cfg(feature = "std")]
+use std::sync::RwLockReadGuard;
 #[cfg(feature = "std")]
 use std::sync::RwLockWriteGuard;
 
@@ -53,10 +57,8 @@ impl MutatePrimitives for PrimitivesCache {
 }
 
 impl GetPrimitives for PrimitivesCache {
-	fn get_primitives(&self) -> Result<Primitives> {
-		let primitives_lock = self.primitives_lock.read().map_err(|_| Error::LockPoisoning)?;
-		let primitives = &*primitives_lock;
-		Ok(primitives.clone())
+	fn get_primitives(&self) -> Result<RwLockReadGuard<Primitives>> {
+		self.primitives_lock.read().map_err(|_| Error::LockPoisoning)
 	}
 
 	fn get_mu_ra_url(&self) -> Result<String> {
