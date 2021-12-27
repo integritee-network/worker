@@ -42,7 +42,7 @@ args:
     - untrusted-worker-port:
         short: U
         long: untrusted-worker-port
-        help: Set the untrsuted websocket port of the worker
+        help: Set the untrusted websocket port of the worker
         takes_value: true
         default_value: "2001"
 

@@ -33,7 +33,7 @@ impl Config {
 		}
 	}
 
-	/// Gives back the client url for the node (including ws://)
+	/// Returns the client url of the node (including ws://)
 	pub fn node_url(&self) -> String {
 		format!("{}:{}", self.node_ip, self.node_port)
 	}

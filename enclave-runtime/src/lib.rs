@@ -167,7 +167,7 @@ pub unsafe extern "C" fn init(
 			Err(e) => return e.into(),
 		};
 
-	let unstrusted_worker_url = match String::decode(&mut slice::from_raw_parts(
+	let untrusted_worker_url = match String::decode(&mut slice::from_raw_parts(
 		untrusted_worker_addr,
 		untrusted_worker_addr_size as usize,
 	))
@@ -177,15 +177,15 @@ pub unsafe extern "C" fn init(
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = set_primitives(&mu_ra_url, &unstrusted_worker_url) {
+	if let Err(e) = set_primitives(&mu_ra_url, &untrusted_worker_url) {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn set_primitives(mu_ra_url: &str, unstrusted_worker_url: &str) -> Result<()> {
-	let primitives = Primitives::new(mu_ra_url, unstrusted_worker_url);
+fn set_primitives(mu_ra_url: &str, untrusted_worker_url: &str) -> Result<()> {
+	let primitives = Primitives::new(mu_ra_url, untrusted_worker_url);
 	let mut rw_lock = GLOBAL_PRIMITIVES_CACHE.load_for_mutation()?;
 
 	*rw_lock = primitives;
