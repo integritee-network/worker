@@ -1,0 +1,24 @@
+version: "3.3"
+services:
+  integritee-node:
+    image: "integritee/integritee-node-dev:1.0.6"
+    ports: 
+     - 9944:9944
+    command: --dev --rpc-methods unsafe --ws-external --rpc-external
+    logging:
+      driver: none
+  integritee-worker-1:
+    image: "integritee-worker:dev"
+    environment:
+     - RUST_LOG='info,info,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=info,integritee_service=info,ita_stf=debug'
+    command: /usr/local/bin/integritee-service --ws-external -u ws://integritee-node run --dev --skip-ra -U ws://integritee-worker-1:2000
+    restart: always
+  integritee-worker-2:
+    image: "integritee-worker:dev"
+    environment:
+     - RUST_LOG='info,info,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=info,integritee_service=info,ita_stf=debug'
+    command: bash -c "
+         sleep 20
+         && /usr/local/bin/integritee-service request-keys integritee-worker-1:3443 --skip-ra 
+         && /usr/local/bin/integritee-service --ws-external -u ws://integritee-node run --dev --skip-ra -U ws://integritee-worker-2:2000"
+    restart: always
