@@ -102,9 +102,9 @@ fn main() {
 						.help("worker url"),
 				)
 				.arg(
-					Arg::with_name("worker-rpc-port")
+					Arg::with_name("trusted-worker-port")
 						.short("P")
-						.long("worker-rpc-port")
+						.long("trusted-worker-port")
 						.global(true)
 						.takes_value(true)
 						.value_name("STRING")
@@ -552,7 +552,7 @@ fn get_worker_api_direct(matches: &ArgMatches<'_>) -> DirectWorkerApi {
 	let url = format!(
 		"{}:{}",
 		matches.value_of("worker-url").unwrap(),
-		matches.value_of("worker-rpc-port").unwrap()
+		matches.value_of("trusted-worker-port").unwrap()
 	);
 	info!("Connecting to integritee-service-direct-port on '{}'", url);
 	DirectWorkerApi::new(url)
