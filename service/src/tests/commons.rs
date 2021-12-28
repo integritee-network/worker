@@ -47,8 +47,11 @@ pub fn local_worker_config(
 		Default::default(),
 		Default::default(),
 		url.next().unwrap().into(),
+		None,
 		url.next().unwrap().into(),
+		None,
 		untrusted_worker_port,
+		None,
 		mu_ra_port,
 	)
 }

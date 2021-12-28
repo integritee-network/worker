@@ -45,10 +45,22 @@ args:
         help: Set the untrusted websocket port of the worker
         takes_value: true
         default_value: "2001"
-    - external-address:
-        short: ext
-        long: external-address
-        help: Set the worker's address to be advertised on the parentchain. The port will be the same as given in `trusted-worker-port`
+    - trusted-external-address:
+        short: trusted-ext
+        long: trusted-external-address
+        help: Set the trusted worker address to be advertised on the parentchain. If no port is given, the same as in `trusted-worker-port` will be used.
+        takes_value: true
+        required: false
+    - untrusted-external-address:
+        short: untrusted-ext
+        long: untrusted-external-address
+        help: Set the untrusted worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `untrusted-worker-port` will be used.
+        takes_value: true
+        required: false
+    - mu-ra-external-address:
+        short: mu-ra-ext
+        long: mu-ra-external-address
+        help: Set the mutual remote attestation worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `mu-ra-port` will be used.
         takes_value: true
         required: false
 
