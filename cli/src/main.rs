@@ -457,10 +457,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
 
 	let direct_api = get_worker_api_direct(matches);
 	let (sender, receiver) = channel();
-	thread::spawn(move || match direct_api.watch(&jsonrpc_call, &sender) {
-		Ok(_) => {},
-		Err(e) => panic!("Error when sending direct invocation call: {:?}", e),
-	});
+	direct_api.watch(jsonrpc_call, sender);
 
 	loop {
 		match receiver.recv() {
@@ -606,10 +603,7 @@ fn send_direct_request(
 
 	debug!("setup sender and receiver");
 	let (sender, receiver) = channel();
-	thread::spawn(move || match direct_api.watch(&jsonrpc_call, &sender) {
-		Ok(_) => {},
-		Err(e) => panic!("Error when sending direct invocation call: {:?}", e),
-	});
+	direct_api.watch(jsonrpc_call, sender);
 
 	debug!("waiting for rpc response");
 	loop {

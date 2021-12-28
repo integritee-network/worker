@@ -22,7 +22,11 @@ use codec::Decode;
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use std::sync::mpsc::{channel, Sender as MpscSender};
+use std::{
+	sync::mpsc::{channel, Sender as MpscSender},
+	thread,
+	thread::JoinHandle,
+};
 
 pub use crate::error::{Error, Result};
 
@@ -34,7 +38,7 @@ pub trait DirectApi {
 	/// Server connection with only one response.
 	fn get(&self, request: &str) -> Result<String>;
 	/// Server connection with more than one response.
-	fn watch(&self, request: &str, sender: &MpscSender<String>) -> Result<()>;
+	fn watch(&self, request: String, sender: MpscSender<String>) -> JoinHandle<()>;
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey>;
 	fn get_mu_ra_url(&self) -> Result<String>;
 	fn get_untrusted_worker_url(&self) -> Result<String>;
@@ -55,9 +59,12 @@ impl DirectApi for DirectClient {
 		port_out.recv().map_err(Error::MspcReceiver)
 	}
 
-	fn watch(&self, request: &str, sender: &MpscSender<String>) -> Result<()> {
+	fn watch(&self, request: String, sender: MpscSender<String>) -> JoinHandle<()> {
 		info!("[WorkerApi Direct]: (watch) Sending request: {:?}", request);
-		WsClient::connect(&self.url, request, sender, true).map_err(Error::WsClientError)
+		let url = self.url.clone();
+
+		// Unwrap is fine here, because JoinHandle can be used to handle a Thread panic.
+		thread::spawn(move || WsClient::connect(&url, &request, &sender, true).unwrap())
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
