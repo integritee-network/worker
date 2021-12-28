@@ -15,9 +15,10 @@
 
 */
 
+//! Sidechain peer fetch error.
+
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// Sidechain peer fetch error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("RPC client error: {0}")]
