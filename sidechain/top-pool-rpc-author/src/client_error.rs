@@ -33,7 +33,7 @@ pub enum Error {
 	/// Client error.
 	#[display(fmt = "Client error: {}", _0)]
 	#[from(ignore)]
-	Client(Box<dyn std::error::Error + Send>),
+	Client(Box<dyn std::error::Error + Sync + Send + 'static>),
 	/// TrustedOperation pool error,
 	#[display(fmt = "TrustedOperation pool error: {}", _0)]
 	Pool(its_top_pool::error::Error),

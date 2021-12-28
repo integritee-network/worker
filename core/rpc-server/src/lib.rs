@@ -66,7 +66,7 @@ where
 
 	let fetch_sidechain_blocks_module = PeerFetchServerModuleBuilder::new(sidechain_block_fetcher)
 		.build()
-		.map_err(|_| CallError::InvalidParams)?; // TODO this is just a shortcut, because the underlying error types do not have the necessary trait bounds.
+		.map_err(|e| CallError::Failed(e.to_string().into()))?; // `to_string` necessary due to no all errors implementing Send + Sync.
 	server.register_module(fetch_sidechain_blocks_module).unwrap();
 
 	let socket_addr = server.local_addr()?;
