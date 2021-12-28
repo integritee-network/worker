@@ -21,15 +21,14 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-	/// File access error
 	#[error("Could not interact with file storage: {0:?}")]
 	Operational(#[from] rocksdb::Error),
-	/// Last block of shard not found
-	#[error("Last Block of shard: {0} not found")]
+	#[error("Last Block of shard {0} not found")]
 	LastBlockNotFound(String),
 	#[error("Failed to find parent block")]
 	FailedToFindParentBlock,
-	/// Decoding Error
 	#[error("Could not decode: {0:?}")]
 	Decode(#[from] codec::Error),
+	#[error("Given block is not an ancestor of the last stored")]
+	HeaderAncestryMismatch,
 }

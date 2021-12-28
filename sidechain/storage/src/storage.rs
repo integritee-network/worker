@@ -101,7 +101,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		self.db.get(block_hash)
 	}
 
-	/// Get all blocks following (i.e. children of) a specified blocks
+	/// Get all blocks following (i.e. children of) a specified blocks.
 	pub fn get_blocks_following(
 		&self,
 		block_hash: &BlockHash,
@@ -133,7 +133,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		while &current_block.hash() != block_hash {
 			let parent_block_hash = current_block.block().parent_hash();
 
-			// Break in case we're at the genesis block
+			// Break in case we're at the genesis block.
 			if parent_block_hash == BlockHash::default() {
 				break
 			}
@@ -152,18 +152,23 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		Ok(blocks_to_return)
 	}
 
-	/// update sidechain storage
+	/// Update sidechain storage with blocks.
+	///
+	/// Blocks are iterated through one by one. In case more than one block per shard is included,
+	/// be sure to give them in the correct order (oldest first).
 	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedBlock>) -> Result<()> {
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
 		for block in blocks_to_store.into_iter() {
-			self.add_block_to_batch(&block, &mut new_shard, &mut batch);
+			if let Err(e) = self.add_block_to_batch(&block, &mut new_shard, &mut batch) {
+				error!("Could not store block {:?} due to: {:?}", block, e);
+			};
 		}
-		// update stored_shards_key -> vec<shard> only if a new shard was included
+		// Update stored_shards_key -> vec<shard> only if a new shard was included,
 		if new_shard {
 			SidechainDB::add_to_batch(&mut batch, STORED_SHARDS_KEY, self.shards().clone());
 		}
-		// store everything in DB
+		// Store everything.
 		self.db.write(batch)
 	}
 
@@ -236,19 +241,20 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		signed_block: &SignedBlock,
 		new_shard: &mut bool,
 		batch: &mut WriteBatch,
-	) {
+	) -> Result<()> {
 		let shard = &signed_block.block().shard_id();
 		if self.shards.contains(shard) {
 			if !self.verify_block_ancestry(signed_block.block()) {
 				// do not include block if its not a direct ancestor of the last block in line
-				return
+				return Err(Error::HeaderAncestryMismatch)
 			}
 		} else {
 			self.shards.push(*shard);
 			*new_shard = true;
 		}
-		// add block to DB batch
+		// Add block to DB batch.
 		self.add_last_block(batch, signed_block);
+		Ok(())
 	}
 
 	fn verify_block_ancestry(&self, block: &<SignedBlock as SignedBlockT>::Block) -> bool {
@@ -731,7 +737,9 @@ mod test {
 			let mut batch = WriteBatch::default();
 			assert!(batch.is_empty());
 			// when
-			sidechain_db.add_block_to_batch(&signed_block, &mut new_shard, &mut batch);
+			sidechain_db
+				.add_block_to_batch(&signed_block, &mut new_shard, &mut batch)
+				.unwrap();
 
 			// then
 			assert!(new_shard);
@@ -761,7 +769,9 @@ mod test {
 			sidechain_db.shards.push(shard);
 			sidechain_db.last_blocks.insert(shard, last_block);
 			// when
-			sidechain_db.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch);
+			sidechain_db
+				.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch)
+				.unwrap();
 
 			// then
 			assert!(!new_shard);
@@ -790,9 +800,11 @@ mod test {
 			sidechain_db.shards.push(shard);
 			sidechain_db.last_blocks.insert(shard, last_block);
 			// when
-			sidechain_db.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch);
+			let result =
+				sidechain_db.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch);
 
 			// then
+			assert!(result.is_err());
 			assert!(!new_shard);
 			// ensure Writebatch is not empty anymore:
 			assert!(batch.is_empty());
