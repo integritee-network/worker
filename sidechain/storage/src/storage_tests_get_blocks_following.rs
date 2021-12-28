@@ -64,7 +64,8 @@ fn get_blocks_follow_returns_empty_vec_if_block_not_found() {
 	{
 		let updated_sidechain_db = db_fixture.get_handle();
 		let block_hash_to_be_followed = BlockHash::from_low_u64_be(1);
-		assert_ne!(block_1.hash(), block_hash_to_be_followed); // Off-chance that random() generates exactly the same hash
+		// Off-chance that random() generates exactly the same hash
+		assert_ne!(block_1.hash(), block_hash_to_be_followed);
 
 		assert_eq!(
 			updated_sidechain_db
@@ -99,11 +100,12 @@ fn get_blocks_returns_none_if_last_is_already_most_recent_block() {
 #[test]
 fn given_block_with_invalid_ancestry_returns_error() {
 	let block_1 = create_signed_block(1, BlockHash::default());
-	let block_2 = create_signed_block(2, BlockHash::random()); // Should be block_1 hash, but be deliberately introduce an invalid parent hash.
+	// Should be block_1 hash, but we deliberately introduce an invalid parent hash.
+	let block_2 = create_signed_block(2, BlockHash::random());
 
 	let db_fixture = TestDbFixture::setup(
 		"given_block_with_invalid_ancestry_returns_error",
-		vec![block_1.clone(), block_2.clone()],
+		vec![block_1.clone(), block_2],
 	);
 
 	{
