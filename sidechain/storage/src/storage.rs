@@ -221,7 +221,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		}
 	}
 
-	/// prunes all shards except for the newest blocks (according to blocknumber)
+	/// Prunes all shards except for the newest blocks (according to blocknumber).
 	pub fn prune_shards(&mut self, number_of_blocks_to_keep: BlockNumber) {
 		for shard in self.shards().clone() {
 			// get last block:
@@ -245,7 +245,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		let shard = &signed_block.block().shard_id();
 		if self.shards.contains(shard) {
 			if !self.verify_block_ancestry(signed_block.block()) {
-				// do not include block if its not a direct ancestor of the last block in line
+				// Do not include block if its not a direct ancestor of the last block in line.
 				return Err(Error::HeaderAncestryMismatch)
 			}
 		} else {
@@ -276,8 +276,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		true
 	}
 
-	/// implementations of helper functions, not meant for pub use
-	/// gets the previous block of given shard and block number, if there is one
+	/// Implementations of helper functions, not meant for pub use
+	/// gets the previous block of given shard and block number, if there is one.
 	fn get_previous_block(
 		&self,
 		shard: &ShardIdentifierFor<SignedBlock>,
@@ -288,12 +288,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			.get_block_hash(shard, prev_block_number)?
 			.map(|block_hash| LastSidechainBlock { hash: block_hash, number: prev_block_number }))
 	}
-	/// reads shards from DB
 	fn load_shards_from_db(&self) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
 		Ok(self.db.get(STORED_SHARDS_KEY)?.unwrap_or_default())
 	}
 
-	/// reads last block from DB
 	fn load_last_block_from_db(
 		&self,
 		shard: &ShardIdentifierFor<SignedBlock>,
@@ -315,24 +313,24 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		}
 	}
 
-	/// adds the block to the WriteBatch
+	/// Adds the block to the WriteBatch.
 	fn add_last_block(&mut self, batch: &mut WriteBatch, block: &SignedBlock) {
 		let hash = block.hash();
 		let block_number = block.block().block_number();
 		let shard = block.block().shard_id();
-		// Block hash -> Signed Block
+		// Block hash -> Signed Block.
 		SidechainDB::add_to_batch(batch, hash, block);
 
-		// (Shard, Block number) -> Blockhash (for block pruning)
+		// (Shard, Block number) -> Blockhash (for block pruning).
 		SidechainDB::add_to_batch(batch, (shard, block_number), hash);
 
-		// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
+		// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state.
 		let last_block = LastSidechainBlock { hash, number: block_number };
 		self.last_blocks.insert(shard, last_block); // add in memory
 		SidechainDB::add_to_batch(batch, (LAST_BLOCK_KEY, shard), last_block);
 	}
 
-	/// delete block to the WriteBach
+	/// Add delete block to the WriteBatch.
 	fn delete_block(
 		&self,
 		batch: &mut WriteBatch,
@@ -340,28 +338,37 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		block_number: &BlockNumber,
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) {
-		// Block hash -> Signed Block
+		// Block hash -> Signed Block.
 		SidechainDB::delete_to_batch(batch, block_hash);
-		// (Shard, Block number) -> Blockhash (for block pruning)
+		// (Shard, Block number) -> Blockhash (for block pruning).
 		SidechainDB::delete_to_batch(batch, (shard, block_number));
 	}
 
-	/// delete last block & add to the last block (write batch only)
+	/// Add delete last block to WriteBatch and remove block from memory.
+	///
+	/// This includes adding a delete command of the following:
+	/// - Block hash -> Signed Block.
+	/// - (Shard, Block number) -> Blockhash (for block pruning).
+	/// - ((LAST_BLOCK_KEY, shard) -> BlockHash) -> Blockhash (for block pruning).
+	///
+	/// Careful usage of this command: In case the last block is deleted, (LAST_BLOCK_KEY, shard) will be empty
+	/// even though there might be a new last block (i.e. the previous block of the removed last block).
+	/// FIXME: Is that a problem?
 	fn delete_last_block(
 		&mut self,
 		batch: &mut WriteBatch,
 		last_block: &LastSidechainBlock,
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) {
-		// add block to delete batch
-		// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
+		// Add delete block to batch.
+		// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock.
 		SidechainDB::delete_to_batch(batch, (LAST_BLOCK_KEY, *shard));
 		self.delete_block(batch, &last_block.hash, &last_block.number, shard);
 
-		// delete last block from local memory
-		// careful here: This deletes the local memory before db has been actually pruned
+		// Delete last block from local memory.
+		// Careful here: This deletes the local memory before db has been actually pruned
 		// (it's been only added to the write batch).
-		// But this can be fixed upon reloading the db / restarting the worker
+		// But this can be fixed upon reloading the db / restarting the worker.
 		self.last_blocks.remove(shard);
 	}
 }
