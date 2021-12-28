@@ -51,7 +51,7 @@ where
 
 	pub fn get_peer_rpc_url_to_sync_from(&self) -> Result<String> {
 		// TODO: Get the validateer to sync from (author of the last sidechain block)
-		let all_validateers = self.node_api.all_enclaves()?;
+		let all_validateers = self.node_api.all_enclaves(None)?;
 		let sync_source = all_validateers.first().unwrap().url.clone();
 
 		worker_url_into_async_rpc_url(sync_source.as_str()).map_err(|e| e.into())
