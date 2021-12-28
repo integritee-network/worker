@@ -353,7 +353,6 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	///
 	/// Careful usage of this command: In case the last block is deleted, (LAST_BLOCK_KEY, shard) will be empty
 	/// even though there might be a new last block (i.e. the previous block of the removed last block).
-	/// FIXME: Is that a problem?
 	fn delete_last_block(
 		&mut self,
 		batch: &mut WriteBatch,
