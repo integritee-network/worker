@@ -55,7 +55,7 @@ impl DirectApi for DirectClientMock {
 	}
 
 	fn watch(&self, _request: String, _sender: MpscSender<String>) -> JoinHandle<()> {
-		Ok(())
+		unimplemented!()
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
