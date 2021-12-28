@@ -213,7 +213,7 @@ fn main() {
 			enclave_run_key_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.mu_ra_url()),
+				&config.mu_ra_url(),
 				_matches.is_present("skip-ra"),
 			);
 			println!("[+] Done!");
@@ -222,7 +222,7 @@ fn main() {
 			enclave_request_key_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.mu_ra_url_for_client()),
+				&config.mu_ra_url_external(),
 				_matches.is_present("skip-ra"),
 			)
 			.unwrap();
@@ -283,7 +283,7 @@ fn start_worker<E, T, D>(
 
 	// ------------------------------------------------------------------------
 	// Start trusted worker rpc server.
-	let direct_invocation_server_addr = config.trusted_worker_url();
+	let direct_invocation_server_addr = config.trusted_worker_url_internal();
 	let enclave_for_direct_invocation = enclave.clone();
 	thread::spawn(move || {
 		println!(
@@ -324,7 +324,7 @@ fn start_worker<E, T, D>(
 	enclave
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
-	let trusted_url = config.trusted_worker_url_for_client();
+	let trusted_url = config.trusted_worker_url_external();
 	let uxt = if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."

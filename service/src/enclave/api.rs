@@ -103,7 +103,7 @@ pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 
 	// create an enclave API and initialize it
 	let enclave_api = Enclave::new(enclave);
-	enclave_api.init(&config.mu_ra_url_for_client(), &config.untrusted_worker_url_for_client())?;
+	enclave_api.init(&config.mu_ra_url_external(), &config.untrusted_worker_url_external())?;
 
 	Ok(enclave_api)
 }

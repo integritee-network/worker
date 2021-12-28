@@ -26,7 +26,7 @@ args:
         default_value: "9944"
     - ws-external:
         long: ws-external
-        help: let worker api listen to external requests too
+        help: Set this flag in case the worker should listen to external requests.
     - mu-ra-port:
         short: r
         long: mu-ra-port
@@ -45,6 +45,12 @@ args:
         help: Set the untrusted websocket port of the worker
         takes_value: true
         default_value: "2001"
+    - external-address:
+        short: ext
+        long: external-address
+        help: Set the worker's address to be advertised on the parentchain. The port will be the same as given in `trusted-worker-port`
+        takes_value: true
+        required: false
 
 subcommands:
     - run:
