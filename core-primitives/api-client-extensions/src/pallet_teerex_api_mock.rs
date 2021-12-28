@@ -16,7 +16,7 @@
 */
 
 use crate::{pallet_teerex::PalletTeerexApi, ApiResult};
-use itp_types::{Enclave, IpfsHash, ShardIdentifier};
+use itp_types::{Enclave, IpfsHash, ShardIdentifier, H256 as Hash};
 
 #[derive(Default)]
 pub struct PalletTeerexApiMock {
@@ -31,23 +31,31 @@ impl PalletTeerexApiMock {
 }
 
 impl PalletTeerexApi for PalletTeerexApiMock {
-	fn enclave(&self, index: u64) -> ApiResult<Option<Enclave>> {
+	fn enclave(&self, index: u64, _at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
 		Ok(self.registered_enclaves.get(index as usize).cloned())
 	}
 
-	fn enclave_count(&self) -> ApiResult<u64> {
+	fn enclave_count(&self, _at_block: Option<Hash>) -> ApiResult<u64> {
 		Ok(self.registered_enclaves.len() as u64)
 	}
 
-	fn all_enclaves(&self) -> ApiResult<Vec<Enclave>> {
+	fn all_enclaves(&self, _at_block: Option<Hash>) -> ApiResult<Vec<Enclave>> {
 		Ok(self.registered_enclaves.clone())
 	}
 
-	fn worker_for_shard(&self, _shard: &ShardIdentifier) -> ApiResult<Option<Enclave>> {
+	fn worker_for_shard(
+		&self,
+		_shard: &ShardIdentifier,
+		_at_block: Option<Hash>,
+	) -> ApiResult<Option<Enclave>> {
 		todo!()
 	}
 
-	fn latest_ipfs_hash(&self, _shard: &ShardIdentifier) -> ApiResult<Option<IpfsHash>> {
+	fn latest_ipfs_hash(
+		&self,
+		_shard: &ShardIdentifier,
+		_at_block: Option<Hash>,
+	) -> ApiResult<Option<IpfsHash>> {
 		todo!()
 	}
 }

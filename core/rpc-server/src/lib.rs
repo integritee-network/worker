@@ -41,7 +41,7 @@ pub async fn run_server<Enclave, FetchSidechainBlocks>(
 ) -> anyhow::Result<SocketAddr>
 where
 	Enclave: DirectRequest,
-	FetchSidechainBlocks: FetchBlocks<SignedSidechainBlock> + Send + Sync + 'static,
+	FetchSidechainBlocks: FetchBlocks<SignedBlock> + Send + Sync + 'static,
 {
 	let mut server = WsServerBuilder::default().build(addr).await?;
 
