@@ -19,7 +19,7 @@
 
 use crate::{direct_client::DirectApi, error::Result};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use std::sync::mpsc::Sender as MpscSender;
+use std::{sync::mpsc::Sender as MpscSender, thread::JoinHandle};
 
 #[derive(Clone, Default)]
 pub struct DirectClientMock {
@@ -54,7 +54,7 @@ impl DirectApi for DirectClientMock {
 		Ok("Hello_world".to_string())
 	}
 
-	fn watch(&self, _request: &str, _sender: &MpscSender<String>) -> Result<()> {
+	fn watch(&self, _request: String, _sender: MpscSender<String>) -> JoinHandle<()> {
 		Ok(())
 	}
 
