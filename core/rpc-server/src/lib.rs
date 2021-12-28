@@ -18,10 +18,7 @@
 use itp_enclave_api::direct_request::DirectRequest;
 use itp_types::RpcRequest;
 use its_peer_fetch::peer_fetch_server::PeerFetchServerModuleBuilder;
-use its_primitives::{
-	constants::RPC_METHOD_NAME_IMPORT_BLOCKS,
-	types::{SignedBlock, SignedBlock as SignedSidechainBlock},
-};
+use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use its_storage::interface::FetchBlocks;
 use jsonrpsee::{
 	types::error::CallError,
