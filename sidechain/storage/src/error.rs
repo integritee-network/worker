@@ -29,6 +29,6 @@ pub enum Error {
 	FailedToFindParentBlock,
 	#[error("Could not decode: {0:?}")]
 	Decode(#[from] codec::Error),
-	#[error("Given block is not an ancestor of the last stored")]
+	#[error("Given block is not a successor of the last known block")]
 	HeaderAncestryMismatch,
 }
