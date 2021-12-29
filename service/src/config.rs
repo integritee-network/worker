@@ -141,7 +141,7 @@ mod test {
 	use std::collections::HashMap;
 
 	#[test]
-	fn creating_config_adds_default_values_if_not_given() {
+	fn check_correct_config_assignment_for_empty_input() {
 		let empty_args = ArgMatches::default();
 		let config = Config::from(&empty_args);
 		let expected_worker_ip = "127.0.0.1";
@@ -158,7 +158,7 @@ mod test {
 	}
 
 	#[test]
-	fn worker_ip_is_set_to_open_if_ws_external_is_set() {
+	fn worker_ip_is_set_correcty_for_set_ws_external_flag() {
 		let expected_worker_ip = "0.0.0.0";
 
 		let mut args = ArgMatches::default();
@@ -169,7 +169,7 @@ mod test {
 	}
 
 	#[test]
-	fn config_from_assigns_given_arg_values_correctly() {
+	fn check_correct_config_assignment_for_given_input() {
 		let node_ip = "ws://12.1.58.1";
 		let node_port = "111111";
 		let trusted_ext_addr = "wss://1.1.1.2:700";
@@ -215,7 +215,7 @@ mod test {
 	}
 
 	#[test]
-	fn external_addresses_are_returned_correctly_if_not_given() {
+	fn external_addresses_are_returned_correctly_if_not_set() {
 		let trusted_port = "7119";
 		let untrusted_port = "9119";
 		let mu_ra_port = "99";
@@ -246,7 +246,7 @@ mod test {
 	}
 
 	#[test]
-	fn external_addresses_are_returned_correctly_if_given() {
+	fn external_addresses_are_returned_correctly_if_set() {
 		let trusted_ext_addr = "wss://1.1.1.2:700";
 		let untrusted_ext_addr = "ws://1.723.3.1:11";
 		let mu_ra_ext_addr = "1.1.3.1:1000";
@@ -271,7 +271,7 @@ mod test {
 	}
 
 	#[test]
-	fn add_port_if_necessary_does_not_add_port_if_given() {
+	fn ensure_no_port_is_added_to_url_with_port() {
 		let url = "ws://hello:4000";
 		let port = "0";
 
@@ -281,7 +281,7 @@ mod test {
 	}
 
 	#[test]
-	fn add_port_if_necessary_adds_port_if_not_given() {
+	fn ensure_port_is_added_to_url_without_port() {
 		let url = "wss://hello";
 		let port = "0";
 
@@ -291,7 +291,7 @@ mod test {
 	}
 
 	#[test]
-	fn without_ws_add_port_if_necessary_does_not_add_port_if_given_without_ws() {
+	fn ensure_no_port_is_added_to_url_with_port_without_prefix() {
 		let url = "hello:10001";
 		let port = "012";
 
@@ -301,7 +301,7 @@ mod test {
 	}
 
 	#[test]
-	fn add_port_if_necessary_adds_port_if_not_given_without_ws() {
+	fn ensure_port_is_added_to_url_without_port_without_prefix() {
 		let url = "hello_world";
 		let port = "10";
 
