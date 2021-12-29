@@ -114,19 +114,12 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		}
 
 		// We get the latest block and then traverse the parents until we find our starting block.
-		let latest_block = match self.last_block_of_shard(shard_identifier) {
-			None =>
-				return Err(Error::LastBlockNotFound(
-					"Failed to find last block information".to_string(),
-				)),
-			Some(last_block_ref) => match self.get_block(&last_block_ref.hash)? {
-				None =>
-					return Err(Error::LastBlockNotFound(
-						"Failed to retrieve last block from storage".to_string(),
-					)),
-				Some(last_block) => last_block,
-			},
-		};
+		let last_block_of_shard = self.last_block_of_shard(shard_identifier).ok_or_else(|| {
+			Error::LastBlockNotFound("Failed to find last block information".to_string())
+		})?;
+		let latest_block = self.get_block(&last_block_of_shard.hash)?.ok_or_else(|| {
+			Error::LastBlockNotFound("Failed to retrieve last block from storage".to_string())
+		})?;
 
 		let mut current_block = latest_block;
 		let mut blocks_to_return = Vec::<SignedBlock>::new();
@@ -140,10 +133,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 
 			blocks_to_return.push(current_block);
 
-			current_block = match self.get_block(&parent_block_hash)? {
-				None => return Err(Error::FailedToFindParentBlock),
-				Some(b) => b,
-			}
+			current_block =
+				self.get_block(&parent_block_hash)?.ok_or(Error::FailedToFindParentBlock)?;
 		}
 
 		// Reverse because we iterate from newest to oldest, but result should be oldest first.
@@ -187,7 +178,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			current_block_number = previous_block.number;
 			self.delete_block(&mut batch, &previous_block.hash, &current_block_number, shard);
 		}
-		// remove shard from list
+		// emove shard from list
 		// STORED_SHARDS_KEY -> Vec<(Shard)>
 		self.shards.retain(|&x| x != *shard);
 		// add updated shards to Batch DB
