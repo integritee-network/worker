@@ -6,11 +6,6 @@ edition = "2018"
 resolver = "2"
 
 [dependencies]
-# local
-itc-rpc-client = { path = "../../core/rpc-client" }
-itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions" }
-its-primitives = { path = "../primitives" }
-its-storage = { path = "../storage" }
 # crates.io
 async-trait = { version = "0.1.50" }
 jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
@@ -19,6 +14,11 @@ serde = "1.0"
 serde_json = "1.0"
 thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
+# local
+itc-rpc-client = { path = "../../core/rpc-client" }
+itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions" }
+its-primitives = { path = "../primitives" }
+its-storage = { path = "../storage" }
 
 [dev-dependencies]
 # crates.io
