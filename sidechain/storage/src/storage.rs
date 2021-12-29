@@ -126,11 +126,6 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		while &current_block.hash() != block_hash {
 			let parent_block_hash = current_block.block().parent_hash();
 
-			// Break in case we're at the genesis block.
-			if parent_block_hash == BlockHash::default() {
-				break
-			}
-
 			blocks_to_return.push(current_block);
 
 			current_block =
