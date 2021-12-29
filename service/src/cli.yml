@@ -40,7 +40,7 @@ args:
         takes_value: true
         default_value: "2000"
     - untrusted-worker-port:
-        short: u
+        short: w
         long: untrusted-worker-port
         help: Set the untrusted websocket port of the worker
         takes_value: true

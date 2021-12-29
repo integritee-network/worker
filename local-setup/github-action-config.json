@@ -13,7 +13,7 @@
       "flags": [
         "-P",
         "2000",
-        "-u",
+        "-w",
         "2001"
       ],
       "subcommand_flags": [
@@ -26,7 +26,7 @@
       "flags": [
         "-P",
         "3000",
-        "-u",
+        "-w",
         "3001"
       ],
       "subcommand_flags": [
