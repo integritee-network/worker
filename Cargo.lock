@@ -5692,7 +5692,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#a5e2d8b6bcb226acba0ca473b4fb028daa73278b"
+source = "git+https://github.com/ajuna-network/sgx-runtime?branch=master#a5e2d8b6bcb226acba0ca473b4fb028daa73278b"
 dependencies = [
  "frame-executive",
  "frame-support",
