@@ -15,18 +15,15 @@
 
 */
 
-use crate::{error::Error, test_db_fixture::TestDbFixture};
-use itp_types::ShardIdentifier;
-use its_primitives::{
-	traits::SignedBlock,
-	types::{BlockHash, SignedBlock as SignedSidechainBlock},
+use crate::{
+	error::Error,
+	test_utils::{
+		create_signed_block_with_parenthash as create_signed_block, default_shard,
+		fill_storage_with_blocks, get_storage,
+	},
 };
-use its_test::sidechain_block_builder::SidechainBlockBuilder;
-use sp_core::{ed25519, Pair, H256};
-use std::{
-	assert_matches::assert_matches,
-	time::{SystemTime, UNIX_EPOCH},
-};
+use its_primitives::{traits::SignedBlock, types::BlockHash};
+use std::assert_matches::assert_matches;
 
 #[test]
 fn get_blocks_following_works_for_regular_case() {
@@ -35,13 +32,11 @@ fn get_blocks_following_works_for_regular_case() {
 	let block_3 = create_signed_block(3, block_2.hash());
 	let block_4 = create_signed_block(4, block_3.hash());
 
-	let db_fixture = TestDbFixture::setup(
-		"get_blocks_following_works_for_regular_case",
-		vec![block_1.clone(), block_2.clone(), block_3.clone(), block_4.clone()],
-	);
+	let temp_dir =
+		fill_storage_with_blocks(vec![block_1.clone(), block_2.clone(), block_3, block_4.clone()]);
 
 	{
-		let updated_sidechain_db = db_fixture.get_handle();
+		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 		let blocks_following_1 = updated_sidechain_db
 			.get_blocks_following(&block_1.hash(), &default_shard())
 			.unwrap();
@@ -56,13 +51,10 @@ fn get_blocks_following_works_for_regular_case() {
 fn get_blocks_follow_returns_empty_vec_if_block_not_found() {
 	let block_1 = create_signed_block(1, BlockHash::random());
 
-	let db_fixture = TestDbFixture::setup(
-		"get_blocks_follow_returns_empty_vec_if_block_not_found",
-		vec![block_1.clone()],
-	);
+	let temp_dir = fill_storage_with_blocks(vec![block_1.clone()]);
 
 	{
-		let updated_sidechain_db = db_fixture.get_handle();
+		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 		let block_hash_to_be_followed = BlockHash::from_low_u64_be(1);
 		// Off-chance that random() generates exactly the same hash
 		assert_ne!(block_1.hash(), block_hash_to_be_followed);
@@ -80,13 +72,10 @@ fn get_blocks_follow_returns_empty_vec_if_block_not_found() {
 fn get_blocks_returns_none_if_last_is_already_most_recent_block() {
 	let block_1 = create_signed_block(1, BlockHash::random());
 
-	let db_fixture = TestDbFixture::setup(
-		"get_blocks_returns_none_if_last_is_already_most_recent_block",
-		vec![block_1.clone()],
-	);
+	let temp_dir = fill_storage_with_blocks(vec![block_1.clone()]);
 
 	{
-		let updated_sidechain_db = db_fixture.get_handle();
+		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 
 		assert_eq!(
 			updated_sidechain_db
@@ -103,32 +92,14 @@ fn given_block_with_invalid_ancestry_returns_error() {
 	// Should be block_1 hash, but we deliberately introduce an invalid parent hash.
 	let block_2 = create_signed_block(2, BlockHash::random());
 
-	let db_fixture = TestDbFixture::setup(
-		"given_block_with_invalid_ancestry_returns_error",
-		vec![block_1.clone(), block_2],
-	);
+	let temp_dir = fill_storage_with_blocks(vec![block_1.clone(), block_2]);
 
 	{
-		let updated_sidechain_db = db_fixture.get_handle();
+		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 
 		assert_matches!(
 			updated_sidechain_db.get_blocks_following(&block_1.hash(), &default_shard()),
 			Err(Error::FailedToFindParentBlock)
 		);
 	}
-}
-
-fn default_shard() -> ShardIdentifier {
-	ShardIdentifier::default()
-}
-
-fn create_signed_block(block_number: u64, parent_hash: BlockHash) -> SignedSidechainBlock {
-	SidechainBlockBuilder::default()
-		.with_signer(ed25519::Pair::from_string("//Alice", None).unwrap())
-		.with_parent_hash(parent_hash)
-		.with_parentchain_block_hash(H256::random())
-		.with_timestamp(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64)
-		.with_shard(default_shard())
-		.with_number(block_number)
-		.build_signed()
 }

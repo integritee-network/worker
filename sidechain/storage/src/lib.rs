@@ -33,7 +33,7 @@ mod storage;
 mod storage_tests_get_blocks_following;
 
 #[cfg(test)]
-mod test_db_fixture;
+mod test_utils;
 
 #[cfg(feature = "mocks")]
 pub mod fetch_blocks_mock;
