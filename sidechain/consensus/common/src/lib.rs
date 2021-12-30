@@ -27,8 +27,8 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use itp_types::OpaqueCall;
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlock};
-use sp_runtime::traits::Block as ParentchainBlock;
+use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
 
 mod block_import;
@@ -37,10 +37,10 @@ mod error;
 pub use block_import::*;
 pub use error::*;
 
-pub trait Verifier<PB, SB>: Send + Sync
+pub trait Verifier<ParentchainBlock, SidechainBlock>: Send + Sync
 where
-	PB: ParentchainBlock,
-	SB: SignedSidechainBlock,
+	ParentchainBlock: ParentchainBlockTrait,
+	SidechainBlock: SignedSidechainBlockTrait,
 {
 	/// Contains all the relevant data needed for block import
 	type BlockImportParams;
@@ -51,8 +51,8 @@ where
 	/// Verify the given data and return the `BlockImportParams` if successful
 	fn verify(
 		&mut self,
-		block: SB,
-		parentchain_header: &PB::Header,
+		block: SidechainBlock,
+		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams>;
 }
@@ -60,26 +60,34 @@ where
 /// Environment for a Consensus instance.
 ///
 /// Creates proposer instance.
-pub trait Environment<B: ParentchainBlock, SB: SignedSidechainBlock> {
+pub trait Environment<
+	ParentchainBlock: ParentchainBlockTrait,
+	SidechainBlock: SignedSidechainBlockTrait,
+>
+{
 	/// The proposer type this creates.
-	type Proposer: Proposer<B, SB> + Send;
+	type Proposer: Proposer<ParentchainBlock, SidechainBlock> + Send;
 	/// Error which can occur upon creation.
 	type Error: From<Error> + std::fmt::Debug + 'static;
 
 	/// Initialize the proposal logic on top of a specific header.
 	fn init(
 		&mut self,
-		parent_header: B::Header,
-		shard: ShardIdentifierFor<SB>,
+		parent_header: ParentchainBlock::Header,
+		shard: ShardIdentifierFor<SidechainBlock>,
 	) -> std::result::Result<Self::Proposer, Self::Error>;
 }
 
-pub trait Proposer<B: ParentchainBlock, SB: SignedSidechainBlock> {
-	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>>;
+pub trait Proposer<
+	ParentchainBlock: ParentchainBlockTrait,
+	SidechainBlock: SignedSidechainBlockTrait,
+>
+{
+	fn propose(&self, max_duration: Duration) -> Result<Proposal<SidechainBlock>>;
 }
 
 /// A proposal that is created by a [`Proposer`].
-pub struct Proposal<SidechainBlock: SignedSidechainBlock> {
+pub struct Proposal<SidechainBlock: SignedSidechainBlockTrait> {
 	/// The sidechain block that was build.
 	pub block: SidechainBlock,
 	/// Parentchain state transitions triggered by sidechain state transitions.

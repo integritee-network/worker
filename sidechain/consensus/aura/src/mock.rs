@@ -37,10 +37,11 @@ pub struct ProposerMock {
 	parentchain_header: Header,
 }
 
-pub type ShardIdentifierFor<SB> = <<SB as SignedBlockT>::Block as SidechainBlockT>::ShardIdentifier;
+pub type ShardIdentifierFor<SidechainBlock> =
+	<<SidechainBlock as SignedBlockT>::Block as SidechainBlockT>::ShardIdentifier;
 
-pub struct StateMock<SB: SidechainBlockT> {
-	pub last_block: Option<SB>,
+pub struct StateMock<SidechainBlock: SidechainBlockT> {
+	pub last_block: Option<SidechainBlock>,
 }
 
 pub type TestAura = Aura<
@@ -88,12 +89,12 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 	}
 }
 
-impl<SB: SidechainBlockT> LastBlockExt<SB> for StateMock<SB> {
-	fn get_last_block(&self) -> Option<SB> {
+impl<SidechainBlock: SidechainBlockT> LastBlockExt<SidechainBlock> for StateMock<SidechainBlock> {
+	fn get_last_block(&self) -> Option<SidechainBlock> {
 		self.last_block.clone()
 	}
 
-	fn set_last_block(&mut self, block: &SB) {
+	fn set_last_block(&mut self, block: &SidechainBlock) {
 		self.last_block = Some(block.clone())
 	}
 }

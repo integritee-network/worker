@@ -22,14 +22,14 @@ use itp_storage_verifier::GetStorageVerified;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{
-	traits::{Block, SignedBlock},
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlock},
 	types::block::BlockHash,
 };
 use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
 use sp_runtime::{
 	app_crypto::Pair,
-	traits::{Block as ParentchainBlock, Header as ParentchainHeader},
+	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
 use std::{fmt::Debug, time::Duration};
 
@@ -40,34 +40,35 @@ pub struct AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, Sidecha
 	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock, Context)>,
 }
 
-impl<AuthorityPair, PB, SB, SidechainState, Context>
-	AuraVerifier<AuthorityPair, PB, SB, SidechainState, Context>
+impl<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
+	AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
 {
 	pub fn new(slot_duration: Duration, sidechain_state: SidechainState) -> Self {
 		Self { slot_duration, sidechain_state, _phantom: Default::default() }
 	}
 }
 
-impl<AuthorityPair, PB, SB, SidechainState, Context> Verifier<PB, SB>
-	for AuraVerifier<AuthorityPair, PB, SB, SidechainState, Context>
+impl<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
+	Verifier<ParentchainBlock, SidechainBlock>
+	for AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
-	PB: ParentchainBlock<Hash = BlockHash>,
-	SB: SignedBlock<Public = AuthorityPair::Public> + 'static,
-	SB::Block: Block,
-	SidechainState: LastBlockExt<SB::Block> + Send + Sync,
+	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
+	SidechainBlock: SignedSidechainBlock<Public = AuthorityPair::Public> + 'static,
+	SidechainBlock::Block: SidechainBlockTrait,
+	SidechainState: LastBlockExt<SidechainBlock::Block> + Send + Sync,
 	Context: ValidateerFetch + GetStorageVerified + Send + Sync,
 {
-	type BlockImportParams = SB;
+	type BlockImportParams = SidechainBlock;
 
 	type Context = Context;
 
 	fn verify(
 		&mut self,
-		signed_block: SB,
-		parentchain_header: &PB::Header,
+		signed_block: SidechainBlock,
+		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams, ConsensusError> {
 		ensure!(
@@ -80,7 +81,7 @@ where
 			self.slot_duration,
 		);
 
-		verify_author::<AuthorityPair, PB, SB, _>(
+		verify_author::<AuthorityPair, ParentchainBlock::Header, SidechainBlock, _>(
 			&slot,
 			signed_block.block(),
 			parentchain_header,
@@ -89,7 +90,7 @@ where
 
 		match self.sidechain_state.get_last_block() {
 			Some(last_block) =>
-				verify_block_ancestry::<SB::Block>(signed_block.block(), &last_block)?,
+				verify_block_ancestry::<SidechainBlock::Block>(signed_block.block(), &last_block)?,
 			None => ensure_first_block(signed_block.block())?,
 		}
 
@@ -98,17 +99,17 @@ where
 }
 
 /// Verify that the `blocks` author is the expected author when comparing with onchain data.
-fn verify_author<AuthorityPair, PB, SB, Context>(
+fn verify_author<AuthorityPair, ParentchainHeader, SidechainBlock, Context>(
 	slot: &Slot,
-	block: &SB::Block,
-	parentchain_head: &PB::Header,
+	block: &SidechainBlock::Block,
+	parentchain_head: &ParentchainHeader,
 	ctx: &Context,
 ) -> Result<(), ConsensusError>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
-	SB: SignedBlock<Public = AuthorityPair::Public> + 'static,
-	PB: ParentchainBlock<Hash = BlockHash>,
+	SidechainBlock: SignedSidechainBlock<Public = AuthorityPair::Public> + 'static,
+	ParentchainHeader: ParentchainHeaderTrait<Hash = BlockHash>,
 	Context: ValidateerFetch + GetStorageVerified,
 {
 	ensure!(
@@ -119,7 +120,7 @@ where
 		)
 	);
 
-	let authorities = authorities::<_, AuthorityPair, PB>(ctx, parentchain_head)?;
+	let authorities = authorities::<_, AuthorityPair, ParentchainHeader>(ctx, parentchain_head)?;
 
 	let expected_author = slot_author::<AuthorityPair>(*slot, &authorities)
 		.ok_or_else(|| ConsensusError::CouldNotGetAuthorities("No authorities found".into()))?;
@@ -132,7 +133,10 @@ where
 	Ok(())
 }
 
-fn verify_block_ancestry<B: Block>(block: &B, last_block: &B) -> Result<(), ConsensusError> {
+fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
+	block: &SidechainBlock,
+	last_block: &SidechainBlock,
+) -> Result<(), ConsensusError> {
 	ensure!(
 		last_block.block_number() + 1 == block.block_number(),
 		ConsensusError::BlockAncestryMismatch(
@@ -152,7 +156,9 @@ fn verify_block_ancestry<B: Block>(block: &B, last_block: &B) -> Result<(), Cons
 	Ok(())
 }
 
-fn ensure_first_block<B: Block>(block: &B) -> Result<(), ConsensusError> {
+fn ensure_first_block<SidechainBlock: SidechainBlockTrait>(
+	block: &SidechainBlock,
+) -> Result<(), ConsensusError> {
 	ensure!(
 		block.block_number() == 1,
 		ConsensusError::BadSidechainBlock(
@@ -194,6 +200,13 @@ mod tests {
 			_,
 			m,
 		)) if m == msg)
+	}
+
+	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
+		assert_matches!(result.unwrap_err(),ConsensusError::BlockAncestryMismatch(
+			_,
+			m,
+		) if &m == msg)
 	}
 
 	fn block2_builder(signer: ed25519::Pair, parent_hash: H256) -> SidechainBlockBuilder {
