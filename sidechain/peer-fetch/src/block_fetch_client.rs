@@ -15,10 +15,8 @@
 
 */
 
-use crate::{error::Result, FetchBlocksFromPeer};
+use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers, FetchBlocksFromPeer};
 use async_trait::async_trait;
-use itc_rpc_client::url_utils::worker_url_into_async_rpc_url;
-use itp_api_client_extensions::PalletTeerexApi;
 use its_primitives::{
 	constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER,
 	traits::SignedBlock as SignedBlockTrait,
@@ -31,38 +29,29 @@ use jsonrpsee::{
 use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 
-/// Sidechain peer block fetcher implementation.
+/// Sidechain block fetcher implementation.
 ///
-/// Determines from which peer validateer to fetch blocks from and sends the RPC request
-/// to retrieve the blocks.
-pub struct PeerFetcher<SignedBlock, NodeApi> {
-	node_api: NodeApi,
+/// Fetches block from a peer with an RPC request.
+pub struct BlockFetcher<SignedBlock, PeerFetcher> {
+	peer_fetcher: PeerFetcher,
 	_phantom: PhantomData<SignedBlock>,
 }
 
-impl<SignedBlock, NodeApi> PeerFetcher<SignedBlock, NodeApi>
+impl<SignedBlock, PeerFetcher> BlockFetcher<SignedBlock, PeerFetcher>
 where
 	SignedBlock: SignedBlockTrait + DeserializeOwned,
-	NodeApi: PalletTeerexApi + Send + Sync,
+	PeerFetcher: FetchUntrustedPeers,
 {
-	pub fn new(node_api: NodeApi) -> Self {
-		PeerFetcher { node_api, _phantom: Default::default() }
-	}
-
-	pub fn get_peer_rpc_url_to_sync_from(&self) -> Result<String> {
-		// TODO: Get the validateer to sync from (author of the last sidechain block)
-		let all_validateers = self.node_api.all_enclaves(None)?;
-		let sync_source = all_validateers.first().unwrap().url.clone();
-
-		worker_url_into_async_rpc_url(sync_source.as_str()).map_err(|e| e.into())
+	pub fn new(peer_fetcher: PeerFetcher) -> Self {
+		BlockFetcher { peer_fetcher, _phantom: Default::default() }
 	}
 }
 
 #[async_trait]
-impl<SignedBlock, NodeApi> FetchBlocksFromPeer for PeerFetcher<SignedBlock, NodeApi>
+impl<SignedBlock, PeerFetcher> FetchBlocksFromPeer for BlockFetcher<SignedBlock, PeerFetcher>
 where
 	SignedBlock: SignedBlockTrait + DeserializeOwned,
-	NodeApi: PalletTeerexApi + Send + Sync,
+	PeerFetcher: FetchUntrustedPeers + Send + Sync,
 {
 	type SignedBlockType = SignedBlock;
 
@@ -71,7 +60,8 @@ where
 		last_known_block_hash: BlockHash,
 		shard_identifier: ShardIdentifier,
 	) -> Result<Vec<Self::SignedBlockType>> {
-		let sync_source_rpc_url = self.get_peer_rpc_url_to_sync_from()?;
+		let sync_source_rpc_url =
+			self.peer_fetcher.get_untrusted_peer_url_of_shard(&shard_identifier)?;
 
 		let rpc_parameters = vec![to_json_value((last_known_block_hash, shard_identifier))?];
 
@@ -91,9 +81,9 @@ where
 mod tests {
 
 	use super::*;
-	use crate::peer_fetch_server::PeerFetchServerModuleBuilder;
-	use itp_api_client_extensions::pallet_teerex_api_mock::PalletTeerexApiMock;
-	use itp_test::builders::enclave_gen_builder::EnclaveGenBuilder;
+	use crate::{
+		block_fetch_server::BlockFetchServerModuleBuilder, mock::UntrustedPeerFetcherMock,
+	};
 	use its_primitives::types::SignedBlock;
 	use its_storage::fetch_blocks_mock::FetchBlocksMock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
@@ -103,12 +93,10 @@ mod tests {
 	const W1_URL: &str = "127.0.0.1:2233";
 
 	async fn run_server(blocks: Vec<SignedBlock>) -> anyhow::Result<SocketAddr> {
-		let mut server = WsServerBuilder::default()
-			.build(worker_url_into_async_rpc_url(W1_URL).unwrap())
-			.await?;
+		let mut server = WsServerBuilder::default().build(W1_URL).await?;
 
 		let storage_block_fetcher = Arc::new(FetchBlocksMock::default().with_blocks(blocks));
-		let module = PeerFetchServerModuleBuilder::new(storage_block_fetcher).build().unwrap();
+		let module = BlockFetchServerModuleBuilder::new(storage_block_fetcher).build().unwrap();
 
 		server.register_module(module).unwrap();
 
@@ -125,12 +113,9 @@ mod tests {
 		];
 		run_server(blocks_to_fetch.clone()).await.unwrap();
 
-		let node_api_mock =
-			PalletTeerexApiMock::default().with_enclaves(vec![EnclaveGenBuilder::default()
-				.with_url(format!("ws://{}", W1_URL))
-				.build()]);
+		let peer_fetch_mock = UntrustedPeerFetcherMock::new(format!("ws://{}", W1_URL));
 
-		let peer_fetcher_client = PeerFetcher::<SignedBlock, _>::new(node_api_mock);
+		let peer_fetcher_client = BlockFetcher::<SignedBlock, _>::new(peer_fetch_mock);
 
 		let blocks_fetched = peer_fetcher_client
 			.fetch_blocks_from_peer(BlockHash::default(), ShardIdentifier::default())

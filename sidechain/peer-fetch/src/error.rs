@@ -17,6 +17,8 @@
 
 //! Sidechain peer fetch error.
 
+use its_primitives::types::ShardIdentifier;
+
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
@@ -27,6 +29,8 @@ pub enum Error {
 	NodeApi(#[from] itp_api_client_extensions::ApiClientError),
 	#[error("Serialization error: {0}")]
 	Serialization(#[from] serde_json::Error),
+	#[error("Could not find any peers onchain for shard: {0:?}")]
+	NoPeerFoundForShard(ShardIdentifier),
 	#[error("JSON RPC error: {0}")]
 	JsonRpc(#[from] jsonrpsee::types::Error),
 	#[error(transparent)]

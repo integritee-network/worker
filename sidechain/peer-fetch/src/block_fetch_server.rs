@@ -26,18 +26,18 @@ use log::*;
 use std::sync::Arc;
 
 /// RPC server module builder for fetching sidechain blocks from peers.
-pub struct PeerFetchServerModuleBuilder<FetchBlocksFromStorage> {
+pub struct BlockFetchServerModuleBuilder<FetchBlocksFromStorage> {
 	sidechain_block_fetcher: Arc<FetchBlocksFromStorage>,
 }
 
-impl<FetchBlocksFromStorage> PeerFetchServerModuleBuilder<FetchBlocksFromStorage>
+impl<FetchBlocksFromStorage> BlockFetchServerModuleBuilder<FetchBlocksFromStorage>
 where
 	// Have to use the concrete `SignedBlock` type, because the ShardIdentifier type
 	// does not have the Serialize/Deserialize trait bound.
 	FetchBlocksFromStorage: FetchBlocks<SignedBlock> + Send + Sync + 'static,
 {
 	pub fn new(sidechain_block_fetcher: Arc<FetchBlocksFromStorage>) -> Self {
-		PeerFetchServerModuleBuilder { sidechain_block_fetcher }
+		BlockFetchServerModuleBuilder { sidechain_block_fetcher }
 	}
 
 	pub fn build(self) -> Result<RpcModule<Arc<FetchBlocksFromStorage>>> {

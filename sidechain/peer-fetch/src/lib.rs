@@ -17,9 +17,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod block_fetch_client;
+pub mod block_fetch_server;
 pub mod error;
-pub mod peer_fetch_client;
-pub mod peer_fetch_server;
+pub mod untrusted_peer_fetch;
+
+#[cfg(test)]
+mod mock;
 
 use crate::error::Result;
 use async_trait::async_trait;

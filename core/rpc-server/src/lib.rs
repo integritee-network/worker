@@ -17,7 +17,7 @@
 
 use itp_enclave_api::direct_request::DirectRequest;
 use itp_types::RpcRequest;
-use its_peer_fetch::peer_fetch_server::PeerFetchServerModuleBuilder;
+use its_peer_fetch::block_fetch_server::BlockFetchServerModuleBuilder;
 use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use its_storage::interface::FetchBlocks;
 use jsonrpsee::{
@@ -64,7 +64,7 @@ where
 	)?;
 	server.register_module(import_sidechain_block_module).unwrap();
 
-	let fetch_sidechain_blocks_module = PeerFetchServerModuleBuilder::new(sidechain_block_fetcher)
+	let fetch_sidechain_blocks_module = BlockFetchServerModuleBuilder::new(sidechain_block_fetcher)
 		.build()
 		.map_err(|e| CallError::Failed(e.to_string().into()))?; // `to_string` necessary due to no all errors implementing Send + Sync.
 	server.register_module(fetch_sidechain_blocks_module).unwrap();

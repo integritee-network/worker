@@ -75,6 +75,7 @@ where
 			debug!("Enclave did not produce sidechain blocks");
 		}
 
+		// FIXME: When & where should peers be updated?
 		if let Err(e) = self.peer_updater.update_peers() {
 			error!("Error updating peers: {:?}", e);
 			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.

@@ -369,9 +369,7 @@ mod test {
 		traits::{Block as BlockT, SignedBlock as SignedBlockT},
 		types::SignedBlock,
 	};
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
-	use sp_core::{crypto::Pair, ed25519, H256};
-	use std::path::PathBuf;
+	use sp_core::H256;
 
 	#[test]
 	fn load_shards_from_db_works() {
