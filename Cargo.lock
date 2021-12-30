@@ -2375,6 +2375,7 @@ dependencies = [
  "serde_derive 1.0.130",
  "serde_json 1.0.72",
  "sgx_crypto_helper",
+ "thiserror 1.0.30",
  "url 2.2.2",
  "ws",
 ]
@@ -2523,6 +2524,17 @@ dependencies = [
  "sgx_types",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "itp-primitives-cache"
+version = "0.8.0"
+dependencies = [
+ "lazy_static",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgx_tstd",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
 ]
 
 [[package]]

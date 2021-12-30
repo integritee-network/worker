@@ -47,6 +47,7 @@ where
 
 	let mut module = RpcModule::new(enclave);
 
+	// FIXME: import block should be moved to trusted side.
 	module.register_method("sidechain_importBlock", |params, enclave| {
 		debug!("sidechain_importBlock params: {:?}", params);
 

@@ -38,22 +38,16 @@ def run_node(config):
     print(f'Run node with command: {node_cmd}')
     return Popen(node_cmd, stdout=node_log, stderr=STDOUT, bufsize=1)
 
-
-def key_provider_addr(config):
-    key_provider = config.get('mu-ra-port', '3443')
-    return f'localhost:{key_provider}'
-
-
-def run_worker(config, i: int, provider_addr):
+def run_worker(config, i: int):
     log = open(f'{log_dir}/worker{i}.log', 'w+')
     w = setup_worker(f'/tmp/w{i}', config["source"], log)
 
     if i > 1:
-        print(f'Worker {i} fetching keys from first worker at {provider_addr}.')
+        print(f'Worker {i} fetching keys from registered worker.')
         skip_ra = "--skip-ra" in config["subcommand_flags"]
         print(f'Skip remote attestation: {skip_ra}')
 
-        w.request_keys(provider_addr, skip_ra=skip_ra)
+        w.request_keys(flags=config["flags"], skip_ra=skip_ra)
 
     print(f'Starting worker {i} in background')
     w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
@@ -67,13 +61,14 @@ def main(processes, config_path):
 
     processes.append(run_node(config))
 
-    provider_addr = key_provider_addr(config["workers"][0])
-
     i = 1
     for w_conf in config["workers"]:
-        processes.append(run_worker(w_conf, i, provider_addr))
+        processes.append(run_worker(w_conf, i))
         # sleep to prevent nonce clash when bootstrapping the enclave's account
         sleep(6)
+        if i == 1:
+             # Give worker 1 some time to register itself, otherwise key & state sharing will not work.
+            sleep(60)
 
         i += 1
 

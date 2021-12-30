@@ -14,8 +14,18 @@
 	limitations under the License.
 
 */
-pub mod direct_client;
-pub mod error;
-#[cfg(test)]
-pub mod mock;
-pub mod ws_client;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+use std::boxed::Box;
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("Primitives lock is poisoned")]
+	LockPoisoning,
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}

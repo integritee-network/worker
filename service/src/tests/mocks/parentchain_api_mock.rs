@@ -37,8 +37,7 @@ impl ParentchainApiMock {
 		self.parentchain = (1..=number_of_blocks)
 			.map(|n| {
 				let header = ParentchainHeaderBuilder::default().with_number(n).build();
-				let block = ParentchainBlockBuilder::default().with_header(header).build_signed();
-				block
+				ParentchainBlockBuilder::default().with_header(header).build_signed()
 			})
 			.collect();
 		self

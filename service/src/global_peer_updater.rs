@@ -18,10 +18,9 @@
 
 use crate::{
 	error::Error,
-	globals::{tokio_handle::GetTokioHandle, worker::GetWorker},
-	worker::{AsyncBlockGossiper, WorkerResult},
+	globals::worker::GetMutWorker,
+	worker::{UpdatePeers, WorkerResult},
 };
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
 use std::sync::Arc;
 
@@ -30,34 +29,32 @@ use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
 
-/// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner
+/// Updates the peers of the global worker.
 #[cfg_attr(test, automock)]
-pub trait GossipBlocks {
-	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+pub trait UpdateWorkerPeers {
+	fn update_peers(&self) -> WorkerResult<()>;
 }
 
-pub struct SyncBlockGossiper<T, W> {
-	tokio_handle: Arc<T>,
-	worker: Arc<W>,
+pub struct GlobalPeerUpdater<Worker> {
+	worker: Arc<Worker>,
 }
 
-impl<T, W> SyncBlockGossiper<T, W> {
-	pub fn new(tokio_handle: Arc<T>, worker: Arc<W>) -> Self {
-		SyncBlockGossiper { tokio_handle, worker }
+impl<Worker> GlobalPeerUpdater<Worker> {
+	pub fn new(worker: Arc<Worker>) -> Self {
+		GlobalPeerUpdater { worker }
 	}
 }
 
-impl<T, W> GossipBlocks for SyncBlockGossiper<T, W>
+// FIXME: We should write unit tests for this one here - but with the global worker struct, which is not yet made to be mocked,
+// this would require a lot of changes.
+impl<Worker> UpdateWorkerPeers for GlobalPeerUpdater<Worker>
 where
-	T: GetTokioHandle,
-	W: GetWorker,
+	Worker: GetMutWorker,
 {
-	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
-		match self.worker.get_worker().as_ref() {
-			Some(w) => {
-				let handle = self.tokio_handle.get_handle();
-				handle.block_on(w.gossip_blocks(blocks))
-			},
+	fn update_peers(&self) -> WorkerResult<()> {
+		let maybe_worker = &mut *self.worker.get_mut_worker();
+		match maybe_worker {
+			Some(w) => w.update_peers(),
 			None => {
 				error!("Failed to get worker instance");
 				Err(Error::ApplicationSetup)

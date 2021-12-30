@@ -102,9 +102,9 @@ fn main() {
 						.help("worker url"),
 				)
 				.arg(
-					Arg::with_name("worker-rpc-port")
+					Arg::with_name("trusted-worker-port")
 						.short("P")
-						.long("worker-rpc-port")
+						.long("trusted-worker-port")
 						.global(true)
 						.takes_value(true)
 						.value_name("STRING")
@@ -457,10 +457,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
 
 	let direct_api = get_worker_api_direct(matches);
 	let (sender, receiver) = channel();
-	match direct_api.watch(jsonrpc_call, sender) {
-		Ok(_) => {},
-		Err(_) => panic!("Error when sending direct invocation call"),
-	}
+	direct_api.watch(jsonrpc_call, sender);
 
 	loop {
 		match receiver.recv() {
@@ -494,7 +491,7 @@ fn encode_encrypt<E: Encode>(
 	let worker_api_direct = get_worker_api_direct(matches);
 	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
 		Ok(key) => key,
-		Err(err_msg) => return Err(err_msg),
+		Err(err_msg) => return Err(err_msg.to_string()),
 	};
 
 	let encoded = to_encrypt.encode();
@@ -555,7 +552,7 @@ fn get_worker_api_direct(matches: &ArgMatches<'_>) -> DirectWorkerApi {
 	let url = format!(
 		"{}:{}",
 		matches.value_of("worker-url").unwrap(),
-		matches.value_of("worker-rpc-port").unwrap()
+		matches.value_of("trusted-worker-port").unwrap()
 	);
 	info!("Connecting to integritee-service-direct-port on '{}'", url);
 	DirectWorkerApi::new(url)
@@ -606,10 +603,7 @@ fn send_direct_request(
 
 	debug!("setup sender and receiver");
 	let (sender, receiver) = channel();
-	match direct_api.watch(jsonrpc_call, sender) {
-		Ok(_) => {},
-		Err(_) => panic!("Error when sending direct invocation call"),
-	}
+	direct_api.watch(jsonrpc_call, sender);
 
 	debug!("waiting for rpc response");
 	loop {

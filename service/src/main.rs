@@ -16,6 +16,7 @@
 */
 use crate::{
 	error::Error,
+	global_peer_updater::GlobalPeerUpdater,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 		worker::{GlobalWorker, Worker},
@@ -27,7 +28,6 @@ use crate::{
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
-	worker::worker_url_into_async_rpc_url,
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
@@ -38,7 +38,6 @@ use enclave::{
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
 use futures::executor::block_on;
-use itc_rpc_client::direct_client::DirectClient;
 use itp_api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
@@ -87,10 +86,12 @@ use teerex_primitives::ShardIdentifier;
 mod config;
 mod enclave;
 mod error;
+mod global_peer_updater;
 mod globals;
 mod node_api_factory;
 mod ocall_bridge;
 mod parentchain_block_syncer;
+mod request_keys;
 mod sync_block_gossiper;
 mod tests;
 mod utils;
@@ -106,7 +107,7 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let mut config = Config::from(&matches);
+	let config = Config::from(&matches);
 
 	GlobalTokioHandle::initialize();
 
@@ -120,13 +121,15 @@ fn main() {
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
-	let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
+	let sync_block_gossiper =
+		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
+	let peer_updater = Arc::new(GlobalPeerUpdater::new(worker));
 	let sidechain_blockstorage = Arc::new(
 		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
 			.unwrap(),
 	);
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
-	let enclave = Arc::new(enclave_init().unwrap());
+	let enclave = Arc::new(enclave_init(&config).unwrap());
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
@@ -134,18 +137,11 @@ fn main() {
 		sync_block_gossiper,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
+		peer_updater,
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
 		let shard = extract_shard(smatches, enclave.as_ref());
-
-		// Todo: Is this deprecated?? It is only used in remote attestation.
-		config.set_ext_api_url(
-			smatches
-				.value_of("w-server")
-				.map(ToString::to_string)
-				.unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port)),
-		);
 
 		println!("Worker Config: {:?}", config);
 		let skip_ra = smatches.is_present("skip-ra");
@@ -157,7 +153,7 @@ fn main() {
 			config.clone(),
 			node_api.clone(),
 			enclave.clone(),
-			DirectClient::new(config.worker_url()),
+			Vec::new(),
 		));
 
 		start_worker(
@@ -171,9 +167,14 @@ fn main() {
 			tokio_handle,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-		let shard = extract_shard(smatches, enclave.as_ref());
-		let provider_url = smatches.value_of("provider").expect("provider must be specified");
-		request_keys(provider_url, &shard, enclave.as_ref(), smatches.is_present("skip-ra"));
+		println!("*** Requesting keys from a registered worker \n");
+		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
+		request_keys::request_keys(
+			&node_api,
+			&extract_shard(smatches, enclave.as_ref()),
+			enclave.as_ref(),
+			smatches.is_present("skip-ra"),
+		);
 	} else if matches.is_present("shielding-key") {
 		info!("*** Get the public key from the TEE\n");
 		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
@@ -212,7 +213,7 @@ fn main() {
 			enclave_run_key_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.worker_mu_ra_port),
+				&config.mu_ra_url(),
 				_matches.is_present("skip-ra"),
 			);
 			println!("[+] Done!");
@@ -221,7 +222,7 @@ fn main() {
 			enclave_request_key_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.worker_mu_ra_port),
+				&config.mu_ra_url_external(),
 				_matches.is_present("skip-ra"),
 			)
 			.unwrap();
@@ -268,7 +269,7 @@ fn start_worker<E, T, D>(
 
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
-	println!("MU-RA server listening on ws://{}", config.mu_ra_url());
+	println!("MU-RA server listening on {}", config.mu_ra_url());
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
 	thread::spawn(move || {
@@ -281,12 +282,12 @@ fn start_worker<E, T, D>(
 	});
 
 	// ------------------------------------------------------------------------
-	// start worker api direct invocation server
-	let direct_invocation_server_addr = config.worker_url();
+	// Start trusted worker rpc server.
+	let direct_invocation_server_addr = config.trusted_worker_url_internal();
 	let enclave_for_direct_invocation = enclave.clone();
 	thread::spawn(move || {
 		println!(
-			"[+] RPC direction invocation server listening on wss://{}",
+			"[+] Trusted RPC direction invocation server listening on {}",
 			direct_invocation_server_addr
 		);
 		enclave_for_direct_invocation
@@ -295,43 +296,43 @@ fn start_worker<E, T, D>(
 		println!("[+] RPC direction invocation server shut down");
 	});
 
-	// listen for sidechain_block import request. Later the `start_worker_api_direct_server`
-	// should be merged into this one.
-	let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
-
+	// ------------------------------------------------------------------------
+	// Start untrusted worker rpc server.
 	let handle = tokio_handle.get_handle();
+	// FIXME: this should be removed - this server should only handle untrusted things.
+	// i.e move sidechain block importing to trusted worker.
 	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let untrusted_url = config.untrusted_worker_url();
+	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
 	handle.spawn(async move {
-		itc_rpc_server::run_server(&url, enclave_for_block_gossip_rpc_server)
+		itc_rpc_server::run_server(&untrusted_url, enclave_for_block_gossip_rpc_server)
 			.await
 			.unwrap()
 	});
+
 	// ------------------------------------------------------------------------
-	// start the substrate-api-client to communicate with the node
+	// Start the substrate-api-client to communicate with the node.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
-	// perform a remote attestation and get an unchecked extrinsic back
+	// Perform a remote attestation and get an unchecked extrinsic back.
 
-	// get enclaves's account nonce
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
-
+	let trusted_url = config.trusted_worker_url_external();
 	let uxt = if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
-		enclave
-			.mock_register_xt(node_api.genesis_hash, nonce, &config.ext_api_url.unwrap())
-			.unwrap()
+		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
 		enclave
-			.perform_ra(genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec())
+			.perform_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
 			.unwrap()
 	};
 
@@ -487,32 +488,6 @@ where
 			thread::sleep(sleep_time);
 		}
 	}
-}
-
-fn request_keys<E: TlsRemoteAttestation>(
-	provider_url: &str,
-	_shard: &ShardIdentifier,
-	enclave_api: &E,
-	skip_ra: bool,
-) {
-	// FIXME: we now assume that keys are equal for all shards
-
-	// initialize the enclave
-	#[cfg(feature = "production")]
-	println!("*** Starting enclave in production mode");
-	#[cfg(not(feature = "production"))]
-	println!("*** Starting enclave in development mode");
-
-	println!("Requesting key provisioning from worker at {}", provider_url);
-
-	enclave_request_key_provisioning(
-		enclave_api,
-		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-		provider_url,
-		skip_ra,
-	)
-	.unwrap();
-	println!("key provisioning successfully performed");
 }
 
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
@@ -771,7 +746,7 @@ fn bootstrap_funds_from_alice(
 
 	if funding_amount > alice_free {
 		println!(
-			"funding amount is to high: please change MIN_FUND_INCREASE_FACTOR ({:?})",
+			"funding amount is to high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
 			funding_amount
 		);
 		return Err(Error::ApplicationSetup)

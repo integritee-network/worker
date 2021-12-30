@@ -33,7 +33,7 @@ use sp_runtime::traits::Header;
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
 	/// Initialize the enclave (needs to be called once at application startup).
-	fn init(&self) -> EnclaveResult<()>;
+	fn init(&self, mu_ra_addr: &str, untrusted_worker_addr: &str) -> EnclaveResult<()>;
 
 	/// Initialize the direct invocation RPC server.
 	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
@@ -63,10 +63,22 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 /// EnclaveApi implementation for Enclave struct
 impl EnclaveBase for Enclave {
-	fn init(&self) -> EnclaveResult<()> {
+	fn init(&self, mu_ra_addr: &str, untrusted_worker_addr: &str) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
-		let result = unsafe { ffi::init(self.eid, &mut retval) };
+		let encoded_mu_ra_addr = mu_ra_addr.encode();
+		let encoded_untrusted_worker_addr = untrusted_worker_addr.encode();
+
+		let result = unsafe {
+			ffi::init(
+				self.eid,
+				&mut retval,
+				encoded_mu_ra_addr.as_ptr(),
+				encoded_mu_ra_addr.len() as u32,
+				encoded_untrusted_worker_addr.as_ptr(),
+				encoded_untrusted_worker_addr.len() as u32,
+			)
+		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
