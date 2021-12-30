@@ -139,18 +139,12 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 ) -> Result<(), ConsensusError> {
 	ensure!(
 		last_block.block_number() + 1 == block.block_number(),
-		ConsensusError::BlockAncestryMismatch(
-			last_block.block_number(),
-			"Invalid block number".into()
-		)
+		ConsensusError::BadSidechainBlock(block.hash(), "Invalid block number".into())
 	);
 
 	ensure!(
 		last_block.hash() == block.parent_hash(),
-		ConsensusError::BlockAncestryMismatch(
-			last_block.block_number(),
-			"Parent hash does not match".into(),
-		)
+		ConsensusError::BadSidechainBlock(block.hash(), "Parent hash does not match".into(),)
 	);
 
 	Ok(())
