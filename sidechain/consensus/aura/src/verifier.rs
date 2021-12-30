@@ -196,13 +196,6 @@ mod tests {
 		)) if m == msg)
 	}
 
-	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
-		assert_matches!(result.unwrap_err(),ConsensusError::BlockAncestryMismatch(
-			_,
-			m,
-		) if &m == msg)
-	}
-
 	fn block2_builder(signer: ed25519::Pair, parent_hash: H256) -> SidechainBlockBuilder {
 		block1_builder(signer).with_parent_hash(parent_hash).with_number(2)
 	}
@@ -258,7 +251,7 @@ mod tests {
 		let curr_block =
 			SidechainBlockBuilder::default().with_parent_hash(last_block.hash()).build();
 
-		assert_ancestry_mismatch_err(
+		assert_bad_sidechain_block_err(
 			verify_block_ancestry(&curr_block, &last_block),
 			"Invalid block number",
 		);
@@ -269,7 +262,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let curr_block = SidechainBlockBuilder::default().with_number(2).build();
 
-		assert_ancestry_mismatch_err(
+		assert_bad_sidechain_block_err(
 			verify_block_ancestry(&curr_block, &last_block),
 			"Parent hash does not match",
 		);
@@ -341,7 +334,7 @@ mod tests {
 
 		let mut aura = TestAuraVerifier::new(SLOT_DURATION, state_mock);
 
-		assert_ancestry_mismatch_err(
+		assert_bad_sidechain_block_err(
 			aura.verify(curr_block, &default_header(), &onchain_mock),
 			"Parent hash does not match",
 		);
