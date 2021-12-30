@@ -17,7 +17,7 @@
 
 //! Error types in sidechain Consensus
 
-use its_primitives::types::block::BlockHash;
+use its_primitives::types::{block::BlockHash, BlockNumber};
 use sgx_types::sgx_status_t;
 use std::{
 	boxed::Box,
@@ -52,6 +52,8 @@ pub enum Error {
 	BadParentchainBlock(BlockHash, String),
 	#[error("Bad parentchain block (Hash={0}). Reason: {1}")]
 	BadSidechainBlock(BlockHash, String),
+	#[error("Could not import new block due to {1}. (Last imported by number: {0:?})")]
+	BlockAncestryMismatch(BlockNumber, String),
 }
 
 impl core::convert::From<std::io::Error> for Error {

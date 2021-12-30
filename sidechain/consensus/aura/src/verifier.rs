@@ -135,12 +135,18 @@ where
 fn verify_block_ancestry<B: Block>(block: &B, last_block: &B) -> Result<(), ConsensusError> {
 	ensure!(
 		last_block.block_number() + 1 == block.block_number(),
-		ConsensusError::BadSidechainBlock(block.hash(), "Invalid block number".into())
+		ConsensusError::BlockAncestryMismatch(
+			last_block.block_number(),
+			"Invalid block number".into()
+		)
 	);
 
 	ensure!(
 		last_block.hash() == block.parent_hash(),
-		ConsensusError::BadSidechainBlock(block.hash(), "Parent hash does not match".into(),)
+		ConsensusError::BlockAncestryMismatch(
+			last_block.block_number(),
+			"Parent hash does not match".into(),
+		)
 	);
 
 	Ok(())
@@ -178,6 +184,13 @@ mod tests {
 
 	fn assert_bad_sidechain_block_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
 		assert_matches!(result.unwrap_err(),ConsensusError::BadSidechainBlock(
+			_,
+			m,
+		) if &m == msg)
+	}
+
+	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
+		assert_matches!(result.unwrap_err(),ConsensusError::BlockAncestryMismatch(
 			_,
 			m,
 		) if &m == msg)
@@ -238,7 +251,7 @@ mod tests {
 		let curr_block =
 			SidechainBlockBuilder::default().with_parent_hash(last_block.hash()).build();
 
-		assert_bad_sidechain_block_err(
+		assert_ancestry_mismatch_err(
 			verify_block_ancestry(&curr_block, &last_block),
 			"Invalid block number",
 		);
@@ -249,7 +262,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let curr_block = SidechainBlockBuilder::default().with_number(2).build();
 
-		assert_bad_sidechain_block_err(
+		assert_ancestry_mismatch_err(
 			verify_block_ancestry(&curr_block, &last_block),
 			"Parent hash does not match",
 		);
@@ -321,7 +334,7 @@ mod tests {
 
 		let mut aura = TestAuraVerifier::new(SLOT_DURATION, state_mock);
 
-		assert_bad_sidechain_block_err(
+		assert_ancestry_mismatch_err(
 			aura.verify(curr_block, &default_header(), &onchain_mock),
 			"Parent hash does not match",
 		);
