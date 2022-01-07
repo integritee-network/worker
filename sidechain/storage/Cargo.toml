@@ -15,7 +15,7 @@ thiserror = "1.0"
 its-primitives = { path = "../primitives" }
 
 # Substrate dependencies
-sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [dev-dependencies]
 mockall = { version = "0.10.1" }

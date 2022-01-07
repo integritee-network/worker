@@ -14,7 +14,7 @@ itp-types = { path = "../../core-primitives/types", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 
 # Substrate dependencies
-sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master", default_features = false }
+sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master", default_features = false }
 
 
 [features]
