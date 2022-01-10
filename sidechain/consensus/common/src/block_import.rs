@@ -77,6 +77,9 @@ where
 	/// Cleanup task after import is done.
 	fn cleanup(&self, signed_sidechain_block: &SB) -> Result<(), Error>;
 
+	/// Handles the cases where the sidechain block import failed.
+	fn handle_import_error(&self, signed_sidechain_block: &SB, error: Error) -> Result<(), Error>;
+
 	/// Import a sidechain block and mutate state by `apply_state_update`.
 	fn import_block(
 		&self,
@@ -89,7 +92,7 @@ where
 		let latest_parentchain_header =
 			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
 
-		self.apply_state_update(&shard, |mut state| {
+		if let Err(error) = self.apply_state_update(&shard, |mut state| {
 			let mut verifier = self.verifier(state.clone());
 
 			let block_import_params = verifier.verify(
@@ -108,7 +111,9 @@ where
 			state.set_last_block(block_import_params.block());
 
 			Ok(state)
-		})?;
+		}) {
+			self.handle_import_error(&signed_sidechain_block, error)?;
+		};
 
 		self.cleanup(&signed_sidechain_block)?;
 
