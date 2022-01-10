@@ -21,7 +21,9 @@ use itp_time_utils::now_as_u64;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
-use its_primitives::traits::{Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock};
+use its_primitives::traits::{
+	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
+};
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use log::*;
@@ -36,7 +38,7 @@ pub type ExternalitiesFor<T> = <T as StateUpdateProposer>::Externalities;
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block.
 pub struct SlotProposer<
 	ParentchainBlock: Block,
-	SidechainBlock: SignedBlock,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 	TopPoolExecutor,
 	StfExecutor,
 	BlockComposer,
@@ -45,7 +47,7 @@ pub struct SlotProposer<
 	pub(crate) stf_executor: Arc<StfExecutor>,
 	pub(crate) block_composer: Arc<BlockComposer>,
 	pub(crate) parentchain_header: ParentchainBlock::Header,
-	pub(crate) shard: ShardIdentifierFor<SidechainBlock>,
+	pub(crate) shard: ShardIdentifierFor<SignedSidechainBlock>,
 	pub(crate) _phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -60,8 +62,8 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 	> where
 	ParentchainBlock: Block<Hash = H256>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	SignedSidechainBlock:
-		SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
+	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
+		+ 'static,
 	SignedSidechainBlock::Block:
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	StfExecutor: StateUpdateProposer,
