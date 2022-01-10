@@ -50,7 +50,7 @@ use std::{marker::PhantomData, sync::Arc, vec::Vec};
 pub struct BlockImporter<
 	Authority,
 	ParentchainBlock,
-	SidechainBlock,
+	SignedSidechainBlock,
 	OCallApi,
 	SidechainState,
 	StateHandler,
@@ -64,13 +64,13 @@ pub struct BlockImporter<
 	top_pool_executor: Arc<TopPoolExecutor>,
 	parentchain_block_import_trigger: Arc<ParentchainBlockImportTrigger>,
 	ocall_api: Arc<OCallApi>,
-	_phantom: PhantomData<(ParentchainBlock, SidechainBlock, SidechainState)>,
+	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock, SidechainState)>,
 }
 
 impl<
 		Authority,
 		ParentchainBlock,
-		SidechainBlock,
+		SignedSidechainBlock,
 		OCallApi,
 		SidechainState,
 		StateHandler,
@@ -81,7 +81,7 @@ impl<
 	BlockImporter<
 		Authority,
 		ParentchainBlock,
-		SidechainBlock,
+		SignedSidechainBlock,
 		OCallApi,
 		SidechainState,
 		StateHandler,
@@ -92,12 +92,13 @@ impl<
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
-	SidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
-	SidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
+	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi + ValidateerFetch + GetStorageVerified + Send + Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
-	TopPoolExecutor: TopPoolCallOperator<ParentchainBlock, SidechainBlock> + Send + Sync + 'static,
+	TopPoolExecutor:
+		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
 	ParentchainBlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlockGeneric<ParentchainBlock>>
 		+ Send
 		+ Sync,
@@ -124,7 +125,7 @@ impl<
 	pub(crate) fn remove_calls_from_top_pool(
 		&self,
 		signed_top_hashes: &[H256],
-		shard: &ShardIdentifierFor<SidechainBlock>,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 	) {
 		let executed_operations = signed_top_hashes
 			.iter()
@@ -145,7 +146,7 @@ impl<
 		}
 	}
 
-	pub(crate) fn block_author_is_self(&self, block_author: &SidechainBlock::Public) -> bool {
+	pub(crate) fn block_author_is_self(&self, block_author: &SignedSidechainBlock::Public) -> bool {
 		self.authority.public() == *block_author
 	}
 }
@@ -153,19 +154,19 @@ impl<
 impl<
 		Authority,
 		ParentchainBlock,
-		SidechainBlock,
+		SignedSidechainBlock,
 		OCallApi,
 		StateHandler,
 		StateKey,
 		TopPoolExecutor,
 		ParentchainBlockImportTrigger,
-	> BlockImport<ParentchainBlock, SidechainBlock>
+	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
 		Authority,
 		ParentchainBlock,
-		SidechainBlock,
+		SignedSidechainBlock,
 		OCallApi,
-		SidechainDB<SidechainBlock::Block, SgxExternalities>,
+		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
 		StateHandler,
 		StateKey,
 		TopPoolExecutor,
@@ -174,12 +175,13 @@ impl<
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
-	SidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
-	SidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
+	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi + ValidateerFetch + GetStorageVerified + Send + Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
-	TopPoolExecutor: TopPoolCallOperator<ParentchainBlock, SidechainBlock> + Send + Sync + 'static,
+	TopPoolExecutor:
+		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
 	ParentchainBlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlockGeneric<ParentchainBlock>>
 		+ Send
 		+ Sync,
@@ -187,11 +189,11 @@ impl<
 	type Verifier = AuraVerifier<
 		Authority,
 		ParentchainBlock,
-		SidechainBlock,
-		SidechainDB<SidechainBlock::Block, SgxExternalities>,
+		SignedSidechainBlock,
+		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
 		OCallApi,
 	>;
-	type SidechainState = SidechainDB<SidechainBlock::Block, SgxExternalities>;
+	type SidechainState = SidechainDB<SignedSidechainBlock::Block, SgxExternalities>;
 	type StateCrypto = StateKey;
 	type Context = OCallApi;
 
@@ -201,7 +203,7 @@ impl<
 
 	fn apply_state_update<F>(
 		&self,
-		shard: &ShardIdentifierFor<SidechainBlock>,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		mutating_function: F,
 	) -> Result<(), ConsensusError>
 	where
@@ -231,7 +233,7 @@ impl<
 
 	fn import_parentchain_block(
 		&self,
-		sidechain_block: &SidechainBlock::Block,
+		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, ConsensusError> {
 		// We trigger the import of parentchain blocks up until the last one we've seen in the
@@ -248,7 +250,7 @@ impl<
 			.unwrap_or_else(|| last_imported_parentchain_header.clone()))
 	}
 
-	fn cleanup(&self, signed_sidechain_block: &SidechainBlock) -> Result<(), ConsensusError> {
+	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), ConsensusError> {
 		let sidechain_block = signed_sidechain_block.block();
 
 		// If the block has been proposed by this enclave, remove all successfully applied
