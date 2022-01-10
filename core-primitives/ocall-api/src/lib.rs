@@ -71,8 +71,14 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 }
 
 pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
-	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
-	fn store_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
+	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()>;
+	fn store_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()>;
 }
 
 /// Newtype for IPFS CID

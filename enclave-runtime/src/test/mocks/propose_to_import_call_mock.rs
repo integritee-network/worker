@@ -21,7 +21,7 @@ use codec::{Decode, Encode};
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_types::{Header as ParentchainHeader, WorkerRequest, WorkerResponse};
 use its_sidechain::{
-	consensus_common::BlockImport, primitives::types::SignedBlock as SignedSidechainBlock,
+	consensus_common::BlockImport, primitives::types::SignedBlock as SignedSidechainBlockType,
 };
 use sgx_types::SgxResult;
 use sp_runtime::OpaqueExtrinsic;
@@ -58,11 +58,14 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 }
 
 impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
-	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
-		let decoded_signed_blocks: Vec<SignedSidechainBlock> = signed_blocks
+	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
+		let decoded_signed_blocks: Vec<SignedSidechainBlockType> = signed_blocks
 			.iter()
 			.map(|sb| sb.encode())
-			.map(|e| SignedSidechainBlock::decode(&mut e.as_slice()).unwrap())
+			.map(|e| SignedSidechainBlockType::decode(&mut e.as_slice()).unwrap())
 			.collect();
 
 		for signed_block in decoded_signed_blocks {
@@ -73,7 +76,10 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 		Ok(())
 	}
 
-	fn store_sidechain_blocks<SB: Encode>(&self, _signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn store_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		_signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		Ok(())
 	}
 }
