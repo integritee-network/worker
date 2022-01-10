@@ -101,8 +101,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		self.db.get(block_hash)
 	}
 
-	/// Get all blocks following (i.e. children of) a specified blocks.
-	pub fn get_blocks_following(
+	/// Get all blocks after (i.e. children of) a specified block.
+	pub fn get_blocks_after(
 		&self,
 		block_hash: &BlockHash,
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
