@@ -330,7 +330,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		SidechainDB::delete_to_batch(batch, (shard, block_number));
 	}
 
-	/// Add delete last block to WriteBatch and remove block from memory.
+	/// Add delete command to remove last block to WriteBatch and remove it from memory.
 	///
 	/// This includes adding a delete command of the following:
 	/// - Block hash -> Signed Block.
