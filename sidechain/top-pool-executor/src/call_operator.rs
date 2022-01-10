@@ -20,40 +20,51 @@ use ita_stf::TrustedCallSigned;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_types::{ShardIdentifier, H256};
 use its_primitives::traits::{
-	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedBlockT,
+	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::{traits::Block as BlockT, MultiSignature};
+use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
 use std::{vec, vec::Vec};
 
 // Reexport since it's part of this API.
 pub use itp_stf_executor::ExecutedOperation;
 
 /// Interface to the trusted calls within the top pool
-pub trait TopPoolCallOperator<PB: BlockT, SB: SignedBlockT> {
+pub trait TopPoolCallOperator<
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
+>
+{
 	/// Retrieves trusted calls from the top pool.
-	fn get_trusted_calls(&self, shard: &ShardIdentifierFor<SB>) -> Result<Vec<TrustedCallSigned>>;
+	fn get_trusted_calls(
+		&self,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
+	) -> Result<Vec<TrustedCallSigned>>;
 
 	/// Removes the given trusted calls from the top pool.
 	/// Returns all hashes that were NOT successfully removed.
 	fn remove_calls_from_pool(
 		&self,
-		shard: &ShardIdentifierFor<SB>,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation>;
 }
 
-impl<PB, SB, RpcAuthor, StfExecutor> TopPoolCallOperator<PB, SB>
-	for TopPoolOperationHandler<PB, SB, RpcAuthor, StfExecutor>
+impl<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
+	TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock>
+	for TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
 where
-	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	RpcAuthor:
-		AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash> + SendState<Hash = PB::Hash>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SignedSidechainBlock::Block:
+		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
+		+ OnBlockCreated<Hash = ParentchainBlock::Hash>
+		+ SendState<Hash = ParentchainBlock::Hash>,
 	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
 	<StfExecutor as StateUpdateProposer>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
