@@ -17,7 +17,8 @@
 
 //! Error types in sidechain Consensus
 
-use its_primitives::types::{block::BlockHash, BlockNumber};
+use itp_types::BlockHash as ParentchainBlockHash;
+use its_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use sgx_types::sgx_status_t;
 use std::{
 	boxed::Box,
@@ -49,9 +50,9 @@ pub enum Error {
 	#[error("Failed to sign using key: {0:?}. Reason: {1}")]
 	CannotSign(Vec<u8>, String),
 	#[error("Bad parentchain block (Hash={0}). Reason: {1}")]
-	BadParentchainBlock(BlockHash, String),
-	#[error("Bad parentchain block (Hash={0}). Reason: {1}")]
-	BadSidechainBlock(BlockHash, String),
+	BadParentchainBlock(ParentchainBlockHash, String),
+	#[error("Bad sidechain block (Hash={0}). Reason: {1}")]
+	BadSidechainBlock(SidechainBlockHash, String),
 	#[error("Could not import new block due to {1}. (Last imported by number: {0:?})")]
 	BlockAncestryMismatch(BlockNumber, String),
 }

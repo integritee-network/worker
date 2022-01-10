@@ -220,29 +220,39 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 }
 
 /// Executes aura for the given `slot`.
-pub(crate) fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment, BlockImportTrigger>(
-	slot: SlotInfo<PB>,
+pub(crate) fn exec_aura_on_slot<
+	Authority,
+	ParentchainBlock,
+	SignedSidechainBlock,
+	OCallApi,
+	PEnvironment,
+	BlockImportTrigger,
+>(
+	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
 	ocall_api: OCallApi,
 	block_import_trigger: Arc<BlockImportTrigger>,
 	proposer_environment: PEnvironment,
-	shards: Vec<ShardIdentifierFor<SB>>,
-) -> Result<(Vec<SB>, Vec<OpaqueCall>)>
+	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
+) -> Result<(Vec<SignedSidechainBlock>, Vec<OpaqueCall>)>
 where
-	PB: BlockTrait<Hash = H256>,
-	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
-	SB::Signature: From<Authority::Signature>,
+	ParentchainBlock: BlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
+	SignedSidechainBlock::Block:
+		SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
+	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
 	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
-	NumberFor<PB>: BlockNumberOps,
-	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<PB>>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
+	PEnvironment:
+		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
+	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let mut aura = Aura::<_, PB, SB, PEnvironment, _, _>::new(
+	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
 		authority,
 		ocall_api,
 		block_import_trigger,
@@ -262,19 +272,25 @@ where
 }
 
 /// Gossips sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
-pub(crate) fn send_blocks_and_extrinsics<PB, SB, OCallApi, ValidatorAccessor, ExtrinsicsFactory>(
-	blocks: Vec<SB>,
+pub(crate) fn send_blocks_and_extrinsics<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	OCallApi,
+	ValidatorAccessor,
+	ExtrinsicsFactory,
+>(
+	blocks: Vec<SignedSidechainBlock>,
 	opaque_calls: Vec<OpaqueCall>,
 	ocall_api: OCallApi,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
 where
-	PB: BlockTrait,
-	SB: SignedBlock + 'static,
+	ParentchainBlock: BlockTrait,
+	SignedSidechainBlock: SignedBlock + 'static,
 	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
-	ValidatorAccessor: ValidatorAccess<PB> + Send + Sync + 'static,
-	NumberFor<PB>: BlockNumberOps,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
 	ocall_api.propose_sidechain_blocks(blocks)?;

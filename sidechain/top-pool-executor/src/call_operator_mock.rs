@@ -23,24 +23,26 @@ use crate::{
 };
 use core::marker::PhantomData;
 use ita_stf::TrustedCallSigned;
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedBlockT};
-use sp_runtime::traits::Block as BlockT;
+use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::HashMap, sync::RwLock};
 
-pub struct TopPoolCallOperatorMock<PB, SB>
+pub struct TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>
 where
-	PB: BlockT,
-	SB: SignedBlockT,
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
-	trusted_calls: HashMap<ShardIdentifierFor<SB>, Vec<TrustedCallSigned>>,
-	remove_calls_invoked: RwLock<Vec<(ShardIdentifierFor<SB>, Vec<ExecutedOperation>)>>,
-	_phantom: PhantomData<PB>,
+	trusted_calls: HashMap<ShardIdentifierFor<SignedSidechainBlock>, Vec<TrustedCallSigned>>,
+	remove_calls_invoked:
+		RwLock<Vec<(ShardIdentifierFor<SignedSidechainBlock>, Vec<ExecutedOperation>)>>,
+	_phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<PB, SB> Default for TopPoolCallOperatorMock<PB, SB>
+impl<ParentchainBlock, SignedSidechainBlock> Default
+	for TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>
 where
-	PB: BlockT,
-	SB: SignedBlockT,
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
 	fn default() -> Self {
 		TopPoolCallOperatorMock {
@@ -51,36 +53,44 @@ where
 	}
 }
 
-impl<PB, SB> TopPoolCallOperatorMock<PB, SB>
+impl<ParentchainBlock, SignedSidechainBlock>
+	TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>
 where
-	PB: BlockT,
-	SB: SignedBlockT,
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
 	pub fn add_trusted_calls(
 		&mut self,
-		shard: ShardIdentifierFor<SB>,
+		shard: ShardIdentifierFor<SignedSidechainBlock>,
 		trusted_calls: Vec<TrustedCallSigned>,
 	) {
 		self.trusted_calls.insert(shard, trusted_calls);
 	}
 
-	pub fn remove_calls_invoked(&self) -> Vec<(ShardIdentifierFor<SB>, Vec<ExecutedOperation>)> {
+	pub fn remove_calls_invoked(
+		&self,
+	) -> Vec<(ShardIdentifierFor<SignedSidechainBlock>, Vec<ExecutedOperation>)> {
 		self.remove_calls_invoked.read().unwrap().clone()
 	}
 }
 
-impl<PB, SB> TopPoolCallOperator<PB, SB> for TopPoolCallOperatorMock<PB, SB>
+impl<ParentchainBlock, SignedSidechainBlock>
+	TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock>
+	for TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>
 where
-	PB: BlockT,
-	SB: SignedBlockT,
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
-	fn get_trusted_calls(&self, shard: &ShardIdentifierFor<SB>) -> Result<Vec<TrustedCallSigned>> {
+	fn get_trusted_calls(
+		&self,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
+	) -> Result<Vec<TrustedCallSigned>> {
 		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or_default())
 	}
 
 	fn remove_calls_from_pool(
 		&self,
-		shard: &ShardIdentifierFor<SB>,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation> {
 		let mut remove_call_invoked_lock = self.remove_calls_invoked.write().unwrap();

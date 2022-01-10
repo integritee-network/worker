@@ -26,12 +26,12 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	LightClientState, Validator,
+	LightClientState, Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
 use itp_sgx_io::SealedIO;
 use lazy_static::lazy_static;
-use sp_runtime::traits::{Block as BlockT, NumberFor};
+use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
 use std::marker::PhantomData;
 
 lazy_static! {
@@ -46,12 +46,12 @@ lazy_static! {
 /// either a mutating, or a non-mutating function on the validator.
 /// The reason we have this additional wrapper around `SealedIO`, is that we need
 /// to guard against concurrent access by using RWLocks (which `SealedIO` does not do).
-pub trait ValidatorAccess<PB>
+pub trait ValidatorAccess<ParentchainBlock>
 where
-	PB: BlockT,
-	NumberFor<PB>: BlockNumberOps,
+	ParentchainBlock: ParentchainBlockTrait,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
-	type ValidatorType: Validator<PB> + LightClientState<PB>;
+	type ValidatorType: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>;
 
 	/// Execute a non-mutating function on the validator.
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
@@ -66,48 +66,50 @@ where
 
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Clone, Debug)]
-pub struct GlobalValidatorAccessor<ValidatorT, PB, Seal>
+pub struct GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
-	ValidatorT: Validator<PB> + LightClientState<PB>,
-	Seal: SealedIO<Error = Error, Unsealed = ValidatorT>,
-	PB: BlockT,
-	NumberFor<PB>: BlockNumberOps,
+	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	ParentchainBlock: ParentchainBlockTrait,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
-	_phantom: PhantomData<(Seal, ValidatorT, PB)>,
+	_phantom: PhantomData<(Seal, Validator, ParentchainBlock)>,
 }
 
-impl<ValidatorT, PB, Seal> Default for GlobalValidatorAccessor<ValidatorT, PB, Seal>
+impl<Validator, ParentchainBlock, Seal> Default
+	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
-	ValidatorT: Validator<PB> + LightClientState<PB>,
-	Seal: SealedIO<Error = Error, Unsealed = ValidatorT>,
-	PB: BlockT,
-	NumberFor<PB>: BlockNumberOps,
+	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	ParentchainBlock: ParentchainBlockTrait,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
 	fn default() -> Self {
 		GlobalValidatorAccessor { _phantom: Default::default() }
 	}
 }
 
-impl<ValidatorT, PB, Seal> GlobalValidatorAccessor<ValidatorT, PB, Seal>
+impl<Validator, ParentchainBlock, Seal> GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
-	ValidatorT: Validator<PB> + LightClientState<PB>,
-	Seal: SealedIO<Error = Error, Unsealed = ValidatorT>,
-	PB: BlockT,
-	NumberFor<PB>: BlockNumberOps,
+	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	ParentchainBlock: ParentchainBlockTrait,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
 	pub fn new() -> Self {
 		GlobalValidatorAccessor { _phantom: Default::default() }
 	}
 }
 
-impl<ValidatorT, PB, Seal> ValidatorAccess<PB> for GlobalValidatorAccessor<ValidatorT, PB, Seal>
+impl<Validator, ParentchainBlock, Seal> ValidatorAccess<ParentchainBlock>
+	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
-	ValidatorT: Validator<PB> + LightClientState<PB>,
-	Seal: SealedIO<Error = Error, Unsealed = ValidatorT>,
-	PB: BlockT,
-	NumberFor<PB>: BlockNumberOps,
+	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	ParentchainBlock: ParentchainBlockTrait,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
-	type ValidatorType = ValidatorT;
+	type ValidatorType = Validator;
 
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
 	where

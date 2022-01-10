@@ -24,7 +24,10 @@ use sgx_types::{sgx_status_t, SgxResult};
 use std::vec::Vec;
 
 impl EnclaveSidechainOCallApi for OcallApi {
-	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let signed_blocks_encoded = signed_blocks.encode();
 
@@ -42,7 +45,10 @@ impl EnclaveSidechainOCallApi for OcallApi {
 		Ok(())
 	}
 
-	fn store_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn store_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let signed_blocks_encoded = signed_blocks.encode();
 

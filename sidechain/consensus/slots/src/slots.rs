@@ -24,8 +24,10 @@ pub use sp_consensus_slots::Slot;
 use itp_sgx_io::SealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
-use its_primitives::traits::{Block, SignedBlock as SignedSidechainBlock};
-use sp_runtime::traits::Block as ParentchainBlock;
+use its_primitives::traits::{
+	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
+};
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
 
 /// Returns the duration until the next slot from now.
@@ -44,7 +46,7 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 
 /// Information about a slot.
 #[derive(Debug)]
-pub struct SlotInfo<B: ParentchainBlock> {
+pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The slot number as found in the inherent data.
 	pub slot: Slot,
 	/// Current timestamp as found in the inherent data.
@@ -54,10 +56,10 @@ pub struct SlotInfo<B: ParentchainBlock> {
 	/// The time at which the slot ends.
 	pub ends_at: Duration,
 	/// Last imported parentchain header, potentially outdated.
-	pub last_imported_parentchain_head: B::Header,
+	pub last_imported_parentchain_head: ParentchainBlock::Header,
 }
 
-impl<B: ParentchainBlock> SlotInfo<B> {
+impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 	/// Create a new [`SlotInfo`].
 	///
 	/// `ends_at` is calculated using `timestamp` and `duration`.
@@ -65,7 +67,7 @@ impl<B: ParentchainBlock> SlotInfo<B> {
 		slot: Slot,
 		timestamp: Duration,
 		duration: Duration,
-		parentchain_head: B::Header,
+		parentchain_head: ParentchainBlock::Header,
 	) -> Self {
 		Self {
 			slot,
@@ -77,9 +79,12 @@ impl<B: ParentchainBlock> SlotInfo<B> {
 	}
 }
 
-pub(crate) fn timestamp_within_slot<B: ParentchainBlock, SB: SignedSidechainBlock>(
-	slot: &SlotInfo<B>,
-	proposal: &SB,
+pub(crate) fn timestamp_within_slot<
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
+>(
+	slot: &SlotInfo<ParentchainBlock>,
+	proposal: &SignedSidechainBlock,
 ) -> bool {
 	let proposal_stamp = proposal.block().timestamp();
 
@@ -91,15 +96,15 @@ pub fn slot_from_time_stamp_and_duration(timestamp: Duration, duration: Duration
 	((timestamp.as_millis() / duration.as_millis()) as u64).into()
 }
 
-pub fn yield_next_slot<SG, B>(
+pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
 	timestamp: Duration,
 	duration: Duration,
-	header: B::Header,
-	last_slot_getter: &mut SG,
-) -> Result<Option<SlotInfo<B>>, ConsensusError>
+	header: ParentchainBlock::Header,
+	last_slot_getter: &mut SlotGetter,
+) -> Result<Option<SlotInfo<ParentchainBlock>>, ConsensusError>
 where
-	SG: GetLastSlot,
-	B: ParentchainBlock,
+	SlotGetter: GetLastSlot,
+	ParentchainBlock: ParentchainBlockTrait,
 {
 	if duration == Default::default() {
 		return Err(ConsensusError::Other("Tried to yield next slot with 0 duration".into()))

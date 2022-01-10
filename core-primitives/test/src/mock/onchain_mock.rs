@@ -131,11 +131,17 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 }
 
 impl EnclaveSidechainOCallApi for OnchainMock {
-	fn propose_sidechain_blocks<SB: Encode>(&self, _signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		_signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		Ok(())
 	}
 
-	fn store_sidechain_blocks<SB: Encode>(&self, _signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn store_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		_signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		Ok(())
 	}
 }

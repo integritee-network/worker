@@ -21,12 +21,12 @@ use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::{AccountId, Block as ParentchainBlock, Enclave, Header};
 use its_consensus_common::{Environment, Error as ConsensusError, Proposal, Proposer};
 use its_primitives::{
-	traits::{Block as SidechainBlockT, SignedBlock as SignedBlockT},
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedBlockTrait},
 	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
 use its_state::LastBlockExt;
 use its_test::sidechain_block_builder::SidechainBlockBuilder;
-use sp_runtime::{app_crypto::ed25519, generic::SignedBlock, traits::Header as HeaderT};
+use sp_runtime::{app_crypto::ed25519, generic::SignedBlock, traits::Header as HeaderTrait};
 use std::time::Duration;
 
 pub const SLOT_DURATION: Duration = Duration::from_millis(300);
@@ -37,10 +37,11 @@ pub struct ProposerMock {
 	parentchain_header: Header,
 }
 
-pub type ShardIdentifierFor<SB> = <<SB as SignedBlockT>::Block as SidechainBlockT>::ShardIdentifier;
+pub type ShardIdentifierFor<SidechainBlock> =
+	<<SidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::ShardIdentifier;
 
-pub struct StateMock<SB: SidechainBlockT> {
-	pub last_block: Option<SB>,
+pub struct StateMock<SidechainBlock: SidechainBlockTrait> {
+	pub last_block: Option<SidechainBlock>,
 }
 
 pub type TestAura = Aura<
@@ -88,12 +89,14 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 	}
 }
 
-impl<SB: SidechainBlockT> LastBlockExt<SB> for StateMock<SB> {
-	fn get_last_block(&self) -> Option<SB> {
+impl<SidechainBlock: SidechainBlockTrait> LastBlockExt<SidechainBlock>
+	for StateMock<SidechainBlock>
+{
+	fn get_last_block(&self) -> Option<SidechainBlock> {
 		self.last_block.clone()
 	}
 
-	fn set_last_block(&mut self, block: &SB) {
+	fn set_last_block(&mut self, block: &SidechainBlock) {
 		self.last_block = Some(block.clone())
 	}
 }
