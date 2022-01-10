@@ -34,6 +34,8 @@ use its_primitives::{
 use std::vec::Vec;
 
 /// Trait to fetch block from peer validateers.
+///
+/// This is used by an outdated validateer to get the most recent state.
 #[async_trait]
 pub trait FetchBlocksFromPeer {
 	type SignedBlockType: SignedBlock;
