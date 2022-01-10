@@ -22,7 +22,7 @@ use itp_storage_verifier::GetStorageVerified;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{
-	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlock},
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::BlockHash,
 };
 use its_state::LastBlockExt;
@@ -48,26 +48,26 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
 	}
 }
 
-impl<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
-	Verifier<ParentchainBlock, SidechainBlock>
-	for AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, SidechainState, Context>
+	Verifier<ParentchainBlock, SignedSidechainBlock>
+	for AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, SidechainState, Context>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
 	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
-	SidechainBlock: SignedSidechainBlock<Public = AuthorityPair::Public> + 'static,
-	SidechainBlock::Block: SidechainBlockTrait,
-	SidechainState: LastBlockExt<SidechainBlock::Block> + Send + Sync,
+	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
+	SignedSidechainBlock::Block: SidechainBlockTrait,
+	SidechainState: LastBlockExt<SignedSidechainBlock::Block> + Send + Sync,
 	Context: ValidateerFetch + GetStorageVerified + Send + Sync,
 {
-	type BlockImportParams = SidechainBlock;
+	type BlockImportParams = SignedSidechainBlock;
 
 	type Context = Context;
 
 	fn verify(
 		&mut self,
-		signed_block: SidechainBlock,
+		signed_block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams, ConsensusError> {
@@ -81,7 +81,7 @@ where
 			self.slot_duration,
 		);
 
-		verify_author::<AuthorityPair, ParentchainBlock::Header, SidechainBlock, _>(
+		verify_author::<AuthorityPair, ParentchainBlock::Header, SignedSidechainBlock, _>(
 			&slot,
 			signed_block.block(),
 			parentchain_header,
@@ -89,8 +89,10 @@ where
 		)?;
 
 		match self.sidechain_state.get_last_block() {
-			Some(last_block) =>
-				verify_block_ancestry::<SidechainBlock::Block>(signed_block.block(), &last_block)?,
+			Some(last_block) => verify_block_ancestry::<SignedSidechainBlock::Block>(
+				signed_block.block(),
+				&last_block,
+			)?,
 			None => ensure_first_block(signed_block.block())?,
 		}
 
@@ -99,16 +101,16 @@ where
 }
 
 /// Verify that the `blocks` author is the expected author when comparing with onchain data.
-fn verify_author<AuthorityPair, ParentchainHeader, SidechainBlock, Context>(
+fn verify_author<AuthorityPair, ParentchainHeader, SignedSidechainBlock, Context>(
 	slot: &Slot,
-	block: &SidechainBlock::Block,
+	block: &SignedSidechainBlock::Block,
 	parentchain_head: &ParentchainHeader,
 	ctx: &Context,
 ) -> Result<(), ConsensusError>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
-	SidechainBlock: SignedSidechainBlock<Public = AuthorityPair::Public> + 'static,
+	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
 	ParentchainHeader: ParentchainHeaderTrait<Hash = BlockHash>,
 	Context: ValidateerFetch + GetStorageVerified,
 {
