@@ -352,7 +352,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 
 		// Delete last block from local memory.
 		// Careful here: This deletes the local memory before db has been actually pruned
-		// (it's been only added to the write batch).
+		// (it's only been added to the write batch).
 		// But this can be fixed upon reloading the db / restarting the worker.
 		self.last_blocks.remove(shard);
 	}
