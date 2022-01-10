@@ -21,7 +21,9 @@ use itp_stf_executor::traits::StateUpdateProposer;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Environment, Error as ConsensusError};
-use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
+use its_primitives::traits::{
+	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
+};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use sgx_externalities::SgxExternalitiesTrait;
@@ -54,38 +56,44 @@ impl<ParentchainBlock: Block, TopPoolExecutor, StfExecutor, BlockComposer>
 
 impl<
 		ParentchainBlock: Block<Hash = H256>,
-		SidechainBlock,
+		SignedSidechainBlock,
 		TopPoolExecutor,
 		StfExecutor,
 		BlockComposer,
-	> Environment<ParentchainBlock, SidechainBlock>
+	> Environment<ParentchainBlock, SignedSidechainBlock>
 	for ProposerFactory<ParentchainBlock, TopPoolExecutor, StfExecutor, BlockComposer>
 where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	SidechainBlock:
-		SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
-	SidechainBlock::Block:
-		SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	TopPoolExecutor: TopPoolCallOperator<ParentchainBlock, SidechainBlock> + Send + Sync + 'static,
+	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
+		+ 'static,
+	SignedSidechainBlock::Block:
+		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	TopPoolExecutor:
+		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
 	StfExecutor: StateUpdateProposer + Send + Sync + 'static,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	BlockComposer: ComposeBlockAndConfirmation<
 			ExternalitiesFor<StfExecutor>,
 			ParentchainBlock,
-			SidechainBlockT = SidechainBlock,
+			SignedSidechainBlock = SignedSidechainBlock,
 		> + Send
 		+ Sync
 		+ 'static,
 {
-	type Proposer =
-		SlotProposer<ParentchainBlock, SidechainBlock, TopPoolExecutor, StfExecutor, BlockComposer>;
+	type Proposer = SlotProposer<
+		ParentchainBlock,
+		SignedSidechainBlock,
+		TopPoolExecutor,
+		StfExecutor,
+		BlockComposer,
+	>;
 	type Error = ConsensusError;
 
 	fn init(
 		&mut self,
 		parent_header: ParentchainBlock::Header,
-		shard: ShardIdentifierFor<SidechainBlock>,
+		shard: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {
 			top_pool_executor: self.top_pool_executor.clone(),
