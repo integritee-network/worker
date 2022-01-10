@@ -173,10 +173,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			current_block_number = previous_block.number;
 			self.delete_block(&mut batch, &previous_block.hash, &current_block_number, shard);
 		}
-		// emove shard from list
+		// Remove shard from list.
 		// STORED_SHARDS_KEY -> Vec<(Shard)>
 		self.shards.retain(|&x| x != *shard);
-		// add updated shards to Batch DB
+		// Add updated shards to batch.
 		SidechainDB::add_to_batch(&mut batch, STORED_SHARDS_KEY, &self.shards);
 		// Update DB
 		self.db.write(batch)
