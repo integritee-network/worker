@@ -37,10 +37,10 @@ mod error;
 pub use block_import::*;
 pub use error::*;
 
-pub trait Verifier<ParentchainBlock, SidechainBlock>: Send + Sync
+pub trait Verifier<ParentchainBlock, SignedSidechainBlock>: Send + Sync
 where
 	ParentchainBlock: ParentchainBlockTrait,
-	SidechainBlock: SignedSidechainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
 	/// Contains all the relevant data needed for block import
 	type BlockImportParams;
@@ -51,7 +51,7 @@ where
 	/// Verify the given data and return the `BlockImportParams` if successful
 	fn verify(
 		&mut self,
-		block: SidechainBlock,
+		block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams>;
@@ -62,11 +62,11 @@ where
 /// Creates proposer instance.
 pub trait Environment<
 	ParentchainBlock: ParentchainBlockTrait,
-	SidechainBlock: SignedSidechainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 >
 {
 	/// The proposer type this creates.
-	type Proposer: Proposer<ParentchainBlock, SidechainBlock> + Send;
+	type Proposer: Proposer<ParentchainBlock, SignedSidechainBlock> + Send;
 	/// Error which can occur upon creation.
 	type Error: From<Error> + std::fmt::Debug + 'static;
 
@@ -74,22 +74,22 @@ pub trait Environment<
 	fn init(
 		&mut self,
 		parent_header: ParentchainBlock::Header,
-		shard: ShardIdentifierFor<SidechainBlock>,
+		shard: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> std::result::Result<Self::Proposer, Self::Error>;
 }
 
 pub trait Proposer<
 	ParentchainBlock: ParentchainBlockTrait,
-	SidechainBlock: SignedSidechainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 >
 {
-	fn propose(&self, max_duration: Duration) -> Result<Proposal<SidechainBlock>>;
+	fn propose(&self, max_duration: Duration) -> Result<Proposal<SignedSidechainBlock>>;
 }
 
 /// A proposal that is created by a [`Proposer`].
-pub struct Proposal<SidechainBlock: SignedSidechainBlockTrait> {
+pub struct Proposal<SignedSidechainBlock: SignedSidechainBlockTrait> {
 	/// The sidechain block that was build.
-	pub block: SidechainBlock,
+	pub block: SignedSidechainBlock,
 	/// Parentchain state transitions triggered by sidechain state transitions.
 	///
 	/// Any sidechain stf that invokes a parentchain stf must not commit its state change

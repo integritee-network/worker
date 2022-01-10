@@ -28,21 +28,21 @@ use its_state::{LastBlockExt, SidechainState};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::vec::Vec;
 
-pub trait BlockImport<ParentchainBlock, SidechainBlock>
+pub trait BlockImport<ParentchainBlock, SignedSidechainBlock>
 where
 	ParentchainBlock: ParentchainBlockTrait,
-	SidechainBlock: SignedSidechainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
 	/// The verifier for of the respective consensus instance.
 	type Verifier: Verifier<
 		ParentchainBlock,
-		SidechainBlock,
-		BlockImportParams = SidechainBlock,
+		SignedSidechainBlock,
+		BlockImportParams = SignedSidechainBlock,
 		Context = Self::Context,
 	>;
 
 	/// Context needed to derive verifier relevant data.
-	type SidechainState: SidechainState + LastBlockExt<SidechainBlock::Block>;
+	type SidechainState: SidechainState + LastBlockExt<SignedSidechainBlock::Block>;
 
 	/// Provides the cryptographic functions for our the state encryption.
 	type StateCrypto: StateCrypto;
@@ -56,7 +56,7 @@ where
 	/// Apply a state update by providing a mutating function.
 	fn apply_state_update<F>(
 		&self,
-		shard: &ShardIdentifierFor<SidechainBlock>,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		mutating_function: F,
 	) -> Result<(), Error>
 	where
@@ -75,24 +75,24 @@ where
 	/// we return `last_imported_parentchain_header`.
 	fn import_parentchain_block(
 		&self,
-		sidechain_block: &SidechainBlock::Block,
+		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error>;
 
 	/// Cleanup task after import is done.
-	fn cleanup(&self, signed_sidechain_block: &SidechainBlock) -> Result<(), Error>;
+	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), Error>;
 
 	/// Handles the cases where the sidechain block import failed.
 	fn handle_import_error(
 		&self,
-		signed_sidechain_block: &SidechainBlock,
+		signed_sidechain_block: &SignedSidechainBlock,
 		error: Error,
 	) -> Result<(), Error>;
 
 	/// Import a sidechain block and mutate state by `apply_state_update`.
 	fn import_block(
 		&self,
-		signed_sidechain_block: SidechainBlock,
+		signed_sidechain_block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 	) -> Result<(), Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
@@ -101,7 +101,7 @@ where
 		let latest_parentchain_header =
 			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
 
-		self.apply_state_update(&shard, |mut state| {
+		if let Err(error) = self.apply_state_update(&shard, |mut state| {
 			let mut verifier = self.verifier(state.clone());
 
 			let block_import_params = verifier.verify(
@@ -120,7 +120,9 @@ where
 			state.set_last_block(block_import_params.block());
 
 			Ok(state)
-		})?;
+		}) {
+			self.handle_import_error(&signed_sidechain_block, error)?;
+		};
 
 		self.cleanup(&signed_sidechain_block)?;
 
