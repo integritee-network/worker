@@ -70,7 +70,8 @@ pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
 }
 
 /// ShardIdentifier for a [`SignedBlock`]
-pub type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as Block>::ShardIdentifier;
+pub type ShardIdentifierFor<SignedSidechainBlock> =
+	<<SignedSidechainBlock as SignedBlock>::Block as Block>::ShardIdentifier;
 
 /// A block and it's corresponding signature by the [`Block`] author.
 pub trait SignedBlock: Encode + Decode + Send + Sync + Debug + Clone {
@@ -102,22 +103,27 @@ pub trait SignedBlock: Encode + Decode + Send + Sync + Debug + Clone {
 }
 
 /// Provide signing logic blanket implementations for all block types satisfying the trait bounds.
-pub trait SignBlock<B: Block, SB: SignedBlock<Block = B>> {
-	fn sign_block<P: Pair>(self, signer: &P) -> SB
+pub trait SignBlock<
+	SidechainBlock: Block,
+	SignedSidechainBlock: SignedBlock<Block = SidechainBlock>,
+>
+{
+	fn sign_block<P: Pair>(self, signer: &P) -> SignedSidechainBlock
 	where
-		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
+		<SignedSidechainBlock as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
 }
 
-impl<B, SB> SignBlock<B, SB> for B
+impl<SidechainBlock, SignedSidechainBlock> SignBlock<SidechainBlock, SignedSidechainBlock>
+	for SidechainBlock
 where
-	B: Block,
-	SB: SignedBlock<Block = B>,
+	SidechainBlock: Block,
+	SignedSidechainBlock: SignedBlock<Block = SidechainBlock>,
 {
-	fn sign_block<P: Pair>(self, signer: &P) -> SB
+	fn sign_block<P: Pair>(self, signer: &P) -> SignedSidechainBlock
 	where
-		<SB as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
+		<SignedSidechainBlock as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
 	{
 		let signature = self.using_encoded(|b| signer.sign(b)).into();
-		SB::new(self, signature)
+		SignedSidechainBlock::new(self, signature)
 	}
 }
