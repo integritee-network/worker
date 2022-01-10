@@ -20,6 +20,11 @@ use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_api_client_extensions::PalletTeerexApi;
 use its_primitives::types::ShardIdentifier;
 
+/// Trait to fetch untrusted peer servers.
+pub trait FetchUntrustedPeers {
+	fn get_untrusted_peer_url_of_shard(&self, shard: &ShardIdentifier) -> Result<String>;
+}
+
 /// Fetches the untrusted peer servers
 /// FIXME: Should problably be combined with the peer fetch in
 /// service/src/worker.rs
@@ -34,11 +39,6 @@ where
 	pub fn new(node_api: NodeApi) -> Self {
 		UntrustedPeerFetcher { node_api }
 	}
-}
-
-/// Trait to fetch untrusted peer servers.
-pub trait FetchUntrustedPeers {
-	fn get_untrusted_peer_url_of_shard(&self, shard: &ShardIdentifier) -> Result<String>;
 }
 
 impl<NodeApi> FetchUntrustedPeers for UntrustedPeerFetcher<NodeApi>
