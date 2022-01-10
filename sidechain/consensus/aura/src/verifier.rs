@@ -183,17 +183,17 @@ mod tests {
 	use sp_runtime::{app_crypto::ed25519, testing::H256};
 
 	fn assert_bad_sidechain_block_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
-		assert_matches!(result.unwrap_err(),ConsensusError::BadSidechainBlock(
+		assert_matches!(result, Err(ConsensusError::BadSidechainBlock(
 			_,
 			m,
-		) if &m == msg)
+		)) if m == msg)
 	}
 
 	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
-		assert_matches!(result.unwrap_err(),ConsensusError::BlockAncestryMismatch(
+		assert_matches!(result, Err(ConsensusError::BlockAncestryMismatch(
 			_,
 			m,
-		) if &m == msg)
+		)) if m == msg)
 	}
 
 	fn block2_builder(signer: ed25519::Pair, parent_hash: H256) -> SidechainBlockBuilder {
