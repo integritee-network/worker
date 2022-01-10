@@ -35,7 +35,7 @@ impl DirectRequest for TestEnclave {
 pub struct MockSidechainBlockFetcher;
 
 impl FetchBlocks<SignedSidechainBlock> for MockSidechainBlockFetcher {
-	fn fetch_all_blocks_following(
+	fn fetch_all_blocks_after(
 		&self,
 		_block_hash: &BlockHash,
 		_shard_identifier: &ShardIdentifierFor<SignedBlock>,

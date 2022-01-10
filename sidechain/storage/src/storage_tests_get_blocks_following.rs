@@ -38,7 +38,7 @@ fn get_blocks_following_works_for_regular_case() {
 	{
 		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 		let blocks_following_1 = updated_sidechain_db
-			.get_blocks_following(&block_1.hash(), &default_shard())
+			.get_blocks_after(&block_1.hash(), &default_shard())
 			.unwrap();
 
 		assert_eq!(3, blocks_following_1.len());
@@ -61,7 +61,7 @@ fn get_blocks_follow_returns_empty_vec_if_block_not_found() {
 
 		assert_eq!(
 			updated_sidechain_db
-				.get_blocks_following(&block_hash_to_be_followed, &default_shard())
+				.get_blocks_after(&block_hash_to_be_followed, &default_shard())
 				.unwrap(),
 			Vec::new()
 		);
@@ -79,7 +79,7 @@ fn get_blocks_returns_none_if_last_is_already_most_recent_block() {
 
 		assert_eq!(
 			updated_sidechain_db
-				.get_blocks_following(&block_1.hash(), &default_shard())
+				.get_blocks_after(&block_1.hash(), &default_shard())
 				.unwrap(),
 			Vec::new()
 		);
@@ -98,7 +98,7 @@ fn given_block_with_invalid_ancestry_returns_error() {
 		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 
 		assert_matches!(
-			updated_sidechain_db.get_blocks_following(&block_1.hash(), &default_shard()),
+			updated_sidechain_db.get_blocks_after(&block_1.hash(), &default_shard()),
 			Err(Error::FailedToFindParentBlock)
 		);
 	}

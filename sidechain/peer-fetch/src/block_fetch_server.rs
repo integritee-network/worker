@@ -49,7 +49,7 @@ where
 				let (block_hash, shard_identifier) =
 					params.one::<(BlockHash, ShardIdentifier)>()?;
 				sidechain_block_fetcher
-					.fetch_all_blocks_following(&block_hash, &shard_identifier)
+					.fetch_all_blocks_after(&block_hash, &shard_identifier)
 					.map_err(|e| CallError::Failed(e.into()))
 			},
 		)?;

@@ -60,7 +60,7 @@ pub trait FetchBlocks<SignedBlock: SignedBlockT> {
 	/// Fetch all child blocks of a specified block.
 	///
 	/// Returns an empty vector if specified block hash cannot be found in storage.
-	fn fetch_all_blocks_following(
+	fn fetch_all_blocks_after(
 		&self,
 		block_hash: &BlockHash,
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
@@ -80,11 +80,11 @@ impl<SignedBlock: SignedBlockT> BlockPruner for SidechainStorageLock<SignedBlock
 }
 
 impl<SignedBlock: SignedBlockT> FetchBlocks<SignedBlock> for SidechainStorageLock<SignedBlock> {
-	fn fetch_all_blocks_following(
+	fn fetch_all_blocks_after(
 		&self,
 		block_hash: &BlockHash,
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>> {
-		self.storage.read().get_blocks_following(block_hash, shard_identifier)
+		self.storage.read().get_blocks_after(block_hash, shard_identifier)
 	}
 }

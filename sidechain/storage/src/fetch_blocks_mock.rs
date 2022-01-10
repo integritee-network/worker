@@ -34,7 +34,7 @@ impl FetchBlocksMock {
 }
 
 impl FetchBlocks<SignedBlock> for FetchBlocksMock {
-	fn fetch_all_blocks_following(
+	fn fetch_all_blocks_after(
 		&self,
 		_block_hash: &BlockHash,
 		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
