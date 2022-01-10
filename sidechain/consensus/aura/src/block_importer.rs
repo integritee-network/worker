@@ -41,7 +41,7 @@ use log::*;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::{
-	generic::SignedBlock as SignedParentchainBlockGeneric, traits::Block as ParentchainBlockTrait,
+	generic::SignedBlock as SignedParentchainBlock, traits::Block as ParentchainBlockTrait,
 };
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
@@ -99,9 +99,8 @@ impl<
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	ParentchainBlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlockGeneric<ParentchainBlock>>
-		+ Send
-		+ Sync,
+	ParentchainBlockImportTrigger:
+		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
@@ -182,9 +181,8 @@ impl<
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	ParentchainBlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlockGeneric<ParentchainBlock>>
-		+ Send
-		+ Sync,
+	ParentchainBlockImportTrigger:
+		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
 {
 	type Verifier = AuraVerifier<
 		Authority,
