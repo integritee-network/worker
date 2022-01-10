@@ -126,26 +126,26 @@ pub enum SlotClaimStrategy {
 }
 
 type AuthorityId<P> = <P as Pair>::Public;
-type ShardIdentifierFor<SidechainBlock> =
-	<<SidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::ShardIdentifier;
+type ShardIdentifierFor<SignedSidechainBlock> =
+	<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::ShardIdentifier;
 
-impl<AuthorityPair, ParentchainBlock, SidechainBlock, E, OcallApi, ImportTrigger>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
 	SimpleSlotWorker<ParentchainBlock>
-	for Aura<AuthorityPair, ParentchainBlock, SidechainBlock, E, OcallApi, ImportTrigger>
+	for Aura<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
 where
 	AuthorityPair: Pair,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
 	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
-	E: Environment<ParentchainBlock, SidechainBlock, Error = ConsensusError>,
-	E::Proposer: Proposer<ParentchainBlock, SidechainBlock>,
-	SidechainBlock: SignedBlock + Send + 'static,
+	E: Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError>,
+	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
+	SignedSidechainBlock: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
 	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
 	type Claim = AuthorityPair::Public;
 	type EpochData = Vec<AuthorityId<AuthorityPair>>;
-	type Output = SidechainBlock;
+	type Output = SignedSidechainBlock;
 
 	fn logging_target(&self) -> &'static str {
 		"aura"
