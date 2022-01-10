@@ -235,11 +235,15 @@ impl<
 		error: ConsensusError,
 	) -> Result<(), ConsensusError> {
 		match error {
-			ConsensusError::BlockAncestryMismatch(_last_imported_number, ref msg) => {
+			ConsensusError::BlockAncestryMismatch(
+				_last_imported_number,
+				_last_imported_block_hash,
+				ref msg,
+			) => {
 				//FIXME: We should trigger block production suspension (TBD) here.
 				warn!("Could not import block {:?} due to: {:?}.", signed_sidechain_block, msg);
 			},
-			// Some erros, such as invalid author, should be ignored because we do not want
+			// Some errors, such as invalid author, should be ignored because we do not want
 			// to provide possible attack vectors.
 			_ => warn!("Ignoring import error of block {:?}.", signed_sidechain_block),
 		}

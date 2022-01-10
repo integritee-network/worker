@@ -143,7 +143,13 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 		last_block.block_number() + 1 == block.block_number(),
 		ConsensusError::BlockAncestryMismatch(
 			last_block.block_number(),
-			"Invalid block number".into()
+			last_block.hash(),
+			format!(
+				"Invalid block number, {} does not succeed {}",
+				block.block_number(),
+				last_block.block_number()
+			)
+			.into()
 		)
 	);
 
@@ -151,6 +157,7 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 		last_block.hash() == block.parent_hash(),
 		ConsensusError::BlockAncestryMismatch(
 			last_block.block_number(),
+			last_block.hash(),
 			"Parent hash does not match".into(),
 		)
 	);
@@ -197,11 +204,8 @@ mod tests {
 		)) if m == msg)
 	}
 
-	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
-		assert_matches!(result, Err(ConsensusError::BlockAncestryMismatch(
-			_,
-			m,
-		)) if m == msg)
+	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>) {
+		assert_matches!(result, Err(ConsensusError::BlockAncestryMismatch(_, _, _,)))
 	}
 
 	fn block2_builder(signer: ed25519::Pair, parent_hash: H256) -> SidechainBlockBuilder {
@@ -259,10 +263,7 @@ mod tests {
 		let curr_block =
 			SidechainBlockBuilder::default().with_parent_hash(last_block.hash()).build();
 
-		assert_ancestry_mismatch_err(
-			verify_block_ancestry(&curr_block, &last_block),
-			"Invalid block number",
-		);
+		assert_ancestry_mismatch_err(verify_block_ancestry(&curr_block, &last_block));
 	}
 
 	#[test]
@@ -270,10 +271,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let curr_block = SidechainBlockBuilder::default().with_number(2).build();
 
-		assert_ancestry_mismatch_err(
-			verify_block_ancestry(&curr_block, &last_block),
-			"Parent hash does not match",
-		);
+		assert_ancestry_mismatch_err(verify_block_ancestry(&curr_block, &last_block));
 	}
 
 	#[test]
@@ -342,10 +340,7 @@ mod tests {
 
 		let mut aura = TestAuraVerifier::new(SLOT_DURATION, state_mock);
 
-		assert_ancestry_mismatch_err(
-			aura.verify(curr_block, &default_header(), &onchain_mock),
-			"Parent hash does not match",
-		);
+		assert_ancestry_mismatch_err(aura.verify(curr_block, &default_header(), &onchain_mock));
 	}
 
 	#[test]
