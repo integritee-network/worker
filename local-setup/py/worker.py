@@ -143,7 +143,7 @@ class Worker:
     def write_signer_pub(self):
         return run_subprocess(self.cli + ['signing-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
-    def request_keys(self, flags: [str] = None, skip_ra: bool = False):
+    def sync_state(self, flags: [str] = None, skip_ra: bool = False):
         """ Returns the keys from another worker. """
 
         if skip_ra:

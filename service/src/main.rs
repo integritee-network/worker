@@ -99,8 +99,8 @@ mod error;
 mod globals;
 mod ocall_bridge;
 mod parentchain_block_syncer;
-mod request_keys;
 mod sync_block_gossiper;
+mod sync_state;
 mod tests;
 mod utils;
 mod worker;
@@ -186,7 +186,7 @@ fn main() {
 		println!("*** Requesting keys from a registered worker \n");
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
-		request_keys::request_keys(
+		sync_state::sync_state(
 			&node_api,
 			&extract_shard(smatches, enclave.as_ref()),
 			enclave.as_ref(),

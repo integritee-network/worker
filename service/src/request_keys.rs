@@ -28,7 +28,7 @@ use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
 
-pub(crate) fn request_keys<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
+pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
 	enclave_api: &E,
