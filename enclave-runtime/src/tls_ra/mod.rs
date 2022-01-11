@@ -19,7 +19,7 @@ mod tls_ra_client;
 mod tls_ra_server;
 
 #[cfg(feature = "test")]
-mod tests;
+pub mod tests;
 
 pub const _MAX_BUFFER_SIZE: u32 = 1024;
 

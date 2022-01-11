@@ -124,7 +124,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 }
 
 /// Internal [`run_state_provisioning_server`] function to be able to use the handy `?` operator.
-fn run_state_provisioning_server_internal(
+pub(crate) fn run_state_provisioning_server_internal(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,

@@ -107,7 +107,7 @@ pub extern "C" fn request_state_provisioning(
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
-fn request_state_provisioning_internal(
+pub(crate) fn request_state_provisioning_internal(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,

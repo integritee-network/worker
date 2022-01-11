@@ -23,6 +23,7 @@ use crate::{
 		cert_tests::*, fixtures::initialize_test_state::init_state,
 		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests,
 	},
+	tls_ra,
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -130,6 +131,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
+		// tls_ra integration tests
+		tls_ra::tests::test_state_provisioning,
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
