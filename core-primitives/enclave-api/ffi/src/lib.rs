@@ -136,7 +136,7 @@ extern "C" {
 		skip_ra: c_int,
 	) -> sgx_status_t;
 
-	pub fn request_key_provisioning(
+	pub fn request_state_provisioning(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		socket_fd: c_int,

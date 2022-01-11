@@ -197,7 +197,7 @@ fn send_files(
 }
 
 #[no_mangle]
-pub extern "C" fn request_key_provisioning(
+pub extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,

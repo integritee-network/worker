@@ -66,7 +66,7 @@ pub trait TlsRemoteAttestation {
 		skip_ra: bool,
 	) -> EnclaveResult<()>;
 
-	fn request_key_provisioning(
+	fn request_state_provisioning(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
@@ -230,7 +230,7 @@ impl TlsRemoteAttestation for Enclave {
 		Ok(())
 	}
 
-	fn request_key_provisioning(
+	fn request_state_provisioning(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
@@ -239,7 +239,7 @@ impl TlsRemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe {
-			ffi::request_key_provisioning(
+			ffi::request_state_provisioning(
 				self.eid,
 				&mut retval,
 				socket_fd,

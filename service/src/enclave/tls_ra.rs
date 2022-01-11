@@ -58,7 +58,7 @@ pub fn enclave_run_key_provisioning_server<E: TlsRemoteAttestation>(
 	}
 }
 
-pub fn enclave_request_key_provisioning<E: TlsRemoteAttestation>(
+pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation>(
 	enclave_api: &E,
 	sign_type: sgx_quote_sign_type_t,
 	addr: &str,
@@ -68,5 +68,5 @@ pub fn enclave_request_key_provisioning<E: TlsRemoteAttestation>(
 
 	let socket = TcpStream::connect(addr).map_err(|e| Error::Other(Box::new(e)))?;
 
-	enclave_api.request_key_provisioning(socket.as_raw_fd(), sign_type, skip_ra)
+	enclave_api.request_state_provisioning(socket.as_raw_fd(), sign_type, skip_ra)
 }

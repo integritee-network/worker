@@ -37,7 +37,7 @@ use codec::{Decode, Encode};
 use config::Config;
 use enclave::{
 	api::enclave_init,
-	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
+	tls_ra::{enclave_request_state_provisioning, enclave_run_key_provisioning_server},
 };
 use futures::executor::block_on;
 use itp_enclave_api::{
@@ -236,7 +236,7 @@ fn main() {
 			println!("[+] Done!");
 		} else if _matches.is_present("provisioning-client") {
 			println!("*** Running Enclave MU-RA TLS client\n");
-			enclave_request_key_provisioning(
+			enclave_request_state_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url_external(),
