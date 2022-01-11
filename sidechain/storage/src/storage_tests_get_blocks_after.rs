@@ -26,7 +26,7 @@ use its_primitives::{traits::SignedBlock, types::BlockHash};
 use std::assert_matches::assert_matches;
 
 #[test]
-fn get_blocks_following_works_for_regular_case() {
+fn get_blocks_after_works_for_regular_case() {
 	let block_1 = create_signed_block(1, BlockHash::default());
 	let block_2 = create_signed_block(2, block_1.hash());
 	let block_3 = create_signed_block(3, block_2.hash());
@@ -37,32 +37,30 @@ fn get_blocks_following_works_for_regular_case() {
 
 	{
 		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
-		let blocks_following_1 = updated_sidechain_db
+		let blocks_after_1 = updated_sidechain_db
 			.get_blocks_after(&block_1.hash(), &default_shard())
 			.unwrap();
 
-		assert_eq!(3, blocks_following_1.len());
-		assert_eq!(block_2.hash(), blocks_following_1.first().unwrap().hash());
-		assert_eq!(block_4.hash(), blocks_following_1.last().unwrap().hash());
+		assert_eq!(3, blocks_after_1.len());
+		assert_eq!(block_2.hash(), blocks_after_1.first().unwrap().hash());
+		assert_eq!(block_4.hash(), blocks_after_1.last().unwrap().hash());
 	}
 }
 
 #[test]
-fn get_blocks_follow_returns_empty_vec_if_block_not_found() {
+fn get_blocks_after_returns_empty_vec_if_block_not_found() {
 	let block_1 = create_signed_block(1, BlockHash::random());
 
 	let temp_dir = fill_storage_with_blocks(vec![block_1.clone()]);
 
 	{
 		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
-		let block_hash_to_be_followed = BlockHash::from_low_u64_be(1);
+		let block_hash = BlockHash::from_low_u64_be(1);
 		// Off-chance that random() generates exactly the same hash
-		assert_ne!(block_1.hash(), block_hash_to_be_followed);
+		assert_ne!(block_1.hash(), block_hash);
 
 		assert_eq!(
-			updated_sidechain_db
-				.get_blocks_after(&block_hash_to_be_followed, &default_shard())
-				.unwrap(),
+			updated_sidechain_db.get_blocks_after(&block_hash, &default_shard()).unwrap(),
 			Vec::new()
 		);
 	}

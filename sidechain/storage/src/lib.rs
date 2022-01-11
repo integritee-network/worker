@@ -30,7 +30,7 @@ pub mod interface;
 mod storage;
 
 #[cfg(test)]
-mod storage_tests_get_blocks_following;
+mod storage_tests_get_blocks_after;
 
 #[cfg(test)]
 mod test_utils;
