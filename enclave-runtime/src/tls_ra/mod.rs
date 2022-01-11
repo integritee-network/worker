@@ -18,6 +18,9 @@
 mod tls_ra_client;
 mod tls_ra_server;
 
+#[cfg(feature = "test")]
+mod tests;
+
 pub const _MAX_BUFFER_SIZE: u32 = 1024;
 
 /// States the tcp stream content type.
