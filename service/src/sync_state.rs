@@ -34,7 +34,7 @@ pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 	enclave_api: &E,
 	skip_ra: bool,
 ) {
-	// FIXME: we now assume that keys are equal for all shards
+	// FIXME: we now assume that keys are equal for all shards.
 	let provider_url =
 		executor::block_on(get_author_url_of_last_finalized_sidechain_block(node_api, shard))
 			.unwrap();
