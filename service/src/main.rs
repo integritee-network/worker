@@ -37,7 +37,7 @@ use codec::{Decode, Encode};
 use config::Config;
 use enclave::{
 	api::enclave_init,
-	tls_ra::{enclave_request_state_provisioning, enclave_run_key_provisioning_server},
+	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
 use futures::executor::block_on;
 use itp_enclave_api::{
@@ -227,7 +227,7 @@ fn main() {
 	} else if let Some(_matches) = matches.subcommand_matches("test") {
 		if _matches.is_present("provisioning-server") {
 			println!("*** Running Enclave MU-RA TLS server\n");
-			enclave_run_key_provisioning_server(
+			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url(),
@@ -290,7 +290,7 @@ fn start_worker<E, T, D>(
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
 	thread::spawn(move || {
-		enclave_run_key_provisioning_server(
+		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 			&ra_url,

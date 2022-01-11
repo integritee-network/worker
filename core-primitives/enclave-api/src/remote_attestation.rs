@@ -59,7 +59,7 @@ pub trait RemoteAttestationCallBacks {
 
 /// TLS remote attestations methods
 pub trait TlsRemoteAttestation {
-	fn run_key_provisioning_server(
+	fn run_state_provisioning_server(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
@@ -206,7 +206,7 @@ impl RemoteAttestationCallBacks for Enclave {
 }
 
 impl TlsRemoteAttestation for Enclave {
-	fn run_key_provisioning_server(
+	fn run_state_provisioning_server(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
@@ -215,7 +215,7 @@ impl TlsRemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe {
-			ffi::run_key_provisioning_server(
+			ffi::run_state_provisioning_server(
 				self.eid,
 				&mut retval,
 				socket_fd,

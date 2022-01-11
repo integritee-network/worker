@@ -109,22 +109,22 @@ where
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn run_key_provisioning_server(
+pub unsafe extern "C" fn run_state_provisioning_server(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	if let Err(e) = run_key_provisioning_server_internal(socket_fd, sign_type, skip_ra) {
+	if let Err(e) = run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra) {
 		return e.into()
 	};
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Internal [`run_key_provisioning_server`] function to be able to use the handy `?` operator.
-fn run_key_provisioning_server_internal(
+/// Internal [`run_state_provisioning_server`] function to be able to use the handy `?` operator.
+fn run_state_provisioning_server_internal(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,

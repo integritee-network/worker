@@ -22,7 +22,7 @@ use std::{
 	os::unix::io::AsRawFd,
 };
 
-pub fn enclave_run_key_provisioning_server<E: TlsRemoteAttestation>(
+pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 	enclave_api: &E,
 	sign_type: sgx_quote_sign_type_t,
 	addr: &str,
@@ -41,8 +41,11 @@ pub fn enclave_run_key_provisioning_server<E: TlsRemoteAttestation>(
 			Ok((socket, addr)) => {
 				info!("[MU-RA-Server] a worker at {} is requesting key provisiong", addr);
 
-				let result =
-					enclave_api.run_key_provisioning_server(socket.as_raw_fd(), sign_type, skip_ra);
+				let result = enclave_api.run_state_provisioning_server(
+					socket.as_raw_fd(),
+					sign_type,
+					skip_ra,
+				);
 
 				match result {
 					Ok(_) => {

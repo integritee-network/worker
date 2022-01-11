@@ -94,7 +94,7 @@ enclave {
 
 		public sgx_status_t dump_ra_to_disk();
 
-		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
+		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
         public sgx_status_t request_state_provisioning(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
 
 		public sgx_status_t call_rpc_methods(
