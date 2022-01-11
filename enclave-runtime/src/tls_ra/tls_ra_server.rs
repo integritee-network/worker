@@ -1,38 +1,31 @@
+use super::Opcode;
 use crate::{
-	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
+	attestation::create_ra_report_and_signature,
 	cert,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
-	tls_ra_client::Opcode,
-	utils::write_slice_and_whitespace_pad,
 };
-use codec::{Decode, Encode};
+use codec::Encode;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::{Aes, AesSeal, Rsa3072Seal};
+use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
 use itp_sgx_io::SealedIO;
 use log::*;
-use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Stream};
-use serde_derive::Deserialize;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
-	io::{Read, Write},
+	io::Write,
 	net::TcpStream,
 	sync::Arc,
-	vec::Vec,
 };
 use webpki::DNSName;
-
-const MAX_BUFFER_SIZE: u32 = 1024;
-const MAX_HEADER_SIZE: u32 = 128;
 
 fn send_signing_key(tls: &mut Stream<ServerSession, TcpStream>) -> EnclaveResult<()> {
 	let aes = AesSeal::unseal()?;
 	info!("    [Enclave] Read Signining Key: {:?}", aes);
 	let aes_encoded = aes.encode();
 	let payload_length: u64 = aes_encoded.len() as u64;
-	tls.write(&Opcode::SigningKeyOp.to_bytes())?;
+	tls.write(&Opcode::SigningKey.to_bytes())?;
 	tls.write(&payload_length.to_be_bytes())?;
 	tls.write(&aes_encoded)?;
 	Ok(())
@@ -43,7 +36,7 @@ fn send_shielding_key(tls: &mut Stream<ServerSession, TcpStream>) -> EnclaveResu
 	info!("    [Enclave] Read Shielding Key: {:?}", shielding_key);
 	let rsa_pair = serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))?;
 	let payload_length: u64 = rsa_pair.len() as u64;
-	tls.write(&Opcode::ShieldingKeyOp.to_bytes())?;
+	tls.write(&Opcode::ShieldingKey.to_bytes())?;
 	tls.write(&payload_length.to_be_bytes())?;
 	tls.write(&rsa_pair)?;
 	Ok(())
@@ -120,9 +113,9 @@ fn run_key_provisioning_server_internal(
 	skip_ra: c_int,
 ) -> EnclaveResult<()> {
 	let cfg = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
-	let (mut sess, mut conn) = tls_server_session_stream(socket_fd, cfg)?;
+	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, cfg)?;
 
-	let mut tls = rustls::Stream::new(&mut sess, &mut conn);
+	let mut tls = rustls::Stream::new(&mut server_session, &mut tcp_stream);
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
 	send_shielding_key(&mut tls)?;

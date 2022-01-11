@@ -100,8 +100,7 @@ pub mod cert;
 pub mod error;
 pub mod rpc;
 mod sync;
-pub mod tls_ra_client;
-pub mod tls_ra_server;
+mod tls_ra;
 pub mod top_pool_execution;
 
 #[cfg(feature = "test")]

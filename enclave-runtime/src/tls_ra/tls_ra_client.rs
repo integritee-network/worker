@@ -1,3 +1,4 @@
+use super::Opcode;
 use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
@@ -20,10 +21,6 @@ use std::{
 	vec::Vec,
 };
 
-pub use self::Opcode::{ShieldingKeyOp, SigningKeyOp, StateOp};
-
-const MAX_BUFFER_SIZE: u32 = 1024;
-
 #[derive(Clone, Debug)]
 pub struct TcpHeader {
 	pub opcode: Opcode,
@@ -36,40 +33,15 @@ impl TcpHeader {
 	}
 }
 
-/// States the tcp stream content type.
-#[derive(Copy, Clone, Debug)]
-pub enum Opcode {
-	ShieldingKeyOp = 0,
-	SigningKeyOp = 1,
-	StateOp = 2,
-}
-
-impl From<u8> for Opcode {
-	fn from(item: u8) -> Self {
-		match item {
-			0 => ShieldingKeyOp,
-			1 => SigningKeyOp,
-			2 => StateOp,
-			_ => unimplemented!(),
-		}
-	}
-}
-
-impl Opcode {
-	pub fn to_bytes(&self) -> [u8; 1] {
-		(*self as u8).to_be_bytes()
-	}
-}
-
 /// This encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
-struct TcpClient<'a> {
+struct TlsClient<'a> {
 	tls_stream: Stream<'a, ClientSession, TcpStream>,
 }
 
-impl<'a> TcpClient<'a> {
-	fn new(tls_stream: Stream<'a, ClientSession, TcpStream>) -> TcpClient {
-		TcpClient { tls_stream }
+impl<'a> TlsClient<'a> {
+	fn new(tls_stream: Stream<'a, ClientSession, TcpStream>) -> TlsClient {
+		TlsClient { tls_stream }
 	}
 
 	fn read(&mut self) -> EnclaveResult<()> {
@@ -85,9 +57,8 @@ impl<'a> TcpClient<'a> {
 
 		if let Some(header) = self.read_header(start_byte.to_vec()) {
 			match header.opcode {
-				Opcode::ShieldingKeyOp =>
-					self.read_shielding_key(header.payload_length as usize)?,
-				Opcode::SigningKeyOp => self.read_signing_key(header.payload_length as usize)?,
+				Opcode::ShieldingKey => self.read_shielding_key(header.payload_length as usize)?,
+				Opcode::SigningKey => self.read_signing_key(header.payload_length as usize)?,
 				_ => error!("received unexpected op: {:?}", header.opcode),
 			}
 		}
@@ -155,9 +126,9 @@ fn request_state_provisioning_internal(
 ) -> EnclaveResult<()> {
 	let cfg = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
 
-	let (mut sess, mut conn) = tls_client_session_stream(socket_fd, cfg)?;
+	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, cfg)?;
 
-	let mut tcp_client = TcpClient::new(rustls::Stream::new(&mut sess, &mut conn));
+	let mut tcp_client = TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream));
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 
