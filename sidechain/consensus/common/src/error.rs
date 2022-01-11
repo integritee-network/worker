@@ -39,6 +39,8 @@ pub enum Error {
 	Sgx(sgx_status_t),
 	#[error("Unable to create block proposal.")]
 	CannotPropose,
+	#[error("Encountered poisoned lock")]
+	LockPoisoning,
 	#[error("Message sender {0} is not a valid authority")]
 	InvalidAuthority(String),
 	#[error("Could not get authorities: {0:?}.")]
