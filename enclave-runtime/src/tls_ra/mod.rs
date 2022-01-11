@@ -44,3 +44,15 @@ impl Opcode {
 		(self as u8).to_be_bytes()
 	}
 }
+
+#[derive(Clone, Debug)]
+pub struct TcpHeader {
+	pub opcode: Opcode,
+	pub payload_length: u64,
+}
+
+impl TcpHeader {
+	fn new(opcode: Opcode, payload_length: u64) -> Self {
+		Self { opcode, payload_length }
+	}
+}

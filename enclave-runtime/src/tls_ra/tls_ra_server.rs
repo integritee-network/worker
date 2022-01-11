@@ -1,4 +1,4 @@
-use super::Opcode;
+use super::{Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
 	cert,
@@ -20,28 +20,45 @@ use std::{
 };
 use webpki::DNSName;
 
-fn send_signing_key(tls: &mut Stream<ServerSession, TcpStream>) -> EnclaveResult<()> {
-	let aes = AesSeal::unseal()?;
-	info!("    [Enclave] Read Signining Key: {:?}", aes);
-	let aes_encoded = aes.encode();
-	let payload_length: u64 = aes_encoded.len() as u64;
-	tls.write(&Opcode::SigningKey.to_bytes())?;
-	tls.write(&payload_length.to_be_bytes())?;
-	tls.write(&aes_encoded)?;
-	Ok(())
+/// This encapsulates the TCP-level connection, some connection
+/// state, and the underlying TLS-level session.
+struct TlsServer<'a> {
+	tls_stream: Stream<'a, ServerSession, TcpStream>,
 }
 
-fn send_shielding_key(tls: &mut Stream<ServerSession, TcpStream>) -> EnclaveResult<()> {
-	let shielding_key = Rsa3072Seal::unseal()?;
-	info!("    [Enclave] Read Shielding Key: {:?}", shielding_key);
-	let rsa_pair = serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))?;
-	let payload_length: u64 = rsa_pair.len() as u64;
-	tls.write(&Opcode::ShieldingKey.to_bytes())?;
-	tls.write(&payload_length.to_be_bytes())?;
-	tls.write(&rsa_pair)?;
-	Ok(())
-}
+impl<'a> TlsServer<'a> {
+	fn new(tls_stream: Stream<'a, ServerSession, TcpStream>) -> Self {
+		Self { tls_stream }
+	}
 
+	fn write_all(&mut self) -> EnclaveResult<()> {
+		self.write_signing_key()?;
+		self.write_shielding_key()?;
+		Ok(())
+	}
+
+	fn write_header(&mut self, tcp_header: TcpHeader) -> EnclaveResult<()> {
+		self.tls_stream.write(&tcp_header.opcode.to_bytes())?;
+		self.tls_stream.write(&tcp_header.payload_length.to_be_bytes())?;
+		Ok(())
+	}
+
+	fn write_signing_key(&mut self) -> EnclaveResult<()> {
+		let aes_encoded = AesSeal::unseal()?.encode();
+		self.write_header(TcpHeader::new(Opcode::SigningKey, aes_encoded.len() as u64))?;
+		self.tls_stream.write(&aes_encoded)?;
+		Ok(())
+	}
+
+	fn write_shielding_key(&mut self) -> EnclaveResult<()> {
+		let shielding_key = Rsa3072Seal::unseal()?;
+		let rsa_pair =
+			serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))?;
+		self.write_header(TcpHeader::new(Opcode::ShieldingKey, rsa_pair.len() as u64))?;
+		self.tls_stream.write(&rsa_pair)?;
+		Ok(())
+	}
+}
 struct ClientAuth<A> {
 	outdated_ok: bool,
 	skip_ra: bool,
@@ -114,12 +131,10 @@ fn run_key_provisioning_server_internal(
 ) -> EnclaveResult<()> {
 	let cfg = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
 	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, cfg)?;
-
-	let mut tls = rustls::Stream::new(&mut server_session, &mut tcp_stream);
+	let mut server = TlsServer::new(rustls::Stream::new(&mut server_session, &mut tcp_stream));
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
-	send_shielding_key(&mut tls)?;
-	send_signing_key(&mut tls)?;
+	server.write_all()?;
 
 	Ok(())
 }

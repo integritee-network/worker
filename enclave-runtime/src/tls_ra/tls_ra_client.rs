@@ -1,4 +1,4 @@
-use super::Opcode;
+use super::{Opcode, TcpHeader};
 use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	cert,
@@ -20,18 +20,6 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-
-#[derive(Clone, Debug)]
-pub struct TcpHeader {
-	pub opcode: Opcode,
-	pub payload_length: u64,
-}
-
-impl TcpHeader {
-	fn new(opcode: Opcode, payload_length: u64) -> Self {
-		Self { opcode, payload_length }
-	}
-}
 
 /// This encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
@@ -128,12 +116,12 @@ fn request_state_provisioning_internal(
 
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, cfg)?;
 
-	let mut tcp_client = TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream));
+	let mut client = TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream));
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 
 	for _n in 1..2 {
-		tcp_client.read()?;
+		client.read()?;
 	}
 
 	info!("    [Enclave] (MU-RA-Client) Registration procedure successful!");
