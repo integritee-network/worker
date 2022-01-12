@@ -2391,7 +2391,9 @@ dependencies = [
  "env_logger 0.9.0",
  "itp-enclave-api",
  "itp-types",
+ "its-peer-fetch",
  "its-primitives",
+ "its-storage",
  "its-test",
  "jsonrpsee",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2673,6 +2675,7 @@ dependencies = [
  "itp-storage",
  "itp-storage-verifier",
  "itp-teerex-storage",
+ "itp-time-utils",
  "itp-types",
  "its-top-pool",
  "jsonrpc-core 16.1.0",
@@ -2817,6 +2820,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-peer-fetch"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "itc-rpc-client",
+ "itp-api-client-extensions",
+ "itp-test",
+ "its-primitives",
+ "its-storage",
+ "its-test",
+ "jsonrpsee",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.130",
+ "serde_json 1.0.72",
+ "thiserror 1.0.30",
+ "tokio",
+]
+
+[[package]]
 name = "its-primitives"
 version = "0.8.0"
 dependencies = [
@@ -2888,12 +2911,14 @@ version = "0.8.0"
 dependencies = [
  "itp-types",
  "its-primitives",
+ "its-test",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mockall",
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "rocksdb",
  "sp-core",
+ "temp-dir",
  "thiserror 1.0.30",
 ]
 
@@ -6808,6 +6833,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "temp-dir"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af547b166dd1ea4b472165569fc456cfb6818116f854690b0ff205e636523dab"
+
+[[package]]
 name = "tempfile"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7247,7 +7278,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 1.0.0",
- "rand 0.6.5",
+ "rand 0.8.4",
  "static_assertions",
 ]
 

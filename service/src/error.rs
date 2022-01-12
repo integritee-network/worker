@@ -26,5 +26,5 @@ pub enum Error {
 	#[error("Retrieved empty value")]
 	EmptyValue,
 	#[error("Custom Error: {0}")]
-	Custom(Box<dyn std::error::Error>),
+	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

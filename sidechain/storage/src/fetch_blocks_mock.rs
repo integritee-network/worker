@@ -15,31 +15,30 @@
 
 */
 
-use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
-use itp_types::RpcResponse;
+use crate::{error::Result, interface::FetchBlocks};
 use its_primitives::{
 	traits::ShardIdentifierFor,
-	types::{BlockHash, SignedBlock, SignedBlock as SignedSidechainBlock},
+	types::{BlockHash, SignedBlock},
 };
-use its_storage::interface::FetchBlocks;
-use parity_scale_codec::Encode;
 
-pub struct TestEnclave;
+#[derive(Default)]
+pub struct FetchBlocksMock {
+	blocks_to_be_fetched: Vec<SignedBlock>,
+}
 
-impl DirectRequest for TestEnclave {
-	fn rpc(&self, _request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		Ok(RpcResponse { jsonrpc: "mock_response".into(), result: "null".encode(), id: 1 }.encode())
+impl FetchBlocksMock {
+	pub fn with_blocks(mut self, blocks: Vec<SignedBlock>) -> Self {
+		self.blocks_to_be_fetched = blocks;
+		self
 	}
 }
 
-pub struct MockSidechainBlockFetcher;
-
-impl FetchBlocks<SignedSidechainBlock> for MockSidechainBlockFetcher {
+impl FetchBlocks<SignedBlock> for FetchBlocksMock {
 	fn fetch_all_blocks_after(
 		&self,
 		_block_hash: &BlockHash,
 		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
-	) -> its_storage::Result<Vec<SignedBlock>> {
-		Ok(Vec::new())
+	) -> Result<Vec<SignedBlock>> {
+		Ok(self.blocks_to_be_fetched.clone())
 	}
 }

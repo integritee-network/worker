@@ -15,8 +15,8 @@
 
 */
 
-pub mod direct_client;
-pub mod error;
-#[cfg(test)]
-pub mod mock;
-pub mod ws_client;
+//! Sidechain constants
+
+// RPC method names.
+pub const RPC_METHOD_NAME_IMPORT_BLOCKS: &str = "sidechain_importBlock";
+pub const RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER: &str = "sidechain_fetchBlocksFromPeer";
