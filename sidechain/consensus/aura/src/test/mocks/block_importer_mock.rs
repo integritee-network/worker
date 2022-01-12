@@ -118,14 +118,6 @@ where
 		todo!()
 	}
 
-	fn handle_import_error(
-		&self,
-		_signed_sidechain_block: &SignedSidechainBlock,
-		_error: Error,
-	) -> Result<()> {
-		todo!()
-	}
-
 	fn import_block(
 		&self,
 		signed_sidechain_block: SignedSidechainBlock,
