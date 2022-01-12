@@ -24,7 +24,6 @@ use sgx_types::sgx_quote_sign_type_t;
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
-	sync::Arc,
 	thread,
 	time::Duration,
 	vec::Vec,

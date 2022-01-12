@@ -16,12 +16,8 @@
 */
 
 use super::key_handler::{SealKeys, UnsealKeys};
-use crate::error::{Error as EnclaveError, Result as EnclaveResult};
-use codec::{Decode, Encode};
-use itp_sgx_crypto::{Aes, AesSeal, Rsa3072Seal};
-use itp_sgx_io::SealedIO;
+use crate::error::Result as EnclaveResult;
 use lazy_static::lazy_static;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use std::{sync::SgxRwLock as RwLock, vec::Vec};
 
 lazy_static! {
