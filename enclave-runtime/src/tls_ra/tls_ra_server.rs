@@ -36,13 +36,13 @@ where
 	fn write_all(&mut self) -> EnclaveResult<()> {
 		let shielding_key = self.key_handler.unseal_shielding_key()?;
 		let signing_key = self.key_handler.unseal_signing_key()?;
-		self.write(&shielding_key)?;
-		self.write(&signing_key)?;
+		self.write(Opcode::ShieldingKey, &shielding_key)?;
+		self.write(Opcode::SigningKey, &signing_key)?;
 		Ok(())
 	}
 
-	fn write(&mut self, bytes: &[u8]) -> EnclaveResult<()> {
-		self.write_header(TcpHeader::new(Opcode::ShieldingKey, bytes.len() as u64))?;
+	fn write(&mut self, opcode: Opcode, bytes: &[u8]) -> EnclaveResult<()> {
+		self.write_header(TcpHeader::new(opcode, bytes.len() as u64))?;
 		self.tls_stream.write(bytes)?;
 		Ok(())
 	}

@@ -39,6 +39,14 @@ where
 		TlsClient { tls_stream, key_handler }
 	}
 
+	fn read_all(&mut self) -> EnclaveResult<()> {
+		// We read two times in total for two keys.
+		for _n in 0..2 {
+			self.read()?;
+		}
+		Ok(())
+	}
+
 	fn read(&mut self) -> EnclaveResult<()> {
 		let mut start_byte = [0u8; 1];
 		let read_size = self.tls_stream.read(&mut start_byte)?;
@@ -49,7 +57,6 @@ where
 				"EOF",
 			)))
 		}
-
 		if let Some(header) = self.read_header(start_byte.to_vec()) {
 			let bytes = self.read_until(header.payload_length as usize)?;
 			match header.opcode {
@@ -64,7 +71,6 @@ where
 
 	fn read_header(&mut self, start_bytes: Vec<u8>) -> Option<TcpHeader> {
 		let opcode: Opcode = start_bytes[0].into();
-
 		let mut length_buffer = [0u8; 8];
 		if let Err(rc) = self.tls_stream.read(&mut length_buffer) {
 			error!("TLS read error: {:?}", rc);
@@ -117,9 +123,7 @@ pub(crate) fn request_state_provisioning_internal<KeySealer: SealKeys>(
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 
-	for _n in 1..2 {
-		client.read()?;
-	}
+	client.read_all()?;
 
 	info!("    [Enclave] (MU-RA-Client) Registration procedure successful!");
 

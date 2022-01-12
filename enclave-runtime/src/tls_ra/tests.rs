@@ -47,7 +47,7 @@ fn run_state_provisioning_server(key_handler: KeyHandlerMock) {
 	}
 }
 
-pub fn test_state_provisioning() {
+pub fn test_tls_ra_server_client_networking() {
 	let shielding_key = vec![1, 2, 3];
 	let signing_key = vec![5, 2, 3];
 	let server_key_handler = KeyHandlerMock::new(shielding_key.clone(), signing_key.clone());

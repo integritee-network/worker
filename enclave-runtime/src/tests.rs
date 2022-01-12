@@ -132,7 +132,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
 		// tls_ra integration tests
-		tls_ra::tests::test_state_provisioning,
+		tls_ra::tests::test_tls_ra_server_client_networking,
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
