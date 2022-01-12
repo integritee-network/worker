@@ -15,7 +15,7 @@
 
 */
 
-use crate::{block_importer::BlockImporter, mock::validateer, ShardIdentifierFor};
+use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIdentifierFor};
 use codec::Encode;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_sgx_crypto::{aes::Aes, StateCrypto};

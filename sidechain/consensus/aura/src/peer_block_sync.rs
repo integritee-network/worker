@@ -21,8 +21,12 @@ use its_consensus_common::{BlockImport, Error, Result};
 use its_primitives::{traits::SignedBlock as SignedSidechainBlockTrait, types::BlockHash};
 use log::*;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
+/// Trait for syncing sidechain blocks from a peer validateer.
+///
+/// This entails importing blocks and detecting if we're out of date with our blocks, in which
+/// case we fetch the missing blocks from a peer.
 pub trait SyncBlockFromPeer<ParentchainHeader, SignedSidechainBlock>
 where
 	ParentchainHeader: ParentchainHeaderTrait,
@@ -35,6 +39,7 @@ where
 	) -> Result<()>;
 }
 
+/// Sidechain peer block sync implementation.
 pub struct PeerBlockSync<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -54,6 +59,13 @@ where
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	BlockProductionSuspender: SuspendBlockProduction + IsBlockProductionSuspended,
 {
+	pub fn new(
+		importer: Arc<BlockImporter>,
+		block_production_suspender: Arc<BlockProductionSuspender>,
+	) -> Self {
+		PeerBlockSync { importer, block_production_suspender, _phantom: Default::default() }
+	}
+
 	fn sync_blocks_from_peer(
 		&self,
 		_last_known_block_hash: BlockHash,
@@ -127,4 +139,55 @@ where
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+	use super::*;
+	use crate::{
+		block_production_suspension::BlockProductionSuspender,
+		test::mocks::block_importer_mock::BlockImportMock,
+	};
+	use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
+	use itp_types::Block as ParentchainBlock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+
+	#[test]
+	fn if_block_production_is_suspended_no_block_is_imported() {
+		let block_importer_mock = Arc::new(BlockImportMock::<ParentchainBlock, _>::default());
+		let block_import_suspender = Arc::new(BlockProductionSuspender::default());
+
+		let peer_syncer =
+			PeerBlockSync::new(block_importer_mock.clone(), block_import_suspender.clone());
+
+		let parentchain_header = ParentchainHeaderBuilder::default().build();
+		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
+
+		block_import_suspender.suspend().unwrap();
+
+		peer_syncer
+			.attempt_block_sync(signed_sidechain_block, &parentchain_header)
+			.unwrap();
+
+		assert!(block_import_suspender.is_suspended().unwrap());
+		assert!(block_importer_mock.get_imported_blocks().is_empty());
+	}
+
+	#[test]
+	fn if_block_import_is_successful_no_peer_fetching_happens() {
+		let block_importer_mock =
+			Arc::new(BlockImportMock::<ParentchainBlock, _>::default().with_import_result(Ok(())));
+
+		let block_import_suspender = Arc::new(BlockProductionSuspender::default());
+
+		let peer_syncer =
+			PeerBlockSync::new(block_importer_mock.clone(), block_import_suspender.clone());
+
+		let parentchain_header = ParentchainHeaderBuilder::default().build();
+		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
+
+		peer_syncer
+			.attempt_block_sync(signed_sidechain_block, &parentchain_header)
+			.unwrap();
+
+		assert!(!block_import_suspender.is_suspended().unwrap());
+		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
+	}
+}

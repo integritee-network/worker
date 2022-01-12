@@ -57,13 +57,7 @@ mod verifier;
 pub use verifier::*;
 
 #[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod block_importer_mock;
-
-#[cfg(test)]
-mod block_importer_tests;
+mod test;
 
 /// Aura consensus struct.
 pub struct Aura<
@@ -279,7 +273,10 @@ fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&A
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::mock::{default_header, validateer, EnvironmentMock, TestAura, SLOT_DURATION};
+	use crate::test::{
+		fixtures::{default_header, types::TestAura, validateer, SLOT_DURATION},
+		mocks::environment_mock::EnvironmentMock,
+	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 	use itp_test::{
 		builders::{

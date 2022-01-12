@@ -149,7 +149,6 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 				block.block_number(),
 				last_block.block_number()
 			)
-			.into()
 		)
 	);
 
@@ -189,7 +188,10 @@ fn ensure_first_block<SidechainBlock: SidechainBlockTrait>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::mock::{default_header, validateer, StateMock, TestAuraVerifier, SLOT_DURATION};
+	use crate::test::{
+		fixtures::{default_header, types::TestAuraVerifier, validateer, SLOT_DURATION},
+		mocks::state_mock::StateMock,
+	};
 	use core::assert_matches::assert_matches;
 	use frame_support::assert_ok;
 	use itp_test::mock::onchain_mock::OnchainMock;

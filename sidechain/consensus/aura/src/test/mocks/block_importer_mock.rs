@@ -26,9 +26,43 @@ use its_state::SidechainDB;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
+use std::sync::RwLock;
 
+/// Block importer mock.
 pub struct BlockImportMock<ParentchainBlock, SignedSidechainBlock> {
+	import_result: Option<Result<()>>,
+	imported_blocks: RwLock<Vec<SignedSidechainBlock>>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
+}
+
+impl<ParentchainBlock, SignedSidechainBlock> BlockImportMock<ParentchainBlock, SignedSidechainBlock>
+where
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
+{
+	#[allow(unused)]
+	pub fn with_import_result(mut self, result: Result<()>) -> Self {
+		self.import_result = Some(result);
+		self
+	}
+
+	#[allow(unused)]
+	pub fn get_imported_blocks(&self) -> Vec<SignedSidechainBlock> {
+		(*self.imported_blocks.read().unwrap()).clone()
+	}
+}
+
+impl<ParentchainBlock, SignedSidechainBlock> Default
+	for BlockImportMock<ParentchainBlock, SignedSidechainBlock>
+{
+	fn default() -> Self {
+		BlockImportMock {
+			import_result: None,
+			imported_blocks: RwLock::default(),
+			_phantom: Default::default(),
+		}
+	}
 }
 
 impl<ParentchainBlock, SignedSidechainBlock> BlockImport<ParentchainBlock, SignedSidechainBlock>
@@ -94,9 +128,25 @@ where
 
 	fn import_block(
 		&self,
-		_signed_sidechain_block: SignedSidechainBlock,
+		signed_sidechain_block: SignedSidechainBlock,
 		_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<()> {
-		todo!()
+		let mut imported_blocks_lock = self.imported_blocks.write().unwrap();
+		imported_blocks_lock.push(signed_sidechain_block);
+
+		// Result (or rather the underlying Error) does not support any cloning,
+		// so we have this elaborate way to return the result.
+		match &self.import_result {
+			Some(r) => match r {
+				Ok(_) => Ok(()),
+				Err(e) => match e {
+					Error::BlockAncestryMismatch(number, hash, reason) => Err(
+						Error::BlockAncestryMismatch(number.clone(), hash.clone(), reason.clone()),
+					),
+					_ => Err(Error::Other(format!("{:?}", e).into())),
+				},
+			},
+			None => Ok(()),
+		}
 	}
 }

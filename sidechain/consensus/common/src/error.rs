@@ -15,7 +15,7 @@
 
 */
 
-//! Error types in sidechain Consensus
+//! Error types in sidechain consensus
 
 use itp_types::BlockHash as ParentchainBlockHash;
 use its_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
