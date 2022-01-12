@@ -4,14 +4,11 @@ use crate::{
 	cert,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
+	tls_ra::key_handler::{KeyHandler, SealKeys},
 };
-use codec::Decode;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::{Aes, AesSeal, Rsa3072Seal};
-use itp_sgx_io::SealedIO;
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
@@ -21,15 +18,25 @@ use std::{
 	vec::Vec,
 };
 
-/// This encapsulates the TCP-level connection, some connection
+/// Encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
-struct TlsClient<'a> {
+struct TlsClient<'a, KeySealer>
+where
+	KeySealer: SealKeys,
+{
 	tls_stream: Stream<'a, ClientSession, TcpStream>,
+	key_handler: KeySealer,
 }
 
-impl<'a> TlsClient<'a> {
-	fn new(tls_stream: Stream<'a, ClientSession, TcpStream>) -> TlsClient {
-		TlsClient { tls_stream }
+impl<'a, KeySealer> TlsClient<'a, KeySealer>
+where
+	KeySealer: SealKeys,
+{
+	fn new(
+		tls_stream: Stream<'a, ClientSession, TcpStream>,
+		key_handler: KeySealer,
+	) -> TlsClient<KeySealer> {
+		TlsClient { tls_stream, key_handler }
 	}
 
 	fn read(&mut self) -> EnclaveResult<()> {
@@ -44,9 +51,10 @@ impl<'a> TlsClient<'a> {
 		}
 
 		if let Some(header) = self.read_header(start_byte.to_vec()) {
+			let bytes = self.read_until(header.payload_length as usize)?;
 			match header.opcode {
-				Opcode::ShieldingKey => self.read_shielding_key(header.payload_length as usize)?,
-				Opcode::SigningKey => self.read_signing_key(header.payload_length as usize)?,
+				Opcode::ShieldingKey => self.key_handler.seal_shielding_key(&bytes)?,
+				Opcode::SigningKey => self.key_handler.seal_signing_key(&bytes)?,
 				_ => error!("received unexpected op: {:?}", header.opcode),
 			}
 		}
@@ -68,26 +76,10 @@ impl<'a> TlsClient<'a> {
 		Some(TcpHeader::new(opcode, payload_length))
 	}
 
-	fn read_shielding_key(&mut self, key_len: usize) -> EnclaveResult<()> {
-		let mut rsa_pair = vec![0u8; key_len];
-		self.tls_stream
-			.read(&mut rsa_pair)
-			.map(|_| info!("    [Enclave] Received Shielding key"))?;
-
-		let key: Rsa3072KeyPair = serde_json::from_slice(&rsa_pair).map_err(|e| {
-			error!("    [Enclave] Received Invalid RSA key");
-			EnclaveError::Other(e.into())
-		})?;
-		Rsa3072Seal::seal(key)?;
-		Ok(())
-	}
-
-	fn read_signing_key(&mut self, key_len: usize) -> EnclaveResult<()> {
-		let mut aes_key_encoded = vec![0u8; key_len];
-		self.tls_stream.read(&mut aes_key_encoded)?;
-		let aes = Aes::decode(&mut aes_key_encoded.as_slice())?;
-		AesSeal::seal(Aes::new(aes.key, aes.init_vec))?;
-		Ok(())
+	fn read_until(&mut self, length: usize) -> EnclaveResult<Vec<u8>> {
+		let mut bytes = vec![0u8; length];
+		self.tls_stream.read(&mut bytes)?;
+		Ok(bytes)
 	}
 }
 
@@ -99,7 +91,10 @@ pub extern "C" fn request_state_provisioning(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	if let Err(e) = request_state_provisioning_internal(socket_fd, sign_type, skip_ra) {
+	let key_handler = KeyHandler {};
+
+	if let Err(e) = request_state_provisioning_internal(socket_fd, sign_type, skip_ra, key_handler)
+	{
 		return e.into()
 	};
 
@@ -107,16 +102,18 @@ pub extern "C" fn request_state_provisioning(
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
-pub(crate) fn request_state_provisioning_internal(
+pub(crate) fn request_state_provisioning_internal<KeySealer: SealKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,
+	key_handler: KeySealer,
 ) -> EnclaveResult<()> {
 	let cfg = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
 
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, cfg)?;
 
-	let mut client = TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream));
+	let mut client =
+		TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream), key_handler);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 

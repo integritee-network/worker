@@ -4,11 +4,9 @@ use crate::{
 	cert,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
+	tls_ra::key_handler::{KeyHandler, UnsealKeys},
 };
-use codec::Encode;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
-use itp_sgx_io::SealedIO;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
@@ -22,40 +20,36 @@ use webpki::DNSName;
 
 /// This encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
-struct TlsServer<'a> {
+struct TlsServer<'a, KeyUnsealer> {
 	tls_stream: Stream<'a, ServerSession, TcpStream>,
+	key_handler: KeyUnsealer,
 }
 
-impl<'a> TlsServer<'a> {
-	fn new(tls_stream: Stream<'a, ServerSession, TcpStream>) -> Self {
-		Self { tls_stream }
+impl<'a, KeyUnsealer> TlsServer<'a, KeyUnsealer>
+where
+	KeyUnsealer: UnsealKeys,
+{
+	fn new(tls_stream: Stream<'a, ServerSession, TcpStream>, key_handler: KeyUnsealer) -> Self {
+		Self { tls_stream, key_handler }
 	}
 
 	fn write_all(&mut self) -> EnclaveResult<()> {
-		self.write_signing_key()?;
-		self.write_shielding_key()?;
+		let shielding_key = self.key_handler.unseal_shielding_key()?;
+		let signing_key = self.key_handler.unseal_signing_key()?;
+		self.write(&shielding_key)?;
+		self.write(&signing_key)?;
+		Ok(())
+	}
+
+	fn write(&mut self, bytes: &[u8]) -> EnclaveResult<()> {
+		self.write_header(TcpHeader::new(Opcode::ShieldingKey, bytes.len() as u64))?;
+		self.tls_stream.write(bytes)?;
 		Ok(())
 	}
 
 	fn write_header(&mut self, tcp_header: TcpHeader) -> EnclaveResult<()> {
 		self.tls_stream.write(&tcp_header.opcode.to_bytes())?;
 		self.tls_stream.write(&tcp_header.payload_length.to_be_bytes())?;
-		Ok(())
-	}
-
-	fn write_signing_key(&mut self) -> EnclaveResult<()> {
-		let aes_encoded = AesSeal::unseal()?.encode();
-		self.write_header(TcpHeader::new(Opcode::SigningKey, aes_encoded.len() as u64))?;
-		self.tls_stream.write(&aes_encoded)?;
-		Ok(())
-	}
-
-	fn write_shielding_key(&mut self) -> EnclaveResult<()> {
-		let shielding_key = Rsa3072Seal::unseal()?;
-		let rsa_pair =
-			serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))?;
-		self.write_header(TcpHeader::new(Opcode::ShieldingKey, rsa_pair.len() as u64))?;
-		self.tls_stream.write(&rsa_pair)?;
 		Ok(())
 	}
 }
@@ -116,7 +110,11 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	if let Err(e) = run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra) {
+	let key_handler = KeyHandler {};
+
+	if let Err(e) =
+		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, key_handler)
+	{
 		return e.into()
 	};
 
@@ -124,14 +122,16 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 }
 
 /// Internal [`run_state_provisioning_server`] function to be able to use the handy `?` operator.
-pub(crate) fn run_state_provisioning_server_internal(
+pub(crate) fn run_state_provisioning_server_internal<KeyUnsealer: UnsealKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,
+	key_handler: KeyUnsealer,
 ) -> EnclaveResult<()> {
 	let cfg = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
 	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, cfg)?;
-	let mut server = TlsServer::new(rustls::Stream::new(&mut server_session, &mut tcp_stream));
+	let mut server =
+		TlsServer::new(rustls::Stream::new(&mut server_session, &mut tcp_stream), key_handler);
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
 	server.write_all()?;

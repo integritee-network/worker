@@ -15,11 +15,15 @@
 
 */
 
+mod key_handler;
 mod tls_ra_client;
 mod tls_ra_server;
 
 #[cfg(feature = "test")]
 pub mod tests;
+
+#[cfg(feature = "test")]
+pub mod mocks;
 
 pub const _MAX_BUFFER_SIZE: u32 = 1024;
 
