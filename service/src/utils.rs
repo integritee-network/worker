@@ -16,8 +16,10 @@
 
 */
 
+use crate::error::Error;
 use base58::{FromBase58, ToBase58};
 use clap::ArgMatches;
+use frame_support::ensure;
 use ita_stf::ShardIdentifier;
 use itp_enclave_api::enclave_base::EnclaveBase;
 use log::{debug, info};
@@ -45,12 +47,13 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 	hex_str
 }
 
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
-	assert!(!data.len() > writable.len(), "Not enough bytes in output buffer for return value");
+pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<(), Error> {
+	ensure!(!data.len() > writable.len(), Error::InsufficientBufferSize);
 	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
 	// fill the right side with whitespace
 	right.iter_mut().for_each(|x| *x = 0x20);
+	Ok(())
 }
 
 pub fn check_files() {

@@ -16,6 +16,7 @@
 
 */
 
+pub mod fetch_sidechain_blocks_from_peer;
 /// Foreign Function interface for all the OCalls
 /// Implementations of C-API functions, that can be called from the Enclave
 /// These should just be wrappers that transform the C-API structures and call the

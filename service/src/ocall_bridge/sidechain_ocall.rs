@@ -20,35 +20,52 @@ use crate::{
 	global_peer_updater::UpdateWorkerPeers,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
 	sync_block_gossiper::GossipBlocks,
+	GetTokioHandle,
 };
-use codec::Decode;
+use codec::{Decode, Encode};
+use itp_types::{BlockHash, ShardIdentifier};
+use its_peer_fetch::FetchBlocksFromPeer;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
 use log::*;
 use std::sync::Arc;
 
-pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater> {
+pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
 	block_gossiper: Arc<BlockGossiper>,
 	block_storage: Arc<Storage>,
 	peer_updater: Arc<PeerUpdater>,
+	peer_block_fetcher: Arc<PeerBlockFetcher>,
+	tokio_handle: Arc<TokioHandle>,
 }
 
-impl<BlockGossiper, Storage, PeerUpdater> SidechainOCall<BlockGossiper, Storage, PeerUpdater> {
+impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+	SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+{
 	pub fn new(
 		block_gossiper: Arc<BlockGossiper>,
 		block_storage: Arc<Storage>,
 		peer_updater: Arc<PeerUpdater>,
+		peer_block_fetcher: Arc<PeerBlockFetcher>,
+		tokio_handle: Arc<TokioHandle>,
 	) -> Self {
-		SidechainOCall { block_gossiper, block_storage, peer_updater }
+		SidechainOCall {
+			block_gossiper,
+			block_storage,
+			peer_updater,
+			peer_block_fetcher,
+			tokio_handle,
+		}
 	}
 }
 
-impl<BlockGossiper, Storage, PeerUpdater> SidechainBridge
-	for SidechainOCall<BlockGossiper, Storage, PeerUpdater>
+impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> SidechainBridge
+	for SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 where
 	BlockGossiper: GossipBlocks,
 	Storage: BlockStorage<SignedSidechainBlock>,
 	PeerUpdater: UpdateWorkerPeers,
+	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock>,
+	TokioHandle: GetTokioHandle,
 {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
@@ -111,5 +128,41 @@ where
 		}
 
 		status
+	}
+
+	fn fetch_sidechain_blocks_from_peer(
+		&self,
+		last_known_block_hash_encoded: Vec<u8>,
+		shard_identifier_encoded: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>> {
+		let last_known_block_hash: BlockHash =
+			Decode::decode(&mut last_known_block_hash_encoded.as_slice()).map_err(|_| {
+				OCallBridgeError::FetchSidechainBlocksFromPeer(
+					"Failed to decode last known block hash".to_string(),
+				)
+			})?;
+
+		let shard_identifier: ShardIdentifier =
+			Decode::decode(&mut shard_identifier_encoded.as_slice()).map_err(|_| {
+				OCallBridgeError::FetchSidechainBlocksFromPeer(
+					"Failed to decode shard identifier".to_string(),
+				)
+			})?;
+
+		let tokio_handle = self.tokio_handle.get_handle();
+
+		let signed_sidechain_blocks = tokio_handle
+			.block_on(
+				self.peer_block_fetcher
+					.fetch_blocks_from_peer(last_known_block_hash, shard_identifier),
+			)
+			.map_err(|e| {
+				OCallBridgeError::FetchSidechainBlocksFromPeer(format!(
+					"Failed to execute block fetching from peer: {:?}",
+					e
+				))
+			})?;
+
+		Ok(signed_sidechain_blocks.encode())
 	}
 }

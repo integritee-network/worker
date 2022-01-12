@@ -2111,6 +2111,7 @@ dependencies = [
  "itp-test",
  "itp-types",
  "its-consensus-slots",
+ "its-peer-fetch",
  "its-primitives",
  "its-storage",
  "its-test",

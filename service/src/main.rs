@@ -55,6 +55,9 @@ use itp_settings::{
 	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
 use its_consensus_slots::start_slot_worker;
+use its_peer_fetch::{
+	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
+};
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{
 	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,
@@ -132,6 +135,9 @@ fn main() {
 	);
 	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
+	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.create_api());
+	let peer_sidechain_block_fetcher =
+		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
@@ -140,6 +146,8 @@ fn main() {
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
 		peer_updater,
+		peer_sidechain_block_fetcher,
+		tokio_handle.clone(),
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {

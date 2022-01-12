@@ -22,7 +22,7 @@ use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::{GetStorageVerified, Result};
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
-use itp_types::Enclave;
+use itp_types::{BlockHash, Enclave, ShardIdentifier};
 use sgx_types::{
 	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
 	sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_target_info_t, sgx_update_info_bit_t,
@@ -143,6 +143,14 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 		_signed_blocks: Vec<SignedSidechainBlock>,
 	) -> SgxResult<()> {
 		Ok(())
+	}
+
+	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
+		&self,
+		_last_known_block_hash: BlockHash,
+		_shard_identifier: ShardIdentifier,
+	) -> SgxResult<Vec<SignedSidechainBlock>> {
+		Ok(Vec::new())
 	}
 }
 

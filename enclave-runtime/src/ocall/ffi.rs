@@ -70,6 +70,16 @@ extern "C" {
 		signed_blocks_size: u32,
 	) -> sgx_status_t;
 
+	pub fn ocall_fetch_sidechain_blocks_from_peer(
+		ret_val: *mut sgx_status_t,
+		last_known_block_hash: *const u8,
+		last_known_block_hash_size: u32,
+		shard_identifier: *const u8,
+		shard_identifier_size: u32,
+		sidechain_blocks: *mut u8,
+		sidechain_blocks_size: u32,
+	) -> sgx_status_t;
+
 	pub fn ocall_send_to_parentchain(
 		ret_val: *mut sgx_status_t,
 		extrinsics: *const u8,

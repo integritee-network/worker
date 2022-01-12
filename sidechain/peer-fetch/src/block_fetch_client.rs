@@ -40,7 +40,7 @@ pub struct BlockFetcher<SignedBlock, PeerFetcher> {
 impl<SignedBlock, PeerFetcher> BlockFetcher<SignedBlock, PeerFetcher>
 where
 	SignedBlock: SignedBlockTrait + DeserializeOwned,
-	PeerFetcher: FetchUntrustedPeers,
+	PeerFetcher: FetchUntrustedPeers + Send + Sync,
 {
 	pub fn new(peer_fetcher: PeerFetcher) -> Self {
 		BlockFetcher { peer_fetcher, _phantom: Default::default() }
