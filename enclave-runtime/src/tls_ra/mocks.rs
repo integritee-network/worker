@@ -20,8 +20,14 @@ use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use itp_sgx_crypto::{Aes, AesSeal, Rsa3072Seal};
 use itp_sgx_io::SealedIO;
+use lazy_static::lazy_static;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use std::vec::Vec;
+use std::{sync::SgxRwLock as RwLock, vec::Vec};
+
+lazy_static! {
+	pub static ref SHIELDING_KEY: RwLock<Vec<u8>> = RwLock::new(vec![]);
+	pub static ref SIGNING_KEY: RwLock<Vec<u8>> = RwLock::new(vec![]);
+}
 
 #[derive(Clone)]
 pub struct KeyHandlerMock {
@@ -36,13 +42,13 @@ impl KeyHandlerMock {
 }
 
 impl SealKeys for KeyHandlerMock {
-	fn seal_shielding_key(&mut self, bytes: &[u8]) -> EnclaveResult<()> {
-		self.shielding_key = bytes.to_vec();
+	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
+		*SHIELDING_KEY.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
 
-	fn seal_signing_key(&mut self, bytes: &[u8]) -> EnclaveResult<()> {
-		self.signing_key = bytes.to_vec();
+	fn seal_signing_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
+		*SIGNING_KEY.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
 }

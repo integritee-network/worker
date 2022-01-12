@@ -16,7 +16,8 @@
 */
 
 use super::{
-	mocks::KeyHandlerMock, tls_ra_client::request_state_provisioning_internal,
+	mocks::{KeyHandlerMock, SHIELDING_KEY, SIGNING_KEY},
+	tls_ra_client::request_state_provisioning_internal,
 	tls_ra_server::run_state_provisioning_server_internal,
 };
 use sgx_types::sgx_quote_sign_type_t;
@@ -67,6 +68,6 @@ pub fn test_state_provisioning() {
 	)
 	.unwrap();
 
-	assert_eq!(client_key_handler.shielding_key, shielding_key);
-	assert_eq!(client_key_handler.signing_key, signing_key);
+	assert_eq!(*SHIELDING_KEY.read().unwrap(), shielding_key);
+	assert_eq!(*SIGNING_KEY.read().unwrap(), signing_key);
 }

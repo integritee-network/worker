@@ -25,8 +25,8 @@ use std::vec::Vec;
 
 pub struct KeyHandler {}
 pub trait SealKeys {
-	fn seal_shielding_key(&mut self, bytes: &[u8]) -> EnclaveResult<()>;
-	fn seal_signing_key(&mut self, bytes: &[u8]) -> EnclaveResult<()>;
+	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
+	fn seal_signing_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
 }
 
 pub trait UnsealKeys {
@@ -35,7 +35,7 @@ pub trait UnsealKeys {
 }
 
 impl SealKeys for KeyHandler {
-	fn seal_shielding_key(&mut self, bytes: &[u8]) -> EnclaveResult<()> {
+	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
 		let key: Rsa3072KeyPair = serde_json::from_slice(bytes).map_err(|e| {
 			error!("    [Enclave] Received Invalid RSA key");
 			EnclaveError::Other(e.into())
@@ -44,7 +44,7 @@ impl SealKeys for KeyHandler {
 		Ok(())
 	}
 
-	fn seal_signing_key(&mut self, mut bytes: &[u8]) -> EnclaveResult<()> {
+	fn seal_signing_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
 		let aes = Aes::decode(&mut bytes)?;
 		AesSeal::seal(Aes::new(aes.key, aes.init_vec))?;
 		Ok(())
