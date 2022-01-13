@@ -73,6 +73,8 @@ default = []
 production = ['itp-settings/production']
 
 [dev-dependencies]
+# crates.io
 anyhow = "1.0.40"
-its-test = { path = "../sidechain/test" }
 mockall = "0.10.1"
+# local
+its-test = { path = "../sidechain/test" }

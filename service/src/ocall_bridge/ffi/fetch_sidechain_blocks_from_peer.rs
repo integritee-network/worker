@@ -87,3 +87,48 @@ fn fetch_sidechain_blocks_from_peer(
 
 	sgx_status_t::SGX_SUCCESS
 }
+
+#[cfg(test)]
+mod tests {
+
+	use super::*;
+	use crate::ocall_bridge::test::mocks::sidechain_bridge_mock::SidechainBridgeMock;
+	use codec::{Decode, Encode};
+	use its_primitives::types::SignedBlock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use primitive_types::H256;
+
+	#[test]
+	fn fetch_sidechain_blocks_from_peer_works() {
+		let sidechain_blocks = vec![
+			SidechainBlockBuilder::random().build_signed(),
+			SidechainBlockBuilder::random().build_signed(),
+		];
+
+		let sidechain_bridge_mock =
+			Arc::new(SidechainBridgeMock::default().with_peer_blocks(sidechain_blocks.encode()));
+
+		let last_known_block_hash_encoded = H256::random().encode();
+		let shard_identifier = H256::random().encode();
+		let mut block_buffer = vec![0; 16 * 4096];
+
+		let result = fetch_sidechain_blocks_from_peer(
+			last_known_block_hash_encoded.as_ptr(),
+			last_known_block_hash_encoded.len() as u32,
+			shard_identifier.as_ptr(),
+			shard_identifier.len() as u32,
+			block_buffer.as_mut_ptr(),
+			block_buffer.len() as u32,
+			sidechain_bridge_mock,
+		);
+
+		let decoded_blocks: Vec<SignedBlock> =
+			Decode::decode(&mut block_buffer.as_slice()).unwrap();
+
+		assert_eq!(result, sgx_status_t::SGX_SUCCESS);
+		assert_eq!(sidechain_blocks, decoded_blocks);
+	}
+
+	#[test]
+	fn returns_error_if_buffer_is_too_small() {}
+}
