@@ -41,6 +41,7 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 
 # local
 ita-stf = { path = "../app-libs/stf" }
+itc-parentchain-node-api = { path = "../core/parentchain/node-api" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }

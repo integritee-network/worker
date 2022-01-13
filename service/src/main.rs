@@ -23,7 +23,6 @@ use crate::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 		worker::{GlobalWorker, Worker},
 	},
-	node_api_factory::{CreateNodeApi, GlobalUrlNodeApiFactory},
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -41,6 +40,10 @@ use enclave::{
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
 use futures::executor::block_on;
+use itc_parentchain_node_api::{
+	node_api_factory::{CreateNodeApi, NodeApiFactory},
+	untrusted_peer_fetch::UntrustedPeerFetcher,
+};
 use itp_api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
@@ -58,9 +61,7 @@ use itp_settings::{
 	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
 use its_consensus_slots::start_slot_worker;
-use its_peer_fetch::{
-	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
-};
+use its_peer_fetch::block_fetch_client::BlockFetcher;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{
 	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,
@@ -95,7 +96,6 @@ mod config;
 mod enclave;
 mod error;
 mod globals;
-mod node_api_factory;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod request_keys;
@@ -136,9 +136,10 @@ fn main() {
 		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
 			.unwrap(),
 	);
-	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
+	let node_api_factory =
+		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
-	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.create_api());
+	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.clone());
 	let peer_sidechain_block_fetcher =
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
 
@@ -160,7 +161,8 @@ fn main() {
 		let skip_ra = smatches.is_present("skip-ra");
 		let dev = smatches.is_present("dev");
 
-		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
+		let node_api =
+			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
 		GlobalWorker::reset_worker(Worker::new(
 			config.clone(),
@@ -181,7 +183,8 @@ fn main() {
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
 		println!("*** Requesting keys from a registered worker \n");
-		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
+		let node_api =
+			node_api_factory.create_api().expect("Failed to create parentchain node API");
 		request_keys::request_keys(
 			&node_api,
 			&extract_shard(smatches, enclave.as_ref()),

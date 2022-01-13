@@ -15,8 +15,9 @@
 
 */
 
-use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers, FetchBlocksFromPeer};
+use crate::{error::Result, FetchBlocksFromPeer};
 use async_trait::async_trait;
+use itc_parentchain_node_api::untrusted_peer_fetch::FetchUntrustedPeers;
 use its_primitives::{
 	constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER,
 	traits::SignedBlock as SignedBlockTrait,
@@ -81,9 +82,8 @@ where
 mod tests {
 
 	use super::*;
-	use crate::{
-		block_fetch_server::BlockFetchServerModuleBuilder, mock::UntrustedPeerFetcherMock,
-	};
+	use crate::block_fetch_server::BlockFetchServerModuleBuilder;
+	use itc_parentchain_node_api::mocks::untrusted_peer_fetch_mock::UntrustedPeerFetcherMock;
 	use its_primitives::types::SignedBlock;
 	use its_storage::fetch_blocks_mock::FetchBlocksMock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;

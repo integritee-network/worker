@@ -9,6 +9,7 @@ members = [
     "core/parentchain/block-importer",
     "core/parentchain/indirect-calls-executor",
     "core/parentchain/light-client",
+    "core/parentchain/node-api",
     "core/parentchain/parentchain-crate",
     "core/rest-client",
     "core/rpc-client",

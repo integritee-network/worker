@@ -16,8 +16,7 @@
 
 */
 
-use lazy_static::lazy_static;
-use parking_lot::RwLock;
+use crate::error::{Error, Result};
 use sp_core::sr25519;
 use substrate_api_client::{rpc::WsRpcClient, Api};
 
@@ -26,41 +25,28 @@ use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
 
-lazy_static! {
-	// todo: replace with &str, but use &str in api-client first
-	static ref NODE_URL: RwLock<String> = RwLock::new("".to_string());
-}
-
 /// trait to create a node API, based on a node URL
 #[cfg_attr(test, automock)]
 pub trait CreateNodeApi {
-	fn create_api(&self) -> Api<sr25519::Pair, WsRpcClient>;
+	fn create_api(&self) -> Result<Api<sr25519::Pair, WsRpcClient>>;
 }
 
-pub struct GlobalUrlNodeApiFactory;
+pub struct NodeApiFactory {
+	node_url: String,
+	signer: sr25519::Pair,
+}
 
-impl GlobalUrlNodeApiFactory {
+impl NodeApiFactory {
 	/// creates a new instance and initializes the global state
-	pub fn new(url: String) -> Self {
-		GlobalUrlNodeApiFactory::write_node_url(url);
-
-		GlobalUrlNodeApiFactory
-	}
-
-	fn write_node_url(url: String) {
-		*NODE_URL.write() = url;
-	}
-
-	fn read_node_url() -> String {
-		NODE_URL.read().clone()
+	pub fn new(url: String, signer: sr25519::Pair) -> Self {
+		NodeApiFactory { node_url: url, signer }
 	}
 }
 
-impl CreateNodeApi for GlobalUrlNodeApiFactory {
-	fn create_api(&self) -> Api<sr25519::Pair, WsRpcClient> {
-		Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(
-			&GlobalUrlNodeApiFactory::read_node_url(),
-		))
-		.unwrap()
+impl CreateNodeApi for NodeApiFactory {
+	fn create_api(&self) -> Result<Api<sr25519::Pair, WsRpcClient>> {
+		Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(self.node_url.as_str()))
+			.map_err(Error::FailedToCreateNodeApi)
+			.map(|a| a.set_signer(self.signer.clone()))
 	}
 }

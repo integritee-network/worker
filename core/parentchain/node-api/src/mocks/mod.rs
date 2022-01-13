@@ -15,21 +15,4 @@
 
 */
 
-use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers};
-use its_primitives::types::ShardIdentifier;
-
-pub struct UntrustedPeerFetcherMock {
-	url: String,
-}
-
-impl UntrustedPeerFetcherMock {
-	pub fn new(url: String) -> Self {
-		UntrustedPeerFetcherMock { url }
-	}
-}
-
-impl FetchUntrustedPeers for UntrustedPeerFetcherMock {
-	fn get_untrusted_peer_url_of_shard(&self, _shard: &ShardIdentifier) -> Result<String> {
-		Ok(self.url.clone())
-	}
-}
+pub mod untrusted_peer_fetch_mock;

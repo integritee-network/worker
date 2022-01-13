@@ -17,11 +17,11 @@
 */
 
 use crate::{
-	node_api_factory::CreateNodeApi,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
+use itc_parentchain_node_api::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
 use log::*;
 use sp_core::storage::StorageKey;
@@ -52,7 +52,7 @@ where
 			return Ok(Vec::<u8>::new().encode())
 		}
 
-		let api = self.node_api_factory.create_api();
+		let api = self.node_api_factory.create_api()?;
 
 		let resp: Vec<WorkerResponse<Vec<u8>>> = requests
 			.into_iter()
@@ -75,7 +75,7 @@ where
 	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
-		let api = self.node_api_factory.create_api();
+		let api = self.node_api_factory.create_api()?;
 
 		let extrinsics: Vec<OpaqueExtrinsic> =
 			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
@@ -105,11 +105,23 @@ where
 mod tests {
 
 	use super::*;
-	use crate::node_api_factory::MockCreateNodeApi;
+	use itc_parentchain_node_api::{
+		error::Result as NodeApiResult, node_api_factory::CreateNodeApi,
+	};
+	use mockall::mock;
+	use sp_core::sr25519;
+	use substrate_api_client::{rpc::WsRpcClient, Api};
 
 	#[test]
 	fn given_empty_worker_request_when_submitting_then_return_empty_response() {
-		let mock_node_api_factory = Arc::new(MockCreateNodeApi::new());
+		mock! {
+			NodeApiFactory {}
+			impl CreateNodeApi for NodeApiFactory {
+				fn create_api(&self) -> NodeApiResult<Api<sr25519::Pair, WsRpcClient>>;
+			}
+		}
+
+		let mock_node_api_factory = Arc::new(MockNodeApiFactory::new());
 
 		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory);
 

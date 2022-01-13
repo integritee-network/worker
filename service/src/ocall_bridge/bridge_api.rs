@@ -106,7 +106,7 @@ pub trait GetOCallBridgeComponents {
 }
 
 /// OCall bridge errors
-#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum OCallBridgeError {
 	#[error("GetQuote Error: {0}")]
 	GetQuote(sgx_status_t),
@@ -126,6 +126,8 @@ pub enum OCallBridgeError {
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
 	DirectInvocationError(String),
+	#[error("Node API error: {0}")]
+	NodeApi(#[from] itc_parentchain_node_api::error::Error),
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
@@ -134,12 +136,7 @@ impl From<OCallBridgeError> for sgx_status_t {
 			OCallBridgeError::GetQuote(s) => s,
 			OCallBridgeError::InitQuote(s) => s,
 			OCallBridgeError::GetUpdateInfo(s) => s,
-			OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::ProposeSidechainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::FetchSidechainBlocksFromPeer(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::SendExtrinsicsToParentchain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			_ => sgx_status_t::SGX_ERROR_UNEXPECTED,
 		}
 	}
 }

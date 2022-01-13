@@ -15,22 +15,20 @@
 
 */
 
-//! Sidechain peer fetch error.
+//! Node API error.
+
+use itp_types::ShardIdentifier;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("RPC client error: {0}")]
+	#[error("Node RPC client error: {0}")]
 	RpcClient(#[from] itc_rpc_client::error::Error),
-	#[error("Node API error: {0}")]
-	NodeApi(#[from] itc_parentchain_node_api::error::Error),
-	#[error("Node API extension error: {0}")]
-	NodeApiExtensions(#[from] itp_api_client_extensions::ApiClientError),
-	#[error("Serialization error: {0}")]
-	Serialization(#[from] serde_json::Error),
-	#[error("JSON RPC error: {0}")]
-	JsonRpc(#[from] jsonrpsee::types::Error),
+	#[error("Failed to create a node API: {0}")]
+	FailedToCreateNodeApi(#[from] substrate_api_client::ApiClientError),
+	#[error("Could not find any peers on-chain for shard: {0:?}")]
+	NoPeerFoundForShard(ShardIdentifier),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

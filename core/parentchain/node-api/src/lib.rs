@@ -15,33 +15,9 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod block_fetch_client;
-pub mod block_fetch_server;
 pub mod error;
+pub mod node_api_factory;
+pub mod untrusted_peer_fetch;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;
-
-use crate::error::Result;
-use async_trait::async_trait;
-use its_primitives::{
-	traits::SignedBlock,
-	types::{BlockHash, ShardIdentifier},
-};
-use std::vec::Vec;
-
-/// Trait to fetch block from peer validateers.
-///
-/// This is used by an outdated validateer to get the most recent state.
-#[async_trait]
-pub trait FetchBlocksFromPeer {
-	type SignedBlockType: SignedBlock;
-
-	async fn fetch_blocks_from_peer(
-		&self,
-		last_known_block_hash: BlockHash,
-		shard_identifier: ShardIdentifier,
-	) -> Result<Vec<Self::SignedBlockType>>;
-}

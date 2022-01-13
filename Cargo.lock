@@ -2103,6 +2103,7 @@ dependencies = [
  "integritee-node-runtime",
  "ipfs-api",
  "ita-stf",
+ "itc-parentchain-node-api",
  "itc-rpc-client",
  "itc-rpc-server",
  "itp-api-client-extensions",
@@ -2346,6 +2347,19 @@ dependencies = [
  "sp-trie",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-parentchain-node-api"
+version = "0.8.0"
+dependencies = [
+ "itc-rpc-client",
+ "itp-api-client-extensions",
+ "itp-types",
+ "mockall",
+ "sp-core",
+ "substrate-api-client",
+ "thiserror 1.0.30",
 ]
 
 [[package]]
@@ -2826,6 +2840,7 @@ version = "0.8.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "itc-parentchain-node-api",
  "itc-rpc-client",
  "itp-api-client-extensions",
  "itp-test",

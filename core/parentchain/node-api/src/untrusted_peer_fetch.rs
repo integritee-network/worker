@@ -15,10 +15,14 @@
 
 */
 
-use crate::error::{Error, Result};
+use crate::{
+	error::{Error, Result},
+	node_api_factory::CreateNodeApi,
+};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_api_client_extensions::PalletTeerexApi;
-use its_primitives::types::ShardIdentifier;
+use itp_types::ShardIdentifier;
+use std::sync::Arc;
 
 /// Trait to fetch untrusted peer servers.
 pub trait FetchUntrustedPeers {
@@ -26,30 +30,32 @@ pub trait FetchUntrustedPeers {
 }
 
 /// Fetches the untrusted peer servers
-/// FIXME: Should problably be combined with the peer fetch in
+/// FIXME: Should probably be combined with the peer fetch in
 /// service/src/worker.rs
-pub struct UntrustedPeerFetcher<NodeApi> {
-	node_api: NodeApi,
+pub struct UntrustedPeerFetcher<NodeApiFactory> {
+	node_api_factory: Arc<NodeApiFactory>,
 }
 
-impl<NodeApi> UntrustedPeerFetcher<NodeApi>
+impl<NodeApiFactory> UntrustedPeerFetcher<NodeApiFactory>
 where
-	NodeApi: PalletTeerexApi + Send + Sync,
+	NodeApiFactory: CreateNodeApi + Send + Sync,
 {
-	pub fn new(node_api: NodeApi) -> Self {
-		UntrustedPeerFetcher { node_api }
+	pub fn new(node_api: Arc<NodeApiFactory>) -> Self {
+		UntrustedPeerFetcher { node_api_factory: node_api }
 	}
 }
 
-impl<NodeApi> FetchUntrustedPeers for UntrustedPeerFetcher<NodeApi>
+impl<NodeApiFactory> FetchUntrustedPeers for UntrustedPeerFetcher<NodeApiFactory>
 where
-	NodeApi: PalletTeerexApi + Send + Sync,
+	NodeApiFactory: CreateNodeApi + Send + Sync,
 {
 	fn get_untrusted_peer_url_of_shard(&self, shard: &ShardIdentifier) -> Result<String> {
-		let validateer = self
-			.node_api
+		let node_api = self.node_api_factory.create_api()?;
+
+		let validateer = node_api
 			.worker_for_shard(shard, None)?
 			.ok_or(Error::NoPeerFoundForShard(*shard))?;
+
 		let trusted_worker_client = DirectWorkerApi::new(validateer.url);
 		Ok(trusted_worker_client.get_untrusted_worker_url()?)
 	}
