@@ -105,10 +105,7 @@ where
 
 		// Attempt to import the block - in case we encounter an ancestry error, we go into
 		// peer fetching mode to fetch sidechain blocks from a peer and import those first.
-		match self
-			.importer
-			.import_block(sidechain_block.clone(), last_imported_parentchain_header)
-		{
+		match self.importer.import_block(sidechain_block, last_imported_parentchain_header) {
 			Err(e) => match e {
 				Error::BlockAncestryMismatch(_block_number, block_hash, _) => {
 					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
