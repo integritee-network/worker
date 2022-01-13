@@ -15,9 +15,14 @@
 
 */
 
-pub mod direct_request_mock;
-pub mod enclave_api_mock;
-pub mod gossip_blocks_mock;
-pub mod parentchain_api_mock;
-pub mod sidechain_api_mock;
-pub mod update_worker_peers_mock;
+use crate::{sync_block_gossiper::GossipBlocks, worker::WorkerResult};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use std::vec::Vec;
+
+pub struct GossipBlocksMock;
+
+impl GossipBlocks for GossipBlocksMock {
+	fn gossip_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+		Ok(())
+	}
+}

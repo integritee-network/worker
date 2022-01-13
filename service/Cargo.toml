@@ -77,4 +77,5 @@ production = ['itp-settings/production']
 anyhow = "1.0.40"
 mockall = "0.10.1"
 # local
+its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
 its-test = { path = "../sidechain/test" }

@@ -17,7 +17,6 @@
 */
 
 use crate::{
-	global_peer_updater::UpdateWorkerPeers,
 	node_api_factory::CreateNodeApi,
 	ocall_bridge::{
 		bridge_api::{
@@ -30,6 +29,7 @@ use crate::{
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
 	sync_block_gossiper::GossipBlocks,
+	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;

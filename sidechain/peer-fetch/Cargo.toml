@@ -32,3 +32,4 @@ its-test = { path = "../test" }
 [features]
 default = ["std"]
 std = []
+mocks = []

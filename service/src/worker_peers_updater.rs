@@ -35,19 +35,19 @@ pub trait UpdateWorkerPeers {
 	fn update_peers(&self) -> WorkerResult<()>;
 }
 
-pub struct GlobalPeerUpdater<Worker> {
+pub struct WorkerPeersUpdater<Worker> {
 	worker: Arc<Worker>,
 }
 
-impl<Worker> GlobalPeerUpdater<Worker> {
+impl<Worker> WorkerPeersUpdater<Worker> {
 	pub fn new(worker: Arc<Worker>) -> Self {
-		GlobalPeerUpdater { worker }
+		WorkerPeersUpdater { worker }
 	}
 }
 
 // FIXME: We should write unit tests for this one here - but with the global worker struct, which is not yet made to be mocked,
 // this would require a lot of changes.
-impl<Worker> UpdateWorkerPeers for GlobalPeerUpdater<Worker>
+impl<Worker> UpdateWorkerPeers for WorkerPeersUpdater<Worker>
 where
 	Worker: GetMutWorker,
 {

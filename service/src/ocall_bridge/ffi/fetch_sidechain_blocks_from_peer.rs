@@ -108,17 +108,14 @@ mod tests {
 		let sidechain_bridge_mock =
 			Arc::new(SidechainBridgeMock::default().with_peer_blocks(sidechain_blocks.encode()));
 
-		let last_known_block_hash_encoded = H256::random().encode();
-		let shard_identifier = H256::random().encode();
+		let last_known_block_hash = H256::random();
+		let shard_identifier = H256::random();
 		let mut block_buffer = vec![0; 16 * 4096];
 
-		let result = fetch_sidechain_blocks_from_peer(
-			last_known_block_hash_encoded.as_ptr(),
-			last_known_block_hash_encoded.len() as u32,
-			shard_identifier.as_ptr(),
-			shard_identifier.len() as u32,
-			block_buffer.as_mut_ptr(),
-			block_buffer.len() as u32,
+		let result = call_fetch_sidech_blocks_from_peer(
+			last_known_block_hash,
+			shard_identifier,
+			&mut block_buffer,
 			sidechain_bridge_mock,
 		);
 
@@ -130,5 +127,48 @@ mod tests {
 	}
 
 	#[test]
-	fn returns_error_if_buffer_is_too_small() {}
+	fn returns_error_if_buffer_is_too_small() {
+		let sidechain_blocks = vec![
+			SidechainBlockBuilder::random().build_signed(),
+			SidechainBlockBuilder::random().build_signed(),
+			SidechainBlockBuilder::random().build_signed(),
+			SidechainBlockBuilder::random().build_signed(),
+		];
+
+		let sidechain_bridge_mock =
+			Arc::new(SidechainBridgeMock::default().with_peer_blocks(sidechain_blocks.encode()));
+
+		let last_known_block_hash = H256::random();
+		let shard_identifier = H256::random();
+		let mut block_buffer = vec![0; 16]; // way too small to hold the encoded blocks
+
+		let result = call_fetch_sidech_blocks_from_peer(
+			last_known_block_hash,
+			shard_identifier,
+			&mut block_buffer,
+			sidechain_bridge_mock,
+		);
+
+		assert_eq!(result, sgx_status_t::SGX_ERROR_UNEXPECTED);
+	}
+
+	fn call_fetch_sidech_blocks_from_peer(
+		last_known_block_hash: H256,
+		shard_identifier: H256,
+		buffer: &mut Vec<u8>,
+		sidechain_bridge: Arc<dyn SidechainBridge>,
+	) -> sgx_status_t {
+		let last_known_block_hash_encoded = last_known_block_hash.encode();
+		let shard_identifier_encoded = shard_identifier.encode();
+
+		fetch_sidechain_blocks_from_peer(
+			last_known_block_hash_encoded.as_ptr(),
+			last_known_block_hash_encoded.len() as u32,
+			shard_identifier_encoded.as_ptr(),
+			shard_identifier_encoded.len() as u32,
+			buffer.as_mut_ptr(),
+			buffer.len() as u32,
+			sidechain_bridge,
+		)
+	}
 }

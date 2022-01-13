@@ -17,9 +17,9 @@
 */
 
 use crate::{
-	global_peer_updater::UpdateWorkerPeers,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
 	sync_block_gossiper::GossipBlocks,
+	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
 };
 use codec::{Decode, Encode};
@@ -164,5 +164,83 @@ where
 			})?;
 
 		Ok(signed_sidechain_blocks.encode())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::{
+		globals::tokio_handle::ScopedTokioHandle,
+		tests::mocks::{
+			gossip_blocks_mock::GossipBlocksMock, update_worker_peers_mock::UpdateWorkerPeersMock,
+		},
+	};
+	use codec::Decode;
+	use its_peer_fetch::mocks::fetch_blocks_from_peer_mock::FetchBlocksFromPeerMock;
+	use its_primitives::types::SignedBlock as SignedSidechainBlock;
+	use its_storage::{interface::BlockStorage, Result as StorageResult};
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use primitive_types::H256;
+	use std::{collections::HashMap, vec::Vec};
+
+	struct BlockStorageMock;
+	impl BlockStorage<SignedSidechainBlock> for BlockStorageMock {
+		fn store_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> StorageResult<()> {
+			Ok(())
+		}
+	}
+
+	type TestSidechainOCall = SidechainOCall<
+		GossipBlocksMock,
+		BlockStorageMock,
+		UpdateWorkerPeersMock,
+		FetchBlocksFromPeerMock<SignedSidechainBlock>,
+		ScopedTokioHandle,
+	>;
+
+	#[test]
+	fn fetch_sidechain_blocks_from_peer_works() {
+		let last_known_block_hash = H256::random();
+		let shard_identifier = H256::random();
+		let blocks = vec![
+			SidechainBlockBuilder::random().build_signed(),
+			SidechainBlockBuilder::random().build_signed(),
+		];
+		let peer_blocks_map = HashMap::from([(shard_identifier, blocks.clone())]);
+		let sidechain_ocall = setup_sidechain_ocall_with_peer_blocks(peer_blocks_map);
+
+		let fetched_blocks_encoded = sidechain_ocall
+			.fetch_sidechain_blocks_from_peer(
+				last_known_block_hash.encode(),
+				shard_identifier.encode(),
+			)
+			.unwrap();
+
+		let fetched_blocks_decoded: Vec<SignedSidechainBlock> =
+			Decode::decode(&mut fetched_blocks_encoded.as_slice()).unwrap();
+
+		assert_eq!(blocks, fetched_blocks_decoded);
+	}
+
+	fn setup_sidechain_ocall_with_peer_blocks(
+		peer_blocks_map: HashMap<ShardIdentifier, Vec<SignedSidechainBlock>>,
+	) -> TestSidechainOCall {
+		let block_gossiper_mock = Arc::new(GossipBlocksMock {});
+		let block_storage_mock = Arc::new(BlockStorageMock {});
+		let peer_updater_mock = Arc::new(UpdateWorkerPeersMock {});
+		let peer_block_fetcher_mock = Arc::new(
+			FetchBlocksFromPeerMock::<SignedSidechainBlock>::default()
+				.with_signed_blocks(peer_blocks_map),
+		);
+		let scoped_tokio_handle = Arc::new(ScopedTokioHandle::default());
+
+		SidechainOCall::new(
+			block_gossiper_mock,
+			block_storage_mock,
+			peer_updater_mock,
+			peer_block_fetcher_mock,
+			scoped_tokio_handle,
+		)
 	}
 }

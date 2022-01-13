@@ -59,6 +59,25 @@ impl GetTokioHandle for GlobalTokioHandle {
 	}
 }
 
+/// Implementation for a scoped Tokio handle
+///
+///
+pub struct ScopedTokioHandle {
+	tokio_runtime: tokio::runtime::Runtime,
+}
+
+impl Default for ScopedTokioHandle {
+	fn default() -> Self {
+		ScopedTokioHandle { tokio_runtime: tokio::runtime::Runtime::new().unwrap() }
+	}
+}
+
+impl GetTokioHandle for ScopedTokioHandle {
+	fn get_handle(&self) -> Handle {
+		self.tokio_runtime.handle().clone()
+	}
+}
+
 #[cfg(test)]
 mod tests {
 

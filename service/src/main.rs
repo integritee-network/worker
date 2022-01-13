@@ -14,9 +14,11 @@
 	limitations under the License.
 
 */
+
+#![cfg_attr(test, feature(assert_matches))]
+
 use crate::{
 	error::Error,
-	global_peer_updater::GlobalPeerUpdater,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 		worker::{GlobalWorker, Worker},
@@ -28,6 +30,7 @@ use crate::{
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
+	worker_peers_updater::WorkerPeersUpdater,
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
@@ -91,7 +94,6 @@ use teerex_primitives::ShardIdentifier;
 mod config;
 mod enclave;
 mod error;
-mod global_peer_updater;
 mod globals;
 mod node_api_factory;
 mod ocall_bridge;
@@ -101,6 +103,7 @@ mod sync_block_gossiper;
 mod tests;
 mod utils;
 mod worker;
+mod worker_peers_updater;
 
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -128,7 +131,7 @@ fn main() {
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
 	let sync_block_gossiper =
 		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
-	let peer_updater = Arc::new(GlobalPeerUpdater::new(worker));
+	let peer_updater = Arc::new(WorkerPeersUpdater::new(worker));
 	let sidechain_blockstorage = Arc::new(
 		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
 			.unwrap(),

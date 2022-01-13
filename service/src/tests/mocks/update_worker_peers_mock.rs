@@ -15,9 +15,12 @@
 
 */
 
-pub mod direct_request_mock;
-pub mod enclave_api_mock;
-pub mod gossip_blocks_mock;
-pub mod parentchain_api_mock;
-pub mod sidechain_api_mock;
-pub mod update_worker_peers_mock;
+use crate::{worker::WorkerResult, worker_peers_updater::UpdateWorkerPeers};
+
+pub struct UpdateWorkerPeersMock;
+
+impl UpdateWorkerPeers for UpdateWorkerPeersMock {
+	fn update_peers(&self) -> WorkerResult<()> {
+		Ok(())
+	}
+}
