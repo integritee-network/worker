@@ -1,4 +1,4 @@
-use itp_api_client_extensions::{ApiResult, PalletTeerexApi};
+use itp_node_api_extensions::{ApiResult, PalletTeerexApi};
 use itp_types::{Enclave, ShardIdentifier, H256 as Hash};
 
 pub struct TestNodeApi;

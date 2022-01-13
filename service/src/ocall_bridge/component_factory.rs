@@ -31,8 +31,8 @@ use crate::{
 	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
 };
-use itc_parentchain_node_api::node_api_factory::CreateNodeApi;
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
+use itp_node_api_extensions::node_api_factory::CreateNodeApi;
 use its_peer_fetch::FetchBlocksFromPeer;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;

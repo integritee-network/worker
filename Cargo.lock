@@ -2019,7 +2019,7 @@ dependencies = [
  "integritee-node-runtime",
  "ita-stf",
  "itc-rpc-client",
- "itp-api-client-extensions",
+ "itp-node-api-extensions",
  "itp-types",
  "json",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2103,11 +2103,10 @@ dependencies = [
  "integritee-node-runtime",
  "ipfs-api",
  "ita-stf",
- "itc-parentchain-node-api",
  "itc-rpc-client",
  "itc-rpc-server",
- "itp-api-client-extensions",
  "itp-enclave-api",
+ "itp-node-api-extensions",
  "itp-settings",
  "itp-test",
  "itp-types",
@@ -2350,19 +2349,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itc-parentchain-node-api"
-version = "0.8.0"
-dependencies = [
- "itc-rpc-client",
- "itp-api-client-extensions",
- "itp-types",
- "mockall",
- "sp-core",
- "substrate-api-client",
- "thiserror 1.0.30",
-]
-
-[[package]]
 name = "itc-rest-client"
 version = "0.8.0"
 dependencies = [
@@ -2461,18 +2447,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
 
 [[package]]
-name = "itp-api-client-extensions"
-version = "0.8.0"
-dependencies = [
- "itp-types",
- "parity-scale-codec",
- "sp-core",
- "sp-finality-grandpa",
- "sp-runtime",
- "substrate-api-client",
-]
-
-[[package]]
 name = "itp-component-container"
 version = "0.8.0"
 dependencies = [
@@ -2522,6 +2496,19 @@ dependencies = [
  "substrate-api-client",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-node-api-extensions"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-finality-grandpa",
+ "sp-runtime",
+ "substrate-api-client",
+ "thiserror 1.0.30",
 ]
 
 [[package]]
@@ -2840,9 +2827,8 @@ version = "0.8.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "itc-parentchain-node-api",
  "itc-rpc-client",
- "itp-api-client-extensions",
+ "itp-node-api-extensions",
  "itp-test",
  "its-primitives",
  "its-storage",

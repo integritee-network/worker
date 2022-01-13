@@ -15,21 +15,20 @@
 
 */
 
-use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers};
-use itp_types::ShardIdentifier;
+//! Some substrate-api-client extension traits.
 
-pub struct UntrustedPeerFetcherMock {
-	url: String,
-}
+pub use substrate_api_client::ApiClientError;
 
-impl UntrustedPeerFetcherMock {
-	pub fn new(url: String) -> Self {
-		UntrustedPeerFetcherMock { url }
-	}
-}
+pub mod account;
+pub mod chain;
+pub mod node_api_factory;
+pub mod pallet_teerex;
 
-impl FetchUntrustedPeers for UntrustedPeerFetcherMock {
-	fn get_untrusted_peer_url_of_shard(&self, _shard: &ShardIdentifier) -> Result<String> {
-		Ok(self.url.clone())
-	}
-}
+#[cfg(feature = "mocks")]
+pub mod pallet_teerex_api_mock;
+
+pub use account::*;
+pub use chain::*;
+pub use pallet_teerex::*;
+
+pub type ApiResult<T> = Result<T, ApiClientError>;

@@ -1,4 +1,4 @@
-use itp_api_client_extensions::PalletTeerexApi;
+use itp_node_api_extensions::PalletTeerexApi;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 

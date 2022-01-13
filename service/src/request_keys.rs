@@ -22,8 +22,8 @@ use crate::{
 };
 use futures::executor;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_api_client_extensions::PalletTeerexApi;
 use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
+use itp_node_api_extensions::PalletTeerexApi;
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;

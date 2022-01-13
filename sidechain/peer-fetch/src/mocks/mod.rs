@@ -16,3 +16,4 @@
 */
 
 pub mod fetch_blocks_from_peer_mock;
+pub mod untrusted_peer_fetch_mock;

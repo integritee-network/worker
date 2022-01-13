@@ -20,6 +20,7 @@
 pub mod block_fetch_client;
 pub mod block_fetch_server;
 pub mod error;
+pub mod untrusted_peer_fetch;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;

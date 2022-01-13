@@ -40,17 +40,16 @@ use enclave::{
 	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
 };
 use futures::executor::block_on;
-use itc_parentchain_node_api::{
-	node_api_factory::{CreateNodeApi, NodeApiFactory},
-	untrusted_peer_fetch::UntrustedPeerFetcher,
-};
-use itp_api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
 	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
 	sidechain::Sidechain,
 	teerex_api::TeerexApi,
+};
+use itp_node_api_extensions::{
+	node_api_factory::{CreateNodeApi, NodeApiFactory},
+	AccountApi, ChainApi, PalletTeerexApi,
 };
 use itp_settings::{
 	files::{
@@ -61,7 +60,9 @@ use itp_settings::{
 	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
 use its_consensus_slots::start_slot_worker;
-use its_peer_fetch::block_fetch_client::BlockFetcher;
+use its_peer_fetch::{
+	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
+};
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{
 	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,

@@ -126,8 +126,8 @@ pub enum OCallBridgeError {
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
 	DirectInvocationError(String),
-	#[error("Node API error: {0}")]
-	NodeApi(#[from] itc_parentchain_node_api::error::Error),
+	#[error("Node API factory error: {0}")]
+	NodeApiFactory(#[from] itp_node_api_extensions::node_api_factory::NodeApiFactoryError),
 }
 
 impl From<OCallBridgeError> for sgx_status_t {

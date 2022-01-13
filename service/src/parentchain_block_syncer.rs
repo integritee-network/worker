@@ -16,8 +16,8 @@
 
 */
 
-use itp_api_client_extensions::ChainApi;
 use itp_enclave_api::sidechain::Sidechain;
+use itp_node_api_extensions::ChainApi;
 use itp_types::SignedBlock;
 use log::{error, trace};
 use my_node_runtime::Header;

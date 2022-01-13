@@ -16,28 +16,32 @@
 
 */
 
-use crate::error::{Error, Result};
 use sp_core::sr25519;
 use substrate_api_client::{rpc::WsRpcClient, Api};
 
-#[cfg(test)]
-use mockall::predicate::*;
-#[cfg(test)]
-use mockall::*;
-
-/// trait to create a node API, based on a node URL
-#[cfg_attr(test, automock)]
+/// Trait to create a node API, based on a node URL and signer.
 pub trait CreateNodeApi {
 	fn create_api(&self) -> Result<Api<sr25519::Pair, WsRpcClient>>;
 }
 
+/// Node API factory error.
+#[derive(Debug, thiserror::Error)]
+pub enum NodeApiFactoryError {
+	#[error("Failed to create a node API: {0}")]
+	FailedToCreateNodeApi(#[from] substrate_api_client::ApiClientError),
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
+
+/// Node API factory implementation.
 pub struct NodeApiFactory {
 	node_url: String,
 	signer: sr25519::Pair,
 }
 
 impl NodeApiFactory {
-	/// creates a new instance and initializes the global state
 	pub fn new(url: String, signer: sr25519::Pair) -> Self {
 		NodeApiFactory { node_url: url, signer }
 	}
@@ -46,7 +50,7 @@ impl NodeApiFactory {
 impl CreateNodeApi for NodeApiFactory {
 	fn create_api(&self) -> Result<Api<sr25519::Pair, WsRpcClient>> {
 		Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(self.node_url.as_str()))
-			.map_err(Error::FailedToCreateNodeApi)
+			.map_err(NodeApiFactoryError::FailedToCreateNodeApi)
 			.map(|a| a.set_signer(self.signer.clone()))
 	}
 }

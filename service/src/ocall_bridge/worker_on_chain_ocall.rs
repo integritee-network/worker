@@ -21,7 +21,7 @@ use crate::{
 	utils::hex_encode,
 };
 use codec::{Decode, Encode};
-use itc_parentchain_node_api::node_api_factory::CreateNodeApi;
+use itp_node_api_extensions::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
 use log::*;
 use sp_core::storage::StorageKey;
@@ -105,9 +105,7 @@ where
 mod tests {
 
 	use super::*;
-	use itc_parentchain_node_api::{
-		error::Result as NodeApiResult, node_api_factory::CreateNodeApi,
-	};
+	use itp_node_api_extensions::node_api_factory::{CreateNodeApi, Result as NodeApiResult};
 	use mockall::mock;
 	use sp_core::sr25519;
 	use substrate_api_client::{rpc::WsRpcClient, Api};
