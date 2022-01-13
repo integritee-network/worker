@@ -66,7 +66,7 @@ where
 		PeerBlockSync { importer, block_production_suspender, _phantom: Default::default() }
 	}
 
-	fn sync_blocks_from_peer(
+	fn fetch_and_import_blocks_from_peer(
 		&self,
 		_last_known_block_hash: BlockHash,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
@@ -75,13 +75,7 @@ where
 
 		let blocks_to_import: Vec<SignedSidechainBlock> = Vec::new();
 		for block_to_import in blocks_to_import {
-			if let Err(e) =
-				self.importer.import_block(block_to_import, last_imported_parentchain_header)
-			{
-				// If we encounter an error here, we have to abort the sync process, no way to recover.
-				error!("Error while importing a block during peer sync process, cannot recover, have to abort");
-				return Err(e)
-			}
+			self.importer.import_block(block_to_import, last_imported_parentchain_header)?;
 		}
 
 		Ok(())
@@ -111,30 +105,36 @@ where
 
 		// Attempt to import the block - in case we encounter an ancestry error, we go into
 		// peer fetching mode to fetch sidechain blocks from a peer and import those first.
-		if let Err(Error::BlockAncestryMismatch(_block_number, block_hash, _)) = self
+		match self
 			.importer
 			.import_block(sidechain_block.clone(), last_imported_parentchain_header)
 		{
-			warn!("Got ancestry mismatch error upon block import. Attempting to sync missing blocks from peer");
+			Err(e) => match e {
+				Error::BlockAncestryMismatch(_block_number, block_hash, _) => {
+					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
 
-			// TODO need a 'finally' (or on-drop) here, to always resume block production ?
+					// TODO need a 'finally' (or on-drop) here for the production suspension,
+					// to ensure we resume block production, even when we return early?
 
-			// Suspend block production while we sync blocks from peer.
-			self.block_production_suspender.suspend()?;
+					// Suspend block production while we sync blocks from peer.
+					self.block_production_suspender.suspend()?;
 
-			self.sync_blocks_from_peer(block_hash, last_imported_parentchain_header)?;
+					if let Err(e) = self.fetch_and_import_blocks_from_peer(
+						block_hash,
+						last_imported_parentchain_header,
+					) {
+						// We just log the error for now. In the future we might have a way to handle this error.
+						error!("Error while importing a block in the peer fetch process: {:?}", e);
+					}
 
-			// Second attempt to import the original gossiped sidechain block
-			if let Err(e) =
-				self.importer.import_block(sidechain_block, last_imported_parentchain_header)
-			{
-				warn!("Second attempt to import gossiped sidechain block failed: {:?}", e);
-			}
+					self.block_production_suspender.resume()?;
 
-			self.block_production_suspender.resume()?;
+					Ok(())
+				},
+				_ => Err(e),
+			},
+			Ok(()) => Ok(()),
 		}
-
-		Ok(())
 	}
 }
 
@@ -145,6 +145,7 @@ mod tests {
 		block_production_suspension::BlockProductionSuspender,
 		test::mocks::block_importer_mock::BlockImportMock,
 	};
+	use core::assert_matches::assert_matches;
 	use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_types::Block as ParentchainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
@@ -187,6 +188,29 @@ mod tests {
 			.attempt_block_sync(signed_sidechain_block, &parentchain_header)
 			.unwrap();
 
+		assert!(!block_import_suspender.is_suspended().unwrap());
+		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
+	}
+
+	#[test]
+	fn error_is_propagated_if_import_returns_error_other_than_ancestry_mismatch() {
+		let block_importer_mock = Arc::new(
+			BlockImportMock::<ParentchainBlock, _>::default()
+				.with_import_result(Err(Error::InvalidAuthority("auth".to_string()))),
+		);
+
+		let block_import_suspender = Arc::new(BlockProductionSuspender::default());
+
+		let peer_syncer =
+			PeerBlockSync::new(block_importer_mock.clone(), block_import_suspender.clone());
+
+		let parentchain_header = ParentchainHeaderBuilder::default().build();
+		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
+
+		let sync_result =
+			peer_syncer.attempt_block_sync(signed_sidechain_block, &parentchain_header);
+
+		assert_matches!(sync_result, Err(Error::Other(_)));
 		assert!(!block_import_suspender.is_suspended().unwrap());
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
 	}
