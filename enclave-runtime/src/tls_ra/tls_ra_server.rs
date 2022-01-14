@@ -7,6 +7,7 @@ use crate::{
 	tls_ra::key_handler::{KeyHandler, UnsealKeys},
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
@@ -17,7 +18,6 @@ use std::{
 	sync::Arc,
 };
 use webpki::DNSName;
-
 /// This encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
 struct TlsServer<'a, KeyUnsealer> {
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let key_handler = KeyHandler {};
+	let key_handler = KeyHandler::<Rsa3072Seal, AesSeal>::new();
 
 	if let Err(e) =
 		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, key_handler)

@@ -131,8 +131,15 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
-		// tls_ra integration tests
+		// tls_ra unit tests
+		tls_ra::key_handler::test::seal_shielding_key_works,
+		tls_ra::key_handler::test::seal_shielding_key_fails_for_wrong_key,
+		tls_ra::key_handler::test::unseal_seal_shielding_key_works,
+		tls_ra::key_handler::test::seal_signing_key_works,
+		tls_ra::key_handler::test::seal_signing_key_fails_for_wrong_key,
+		tls_ra::key_handler::test::unseal_seal_signing_key_works,
 		tls_ra::tests::test_tls_ra_server_client_networking,
+
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
