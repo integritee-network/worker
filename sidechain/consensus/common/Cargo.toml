@@ -48,7 +48,12 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [dev-dependencies]
-its-consensus-aura = { path = "../aura" }
+# local
 itp-test = { path = "../../../core-primitives/test" }
+its-consensus-aura = { path = "../aura" }
+its-test = { path = "../../test" }
+# substrate
+sp-core = { version = "4.1.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+# integritee / scs
 sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }

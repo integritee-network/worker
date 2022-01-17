@@ -15,9 +15,11 @@
 
 */
 
-use crate::block_production_suspension::{IsBlockProductionSuspended, SuspendBlockProduction};
+use crate::{
+	block_production_suspension::{IsBlockProductionSuspended, SuspendBlockProduction},
+	BlockImport, Error, Result,
+};
 use core::marker::PhantomData;
-use its_consensus_common::{BlockImport, Error, Result};
 use its_primitives::{traits::SignedBlock as SignedSidechainBlockTrait, types::BlockHash};
 use log::*;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
@@ -32,7 +34,7 @@ where
 	ParentchainHeader: ParentchainHeaderTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
-	fn attempt_block_sync(
+	fn sync_block(
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainHeader,
@@ -91,7 +93,7 @@ where
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	BlockProductionSuspender: SuspendBlockProduction + IsBlockProductionSuspended,
 {
-	fn attempt_block_sync(
+	fn sync_block(
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
@@ -160,9 +162,7 @@ mod tests {
 
 		block_import_suspender.suspend().unwrap();
 
-		peer_syncer
-			.attempt_block_sync(signed_sidechain_block, &parentchain_header)
-			.unwrap();
+		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 
 		assert!(block_import_suspender.is_suspended().unwrap());
 		assert!(block_importer_mock.get_imported_blocks().is_empty());
@@ -181,9 +181,7 @@ mod tests {
 		let parentchain_header = ParentchainHeaderBuilder::default().build();
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
-		peer_syncer
-			.attempt_block_sync(signed_sidechain_block, &parentchain_header)
-			.unwrap();
+		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 
 		assert!(!block_import_suspender.is_suspended().unwrap());
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
@@ -204,8 +202,7 @@ mod tests {
 		let parentchain_header = ParentchainHeaderBuilder::default().build();
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
-		let sync_result =
-			peer_syncer.attempt_block_sync(signed_sidechain_block, &parentchain_header);
+		let sync_result = peer_syncer.sync_block(signed_sidechain_block, &parentchain_header);
 
 		assert_matches!(sync_result, Err(Error::Other(_)));
 		assert!(!block_import_suspender.is_suspended().unwrap());

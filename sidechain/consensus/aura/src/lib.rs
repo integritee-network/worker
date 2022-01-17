@@ -48,8 +48,6 @@ use sp_runtime::{
 use std::{string::ToString, sync::Arc, time::Duration, vec::Vec};
 
 pub mod block_importer;
-pub mod block_production_suspension;
-pub mod peer_block_sync;
 pub mod proposer_factory;
 pub mod slot_proposer;
 mod verifier;

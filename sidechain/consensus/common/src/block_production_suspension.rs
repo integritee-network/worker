@@ -23,7 +23,7 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use its_consensus_common::{Error, Result};
+use crate::error::{Error, Result};
 use log::*;
 
 /// Trait to suspend the production of sidechain blocks.

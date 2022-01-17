@@ -15,6 +15,5 @@
 
 */
 
-pub mod environment_mock;
-pub mod proposer_mock;
-pub mod state_mock;
+pub mod block_importer_mock;
+pub mod verifier_mock;

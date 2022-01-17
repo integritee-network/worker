@@ -15,12 +15,11 @@
 
 */
 
-use crate::AuraVerifier;
+use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_sgx_crypto::aes::Aes;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::H256;
-use its_consensus_common::{BlockImport, Error, Result};
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use its_state::SidechainDB;
 use sgx_externalities::SgxExternalities;
@@ -41,13 +40,11 @@ where
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
-	#[allow(unused)]
 	pub fn with_import_result(mut self, result: Result<()>) -> Self {
 		self.import_result = Some(result);
 		self
 	}
 
-	#[allow(unused)]
 	pub fn get_imported_blocks(&self) -> Vec<SignedSidechainBlock> {
 		(*self.imported_blocks.read().unwrap()).clone()
 	}
@@ -72,13 +69,8 @@ where
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
-	type Verifier = AuraVerifier<
-		sp_core::ed25519::Pair,
-		ParentchainBlock,
-		SignedSidechainBlock,
-		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
-		OnchainMock,
-	>;
+	type Verifier =
+		VerifierMock<ParentchainBlock, SignedSidechainBlock, SignedSidechainBlock, OnchainMock>;
 	type SidechainState = SidechainDB<SignedSidechainBlock::Block, SgxExternalities>;
 	type StateCrypto = Aes;
 	type Context = OnchainMock;
