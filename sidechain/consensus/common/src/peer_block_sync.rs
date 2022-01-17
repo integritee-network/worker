@@ -112,11 +112,12 @@ where
 				Error::BlockAncestryMismatch(_block_number, block_hash, _) => {
 					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
 
-					// TODO need a 'finally' (or on-drop) here for the production suspension,
-					// to ensure we resume block production, even when we return early?
-
 					// Suspend block production while we sync blocks from peer.
 					self.block_production_suspender.suspend()?;
+
+					// TODO need a 'finally' (or on-drop) here for the production suspension,
+					// to ensure we resume block production when we return early between `suspend` and `resume`
+					// (e.g. with a `?` operator in between).
 
 					if let Err(e) = self.fetch_and_import_blocks_from_peer(
 						block_hash,
