@@ -5,7 +5,7 @@ The server expects an json-rpc call of the following format:
 
 `{"jsonrpc": "2.0", "method": "author_pendingExtrinsics", "params": ["5Ki5bf4dcY9eyrqBRe6Xbr5accvo42XZb86eXv5mkTJo"], "id": 1}`
 
-The workers methods are aligned to match as much as sensible the substrate rpc calls: https://docs.substrate.io/v3/runtime/custom-rpcs/
+The rpc method names of the worker are chosen such that they match the naming scheme of the rpc calls of substrate: https://docs.substrate.io/v3/runtime/custom-rpcs/
 ## Available RPC calls
 
 ### General
@@ -24,7 +24,7 @@ All rpc params are expected to be a [substrate codec](https://docs.substrate.io/
 
 
 #### Trusted Operation
-A [`TrustedOperation`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/app-libs/stf/src/lib.rs#L112-L118) may be an indirect / direct `TrustedCallSigned` or a `Getter`. For the direct rpc calls, only direct Calls should be used.
+A [`TrustedOperation`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/app-libs/stf/src/lib.rs#L112-L118) may be an indirect / direct `TrustedCallSigned` or a `Getter`. For the direct rpc calls, only direct calls should be used.
 
 #### Getter
 [`Getters`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/app-libs/stf/src/lib.rs#L144-L149) may be `trusted` or `public`. All trusted getters must be signed by the client, forming a [`TrustedGetterSigned`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/app-libs/stf/src/lib.rs#L227-L231), which contains the [`TrustedGetter`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/app-libs/stf/src/lib.rs#L204-L210) itself and the `Signature` of the sender. The currently supported trusted Getters are:
@@ -46,8 +46,8 @@ The current implementation of the [`TrustedCall`](https://github.com/integritee-
 
 #### RPC Methods
 The following rpc calls are available:
-  - `author_submitAndWatchExtrinsic`, params: `Vec<u8>`(encoded `Request`). Sends an Extrinsic (`Call` or `Getter`). The server will keep the wss connection open and send status updates.
-  - `author_submitExtrinsic`, params: `Vec<u8>` (encoded `Request`). Sends an Extrinsic (`Call` or `Getter`). The server will close the connection immediately after the first response.
+  - `author_submitAndWatchExtrinsic`, params: `Vec<u8>`(encoded `Request`). Sends an extrinsic (`Call` or `Getter`). The server will keep the wss connection open and send status updates.
+  - `author_submitExtrinsic`, params: `Vec<u8>` (encoded `Request`). Sends an extrinsic (`Call` or `Getter`). The server will close the connection immediately after the first response.
    - `author_pendingExtrinsics`, params: `Vec<String>` (Vector of base58 shards as strings). Returns all pending operations of the listed shards in the top pool.
 ## Rpc Response
 The server response is a json rpc response containing a [substrate codec](https://docs.substrate.io/v3/advanced/scale-codec/) encoded [`RpcReturnValue`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/core-primitives/types/src/rpc.rs#L8-L14) as param. It has the following parameters:
@@ -60,4 +60,4 @@ For all rpc methods the following holds true:  If the status is an `Error`, the 
 The `TrustedOperationStatus` is only used for sidechain related responses.
 
 ### Sidechain related responses
-If the `status` equals the enum [`TrustedOperationStatus`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/core-primitives/types/src/lib.rs#L98-L123), then the value contains the encoded Hash of the corresponding `TrustedOperation`. The status `Ok` is used for `Getter` return values. In this case, the return value is an encoded  `Option` which, in turn, contains the encoded exptected return value. The balance getter for example would be an encoded `Balance` type ( = `u128`).
+If the `status` equals the enum [`TrustedOperationStatus`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/core-primitives/types/src/lib.rs#L98-L123), the value contains the encoded Hash of the corresponding `TrustedOperation`. The status `Ok` is used for `Getter` return values. In this case, the return value is an encoded  `Option` containing the encoded expected return value. The balance getter for example would be an encoded `Balance` type ( = `u128`).

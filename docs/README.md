@@ -8,7 +8,7 @@ Use with caution, as this is work in progress. Hence, the code is most likely pr
 - Ocall Bridge: https://github.com/integritee-network/worker/pull/293 & https://github.com/integritee-network/worker/pull/299
 - Enclave ecalls / ocalls: https://github.com/integritee-network/worker/issues/279
 - Abstract ecalls in enclave: https://github.com/integritee-network/worker/issues/286
-- Abstract ocalls in enclave :  https://github.com/integritee-network/worker/issues/279
+- Abstract ocalls in enclave: https://github.com/integritee-network/worker/issues/279
 
 ### Sidechain
 - Sidechain functionality: https://polkadot.polkassembly.io/post/111
