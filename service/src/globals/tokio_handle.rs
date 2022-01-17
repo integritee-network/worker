@@ -59,7 +59,7 @@ impl GetTokioHandle for GlobalTokioHandle {
 	}
 }
 
-/// Implementation for a scoped Tokio handle
+/// Implementation for a scoped Tokio handle.
 ///
 ///
 pub struct ScopedTokioHandle {
