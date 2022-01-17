@@ -29,6 +29,7 @@ substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
 my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+teeracle-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # substrate dependencies
 sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -40,7 +41,8 @@ sp-application-crypto = { version = "4.0.0-dev", git = "https://github.com/parit
 sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 #local dependencies
-itp-types = { path = "../core-primitives/types" }
-itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
+itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
+itp-time-utils ={ path = "../core-primitives/time-utils"}
+itp-types = { path = "../core-primitives/types" }

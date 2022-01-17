@@ -47,16 +47,18 @@ use sp_runtime::{
 };
 use std::{result::Result as StdResult, sync::mpsc::channel, thread};
 use substrate_api_client::{
-	compose_extrinsic, compose_extrinsic_offline,
+	compose_call, compose_extrinsic, compose_extrinsic_offline,
 	rpc::{ws_client::Subscriber, WsRpcClient},
 	utils::FromHexString,
 	Api, GenericAddress, Metadata, RpcClient, UncheckedExtrinsicV4, XtStatus,
 };
+use teeracle_primitives::MarketDataSourceString;
 use teerex_primitives::Request;
 
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_api_client_extensions::{PalletTeerexApi, TEEREX};
+use itp_api_client_extensions::{PalletTeerexApi, ADD_TO_WHITELIST, TEERACLE, TEEREX};
+use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
@@ -405,6 +407,105 @@ fn main() {
 					let tx_hash =
 						chain_api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
 					println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
+					Ok(())
+				}),
+		)
+		.add_cmd(
+			Command::new("add-whitelist")
+				.description("Add a trusted market data source")
+				.options(|app| {
+					app.arg(
+						Arg::with_name("from")
+							.takes_value(true)
+							.required(true)
+							.value_name("SS58")
+							.help("Sender's on-chain AccountId in ss58check format.It has to be a sudo account"),
+					)
+					.arg(
+						Arg::with_name("src")
+							.takes_value(true)
+							.required(true)
+							.value_name("STRING")
+							.help("Market data Url"),
+					)
+					.arg(
+						Arg::with_name("mrenclave")
+							.takes_value(true)
+							.required(true)
+							.value_name("STRING")
+							.help("MRENCLAVE  identifier"),
+					)
+				})
+				.runner(move |_args: &str, matches: &ArgMatches<'_>| {
+					let chain_api = get_chain_api(matches);
+
+					let market_data_source: MarketDataSourceString =
+						matches.value_of("src").unwrap().to_string();
+
+					// get the mrenclave
+					let mrenclave_opt = match matches.value_of("mrenclave") {
+						Some(m) => match m.from_base58() {
+							Ok(m) => ShardIdentifier::decode(&mut &m[..]),
+							_ => panic!("mrenclave argument must be base58 encoded"),
+						},
+						_ => panic!("at least one of `mrenclave` argument must be supplied"),
+					};
+					let mrenclave = match mrenclave_opt {
+						Ok(m) => m.to_fixed_bytes(),
+						Err(e) => panic!("{}", e),
+					};
+
+					// get the sender
+					let arg_from = matches.value_of("from").unwrap();
+					let from = get_pair_from_str(arg_from);
+					let chain_api = chain_api.set_signer(sr25519_core::Pair::from(from));
+
+					let call = compose_call!(
+						chain_api.metadata,
+						TEERACLE,
+						ADD_TO_WHITELIST,
+						market_data_source,
+						mrenclave
+					);
+
+					// compose the extrinsic
+					let xt: UncheckedExtrinsicV4<_> =
+						compose_extrinsic!(chain_api, "Sudo", "sudo", call);
+
+					let tx_hash =
+						chain_api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+					println!("[+] Add to whitelist got finalized. Hash: {:?}\n", tx_hash);
+
+					Ok(())
+				}),
+		)
+		.add_cmd(
+			Command::new("exchange-rate-events")
+				.description("Count the ExchangeRateUpdated events received over a period of time")
+				.options(|app| {
+					app.arg(
+						Arg::with_name("duration")
+							.takes_value(true)
+							.required(true)
+							.value_name("U64")
+							.help("The period in seconds"),
+					)
+				})
+				.runner(move |_args: &str, matches: &ArgMatches<'_>| {
+					let chain_api = get_chain_api(matches);
+
+					let secs = matches
+						.value_of("duration")
+						.unwrap()
+						.parse()
+						.expect("duration can't be converted to u64");
+
+					let count =
+						count_exchange_rate_update_events(chain_api, Duration::from_secs(secs));
+
+					println!("Number of ExchangeRateUpdated events received : ");
+					println!("   EVENTS_COUNT: {}", count);
+
 					Ok(())
 				}),
 		)
@@ -758,6 +859,50 @@ fn listen(matches: &ArgMatches<'_>) {
 								},
 							}
 						},
+						Event::Teeracle(teeracle_event) => {
+							println!(">>>>>>>>>> integritee teeracle event: {:?}", teeracle_event);
+							count += 1;
+							match &teeracle_event {
+								my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
+									src,
+									trading_pair,
+									exchange_rate,
+								) => {
+									println!("ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}", trading_pair, src, exchange_rate);
+								},
+								my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted(
+									src,
+									trading_pair,
+								) => {
+									println!(
+										"ExchangeRateDeleted: TRADING_PAIR : {}, SRC : {}",
+										trading_pair, src
+									);
+								},
+								my_node_runtime::pallet_teeracle::Event::AddedToWhitelist(
+									src,
+									mrenclave,
+								) => {
+									println!(
+										"AddedToWhitelist: MRENCLAVE {:?}, SRC : {}",
+										mrenclave, src
+									);
+								},
+								my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist(
+									src,
+									mrenclave,
+								) => {
+									println!(
+										"RemovedFromWhitelist: MRENCLAVE {:?}, SRC : {}",
+										mrenclave, src
+									);
+								},
+								_ => debug!(
+									"ignoring unsupported teeracle event: {:?}",
+									teeracle_event
+								),
+							}
+						},
 						_ => debug!("ignoring unsupported module event: {:?}", evr.event),
 					}
 				},
@@ -840,4 +985,50 @@ fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 			_pair
 		},
 	}
+}
+
+pub fn count_exchange_rate_update_events<P: Pair, Client: 'static>(
+	api: Api<P, Client>,
+	duration: Duration,
+) -> u32
+where
+	MultiSignature: From<P::Signature>,
+	Client: RpcClient + Subscriber + Send,
+{
+	let stop = duration_now() + duration;
+
+	//subscribe to events
+	let (events_in, events_out) = channel();
+	api.subscribe_events(events_in).unwrap();
+	let mut count = 0;
+
+	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
+		let event_str = events_out.recv().unwrap();
+		let unhex = Vec::from_hex(event_str).unwrap();
+		let mut event_records_encoded = unhex.as_slice();
+		let events_result =
+			Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut event_records_encoded);
+		if let Ok(events) = events_result {
+			for event_record in &events {
+				info!("received event {:?}", event_record.event);
+				if let Event::Teeracle(event) = &event_record.event {
+					match &event {
+						my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
+							src,
+							trading_pair,
+							exchange_rate,
+						) => {
+							count += 1;
+							println!(
+								"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
+								trading_pair, src, exchange_rate
+							);
+						},
+						_ => debug!("ignoring teeracle event: {:?}", event),
+					}
+				}
+			}
+		}
+	}
+	count
 }
