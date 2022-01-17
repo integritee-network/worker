@@ -112,7 +112,7 @@ mod tests {
 		let shard_identifier = H256::random();
 		let mut block_buffer = vec![0; 16 * 4096];
 
-		let result = call_fetch_sidech_blocks_from_peer(
+		let result = call_fetch_sidechain_blocks_from_peer(
 			last_known_block_hash,
 			shard_identifier,
 			&mut block_buffer,
@@ -142,7 +142,7 @@ mod tests {
 		let shard_identifier = H256::random();
 		let mut block_buffer = vec![0; 16]; // way too small to hold the encoded blocks
 
-		let result = call_fetch_sidech_blocks_from_peer(
+		let result = call_fetch_sidechain_blocks_from_peer(
 			last_known_block_hash,
 			shard_identifier,
 			&mut block_buffer,
@@ -152,7 +152,7 @@ mod tests {
 		assert_eq!(result, sgx_status_t::SGX_ERROR_UNEXPECTED);
 	}
 
-	fn call_fetch_sidech_blocks_from_peer(
+	fn call_fetch_sidechain_blocks_from_peer(
 		last_known_block_hash: H256,
 		shard_identifier: H256,
 		buffer: &mut Vec<u8>,
