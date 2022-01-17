@@ -15,9 +15,20 @@
 
 */
 
-pub mod direct_request_mock;
-pub mod enclave_api_mock;
-pub mod gossip_blocks_mock;
-pub mod parentchain_api_mock;
-pub mod sidechain_api_mock;
-pub mod update_worker_peers_mock;
+//! Some substrate-api-client extension traits.
+
+pub use substrate_api_client::ApiClientError;
+
+pub mod account;
+pub mod chain;
+pub mod node_api_factory;
+pub mod pallet_teerex;
+
+#[cfg(feature = "mocks")]
+pub mod pallet_teerex_api_mock;
+
+pub use account::*;
+pub use chain::*;
+pub use pallet_teerex::*;
+
+pub type ApiResult<T> = Result<T, ApiClientError>;

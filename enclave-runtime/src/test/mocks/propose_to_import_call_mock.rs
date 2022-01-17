@@ -19,7 +19,9 @@
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
-use itp_types::{Header as ParentchainHeader, WorkerRequest, WorkerResponse};
+use itp_types::{
+	BlockHash, Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse,
+};
 use its_sidechain::{
 	consensus_common::BlockImport, primitives::types::SignedBlock as SignedSidechainBlockType,
 };
@@ -81,5 +83,13 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 		_signed_blocks: Vec<SignedSidechainBlock>,
 	) -> SgxResult<()> {
 		Ok(())
+	}
+
+	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
+		&self,
+		_last_known_block_hash: BlockHash,
+		_shard_identifier: ShardIdentifier,
+	) -> SgxResult<Vec<SignedSidechainBlock>> {
+		Ok(Vec::new())
 	}
 }

@@ -1,10 +1,10 @@
-use itp_api_client_extensions::{ApiResult, PalletTeerexApi};
+use itp_node_api_extensions::{ApiResult, PalletTeerexApi};
 use itp_types::{Enclave, ShardIdentifier, H256 as Hash};
 
 pub struct TestNodeApi;
 
-pub const W1_URL: &str = "127.0.0.1:2222";
-pub const W2_URL: &str = "127.0.0.1:3333";
+pub const W1_URL: &str = "127.0.0.1:22222";
+pub const W2_URL: &str = "127.0.0.1:33333";
 
 pub fn enclaves() -> Vec<Enclave> {
 	vec![

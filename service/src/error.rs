@@ -25,6 +25,8 @@ pub enum Error {
 	ApplicationSetup,
 	#[error("Retrieved empty value")]
 	EmptyValue,
+	#[error("Insufficient buffer size")]
+	InsufficientBufferSize,
 	#[error("Custom Error: {0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

@@ -16,7 +16,7 @@ thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
-itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions" }
+itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions" }
 its-primitives = { path = "../primitives" }
 its-storage = { path = "../storage" }
 
@@ -24,7 +24,7 @@ its-storage = { path = "../storage" }
 # crates.io
 anyhow = "1.0.40"
 # local
-itp-api-client-extensions = { path = "../../core-primitives/api-client-extensions", features = ["mocks"] }
+itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 its-storage = { path = "../storage", features = ["mocks"] }
 its-test = { path = "../test" }
@@ -32,3 +32,4 @@ its-test = { path = "../test" }
 [features]
 default = ["std"]
 std = []
+mocks = []

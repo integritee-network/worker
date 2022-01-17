@@ -106,7 +106,7 @@ pub trait GetOCallBridgeComponents {
 }
 
 /// OCall bridge errors
-#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum OCallBridgeError {
 	#[error("GetQuote Error: {0}")]
 	GetQuote(sgx_status_t),
@@ -118,12 +118,16 @@ pub enum OCallBridgeError {
 	GetIasSocket(String),
 	#[error("Propose sidechain block failed: {0}")]
 	ProposeSidechainBlock(String),
+	#[error("Failed to fetch sidechain blocks from peer: {0}")]
+	FetchSidechainBlocksFromPeer(String),
 	#[error("Sending extrinsics to parentchain failed: {0}")]
 	SendExtrinsicsToParentchain(String),
 	#[error("IPFS Error: {0}")]
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
 	DirectInvocationError(String),
+	#[error("Node API factory error: {0}")]
+	NodeApiFactory(#[from] itp_node_api_extensions::node_api_factory::NodeApiFactoryError),
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
@@ -132,11 +136,7 @@ impl From<OCallBridgeError> for sgx_status_t {
 			OCallBridgeError::GetQuote(s) => s,
 			OCallBridgeError::InitQuote(s) => s,
 			OCallBridgeError::GetUpdateInfo(s) => s,
-			OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::ProposeSidechainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::SendExtrinsicsToParentchain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			_ => sgx_status_t::SGX_ERROR_UNEXPECTED,
 		}
 	}
 }
@@ -182,7 +182,14 @@ pub trait WorkerOnChainBridge {
 #[cfg_attr(test, automock)]
 pub trait SidechainBridge {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+
 	fn store_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+
+	fn fetch_sidechain_blocks_from_peer(
+		&self,
+		last_known_block_hash_encoded: Vec<u8>,
+		shard_identifier_encoded: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>>;
 }
 
 /// type for IPFS

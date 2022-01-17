@@ -23,7 +23,7 @@ use crate::{config::Config, error::Error};
 /// multiple traits.
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_api_client_extensions::PalletTeerexApi;
+use itp_node_api_extensions::PalletTeerexApi;
 use its_primitives::{
 	constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock as SignedSidechainBlock,
 };

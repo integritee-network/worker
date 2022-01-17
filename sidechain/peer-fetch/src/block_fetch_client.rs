@@ -40,7 +40,7 @@ pub struct BlockFetcher<SignedBlock, PeerFetcher> {
 impl<SignedBlock, PeerFetcher> BlockFetcher<SignedBlock, PeerFetcher>
 where
 	SignedBlock: SignedBlockTrait + DeserializeOwned,
-	PeerFetcher: FetchUntrustedPeers,
+	PeerFetcher: FetchUntrustedPeers + Send + Sync,
 {
 	pub fn new(peer_fetcher: PeerFetcher) -> Self {
 		BlockFetcher { peer_fetcher, _phantom: Default::default() }
@@ -82,7 +82,8 @@ mod tests {
 
 	use super::*;
 	use crate::{
-		block_fetch_server::BlockFetchServerModuleBuilder, mock::UntrustedPeerFetcherMock,
+		block_fetch_server::BlockFetchServerModuleBuilder,
+		mocks::untrusted_peer_fetch_mock::UntrustedPeerFetcherMock,
 	};
 	use its_primitives::types::SignedBlock;
 	use its_storage::fetch_blocks_mock::FetchBlocksMock;

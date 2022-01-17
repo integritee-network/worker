@@ -43,12 +43,13 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
-itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
+itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-settings = { path = "../core-primitives/settings" }
 itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
+its-peer-fetch = { path = "../sidechain/peer-fetch" }
 its-primitives = { path = "../sidechain/primitives"}
 its-storage = { path = "../sidechain/storage" }
 
@@ -72,6 +73,9 @@ default = []
 production = ['itp-settings/production']
 
 [dev-dependencies]
+# crates.io
 anyhow = "1.0.40"
-its-test = { path = "../sidechain/test" }
 mockall = "0.10.1"
+# local
+its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
+its-test = { path = "../sidechain/test" }

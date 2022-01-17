@@ -22,8 +22,8 @@ pub mod block_fetch_server;
 pub mod error;
 pub mod untrusted_peer_fetch;
 
-#[cfg(test)]
-mod mock;
+#[cfg(feature = "mocks")]
+pub mod mocks;
 
 use crate::error::Result;
 use async_trait::async_trait;

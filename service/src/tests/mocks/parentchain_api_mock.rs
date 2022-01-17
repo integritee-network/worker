@@ -15,7 +15,7 @@
 
 */
 
-use itp_api_client_extensions::{ApiResult, ChainApi, StorageProof};
+use itp_node_api_extensions::{ApiResult, ChainApi, StorageProof};
 use itp_test::builders::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,

@@ -14,7 +14,7 @@ members = [
     "core/rpc-client",
     "core/rpc-server",
     "core/tls-websocket-server",
-    "core-primitives/api-client-extensions",
+    "core-primitives/node-api-extensions",
     "core-primitives/component-container",
     "core-primitives/enclave-api",
     "core-primitives/enclave-api/ffi",

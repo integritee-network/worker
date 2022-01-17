@@ -56,7 +56,7 @@ use teerex_primitives::Request;
 
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_api_client_extensions::{PalletTeerexApi, TEEREX};
+use itp_node_api_extensions::{PalletTeerexApi, TEEREX};
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 

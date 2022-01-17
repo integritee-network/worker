@@ -59,7 +59,7 @@ mod tests {
 		ra_ocall_api_mock
 			.expect_get_ias_socket()
 			.times(1)
-			.return_const(Ok(expected_socket));
+			.returning(move || Ok(expected_socket));
 
 		let mut ias_sock: i32 = 0;
 
@@ -75,7 +75,7 @@ mod tests {
 		ra_ocall_api_mock
 			.expect_get_ias_socket()
 			.times(1)
-			.return_const(Err(OCallBridgeError::GetIasSocket("test error".to_string())));
+			.returning(|| Err(OCallBridgeError::GetIasSocket("test error".to_string())));
 
 		let mut ias_sock: i32 = 0;
 		let ret_status = get_ias_socket(&mut ias_sock as *mut i32, Arc::new(ra_ocall_api_mock));

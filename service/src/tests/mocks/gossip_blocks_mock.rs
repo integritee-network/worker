@@ -15,19 +15,14 @@
 
 */
 
-//! Some substrate-api-client extension traits.
+use crate::{sync_block_gossiper::GossipBlocks, worker::WorkerResult};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use std::vec::Vec;
 
-pub use substrate_api_client::ApiClientError;
+pub struct GossipBlocksMock;
 
-pub mod account;
-pub mod chain;
-pub mod pallet_teerex;
-
-#[cfg(feature = "mocks")]
-pub mod pallet_teerex_api_mock;
-
-pub use account::*;
-pub use chain::*;
-pub use pallet_teerex::*;
-
-pub type ApiResult<T> = Result<T, ApiClientError>;
+impl GossipBlocks for GossipBlocksMock {
+	fn gossip_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+		Ok(())
+	}
+}

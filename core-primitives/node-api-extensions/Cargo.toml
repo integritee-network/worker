@@ -1,11 +1,13 @@
 [package]
-name = "itp-api-client-extensions"
+name = "itp-node-api-extensions"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
+# crates.io
 codec = { package = "parity-scale-codec", version = "2.0.0", features = ["derive"] }
+thiserror = "1.0"
 
 # substrate
 sp-core = { version = "4.1.0-dev",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
