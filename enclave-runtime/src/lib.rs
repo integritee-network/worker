@@ -35,8 +35,10 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		EnclaveSidechainBlockImporter, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveTopPoolOperationHandler,
+		EnclaveValidatorAccessor, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
@@ -79,7 +81,8 @@ use itp_stf_state_handler::{
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
 use its_sidechain::{
-	aura::block_importer::{BlockImport, BlockImporter},
+	aura::block_importer::BlockImporter,
+	consensus_common::{BlockProductionSuspender, SyncBlockFromPeer},
 	top_pool_executor::TopPoolOperationHandler,
 	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
 };
@@ -335,12 +338,12 @@ fn sidechain_rpc_int(request: &str) -> Result<String> {
 		Ok(latest_parentchain_header)
 	})?;
 
-	let sidechain_block_importer = GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT
+	let sidechain_block_syncer = GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT
 		.get()
 		.ok_or(Error::ComponentNotInitialized)?;
 
 	let io = sidechain_io_handler(move |signed_block| {
-		sidechain_block_importer.import_block(signed_block, &latest_parentchain_header)
+		sidechain_block_syncer.sync_block(signed_block, &latest_parentchain_header)
 	});
 
 	// note: errors are still returned as Option<String>
@@ -557,7 +560,17 @@ pub unsafe extern "C" fn init_light_client(
 		block_import_dispatcher,
 		ocall_api,
 	));
-	GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT.initialize(sidechain_block_importer);
+	let sidechain_block_production_suspender = Arc::new(BlockProductionSuspender::default());
+
+	GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT
+		.initialize(sidechain_block_production_suspender.clone());
+
+	let sidechain_block_syncer = Arc::new(EnclaveSidechainBlockSyncer::new(
+		sidechain_block_importer,
+		sidechain_block_production_suspender,
+	));
+
+	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer);
 
 	sgx_status_t::SGX_SUCCESS
 }

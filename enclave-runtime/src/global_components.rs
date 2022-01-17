@@ -35,6 +35,7 @@ use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
+	consensus_common::{BlockProductionSuspender, PeerBlockSync},
 	primitives::{
 		traits::SignedBlock as SignedSidechainBlockTrait,
 		types::SignedBlock as SignedSidechainBlock,
@@ -83,11 +84,21 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
 >;
+pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	EnclaveSidechainBlockImporter,
+	BlockProductionSuspender,
+>;
 
 pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new();
 
-pub static GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT: ComponentContainer<
-	EnclaveSidechainBlockImporter,
+pub static GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT: ComponentContainer<
+	BlockProductionSuspender,
+> = ComponentContainer::new();
+
+pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<
+	EnclaveSidechainBlockSyncer,
 > = ComponentContainer::new();

@@ -20,6 +20,7 @@ use crate::{
 	global_components::GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
+	GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT,
 };
 use codec::Encode;
 use itc_parentchain::{
@@ -44,7 +45,7 @@ use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	block_composer::BlockComposer,
-	consensus_common::{Environment, Error as ConsensusError},
+	consensus_common::{Environment, Error as ConsensusError, IsBlockProductionSuspended},
 	primitives::{
 		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
 		types::block::SignedBlock as SignedSidechainBlock,
@@ -139,6 +140,19 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	// We acquire lock explicitly (variable binding), since '_' will drop the lock after the statement.
 	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
+
+	let sidechain_block_production_suspender =
+		GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT
+			.get()
+			.ok_or(Error::ComponentNotInitialized)?;
+
+	if sidechain_block_production_suspender
+		.is_suspended()
+		.map_err(|_| Error::MutexAccess)?
+	{
+		warn!("Sidechain block production is suspended, skipping any top pool execution and subsequent block production");
+		return Ok(())
+	}
 
 	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
 		.get()
