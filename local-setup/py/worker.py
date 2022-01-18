@@ -147,9 +147,9 @@ class Worker:
         """ Returns the keys from another worker. """
 
         if skip_ra:
-            subcommand_flags = ['request-keys', '--skip-ra']
+            subcommand_flags = ['request-state', '--skip-ra']
         else:
-            subcommand_flags = ['request-keys']
+            subcommand_flags = ['request-state']
 
         return run_subprocess(self.cli + flags + subcommand_flags, stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 

@@ -23,17 +23,19 @@ use std::{sync::SgxRwLock as RwLock, vec::Vec};
 lazy_static! {
 	pub static ref SHIELDING_KEY: RwLock<Vec<u8>> = RwLock::new(vec![]);
 	pub static ref SIGNING_KEY: RwLock<Vec<u8>> = RwLock::new(vec![]);
+	pub static ref STATE: RwLock<Vec<u8>> = RwLock::new(vec![]);
 }
 
 #[derive(Clone)]
 pub struct SealHandlerMock {
 	pub shielding_key: Vec<u8>,
 	pub signing_key: Vec<u8>,
+	pub state: Vec<u8>,
 }
 
 impl SealHandlerMock {
-	pub fn new(shielding_key: Vec<u8>, signing_key: Vec<u8>) -> Self {
-		Self { shielding_key, signing_key }
+	pub fn new(shielding_key: Vec<u8>, signing_key: Vec<u8>, state: Vec<u8>) -> Self {
+		Self { shielding_key, signing_key, state }
 	}
 }
 
@@ -47,6 +49,11 @@ impl SealStateAndKeys for SealHandlerMock {
 		*SIGNING_KEY.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
+
+	fn seal_state(&self, bytes: &[u8]) -> EnclaveResult<()> {
+		*STATE.write().unwrap() = bytes.to_vec();
+		Ok(())
+	}
 }
 
 impl UnsealStateAndKeys for SealHandlerMock {
@@ -56,5 +63,9 @@ impl UnsealStateAndKeys for SealHandlerMock {
 
 	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>> {
 		Ok(self.signing_key.clone())
+	}
+
+	fn unseal_state(&self) -> EnclaveResult<Vec<u8>> {
+		Ok(self.state.clone())
 	}
 }

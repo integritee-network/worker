@@ -8,6 +8,8 @@ use crate::{
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
+use itp_stf_state_handler::GlobalFileStateHandler;
+use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
 use sgx_types::*;
@@ -15,6 +17,7 @@ use std::{
 	backtrace::{self, PrintFormat},
 	io::Read,
 	net::TcpStream,
+	slice,
 	sync::Arc,
 	vec::Vec,
 };
@@ -91,16 +94,20 @@ where
 }
 
 #[no_mangle]
-pub extern "C" fn request_state_provisioning(
+pub unsafe extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	shard: *const u8,
+	shard_size: u32,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
+	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal>::new();
+	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, GlobalFileStateHandler>::new();
 
-	if let Err(e) = request_state_provisioning_internal(socket_fd, sign_type, skip_ra, seal_handler)
+	if let Err(e) =
+		request_state_provisioning_internal(socket_fd, sign_type, shard, skip_ra, seal_handler)
 	{
 		return e.into()
 	};
@@ -112,6 +119,7 @@ pub extern "C" fn request_state_provisioning(
 pub(crate) fn request_state_provisioning_internal<KeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	shard: ShardIdentifier,
 	skip_ra: c_int,
 	seal_handler: KeySealer,
 ) -> EnclaveResult<()> {

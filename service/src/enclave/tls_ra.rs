@@ -15,6 +15,7 @@
 
 */
 use itp_enclave_api::{error::Error, remote_attestation::TlsRemoteAttestation, EnclaveResult};
+use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
 use std::{
@@ -65,11 +66,12 @@ pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation>(
 	enclave_api: &E,
 	sign_type: sgx_quote_sign_type_t,
 	addr: &str,
+	shard: &ShardIdentifier,
 	skip_ra: bool,
 ) -> EnclaveResult<()> {
 	info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
 
 	let socket = TcpStream::connect(addr).map_err(|e| Error::Other(Box::new(e)))?;
 
-	enclave_api.request_state_provisioning(socket.as_raw_fd(), sign_type, skip_ra)
+	enclave_api.request_state_provisioning(socket.as_raw_fd(), sign_type, shard, skip_ra)
 }

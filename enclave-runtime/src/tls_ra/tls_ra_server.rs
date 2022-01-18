@@ -8,6 +8,7 @@ use crate::{
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
+use itp_stf_state_handler::GlobalFileStateHandler;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
@@ -110,7 +111,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal>::new();
+	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, GlobalFileStateHandler>::new();
 
 	if let Err(e) =
 		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, seal_handler)

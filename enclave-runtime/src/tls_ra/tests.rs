@@ -20,6 +20,7 @@ use super::{
 	tls_ra_client::request_state_provisioning_internal,
 	tls_ra_server::run_state_provisioning_server_internal,
 };
+use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::{
 	net::{TcpListener, TcpStream},
@@ -50,8 +51,11 @@ fn run_state_provisioning_server(seal_handler: SealHandlerMock) {
 pub fn test_tls_ra_server_client_networking() {
 	let shielding_key = vec![1, 2, 3];
 	let signing_key = vec![5, 2, 3];
-	let server_seal_handler = SealHandlerMock::new(shielding_key.clone(), signing_key.clone());
-	let client_seal_handler = SealHandlerMock::new(Vec::new(), Vec::new());
+	let state = vec![5, 2, 3, 10, 21, 0, 9, 1];
+	let server_seal_handler =
+		SealHandlerMock::new(shielding_key.clone(), signing_key.clone(), state.clone());
+	let client_seal_handler = SealHandlerMock::new(Vec::new(), Vec::new(), Vec::new());
+	let shard = ShardIdentifier::default();
 
 	thread::spawn(move || {
 		run_state_provisioning_server(server_seal_handler);
@@ -62,6 +66,7 @@ pub fn test_tls_ra_server_client_networking() {
 	request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		shard,
 		SKIP_RA,
 		client_seal_handler.clone(),
 	)

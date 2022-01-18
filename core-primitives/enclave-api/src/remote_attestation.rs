@@ -17,9 +17,11 @@
 */
 
 use crate::{error::Error, utils, Enclave, EnclaveResult};
+use codec::Encode;
 use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::EXTRINSIC_MAX_SIZE;
+use itp_types::ShardIdentifier;
 use sgx_types::*;
 
 /// general remote attestation methods
@@ -70,6 +72,7 @@ pub trait TlsRemoteAttestation {
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
+		shard: &ShardIdentifier,
 		skip_ra: bool,
 	) -> EnclaveResult<()>;
 }
@@ -234,9 +237,12 @@ impl TlsRemoteAttestation for Enclave {
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
+		shard: &ShardIdentifier,
 		skip_ra: bool,
 	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let encoded_shard = shard.encode();
 
 		let result = unsafe {
 			ffi::request_state_provisioning(
@@ -244,6 +250,8 @@ impl TlsRemoteAttestation for Enclave {
 				&mut retval,
 				socket_fd,
 				sign_type,
+				encoded_shard.as_ptr(),
+				encoded_shard.len() as u32,
 				skip_ra.into(),
 			)
 		};

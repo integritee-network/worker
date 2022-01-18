@@ -182,8 +182,8 @@ fn main() {
 			node_api,
 			tokio_handle,
 		);
-	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-		println!("*** Requesting keys from a registered worker \n");
+	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
+		println!("*** Requesting state from a registered worker \n");
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
 		sync_state::sync_state(
@@ -236,10 +236,12 @@ fn main() {
 			println!("[+] Done!");
 		} else if _matches.is_present("provisioning-client") {
 			println!("*** Running Enclave MU-RA TLS client\n");
+			let shard = extract_shard(_matches, enclave.as_ref());
 			enclave_request_state_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url_external(),
+				&shard,
 				_matches.is_present("skip-ra"),
 			)
 			.unwrap();

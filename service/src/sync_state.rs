@@ -44,6 +44,7 @@ pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 		enclave_api,
 		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 		&provider_url,
+		shard,
 		skip_ra,
 	)
 	.unwrap();

@@ -141,6 +141,8 @@ extern "C" {
 		retval: *mut sgx_status_t,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
+		shard: *const u8,
+		shard_size: u32,
 		skip_ra: c_int,
 	) -> sgx_status_t;
 }
