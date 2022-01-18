@@ -15,7 +15,7 @@ use rustls::{ClientConfig, ClientSession, Stream};
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
-	io::Read,
+	io::{Read, Write},
 	net::TcpStream,
 	slice,
 	sync::Arc,
@@ -30,6 +30,7 @@ where
 {
 	tls_stream: Stream<'a, ClientSession, TcpStream>,
 	seal_handler: StateAndKeySealer,
+	shard: ShardIdentifier,
 }
 
 impl<'a, StateAndKeySealer> TlsClient<'a, StateAndKeySealer>
@@ -39,13 +40,24 @@ where
 	fn new(
 		tls_stream: Stream<'a, ClientSession, TcpStream>,
 		seal_handler: StateAndKeySealer,
+		shard: ShardIdentifier,
 	) -> TlsClient<StateAndKeySealer> {
-		TlsClient { tls_stream, seal_handler }
+		TlsClient { tls_stream, seal_handler, shard }
+	}
+
+	fn read_shard(&mut self) -> EnclaveResult<()> {
+		self.write_shard()?;
+		self.read_all()
+	}
+
+	fn write_shard(&mut self) -> EnclaveResult<()> {
+		self.tls_stream.write(self.shard.as_bytes())?;
+		Ok(())
 	}
 
 	fn read_all(&mut self) -> EnclaveResult<()> {
 		// We read two times in total for two keys.
-		for _n in 0..2 {
+		for _n in 0..3 {
 			self.read()?;
 		}
 		Ok(())
@@ -66,7 +78,7 @@ where
 			match header.opcode {
 				Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
 				Opcode::SigningKey => self.seal_handler.seal_signing_key(&bytes)?,
-				_ => error!("received unexpected op: {:?}", header.opcode),
+				Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
 			}
 		}
 
@@ -104,7 +116,8 @@ pub unsafe extern "C" fn request_state_provisioning(
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, GlobalFileStateHandler>::new();
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, _>::new(state_handler);
 
 	if let Err(e) =
 		request_state_provisioning_internal(socket_fd, sign_type, shard, skip_ra, seal_handler)
@@ -127,12 +140,14 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, cfg)?;
 
-	let mut client =
-		TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream), seal_handler);
+	let mut client = TlsClient::new(
+		rustls::Stream::new(&mut client_session, &mut tcp_stream),
+		seal_handler,
+		shard,
+	);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
-
-	client.read_all()?;
+	client.read_shard()?;
 
 	info!("    [Enclave] (MU-RA-Client) Registration procedure successful!");
 

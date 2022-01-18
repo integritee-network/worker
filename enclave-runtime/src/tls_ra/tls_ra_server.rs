@@ -9,12 +9,13 @@ use crate::{
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
 use itp_stf_state_handler::GlobalFileStateHandler;
+use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
-	io::Write,
+	io::{Read, Write},
 	net::TcpStream,
 	sync::Arc,
 };
@@ -37,11 +38,25 @@ where
 		Self { tls_stream, seal_handler }
 	}
 
-	fn write_all(&mut self) -> EnclaveResult<()> {
+	fn write_shard(&mut self) -> EnclaveResult<()> {
+		let shard = self.read_shard()?;
+		self.write_all(&shard)
+	}
+
+	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
+		let mut shard_holder = ShardIdentifier::default();
+		let shard = shard_holder.as_fixed_bytes_mut();
+		self.tls_stream.read(shard)?;
+		Ok(shard.into())
+	}
+
+	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let shielding_key = self.seal_handler.unseal_shielding_key()?;
 		let signing_key = self.seal_handler.unseal_signing_key()?;
+		let state = self.seal_handler.unseal_state(shard)?;
 		self.write(Opcode::ShieldingKey, &shielding_key)?;
 		self.write(Opcode::SigningKey, &signing_key)?;
+		self.write(Opcode::State, &state)?;
 		Ok(())
 	}
 
@@ -114,7 +129,8 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, GlobalFileStateHandler>::new();
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, _>::new(state_handler);
 
 	if let Err(e) =
 		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, seal_handler)
@@ -138,8 +154,7 @@ pub(crate) fn run_state_provisioning_server_internal<StateAndKeyUnsealer: Unseal
 		TlsServer::new(rustls::Stream::new(&mut server_session, &mut tcp_stream), seal_handler);
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
-	server.write_all()?;
-
+	server.write_shard()?;
 	Ok(())
 }
 

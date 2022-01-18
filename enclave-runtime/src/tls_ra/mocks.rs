@@ -17,6 +17,7 @@
 
 use super::seal_handler::{SealStateAndKeys, UnsealStateAndKeys};
 use crate::error::Result as EnclaveResult;
+use itp_types::ShardIdentifier;
 use lazy_static::lazy_static;
 use std::{sync::SgxRwLock as RwLock, vec::Vec};
 
@@ -50,7 +51,7 @@ impl SealStateAndKeys for SealHandlerMock {
 		Ok(())
 	}
 
-	fn seal_state(&self, bytes: &[u8]) -> EnclaveResult<()> {
+	fn seal_state(&self, bytes: &[u8], _shard: &ShardIdentifier) -> EnclaveResult<()> {
 		*STATE.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
@@ -65,7 +66,7 @@ impl UnsealStateAndKeys for SealHandlerMock {
 		Ok(self.signing_key.clone())
 	}
 
-	fn unseal_state(&self) -> EnclaveResult<Vec<u8>> {
+	fn unseal_state(&self, _shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
 		Ok(self.state.clone())
 	}
 }
