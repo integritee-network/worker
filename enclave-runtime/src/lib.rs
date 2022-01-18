@@ -91,7 +91,6 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::OpaqueExtrinsic;
 use std::{slice, sync::Arc, vec::Vec};
 use substrate_api_client::compose_extrinsic_offline;
-use substrate_fixed::types::U32F32;
 
 mod attestation;
 mod global_components;
@@ -661,7 +660,7 @@ fn update_market_data_internal(
 	println!(
 		"Update the exchange rate:  {} = {:?} for source {}",
 		trading_pair.clone().key(),
-		Some(U32F32::from_num(rate)).unwrap(),
+		rate,
 		src,
 	);
 
@@ -669,7 +668,7 @@ fn update_market_data_internal(
 		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
 		src.as_bytes().to_vec(),
 		trading_pair.key().as_bytes().to_vec(),
-		Some(U32F32::from_num(rate)),
+		Some(rate),
 	));
 
 	let extrinsics = extrinsics_factory.create_extrinsics(vec![call].as_slice())?;

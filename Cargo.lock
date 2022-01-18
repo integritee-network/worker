@@ -2204,6 +2204,7 @@ dependencies = [
  "serde 1.0.130",
  "serde_json 1.0.72",
  "sgx_tstd",
+ "substrate-fixed",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
  "url 2.1.1",

@@ -64,7 +64,7 @@ subcommands:
             - interval:
                 long: interval
                 short: i
-                help: update exchange rate interval. Format 5s15m2h1d
+                help: Set the update exchange rate interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
                 takes_value: true
 
     - request-keys:

@@ -26,7 +26,7 @@ use crate::{
 	},
 	parentchain_block_syncer::ParentchainBlockSyncer,
 	sync_block_gossiper::SyncBlockGossiper,
-	utils::{check_files, extract_shard, parse_time},
+	utils::{check_files, extract_shard},
 	worker::worker_url_into_async_rpc_url,
 };
 use base58::ToBase58;
@@ -59,6 +59,7 @@ use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::Header;
+use parse_duration::parse;
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -144,17 +145,12 @@ fn main() {
 		println!("Worker Config: {:?}", config);
 		let skip_ra = smatches.is_present("skip-ra");
 		let dev = smatches.is_present("dev");
-		let set_interval = smatches.is_present("interval");
 
-		let mut interval = MARKET_DATA_UPDATE_INTERVAL;
-		if set_interval {
-			let i = parse_time(smatches);
-			if i.is_none() {
-				error!("Interval input value is wrong !");
-				return
-			}
-			interval = i.unwrap();
-		}
+		let interval = smatches
+			.value_of("interval")
+			.map_or_else(|| Ok(MARKET_DATA_UPDATE_INTERVAL), parse)
+			.unwrap_or_else(|e| panic!("Interval parsing error {:?}", e));
+
 		println!("Update exchange rate interval is {:?}", interval);
 
 		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
