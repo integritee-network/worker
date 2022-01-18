@@ -15,6 +15,8 @@
 
 */
 
+//! Tests of tls-ra client / server communication.
+
 use super::{
 	mocks::{SealHandlerMock, SHIELDING_KEY, SIGNING_KEY},
 	tls_ra_client::request_state_provisioning_internal,

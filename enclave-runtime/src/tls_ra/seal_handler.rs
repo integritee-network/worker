@@ -15,6 +15,9 @@
 
 */
 
+//! Abstraction of the reading (unseal) and storing (seal) part of the
+//! shielding key, signing key and state.
+
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
@@ -29,6 +32,7 @@ use std::{marker::PhantomData, sync::Arc, vec::Vec};
 pub trait SealedIOForShieldingKey = SealedIO<Unsealed = Rsa3072KeyPair, Error = CryptoError>;
 pub trait SealedIOForSigningKey = SealedIO<Unsealed = Aes, Error = CryptoError>;
 
+/// Handles the sealing and unsealing of the shielding key, signing key and the state.
 #[derive(Default)]
 pub struct SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
 where

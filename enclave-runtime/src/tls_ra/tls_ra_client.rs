@@ -22,8 +22,9 @@ use std::{
 	vec::Vec,
 };
 
-/// Encapsulates the TCP-level connection, some connection
-/// state, and the underlying TLS-level session.
+/// Client part of the TCP-level connection and the underlying TLS-level session.
+///
+/// Includes a seal handler, which handles the storage part of the received data.
 struct TlsClient<'a, StateAndKeySealer>
 where
 	StateAndKeySealer: SealStateAndKeys,
@@ -45,6 +46,8 @@ where
 		TlsClient { tls_stream, seal_handler, shard }
 	}
 
+	/// Sends the shard of the state we want to sync to the server
+	/// and read all following data sent by the server.
 	fn read_shard(&mut self) -> EnclaveResult<()> {
 		self.write_shard()?;
 		self.read_all()
@@ -55,15 +58,21 @@ where
 		Ok(())
 	}
 
+	/// Read all relevant data sent by the server.
+	/// We currently expect three header / payload pairs:
+	/// - shielding key
+	/// - signing key
+	/// - state
 	fn read_all(&mut self) -> EnclaveResult<()> {
 		// We read two times in total for two keys.
 		for _n in 0..3 {
-			self.read()?;
+			self.read_and_seal()?;
 		}
 		Ok(())
 	}
 
-	fn read(&mut self) -> EnclaveResult<()> {
+	/// Read a server header / payload pair and directly seal the received data.
+	fn read_and_seal(&mut self) -> EnclaveResult<()> {
 		let mut start_byte = [0u8; 1];
 		let read_size = self.tls_stream.read(&mut start_byte)?;
 		// If we're reading but there's no data: EOF.
@@ -85,6 +94,7 @@ where
 		Ok(())
 	}
 
+	/// Reads the payload header, indicating the sent payload length and type.
 	fn read_header(&mut self, start_bytes: Vec<u8>) -> Option<TcpHeader> {
 		let opcode: Opcode = start_bytes[0].into();
 		let mut length_buffer = [0u8; 8];
@@ -98,6 +108,7 @@ where
 		Some(TcpHeader::new(opcode, payload_length))
 	}
 
+	/// Read all bytes into a buffer of given length.
 	fn read_until(&mut self, length: usize) -> EnclaveResult<Vec<u8>> {
 		let mut bytes = vec![0u8; length];
 		self.tls_stream.read(&mut bytes)?;

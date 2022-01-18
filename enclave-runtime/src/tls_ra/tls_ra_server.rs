@@ -20,8 +20,9 @@ use std::{
 	sync::Arc,
 };
 use webpki::DNSName;
-/// This encapsulates the TCP-level connection, some connection
-/// state, and the underlying TLS-level session.
+/// Server part of the TCP-level connection and the underlying TLS-level session.
+///
+/// Includes a seal handler, which handles the reading part of the data to be sent.
 struct TlsServer<'a, StateAndKeyUnsealer> {
 	tls_stream: Stream<'a, ServerSession, TcpStream>,
 	seal_handler: StateAndKeyUnsealer,
@@ -38,6 +39,8 @@ where
 		Self { tls_stream, seal_handler }
 	}
 
+	/// Reads the shard sent by the client and
+	/// sends all relevant data of this shard to the client.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
 		let shard = self.read_shard()?;
 		self.write_all(&shard)
@@ -50,6 +53,7 @@ where
 		Ok(shard.into())
 	}
 
+	/// Sends all relevant data to the client.
 	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let shielding_key = self.seal_handler.unseal_shielding_key()?;
 		let signing_key = self.seal_handler.unseal_signing_key()?;
@@ -60,12 +64,14 @@ where
 		Ok(())
 	}
 
+	/// Sends the header followed by the payload.
 	fn write(&mut self, opcode: Opcode, bytes: &[u8]) -> EnclaveResult<()> {
 		self.write_header(TcpHeader::new(opcode, bytes.len() as u64))?;
 		self.tls_stream.write(bytes)?;
 		Ok(())
 	}
 
+	/// Sends the header which includes the payload length and the Opcode indicating the payload type.
 	fn write_header(&mut self, tcp_header: TcpHeader) -> EnclaveResult<()> {
 		self.tls_stream.write(&tcp_header.opcode.to_bytes())?;
 		self.tls_stream.write(&tcp_header.payload_length.to_be_bytes())?;
