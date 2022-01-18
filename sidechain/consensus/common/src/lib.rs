@@ -18,6 +18,7 @@
 //! Common stuff that could be shared across multiple consensus engines
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -32,10 +33,17 @@ use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
 
 mod block_import;
+mod block_production_suspension;
 mod error;
+mod peer_block_sync;
+
+#[cfg(test)]
+mod test;
 
 pub use block_import::*;
+pub use block_production_suspension::*;
 pub use error::*;
+pub use peer_block_sync::*;
 
 pub trait Verifier<ParentchainBlock, SignedSidechainBlock>: Send + Sync
 where
