@@ -17,6 +17,7 @@
 
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
+use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{Aes, AesSeal, Error as CryptoError};
 use itp_sgx_io::SealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
@@ -33,7 +34,9 @@ pub struct SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
 	SigningKeyHandler: SealedIOForSigningKey,
-	StateHandler: HandleState,
+	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
+	// See https://github.com/integritee-network/sgx-runtime/issues/46.
+	StateHandler: HandleState<StateT = StfState>,
 {
 	state_handler: Arc<StateHandler>,
 	_phantom_shield: PhantomData<ShieldingKeyHandler>,
@@ -45,7 +48,7 @@ impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
 	SigningKeyHandler: SealedIOForSigningKey,
-	StateHandler: HandleState,
+	StateHandler: HandleState<StateT = StfState>,
 {
 	pub fn new(state_handler: Arc<StateHandler>) -> Self {
 		Self {
@@ -72,8 +75,7 @@ impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler> SealStateAndKeys
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
 	SigningKeyHandler: SealedIOForSigningKey,
-	StateHandler: HandleState,
-	<StateHandler as HandleState>::StateT: Decode,
+	StateHandler: HandleState<StateT = StfState>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
 		let key: Rsa3072KeyPair = serde_json::from_slice(bytes).map_err(|e| {
@@ -91,9 +93,11 @@ where
 	}
 
 	fn seal_state(&self, mut bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()> {
-		let new_state = Decode::decode(&mut bytes)?;
+		let state = StfStateType::decode(&mut bytes)?;
+		let state_with_empty_diff = StfState { state, state_diff: Default::default() };
 		let (state_lock, _) = self.state_handler.load_for_mutation(shard)?;
-		self.state_handler.write(new_state, state_lock, shard)?;
+
+		self.state_handler.write(state_with_empty_diff, state_lock, shard)?;
 		Ok(())
 	}
 }
@@ -103,8 +107,7 @@ impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler> UnsealStateAndKeys
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
 	SigningKeyHandler: SealedIOForSigningKey,
-	StateHandler: HandleState,
-	<StateHandler as HandleState>::StateT: Encode,
+	StateHandler: HandleState<StateT = StfState>,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
 		let shielding_key = ShieldingKeyHandler::unseal()?;
@@ -117,7 +120,7 @@ where
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
 		let state = self.state_handler.load_initialized(shard)?;
-		Ok(state.encode())
+		Ok(state.state.encode())
 	}
 }
 
@@ -126,6 +129,7 @@ pub mod test {
 	use super::*;
 	use itp_sgx_crypto::mocks::{AesSealMock, Rsa3072SealMock};
 	use itp_test::mock::handle_state_mock::HandleStateMock;
+	use sgx_externalities::SgxExternalitiesTrait;
 
 	type SealHandlerMock = SealHandler<Rsa3072SealMock, AesSealMock, HandleStateMock>;
 
@@ -138,7 +142,7 @@ pub mod test {
 		assert!(result.is_ok());
 	}
 
-	pub fn seal_shielding_key_fails_for_wrong_key() {
+	pub fn seal_shielding_key_fails_for_invalid_key() {
 		let seal_handler = SealHandlerMock::default();
 
 		let result = seal_handler.seal_shielding_key(&[1, 2, 3]);
@@ -165,7 +169,7 @@ pub mod test {
 		assert!(result.is_ok());
 	}
 
-	pub fn seal_signing_key_fails_for_wrong_key() {
+	pub fn seal_signing_key_fails_for_invalid_key() {
 		let seal_handler = SealHandlerMock::default();
 
 		let result = seal_handler.seal_signing_key(&[1, 2, 3]);
@@ -178,6 +182,41 @@ pub mod test {
 		let key_pair_in_bytes = seal_handler.unseal_signing_key().unwrap();
 
 		let result = seal_handler.seal_signing_key(&key_pair_in_bytes);
+
+		assert!(result.is_ok());
+	}
+
+	pub fn seal_state_works() {
+		let seal_handler = SealHandlerMock::default();
+		let state = <HandleStateMock as HandleState>::StateT::default();
+		let shard = ShardIdentifier::default();
+
+		let result = seal_handler.seal_state(&state.encode(), &shard);
+
+		assert!(result.is_ok());
+	}
+
+	pub fn seal_state_fails_for_invalid_state() {
+		let seal_handler = SealHandlerMock::default();
+		let shard = ShardIdentifier::default();
+
+		let result = seal_handler.seal_state(&[1, 0, 3], &shard);
+
+		assert!(result.is_err());
+	}
+
+	pub fn unseal_seal_state_works() {
+		let seal_handler = SealHandlerMock::default();
+		let shard = ShardIdentifier::default();
+		// Fill our mock state:
+		let (lock, mut state) = seal_handler.state_handler.load_for_mutation(&shard).unwrap();
+		let (key, value) = ("my_key", "my_value");
+		state.insert(key.encode(), value.encode());
+		seal_handler.state_handler.write(state, lock, &shard).unwrap();
+
+		let state_in_bytes = seal_handler.unseal_state(&shard).unwrap();
+
+		let result = seal_handler.seal_state(&state_in_bytes, &shard);
 
 		assert!(result.is_ok());
 	}
