@@ -56,7 +56,7 @@ pub fn test_tls_ra_server_client_networking() {
 	let server_seal_handler =
 		SealHandlerMock::new(shielding_key.clone(), signing_key.clone(), state.clone());
 	let client_seal_handler = SealHandlerMock::new(Vec::new(), Vec::new(), Vec::new());
-	let shard = ShardIdentifier::from([1; 32]);
+	let shard = ShardIdentifier::default();
 
 	thread::spawn(move || {
 		run_state_provisioning_server(server_seal_handler);
