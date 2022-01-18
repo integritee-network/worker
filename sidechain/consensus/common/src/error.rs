@@ -15,7 +15,7 @@
 
 */
 
-//! Error types in sidechain Consensus
+//! Error types in sidechain consensus
 
 use itp_types::BlockHash as ParentchainBlockHash;
 use its_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
@@ -39,6 +39,8 @@ pub enum Error {
 	Sgx(sgx_status_t),
 	#[error("Unable to create block proposal.")]
 	CannotPropose,
+	#[error("Encountered poisoned lock")]
+	LockPoisoning,
 	#[error("Message sender {0} is not a valid authority")]
 	InvalidAuthority(String),
 	#[error("Could not get authorities: {0:?}.")]
@@ -53,8 +55,8 @@ pub enum Error {
 	BadParentchainBlock(ParentchainBlockHash, String),
 	#[error("Bad sidechain block (Hash={0}). Reason: {1}")]
 	BadSidechainBlock(SidechainBlockHash, String),
-	#[error("Could not import new block due to {1}. (Last imported by number: {0:?})")]
-	BlockAncestryMismatch(BlockNumber, String),
+	#[error("Could not import new block due to {2}. (Last imported by number: {0:?})")]
+	BlockAncestryMismatch(BlockNumber, SidechainBlockHash, String),
 }
 
 impl core::convert::From<std::io::Error> for Error {
