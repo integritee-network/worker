@@ -15,7 +15,7 @@
 
 */
 
-use super::key_handler::{SealKeys, UnsealKeys};
+use super::seal_handler::{SealStateAndKeys, UnsealStateAndKeys};
 use crate::error::Result as EnclaveResult;
 use lazy_static::lazy_static;
 use std::{sync::SgxRwLock as RwLock, vec::Vec};
@@ -26,18 +26,18 @@ lazy_static! {
 }
 
 #[derive(Clone)]
-pub struct KeyHandlerMock {
+pub struct SealHandlerMock {
 	pub shielding_key: Vec<u8>,
 	pub signing_key: Vec<u8>,
 }
 
-impl KeyHandlerMock {
+impl SealHandlerMock {
 	pub fn new(shielding_key: Vec<u8>, signing_key: Vec<u8>) -> Self {
-		KeyHandlerMock { shielding_key, signing_key }
+		Self { shielding_key, signing_key }
 	}
 }
 
-impl SealKeys for KeyHandlerMock {
+impl SealStateAndKeys for SealHandlerMock {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
 		*SHIELDING_KEY.write().unwrap() = bytes.to_vec();
 		Ok(())
@@ -49,7 +49,7 @@ impl SealKeys for KeyHandlerMock {
 	}
 }
 
-impl UnsealKeys for KeyHandlerMock {
+impl UnsealStateAndKeys for SealHandlerMock {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
 		Ok(self.shielding_key.clone())
 	}

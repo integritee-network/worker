@@ -15,7 +15,7 @@
 
 */
 
-pub mod key_handler;
+pub mod seal_handler;
 mod tls_ra_client;
 mod tls_ra_server;
 

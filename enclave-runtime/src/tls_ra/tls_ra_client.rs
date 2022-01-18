@@ -4,7 +4,7 @@ use crate::{
 	cert,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
-	tls_ra::key_handler::{KeyHandler, SealKeys},
+	tls_ra::seal_handler::{SealHandler, SealStateAndKeys},
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
@@ -23,21 +23,21 @@ use std::{
 /// state, and the underlying TLS-level session.
 struct TlsClient<'a, KeySealer>
 where
-	KeySealer: SealKeys,
+	KeySealer: SealStateAndKeys,
 {
 	tls_stream: Stream<'a, ClientSession, TcpStream>,
-	key_handler: KeySealer,
+	seal_handler: KeySealer,
 }
 
 impl<'a, KeySealer> TlsClient<'a, KeySealer>
 where
-	KeySealer: SealKeys,
+	KeySealer: SealStateAndKeys,
 {
 	fn new(
 		tls_stream: Stream<'a, ClientSession, TcpStream>,
-		key_handler: KeySealer,
+		seal_handler: KeySealer,
 	) -> TlsClient<KeySealer> {
-		TlsClient { tls_stream, key_handler }
+		TlsClient { tls_stream, seal_handler }
 	}
 
 	fn read_all(&mut self) -> EnclaveResult<()> {
@@ -61,8 +61,8 @@ where
 		if let Some(header) = self.read_header(start_byte.to_vec()) {
 			let bytes = self.read_until(header.payload_length as usize)?;
 			match header.opcode {
-				Opcode::ShieldingKey => self.key_handler.seal_shielding_key(&bytes)?,
-				Opcode::SigningKey => self.key_handler.seal_signing_key(&bytes)?,
+				Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
+				Opcode::SigningKey => self.seal_handler.seal_signing_key(&bytes)?,
 				_ => error!("received unexpected op: {:?}", header.opcode),
 			}
 		}
@@ -98,9 +98,9 @@ pub extern "C" fn request_state_provisioning(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let key_handler = KeyHandler::<Rsa3072Seal, AesSeal>::new();
+	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal>::new();
 
-	if let Err(e) = request_state_provisioning_internal(socket_fd, sign_type, skip_ra, key_handler)
+	if let Err(e) = request_state_provisioning_internal(socket_fd, sign_type, skip_ra, seal_handler)
 	{
 		return e.into()
 	};
@@ -109,18 +109,18 @@ pub extern "C" fn request_state_provisioning(
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
-pub(crate) fn request_state_provisioning_internal<KeySealer: SealKeys>(
+pub(crate) fn request_state_provisioning_internal<KeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,
-	key_handler: KeySealer,
+	seal_handler: KeySealer,
 ) -> EnclaveResult<()> {
 	let cfg = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
 
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, cfg)?;
 
 	let mut client =
-		TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream), key_handler);
+		TlsClient::new(rustls::Stream::new(&mut client_session, &mut tcp_stream), seal_handler);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 

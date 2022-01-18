@@ -16,7 +16,7 @@
 */
 
 use super::{
-	mocks::{KeyHandlerMock, SHIELDING_KEY, SIGNING_KEY},
+	mocks::{SealHandlerMock, SHIELDING_KEY, SIGNING_KEY},
 	tls_ra_client::request_state_provisioning_internal,
 	tls_ra_server::run_state_provisioning_server_internal,
 };
@@ -33,7 +33,7 @@ static SERVER_ADDR: &str = "127.0.0.1:3149";
 static SIGN_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 static SKIP_RA: i32 = 1;
 
-fn run_state_provisioning_server(key_handler: KeyHandlerMock) {
+fn run_state_provisioning_server(seal_handler: SealHandlerMock) {
 	let listener = TcpListener::bind(SERVER_ADDR).unwrap();
 	loop {
 		let (socket, _addr) = listener.accept().unwrap();
@@ -41,7 +41,7 @@ fn run_state_provisioning_server(key_handler: KeyHandlerMock) {
 			socket.as_raw_fd(),
 			SIGN_TYPE,
 			SKIP_RA,
-			key_handler.clone(),
+			seal_handler.clone(),
 		)
 		.unwrap();
 	}
@@ -50,11 +50,11 @@ fn run_state_provisioning_server(key_handler: KeyHandlerMock) {
 pub fn test_tls_ra_server_client_networking() {
 	let shielding_key = vec![1, 2, 3];
 	let signing_key = vec![5, 2, 3];
-	let server_key_handler = KeyHandlerMock::new(shielding_key.clone(), signing_key.clone());
-	let client_key_handler = KeyHandlerMock::new(Vec::new(), Vec::new());
+	let server_seal_handler = SealHandlerMock::new(shielding_key.clone(), signing_key.clone());
+	let client_seal_handler = SealHandlerMock::new(Vec::new(), Vec::new());
 
 	thread::spawn(move || {
-		run_state_provisioning_server(server_key_handler);
+		run_state_provisioning_server(server_seal_handler);
 	});
 	thread::sleep(Duration::from_secs(2));
 
@@ -63,7 +63,7 @@ pub fn test_tls_ra_server_client_networking() {
 		socket.as_raw_fd(),
 		SIGN_TYPE,
 		SKIP_RA,
-		client_key_handler.clone(),
+		client_seal_handler.clone(),
 	)
 	.unwrap();
 
