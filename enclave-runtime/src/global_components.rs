@@ -89,7 +89,10 @@ pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
 	SignedSidechainBlock,
 	EnclaveSidechainBlockImporter,
 	BlockProductionSuspender,
+	OcallApi,
 >;
+
+/// Global component instances
 
 pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,

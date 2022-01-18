@@ -558,7 +558,7 @@ pub unsafe extern "C" fn init_light_client(
 		signer,
 		top_pool_executor,
 		block_import_dispatcher,
-		ocall_api,
+		ocall_api.clone(),
 	));
 	let sidechain_block_production_suspender = Arc::new(BlockProductionSuspender::default());
 
@@ -568,6 +568,7 @@ pub unsafe extern "C" fn init_light_client(
 	let sidechain_block_syncer = Arc::new(EnclaveSidechainBlockSyncer::new(
 		sidechain_block_importer,
 		sidechain_block_production_suspender,
+		ocall_api,
 	));
 
 	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer);
