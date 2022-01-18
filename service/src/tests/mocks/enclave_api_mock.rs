@@ -39,6 +39,7 @@ impl EnclaveBase for EnclaveBaseMock {
 		genesis_header: SpHeader,
 		_authority_list: VersionedAuthorityList,
 		_authority_proof: Vec<Vec<u8>>,
+		_is_primary_validateer: bool,
 	) -> EnclaveResult<SpHeader> {
 		Ok(genesis_header)
 	}

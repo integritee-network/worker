@@ -140,10 +140,12 @@ impl<
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<()> {
-		// In case block production is suspended, we don't import any blocks.
+		// In case block production is suspended and a sync is already ongoing, we don't import any blocks.
 		// In the future we might want to cache the blocks here, so they can be imported later.
-		if self.block_production_suspender.is_suspended().unwrap_or_default() {
-			warn!("Sidechain block won't be imported, since block production is suspended");
+		if self.block_production_suspender.is_suspended()?
+			&& self.block_production_suspender.is_sync_ongoing()?
+		{
+			warn!("Sidechain block won't be imported, since block production is suspended and sync already ongoing");
 			return Ok(())
 		}
 
@@ -157,7 +159,7 @@ impl<
 					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
 
 					// Suspend block production while we sync blocks from peer.
-					self.block_production_suspender.suspend()?;
+					self.block_production_suspender.suspend_for_sync()?;
 
 					// TODO need a 'finally' (or on-drop) here for the production suspension,
 					// to ensure we resume block production when we return early between `suspend` and `resume`
@@ -215,7 +217,7 @@ mod tests {
 		let parentchain_header = ParentchainHeaderBuilder::default().build();
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
-		block_import_suspender.suspend().unwrap();
+		block_import_suspender.suspend_for_sync().unwrap();
 
 		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 

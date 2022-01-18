@@ -44,6 +44,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 		genesis_header: SpHeader,
 		authority_list: VersionedAuthorityList,
 		authority_proof: Vec<Vec<u8>>,
+		is_primary_validateer: bool,
 	) -> EnclaveResult<SpHeader>;
 
 	/// Trigger the import of parentchain block explicitly. Used when initializing a light-client
@@ -111,6 +112,7 @@ impl EnclaveBase for Enclave {
 		genesis_header: SpHeader,
 		authority_list: VersionedAuthorityList,
 		authority_proof: Vec<Vec<u8>>,
+		is_primary_validateer: bool,
 	) -> EnclaveResult<SpHeader> {
 		let encoded_genesis_header = genesis_header.encode();
 		let authority_proof_encoded = authority_proof.encode();
@@ -122,6 +124,7 @@ impl EnclaveBase for Enclave {
 				authorities.to_vec(),
 				encoded_genesis_header,
 				authority_proof_encoded,
+				is_primary_validateer,
 			)
 		})?;
 
@@ -245,6 +248,7 @@ fn init_light_client_ffi(
 	authorities_vec: Vec<u8>,
 	encoded_genesis_header: Vec<u8>,
 	authority_proof_encoded: Vec<u8>,
+	is_primary_validateer: bool,
 ) -> EnclaveResult<Vec<u8>> {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -261,6 +265,7 @@ fn init_light_client_ffi(
 			authorities_vec.len(),
 			authority_proof_encoded.as_ptr(),
 			authority_proof_encoded.len(),
+			is_primary_validateer.into(),
 			latest_header.as_mut_ptr(),
 			latest_header.len(),
 		)
