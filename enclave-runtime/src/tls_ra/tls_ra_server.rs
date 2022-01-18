@@ -21,16 +21,19 @@ use std::{
 use webpki::DNSName;
 /// This encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
-struct TlsServer<'a, KeyUnsealer> {
+struct TlsServer<'a, StateAndKeyUnsealer> {
 	tls_stream: Stream<'a, ServerSession, TcpStream>,
-	seal_handler: KeyUnsealer,
+	seal_handler: StateAndKeyUnsealer,
 }
 
-impl<'a, KeyUnsealer> TlsServer<'a, KeyUnsealer>
+impl<'a, StateAndKeyUnsealer> TlsServer<'a, StateAndKeyUnsealer>
 where
-	KeyUnsealer: UnsealStateAndKeys,
+	StateAndKeyUnsealer: UnsealStateAndKeys,
 {
-	fn new(tls_stream: Stream<'a, ServerSession, TcpStream>, seal_handler: KeyUnsealer) -> Self {
+	fn new(
+		tls_stream: Stream<'a, ServerSession, TcpStream>,
+		seal_handler: StateAndKeyUnsealer,
+	) -> Self {
 		Self { tls_stream, seal_handler }
 	}
 
@@ -123,11 +126,11 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 }
 
 /// Internal [`run_state_provisioning_server`] function to be able to use the handy `?` operator.
-pub(crate) fn run_state_provisioning_server_internal<KeyUnsealer: UnsealStateAndKeys>(
+pub(crate) fn run_state_provisioning_server_internal<StateAndKeyUnsealer: UnsealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: c_int,
-	seal_handler: KeyUnsealer,
+	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
 	let cfg = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
 	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, cfg)?;

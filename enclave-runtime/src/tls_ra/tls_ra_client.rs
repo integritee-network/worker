@@ -24,22 +24,22 @@ use std::{
 
 /// Encapsulates the TCP-level connection, some connection
 /// state, and the underlying TLS-level session.
-struct TlsClient<'a, KeySealer>
+struct TlsClient<'a, StateAndKeySealer>
 where
-	KeySealer: SealStateAndKeys,
+	StateAndKeySealer: SealStateAndKeys,
 {
 	tls_stream: Stream<'a, ClientSession, TcpStream>,
-	seal_handler: KeySealer,
+	seal_handler: StateAndKeySealer,
 }
 
-impl<'a, KeySealer> TlsClient<'a, KeySealer>
+impl<'a, StateAndKeySealer> TlsClient<'a, StateAndKeySealer>
 where
-	KeySealer: SealStateAndKeys,
+	StateAndKeySealer: SealStateAndKeys,
 {
 	fn new(
 		tls_stream: Stream<'a, ClientSession, TcpStream>,
-		seal_handler: KeySealer,
-	) -> TlsClient<KeySealer> {
+		seal_handler: StateAndKeySealer,
+	) -> TlsClient<StateAndKeySealer> {
 		TlsClient { tls_stream, seal_handler }
 	}
 
@@ -116,12 +116,12 @@ pub unsafe extern "C" fn request_state_provisioning(
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
-pub(crate) fn request_state_provisioning_internal<KeySealer: SealStateAndKeys>(
+pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	shard: ShardIdentifier,
 	skip_ra: c_int,
-	seal_handler: KeySealer,
+	seal_handler: StateAndKeySealer,
 ) -> EnclaveResult<()> {
 	let cfg = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
 
