@@ -57,6 +57,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
+    "itp-storage-verifier/sgx",
     "its-top-pool/sgx",
     "jsonrpc-core_sgx",
     "sgx-externalities/sgx",

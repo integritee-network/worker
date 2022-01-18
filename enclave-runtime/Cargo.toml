@@ -93,7 +93,7 @@ itp-time-utils = { path = "../core-primitives/time-utils", default-features = fa
 itp-settings = { path = "../core-primitives/settings" }
 itp-sgx-io = { path = "../core-primitives/sgx/io", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }
-itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false }
+itp-storage-verifier = { path = "../core-primitives/storage-verified", default-features = false, features = ["sgx"] }
 itp-sgx-crypto = { path = "../core-primitives/sgx/crypto", default-features = false, features = ["sgx"] }
 itp-stf-executor = { path = "../core-primitives/stf-executor", default-features = false, features = ["sgx"] }
 itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default-features = false, features = ["sgx"] }

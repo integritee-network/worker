@@ -64,6 +64,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
+    "itp-storage-verifier/sgx",
     "itp-time-utils/sgx",
     "sgx-externalities/sgx",
     "thiserror_sgx",

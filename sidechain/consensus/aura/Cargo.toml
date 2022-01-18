@@ -75,6 +75,7 @@ sgx = [
    "itp-sgx-crypto/sgx",
    "itp-stf-executor/sgx",
    "itp-stf-state-handler/sgx",
+   "itp-storage-verifier/sgx",
    "itp-time-utils/sgx",
    "its-block-composer/sgx",
    "its-consensus-common/sgx",

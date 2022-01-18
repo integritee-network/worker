@@ -134,15 +134,20 @@ dependencies = [
 [[package]]
 name = "ajuna-runtime"
 version = "4.0.0-dev"
+source = "git+https://github.com/ajuna-network/ajuna-node.git?branch=darkfriend77/integritee#d3799a769195c1a3fa7e68294cd0e0de9e1a58d0"
 dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "pallet-ajuna-connectfour",
+ "pallet-ajuna-gameregistry",
+ "pallet-ajuna-matchmaker",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
+ "pallet-scheduler",
  "pallet-sudo",
  "pallet-teerex",
  "pallet-template",
@@ -2178,7 +2183,7 @@ dependencies = [
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io 4.0.0-dev",
+ "sp-io 4.0.0-dev (git+https://github.com/ajuna-network/sgx-runtime?branch=update-substrate)",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
@@ -2250,8 +2255,10 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-ocall-api",
+ "itp-registry-storage",
  "itp-settings",
  "itp-stf-executor",
+ "itp-storage-verifier",
  "itp-types",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -2496,6 +2503,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-registry-storage"
+version = "0.8.0"
+dependencies = [
+ "itp-storage",
+ "parity-scale-codec",
+ "sp-std",
+]
+
+[[package]]
 name = "itp-settings"
 version = "0.8.0"
 
@@ -2602,10 +2618,13 @@ dependencies = [
  "itp-storage",
  "itp-types",
  "parity-scale-codec",
+ "sgx_tstd",
  "sgx_types",
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2830,7 +2849,7 @@ dependencies = [
  "sgx-externalities",
  "sgx_tstd",
  "sp-core",
- "sp-io 4.0.0-dev",
+ "sp-io 4.0.0-dev (git+https://github.com/ajuna-network/sgx-runtime?branch=update-substrate)",
  "sp-runtime",
  "sp-std",
  "thiserror 1.0.30",
@@ -4024,14 +4043,45 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-connectfour"
 version = "4.0.0-dev"
-source = "git+https://github.com/ajuna-network/ajuna-node.git?branch=update-substrate#8daefda429c239dc924ea51e2ef5679a5482538b"
+source = "git+https://github.com/ajuna-network/ajuna-node.git?branch=darkfriend77/integritee#d3799a769195c1a3fa7e68294cd0e0de9e1a58d0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "scale-info",
  "sp-io 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=master)",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ajuna-gameregistry"
+version = "4.0.0-dev"
+source = "git+https://github.com/ajuna-network/ajuna-node.git?branch=darkfriend77/integritee#d3799a769195c1a3fa7e68294cd0e0de9e1a58d0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-ajuna-matchmaker",
+ "pallet-scheduler",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=master)",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ajuna-matchmaker"
+version = "4.0.0-dev"
+source = "git+https://github.com/ajuna-network/ajuna-node.git?branch=darkfriend77/integritee#d3799a769195c1a3fa7e68294cd0e0de9e1a58d0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
  "sp-std",
 ]
 
@@ -4139,6 +4189,7 @@ name = "pallet-scheduler"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#b9cafba3d0e7a5950ac78d81e4ab7f2074938666"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4189,13 +4240,16 @@ name = "pallet-teerex"
 version = "0.9.0"
 source = "git+https://github.com/integritee-network/pallets.git?branch=master#d437fc236f0508cbe5344cd1092696ab477abcaa"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "ias-verify",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
+ "serde 1.0.130",
  "sp-core",
  "sp-io 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=master)",
  "sp-runtime",
@@ -4207,6 +4261,7 @@ dependencies = [
 [[package]]
 name = "pallet-template"
 version = "4.0.0-dev"
+source = "git+https://github.com/ajuna-network/ajuna-node.git?branch=darkfriend77/integritee#d3799a769195c1a3fa7e68294cd0e0de9e1a58d0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5547,6 +5602,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
+source = "git+https://github.com/ajuna-network/sgx-runtime?branch=update-substrate#db69acbc7c1ff8cc3cce668f99d8dffbae69bf17"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5561,6 +5617,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
+source = "git+https://github.com/ajuna-network/sgx-runtime?branch=update-substrate#db69acbc7c1ff8cc3cce668f99d8dffbae69bf17"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6175,17 +6232,14 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#b9cafba3d0e7a5950ac78d81e4ab7f2074938666"
 dependencies = [
- "environmental",
  "futures 0.3.18",
  "hash-db",
- "libsecp256k1 0.6.0",
+ "libsecp256k1 0.7.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "parking_lot 0.11.2",
- "sgx-externalities",
- "sgx_tstd",
- "sgx_types",
  "sp-core",
  "sp-externalities",
  "sp-keystore",
@@ -6202,14 +6256,18 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#b9cafba3d0e7a5950ac78d81e4ab7f2074938666"
+source = "git+https://github.com/ajuna-network/sgx-runtime?branch=update-substrate#db69acbc7c1ff8cc3cce668f99d8dffbae69bf17"
 dependencies = [
+ "environmental",
  "futures 0.3.18",
  "hash-db",
- "libsecp256k1 0.7.0",
+ "libsecp256k1 0.6.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "parking_lot 0.11.2",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
  "sp-core",
  "sp-externalities",
  "sp-keystore",
@@ -7120,8 +7178,8 @@ version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
- "cfg-if 1.0.0",
- "rand 0.6.5",
+ "cfg-if 0.1.10",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
