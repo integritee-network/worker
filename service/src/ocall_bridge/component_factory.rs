@@ -29,7 +29,6 @@ use crate::{
 	},
 	sync_block_gossiper::GossipBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
-	GetTokioHandle,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use itp_node_api_extensions::node_api_factory::CreateNodeApi;
@@ -48,7 +47,6 @@ pub struct OCallBridgeComponentFactory<
 	Storage,
 	PeerUpdater,
 	PeerBlockFetcher,
-	TokioHandle,
 > {
 	node_api_factory: Arc<NodeApi>,
 	block_gossiper: Arc<Gossiper>,
@@ -56,19 +54,10 @@ pub struct OCallBridgeComponentFactory<
 	block_storage: Arc<Storage>,
 	peer_updater: Arc<PeerUpdater>,
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
-	tokio_handle: Arc<TokioHandle>,
 }
 
-impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
-	OCallBridgeComponentFactory<
-		NodeApi,
-		Gossiper,
-		EnclaveApi,
-		Storage,
-		PeerUpdater,
-		PeerBlockFetcher,
-		TokioHandle,
-	>
+impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher>
+	OCallBridgeComponentFactory<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher>
 {
 	pub fn new(
 		node_api_factory: Arc<NodeApi>,
@@ -77,7 +66,6 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 		block_storage: Arc<Storage>,
 		peer_updater: Arc<PeerUpdater>,
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
-		tokio_handle: Arc<TokioHandle>,
 	) -> Self {
 		OCallBridgeComponentFactory {
 			node_api_factory,
@@ -86,13 +74,11 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 			block_storage,
 			peer_updater,
 			peer_block_fetcher,
-			tokio_handle,
 		}
 	}
 }
 
-impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
-	GetOCallBridgeComponents
+impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher> GetOCallBridgeComponents
 	for OCallBridgeComponentFactory<
 		NodeApi,
 		Gossiper,
@@ -100,7 +86,6 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 		Storage,
 		PeerUpdater,
 		PeerBlockFetcher,
-		TokioHandle,
 	> where
 	NodeApi: CreateNodeApi + 'static,
 	Gossiper: GossipBlocks + 'static,
@@ -108,7 +93,6 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 	Storage: BlockStorage<SignedSidechainBlock> + 'static,
 	PeerUpdater: UpdateWorkerPeers + 'static,
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock> + 'static,
-	TokioHandle: GetTokioHandle + 'static,
 {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))
@@ -120,7 +104,6 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 			self.block_storage.clone(),
 			self.peer_updater.clone(),
 			self.peer_block_fetcher.clone(),
-			self.tokio_handle.clone(),
 		))
 	}
 

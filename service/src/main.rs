@@ -152,7 +152,6 @@ fn main() {
 		sidechain_blockstorage.clone(),
 		peer_updater,
 		peer_sidechain_block_fetcher,
-		tokio_handle.clone(),
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
