@@ -85,6 +85,27 @@ fn get_blocks_returns_none_if_last_is_already_most_recent_block() {
 }
 
 #[test]
+fn get_blocks_after_returns_all_blocks_if_last_known_is_default() {
+	let block_1 = create_signed_block(1, BlockHash::default());
+	let block_2 = create_signed_block(2, block_1.hash());
+	let block_3 = create_signed_block(3, block_2.hash());
+
+	let blocks = vec![block_1.clone(), block_2.clone(), block_3.clone()];
+
+	let temp_dir = fill_storage_with_blocks(blocks.clone());
+
+	{
+		let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
+		let default_hash = BlockHash::default();
+
+		assert_eq!(
+			updated_sidechain_db.get_blocks_after(&default_hash, &default_shard()).unwrap(),
+			blocks
+		);
+	}
+}
+
+#[test]
 fn given_block_with_invalid_ancestry_returns_error() {
 	let block_1 = create_signed_block(1, BlockHash::default());
 	// Should be block_1 hash, but we deliberately introduce an invalid parent hash.

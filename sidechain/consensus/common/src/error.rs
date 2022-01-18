@@ -57,6 +57,8 @@ pub enum Error {
 	BadSidechainBlock(SidechainBlockHash, String),
 	#[error("Could not import new block due to {2}. (Last imported by number: {0:?})")]
 	BlockAncestryMismatch(BlockNumber, SidechainBlockHash, String),
+	#[error("Could not import new block. Expected first block, but found {0}. {1:?}")]
+	InvalidFirstBlock(BlockNumber, String),
 }
 
 impl core::convert::From<std::io::Error> for Error {

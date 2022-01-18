@@ -112,6 +112,30 @@ impl<
 
 		Ok(())
 	}
+
+	fn execute_while_production_suspended<FnToExecute>(
+		&self,
+		fn_to_execute: FnToExecute,
+	) -> Result<()>
+	where
+		FnToExecute: Fn() -> Result<()>,
+	{
+		// Suspend block production while we execute our function.
+		self.block_production_suspender.suspend_for_sync()?;
+
+		// TODO need a 'finally' (or on-drop) here for the production suspension,
+		// to ensure we resume block production when we return early between `suspend` and `resume`
+		// (e.g. with a `?` operator in between).
+
+		if let Err(e) = (fn_to_execute)() {
+			// We just log the error for now. In the future we might have a way to handle this error.
+			error!("Error while importing a block in the peer fetch process: {:?}", e);
+		}
+
+		self.block_production_suspender.resume()?;
+
+		Ok(())
+	}
 }
 
 impl<
@@ -140,11 +164,9 @@ impl<
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<()> {
-		// In case block production is suspended and a sync is already ongoing, we don't import any blocks.
+		// In case a sync is already ongoing, we don't import any blocks.
 		// In the future we might want to cache the blocks here, so they can be imported later.
-		if self.block_production_suspender.is_suspended()?
-			&& self.block_production_suspender.is_sync_ongoing()?
-		{
+		if self.block_production_suspender.is_sync_ongoing()? {
 			warn!("Sidechain block won't be imported, since block production is suspended and sync already ongoing");
 			return Ok(())
 		}
@@ -157,26 +179,23 @@ impl<
 			Err(e) => match e {
 				Error::BlockAncestryMismatch(_block_number, block_hash, _) => {
 					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
-
-					// Suspend block production while we sync blocks from peer.
-					self.block_production_suspender.suspend_for_sync()?;
-
-					// TODO need a 'finally' (or on-drop) here for the production suspension,
-					// to ensure we resume block production when we return early between `suspend` and `resume`
-					// (e.g. with a `?` operator in between).
-
-					if let Err(e) = self.fetch_and_import_blocks_from_peer(
-						block_hash,
-						last_imported_parentchain_header,
-						shard_identifier,
-					) {
-						// We just log the error for now. In the future we might have a way to handle this error.
-						error!("Error while importing a block in the peer fetch process: {:?}", e);
-					}
-
-					self.block_production_suspender.resume()?;
-
-					Ok(())
+					self.execute_while_production_suspended(|| {
+						self.fetch_and_import_blocks_from_peer(
+							block_hash,
+							last_imported_parentchain_header,
+							shard_identifier,
+						)
+					})
+				},
+				Error::InvalidFirstBlock(_block_number, _) => {
+					warn!("Got invalid first block error upon block import. Attempting to fetch missing blocks from peer");
+					self.execute_while_production_suspended(|| {
+						self.fetch_and_import_blocks_from_peer(
+							Default::default(),
+							last_imported_parentchain_header,
+							shard_identifier,
+						)
+					})
 				},
 				_ => Err(e),
 			},
