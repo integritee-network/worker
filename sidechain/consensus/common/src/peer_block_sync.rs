@@ -100,6 +100,8 @@ impl<
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 		shard_identifier: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<()> {
+		info!("Initiating fetch blocks from peer");
+
 		let blocks_to_import: Vec<SignedSidechainBlock> = self
 			.sidechain_ocall_api
 			.fetch_sidechain_blocks_from_peer(last_known_block_hash, shard_identifier)?;

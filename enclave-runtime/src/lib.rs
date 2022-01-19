@@ -319,7 +319,10 @@ pub unsafe extern "C" fn call_rpc_methods(
 
 	let res = match sidechain_rpc_int(request) {
 		Ok(res) => res,
-		Err(e) => return e.into(),
+		Err(e) => {
+			error!("RPC request failed: {:?}", e);
+			return e.into()
+		},
 	};
 
 	let response_slice = slice::from_raw_parts_mut(response, response_len as usize);

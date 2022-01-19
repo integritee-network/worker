@@ -85,14 +85,18 @@ where
 		// FIXME: When & where should peers be updated?
 		if let Err(e) = self.peer_updater.update_peers() {
 			error!("Error updating peers: {:?}", e);
-			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
+		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		} else {
+			info!("Successfully updated peers");
 		}
 
 		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
 			error!("Error gossiping blocks: {:?}", e);
-			// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-			// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
+		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		} else {
+			info!("Successfully gossiped blocks");
 		}
 
 		status
@@ -139,6 +143,8 @@ where
 				)
 			})?;
 
+		info!("[O-call] fetching blocks from peer..");
+
 		let signed_sidechain_blocks = futures::executor::block_on({
 			self.peer_block_fetcher
 				.fetch_blocks_from_peer(last_known_block_hash, shard_identifier)
@@ -149,6 +155,8 @@ where
 				e
 			))
 		})?;
+
+		info!("[O-call] successfully fetched {} blocks from peer", signed_sidechain_blocks.len());
 
 		Ok(signed_sidechain_blocks.encode())
 	}

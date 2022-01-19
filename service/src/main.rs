@@ -330,7 +330,8 @@ fn start_worker<E, T, D>(
 			sidechain_storage_for_rpc,
 		)
 		.await
-		.unwrap()
+		.unwrap();
+		println!("[!] Untrusted RPC server has terminated");
 	});
 
 	// ------------------------------------------------------------------------
@@ -416,6 +417,7 @@ fn start_worker<E, T, D>(
 				SLOT_DURATION,
 			);
 			block_on(future);
+			println!("[!] Sidechain block production loop has terminated");
 		})
 		.unwrap();
 
@@ -433,7 +435,7 @@ fn start_worker<E, T, D>(
 			) {
 				error!("Parentchain block syncing terminated with a failure: {:?}", e);
 			}
-			println!("[+] Parentchain block syncing has terminated");
+			println!("[!] Parentchain block syncing has terminated");
 		})
 		.unwrap();
 
