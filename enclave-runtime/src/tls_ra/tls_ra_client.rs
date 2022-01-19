@@ -17,10 +17,9 @@
 
 //! Implementation of the client part of the state provisioning.
 
-use super::{Opcode, TcpHeader};
+use super::{authentication::ServerAuth, Opcode, TcpHeader};
 use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
-	cert,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys},
@@ -201,49 +200,4 @@ fn tls_client_session_stream(
 	let sess = rustls::ClientSession::new(&Arc::new(client_config), dns_name);
 	let conn = TcpStream::new(socket_fd)?;
 	Ok((sess, conn))
-}
-
-struct ServerAuth<A> {
-	outdated_ok: bool,
-	skip_ra: bool,
-	attestation_ocall: A,
-}
-
-impl<A> ServerAuth<A> {
-	fn new(outdated_ok: bool, skip_ra: bool, attestation_ocall: A) -> Self {
-		ServerAuth { outdated_ok, skip_ra, attestation_ocall }
-	}
-}
-
-impl<A> rustls::ServerCertVerifier for ServerAuth<A>
-where
-	A: EnclaveAttestationOCallApi,
-{
-	fn verify_server_cert(
-		&self,
-		_roots: &rustls::RootCertStore,
-		certs: &[rustls::Certificate],
-		_hostname: webpki::DNSNameRef,
-		_ocsp: &[u8],
-	) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-		debug!("server cert: {:?}", certs);
-
-		if self.skip_ra {
-			warn!("Skip verifying ra-report");
-			return Ok(rustls::ServerCertVerified::assertion())
-		}
-
-		// This call will automatically verify cert is properly signed
-		match cert::verify_mra_cert(&certs[0].0, &self.attestation_ocall) {
-			Ok(()) => Ok(rustls::ServerCertVerified::assertion()),
-			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
-				if self.outdated_ok {
-					warn!("outdated_ok is set, overriding outdated error");
-					Ok(rustls::ServerCertVerified::assertion())
-				} else {
-					Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
-				},
-			Err(_) => Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid)),
-		}
-	}
 }

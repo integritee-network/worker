@@ -17,10 +17,9 @@
 
 //! Implementation of the server part of the state provisioning.
 
-use super::{Opcode, TcpHeader};
+use super::{authentication::ClientAuth, Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
-	cert,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, UnsealStateAndKeys},
@@ -29,7 +28,6 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
 use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::ShardIdentifier;
-use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
 use std::{
@@ -38,7 +36,6 @@ use std::{
 	net::TcpStream,
 	sync::Arc,
 };
-use webpki::DNSName;
 /// Server part of the TCP-level connection and the underlying TLS-level session.
 ///
 /// Includes a seal handler, which handles the reading part of the data to be sent.
@@ -95,54 +92,6 @@ where
 		self.tls_stream.write(&tcp_header.opcode.to_bytes())?;
 		self.tls_stream.write(&tcp_header.payload_length.to_be_bytes())?;
 		Ok(())
-	}
-}
-struct ClientAuth<A> {
-	outdated_ok: bool,
-	skip_ra: bool,
-	attestation_ocall: A,
-}
-
-impl<A> ClientAuth<A> {
-	fn new(outdated_ok: bool, skip_ra: bool, attestation_ocall: A) -> Self {
-		ClientAuth { outdated_ok, skip_ra, attestation_ocall }
-	}
-}
-
-impl<A> rustls::ClientCertVerifier for ClientAuth<A>
-where
-	A: EnclaveAttestationOCallApi,
-{
-	fn client_auth_root_subjects(
-		&self,
-		_sni: Option<&DNSName>,
-	) -> Option<rustls::DistinguishedNames> {
-		Some(rustls::DistinguishedNames::new())
-	}
-
-	fn verify_client_cert(
-		&self,
-		_certs: &[rustls::Certificate],
-		_sni: Option<&DNSName>,
-	) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
-		debug!("client cert: {:?}", _certs);
-		// This call will automatically verify cert is properly signed
-		if self.skip_ra {
-			warn!("Skip verifying ra-report");
-			return Ok(rustls::ClientCertVerified::assertion())
-		}
-
-		match cert::verify_mra_cert(&_certs[0].0, &self.attestation_ocall) {
-			Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
-			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
-				if self.outdated_ok {
-					warn!("outdated_ok is set, overriding outdated error");
-					Ok(rustls::ClientCertVerified::assertion())
-				} else {
-					Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
-				},
-			Err(_) => Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid)),
-		}
 	}
 }
 

@@ -18,6 +18,7 @@
 //! Contains all logic of the state provisioning mechanism
 //! including the remote attestation and tls / tcp connection part.
 
+mod authentication;
 pub mod seal_handler;
 mod tls_ra_client;
 mod tls_ra_server;
