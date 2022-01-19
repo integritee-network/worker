@@ -1,3 +1,22 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+//! Implementation of the client part of the state provisioning.
+
 use super::{Opcode, TcpHeader};
 use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
@@ -46,66 +65,60 @@ where
 		TlsClient { tls_stream, seal_handler, shard }
 	}
 
-	/// Sends the shard of the state we want to sync to the server
-	/// and read all following data sent by the server.
+	/// Read all data sent by the server of the specific shard.
+	///
+	/// We trust here that the server sends us the correct data, as
+	/// we do not have any way to test it.
 	fn read_shard(&mut self) -> EnclaveResult<()> {
 		self.write_shard()?;
 		self.read_all()
 	}
 
+	/// Send the shard of the state we want to receive to the provisioning server.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
 		self.tls_stream.write(self.shard.as_bytes())?;
 		Ok(())
 	}
 
 	/// Read all relevant data sent by the server.
-	/// We currently expect three header / payload pairs:
-	/// - shielding key
-	/// - signing key
-	/// - state
 	fn read_all(&mut self) -> EnclaveResult<()> {
-		// We read two times in total for two keys.
-		for _n in 0..3 {
-			self.read_and_seal()?;
+		let mut continue_reading = true;
+		while continue_reading {
+			continue_reading = self.read_and_seal()?;
 		}
+		info!("Successfully read all data sent by the state provisioning server.");
 		Ok(())
 	}
 
 	/// Read a server header / payload pair and directly seal the received data.
-	fn read_and_seal(&mut self) -> EnclaveResult<()> {
+	fn read_and_seal(&mut self) -> EnclaveResult<bool> {
 		let mut start_byte = [0u8; 1];
 		let read_size = self.tls_stream.read(&mut start_byte)?;
 		// If we're reading but there's no data: EOF.
 		if read_size == 0 {
-			return Err(EnclaveError::IO(std::io::Error::new(
-				std::io::ErrorKind::UnexpectedEof,
-				"EOF",
-			)))
+			return Ok(false)
 		}
-		if let Some(header) = self.read_header(start_byte.to_vec()) {
-			let bytes = self.read_until(header.payload_length as usize)?;
-			match header.opcode {
-				Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
-				Opcode::SigningKey => self.seal_handler.seal_signing_key(&bytes)?,
-				Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
-			}
-		}
-
-		Ok(())
+		let header = self.read_header(start_byte.to_vec())?;
+		let bytes = self.read_until(header.payload_length as usize)?;
+		match header.opcode {
+			Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
+			Opcode::SigningKey => self.seal_handler.seal_signing_key(&bytes)?,
+			Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
+		};
+		Ok(true)
 	}
 
 	/// Reads the payload header, indicating the sent payload length and type.
-	fn read_header(&mut self, start_bytes: Vec<u8>) -> Option<TcpHeader> {
+	fn read_header(&mut self, start_bytes: Vec<u8>) -> EnclaveResult<TcpHeader> {
+		// The first sent byte indicates the payload type.
 		let opcode: Opcode = start_bytes[0].into();
+		// The 8 bytes following afterwards indicate the payload length.
 		let mut length_buffer = [0u8; 8];
-		if let Err(rc) = self.tls_stream.read(&mut length_buffer) {
-			error!("TLS read error: {:?}", rc);
-			return None
-		};
+		self.tls_stream.read(&mut length_buffer)?;
 		let payload_length = u64::from_be_bytes(length_buffer);
 		debug!("payload_length: {}", payload_length);
 
-		Some(TcpHeader::new(opcode, payload_length))
+		Ok(TcpHeader::new(opcode, payload_length))
 	}
 
 	/// Read all bytes into a buffer of given length.
@@ -147,9 +160,8 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
 ) -> EnclaveResult<()> {
-	let cfg = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
-
-	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, cfg)?;
+	let client_config = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
+	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
 
 	let mut client = TlsClient::new(
 		rustls::Stream::new(&mut client_session, &mut tcp_stream),
@@ -158,11 +170,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
-	client.read_shard()?;
-
-	info!("    [Enclave] (MU-RA-Client) Registration procedure successful!");
-
-	Ok(())
+	client.read_shard()
 }
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
@@ -186,11 +194,11 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 
 fn tls_client_session_stream(
 	socket_fd: i32,
-	cfg: ClientConfig,
+	client_config: ClientConfig,
 ) -> EnclaveResult<(ClientSession, TcpStream)> {
 	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
 		.map_err(|e| EnclaveError::Other(e.into()))?;
-	let sess = rustls::ClientSession::new(&Arc::new(cfg), dns_name);
+	let sess = rustls::ClientSession::new(&Arc::new(client_config), dns_name);
 	let conn = TcpStream::new(socket_fd)?;
 	Ok((sess, conn))
 }
@@ -214,11 +222,11 @@ where
 	fn verify_server_cert(
 		&self,
 		_roots: &rustls::RootCertStore,
-		_certs: &[rustls::Certificate],
+		certs: &[rustls::Certificate],
 		_hostname: webpki::DNSNameRef,
 		_ocsp: &[u8],
 	) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-		debug!("server cert: {:?}", _certs);
+		debug!("server cert: {:?}", certs);
 
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
@@ -226,7 +234,7 @@ where
 		}
 
 		// This call will automatically verify cert is properly signed
-		match cert::verify_mra_cert(&_certs[0].0, &self.attestation_ocall) {
+		match cert::verify_mra_cert(&certs[0].0, &self.attestation_ocall) {
 			Ok(()) => Ok(rustls::ServerCertVerified::assertion()),
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
 				if self.outdated_ok {

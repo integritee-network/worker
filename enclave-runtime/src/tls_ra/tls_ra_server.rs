@@ -1,3 +1,22 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+//! Implementation of the server part of the state provisioning.
+
 use super::{Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
@@ -39,13 +58,13 @@ where
 		Self { tls_stream, seal_handler }
 	}
 
-	/// Reads the shard sent by the client and
-	/// sends all relevant data of this shard to the client.
+	/// Sends all relevant data of the specific shard to the client.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
 		let shard = self.read_shard()?;
 		self.write_all(&shard)
 	}
 
+	/// Read the shard of the state the client wants to receive.
 	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
@@ -154,21 +173,20 @@ pub(crate) fn run_state_provisioning_server_internal<StateAndKeyUnsealer: Unseal
 	skip_ra: c_int,
 	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
-	let cfg = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
-	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, cfg)?;
+	let server_config = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
+	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
 	let mut server =
 		TlsServer::new(rustls::Stream::new(&mut server_session, &mut tcp_stream), seal_handler);
-	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 
-	server.write_shard()?;
-	Ok(())
+	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
+	server.write_shard()
 }
 
 fn tls_server_session_stream(
 	socket_fd: i32,
-	cfg: ServerConfig,
+	server_config: ServerConfig,
 ) -> EnclaveResult<(ServerSession, TcpStream)> {
-	let sess = rustls::ServerSession::new(&Arc::new(cfg));
+	let sess = rustls::ServerSession::new(&Arc::new(server_config));
 	let conn = TcpStream::new(socket_fd).map_err(|e| EnclaveError::Other(e.into()))?;
 	Ok((sess, conn))
 }

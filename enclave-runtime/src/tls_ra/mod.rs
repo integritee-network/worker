@@ -15,6 +15,9 @@
 
 */
 
+//! Contains all logic of the state provisioning mechanism
+//! including the remote attestation and tls / tcp connection part.
+
 pub mod seal_handler;
 mod tls_ra_client;
 mod tls_ra_server;
@@ -25,9 +28,21 @@ pub mod tests;
 #[cfg(feature = "test")]
 pub mod mocks;
 
-pub const _MAX_BUFFER_SIZE: u32 = 1024;
+/// Header of an accompanied payloard. Indicates the
+/// length an the type (opcode) of the following payload.
+#[derive(Clone, Debug)]
+pub struct TcpHeader {
+	pub opcode: Opcode,
+	pub payload_length: u64,
+}
 
-/// States the tcp stream content type.
+impl TcpHeader {
+	fn new(opcode: Opcode, payload_length: u64) -> Self {
+		Self { opcode, payload_length }
+	}
+}
+
+/// Indicates the payload content type.
 #[derive(Copy, Clone, Debug)]
 pub enum Opcode {
 	ShieldingKey = 0,
@@ -49,17 +64,5 @@ impl From<u8> for Opcode {
 impl Opcode {
 	pub fn to_bytes(self) -> [u8; 1] {
 		(self as u8).to_be_bytes()
-	}
-}
-
-#[derive(Clone, Debug)]
-pub struct TcpHeader {
-	pub opcode: Opcode,
-	pub payload_length: u64,
-}
-
-impl TcpHeader {
-	fn new(opcode: Opcode, payload_length: u64) -> Self {
-		Self { opcode, payload_length }
 	}
 }
