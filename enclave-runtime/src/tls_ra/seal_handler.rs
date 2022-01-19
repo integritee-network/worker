@@ -43,8 +43,7 @@ where
 	StateHandler: HandleState<StateT = StfState>,
 {
 	state_handler: Arc<StateHandler>,
-	_phantom_shield: PhantomData<ShieldingKeyHandler>,
-	_phantom_sign: PhantomData<SigningKeyHandler>,
+	_phantom_key_handler: PhantomData<(ShieldingKeyHandler, SigningKeyHandler)>,
 }
 
 impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
@@ -55,11 +54,7 @@ where
 	StateHandler: HandleState<StateT = StfState>,
 {
 	pub fn new(state_handler: Arc<StateHandler>) -> Self {
-		Self {
-			state_handler,
-			_phantom_shield: Default::default(),
-			_phantom_sign: Default::default(),
-		}
+		Self { state_handler, _phantom_key_handler: Default::default() }
 	}
 }
 pub trait SealStateAndKeys {
