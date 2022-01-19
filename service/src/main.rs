@@ -331,7 +331,6 @@ fn start_worker<E, T, D>(
 		)
 		.await
 		.unwrap();
-		println!("[!] Untrusted RPC server has terminated");
 	});
 
 	// ------------------------------------------------------------------------
