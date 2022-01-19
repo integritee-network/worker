@@ -39,16 +39,15 @@ static SKIP_RA: i32 = 1;
 
 fn run_state_provisioning_server(seal_handler: SealHandlerMock) {
 	let listener = TcpListener::bind(SERVER_ADDR).unwrap();
-	loop {
-		let (socket, _addr) = listener.accept().unwrap();
-		run_state_provisioning_server_internal(
-			socket.as_raw_fd(),
-			SIGN_TYPE,
-			SKIP_RA,
-			seal_handler.clone(),
-		)
-		.unwrap();
-	}
+
+	let (socket, _addr) = listener.accept().unwrap();
+	run_state_provisioning_server_internal(
+		socket.as_raw_fd(),
+		SIGN_TYPE,
+		SKIP_RA,
+		seal_handler.clone(),
+	)
+	.unwrap();
 }
 
 pub fn test_tls_ra_server_client_networking() {
@@ -63,7 +62,7 @@ pub fn test_tls_ra_server_client_networking() {
 	thread::spawn(move || {
 		run_state_provisioning_server(server_seal_handler);
 	});
-	thread::sleep(Duration::from_secs(2));
+	thread::sleep(Duration::from_secs(1));
 
 	let socket = TcpStream::connect(SERVER_ADDR).unwrap();
 	request_state_provisioning_internal(
