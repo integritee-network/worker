@@ -145,6 +145,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 	if let Err(e) =
 		request_state_provisioning_internal(socket_fd, sign_type, shard, skip_ra, seal_handler)
 	{
+		error!("Failed to sync state due to: {:?}", e);
 		return e.into()
 	};
 

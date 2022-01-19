@@ -28,6 +28,7 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
 use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::ShardIdentifier;
+use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
 use sgx_types::*;
 use std::{
@@ -109,6 +110,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 	if let Err(e) =
 		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, seal_handler)
 	{
+		error!("Failed to provision state due to: {:?}", e);
 		return e.into()
 	};
 
