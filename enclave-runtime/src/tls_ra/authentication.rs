@@ -15,7 +15,7 @@
 
 */
 
-//! Implementation of the client part of the state provisioning.
+//! Remote attestation certificate authentication of server and client
 
 use crate::cert;
 use itp_ocall_api::EnclaveAttestationOCallApi;
