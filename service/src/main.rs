@@ -404,6 +404,8 @@ fn start_worker<E, T, D>(
 		.unwrap();
 	});
 
+	thread::sleep(Duration::from_secs(3));
+
 	// ------------------------------------------------------------------------
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 	let sidechain_enclave_api = enclave.clone();
