@@ -78,7 +78,7 @@ impl EnclaveSidechainOCallApi for OcallApi {
 		let shard_identifier_encoded = shard_identifier.encode();
 
 		// We have to pre-allocate the vector and hope it's large enough
-		let mut signed_blocks_encoded: Vec<u8> = vec![0; 4096 * 16];
+		let mut signed_blocks_encoded: Vec<u8> = vec![0; 4096 * 32];
 
 		let res = unsafe {
 			ffi::ocall_fetch_sidechain_blocks_from_peer(

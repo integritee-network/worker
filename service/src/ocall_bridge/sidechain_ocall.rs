@@ -20,6 +20,7 @@ use crate::{
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
 	sync_block_gossiper::GossipBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
+	GetTokioHandle,
 };
 use codec::{Decode, Encode};
 use itp_types::{BlockHash, ShardIdentifier};
@@ -29,33 +30,42 @@ use its_storage::BlockStorage;
 use log::*;
 use std::sync::Arc;
 
-pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher> {
+pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
 	block_gossiper: Arc<BlockGossiper>,
 	block_storage: Arc<Storage>,
 	peer_updater: Arc<PeerUpdater>,
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
+	tokio_handle: Arc<TokioHandle>,
 }
 
-impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher>
-	SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher>
+impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+	SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 {
 	pub fn new(
 		block_gossiper: Arc<BlockGossiper>,
 		block_storage: Arc<Storage>,
 		peer_updater: Arc<PeerUpdater>,
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
+		tokio_handle: Arc<TokioHandle>,
 	) -> Self {
-		SidechainOCall { block_gossiper, block_storage, peer_updater, peer_block_fetcher }
+		SidechainOCall {
+			block_gossiper,
+			block_storage,
+			peer_updater,
+			peer_block_fetcher,
+			tokio_handle,
+		}
 	}
 }
 
-impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher> SidechainBridge
-	for SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher>
+impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> SidechainBridge
+	for SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 where
 	BlockGossiper: GossipBlocks,
 	Storage: BlockStorage<SignedSidechainBlock>,
 	PeerUpdater: UpdateWorkerPeers,
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock>,
+	TokioHandle: GetTokioHandle,
 {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
@@ -145,16 +155,19 @@ where
 
 		info!("[O-call] fetching blocks from peer..");
 
-		let signed_sidechain_blocks = futures::executor::block_on({
-			self.peer_block_fetcher
-				.fetch_blocks_from_peer(last_known_block_hash, shard_identifier)
-		})
-		.map_err(|e| {
-			OCallBridgeError::FetchSidechainBlocksFromPeer(format!(
-				"Failed to execute block fetching from peer: {:?}",
-				e
-			))
-		})?;
+		let tokio_handle = self.tokio_handle.get_handle();
+
+		let signed_sidechain_blocks = tokio_handle
+			.block_on(
+				self.peer_block_fetcher
+					.fetch_blocks_from_peer(last_known_block_hash, shard_identifier),
+			)
+			.map_err(|e| {
+				OCallBridgeError::FetchSidechainBlocksFromPeer(format!(
+					"Failed to execute block fetching from peer: {:?}",
+					e
+				))
+			})?;
 
 		info!("[O-call] successfully fetched {} blocks from peer", signed_sidechain_blocks.len());
 
@@ -165,8 +178,11 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::tests::mocks::{
-		gossip_blocks_mock::GossipBlocksMock, update_worker_peers_mock::UpdateWorkerPeersMock,
+	use crate::{
+		globals::tokio_handle::ScopedTokioHandle,
+		tests::mocks::{
+			gossip_blocks_mock::GossipBlocksMock, update_worker_peers_mock::UpdateWorkerPeersMock,
+		},
 	};
 	use codec::Decode;
 	use its_peer_fetch::mocks::fetch_blocks_from_peer_mock::FetchBlocksFromPeerMock;
@@ -188,6 +204,7 @@ mod tests {
 		BlockStorageMock,
 		UpdateWorkerPeersMock,
 		FetchBlocksFromPeerMock<SignedSidechainBlock>,
+		ScopedTokioHandle,
 	>;
 
 	#[test]
@@ -224,12 +241,14 @@ mod tests {
 			FetchBlocksFromPeerMock::<SignedSidechainBlock>::default()
 				.with_signed_blocks(peer_blocks_map),
 		);
+		let scoped_tokio_handle = Arc::new(ScopedTokioHandle::default());
 
 		SidechainOCall::new(
 			block_gossiper_mock,
 			block_storage_mock,
 			peer_updater_mock,
 			peer_block_fetcher_mock,
+			scoped_tokio_handle,
 		)
 	}
 }

@@ -129,7 +129,11 @@ where
 
 	ensure!(
 		expected_author == block.block_author(),
-		ConsensusError::InvalidAuthority(format!("{:?}", block.block_author()))
+		ConsensusError::InvalidAuthority(format!(
+			"Expected author: {:?}, author found in block: {:?}",
+			expected_author,
+			block.block_author()
+		))
 	);
 
 	Ok(())
