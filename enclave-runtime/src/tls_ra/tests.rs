@@ -71,22 +71,25 @@ pub fn test_tls_ra_server_client_networking() {
 	);
 
 	// Start server.
-	thread::spawn(move || {
+	let server_thread_handle = thread::spawn(move || {
 		run_state_provisioning_server(server_seal_handler);
 	});
 	thread::sleep(Duration::from_secs(1));
 
 	// Start client.
 	let socket = TcpStream::connect(SERVER_ADDR).unwrap();
-	request_state_provisioning_internal(
+	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
 		shard,
 		SKIP_RA,
 		client_seal_handler.clone(),
-	)
-	.unwrap();
+	);
 
+	// Ensure server thread has finished.
+	server_thread_handle.join().unwrap();
+
+	assert!(result.is_ok());
 	assert_eq!(*client_shielding_key.read().unwrap(), shielding_key);
 	assert_eq!(*client_signing_key.read().unwrap(), signing_key);
 	assert_eq!(*client_state.read().unwrap(), state);
