@@ -90,11 +90,17 @@ impl<SignedBlock> PopFromBlockQueue for BlockImportQueue<SignedBlock> {
 			Some(p) => Ok(queue_lock.drain(..p + 1).collect::<Vec<_>>()),
 		}
 	}
+
+	fn pop_front(&self) -> Result<Option<Self::BlockType>> {
+		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
+		Ok(queue_lock.pop_front())
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use core::assert_matches::assert_matches;
 
 	type TestBlock = u32;
 
@@ -181,5 +187,22 @@ mod tests {
 		let queue = BlockImportQueue::<TestBlock>::default();
 		queue.push_single(4).unwrap();
 		assert_eq!(queue.pop_until(|i| i == &4).unwrap(), vec![4])
+	}
+
+	#[test]
+	fn pop_front_returns_none_if_queue_is_empty() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		assert_matches!(queue.pop_front().unwrap(), None);
+	}
+
+	#[test]
+	fn pop_front_works() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 2, 3, 5]).unwrap();
+		assert_eq!(queue.pop_front().unwrap(), Some(1));
+		assert_eq!(queue.pop_front().unwrap(), Some(2));
+		assert_eq!(queue.pop_front().unwrap(), Some(3));
+		assert_eq!(queue.pop_front().unwrap(), Some(5));
+		assert_eq!(queue.pop_front().unwrap(), None);
 	}
 }

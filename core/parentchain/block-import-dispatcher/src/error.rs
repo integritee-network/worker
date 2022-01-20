@@ -29,7 +29,7 @@ pub enum Error {
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
 	#[error("Block import queue error: {0}")]
-	BlockImportQueue(#[from] itc_parentchain_block_import_queue::error::Error),
+	BlockImportQueue(#[from] itp_block_import_queue::error::Error),
 	#[error("Block import error: {0}")]
 	BlockImport(#[from] itc_parentchain_block_importer::error::Error),
 	#[error(transparent)]

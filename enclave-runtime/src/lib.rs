@@ -57,12 +57,12 @@ use itc_parentchain::{
 		triggered_dispatcher::{TriggerParentchainBlockImport, TriggeredDispatcher},
 		DispatchBlockImport,
 	},
-	block_import_queue::BlockImportQueue,
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
+use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
@@ -548,11 +548,14 @@ pub unsafe extern "C" fn init_light_client(
 		extrinsics_factory,
 		indirect_calls_executor,
 	);
-	let block_queue = BlockImportQueue::<SignedBlock>::default();
-	let block_import_dispatcher =
-		Arc::new(TriggeredDispatcher::new(parentchain_block_importer, block_queue));
+	let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
+	let parentchain_block_import_dispatcher = Arc::new(TriggeredDispatcher::new(
+		parentchain_block_importer,
+		parentchain_block_import_queue,
+	));
 
-	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.initialize(block_import_dispatcher.clone());
+	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+		.initialize(parentchain_block_import_dispatcher.clone());
 
 	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
 		TopPoolOperationHandler::new(rpc_author, stf_executor),
@@ -562,7 +565,7 @@ pub unsafe extern "C" fn init_light_client(
 		state_key,
 		signer,
 		top_pool_executor,
-		block_import_dispatcher,
+		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
 	));
 

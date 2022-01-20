@@ -140,6 +140,11 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 	last_block: &SidechainBlock,
 ) -> Result<(), ConsensusError> {
 	ensure!(
+		block.block_number() > last_block.block_number(),
+		ConsensusError::BlockAlreadyImported(block.block_number(), last_block.block_number())
+	);
+
+	ensure!(
 		last_block.block_number() + 1 == block.block_number(),
 		ConsensusError::BlockAncestryMismatch(
 			last_block.block_number(),
@@ -251,8 +256,10 @@ mod tests {
 	#[test]
 	fn verify_block_ancestry_errs_with_invalid_parent_block_number() {
 		let last_block = SidechainBlockBuilder::default().build();
-		let curr_block =
-			SidechainBlockBuilder::default().with_parent_hash(last_block.hash()).build();
+		let curr_block = SidechainBlockBuilder::default()
+			.with_parent_hash(last_block.hash())
+			.with_number(5)
+			.build();
 
 		assert_ancestry_mismatch_err(verify_block_ancestry(&curr_block, &last_block));
 	}
@@ -349,6 +356,28 @@ mod tests {
 		assert_matches!(
 			aura.verify(curr_block, &default_header(), &onchain_mock),
 			Err(ConsensusError::InvalidFirstBlock(2, _))
+		);
+	}
+
+	#[test]
+	fn verify_errs_on_already_imported_block() {
+		let last_block = SidechainBlockBuilder::default().build();
+		let signer = Keyring::Alice;
+
+		// Current block has also number 1, same as last. So import should return an error
+		// that a block with this number is already imported.
+		let curr_block =
+			block2_builder(signer.pair(), last_block.hash()).with_number(1).build_signed();
+
+		let state_mock = StateMock { last_block: Some(last_block) };
+		let onchain_mock = OnchainMock::default()
+			.with_validateer_set(Some(vec![validateer(signer.public().into())]));
+
+		let mut aura = TestAuraVerifier::new(SLOT_DURATION, state_mock);
+
+		assert_matches!(
+			aura.verify(curr_block, &default_header(), &onchain_mock),
+			Err(ConsensusError::BlockAlreadyImported(1, 1))
 		);
 	}
 }

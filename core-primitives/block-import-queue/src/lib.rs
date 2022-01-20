@@ -17,6 +17,7 @@
 //! Queueing of block imports.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -61,4 +62,7 @@ pub trait PopFromBlockQueue {
 	fn pop_until<Predicate>(&self, predicate: Predicate) -> Result<Vec<Self::BlockType>>
 	where
 		Predicate: Fn(&Self::BlockType) -> bool;
+
+	/// Pop (front) queue. Returns None if queue is empty.
+	fn pop_front(&self) -> Result<Option<Self::BlockType>>;
 }

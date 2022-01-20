@@ -23,9 +23,10 @@
 use crate::ocall::OcallApi;
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
-	block_import_queue::BlockImportQueue, block_importer::ParentchainBlockImporter,
-	indirect_calls_executor::IndirectCallsExecutor, light_client::ValidatorAccessor,
+	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
+	light_client::ValidatorAccessor,
 };
+use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
@@ -60,9 +61,9 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
 >;
-pub type EnclaveBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
+pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
-	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveBlockImportQueue>;
+	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveParentchainBlockImportQueue>;
 
 /// Sidechain types
 pub type EnclaveSidechainState =

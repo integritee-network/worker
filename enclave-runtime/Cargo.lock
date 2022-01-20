@@ -538,6 +538,7 @@ dependencies = [
  "itc-parentchain",
  "itc-tls-websocket-server",
  "itertools",
+ "itp-block-import-queue",
  "itp-component-container",
  "itp-extrinsics-factory",
  "itp-nonce-cache",
@@ -1239,7 +1240,6 @@ name = "itc-parentchain"
 version = "0.8.0"
 dependencies = [
  "itc-parentchain-block-import-dispatcher",
- "itc-parentchain-block-import-queue",
  "itc-parentchain-block-importer",
  "itc-parentchain-indirect-calls-executor",
  "itc-parentchain-light-client",
@@ -1249,19 +1249,8 @@ dependencies = [
 name = "itc-parentchain-block-import-dispatcher"
 version = "0.8.0"
 dependencies = [
- "itc-parentchain-block-import-queue",
  "itc-parentchain-block-importer",
- "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
- "sgx_tstd",
- "sgx_types",
- "sp-runtime",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "itc-parentchain-block-import-queue"
-version = "0.8.0"
-dependencies = [
+ "itp-block-import-queue",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "sgx_tstd",
  "sgx_types",
@@ -1375,6 +1364,17 @@ name = "itoa"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
+
+[[package]]
+name = "itp-block-import-queue"
+version = "0.8.0"
+dependencies = [
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.9",
+]
 
 [[package]]
 name = "itp-component-container"
@@ -1652,6 +1652,7 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
+ "itp-block-import-queue",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-types",

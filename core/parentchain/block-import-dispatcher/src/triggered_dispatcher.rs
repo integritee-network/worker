@@ -21,8 +21,8 @@ use crate::{
 	error::{Error, Result},
 	DispatchBlockImport,
 };
-use itc_parentchain_block_import_queue::{PopFromBlockQueue, PushToBlockQueue};
 use itc_parentchain_block_importer::ImportParentchainBlocks;
+use itp_block_import_queue::{PopFromBlockQueue, PushToBlockQueue};
 use std::vec::Vec;
 
 /// Trait to specifically trigger the import of parentchain blocks.
@@ -128,8 +128,8 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use itc_parentchain_block_import_queue::BlockImportQueue;
 	use itc_parentchain_block_importer::block_importer_mock::ParentchainBlockImporterMock;
+	use itp_block_import_queue::{BlockImportQueue, PopFromBlockQueue};
 
 	type SignedBlockType = u32;
 	type TestBlockImporter = ParentchainBlockImporterMock<SignedBlockType>;

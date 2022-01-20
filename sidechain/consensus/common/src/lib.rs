@@ -33,6 +33,7 @@ use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
 
 mod block_import;
+mod block_import_queue_worker;
 mod block_production_suspension;
 mod error;
 mod peer_block_sync;
