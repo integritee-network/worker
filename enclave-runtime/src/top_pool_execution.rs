@@ -17,10 +17,12 @@
 
 use crate::{
 	error::{Error, Result},
-	global_components::GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+	global_components::{
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+	},
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
-	GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT,
 };
 use codec::Encode;
 use itc_parentchain::{
@@ -45,7 +47,7 @@ use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	block_composer::BlockComposer,
-	consensus_common::{Environment, Error as ConsensusError, IsBlockProductionSuspended},
+	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
 	primitives::{
 		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
 		types::block::SignedBlock as SignedSidechainBlock,
@@ -141,18 +143,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
 
-	let sidechain_block_production_suspender =
-		GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT
-			.get()
-			.ok_or(Error::ComponentNotInitialized)?;
-
-	if sidechain_block_production_suspender
-		.is_suspended()
-		.map_err(|_| Error::MutexAccess)?
-	{
-		warn!("Sidechain block production is suspended, skipping any top pool execution and subsequent block production");
-		return Ok(())
-	}
+	let slot_beginning_timestamp = duration_now();
 
 	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
 		.get()
@@ -168,6 +159,13 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		let genesis_hash = v.genesis_hash(v.num_relays())?;
 		Ok((latest_parentchain_header, genesis_hash))
 	})?;
+
+	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
+	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
+	let sidechain_block_import_queue_worker = GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT
+		.get()
+		.ok_or(Error::ComponentNotInitialized)?;
+	sidechain_block_import_queue_worker.process_queue(&latest_parentchain_header)?;
 
 	let authority = Ed25519Seal::unseal()?;
 	let state_key = AesSeal::unseal()?;
@@ -191,7 +189,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key, rpc_author));
 
 	match yield_next_slot(
-		duration_now(),
+		slot_beginning_timestamp,
 		SLOT_DURATION,
 		latest_parentchain_header,
 		&mut LastSlotSeal,

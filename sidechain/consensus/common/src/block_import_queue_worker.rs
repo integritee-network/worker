@@ -45,6 +45,27 @@ pub struct BlockImportQueueWorker<
 }
 
 impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
+	BlockImportQueueWorker<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
+where
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
+	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	BlockImportQueue: PopFromBlockQueue<BlockType = SignedSidechainBlock>,
+	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
+{
+	pub fn new(
+		block_import_queue: Arc<BlockImportQueue>,
+		peer_block_syncer: Arc<PeerBlockSyncer>,
+	) -> Self {
+		BlockImportQueueWorker {
+			block_import_queue,
+			peer_block_syncer,
+			_phantom: Default::default(),
+		}
+	}
+}
+
+impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 	ProcessBlockImportQueue<ParentchainBlock::Header>
 	for BlockImportQueueWorker<
 		ParentchainBlock,

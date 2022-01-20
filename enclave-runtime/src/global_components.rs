@@ -36,7 +36,7 @@ use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
-	consensus_common::{BlockProductionSuspender, PeerBlockSync},
+	consensus_common::{BlockImportQueueWorker, PeerBlockSync},
 	primitives::{
 		traits::SignedBlock as SignedSidechainBlockTrait,
 		types::SignedBlock as SignedSidechainBlock,
@@ -85,12 +85,14 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
 >;
-pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
+pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
+pub type EnclaveSidechainBlockSyncer =
+	PeerBlockSync<ParentchainBlock, SignedSidechainBlock, EnclaveSidechainBlockImporter, OcallApi>;
+pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 	ParentchainBlock,
 	SignedSidechainBlock,
-	EnclaveSidechainBlockImporter,
-	BlockProductionSuspender,
-	OcallApi,
+	EnclaveSidechainBlockImportQueue,
+	EnclaveSidechainBlockSyncer,
 >;
 
 /// Global component instances
@@ -99,8 +101,12 @@ pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new();
 
-pub static GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT: ComponentContainer<
-	BlockProductionSuspender,
+pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT: ComponentContainer<
+	EnclaveSidechainBlockImportQueue,
+> = ComponentContainer::new();
+
+pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT: ComponentContainer<
+	EnclaveSidechainBlockImportQueueWorker,
 > = ComponentContainer::new();
 
 pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<

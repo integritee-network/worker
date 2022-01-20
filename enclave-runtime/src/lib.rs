@@ -35,14 +35,14 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	global_components::{
+		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
 		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveTopPoolOperationHandler,
 		EnclaveValidatorAccessor, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
-	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw},
 };
 use base58::ToBase58;
@@ -62,7 +62,7 @@ use itc_parentchain::{
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
-use itp_block_import_queue::BlockImportQueue;
+use itp_block_import_queue::{BlockImportQueue, PushToBlockQueue};
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
@@ -81,9 +81,7 @@ use itp_stf_state_handler::{
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
 use its_sidechain::{
-	aura::block_importer::BlockImporter,
-	consensus_common::{BlockProductionSuspender, SyncBlockFromPeer},
-	top_pool_executor::TopPoolOperationHandler,
+	aura::block_importer::BlockImporter, top_pool_executor::TopPoolOperationHandler,
 	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
 };
 use log::*;
@@ -332,21 +330,12 @@ pub unsafe extern "C" fn call_rpc_methods(
 }
 
 fn sidechain_rpc_int(request: &str) -> Result<String> {
-	let _sidechain_lock = EnclaveLock::write_all()?;
-
-	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
-
-	let latest_parentchain_header = validator_access.execute_on_validator(|v| {
-		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
-		Ok(latest_parentchain_header)
-	})?;
-
-	let sidechain_block_syncer = GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT
+	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT
 		.get()
 		.ok_or(Error::ComponentNotInitialized)?;
 
 	let io = sidechain_io_handler(move |signed_block| {
-		sidechain_block_syncer.sync_block(signed_block, &latest_parentchain_header)
+		sidechain_block_import_queue.push_single(signed_block)
 	});
 
 	// note: errors are still returned as Option<String>
@@ -453,7 +442,7 @@ pub unsafe extern "C" fn init_light_client(
 	authority_list_size: usize,
 	authority_proof: *const u8,
 	authority_proof_size: usize,
-	is_primary_validateer: c_int,
+	_is_primary_validateer: c_int,
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
@@ -463,7 +452,7 @@ pub unsafe extern "C" fn init_light_client(
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 	let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
 	let mut proof = slice::from_raw_parts(authority_proof, authority_proof_size);
-	let is_primary_validateer: bool = is_primary_validateer == 1;
+	let _is_primary_validateer: bool = _is_primary_validateer == 1;
 
 	let header = match Header::decode(&mut header) {
 		Ok(h) => h,
@@ -569,21 +558,20 @@ pub unsafe extern "C" fn init_light_client(
 		ocall_api.clone(),
 	));
 
-	// In case we're not the primary validateer, we suspend sidechain block production at the beginning.
-	let is_sidechain_block_production_suspended = !is_primary_validateer;
-	let sidechain_block_production_suspender =
-		Arc::new(BlockProductionSuspender::new(is_sidechain_block_production_suspended));
+	let sidechain_block_syncer =
+		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
 
-	GLOBAL_SIDECHAIN_BLOCK_PRODUCTION_SUSPENDER_COMPONENT
-		.initialize(sidechain_block_production_suspender.clone());
+	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer.clone());
 
-	let sidechain_block_syncer = Arc::new(EnclaveSidechainBlockSyncer::new(
-		sidechain_block_importer,
-		sidechain_block_production_suspender,
-		ocall_api,
-	));
+	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
 
-	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer);
+	let sidechain_block_import_queue_worker =
+		Arc::new(EnclaveSidechainBlockImportQueueWorker::new(
+			sidechain_block_import_queue,
+			sidechain_block_syncer,
+		));
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
 
 	sgx_status_t::SGX_SUCCESS
 }

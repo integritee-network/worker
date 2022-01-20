@@ -315,25 +315,6 @@ fn start_worker<E, T, D>(
 	});
 
 	// ------------------------------------------------------------------------
-	// Start untrusted worker rpc server.
-	let handle = tokio_handle.get_handle();
-	// FIXME: this should be removed - this server should only handle untrusted things.
-	// i.e move sidechain block importing to trusted worker.
-	let enclave_for_block_gossip_rpc_server = enclave.clone();
-	let untrusted_url = config.untrusted_worker_url();
-	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
-	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	let _untrusted_rpc_join_handle = handle.spawn(async move {
-		itc_rpc_server::run_server(
-			&untrusted_url,
-			enclave_for_block_gossip_rpc_server,
-			sidechain_storage_for_rpc,
-		)
-		.await
-		.unwrap();
-	});
-
-	// ------------------------------------------------------------------------
 	// Start the substrate-api-client to communicate with the node.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
@@ -403,6 +384,25 @@ fn start_worker<E, T, D>(
 		)
 		.unwrap();
 	}
+
+	// ------------------------------------------------------------------------
+	// Start untrusted worker rpc server.
+	let handle = tokio_handle.get_handle();
+	// FIXME: this should be removed - this server should only handle untrusted things.
+	// i.e move sidechain block importing to trusted worker.
+	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let untrusted_url = config.untrusted_worker_url();
+	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
+	let sidechain_storage_for_rpc = sidechain_storage.clone();
+	let _untrusted_rpc_join_handle = handle.spawn(async move {
+		itc_rpc_server::run_server(
+			&untrusted_url,
+			enclave_for_block_gossip_rpc_server,
+			sidechain_storage_for_rpc,
+		)
+		.await
+		.unwrap();
+	});
 
 	// ------------------------------------------------------------------------
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
