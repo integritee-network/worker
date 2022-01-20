@@ -18,55 +18,55 @@
 use super::seal_handler::{SealStateAndKeys, UnsealStateAndKeys};
 use crate::error::Result as EnclaveResult;
 use itp_types::ShardIdentifier;
-use lazy_static::lazy_static;
-use std::{sync::SgxRwLock as RwLock, vec::Vec};
-
-lazy_static! {
-	pub static ref SHIELDING_KEY: RwLock<Vec<u8>> = RwLock::new(vec![]);
-	pub static ref SIGNING_KEY: RwLock<Vec<u8>> = RwLock::new(vec![]);
-	pub static ref STATE: RwLock<Vec<u8>> = RwLock::new(vec![]);
-}
+use std::{
+	sync::{Arc, SgxRwLock as RwLock},
+	vec::Vec,
+};
 
 #[derive(Clone)]
 pub struct SealHandlerMock {
-	pub shielding_key: Vec<u8>,
-	pub signing_key: Vec<u8>,
-	pub state: Vec<u8>,
+	pub shielding_key: Arc<RwLock<Vec<u8>>>,
+	pub signing_key: Arc<RwLock<Vec<u8>>>,
+	pub state: Arc<RwLock<Vec<u8>>>,
 }
 
 impl SealHandlerMock {
-	pub fn new(shielding_key: Vec<u8>, signing_key: Vec<u8>, state: Vec<u8>) -> Self {
+	pub fn new(
+		shielding_key: Arc<RwLock<Vec<u8>>>,
+		signing_key: Arc<RwLock<Vec<u8>>>,
+		state: Arc<RwLock<Vec<u8>>>,
+	) -> Self {
 		Self { shielding_key, signing_key, state }
 	}
 }
 
 impl SealStateAndKeys for SealHandlerMock {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
-		*SHIELDING_KEY.write().unwrap() = bytes.to_vec();
+		*self.shielding_key.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
 
 	fn seal_signing_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
-		*SIGNING_KEY.write().unwrap() = bytes.to_vec();
+		*self.signing_key.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
 
 	fn seal_state(&self, bytes: &[u8], _shard: &ShardIdentifier) -> EnclaveResult<()> {
-		*STATE.write().unwrap() = bytes.to_vec();
+		*self.state.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
 }
 
 impl UnsealStateAndKeys for SealHandlerMock {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
-		Ok(self.shielding_key.clone())
+		Ok(self.shielding_key.read().unwrap().clone())
 	}
 
 	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>> {
-		Ok(self.signing_key.clone())
+		Ok(self.signing_key.read().unwrap().clone())
 	}
 
 	fn unseal_state(&self, _shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
-		Ok(self.state.clone())
+		Ok(self.state.read().unwrap().clone())
 	}
 }
