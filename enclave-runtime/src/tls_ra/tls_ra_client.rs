@@ -70,7 +70,7 @@ where
 	/// we do not have any way to test it.
 	fn read_shard(&mut self) -> EnclaveResult<()> {
 		self.write_shard()?;
-		self.read_all()
+		self.read_and_seal_all()
 	}
 
 	/// Send the shard of the state we want to receive to the provisioning server.
@@ -79,13 +79,13 @@ where
 		Ok(())
 	}
 
-	/// Read all relevant data sent by the server.
-	fn read_all(&mut self) -> EnclaveResult<()> {
+	/// Read and seal all relevant data sent by the server.
+	fn read_and_seal_all(&mut self) -> EnclaveResult<()> {
 		let mut continue_reading = true;
 		while continue_reading {
 			continue_reading = self.read_and_seal()?;
 		}
-		info!("Successfully read all data sent by the state provisioning server.");
+		info!("Successfully read and sealed all data sent by the state provisioning server.");
 		Ok(())
 	}
 
@@ -115,7 +115,7 @@ where
 		let mut length_buffer = [0u8; 8];
 		self.tls_stream.read(&mut length_buffer)?;
 		let payload_length = u64::from_be_bytes(length_buffer);
-		debug!("payload_length: {}", payload_length);
+		debug!("Payload length of {:?}: {}", opcode, payload_length);
 
 		Ok(TcpHeader::new(opcode, payload_length))
 	}

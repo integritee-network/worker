@@ -82,12 +82,14 @@ where
 			EnclaveError::Other(e.into())
 		})?;
 		ShieldingKeyHandler::seal(key)?;
+		info!("Successfully stored a new shielding key");
 		Ok(())
 	}
 
 	fn seal_signing_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
 		let aes = Aes::decode(&mut bytes)?;
 		AesSeal::seal(Aes::new(aes.key, aes.init_vec))?;
+		info!("Successfully stored a new signing key");
 		Ok(())
 	}
 
@@ -97,6 +99,7 @@ where
 		let (state_lock, _) = self.state_handler.load_for_mutation(shard)?;
 
 		self.state_handler.write(state_with_empty_diff, state_lock, shard)?;
+		info!("Successfully updated shard {:?} with provisioned state", shard);
 		Ok(())
 	}
 }
