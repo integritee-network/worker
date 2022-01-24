@@ -82,6 +82,7 @@ where
 				self.importer.import_block(block_to_import, last_imported_parentchain_header)
 			{
 				error!("Failed to import sidechain block that was fetched from peer: {:?}", e);
+				return Err(e)
 			}
 		}
 
@@ -153,8 +154,9 @@ mod tests {
 
 	#[test]
 	fn if_block_import_is_successful_no_peer_fetching_happens() {
-		let block_importer_mock =
-			Arc::new(BlockImportMock::<ParentchainBlock, _>::default().with_import_result(Ok(())));
+		let block_importer_mock = Arc::new(
+			BlockImportMock::<ParentchainBlock, _>::default().with_import_result_once(Ok(())),
+		);
 
 		let sidechain_ocall_api =
 			Arc::new(SidechainOCallApiMock::<SignedSidechainBlock>::default());
@@ -175,7 +177,7 @@ mod tests {
 	fn error_is_propagated_if_import_returns_error_other_than_ancestry_mismatch() {
 		let block_importer_mock = Arc::new(
 			BlockImportMock::<ParentchainBlock, _>::default()
-				.with_import_result(Err(Error::InvalidAuthority("auth".to_string()))),
+				.with_import_result_once(Err(Error::InvalidAuthority("auth".to_string()))),
 		);
 
 		let sidechain_ocall_api =
@@ -189,19 +191,17 @@ mod tests {
 
 		let sync_result = peer_syncer.sync_block(signed_sidechain_block, &parentchain_header);
 
-		assert_matches!(sync_result, Err(Error::Other(_)));
+		assert_matches!(sync_result, Err(Error::InvalidAuthority(_)));
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
 		assert_eq!(0, sidechain_ocall_api.number_of_fetch_calls());
 	}
 
 	#[test]
 	fn blocks_are_fetched_from_peer_if_initial_import_yields_ancestry_mismatch() {
-		// Unfortunately without a real mocking framework, we don't have the flexibility
-		// to define a sequence of results. So this mock always returns an error, which is not ideal for this test.
 		let block_importer_mock =
-			Arc::new(BlockImportMock::<ParentchainBlock, _>::default().with_import_result(Err(
-				Error::BlockAncestryMismatch(1, H256::random(), "".to_string()),
-			)));
+			Arc::new(BlockImportMock::<ParentchainBlock, _>::default().with_import_result_once(
+				Err(Error::BlockAncestryMismatch(1, H256::random(), "".to_string())),
+			));
 
 		let sidechain_ocall_api = Arc::new(
 			SidechainOCallApiMock::<SignedSidechainBlock>::default().with_peer_fetch_blocks(vec![

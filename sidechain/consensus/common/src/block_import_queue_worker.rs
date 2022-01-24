@@ -20,7 +20,6 @@ use core::marker::PhantomData;
 use itp_block_import_queue::PopFromBlockQueue;
 use itp_types::H256;
 use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
-use log::*;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::sync::Arc;
 
@@ -87,15 +86,8 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 			match self.block_import_queue.pop_front() {
 				Ok(maybe_block) => match maybe_block {
 					Some(block) => {
-						if let Err(e) = self
-							.peer_block_syncer
-							.sync_block(block, last_imported_parentchain_header)
-						{
-							error!(
-								"Failed to process sidechain block import, discarding block: {:?}",
-								e
-							);
-						}
+						self.peer_block_syncer
+							.sync_block(block, last_imported_parentchain_header)?;
 					},
 					None => return Ok(()),
 				},

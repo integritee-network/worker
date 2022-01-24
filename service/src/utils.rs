@@ -83,7 +83,7 @@ mod tests {
 		let data = vec![1; 33];
 		assert_matches!(
 			write_slice_and_whitespace_pad(&mut writable, data),
-			Err(Error::InsufficientBufferSize)
+			Err(Error::InsufficientBufferSize(_, _))
 		);
 	}
 }

@@ -15,7 +15,7 @@
 
 */
 
-use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Error, Result};
+use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Result};
 use core::marker::PhantomData;
 use itp_sgx_crypto::aes::Aes;
 use itp_test::mock::onchain_mock::OnchainMock;
@@ -25,11 +25,11 @@ use its_state::SidechainDB;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::sync::RwLock;
+use std::{collections::VecDeque, sync::RwLock};
 
 /// Block importer mock.
 pub struct BlockImportMock<ParentchainBlock, SignedSidechainBlock> {
-	import_result: Option<Result<()>>,
+	import_result: RwLock<VecDeque<Result<()>>>,
 	imported_blocks: RwLock<Vec<SignedSidechainBlock>>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
@@ -40,8 +40,18 @@ where
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
-	pub fn with_import_result(mut self, result: Result<()>) -> Self {
-		self.import_result = Some(result);
+	pub fn with_import_result_once(self, result: Result<()>) -> Self {
+		let mut imported_results_lock = self.import_result.write().unwrap();
+		imported_results_lock.push_back(result);
+		std::mem::drop(imported_results_lock);
+		self
+	}
+
+	#[allow(unused)]
+	pub fn with_import_result_sequence(self, mut results: VecDeque<Result<()>>) -> Self {
+		let mut imported_results_lock = self.import_result.write().unwrap();
+		imported_results_lock.append(&mut results);
+		std::mem::drop(imported_results_lock);
 		self
 	}
 
@@ -55,7 +65,7 @@ impl<ParentchainBlock, SignedSidechainBlock> Default
 {
 	fn default() -> Self {
 		BlockImportMock {
-			import_result: None,
+			import_result: RwLock::default(),
 			imported_blocks: RwLock::default(),
 			_phantom: Default::default(),
 		}
@@ -118,19 +128,7 @@ where
 		let mut imported_blocks_lock = self.imported_blocks.write().unwrap();
 		imported_blocks_lock.push(signed_sidechain_block);
 
-		// Result (or rather the underlying Error) does not support any cloning,
-		// so we have this elaborate way to return the result.
-		match &self.import_result {
-			Some(r) => match r {
-				Ok(_) => Ok(()),
-				Err(e) => match e {
-					Error::BlockAncestryMismatch(number, hash, reason) => Err(
-						Error::BlockAncestryMismatch(number.clone(), hash.clone(), reason.clone()),
-					),
-					_ => Err(Error::Other(format!("{:?}", e).into())),
-				},
-			},
-			None => Ok(()),
-		}
+		let mut imported_results_lock = self.import_result.write().unwrap();
+		imported_results_lock.pop_front().unwrap_or(Ok(()))
 	}
 }
