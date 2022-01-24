@@ -38,7 +38,11 @@ pub struct GlobalTokioHandle;
 impl GlobalTokioHandle {
 	/// this needs to be called once at application startup!
 	pub fn initialize() {
-		let rt = tokio::runtime::Runtime::new().unwrap();
+		let rt = tokio::runtime::Builder::new_multi_thread()
+			.enable_all()
+			.worker_threads(2)
+			.build()
+			.unwrap();
 		*TOKIO_HANDLE.write() = Some(rt);
 	}
 
