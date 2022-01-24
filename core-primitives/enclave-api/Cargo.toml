@@ -21,6 +21,7 @@ sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/subst
 
 itp-enclave-api-ffi = { path = "ffi" }
 itp-settings = { path = "../settings" }
+itp-types = { path = "../types" }
 
 
 [dev-dependencies]

@@ -128,7 +128,7 @@ extern "C" {
 		unchecked_extrinsic_size: u32,
 	) -> sgx_status_t;
 
-	pub fn run_key_provisioning_server(
+	pub fn run_state_provisioning_server(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		socket_fd: c_int,
@@ -136,11 +136,13 @@ extern "C" {
 		skip_ra: c_int,
 	) -> sgx_status_t;
 
-	pub fn request_key_provisioning(
+	pub fn request_state_provisioning(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
+		shard: *const u8,
+		shard_size: u32,
 		skip_ra: c_int,
 	) -> sgx_status_t;
 }
