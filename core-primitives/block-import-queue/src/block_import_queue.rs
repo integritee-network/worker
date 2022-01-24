@@ -109,12 +109,12 @@ where
 	{
 		let queue_lock = self.queue.read().map_err(|_| Error::PoisonedLock)?;
 		let maybe_block = queue_lock.iter().find(|&b| predicate(b));
-		Ok(maybe_block.map(|b| b.clone()))
+		Ok(maybe_block.cloned())
 	}
 
 	fn peek_last(&self) -> Result<Option<Self::BlockType>> {
 		let queue_lock = self.queue.read().map_err(|_| Error::PoisonedLock)?;
-		Ok(queue_lock.back().map(|b| b.clone()))
+		Ok(queue_lock.back().cloned())
 	}
 
 	fn peek_queue_size(&self) -> Result<usize> {

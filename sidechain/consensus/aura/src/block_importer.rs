@@ -290,16 +290,18 @@ impl<
 
 		maybe_signed_parentchain_block
 			.map(|signed_block| signed_block.block.header().clone())
-			.ok_or(ConsensusError::Other(
-				format!(
-					"Failed to find parentchain header in import queue (hash: {}) that is \
+			.ok_or_else(|| {
+				ConsensusError::Other(
+					format!(
+						"Failed to find parentchain header in import queue (hash: {}) that is \
 			associated with the current sidechain block that is to be imported (number: {}, hash: {})",
-					sidechain_block.layer_one_head(),
-					sidechain_block.block_number(),
-					sidechain_block.hash()
+						sidechain_block.layer_one_head(),
+						sidechain_block.block_number(),
+						sidechain_block.hash()
+					)
+					.into(),
 				)
-				.into(),
-			))
+			})
 	}
 
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), ConsensusError> {

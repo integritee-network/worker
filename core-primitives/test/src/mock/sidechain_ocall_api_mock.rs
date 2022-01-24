@@ -66,7 +66,7 @@ where
 		SidechainOCallApiMock {
 			fetch_from_peer_blocks: self.fetch_from_peer_blocks.clone(),
 			number_of_fetch_calls: RwLock::new(*self.number_of_fetch_calls.read().unwrap()),
-			_phantom: self._phantom.clone(),
+			_phantom: self._phantom,
 		}
 	}
 }
