@@ -22,7 +22,8 @@ use crate::{
 	DispatchBlockImport,
 };
 use itc_parentchain_block_importer::ImportParentchainBlocks;
-use itp_block_import_queue::{PopFromBlockQueue, PushToBlockQueue};
+use itp_block_import_queue::{PeekBlockQueue, PopFromBlockQueue, PushToBlockQueue};
+use log::info;
 use std::vec::Vec;
 
 /// Trait to specifically trigger the import of parentchain blocks.
@@ -42,6 +43,18 @@ pub trait TriggerParentchainBlockImport<SignedBlockType> {
 	fn import_until<Predicate>(&self, predicate: Predicate) -> Result<Option<SignedBlockType>>
 	where
 		Predicate: Fn(&SignedBlockType) -> bool;
+}
+
+/// Trait to peek the queue, without mutating it.
+pub trait PeekParentchainBlockImportQueue<SignedBlockType> {
+	/// Search the import queue with a given predicate and return a reference
+	/// to the first element that matches the predicate.
+	fn peek<Predicate>(&self, predicate: Predicate) -> Result<Option<SignedBlockType>>
+	where
+		Predicate: Fn(&SignedBlockType) -> bool;
+
+	/// Peek the latest block in the import queue. Returns None if queue is empty.
+	fn peek_latest(&self) -> Result<Option<SignedBlockType>>;
 }
 
 /// Dispatcher for block imports that retains blocks until the import is triggered, using the
@@ -72,6 +85,7 @@ where
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
 	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+		info!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
 		// Push all the blocks to be dispatched into the queue.
 		self.import_queue.push_multiple(blocks).map_err(Error::BlockImportQueue)
 	}
@@ -117,11 +131,46 @@ where
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
+		info!(
+			"Import of parentchain blocks has been triggered, importing {} blocks from queue",
+			blocks_to_import.len()
+		);
+
 		self.block_importer
 			.import_parentchain_blocks(blocks_to_import)
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)
+	}
+}
+
+impl<BlockImporter, BlockImportQueue>
+	PeekParentchainBlockImportQueue<BlockImporter::SignedBlockType>
+	for TriggeredDispatcher<BlockImporter, BlockImportQueue>
+where
+	BlockImporter: ImportParentchainBlocks,
+	BlockImportQueue: PeekBlockQueue<BlockType = BlockImporter::SignedBlockType>,
+{
+	fn peek<Predicate>(
+		&self,
+		predicate: Predicate,
+	) -> Result<Option<BlockImporter::SignedBlockType>>
+	where
+		Predicate: Fn(&BlockImporter::SignedBlockType) -> bool,
+	{
+		info!(
+			"Peek find parentchain import queue (currently has {} elements)",
+			self.import_queue.peek_queue_size().unwrap_or(0)
+		);
+		self.import_queue.peek_find(predicate).map_err(Error::BlockImportQueue)
+	}
+
+	fn peek_latest(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
+		info!(
+			"Peek latest parentchain import queue (currently has {} elements)",
+			self.import_queue.peek_queue_size().unwrap_or(0)
+		);
+		self.import_queue.peek_last().map_err(Error::BlockImportQueue)
 	}
 }
 

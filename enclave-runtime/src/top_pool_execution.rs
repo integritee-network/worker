@@ -26,7 +26,9 @@ use crate::{
 };
 use codec::Encode;
 use itc_parentchain::{
-	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
+	block_import_dispatcher::triggered_dispatcher::{
+		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
+	},
 	light_client::{
 		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
 		ValidatorAccessor,
@@ -260,7 +262,8 @@ where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
+	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
+		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 

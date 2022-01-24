@@ -17,6 +17,7 @@
 
 use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIdentifierFor};
 use codec::Encode;
+use core::assert_matches::assert_matches;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_sgx_crypto::{aes::Aes, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
@@ -29,7 +30,7 @@ use itp_test::{
 };
 use itp_time_utils::duration_now;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
-use its_consensus_common::BlockImport;
+use its_consensus_common::{BlockImport, Error as ConsensusError};
 use its_primitives::{
 	traits::{SignBlock, SignedBlock},
 	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
@@ -222,4 +223,56 @@ fn sidechain_block_import_triggers_parentchain_block_import() {
 		.unwrap();
 
 	assert!(parentchain_block_import_trigger.has_import_been_called());
+}
+
+#[test]
+fn peek_parentchain_block_finds_block_in_queue() {
+	let previous_parentchain_header = ParentchainHeaderBuilder::default().with_number(4).build();
+	let latest_parentchain_header = ParentchainHeaderBuilder::default()
+		.with_number(5)
+		.with_parent_hash(previous_parentchain_header.hash())
+		.build();
+
+	let latest_parentchain_block = ParentchainBlockBuilder::default()
+		.with_header(latest_parentchain_header.clone())
+		.build_signed();
+
+	let parentchain_block_import_trigger = Arc::new(
+		TestParentchainBlockImportTrigger::default()
+			.with_latest_imported(Some(latest_parentchain_block)),
+	);
+
+	let (block_importer, state_handler, _) = test_fixtures(parentchain_block_import_trigger);
+
+	let signed_sidechain_block =
+		default_authority_signed_block(&latest_parentchain_header, state_handler.as_ref());
+
+	let peeked_header = block_importer
+		.peek_parentchain_header(&signed_sidechain_block.block, &previous_parentchain_header)
+		.unwrap();
+
+	assert_eq!(peeked_header, latest_parentchain_header);
+}
+
+#[test]
+fn peek_parentchain_block_returns_error_if_no_corresponding_block_can_be_found() {
+	let previous_parentchain_header = ParentchainHeaderBuilder::default().with_number(1).build();
+	let latest_parentchain_header = ParentchainHeaderBuilder::default()
+		.with_number(2)
+		.with_parent_hash(previous_parentchain_header.hash())
+		.build();
+
+	let parentchain_block_import_trigger = Arc::new(
+		TestParentchainBlockImportTrigger::default(), // Parentchain block import queue is empty, so nothing will be found when peeked.
+	);
+
+	let (block_importer, state_handler, _) = test_fixtures(parentchain_block_import_trigger);
+
+	let signed_sidechain_block =
+		default_authority_signed_block(&latest_parentchain_header, state_handler.as_ref());
+
+	let peek_result = block_importer
+		.peek_parentchain_header(&signed_sidechain_block.block, &previous_parentchain_header);
+
+	assert_matches!(peek_result, Err(ConsensusError::Other(_)));
 }

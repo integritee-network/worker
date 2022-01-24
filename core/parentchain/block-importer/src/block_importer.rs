@@ -174,6 +174,12 @@ impl<
 				},
 				Err(_) => error!("Error executing relevant extrinsics"),
 			};
+
+			info!(
+				"Successfully imported parentchain block (number: {}, hash: {})",
+				block.header().number,
+				block.header().hash()
+			);
 		}
 
 		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.

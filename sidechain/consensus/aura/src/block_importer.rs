@@ -22,7 +22,9 @@ pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, SidechainBlockTrait};
 use ita_stf::hash::TrustedOperationOrHash;
-use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
+use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
+	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
+};
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
@@ -41,7 +43,8 @@ use log::*;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::{
-	generic::SignedBlock as SignedParentchainBlock, traits::Block as ParentchainBlockTrait,
+	generic::SignedBlock as SignedParentchainBlock,
+	traits::{Block as ParentchainBlockTrait, Header},
 };
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
@@ -56,13 +59,13 @@ pub struct BlockImporter<
 	StateHandler,
 	StateKey,
 	TopPoolExecutor,
-	ParentchainBlockImportTrigger,
+	ParentchainBlockImporter,
 > {
 	state_handler: Arc<StateHandler>,
 	state_key: StateKey,
 	authority: Authority,
 	top_pool_executor: Arc<TopPoolExecutor>,
-	parentchain_block_import_trigger: Arc<ParentchainBlockImportTrigger>,
+	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock, SidechainState)>,
 }
@@ -76,7 +79,7 @@ impl<
 		StateHandler,
 		StateKey,
 		TopPoolExecutor,
-		ParentchainBlockImportTrigger,
+		ParentchainBlockImporter,
 	>
 	BlockImporter<
 		Authority,
@@ -87,7 +90,7 @@ impl<
 		StateHandler,
 		StateKey,
 		TopPoolExecutor,
-		ParentchainBlockImportTrigger,
+		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
@@ -99,15 +102,17 @@ impl<
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	ParentchainBlockImportTrigger:
-		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
+	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
+		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
+		+ Send
+		+ Sync,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		state_key: StateKey,
 		authority: Authority,
 		top_pool_executor: Arc<TopPoolExecutor>,
-		parentchain_block_import_trigger: Arc<ParentchainBlockImportTrigger>,
+		parentchain_block_importer: Arc<ParentchainBlockImporter>,
 		ocall_api: Arc<OCallApi>,
 	) -> Self {
 		Self {
@@ -115,7 +120,7 @@ impl<
 			state_key,
 			authority,
 			top_pool_executor,
-			parentchain_block_import_trigger,
+			parentchain_block_importer,
 			ocall_api,
 			_phantom: Default::default(),
 		}
@@ -158,7 +163,7 @@ impl<
 		StateHandler,
 		StateKey,
 		TopPoolExecutor,
-		ParentchainBlockImportTrigger,
+		ParentchainBlockImporter,
 	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
 		Authority,
@@ -169,7 +174,7 @@ impl<
 		StateHandler,
 		StateKey,
 		TopPoolExecutor,
-		ParentchainBlockImportTrigger,
+		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
@@ -181,8 +186,10 @@ impl<
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	ParentchainBlockImportTrigger:
-		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
+	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
+		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
+		+ Send
+		+ Sync,
 {
 	type Verifier = AuraVerifier<
 		Authority,
@@ -221,6 +228,21 @@ impl<
 		Ok(())
 	}
 
+	fn verify_import<F>(
+		&self,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
+		verifying_function: F,
+	) -> Result<SignedSidechainBlock, ConsensusError>
+	where
+		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, ConsensusError>,
+	{
+		let state = self
+			.state_handler
+			.load_initialized(shard)
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+		verifying_function(Self::SidechainState::new(state))
+	}
+
 	fn state_key(&self) -> Self::StateCrypto {
 		self.state_key
 	}
@@ -237,7 +259,7 @@ impl<
 		// We trigger the import of parentchain blocks up until the last one we've seen in the
 		// sidechain block that we're importing. This is done to prevent forks in the sidechain (#423)
 		let maybe_latest_imported_block = self
-			.parentchain_block_import_trigger
+			.parentchain_block_importer
 			.import_until(|signed_parentchain_block| {
 				signed_parentchain_block.block.hash() == sidechain_block.layer_one_head()
 			})
@@ -246,6 +268,38 @@ impl<
 		Ok(maybe_latest_imported_block
 			.map(|b| b.block.header().clone())
 			.unwrap_or_else(|| last_imported_parentchain_header.clone()))
+	}
+
+	fn peek_parentchain_header(
+		&self,
+		sidechain_block: &SignedSidechainBlock::Block,
+		last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, ConsensusError> {
+		if sidechain_block.layer_one_head() == last_imported_parentchain_header.hash() {
+			info!("No queue peek necessary, sidechain block references latest imported parentchain block");
+			return Ok(last_imported_parentchain_header.clone())
+		}
+
+		let parentchain_header_hash_to_peek = sidechain_block.layer_one_head();
+		let maybe_signed_parentchain_block = self
+			.parentchain_block_importer
+			.peek(|parentchain_block| {
+				parentchain_block.block.header().hash() == parentchain_header_hash_to_peek
+			})
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+
+		maybe_signed_parentchain_block
+			.map(|signed_block| signed_block.block.header().clone())
+			.ok_or(ConsensusError::Other(
+				format!(
+					"Failed to find parentchain header in import queue (hash: {}) that is \
+			associated with the current sidechain block that is to be imported (number: {}, hash: {})",
+					sidechain_block.layer_one_head(),
+					sidechain_block.block_number(),
+					sidechain_block.hash()
+				)
+				.into(),
+			))
 	}
 
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), ConsensusError> {

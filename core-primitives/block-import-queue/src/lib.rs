@@ -39,7 +39,7 @@ pub use block_import_queue::*;
 use error::Result;
 use std::vec::Vec;
 
-/// Trait to push parentchain blocks to an import queue.
+/// Trait to push blocks to an import queue.
 pub trait PushToBlockQueue<BlockType> {
 	/// Push multiple blocks to the queue, ordering from the Vec is preserved.
 	fn push_multiple(&self, blocks: Vec<BlockType>) -> Result<()>;
@@ -48,7 +48,7 @@ pub trait PushToBlockQueue<BlockType> {
 	fn push_single(&self, block: BlockType) -> Result<()>;
 }
 
-/// Trait to pop parentchain blocks from the import queue.
+/// Trait to pop blocks from the import queue.
 pub trait PopFromBlockQueue {
 	type BlockType;
 
@@ -65,4 +65,22 @@ pub trait PopFromBlockQueue {
 
 	/// Pop (front) queue. Returns None if queue is empty.
 	fn pop_front(&self) -> Result<Option<Self::BlockType>>;
+}
+
+/// Trait to peek blocks in the import queue.
+pub trait PeekBlockQueue {
+	type BlockType: Clone;
+
+	/// Search the queue with a given predicate and return a reference to the first element that matches.
+	/// Returns None if nothing matches.
+	fn peek_find<Predicate>(&self, predicate: Predicate) -> Result<Option<Self::BlockType>>
+	where
+		Predicate: Fn(&Self::BlockType) -> bool;
+
+	/// Peeks the last element in the queue (aka the newest one, last to be popped).
+	/// Returns None if queue is empty.
+	fn peek_last(&self) -> Result<Option<Self::BlockType>>;
+
+	/// Peek the queue size (i.e. number of elements the queue contains).
+	fn peek_queue_size(&self) -> Result<usize>;
 }

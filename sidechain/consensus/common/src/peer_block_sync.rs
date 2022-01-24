@@ -77,13 +77,27 @@ where
 
 		info!("Fetched {} blocks from peer to import", blocks_to_import.len());
 
+		let mut latest_imported_parentchain_header = last_imported_parentchain_header.clone();
+
 		for block_to_import in blocks_to_import {
-			if let Err(e) =
-				self.importer.import_block(block_to_import, last_imported_parentchain_header)
+			let block_number = block_to_import.block().block_number();
+
+			latest_imported_parentchain_header = match self
+				.importer
+				.import_block(block_to_import, &latest_imported_parentchain_header)
 			{
-				error!("Failed to import sidechain block that was fetched from peer: {:?}", e);
-				return Err(e)
-			}
+				Err(e) => {
+					error!("Failed to import sidechain block that was fetched from peer: {:?}", e);
+					return Err(e)
+				},
+				Ok(h) => {
+					info!(
+						"Successfully imported peer fetched sidechain block (number: {})",
+						block_number
+					);
+					h
+				},
+			};
 		}
 
 		Ok(())
@@ -106,6 +120,7 @@ where
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<()> {
 		let shard_identifier = sidechain_block.block().shard_id();
+		let sidechain_block_number = sidechain_block.block().block_number();
 
 		// Attempt to import the block - in case we encounter an ancestry error, we go into
 		// peer fetching mode to fetch sidechain blocks from a peer and import those first.
@@ -134,7 +149,11 @@ where
 				},
 				_ => Err(e),
 			},
-			Ok(()) => Ok(()),
+			Ok(parentchain_header) => {
+				info!("Successfully imported gossiped sidechain block (number: {}), based on parentchain block {:?}", 
+					sidechain_block_number, parentchain_header.number());
+				Ok(())
+			},
 		}
 	}
 }
@@ -154,8 +173,12 @@ mod tests {
 
 	#[test]
 	fn if_block_import_is_successful_no_peer_fetching_happens() {
+		let parentchain_header = ParentchainHeaderBuilder::default().build();
+		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
+
 		let block_importer_mock = Arc::new(
-			BlockImportMock::<ParentchainBlock, _>::default().with_import_result_once(Ok(())),
+			BlockImportMock::<ParentchainBlock, _>::default()
+				.with_import_result_once(Ok(parentchain_header.clone())),
 		);
 
 		let sidechain_ocall_api =
@@ -163,9 +186,6 @@ mod tests {
 
 		let peer_syncer =
 			PeerBlockSync::new(block_importer_mock.clone(), sidechain_ocall_api.clone());
-
-		let parentchain_header = ParentchainHeaderBuilder::default().build();
-		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 

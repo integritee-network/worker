@@ -15,7 +15,7 @@
 
 */
 
-use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Result};
+use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_sgx_crypto::aes::Aes;
 use itp_test::mock::onchain_mock::OnchainMock;
@@ -28,8 +28,13 @@ use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::VecDeque, sync::RwLock};
 
 /// Block importer mock.
-pub struct BlockImportMock<ParentchainBlock, SignedSidechainBlock> {
-	import_result: RwLock<VecDeque<Result<()>>>,
+pub struct BlockImportMock<ParentchainBlock, SignedSidechainBlock>
+where
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
+{
+	import_result: RwLock<VecDeque<Result<ParentchainBlock::Header>>>,
 	imported_blocks: RwLock<Vec<SignedSidechainBlock>>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
@@ -40,7 +45,7 @@ where
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
-	pub fn with_import_result_once(self, result: Result<()>) -> Self {
+	pub fn with_import_result_once(self, result: Result<ParentchainBlock::Header>) -> Self {
 		let mut imported_results_lock = self.import_result.write().unwrap();
 		imported_results_lock.push_back(result);
 		std::mem::drop(imported_results_lock);
@@ -48,7 +53,10 @@ where
 	}
 
 	#[allow(unused)]
-	pub fn with_import_result_sequence(self, mut results: VecDeque<Result<()>>) -> Self {
+	pub fn with_import_result_sequence(
+		self,
+		mut results: VecDeque<Result<ParentchainBlock::Header>>,
+	) -> Self {
 		let mut imported_results_lock = self.import_result.write().unwrap();
 		imported_results_lock.append(&mut results);
 		std::mem::drop(imported_results_lock);
@@ -62,6 +70,10 @@ where
 
 impl<ParentchainBlock, SignedSidechainBlock> Default
 	for BlockImportMock<ParentchainBlock, SignedSidechainBlock>
+where
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
 	fn default() -> Self {
 		BlockImportMock {
@@ -100,6 +112,17 @@ where
 		todo!()
 	}
 
+	fn verify_import<F>(
+		&self,
+		_shard: &ShardIdentifierFor<SignedSidechainBlock>,
+		_verifying_function: F,
+	) -> core::result::Result<SignedSidechainBlock, Error>
+	where
+		F: FnOnce(Self::SidechainState) -> core::result::Result<SignedSidechainBlock, Error>,
+	{
+		todo!()
+	}
+
 	fn state_key(&self) -> Self::StateCrypto {
 		todo!()
 	}
@@ -116,6 +139,14 @@ where
 		todo!()
 	}
 
+	fn peek_parentchain_header(
+		&self,
+		_sidechain_block: &SignedSidechainBlock::Block,
+		_last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> core::result::Result<ParentchainBlock::Header, Error> {
+		todo!()
+	}
+
 	fn cleanup(&self, _signed_sidechain_block: &SignedSidechainBlock) -> Result<()> {
 		todo!()
 	}
@@ -123,12 +154,12 @@ where
 	fn import_block(
 		&self,
 		signed_sidechain_block: SignedSidechainBlock,
-		_parentchain_header: &ParentchainBlock::Header,
-	) -> Result<()> {
+		parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header> {
 		let mut imported_blocks_lock = self.imported_blocks.write().unwrap();
 		imported_blocks_lock.push(signed_sidechain_block);
 
 		let mut imported_results_lock = self.import_result.write().unwrap();
-		imported_results_lock.pop_front().unwrap_or(Ok(()))
+		imported_results_lock.pop_front().unwrap_or(Ok(parentchain_header.clone()))
 	}
 }
