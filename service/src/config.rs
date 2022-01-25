@@ -20,7 +20,7 @@ pub struct Config {
 	pub untrusted_external_worker_address: Option<String>,
 	/// Port to the untrusted ws of the validateer.
 	pub untrusted_worker_port: String,
-	/// Mututal remote attestion address that will be returned by the dedicated trusted ws rpc call.
+	/// Mutual remote attestation address that will be returned by the dedicated trusted ws rpc call.
 	pub mu_ra_external_address: Option<String>,
 	/// Port for mutual-remote attestation requests.
 	pub mu_ra_port: String,
