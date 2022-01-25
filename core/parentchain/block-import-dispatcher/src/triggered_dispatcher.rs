@@ -23,7 +23,7 @@ use crate::{
 };
 use itc_parentchain_block_importer::ImportParentchainBlocks;
 use itp_block_import_queue::{PeekBlockQueue, PopFromBlockQueue, PushToBlockQueue};
-use log::info;
+use log::debug;
 use std::vec::Vec;
 
 /// Trait to specifically trigger the import of parentchain blocks.
@@ -85,7 +85,7 @@ where
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
 	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
-		info!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
+		debug!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
 		// Push all the blocks to be dispatched into the queue.
 		self.import_queue.push_multiple(blocks).map_err(Error::BlockImportQueue)
 	}
@@ -131,7 +131,7 @@ where
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
-		info!(
+		debug!(
 			"Import of parentchain blocks has been triggered, importing {} blocks from queue",
 			blocks_to_import.len()
 		);
@@ -158,7 +158,7 @@ where
 	where
 		Predicate: Fn(&BlockImporter::SignedBlockType) -> bool,
 	{
-		info!(
+		debug!(
 			"Peek find parentchain import queue (currently has {} elements)",
 			self.import_queue.peek_queue_size().unwrap_or(0)
 		);
@@ -166,7 +166,7 @@ where
 	}
 
 	fn peek_latest(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
-		info!(
+		debug!(
 			"Peek latest parentchain import queue (currently has {} elements)",
 			self.import_queue.peek_queue_size().unwrap_or(0)
 		);

@@ -40,7 +40,7 @@ where
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainHeader,
-	) -> Result<()>;
+	) -> Result<ParentchainHeader>;
 }
 
 /// Sidechain peer block sync implementation.
@@ -66,9 +66,9 @@ where
 	fn fetch_and_import_blocks_from_peer(
 		&self,
 		last_known_block_hash: BlockHash,
-		last_imported_parentchain_header: &ParentchainBlock::Header,
+		current_parentchain_header: &ParentchainBlock::Header,
 		shard_identifier: ShardIdentifierFor<SignedSidechainBlock>,
-	) -> Result<()> {
+	) -> Result<ParentchainBlock::Header> {
 		info!("Initiating fetch blocks from peer");
 
 		let blocks_to_import: Vec<SignedSidechainBlock> = self
@@ -77,7 +77,7 @@ where
 
 		info!("Fetched {} blocks from peer to import", blocks_to_import.len());
 
-		let mut latest_imported_parentchain_header = last_imported_parentchain_header.clone();
+		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
 
 		for block_to_import in blocks_to_import {
 			let block_number = block_to_import.block().block_number();
@@ -100,7 +100,7 @@ where
 			};
 		}
 
-		Ok(())
+		Ok(latest_imported_parentchain_header)
 	}
 }
 
@@ -117,42 +117,43 @@ where
 	fn sync_block(
 		&self,
 		sidechain_block: SignedSidechainBlock,
-		last_imported_parentchain_header: &ParentchainBlock::Header,
-	) -> Result<()> {
+		current_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header> {
 		let shard_identifier = sidechain_block.block().shard_id();
 		let sidechain_block_number = sidechain_block.block().block_number();
 
 		// Attempt to import the block - in case we encounter an ancestry error, we go into
 		// peer fetching mode to fetch sidechain blocks from a peer and import those first.
-		match self.importer.import_block(sidechain_block, last_imported_parentchain_header) {
+		match self.importer.import_block(sidechain_block, current_parentchain_header) {
 			Err(e) => match e {
 				Error::BlockAncestryMismatch(_block_number, block_hash, _) => {
 					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
 					self.fetch_and_import_blocks_from_peer(
 						block_hash,
-						last_imported_parentchain_header,
+						current_parentchain_header,
 						shard_identifier,
 					)
 				},
-				Error::InvalidFirstBlock(_block_number, _) => {
-					warn!("Got invalid first block error upon block import. Attempting to fetch missing blocks from peer");
+				Error::InvalidFirstBlock(block_number, _) => {
+					warn!("Got invalid first block error upon block import (expected first block, but got block with number {}). \
+							Attempting to fetch missing blocks from peer", block_number);
 					self.fetch_and_import_blocks_from_peer(
 						Default::default(), // This is the parent hash of the first block. So we import everything.
-						last_imported_parentchain_header,
+						current_parentchain_header,
 						shard_identifier,
 					)
 				},
 				Error::BlockAlreadyImported(to_import_block_number, last_known_block_number) => {
 					warn!("Sidechain block from queue (number: {}) was already imported (current block number: {}). Block will be ignored.", 
 						to_import_block_number, last_known_block_number);
-					Ok(())
+					Ok(current_parentchain_header.clone())
 				},
 				_ => Err(e),
 			},
-			Ok(parentchain_header) => {
+			Ok(latest_parentchain_header) => {
 				info!("Successfully imported gossiped sidechain block (number: {}), based on parentchain block {:?}", 
-					sidechain_block_number, parentchain_header.number());
-				Ok(())
+					sidechain_block_number, latest_parentchain_header.number());
+				Ok(latest_parentchain_header)
 			},
 		}
 	}

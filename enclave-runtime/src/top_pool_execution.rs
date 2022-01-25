@@ -156,18 +156,20 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
 	// (in case we have a block in the queue, but not imported yet).
-	let (latest_parentchain_header, genesis_hash) = validator_access.execute_on_validator(|v| {
-		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
-		let genesis_hash = v.genesis_hash(v.num_relays())?;
-		Ok((latest_parentchain_header, genesis_hash))
-	})?;
+	let (current_parentchain_header, genesis_hash) =
+		validator_access.execute_on_validator(|v| {
+			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+			let genesis_hash = v.genesis_hash(v.num_relays())?;
+			Ok((latest_parentchain_header, genesis_hash))
+		})?;
 
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
 	let sidechain_block_import_queue_worker = GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT
 		.get()
 		.ok_or(Error::ComponentNotInitialized)?;
-	sidechain_block_import_queue_worker.process_queue(&latest_parentchain_header)?;
+	let latest_parentchain_header =
+		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
 	let authority = Ed25519Seal::unseal()?;
 	let state_key = AesSeal::unseal()?;

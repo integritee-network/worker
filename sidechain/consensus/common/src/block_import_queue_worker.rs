@@ -28,8 +28,8 @@ pub trait ProcessBlockImportQueue<ParentchainBlockHeader> {
 	/// Pop sidechain blocks from the import queue and import them until queue is empty.
 	fn process_queue(
 		&self,
-		last_imported_parentchain_header: &ParentchainBlockHeader,
-	) -> Result<()>;
+		current_parentchain_header: &ParentchainBlockHeader,
+	) -> Result<ParentchainBlockHeader>;
 }
 
 pub struct BlockImportQueueWorker<
@@ -80,16 +80,19 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 {
 	fn process_queue(
 		&self,
-		last_imported_parentchain_header: &ParentchainBlock::Header,
-	) -> Result<()> {
+		current_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header> {
+		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
+
 		loop {
 			match self.block_import_queue.pop_front() {
 				Ok(maybe_block) => match maybe_block {
 					Some(block) => {
-						self.peer_block_syncer
-							.sync_block(block, last_imported_parentchain_header)?;
+						latest_imported_parentchain_header = self
+							.peer_block_syncer
+							.sync_block(block, &latest_imported_parentchain_header)?;
 					},
-					None => return Ok(()),
+					None => return Ok(latest_imported_parentchain_header),
 				},
 				Err(e) => return Err(Error::FailedToPopBlockImportQueue(e)),
 			}

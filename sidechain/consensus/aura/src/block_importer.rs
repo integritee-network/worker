@@ -276,7 +276,7 @@ impl<
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, ConsensusError> {
 		if sidechain_block.layer_one_head() == last_imported_parentchain_header.hash() {
-			info!("No queue peek necessary, sidechain block references latest imported parentchain block");
+			debug!("No queue peek necessary, sidechain block references latest imported parentchain block");
 			return Ok(last_imported_parentchain_header.clone())
 		}
 
