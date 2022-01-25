@@ -163,12 +163,12 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='info,ws=warn,sp_io=warn,'
+        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=warn,'
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'
-                                        'enclave_runtime=info,'
-                                        'integritee_service=info,'
+                                        'enclave_runtime=warn,'
+                                        'integritee_service=warn,'
                                         'ita_stf=debug')
 
         return Popen(
