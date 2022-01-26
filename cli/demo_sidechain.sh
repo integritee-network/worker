@@ -49,7 +49,7 @@ echo "Using node-port ${NPORT}"
 echo "Using trusted-worker-1-port ${WORKER1PORT}"
 echo "Using trusted-worker-2-port ${WORKER2PORT}"
 
-AMOUNTSHIELD=50000000000
+INITIALFUNDS=50000000000
 AMOUNTTRANSFER=20000000000
 
 CLIENTWORKER1="./../bin/integritee-cli -p ${NPORT} -P ${WORKER1PORT}"
@@ -77,8 +77,8 @@ ICGACCOUNTBOB=//BobIncognito
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Issue ${AMOUNTSHIELD} tokens to Alice's incognito account (on worker 1)"
-${CLIENTWORKER1} trusted set-balance ${ICGACCOUNTALICE} ${AMOUNTSHIELD} --mrenclave ${MRENCLAVE} --direct
+echo "* Issue ${INITIALFUNDS} tokens to Alice's incognito account (on worker 1)"
+${CLIENTWORKER1} trusted set-balance ${ICGACCOUNTALICE} ${INITIALFUNDS} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
 echo "* Waiting 2 seconds"
@@ -90,7 +90,7 @@ ${CLIENTWORKER1} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
 
 # Send funds from Alice to Bobs account, on worker 1
-echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 1)"
+echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 1)"
 $CLIENTWORKER1 trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
@@ -99,7 +99,7 @@ sleep 2
 echo ""
 
 # Send funds from Alice to Bobs account, on worker 2
-echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
+echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
 $CLIENTWORKER2 trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
