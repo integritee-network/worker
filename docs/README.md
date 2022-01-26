@@ -12,8 +12,7 @@ Use with caution, as this is work in progress. Hence, the code is most likely pr
 
 ### Sidechain
 - Sidechain functionality: https://polkadot.polkassembly.io/post/111
-- Sidechain flow: https://github.com/integritee-network/worker/issues/567
-- Peer sync and block production suspension for sidechain: https://github.com/integritee-network/worker/pull/618
+- Sidechain flow: https://github.com/integritee-network/worker/pull/627
 - Simplified sidechain sequence, of a user call and the STF: https://raw.githubusercontent.com/haerdib/substraTEE_diagramms/main/sidechain-sequence.svg
 - Top_pool sequence: https://raw.githubusercontent.com/haerdib/substraTEE_diagramms/main/submit_and_watch_sequence.svg
 ### Parentchain

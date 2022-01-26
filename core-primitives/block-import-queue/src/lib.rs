@@ -67,7 +67,7 @@ pub trait PopFromBlockQueue {
 	fn pop_front(&self) -> Result<Option<Self::BlockType>>;
 }
 
-/// Trait to peek blocks in the import queue.
+/// Trait to peek blocks in the import queue without altering the queue.
 pub trait PeekBlockQueue {
 	type BlockType: Clone;
 

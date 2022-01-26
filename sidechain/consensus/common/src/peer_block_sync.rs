@@ -65,15 +65,17 @@ where
 
 	fn fetch_and_import_blocks_from_peer(
 		&self,
-		last_known_block_hash: BlockHash,
+		last_imported_sidechain_block_hash: BlockHash,
 		current_parentchain_header: &ParentchainBlock::Header,
 		shard_identifier: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<ParentchainBlock::Header> {
 		info!("Initiating fetch blocks from peer");
 
-		let blocks_to_import: Vec<SignedSidechainBlock> = self
-			.sidechain_ocall_api
-			.fetch_sidechain_blocks_from_peer(last_known_block_hash, shard_identifier)?;
+		let blocks_to_import: Vec<SignedSidechainBlock> =
+			self.sidechain_ocall_api.fetch_sidechain_blocks_from_peer(
+				last_imported_sidechain_block_hash,
+				shard_identifier,
+			)?;
 
 		info!("Fetched {} blocks from peer to import", blocks_to_import.len());
 

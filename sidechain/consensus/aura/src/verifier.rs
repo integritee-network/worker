@@ -143,11 +143,15 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 	block: &SidechainBlock,
 	last_block: &SidechainBlock,
 ) -> Result<(), ConsensusError> {
+	// These next two checks might seem redundant at first glance. However, they are distinct (see comments).
+
+	// We have already imported this block.
 	ensure!(
 		block.block_number() > last_block.block_number(),
 		ConsensusError::BlockAlreadyImported(block.block_number(), last_block.block_number())
 	);
 
+	// We are missing some blocks between our last known block and the one we're trying to import.
 	ensure!(
 		last_block.block_number() + 1 == block.block_number(),
 		ConsensusError::BlockAncestryMismatch(
