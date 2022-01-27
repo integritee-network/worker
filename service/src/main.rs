@@ -18,6 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 use crate::{
+	account_funding::setup_account_funding,
 	error::Error,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
@@ -58,7 +59,6 @@ use itp_settings::{
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
 	sidechain::SLOT_DURATION,
-	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
 use its_consensus_slots::start_slot_worker;
 use its_peer_fetch::{
@@ -73,7 +73,7 @@ use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
-	sr25519, Pair,
+	sr25519,
 };
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
@@ -90,10 +90,11 @@ use std::{
 	time::{Duration, Instant},
 };
 use substrate_api_client::{
-	rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, Header as HeaderTrait, XtStatus,
+	rpc::WsRpcClient, utils::FromHexString, Api, Header as HeaderTrait, XtStatus,
 };
 use teerex_primitives::ShardIdentifier;
 
+mod account_funding;
 mod config;
 mod enclave;
 mod error;
@@ -265,7 +266,7 @@ fn start_worker<E, T, D>(
 	sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	dev: bool,
-	mut node_api: Api<sr25519::Pair, WsRpcClient>,
+	node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle_getter: Arc<T>,
 ) where
 	T: GetTokioHandle,
@@ -357,7 +358,7 @@ fn start_worker<E, T, D>(
 	xthex.insert_str(0, "0x");
 
 	// Account funds
-	if let Err(x) = account_funding(&mut node_api, &tee_accountid, xthex.clone(), dev) {
+	if let Err(x) = setup_account_funding(&node_api, &tee_accountid, xthex.clone(), dev) {
 		error!("Starting worker failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return
@@ -698,120 +699,6 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	AccountId32::from(*tee_public.as_array_ref())
-}
-
-fn account_funding(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-	extrinsic_prefix: String,
-	dev: bool,
-) -> Result<(), Error> {
-	// Account funds
-	if dev {
-		// Development mode, the faucet will ensure that the enclave has enough funds
-		ensure_account_has_funds(api, accountid)?;
-	} else {
-		// Production mode, there is no faucet.
-		let registration_fees = enclave_registration_fees(api, &extrinsic_prefix)?;
-		info!("Registration fees = {:?}", registration_fees);
-		let free_balance = api.get_free_balance(accountid)?;
-		info!("TEE's free balance = {:?}", free_balance);
-
-		let min_required_funds =
-			registration_fees.saturating_mul(REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS);
-		let missing_funds = min_required_funds.saturating_sub(free_balance);
-
-		if missing_funds > 0 {
-			// If there are not enough funds, then the user can send the missing TEER to the enclave address and start again.
-			println!(
-				"Enclave account: {:}, missing funds {}",
-				accountid.to_ss58check(),
-				missing_funds
-			);
-			return Err(Error::Custom(
-				"Enclave does not have enough funds on the parentchain to register.".into(),
-			))
-		}
-	}
-	Ok(())
-}
-// Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-) -> Result<(), Error> {
-	// check account balance
-	let free_balance = api.get_free_balance(accountid)?;
-	info!("TEE's free balance = {:?}", free_balance);
-
-	let existential_deposit = api.get_existential_deposit()?;
-	info!("Existential deposit is = {:?}", existential_deposit);
-
-	let min_required_funds =
-		existential_deposit.saturating_mul(EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS);
-	let missing_funds = min_required_funds.saturating_sub(free_balance);
-
-	if missing_funds > 0 {
-		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
-	}
-	Ok(())
-}
-
-fn enclave_registration_fees(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	xthex_prefixed: &str,
-) -> Result<u128, Error> {
-	let reg_fee_details = api.get_fee_details(xthex_prefixed, None)?;
-	match reg_fee_details {
-		Some(details) => match details.inclusion_fee {
-			Some(fee) => Ok(fee.inclusion_fee()),
-			None => Err(Error::Custom(
-				"Inclusion fee for the registration of the enclave is None!".into(),
-			)),
-		},
-		None =>
-			Err(Error::Custom("Fee Details for the registration of the enclave is None !".into())),
-	}
-}
-
-// Alice sends some funds to the account
-fn bootstrap_funds_from_alice(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-	funding_amount: u128,
-) -> Result<(), Error> {
-	let alice = AccountKeyring::Alice.pair();
-	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
-	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
-	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
-
-	let alice_free = api.get_free_balance(&alice_acc)?;
-	info!("    Alice's free balance = {:?}", alice_free);
-	let nonce = api.get_nonce_of(&alice_acc)?;
-	info!("    Alice's Account Nonce is {}", nonce);
-
-	if funding_amount > alice_free {
-		println!(
-			"funding amount is to high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
-			funding_amount
-		);
-		return Err(Error::ApplicationSetup)
-	}
-
-	let signer_orig = api.signer.clone();
-	api.signer = Some(alice);
-
-	println!("[+] bootstrap funding Enclave from Alice's funds");
-	let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
-	let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)?;
-	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
-
-	// Verify funds have arrived.
-	let free_balance = api.get_free_balance(accountid);
-	info!("TEE's NEW free balance = {:?}", free_balance);
-
-	api.signer = signer_orig;
-	Ok(())
 }
 
 /// Ensure we're synced up until the parentchain block where we have registered ourselves.
