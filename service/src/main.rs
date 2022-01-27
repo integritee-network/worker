@@ -27,6 +27,7 @@ use crate::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
+	prometheus_metrics::start_prometheus_metrics_server,
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker_peers_updater::WorkerPeersUpdater,
@@ -99,6 +100,7 @@ mod error;
 mod globals;
 mod ocall_bridge;
 mod parentchain_block_syncer;
+mod prometheus_metrics;
 mod sync_block_gossiper;
 mod sync_state;
 mod tests;
@@ -264,7 +266,7 @@ fn start_worker<E, T, D>(
 	skip_ra: bool,
 	dev: bool,
 	mut node_api: Api<sr25519::Pair, WsRpcClient>,
-	tokio_handle: Arc<T>,
+	tokio_handle_getter: Arc<T>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -298,6 +300,16 @@ fn start_worker<E, T, D>(
 			&ra_url,
 			skip_ra,
 		)
+	});
+
+	let tokio_handle = tokio_handle_getter.get_handle();
+
+	// ------------------------------------------------------------------------
+	// Start prometheus metrics server.
+	tokio_handle.spawn(async move {
+		if let Err(e) = start_prometheus_metrics_server(8787).await {
+			error!("Running the Prometheus web server failed: {:?}", e);
+		}
 	});
 
 	// ------------------------------------------------------------------------
@@ -387,14 +399,13 @@ fn start_worker<E, T, D>(
 
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.
-	let handle = tokio_handle.get_handle();
 	// FIXME: this should be removed - this server should only handle untrusted things.
 	// i.e move sidechain block importing to trusted worker.
 	let enclave_for_block_gossip_rpc_server = enclave.clone();
 	let untrusted_url = config.untrusted_worker_url();
 	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
 	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	let _untrusted_rpc_join_handle = handle.spawn(async move {
+	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
 		itc_rpc_server::run_server(
 			&untrusted_url,
 			enclave_for_block_gossip_rpc_server,
