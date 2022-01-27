@@ -17,55 +17,95 @@
 
 //! Service for prometheus metrics, hosted on a http server.
 
-use crate::error::{Error, ServiceResult};
+use crate::{
+	account_funding::EnclaveWalletInfo,
+	error::{Error, ServiceResult},
+};
+use async_trait::async_trait;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{proto::MetricFamily, register_int_gauge, IntGauge};
-use std::{net::SocketAddr, time::SystemTime};
+use std::{net::SocketAddr, sync::Arc};
 use warp::{Filter, Rejection, Reply};
 
 lazy_static! {
-	static ref ELAPSED_SECONDS: IntGauge =
-		register_int_gauge!("uptime_seconds", "Uptime of service in seconds").unwrap();
-	static ref SERVICE_START_TIME: SystemTime = SystemTime::now();
+	static ref ENCLAVE_ACCOUNT_FREE_BALANCE: IntGauge =
+		register_int_gauge!("enclave_account_free_balance", "Free balance of the enclave account")
+			.unwrap();
 }
 
-pub async fn start_prometheus_metrics_server(port: u16) -> ServiceResult<()> {
-	let metrics_route = warp::path!("metrics").and_then(metrics_handler);
+#[async_trait]
+pub trait HandleMetrics {
+	type ReplyType: Reply;
+
+	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection>;
+}
+
+pub async fn start_metrics_server<MetricsHandler>(
+	metrics_handler: Arc<MetricsHandler>,
+	port: u16,
+) -> ServiceResult<()>
+where
+	MetricsHandler: HandleMetrics + Send + Sync + 'static,
+{
+	let metrics_route = warp::path!("metrics").and_then(move || {
+		let handler_clone = metrics_handler.clone();
+		async move { handler_clone.handle_metrics().await }
+	});
 	let socket_addr: SocketAddr = ([0, 0, 0, 0], port).into();
 
-	info!("Initializing prometheus metrics");
-	update_metrics();
-
 	info!("Running prometheus metrics server on: {:?}", socket_addr);
-
 	warp::serve(metrics_route).run(socket_addr).await;
 
-	info!("Prometheus web server shut down");
+	info!("Prometheus metrics server shut down");
 	Ok(())
 }
 
-async fn metrics_handler() -> Result<impl Reply, Rejection> {
-	update_metrics();
-
-	let default_metrics = match gather_metrics_into_reply(&prometheus::gather()) {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Failed to gather prometheus metrics: {:?}", e);
-			String::default()
-		},
-	};
-
-	Ok(default_metrics)
+/// Metrics handler implementation.
+pub struct MetricsHandler<Wallet> {
+	enclave_wallet: Arc<Wallet>,
 }
 
-fn update_metrics() {
-	let elapsed_seconds = SERVICE_START_TIME
-		.elapsed()
-		.map(|t| t.as_secs())
-		.map_err(|e| error!("Failed to compute elapsed time metric: {:?}, returning 0", e))
-		.unwrap_or_default();
-	ELAPSED_SECONDS.set(elapsed_seconds as i64);
+#[async_trait]
+impl<Wallet> HandleMetrics for MetricsHandler<Wallet>
+where
+	Wallet: EnclaveWalletInfo + Send + Sync,
+{
+	type ReplyType = String;
+
+	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection> {
+		self.update_metrics().await;
+
+		let default_metrics = match gather_metrics_into_reply(&prometheus::gather()) {
+			Ok(r) => r,
+			Err(e) => {
+				error!("Failed to gather prometheus metrics: {:?}", e);
+				String::default()
+			},
+		};
+
+		Ok(default_metrics)
+	}
+}
+
+impl<Wallet> MetricsHandler<Wallet>
+where
+	Wallet: EnclaveWalletInfo + Send + Sync,
+{
+	pub fn new(enclave_wallet: Arc<Wallet>) -> Self {
+		MetricsHandler { enclave_wallet }
+	}
+
+	async fn update_metrics(&self) {
+		match self.enclave_wallet.free_balance() {
+			Ok(b) => {
+				ENCLAVE_ACCOUNT_FREE_BALANCE.set(b as i64);
+			},
+			Err(e) => {
+				error!("Failed to fetch free balance metric, value will not be updated: {:?}", e);
+			},
+		}
+	}
 }
 
 fn gather_metrics_into_reply(metrics: &[MetricFamily]) -> ServiceResult<String> {

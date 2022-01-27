@@ -27,16 +27,38 @@ use sp_core::{
 	sr25519, Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{rpc::WsRpcClient, Api, GenericAddress, XtStatus};
+use substrate_api_client::{rpc::WsRpcClient, Api, Balance, GenericAddress, XtStatus};
+
+/// Draft for an enclave wallet trait (WIP).
+pub trait EnclaveWalletInfo {
+	fn free_balance(&self) -> ServiceResult<Balance>;
+}
+
+pub struct EnclaveWallet {
+	node_api: Api<sr25519::Pair, WsRpcClient>,
+	account_id: AccountId32,
+}
+
+impl EnclaveWalletInfo for EnclaveWallet {
+	fn free_balance(&self) -> ServiceResult<Balance> {
+		self.node_api.get_free_balance(&self.account_id).map_err(|e| e.into())
+	}
+}
+
+impl EnclaveWallet {
+	pub fn new(node_api: Api<sr25519::Pair, WsRpcClient>, account_id: AccountId32) -> Self {
+		EnclaveWallet { node_api, account_id }
+	}
+}
 
 pub fn setup_account_funding(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	accountid: &AccountId32,
 	extrinsic_prefix: String,
-	dev: bool,
+	is_development_mode: bool,
 ) -> ServiceResult<()> {
 	// Account funds
-	if dev {
+	if is_development_mode {
 		// Development mode, the faucet will ensure that the enclave has enough funds
 		ensure_account_has_funds(api, accountid)?;
 	} else {

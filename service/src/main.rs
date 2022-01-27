@@ -18,7 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 use crate::{
-	account_funding::setup_account_funding,
+	account_funding::{setup_account_funding, EnclaveWallet},
 	error::Error,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
@@ -28,7 +28,7 @@ use crate::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
-	prometheus_metrics::start_prometheus_metrics_server,
+	prometheus_metrics::{start_metrics_server, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker_peers_updater::WorkerPeersUpdater,
@@ -306,14 +306,6 @@ fn start_worker<E, T, D>(
 	let tokio_handle = tokio_handle_getter.get_handle();
 
 	// ------------------------------------------------------------------------
-	// Start prometheus metrics server.
-	tokio_handle.spawn(async move {
-		if let Err(e) = start_prometheus_metrics_server(8787).await {
-			error!("Running the Prometheus web server failed: {:?}", e);
-		}
-	});
-
-	// ------------------------------------------------------------------------
 	// Start trusted worker rpc server.
 	let direct_invocation_server_addr = config.trusted_worker_url_internal();
 	let enclave_for_direct_invocation = enclave.clone();
@@ -329,14 +321,22 @@ fn start_worker<E, T, D>(
 	});
 
 	// ------------------------------------------------------------------------
-	// Start the substrate-api-client to communicate with the node.
+	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
-
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
-	// Perform a remote attestation and get an unchecked extrinsic back.
+	// Start prometheus metrics server.
+	let enclave_wallet = Arc::new(EnclaveWallet::new(node_api.clone(), tee_accountid.clone()));
+	let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
+	tokio_handle.spawn(async move {
+		if let Err(e) = start_metrics_server(metrics_handler, 8787).await {
+			error!("Unexpected error in Prometheus metrics server: {:?}", e);
+		}
+	});
 
+	// ------------------------------------------------------------------------
+	// Perform a remote attestation and get an unchecked extrinsic back.
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -694,7 +694,7 @@ fn init_shard(shard: &ShardIdentifier) {
 	file.write_all(b"").unwrap();
 }
 
-// get the public signing key of the TEE
+/// Get the public signing key of the TEE.
 fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
