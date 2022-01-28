@@ -15,12 +15,12 @@
 
 */
 
-use crate::{config::Config, error::Error};
 ///! Integritee worker. Inspiration for this design came from parity's substrate Client.
 ///
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
+use crate::{config::Config, error::Error};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api_extensions::PalletTeerexApi;
@@ -81,16 +81,29 @@ where
 
 		let blocks_json = vec![to_json_value(blocks)?];
 
-		for url in self.peers.iter() {
-			trace!("Gossiping block to peer with address: {:?}", url);
-			// FIXME: Websocket connection to a worker should stay, once etablished.
-			let client = WsClientBuilder::default().build(url).await?;
+		for url in self.peers.iter().cloned() {
 			let blocks = blocks_json.clone();
-			if let Err(e) =
-				client.request::<Vec<u8>>(RPC_METHOD_NAME_IMPORT_BLOCKS, blocks.into()).await
-			{
-				error!("{} failed: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, e);
-			}
+
+			tokio::spawn(async move {
+				debug!("Gossiping block to peer with address: {:?}", url);
+				// FIXME: Websocket connection to a worker should stay, once established.
+				let client = match WsClientBuilder::default().build(&url).await {
+					Ok(c) => c,
+					Err(e) => {
+						error!("Failed to create websocket client for block gossiping (target url: {}): {:?}", url, e);
+						return
+					},
+				};
+
+				if let Err(e) =
+					client.request::<Vec<u8>>(RPC_METHOD_NAME_IMPORT_BLOCKS, blocks.into()).await
+				{
+					error!(
+						"Gossip block request ({}) to {} failed: {:?}",
+						RPC_METHOD_NAME_IMPORT_BLOCKS, url, e
+					);
+				}
+			});
 		}
 		Ok(())
 	}

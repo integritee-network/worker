@@ -37,7 +37,7 @@ use codec::{Decode, Encode};
 use config::Config;
 use enclave::{
 	api::enclave_init,
-	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
+	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
 use futures::executor::block_on;
 use itp_enclave_api::{
@@ -99,8 +99,8 @@ mod error;
 mod globals;
 mod ocall_bridge;
 mod parentchain_block_syncer;
-mod request_keys;
 mod sync_block_gossiper;
+mod sync_state;
 mod tests;
 mod utils;
 mod worker;
@@ -182,11 +182,11 @@ fn main() {
 			node_api,
 			tokio_handle,
 		);
-	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-		println!("*** Requesting keys from a registered worker \n");
+	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
+		println!("*** Requesting state from a registered worker \n");
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
-		request_keys::request_keys(
+		sync_state::sync_state(
 			&node_api,
 			&extract_shard(smatches, enclave.as_ref()),
 			enclave.as_ref(),
@@ -227,7 +227,7 @@ fn main() {
 	} else if let Some(_matches) = matches.subcommand_matches("test") {
 		if _matches.is_present("provisioning-server") {
 			println!("*** Running Enclave MU-RA TLS server\n");
-			enclave_run_key_provisioning_server(
+			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url(),
@@ -236,10 +236,12 @@ fn main() {
 			println!("[+] Done!");
 		} else if _matches.is_present("provisioning-client") {
 			println!("*** Running Enclave MU-RA TLS client\n");
-			enclave_request_key_provisioning(
+			let shard = extract_shard(_matches, enclave.as_ref());
+			enclave_request_state_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url_external(),
+				&shard,
 				_matches.is_present("skip-ra"),
 			)
 			.unwrap();
@@ -290,7 +292,7 @@ fn start_worker<E, T, D>(
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
 	thread::spawn(move || {
-		enclave_run_key_provisioning_server(
+		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 			&ra_url,

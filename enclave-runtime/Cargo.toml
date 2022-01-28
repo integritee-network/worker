@@ -19,6 +19,7 @@ test = [
     "ita-stf/test",
     "itc-parentchain/mocks",
     "itp-extrinsics-factory/mocks",
+    "itp-sgx-crypto/mocks",
     "itp-stf-executor/test",
     "itp-stf-state-handler/test",
     "itp-storage/test",

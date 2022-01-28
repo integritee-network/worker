@@ -47,7 +47,7 @@ def run_worker(config, i: int):
         skip_ra = "--skip-ra" in config["subcommand_flags"]
         print(f'Skip remote attestation: {skip_ra}')
 
-        w.request_keys(flags=config["flags"], skip_ra=skip_ra)
+        w.sync_state(flags=config["flags"], skip_ra=skip_ra)
 
     print(f'Starting worker {i} in background')
     w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
