@@ -1,0 +1,19 @@
+[package]
+name = "itp-registry-storage"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+
+[dependencies]
+codec = { version = "2.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+
+#local deps
+itp-storage = { path = "../storage", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "sp-std/std",
+    "itp-storage/std",
+]

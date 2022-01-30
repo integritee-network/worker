@@ -27,7 +27,7 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 # scs / integritee
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "master" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
-my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
+my-node-runtime = { package = "ajuna-runtime", git = "https://github.com/ajuna-network/ajuna-node.git", branch = "darkfriend77/integritee" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # substrate dependencies
@@ -37,7 +37,7 @@ pallet-balances = { version = "4.0.0-dev", default-features = false, git = "http
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-application-crypto = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 #local dependencies
 itp-types = { path = "../core-primitives/types" }

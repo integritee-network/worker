@@ -51,4 +51,4 @@ sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://g
 its-consensus-aura = { path = "../aura" }
 itp-test = { path = "../../../core-primitives/test" }
 sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "update-substrate" }

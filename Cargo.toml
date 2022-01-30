@@ -61,13 +61,13 @@ sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-t
 sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
 
-#[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../sgx-runtime/runtime"}
-#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io"}
-#sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities"}
+#[patch."https://github.com/ajuna-network/sgx-runtime"]
+#sgx-runtime = { path = "../ajuna-sgx-runtime/runtime" }
+#sp-io = { path = "../ajuna-sgx-runtime/substrate-sgx/sp-io" }
+#sgx-externalities = { path = "../ajuna-sgx-runtime/substrate-sgx/externalities" }
 
-#[patch."https://github.com/integritee-network/integritee-node"]
-#my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
+#[patch."https://github.com/ajuna-network/ajuna-node"]
+#my-node-runtime = { package = "ajuna-runtime", path = "../ajuna-node/runtime" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
 #pallet-claims = { path = '../pallets/claims' }

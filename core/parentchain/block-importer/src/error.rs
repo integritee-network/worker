@@ -34,6 +34,8 @@ pub enum Error {
 	StfExecution(#[from] itp_stf_executor::error::Error),
 	#[error("Light-client error: {0}")]
 	LightClient(#[from] itc_parentchain_light_client::error::Error),
+	#[error("Storage verified error: {0}")]
+	StorageVerified(#[from] itp_storage_verifier::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
