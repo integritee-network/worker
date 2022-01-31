@@ -15,12 +15,18 @@
 
 */
 
-mod attestation_ocall;
-mod ffi;
-mod ipfs_ocall;
-mod metrics_ocall;
-mod on_chain_ocall;
-mod sidechain_ocall;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[derive(Clone, Debug, Default)]
-pub struct OcallApi;
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
+use codec::{Decode, Encode};
+
+#[derive(Encode, Decode)]
+pub enum EnclaveMetric {
+	SidechainBlockHeight(u64),
+	TopPoolSize(u64),
+}

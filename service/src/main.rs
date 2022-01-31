@@ -28,7 +28,7 @@ use crate::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
-	prometheus_metrics::{start_metrics_server, MetricsHandler},
+	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker_peers_updater::WorkerPeersUpdater,
@@ -146,6 +146,7 @@ fn main() {
 	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.clone());
 	let peer_sidechain_block_fetcher =
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
+	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
@@ -156,6 +157,7 @@ fn main() {
 		peer_updater,
 		peer_sidechain_block_fetcher,
 		tokio_handle.clone(),
+		enclave_metrics_receiver,
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {

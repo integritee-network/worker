@@ -30,4 +30,5 @@ pub mod ipfs;
 pub mod propose_sidechain_blocks;
 pub mod send_to_parentchain;
 pub mod store_sidechain_blocks;
+pub mod update_metric;
 pub mod worker_request;

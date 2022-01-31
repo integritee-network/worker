@@ -72,6 +72,11 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
 }
 
+/// Trait for sending metric updates.
+pub trait EnclaveMetricsOCallApi: Clone + Send + Sync {
+	fn update_metric<Metric: Encode>(&self, metric: Metric) -> SgxResult<()>;
+}
+
 pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
 		&self,

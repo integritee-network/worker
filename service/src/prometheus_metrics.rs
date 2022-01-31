@@ -22,6 +22,7 @@ use crate::{
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
+use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{proto::MetricFamily, register_int_gauge, IntGauge};
@@ -32,13 +33,12 @@ lazy_static! {
 	static ref ENCLAVE_ACCOUNT_FREE_BALANCE: IntGauge =
 		register_int_gauge!("enclave_account_free_balance", "Free balance of the enclave account")
 			.unwrap();
-}
-
-#[async_trait]
-pub trait HandleMetrics {
-	type ReplyType: Reply;
-
-	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection>;
+	static ref ENCLAVE_SIDECHAIN_BLOCK_HEIGHT: IntGauge =
+		register_int_gauge!("enclave_sidechain_block_height", "Enclave sidechain block height")
+			.unwrap();
+	static ref ENCLAVE_SIDECHAIN_TOP_POOL_SIZE: IntGauge =
+		register_int_gauge!("enclave_sidechain_top_pool_size", "Enclave sidechain top pool size")
+			.unwrap();
 }
 
 pub async fn start_metrics_server<MetricsHandler>(
@@ -59,6 +59,13 @@ where
 
 	info!("Prometheus metrics server shut down");
 	Ok(())
+}
+
+#[async_trait]
+pub trait HandleMetrics {
+	type ReplyType: Reply;
+
+	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection>;
 }
 
 /// Metrics handler implementation.
@@ -124,4 +131,25 @@ fn gather_metrics_into_reply(metrics: &[MetricFamily]) -> ServiceResult<String> 
 	})?;
 
 	Ok(result_string)
+}
+
+/// Trait to receive metric updates from inside the enclave.
+pub trait ReceiveEnclaveMetric {
+	fn receive_enclave_metric(&self, metric: EnclaveMetric) -> ServiceResult<()>;
+}
+
+pub struct EnclaveMetricsReceiver;
+
+impl ReceiveEnclaveMetric for EnclaveMetricsReceiver {
+	fn receive_enclave_metric(&self, metric: EnclaveMetric) -> ServiceResult<()> {
+		match metric {
+			EnclaveMetric::SidechainBlockHeight(h) => {
+				ENCLAVE_SIDECHAIN_BLOCK_HEIGHT.set(h as i64);
+			},
+			EnclaveMetric::TopPoolSize(pool_size) => {
+				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.set(pool_size as i64);
+			},
+		}
+		Ok(())
+	}
 }

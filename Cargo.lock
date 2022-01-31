@@ -2177,6 +2177,7 @@ dependencies = [
  "itc-rpc-client",
  "itc-rpc-server",
  "itp-enclave-api",
+ "itp-enclave-metrics",
  "itp-node-api-extensions",
  "itp-settings",
  "itp-test",
@@ -2557,6 +2558,15 @@ dependencies = [
 name = "itp-enclave-api-ffi"
 version = "0.8.0"
 dependencies = [
+ "sgx_types",
+]
+
+[[package]]
+name = "itp-enclave-metrics"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sgx_tstd",
  "sgx_types",
 ]
 

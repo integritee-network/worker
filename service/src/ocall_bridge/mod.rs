@@ -23,6 +23,7 @@ pub mod component_factory;
 
 mod ffi;
 mod ipfs_ocall;
+mod metrics_ocall;
 mod remote_attestation_ocall;
 mod sidechain_ocall;
 mod worker_on_chain_ocall;

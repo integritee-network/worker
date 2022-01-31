@@ -146,6 +146,10 @@ enclave {
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
 	    );
 
+		sgx_status_t ocall_update_metric(
+	        [in, size = metric_size] uint8_t * metric, uint32_t metric_size
+	    );
+
 		sgx_status_t ocall_propose_sidechain_blocks(
 	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
 	    );
