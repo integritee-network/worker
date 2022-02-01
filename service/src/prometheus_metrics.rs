@@ -143,11 +143,17 @@ pub struct EnclaveMetricsReceiver;
 impl ReceiveEnclaveMetric for EnclaveMetricsReceiver {
 	fn receive_enclave_metric(&self, metric: EnclaveMetric) -> ServiceResult<()> {
 		match metric {
-			EnclaveMetric::SidechainBlockHeight(h) => {
+			EnclaveMetric::SetSidechainBlockHeight(h) => {
 				ENCLAVE_SIDECHAIN_BLOCK_HEIGHT.set(h as i64);
 			},
-			EnclaveMetric::TopPoolSize(pool_size) => {
+			EnclaveMetric::TopPoolSizeSet(pool_size) => {
 				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.set(pool_size as i64);
+			},
+			EnclaveMetric::TopPoolSizeIncrement => {
+				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.inc();
+			},
+			EnclaveMetric::TopPoolSizeDecrement => {
+				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.dec();
 			},
 		}
 		Ok(())

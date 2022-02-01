@@ -25,7 +25,8 @@ use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
 	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 };
-use itp_ocall_api::EnclaveSidechainOCallApi;
+use itp_enclave_metrics::EnclaveMetric;
+use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
 use itp_stf_executor::ExecutedOperation;
@@ -97,7 +98,12 @@ impl<
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
-	OCallApi: EnclaveSidechainOCallApi + ValidateerFetch + GetStorageVerified + Send + Sync,
+	OCallApi: EnclaveSidechainOCallApi
+		+ ValidateerFetch
+		+ GetStorageVerified
+		+ EnclaveMetricsOCallApi
+		+ Send
+		+ Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor:
@@ -181,7 +187,12 @@ impl<
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
-	OCallApi: EnclaveSidechainOCallApi + ValidateerFetch + GetStorageVerified + Send + Sync,
+	OCallApi: EnclaveSidechainOCallApi
+		+ ValidateerFetch
+		+ GetStorageVerified
+		+ EnclaveMetricsOCallApi
+		+ Send
+		+ Sync,
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKey: StateCrypto + Copy,
 	TopPoolExecutor:
@@ -315,6 +326,14 @@ impl<
 				&sidechain_block.shard_id(),
 			)
 		}
+
+		// Send metric about sidechain block height (i.e. block number)
+		let block_height_metric =
+			EnclaveMetric::SetSidechainBlockHeight(sidechain_block.block_number());
+		if let Err(e) = self.ocall_api.update_metric(block_height_metric) {
+			warn!("Failed to update sidechain block height metric: {:?}", e);
+		}
+
 		Ok(())
 	}
 }

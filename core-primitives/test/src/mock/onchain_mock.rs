@@ -18,7 +18,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_storage::StorageEntryVerified;
 use itp_storage_verifier::{GetStorageVerified, Result};
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
@@ -151,6 +151,12 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 		_shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>> {
 		Ok(Vec::new())
+	}
+}
+
+impl EnclaveMetricsOCallApi for OnchainMock {
+	fn update_metric<Metric: Encode>(&self, _metric: Metric) -> SgxResult<()> {
+		Ok(())
 	}
 }
 

@@ -15,16 +15,16 @@
 
 */
 
-use crate::{
-	author::{Author, AuthorTopFilter},
-	pool_types::BPool,
-};
-use itp_component_container::ComponentContainer;
-use itp_stf_state_handler::GlobalFileStateHandler;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use codec::Encode;
+use itp_ocall_api::EnclaveMetricsOCallApi;
+use sgx_types::SgxResult;
 
-pub type EnclaveRpcAuthor = Author<BPool, AuthorTopFilter, GlobalFileStateHandler, Rsa3072KeyPair>;
+/// Metrics o-call mock.
+#[derive(Clone)]
+pub struct MetricsOCallMock;
 
-/// Global instance of the RPC author (only usable in `sgx` feature).
-pub static GLOBAL_RPC_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
-	ComponentContainer::new();
+impl EnclaveMetricsOCallApi for MetricsOCallMock {
+	fn update_metric<Metric: Encode>(&self, _metric: Metric) -> SgxResult<()> {
+		Ok(())
+	}
+}

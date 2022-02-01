@@ -26,6 +26,8 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use itp_enclave_metrics::EnclaveMetric;
+use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::ShieldingCrypto;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
@@ -57,7 +59,7 @@ const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 /// Authoring API for RPC calls
 ///
 ///
-pub struct Author<TopPool, TopFilter, StateFacade, EncryptionKey>
+pub struct Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
@@ -68,15 +70,17 @@ where
 	top_filter: TopFilter,
 	state_facade: Arc<StateFacade>,
 	encryption_key: EncryptionKey,
+	ocall_api: Arc<OCallApi>,
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey>
-	Author<TopPool, TopFilter, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+	Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	/// Create new instance of Authoring API.
 	pub fn new(
@@ -84,8 +88,9 @@ where
 		top_filter: TopFilter,
 		state_facade: Arc<StateFacade>,
 		encryption_key: EncryptionKey,
+		ocall_api: Arc<OCallApi>,
 	) -> Self {
-		Author { top_pool, top_filter, state_facade, encryption_key }
+		Author { top_pool, top_filter, state_facade, encryption_key, ocall_api }
 	}
 }
 
@@ -94,13 +99,14 @@ enum TopSubmissionMode {
 	SubmitWatch,
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey>
-	Author<TopPool, TopFilter, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+	Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn process_top(
 		&self,
@@ -134,6 +140,11 @@ where
 		//let best_block_hash = self.client.info().best_hash;
 		// dummy block hash
 		let best_block_hash = Default::default();
+
+		// Update metric
+		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::TopPoolSizeIncrement) {
+			warn!("Failed to update metric for top pool size: {:?}", e);
+		}
 
 		match submission_mode {
 			TopSubmissionMode::Submit => Box::pin(
@@ -171,13 +182,15 @@ fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
 	.into()
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey> AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
-	for Author<TopPool, TopFilter, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+	AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
+	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn submit_top(
 		&self,
@@ -242,6 +255,11 @@ where
 			.collect::<Result<Vec<_>>>()?;
 		debug!("removing {:?} from top pool", hashes);
 
+		// Update metric
+		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::TopPoolSizeDecrement) {
+			warn!("Failed to update metric for top pool size: {:?}", e);
+		}
+
 		Ok(self
 			.top_pool
 			.remove_invalid(&hashes, shard, inblock)
@@ -259,13 +277,14 @@ where
 	}
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey> OnBlockCreated
-	for Author<TopPool, TopFilter, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi> OnBlockCreated
+	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
 
@@ -274,13 +293,14 @@ where
 	}
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey> SendState
-	for Author<TopPool, TopFilter, StateFacade, EncryptionKey>
+impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi> SendState
+	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	EncryptionKey: ShieldingCrypto,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
 

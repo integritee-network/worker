@@ -27,6 +27,8 @@ use codec::{Decode, Encode};
 
 #[derive(Encode, Decode)]
 pub enum EnclaveMetric {
-	SidechainBlockHeight(u64),
-	TopPoolSize(u64),
+	SetSidechainBlockHeight(u64),
+	TopPoolSizeSet(u64),
+	TopPoolSizeIncrement,
+	TopPoolSizeDecrement,
 }

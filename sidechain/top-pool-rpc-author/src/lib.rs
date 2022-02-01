@@ -35,15 +35,10 @@ pub mod api;
 pub mod author;
 pub mod client_error;
 pub mod error;
+pub mod initializer;
 pub mod pool_types;
 pub mod top_filter;
 pub mod traits;
-
-#[cfg(feature = "sgx")]
-pub mod initializer;
-
-#[cfg(feature = "sgx")]
-pub mod global_author_container;
 
 #[cfg(all(feature = "sgx", feature = "test"))]
 pub mod author_tests;

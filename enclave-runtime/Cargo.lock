@@ -1384,6 +1384,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-enclave-metrics"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+]
+
+[[package]]
 name = "itp-extrinsics-factory"
 version = "0.8.0"
 dependencies = [
@@ -1626,6 +1635,7 @@ dependencies = [
  "frame-support",
  "ita-stf",
  "itc-parentchain-block-import-dispatcher",
+ "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
@@ -1799,6 +1809,8 @@ dependencies = [
  "itc-direct-rpc-server",
  "itc-tls-websocket-server",
  "itp-component-container",
+ "itp-enclave-metrics",
+ "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-state-handler",
  "itp-test",

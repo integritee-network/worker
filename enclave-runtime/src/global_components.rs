@@ -43,7 +43,10 @@ use its_sidechain::{
 	},
 	state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
-	top_pool_rpc_author::global_author_container::EnclaveRpcAuthor,
+	top_pool_rpc_author::{
+		author::{Author, AuthorTopFilter},
+		pool_types::BPool,
+	},
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
@@ -68,6 +71,8 @@ pub type EnclaveParentchainBlockImportDispatcher =
 /// Sidechain types
 pub type EnclaveSidechainState =
 	SidechainDB<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block, SgxExternalities>;
+pub type EnclaveRpcAuthor =
+	Author<BPool, AuthorTopFilter, GlobalFileStateHandler, Rsa3072KeyPair, OcallApi>;
 pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -115,4 +120,11 @@ pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT: ComponentContainer<
 /// Sidechain block syncer.
 pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<
 	EnclaveSidechainBlockSyncer,
+> = ComponentContainer::new();
+
+pub static GLOBAL_RPC_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
+	ComponentContainer::new();
+
+pub static GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT: ComponentContainer<
+	EnclaveTopPoolOperationHandler,
 > = ComponentContainer::new();
