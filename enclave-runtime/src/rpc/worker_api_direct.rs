@@ -115,7 +115,7 @@ where
 	let state_get_metadata_name: &str = "state_getMetadata";
 	io.add_sync_method(state_get_metadata_name, |_: Params| {
 		let metadata = Runtime::metadata();
-		let json_value = RpcReturnValue::new(metadata.encode(), false, DirectRequestStatus::Ok);
+		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.encode()))
 	});
 
