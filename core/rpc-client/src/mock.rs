@@ -17,20 +17,31 @@
 
 //! Interface for direct access to a workers rpc.
 
-use crate::{direct_client::DirectApi, error::Result};
+use crate::{
+	direct_client::{DirectApi, Error},
+	error::Result,
+};
+use codec::Decode;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::{sync::mpsc::Sender as MpscSender, thread::JoinHandle};
+use substrate_api_client::{FromHexString, RuntimeMetadataPrefixed};
 
 #[derive(Clone, Default)]
 pub struct DirectClientMock {
 	rsa_pubkey: Rsa3072PubKey,
 	mu_ra_url: String,
 	untrusted_worker_url: String,
+	metadata: String,
 }
 
 impl DirectClientMock {
-	pub fn new(rsa_pubkey: Rsa3072PubKey, mu_ra_url: String, untrusted_worker_url: String) -> Self {
-		Self { rsa_pubkey, mu_ra_url, untrusted_worker_url }
+	pub fn new(
+		rsa_pubkey: Rsa3072PubKey,
+		mu_ra_url: String,
+		untrusted_worker_url: String,
+		metadata: String,
+	) -> Self {
+		Self { rsa_pubkey, mu_ra_url, untrusted_worker_url, metadata }
 	}
 
 	pub fn with_rsa_pubkey(mut self, key: Rsa3072PubKey) -> Self {
@@ -45,6 +56,11 @@ impl DirectClientMock {
 
 	pub fn with_untrusted_worker_url(mut self, url: &str) -> Self {
 		self.untrusted_worker_url = url.to_string();
+		self
+	}
+
+	pub fn with_metadata(mut self, hex_metadata: String) -> Self {
+		self.metadata = hex_metadata;
 		self
 	}
 }
@@ -68,5 +84,13 @@ impl DirectApi for DirectClientMock {
 
 	fn get_untrusted_worker_url(&self) -> Result<String> {
 		Ok(self.untrusted_worker_url.clone())
+	}
+
+	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
+		let metadata = match Vec::from_hex(self.metadata.clone()) {
+			Ok(m) => m,
+			Err(e) => return Err(Error::Custom("Decode metadata FromHexError!".into())),
+		};
+		RuntimeMetadataPrefixed::decode(&mut metadata.as_slice()).map_err(|e| e.into())
 	}
 }
