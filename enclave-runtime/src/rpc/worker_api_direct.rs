@@ -26,6 +26,7 @@ use its_sidechain::{
 	top_pool_rpc_author::traits::AuthorApi,
 };
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
+use sgx_runtime::Runtime;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
 fn compute_encoded_return_error(error_msg: &str) -> Vec<u8> {
@@ -113,8 +114,9 @@ where
 	// state_getMetadata
 	let state_get_metadata_name: &str = "state_getMetadata";
 	io.add_sync_method(state_get_metadata_name, |_: Params| {
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+		let metadata = Runtime::metadata();
+		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.encode()))
 	});
 
 	// state_getRuntimeVersion

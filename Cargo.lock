@@ -2379,6 +2379,7 @@ dependencies = [
  "serde_derive 1.0.130",
  "serde_json 1.0.72",
  "sgx_crypto_helper",
+ "substrate-api-client",
  "thiserror 1.0.30",
  "url 2.2.2",
  "ws",
@@ -5674,7 +5675,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#e998d6e73db2ef77b1b5f629e918ec9239683599"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#8cd9b1f98f62fb9bc110c122568d1e531c0f7b8d"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5689,7 +5690,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#e998d6e73db2ef77b1b5f629e918ec9239683599"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#8cd9b1f98f62fb9bc110c122568d1e531c0f7b8d"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6302,7 +6303,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "4.0.0-dev"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#e998d6e73db2ef77b1b5f629e918ec9239683599"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#8cd9b1f98f62fb9bc110c122568d1e531c0f7b8d"
 dependencies = [
  "environmental",
  "futures 0.3.18",

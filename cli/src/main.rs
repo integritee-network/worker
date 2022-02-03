@@ -156,6 +156,16 @@ fn main() {
 				}),
 		)
 		.add_cmd(
+			Command::new("print-sgx-metadata")
+				.description("query sgx-runtime metadata and print it as json to stdout")
+				.runner(|_args: &str, matches: &ArgMatches<'_>| {
+					let worker_api_direct = get_worker_api_direct(matches);
+					let metadata = worker_api_direct.get_state_metadata().unwrap();
+					println!("Metadata:\n {}", Metadata::pretty_format(&metadata).unwrap());
+					Ok(())
+				}),
+		)
+		.add_cmd(
 			Command::new("faucet")
 				.description("send some bootstrapping funds to supplied account(s)")
 				.options(|app| {

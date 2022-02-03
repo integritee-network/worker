@@ -27,6 +27,7 @@ use std::{
 	thread,
 	thread::JoinHandle,
 };
+use substrate_api_client::RuntimeMetadataPrefixed;
 
 pub use crate::error::{Error, Result};
 
@@ -42,6 +43,7 @@ pub trait DirectApi {
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey>;
 	fn get_mu_ra_url(&self) -> Result<String>;
 	fn get_untrusted_worker_url(&self) -> Result<String>;
+	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed>;
 }
 
 impl DirectClient {
@@ -105,6 +107,23 @@ impl DirectApi for DirectClient {
 
 		info!("[+] Got untrusted websocket url of worker: {}", untrusted_url);
 		Ok(untrusted_url)
+	}
+	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
+		let jsonrpc_call: String =
+			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), vec![]);
+
+		// Send json rpc call to ws server.
+		let response_str = Self::get(self, &jsonrpc_call)?;
+
+		//Decode rpc response
+		let rpc_response: RpcResponse = serde_json::from_str(&response_str)?;
+		let rpc_return_value = RpcReturnValue::decode(&mut rpc_response.result.as_slice())?;
+
+		//Decode Metadata
+		let metadata = RuntimeMetadataPrefixed::decode(&mut rpc_return_value.value.as_slice())?;
+
+		println!("[+] Got metadata of enclave runtime");
+		Ok(metadata)
 	}
 }
 
