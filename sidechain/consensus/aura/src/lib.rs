@@ -42,7 +42,7 @@ use its_primitives::{
 use its_validateer_fetch::ValidateerFetch;
 use sp_core::ByteArray;
 use sp_runtime::{
-	app_crypto::{sp_core::H256, Pair, Public},
+	app_crypto::{sp_core::H256, Pair},
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
