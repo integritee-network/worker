@@ -37,4 +37,4 @@ std = [ 'codec/std',
 sgx = [ 'sgx_tstd' ]
 
 [dev-dependencies]
-sp-keyring = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-keyring = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
