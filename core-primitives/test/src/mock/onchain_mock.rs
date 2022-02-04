@@ -29,7 +29,7 @@ use sgx_types::{
 	SgxResult, SGX_HASH_SIZE,
 };
 use sp_core::H256;
-use sp_runtime::traits::Header as HeaderT;
+use sp_runtime::{traits::Header as HeaderT, AccountId32};
 use sp_std::prelude::*;
 use std::collections::HashMap;
 
@@ -172,7 +172,13 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 // }
 
 pub fn validateer_set() -> Vec<Enclave> {
-	vec![Default::default(), Default::default(), Default::default(), Default::default()]
+	let default_enclave = Enclave::new(
+		AccountId32::from([0; 32]),
+		Default::default(),
+		Default::default(),
+		Default::default(),
+	);
+	vec![default_enclave.clone(), default_enclave.clone(), default_enclave.clone(), default_enclave]
 }
 
 fn into_key_value_storage(validateers: Vec<Enclave>) -> Vec<(Vec<u8>, Enclave)> {

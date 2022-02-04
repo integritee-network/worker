@@ -68,7 +68,7 @@ pub struct Request {
 }
 
 // Todo: move this improved enclave definition into a primitives crate in the pallet_teerex repo.
-#[derive(Encode, Decode, Default, Clone, PartialEq, sp_core::RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, sp_core::RuntimeDebug)]
 pub struct EnclaveGen<AccountId> {
 	pub pubkey: AccountId,
 	// FIXME: this is redundant information
