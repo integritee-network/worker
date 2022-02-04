@@ -19,8 +19,8 @@ itp-storage = { path = "../storage", default-features = false }
 
 # substrate-deps
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-core = { version = "4.1.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [features]
 default = ['std']
@@ -37,4 +37,4 @@ std = [ 'codec/std',
 sgx = [ 'sgx_tstd' ]
 
 [dev-dependencies]
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-keyring = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}

@@ -107,13 +107,13 @@ its-sidechain = { path = "../sidechain/sidechain-crate", default-features = fals
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-core = { version = "4.1.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-finality-grandpa = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sc-utils = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-version = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-application-crypto = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-application-crypto = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [patch.crates-io]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }

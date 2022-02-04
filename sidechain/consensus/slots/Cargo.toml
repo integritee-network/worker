@@ -20,7 +20,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # substrate deps
 sp-consensus-slots = { version = "0.10.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
@@ -30,7 +30,7 @@ its-consensus-common = { path = "../common", default-features = false }
 its-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 tokio = "*"
 
 

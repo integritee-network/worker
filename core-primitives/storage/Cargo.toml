@@ -18,13 +18,13 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 # substrate deps
 frame-metadata = { version = "14.0.0", features = ["v13"], default-features = false, git = "https://github.com/paritytech/frame-metadata.git", branch = "main" }
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-core = { version = "4.1.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-trie = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-trie = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [dev-dependencies]
-sp-state-machine = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-state-machine = { version = "0.11.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [features]
 default = ["std"]

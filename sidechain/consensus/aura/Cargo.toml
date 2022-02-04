@@ -14,8 +14,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-core = { version = "4.1.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
@@ -44,7 +44,7 @@ itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
 its-test = { path = "../../test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-keyring = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [features]
 default = ["std"]
