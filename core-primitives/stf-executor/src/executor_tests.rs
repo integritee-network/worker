@@ -279,7 +279,7 @@ pub fn get_stf_state_works() {
 }
 
 pub fn upon_false_signature_get_stf_state_errs() {
-	let sender = AccountId::default();
+	let sender = AccountId::from([0; 32]);
 	let wrong_signer = endowed_account();
 	let signed_getter = TrustedGetter::free_balance(sender).sign(&wrong_signer.into());
 	let mut state = test_state();
