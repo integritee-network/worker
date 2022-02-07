@@ -51,7 +51,6 @@ enclave {
 			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,
             [in, size=authority_list_size] uint8_t* authority_list, size_t authority_list_size,
             [in, size=authority_proof_size] uint8_t* authority_proof, size_t authority_proof_size,
-            int is_primary_validateer,
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 

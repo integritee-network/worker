@@ -85,7 +85,7 @@ use its_sidechain::{
 	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
 };
 use log::*;
-use sgx_types::{c_int, sgx_status_t};
+use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
 use std::{slice, sync::Arc, vec::Vec};
@@ -442,7 +442,6 @@ pub unsafe extern "C" fn init_light_client(
 	authority_list_size: usize,
 	authority_proof: *const u8,
 	authority_proof_size: usize,
-	_is_primary_validateer: c_int,
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
@@ -452,7 +451,6 @@ pub unsafe extern "C" fn init_light_client(
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 	let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
 	let mut proof = slice::from_raw_parts(authority_proof, authority_proof_size);
-	let _is_primary_validateer: bool = _is_primary_validateer == 1;
 
 	let header = match Header::decode(&mut header) {
 		Ok(h) => h,

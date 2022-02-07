@@ -366,8 +366,7 @@ fn start_worker<E, T, D>(
 		println!("[+] We are NOT the primary validateer");
 	}
 
-	let last_synced_header =
-		init_light_client(&node_api, enclave.clone(), we_are_primary_validateer).unwrap();
+	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parent chain...");
 
 	// Syncing all parentchain blocks, this might take a while..
@@ -613,7 +612,6 @@ fn print_events(events: Events, _sender: Sender<String>) {
 pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	enclave_api: Arc<E>,
-	is_primary_validateer: bool,
 ) -> Result<Header, Error> {
 	let genesis_hash = api.get_genesis_hash().unwrap();
 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
@@ -626,7 +624,7 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	let authority_list = VersionedAuthorityList::from(grandpas);
 
 	Ok(enclave_api
-		.init_light_client(genesis_header, authority_list, grandpa_proof, is_primary_validateer)
+		.init_light_client(genesis_header, authority_list, grandpa_proof)
 		.unwrap())
 }
 

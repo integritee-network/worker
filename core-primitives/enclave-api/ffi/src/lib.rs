@@ -40,7 +40,6 @@ extern "C" {
 		authority_list_size: usize,
 		authority_proof: *const u8,
 		authority_proof_size: usize,
-		is_primary_validateer: c_int,
 		latest_header: *mut u8,
 		latest_header_size: usize,
 	) -> sgx_status_t;
