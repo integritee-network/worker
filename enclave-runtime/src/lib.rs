@@ -424,7 +424,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
-	let stf_executor = Arc::new(EnclaveStfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let stf_executor = Arc::new(EnclaveStfExecutor::new(Arc::new(OcallApi), state_handler));
 	let top_pool_operation_handler =
 		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor));
 

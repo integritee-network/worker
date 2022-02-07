@@ -84,6 +84,7 @@ impl<
 		MetricsReceiver,
 	>
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		node_api_factory: Arc<NodeApi>,
 		block_gossiper: Arc<Gossiper>,
