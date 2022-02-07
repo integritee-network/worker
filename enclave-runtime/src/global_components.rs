@@ -97,18 +97,22 @@ pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 
 /// Global component instances
 
+/// Parentchain import dispatcher.
 pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new();
 
+/// Sidechain import queue.
 pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT: ComponentContainer<
 	EnclaveSidechainBlockImportQueue,
 > = ComponentContainer::new();
 
+/// Sidechain import queue worker - processes the import queue.
 pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT: ComponentContainer<
 	EnclaveSidechainBlockImportQueueWorker,
 > = ComponentContainer::new();
 
+/// Sidechain block syncer.
 pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<
 	EnclaveSidechainBlockSyncer,
 > = ComponentContainer::new();
