@@ -331,8 +331,11 @@ fn start_worker<E, T, D>(
 	// Start prometheus metrics server.
 	let enclave_wallet = Arc::new(EnclaveWallet::new(node_api.clone(), tee_accountid.clone()));
 	let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
+	let metrics_server_port = config
+		.try_parse_metrics_server_port()
+		.expect("metrics server port to be a valid port number");
 	tokio_handle.spawn(async move {
-		if let Err(e) = start_metrics_server(metrics_handler, 8787).await {
+		if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
 			error!("Unexpected error in Prometheus metrics server: {:?}", e);
 		}
 	});
