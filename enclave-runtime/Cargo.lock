@@ -15,6 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.1.0"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#267846616355810e347c42616ede224c9a0fc2f5"
 dependencies = [
  "ac-primitives",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -26,6 +27,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.1.0"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#267846616355810e347c42616ede224c9a0fc2f5"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -3002,6 +3004,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#3695e29c300d53e2e38848c3a5116c5530501ad8"
 dependencies = [
  "derive_more",
  "environmental",
@@ -3016,6 +3019,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#3695e29c300d53e2e38848c3a5116c5530501ad8"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3520,6 +3524,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "5.0.0"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#3695e29c300d53e2e38848c3a5116c5530501ad8"
 dependencies = [
  "environmental",
  "hash-db",
@@ -3746,6 +3751,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#267846616355810e347c42616ede224c9a0fc2f5"
 dependencies = [
  "ac-compose-macros",
  "ac-primitives",
