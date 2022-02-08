@@ -2059,7 +2059,8 @@ dependencies = [
 
 [[package]]
 name = "integritee-node-runtime"
-version = "1.0.6"
+version = "1.0.7"
+source = "git+https://github.com/integritee-network/integritee-node?branch=master#fb4bac9880a8e742f8862bcdadd0f0b0bd2624a7"
 dependencies = [
  "frame-executive",
  "frame-support",
