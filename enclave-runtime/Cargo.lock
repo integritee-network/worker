@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=master#267846616355810e347c42616ede224c9a0fc2f5"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#7b6b822e2826e384346a9ade9585a6f96f4951ca"
 dependencies = [
  "ac-primitives",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -27,7 +27,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=master#267846616355810e347c42616ede224c9a0fc2f5"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#7b6b822e2826e384346a9ade9585a6f96f4951ca"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -3751,7 +3751,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=master#267846616355810e347c42616ede224c9a0fc2f5"
+source = "git+https://github.com/scs/substrate-api-client?branch=master#7b6b822e2826e384346a9ade9585a6f96f4951ca"
 dependencies = [
  "ac-compose-macros",
  "ac-primitives",
