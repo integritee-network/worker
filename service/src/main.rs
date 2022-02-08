@@ -547,18 +547,18 @@ fn print_events(events: Events, _sender: Sender<String>) {
 			Event::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(sender, worker_url) => {
+					my_node_runtime::pallet_teerex::Event::AddedEnclave(sender, worker_url) => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", sender);
 						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 					},
-					my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
+					my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
 						println!(
 							"[+] Received trusted call for shard {}",
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
+					my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
 						sender,
 						block_hash,
 						merkle_root,
@@ -568,7 +568,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    Block Hash: {:?}", hex::encode(block_hash));
 						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ProposedSidechainBlock(
+					my_node_runtime::pallet_teerex::Event::ProposedSidechainBlock(
 						sender,
 						payload,
 					) => {
@@ -576,13 +576,11 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(incognito_account) => {
+					my_node_runtime::pallet_teerex::Event::ShieldFunds(incognito_account) => {
 						info!("[+] Received ShieldFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},
-					my_node_runtime::pallet_teerex::RawEvent::UnshieldedFunds(
-						incognito_account,
-					) => {
+					my_node_runtime::pallet_teerex::Event::UnshieldedFunds(incognito_account) => {
 						info!("[+] Received UnshieldedFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},

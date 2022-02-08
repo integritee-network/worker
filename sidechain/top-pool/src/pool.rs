@@ -486,10 +486,11 @@ pub mod tests {
 	use parity_util_mem::MallocSizeOf;
 	use serde::Serialize;
 	use sp_application_crypto::ed25519;
-	use sp_core::hash::H256;
+	use sp_core::{hash::H256, Pair};
 	use sp_runtime::{
 		traits::{BlakeTwo256, Extrinsic as ExtrinsicT, Hash, Verify},
 		transaction_validity::{InvalidTransaction as InvalidTrustedOperation, ValidTransaction},
+		MultiSignature,
 	};
 	use std::{collections::HashSet, sync::Mutex};
 
@@ -644,7 +645,12 @@ pub mod tests {
 	}
 
 	fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
-		TrustedCallSigned::new(call, nonce, Default::default()).into_trusted_operation(true)
+		let msg = &b"test-message"[..];
+		let (pair, _) = ed25519::Pair::generate();
+
+		let signature = pair.sign(&msg);
+		let multi_sig = MultiSignature::from(signature);
+		TrustedCallSigned::new(call, nonce, multi_sig).into_trusted_operation(true)
 	}
 
 	fn test_pool() -> Pool<TestApi, RpcResponderMock<H256>> {

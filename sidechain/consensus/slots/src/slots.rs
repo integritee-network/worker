@@ -185,7 +185,7 @@ mod tests {
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
 	};
-	use sp_keyring::ed25519::Keyring;
+	use sp_keyring::ed25519::{ed25519, Keyring};
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
 	use std::{fmt::Debug, time::SystemTime};
 
@@ -209,7 +209,7 @@ mod tests {
 
 	fn test_block_with_time_stamp(timestamp: u64) -> SignedBlock {
 		Block::new(
-			Default::default(),
+			ed25519::Public([0; 32]),
 			0,
 			H256::random(),
 			H256::random(),

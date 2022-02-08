@@ -40,8 +40,9 @@ use its_primitives::{
 	types::block::BlockHash,
 };
 use its_validateer_fetch::ValidateerFetch;
+use sp_core::ByteArray;
 use sp_runtime::{
-	app_crypto::{sp_core::H256, Pair, Public},
+	app_crypto::{sp_core::H256, Pair},
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
@@ -245,7 +246,7 @@ where
 		.current_validateers(header)
 		.map_err(|e| ConsensusError::CouldNotGetAuthorities(e.to_string()))?
 		.into_iter()
-		.map(|e| AuthorityId::<P>::from_slice(e.pubkey.as_ref()))
+		.filter_map(|e| AuthorityId::<P>::from_slice(e.pubkey.as_ref()).ok())
 		.collect())
 }
 
