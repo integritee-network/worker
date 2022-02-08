@@ -89,7 +89,7 @@ impl DirectApi for DirectClientMock {
 	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
 		let metadata = match Vec::from_hex(self.metadata.clone()) {
 			Ok(m) => m,
-			Err(e) => return Err(Error::Custom("Decode metadata FromHexError!".into())),
+			Err(_) => return Err(Error::Custom("Decode metadata FromHexError!".into())),
 		};
 		RuntimeMetadataPrefixed::decode(&mut metadata.as_slice()).map_err(|e| e.into())
 	}
