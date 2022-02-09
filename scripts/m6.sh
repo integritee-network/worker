@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Runs M6 demo: Either set `CLIENT_DIR` env var directly or run script with:
 #
-# source ./init_env.sh && ./m8.sh
+# source ./init_env.sh && ./m6.sh
 
 echo "$CLIENT_DIR"
 

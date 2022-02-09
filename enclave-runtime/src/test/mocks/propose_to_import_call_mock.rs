@@ -73,7 +73,7 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 		for signed_block in decoded_signed_blocks {
 			self.block_importer
 				.import_block(signed_block, &self.parentchain_header)
-				.unwrap()
+				.unwrap();
 		}
 		Ok(())
 	}

@@ -48,7 +48,10 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 }
 
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<(), Error> {
-	ensure!(data.len() <= writable.len(), Error::InsufficientBufferSize);
+	ensure!(
+		data.len() <= writable.len(),
+		Error::InsufficientBufferSize(writable.len(), data.len())
+	);
 	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
 	// fill the right side with whitespace
@@ -80,7 +83,7 @@ mod tests {
 		let data = vec![1; 33];
 		assert_matches!(
 			write_slice_and_whitespace_pad(&mut writable, data),
-			Err(Error::InsufficientBufferSize)
+			Err(Error::InsufficientBufferSize(_, _))
 		);
 	}
 }

@@ -129,7 +129,11 @@ where
 
 	ensure!(
 		expected_author == block.block_author(),
-		ConsensusError::InvalidAuthority(format!("{:?}", block.block_author()))
+		ConsensusError::InvalidAuthority(format!(
+			"Expected author: {:?}, author found in block: {:?}",
+			expected_author,
+			block.block_author()
+		))
 	);
 
 	Ok(())
@@ -139,6 +143,15 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 	block: &SidechainBlock,
 	last_block: &SidechainBlock,
 ) -> Result<(), ConsensusError> {
+	// These next two checks might seem redundant at first glance. However, they are distinct (see comments).
+
+	// We have already imported this block.
+	ensure!(
+		block.block_number() > last_block.block_number(),
+		ConsensusError::BlockAlreadyImported(block.block_number(), last_block.block_number())
+	);
+
+	// We are missing some blocks between our last known block and the one we're trying to import.
 	ensure!(
 		last_block.block_number() + 1 == block.block_number(),
 		ConsensusError::BlockAncestryMismatch(
@@ -169,16 +182,18 @@ fn ensure_first_block<SidechainBlock: SidechainBlockTrait>(
 ) -> Result<(), ConsensusError> {
 	ensure!(
 		block.block_number() == 1,
-		ConsensusError::BadSidechainBlock(
-			block.hash(),
-			"No last block found but block number != 1".into()
+		ConsensusError::InvalidFirstBlock(
+			block.block_number(),
+			"No last block found, expecting first block. But block to import has number != 1"
+				.into()
 		)
 	);
 	ensure!(
 		block.parent_hash() == Default::default(),
-		ConsensusError::BadSidechainBlock(
-			block.hash(),
-			"No last block found parent_hash != 0".into()
+		ConsensusError::InvalidFirstBlock(
+			block.block_number(),
+			"No last block found, excepting first block. But block to import has parent_hash != 0"
+				.into()
 		)
 	);
 
@@ -198,13 +213,6 @@ mod tests {
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::{app_crypto::ed25519, testing::H256};
-
-	fn assert_bad_sidechain_block_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
-		assert_matches!(result, Err(ConsensusError::BadSidechainBlock(
-			_,
-			m,
-		)) if m == msg)
-	}
 
 	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>) {
 		assert_matches!(result, Err(ConsensusError::BlockAncestryMismatch(_, _, _,)))
@@ -231,10 +239,7 @@ mod tests {
 	#[test]
 	fn ensure_first_block_errs_with_invalid_block_number() {
 		let b = SidechainBlockBuilder::default().with_number(2).build();
-		assert_bad_sidechain_block_err(
-			ensure_first_block(&b),
-			"No last block found but block number != 1",
-		)
+		assert_matches!(ensure_first_block(&b), Err(ConsensusError::InvalidFirstBlock(2, _)))
 	}
 
 	#[test]
@@ -242,10 +247,7 @@ mod tests {
 		let parent = H256::random();
 		let b = SidechainBlockBuilder::default().with_parent_hash(parent).build();
 
-		assert_bad_sidechain_block_err(
-			ensure_first_block(&b),
-			"No last block found parent_hash != 0",
-		);
+		assert_matches!(ensure_first_block(&b), Err(ConsensusError::InvalidFirstBlock(_, _)));
 	}
 
 	#[test]
@@ -262,8 +264,10 @@ mod tests {
 	#[test]
 	fn verify_block_ancestry_errs_with_invalid_parent_block_number() {
 		let last_block = SidechainBlockBuilder::default().build();
-		let curr_block =
-			SidechainBlockBuilder::default().with_parent_hash(last_block.hash()).build();
+		let curr_block = SidechainBlockBuilder::default()
+			.with_parent_hash(last_block.hash())
+			.with_number(5)
+			.build();
 
 		assert_ancestry_mismatch_err(verify_block_ancestry(&curr_block, &last_block));
 	}
@@ -357,9 +361,31 @@ mod tests {
 
 		let mut aura = TestAuraVerifier::new(SLOT_DURATION, state_mock);
 
-		assert_bad_sidechain_block_err(
+		assert_matches!(
 			aura.verify(curr_block, &default_header(), &onchain_mock),
-			"No last block found but block number != 1",
+			Err(ConsensusError::InvalidFirstBlock(2, _))
+		);
+	}
+
+	#[test]
+	fn verify_errs_on_already_imported_block() {
+		let last_block = SidechainBlockBuilder::default().build();
+		let signer = Keyring::Alice;
+
+		// Current block has also number 1, same as last. So import should return an error
+		// that a block with this number is already imported.
+		let curr_block =
+			block2_builder(signer.pair(), last_block.hash()).with_number(1).build_signed();
+
+		let state_mock = StateMock { last_block: Some(last_block) };
+		let onchain_mock = OnchainMock::default()
+			.with_validateer_set(Some(vec![validateer(signer.public().into())]));
+
+		let mut aura = TestAuraVerifier::new(SLOT_DURATION, state_mock);
+
+		assert_matches!(
+			aura.verify(curr_block, &default_header(), &onchain_mock),
+			Err(ConsensusError::BlockAlreadyImported(1, 1))
 		);
 	}
 }

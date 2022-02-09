@@ -48,16 +48,16 @@ impl Handler for WsClient {
 	}
 
 	fn on_message(&mut self, msg: Message) -> Result<()> {
-		info!("got message");
+		debug!("got message");
 		debug!("{}", msg);
-		info!("sending result to MpscSender..");
+		debug!("sending result to MpscSender..");
 		self.result.send(msg.to_string()).unwrap();
 		if !self.do_watch {
-			info!("do_watch is false, closing connection");
+			debug!("do_watch is false, closing connection");
 			self.out.close(CloseCode::Normal).unwrap();
-			info!("connection is closed");
+			debug!("connection is closed");
 		}
-		info!("on_message successful, returning");
+		debug!("on_message successful, returning");
 		Ok(())
 	}
 

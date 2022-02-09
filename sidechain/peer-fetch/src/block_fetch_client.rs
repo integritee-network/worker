@@ -26,6 +26,7 @@ use jsonrpsee::{
 	types::to_json_value,
 	ws_client::{traits::Client, WsClientBuilder},
 };
+use log::info;
 use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 
@@ -65,7 +66,11 @@ where
 
 		let rpc_parameters = vec![to_json_value((last_known_block_hash, shard_identifier))?];
 
+		info!("Got untrusted url for peer block fetching: {}", sync_source_rpc_url);
+
 		let client = WsClientBuilder::default().build(sync_source_rpc_url.as_str()).await?;
+
+		info!("Sending fetch blocks from peer request");
 
 		client
 			.request::<Vec<SignedBlock>>(

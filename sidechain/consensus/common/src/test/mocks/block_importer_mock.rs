@@ -25,11 +25,16 @@ use its_state::SidechainDB;
 use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::sync::RwLock;
+use std::{collections::VecDeque, sync::RwLock};
 
 /// Block importer mock.
-pub struct BlockImportMock<ParentchainBlock, SignedSidechainBlock> {
-	import_result: Option<Result<()>>,
+pub struct BlockImportMock<ParentchainBlock, SignedSidechainBlock>
+where
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
+{
+	import_result: RwLock<VecDeque<Result<ParentchainBlock::Header>>>,
 	imported_blocks: RwLock<Vec<SignedSidechainBlock>>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
@@ -40,8 +45,21 @@ where
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
-	pub fn with_import_result(mut self, result: Result<()>) -> Self {
-		self.import_result = Some(result);
+	pub fn with_import_result_once(self, result: Result<ParentchainBlock::Header>) -> Self {
+		let mut imported_results_lock = self.import_result.write().unwrap();
+		imported_results_lock.push_back(result);
+		std::mem::drop(imported_results_lock);
+		self
+	}
+
+	#[allow(unused)]
+	pub fn with_import_result_sequence(
+		self,
+		mut results: VecDeque<Result<ParentchainBlock::Header>>,
+	) -> Self {
+		let mut imported_results_lock = self.import_result.write().unwrap();
+		imported_results_lock.append(&mut results);
+		std::mem::drop(imported_results_lock);
 		self
 	}
 
@@ -52,10 +70,14 @@ where
 
 impl<ParentchainBlock, SignedSidechainBlock> Default
 	for BlockImportMock<ParentchainBlock, SignedSidechainBlock>
+where
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = <sp_core::ed25519::Pair as Pair>::Public> + 'static,
 {
 	fn default() -> Self {
 		BlockImportMock {
-			import_result: None,
+			import_result: RwLock::default(),
 			imported_blocks: RwLock::default(),
 			_phantom: Default::default(),
 		}
@@ -90,6 +112,17 @@ where
 		todo!()
 	}
 
+	fn verify_import<F>(
+		&self,
+		_shard: &ShardIdentifierFor<SignedSidechainBlock>,
+		_verifying_function: F,
+	) -> core::result::Result<SignedSidechainBlock, Error>
+	where
+		F: FnOnce(Self::SidechainState) -> core::result::Result<SignedSidechainBlock, Error>,
+	{
+		todo!()
+	}
+
 	fn state_key(&self) -> Self::StateCrypto {
 		todo!()
 	}
@@ -106,6 +139,14 @@ where
 		todo!()
 	}
 
+	fn peek_parentchain_header(
+		&self,
+		_sidechain_block: &SignedSidechainBlock::Block,
+		_last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> core::result::Result<ParentchainBlock::Header, Error> {
+		todo!()
+	}
+
 	fn cleanup(&self, _signed_sidechain_block: &SignedSidechainBlock) -> Result<()> {
 		todo!()
 	}
@@ -113,24 +154,12 @@ where
 	fn import_block(
 		&self,
 		signed_sidechain_block: SignedSidechainBlock,
-		_parentchain_header: &ParentchainBlock::Header,
-	) -> Result<()> {
+		parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header> {
 		let mut imported_blocks_lock = self.imported_blocks.write().unwrap();
 		imported_blocks_lock.push(signed_sidechain_block);
 
-		// Result (or rather the underlying Error) does not support any cloning,
-		// so we have this elaborate way to return the result.
-		match &self.import_result {
-			Some(r) => match r {
-				Ok(_) => Ok(()),
-				Err(e) => match e {
-					Error::BlockAncestryMismatch(number, hash, reason) => Err(
-						Error::BlockAncestryMismatch(number.clone(), hash.clone(), reason.clone()),
-					),
-					_ => Err(Error::Other(format!("{:?}", e).into())),
-				},
-			},
-			None => Ok(()),
-		}
+		let mut imported_results_lock = self.import_result.write().unwrap();
+		imported_results_lock.pop_front().unwrap_or(Ok(parentchain_header.clone()))
 	}
 }

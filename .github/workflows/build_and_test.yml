@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [M6, M8]
+        test: [M6, M8, Sidechain]
         include:
           - test: M6
             demo_name: m6_demo_shielding_unshielding
@@ -107,6 +107,9 @@ jobs:
           - test: M8
             demo_name: m8_demo_direct_call
             demo_script: m8.sh
+          - test: Sidechain
+            demo_name: sidechain_demo
+            demo_script: sidechain.sh
 
     env:
       BIN_DIR: bin
@@ -206,7 +209,7 @@ jobs:
         run: |
           touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
-          sleep 60
+          sleep 150
 
       - name: ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.

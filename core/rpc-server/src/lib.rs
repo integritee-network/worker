@@ -71,5 +71,8 @@ where
 
 	let socket_addr = server.local_addr()?;
 	tokio::spawn(async move { server.start().await });
+
+	println!("[+] Untrusted RPC server is spawned on: {}", socket_addr);
+
 	Ok(socket_addr)
 }

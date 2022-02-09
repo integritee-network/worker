@@ -29,7 +29,7 @@ use log::*;
 /// Trait to suspend the production of sidechain blocks.
 pub trait SuspendBlockProduction {
 	/// Suspend any sidechain block production.
-	fn suspend(&self) -> Result<()>;
+	fn suspend_for_sync(&self) -> Result<()>;
 
 	/// Resume block sidechain block production.
 	fn resume(&self) -> Result<()>;
@@ -38,18 +38,35 @@ pub trait SuspendBlockProduction {
 /// Trait to query if sidechain block production is suspended.
 pub trait IsBlockProductionSuspended {
 	fn is_suspended(&self) -> Result<bool>;
+
+	fn is_sync_ongoing(&self) -> Result<bool>;
 }
 
 /// Implementation for suspending and resuming sidechain block production.
 #[derive(Default)]
 pub struct BlockProductionSuspender {
 	is_suspended: RwLock<bool>,
+	sync_is_ongoing: RwLock<bool>,
+}
+
+impl BlockProductionSuspender {
+	pub fn new(is_suspended: bool) -> Self {
+		BlockProductionSuspender {
+			is_suspended: RwLock::new(is_suspended),
+			sync_is_ongoing: RwLock::new(false),
+		}
+	}
 }
 
 impl SuspendBlockProduction for BlockProductionSuspender {
-	fn suspend(&self) -> Result<()> {
+	fn suspend_for_sync(&self) -> Result<()> {
 		let mut suspended_lock = self.is_suspended.write().map_err(|_| Error::LockPoisoning)?;
 		*suspended_lock = true;
+
+		let mut sync_is_ongoing_lock =
+			self.sync_is_ongoing.write().map_err(|_| Error::LockPoisoning)?;
+		*sync_is_ongoing_lock = true;
+
 		info!("Suspend sidechain block production");
 		Ok(())
 	}
@@ -65,6 +82,10 @@ impl SuspendBlockProduction for BlockProductionSuspender {
 impl IsBlockProductionSuspended for BlockProductionSuspender {
 	fn is_suspended(&self) -> Result<bool> {
 		Ok(*self.is_suspended.read().map_err(|_| Error::LockPoisoning)?)
+	}
+
+	fn is_sync_ongoing(&self) -> Result<bool> {
+		Ok(*self.sync_is_ongoing.read().map_err(|_| Error::LockPoisoning)?)
 	}
 }
 
@@ -82,7 +103,7 @@ mod tests {
 	fn suspending_production_works() {
 		let block_production_suspender = BlockProductionSuspender::default();
 
-		block_production_suspender.suspend().unwrap();
+		block_production_suspender.suspend_for_sync().unwrap();
 		assert!(block_production_suspender.is_suspended().unwrap());
 
 		block_production_suspender.resume().unwrap();

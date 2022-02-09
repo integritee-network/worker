@@ -11,6 +11,7 @@ std = [
     "log/std",
     "thiserror",
     # local
+    "itp-block-import-queue/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-types/std",
@@ -23,6 +24,7 @@ sgx = [
     "sgx_tstd",
     "thiserror-sgx",
     # local
+    "itp-block-import-queue/sgx",
     "itp-sgx-crypto/sgx",
     "its-state/sgx",
 ]
@@ -33,6 +35,7 @@ log = { version = "0.4.14", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
 # local deps
+itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }

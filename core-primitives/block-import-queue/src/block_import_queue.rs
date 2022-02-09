@@ -25,7 +25,7 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	PopFromBlockQueue, PushToBlockQueue,
+	PeekBlockQueue, PopFromBlockQueue, PushToBlockQueue,
 };
 use std::{collections::VecDeque, vec::Vec};
 
@@ -90,11 +90,43 @@ impl<SignedBlock> PopFromBlockQueue for BlockImportQueue<SignedBlock> {
 			Some(p) => Ok(queue_lock.drain(..p + 1).collect::<Vec<_>>()),
 		}
 	}
+
+	fn pop_front(&self) -> Result<Option<Self::BlockType>> {
+		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
+		Ok(queue_lock.pop_front())
+	}
+}
+
+impl<SignedBlock> PeekBlockQueue for BlockImportQueue<SignedBlock>
+where
+	SignedBlock: Clone,
+{
+	type BlockType = SignedBlock;
+
+	fn peek_find<Predicate>(&self, predicate: Predicate) -> Result<Option<Self::BlockType>>
+	where
+		Predicate: Fn(&Self::BlockType) -> bool,
+	{
+		let queue_lock = self.queue.read().map_err(|_| Error::PoisonedLock)?;
+		let maybe_block = queue_lock.iter().find(|&b| predicate(b));
+		Ok(maybe_block.cloned())
+	}
+
+	fn peek_last(&self) -> Result<Option<Self::BlockType>> {
+		let queue_lock = self.queue.read().map_err(|_| Error::PoisonedLock)?;
+		Ok(queue_lock.back().cloned())
+	}
+
+	fn peek_queue_size(&self) -> Result<usize> {
+		let queue_lock = self.queue.read().map_err(|_| Error::PoisonedLock)?;
+		Ok(queue_lock.len())
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use core::assert_matches::assert_matches;
 
 	type TestBlock = u32;
 
@@ -181,5 +213,51 @@ mod tests {
 		let queue = BlockImportQueue::<TestBlock>::default();
 		queue.push_single(4).unwrap();
 		assert_eq!(queue.pop_until(|i| i == &4).unwrap(), vec![4])
+	}
+
+	#[test]
+	fn pop_front_returns_none_if_queue_is_empty() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		assert_matches!(queue.pop_front().unwrap(), None);
+	}
+
+	#[test]
+	fn pop_front_works() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 2, 3, 5]).unwrap();
+		assert_eq!(queue.pop_front().unwrap(), Some(1));
+		assert_eq!(queue.pop_front().unwrap(), Some(2));
+		assert_eq!(queue.pop_front().unwrap(), Some(3));
+		assert_eq!(queue.pop_front().unwrap(), Some(5));
+		assert_eq!(queue.pop_front().unwrap(), None);
+	}
+
+	#[test]
+	fn peek_find_works() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 2, 3, 5]).unwrap();
+
+		assert_eq!(None, queue.peek_find(|i| i == &4).unwrap());
+		assert!(queue.peek_find(|i| i == &1).unwrap().is_some());
+		assert!(queue.peek_find(|i| i == &5).unwrap().is_some());
+	}
+
+	#[test]
+	fn peek_find_on_empty_queue_returns_none() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		assert_eq!(None, queue.peek_find(|i| i == &1).unwrap());
+	}
+
+	#[test]
+	fn peek_last_works() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		queue.push_multiple(vec![1, 2, 3, 5, 6, 9, 10]).unwrap();
+		assert_eq!(queue.peek_last().unwrap(), Some(10));
+	}
+
+	#[test]
+	fn peek_last_on_empty_queue_returns_none() {
+		let queue = BlockImportQueue::<TestBlock>::default();
+		assert_eq!(None, queue.peek_last().unwrap());
 	}
 }

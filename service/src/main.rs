@@ -316,25 +316,6 @@ fn start_worker<E, T, D>(
 	});
 
 	// ------------------------------------------------------------------------
-	// Start untrusted worker rpc server.
-	let handle = tokio_handle.get_handle();
-	// FIXME: this should be removed - this server should only handle untrusted things.
-	// i.e move sidechain block importing to trusted worker.
-	let enclave_for_block_gossip_rpc_server = enclave.clone();
-	let untrusted_url = config.untrusted_worker_url();
-	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
-	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	handle.spawn(async move {
-		itc_rpc_server::run_server(
-			&untrusted_url,
-			enclave_for_block_gossip_rpc_server,
-			sidechain_storage_for_rpc,
-		)
-		.await
-		.unwrap()
-	});
-
-	// ------------------------------------------------------------------------
 	// Start the substrate-api-client to communicate with the node.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 
@@ -374,6 +355,17 @@ fn start_worker<E, T, D>(
 	let register_enclave_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_enclave_xt_hash);
 
+	let register_enclave_xt_header =
+		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
+	let we_are_primary_validateer =
+		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
+
+	if we_are_primary_validateer {
+		println!("[+] We are the primary validateer");
+	} else {
+		println!("[+] We are NOT the primary validateer");
+	}
+
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parent chain...");
 
@@ -383,9 +375,7 @@ fn start_worker<E, T, D>(
 	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 
 	// If we're the first validateer to register, also trigger parentchain block import.
-	let register_enclave_xt_header =
-		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
-	if primary_validateer(&node_api, &register_enclave_xt_header).unwrap() {
+	if we_are_primary_validateer {
 		last_synced_header = import_parentchain_blocks_until_self_registry(
 			enclave.clone(),
 			parentchain_block_syncer,
@@ -396,8 +386,30 @@ fn start_worker<E, T, D>(
 	}
 
 	// ------------------------------------------------------------------------
+	// Start untrusted worker rpc server.
+	let handle = tokio_handle.get_handle();
+	// FIXME: this should be removed - this server should only handle untrusted things.
+	// i.e move sidechain block importing to trusted worker.
+	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let untrusted_url = config.untrusted_worker_url();
+	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
+	let sidechain_storage_for_rpc = sidechain_storage.clone();
+	let _untrusted_rpc_join_handle = handle.spawn(async move {
+		itc_rpc_server::run_server(
+			&untrusted_url,
+			enclave_for_block_gossip_rpc_server,
+			sidechain_storage_for_rpc,
+		)
+		.await
+		.unwrap();
+	});
+
+	thread::sleep(Duration::from_secs(3));
+
+	// ------------------------------------------------------------------------
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 	let sidechain_enclave_api = enclave.clone();
+	println!("[+] Spawning thread for sidechain block production");
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
 		.spawn(move || {
@@ -406,6 +418,7 @@ fn start_worker<E, T, D>(
 				SLOT_DURATION,
 			);
 			block_on(future);
+			println!("[!] Sidechain block production loop has terminated");
 		})
 		.unwrap();
 
@@ -423,7 +436,7 @@ fn start_worker<E, T, D>(
 			) {
 				error!("Parentchain block syncing terminated with a failure: {:?}", e);
 			}
-			println!("[+] Parentchain block syncing has terminated");
+			println!("[!] Parentchain block syncing has terminated");
 		})
 		.unwrap();
 
@@ -813,8 +826,8 @@ fn import_parentchain_blocks_until_self_registry<
 	Ok(last_synced_header)
 }
 
-// Checks if we are the first validateer to register on the parentchain.
-fn primary_validateer(
+/// Checks if we are the first validateer to register on the parentchain.
+fn we_are_primary_validateer(
 	node_api: &Api<sr25519::Pair, WsRpcClient>,
 	register_enclave_xt_header: &Header,
 ) -> Result<bool, Error> {

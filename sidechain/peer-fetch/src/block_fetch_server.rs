@@ -46,11 +46,16 @@ where
 			RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER,
 			|params, sidechain_block_fetcher| {
 				debug!("{}: {:?}", RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER, params);
+
 				let (block_hash, shard_identifier) =
 					params.one::<(BlockHash, ShardIdentifier)>()?;
+				info!("Got request to fetch sidechain blocks from peer. Fetching sidechain blocks from storage (block hash: {}, shard: {}", block_hash, shard_identifier);
 				sidechain_block_fetcher
 					.fetch_all_blocks_after(&block_hash, &shard_identifier)
-					.map_err(|e| CallError::Failed(e.into()))
+					.map_err(|e| {
+						error!("Failed to fetch sidechain blocks from storage: {:?}", e);
+						CallError::Failed(e.into())
+					})
 			},
 		)?;
 		Ok(fetch_sidechain_blocks_module)

@@ -11,8 +11,8 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
-itc-parentchain-block-import-queue = { path = "../block-import-queue", default-features = false }
 itc-parentchain-block-importer = { path = "../block-importer", default-features = false }
+itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -32,8 +32,8 @@ itc-parentchain-block-importer = { path = "../block-importer", features = ["mock
 default = ["std"]
 std = [
     # local
-    "itc-parentchain-block-import-queue/std",
     "itc-parentchain-block-importer/std",
+    "itp-block-import-queue/std",
     # no-std compatible libraries
     "log/std",
     "sp-runtime/std",
@@ -44,8 +44,8 @@ sgx = [
     # sgx
     "sgx_tstd",
     # local
-    "itc-parentchain-block-import-queue/sgx",
     "itc-parentchain-block-importer/sgx",
+    "itp-block-import-queue/sgx",
     # sgx enabled external libraries
     "thiserror_sgx",
 ]

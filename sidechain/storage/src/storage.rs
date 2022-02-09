@@ -108,7 +108,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>> {
 		// Ensure we find the block in storage (otherwise we would return all blocks for a specific shard).
-		if self.get_block(block_hash)?.is_none() {
+		// The exception is, if the hash is the default hash, which represents block 0. In that case we want to return all blocks.
+		if block_hash != &BlockHash::default() && self.get_block(block_hash)?.is_none() {
 			warn!("Could not find starting block in storage, returning empty vector");
 			return Ok(Vec::new())
 		}
@@ -127,6 +128,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			let parent_block_hash = current_block.block().parent_hash();
 
 			blocks_to_return.push(current_block);
+
+			if parent_block_hash == BlockHash::default() {
+				break
+			}
 
 			current_block =
 				self.get_block(&parent_block_hash)?.ok_or(Error::FailedToFindParentBlock)?;

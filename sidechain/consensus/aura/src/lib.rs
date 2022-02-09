@@ -170,6 +170,7 @@ where
 		let expected_author = slot_author::<AuthorityPair>(slot, epoch_data)?;
 
 		if expected_author == &self.authority_pair.public() {
+			log::info!(target: self.logging_target(), "Claiming slot ({})", *slot);
 			return Some(self.authority_pair.public())
 		}
 
@@ -253,6 +254,7 @@ where
 /// Get slot author for given block along with authorities.
 fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&AuthorityId<P>> {
 	if authorities.is_empty() {
+		log::warn!("Authorities list is empty, cannot determine slot author");
 		return None
 	}
 

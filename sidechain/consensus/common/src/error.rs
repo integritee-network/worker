@@ -57,6 +57,12 @@ pub enum Error {
 	BadSidechainBlock(SidechainBlockHash, String),
 	#[error("Could not import new block due to {2}. (Last imported by number: {0:?})")]
 	BlockAncestryMismatch(BlockNumber, SidechainBlockHash, String),
+	#[error("Could not import new block. Expected first block, but found {0}. {1:?}")]
+	InvalidFirstBlock(BlockNumber, String),
+	#[error("Could not import block (number: {0}). A block with this number is already imported (current state block number: {1})")]
+	BlockAlreadyImported(BlockNumber, BlockNumber),
+	#[error("Failed to pop from block import queue: {0}")]
+	FailedToPopBlockImportQueue(#[from] itp_block_import_queue::error::Error),
 }
 
 impl core::convert::From<std::io::Error> for Error {

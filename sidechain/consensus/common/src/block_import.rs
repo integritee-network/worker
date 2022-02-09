@@ -62,6 +62,15 @@ where
 	where
 		F: FnOnce(Self::SidechainState) -> Result<Self::SidechainState, Error>;
 
+	/// Verify a sidechain block that is to be imported.
+	fn verify_import<F>(
+		&self,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
+		verifying_function: F,
+	) -> Result<SignedSidechainBlock, Error>
+	where
+		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, Error>;
+
 	/// Key that is used for state encryption.
 	fn state_key(&self) -> Self::StateCrypto;
 
@@ -79,6 +88,16 @@ where
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error>;
 
+	/// Peek the parentchain import queue for the block that is associated with a given sidechain.
+	/// Does not perform the import or mutate the queue.
+	///
+	/// Warning: Be aware that peeking the parentchain block means that it is not verified (that happens upon import).
+	fn peek_parentchain_header(
+		&self,
+		sidechain_block: &SignedSidechainBlock::Block,
+		last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, Error>;
+
 	/// Cleanup task after import is done.
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), Error>;
 
@@ -87,22 +106,27 @@ where
 		&self,
 		signed_sidechain_block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
-	) -> Result<(), Error> {
+	) -> Result<ParentchainBlock::Header, Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.shard_id();
+
+		let peeked_parentchain_header =
+			self.peek_parentchain_header(&sidechain_block, parentchain_header)?;
+
+		let block_import_params = self.verify_import(&shard, |state| {
+			let mut verifier = self.verifier(state);
+
+			verifier.verify(
+				signed_sidechain_block.clone(),
+				&peeked_parentchain_header,
+				self.get_context(),
+			)
+		})?;
 
 		let latest_parentchain_header =
 			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
 
 		self.apply_state_update(&shard, |mut state| {
-			let mut verifier = self.verifier(state.clone());
-
-			let block_import_params = verifier.verify(
-				signed_sidechain_block.clone(),
-				&latest_parentchain_header,
-				self.get_context(),
-			)?;
-
 			let update = state_update_from_encrypted(
 				block_import_params.block().state_payload(),
 				self.state_key(),
@@ -120,7 +144,7 @@ where
 		// Store block in storage.
 		self.get_context().store_sidechain_blocks(vec![signed_sidechain_block])?;
 
-		Ok(())
+		Ok(latest_parentchain_header)
 	}
 }
 
