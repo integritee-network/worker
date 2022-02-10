@@ -55,4 +55,4 @@ itp-test = { path = "../../../core-primitives/test" }
 sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 # integritee / scs
-sgx-externalities = { git = "https://github.com/ajuna-network/sgx-runtime", branch = "master" }
+sgx-externalities = { git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master" }

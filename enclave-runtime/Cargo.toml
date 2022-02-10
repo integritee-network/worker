@@ -53,8 +53,8 @@ ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "master", features = ["sgx"] }
-sgx-runtime = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "master"}
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime",  branch = "integritee-network-master", features = ["sgx"] }
+sgx-runtime = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master"}
 sp-io = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master", features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], optional = true }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "master" }
 
