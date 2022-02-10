@@ -20,7 +20,7 @@ its-state = { path = "../state", default-features = false }
 its-top-pool-rpc-author = { path = "../top-pool-rpc-author", default-features = false }
 
 # integritee dependencies
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "update-substrate" }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -33,8 +33,8 @@ codec  = { package = "parity-scale-codec", version = "2.0.0", default-features =
 log = { version = "0.4", default-features = false }
 
 # substrate
-sp-core = { version = "4.1.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 
 [features]

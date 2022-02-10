@@ -43,25 +43,26 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
-itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
+itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-settings = { path = "../core-primitives/settings" }
 itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
-its-primitives = { path = "../sidechain/primitives" }
+its-peer-fetch = { path = "../sidechain/peer-fetch" }
+its-primitives = { path = "../sidechain/primitives"}
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
-my-node-runtime = { package = "ajuna-runtime", git = "https://github.com/ajuna-network/ajuna-node.git", branch = "darkfriend77/integritee" }
+my-node-runtime = { package = "ajuna-runtime", git = "https://github.com/ajuna-network/ajuna-node.git", branch = "update-substrate-5" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
-sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-balances = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 frame-system = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-finality-grandpa = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 frame-support = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -72,6 +73,9 @@ default = []
 production = ['itp-settings/production']
 
 [dev-dependencies]
+# crates.io
 anyhow = "1.0.40"
-its-test = { path = "../sidechain/test" }
 mockall = "0.10.1"
+# local
+its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
+its-test = { path = "../sidechain/test" }

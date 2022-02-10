@@ -17,14 +17,19 @@
 */
 
 use crate::ocall::{ffi, OcallApi};
-use codec::Encode;
+use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveSidechainOCallApi;
+use itp_types::{BlockHash, ShardIdentifier};
+use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 use std::vec::Vec;
 
 impl EnclaveSidechainOCallApi for OcallApi {
-	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let signed_blocks_encoded = signed_blocks.encode();
 
@@ -42,7 +47,10 @@ impl EnclaveSidechainOCallApi for OcallApi {
 		Ok(())
 	}
 
-	fn store_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()> {
+	fn store_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let signed_blocks_encoded = signed_blocks.encode();
 
@@ -58,5 +66,41 @@ impl EnclaveSidechainOCallApi for OcallApi {
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 
 		Ok(())
+	}
+
+	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
+		&self,
+		last_known_block_hash: BlockHash,
+		shard_identifier: ShardIdentifier,
+	) -> SgxResult<Vec<SignedSidechainBlock>> {
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		let last_known_block_hash_encoded = last_known_block_hash.encode();
+		let shard_identifier_encoded = shard_identifier.encode();
+
+		// We have to pre-allocate the vector and hope it's large enough
+		let mut signed_blocks_encoded: Vec<u8> = vec![0; 4096 * 16];
+
+		let res = unsafe {
+			ffi::ocall_fetch_sidechain_blocks_from_peer(
+				&mut rt as *mut sgx_status_t,
+				last_known_block_hash_encoded.as_ptr(),
+				last_known_block_hash_encoded.len() as u32,
+				shard_identifier_encoded.as_ptr(),
+				shard_identifier_encoded.len() as u32,
+				signed_blocks_encoded.as_mut_ptr(),
+				signed_blocks_encoded.len() as u32,
+			)
+		};
+
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
+
+		let decoded_signed_blocks: Vec<SignedSidechainBlock> =
+			Decode::decode(&mut signed_blocks_encoded.as_slice()).map_err(|e| {
+				error!("Failed to decode WorkerResponse: {}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			})?;
+
+		Ok(decoded_signed_blocks)
 	}
 }

@@ -45,10 +45,14 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
 # substrate deps
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [dev-dependencies]
+# local
 its-consensus-aura = { path = "../aura" }
 itp-test = { path = "../../../core-primitives/test" }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "update-substrate" }
+# substrate
+sp-core = { version = "5.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+# integritee / scs
+sgx-externalities = { git = "https://github.com/ajuna-network/sgx-runtime", branch = "master" }

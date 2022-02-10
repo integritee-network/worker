@@ -38,6 +38,7 @@ use itp_time_utils::duration_now;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
+use sp_core::ed25519;
 use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};
 use std::{
 	collections::BTreeMap, fmt::Debug, format, marker::PhantomData, result::Result as StdResult,
@@ -183,7 +184,7 @@ where
 		let trusted_call = TrustedCallSigned::new(
 			TrustedCall::balance_shield(root, account, amount),
 			nonce,
-			Default::default(), //don't care about signature here
+			ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
 		);
 
 		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())

@@ -22,22 +22,27 @@ use codec::Decode;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_sgx_crypto::StateCrypto;
 use its_primitives::traits::{
-	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockT,
+	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainState};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::vec::Vec;
 
-pub trait BlockImport<PB, SB>
+pub trait BlockImport<ParentchainBlock, SignedSidechainBlock>
 where
-	PB: ParentchainBlockTrait,
-	SB: SignedSidechainBlockT,
+	ParentchainBlock: ParentchainBlockTrait,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
 	/// The verifier for of the respective consensus instance.
-	type Verifier: Verifier<PB, SB, BlockImportParams = SB, Context = Self::Context>;
+	type Verifier: Verifier<
+		ParentchainBlock,
+		SignedSidechainBlock,
+		BlockImportParams = SignedSidechainBlock,
+		Context = Self::Context,
+	>;
 
 	/// Context needed to derive verifier relevant data.
-	type SidechainState: SidechainState + LastBlockExt<SB::Block>;
+	type SidechainState: SidechainState + LastBlockExt<SignedSidechainBlock::Block>;
 
 	/// Provides the cryptographic functions for our the state encryption.
 	type StateCrypto: StateCrypto;
@@ -51,7 +56,7 @@ where
 	/// Apply a state update by providing a mutating function.
 	fn apply_state_update<F>(
 		&self,
-		shard: &ShardIdentifierFor<SB>,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		mutating_function: F,
 	) -> Result<(), Error>
 	where
@@ -70,18 +75,18 @@ where
 	/// we return `last_imported_parentchain_header`.
 	fn import_parentchain_block(
 		&self,
-		sidechain_block: &SB::Block,
-		last_imported_parentchain_header: &PB::Header,
-	) -> Result<PB::Header, Error>;
+		sidechain_block: &SignedSidechainBlock::Block,
+		last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, Error>;
 
 	/// Cleanup task after import is done.
-	fn cleanup(&self, signed_sidechain_block: &SB) -> Result<(), Error>;
+	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), Error>;
 
 	/// Import a sidechain block and mutate state by `apply_state_update`.
 	fn import_block(
 		&self,
-		signed_sidechain_block: SB,
-		parentchain_header: &PB::Header,
+		signed_sidechain_block: SignedSidechainBlock,
+		parentchain_header: &ParentchainBlock::Header,
 	) -> Result<(), Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.shard_id();

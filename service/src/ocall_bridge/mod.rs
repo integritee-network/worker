@@ -16,6 +16,8 @@
 
 */
 
+// TODO This entire module should be extracted to a separate crate and re-named to o-call tunnel, see #288 and #316
+
 pub mod bridge_api;
 pub mod component_factory;
 
@@ -24,3 +26,6 @@ mod ipfs_ocall;
 mod remote_attestation_ocall;
 mod sidechain_ocall;
 mod worker_on_chain_ocall;
+
+#[cfg(test)]
+pub mod test;

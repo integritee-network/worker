@@ -27,20 +27,20 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 # scs / integritee
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "master" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
-my-node-runtime = { package = "ajuna-runtime", git = "https://github.com/ajuna-network/ajuna-node.git", branch = "darkfriend77/integritee" }
+my-node-runtime = { package = "ajuna-runtime", git = "https://github.com/ajuna-network/ajuna-node.git", branch = "update-substrate-5" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # substrate dependencies
-sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sc-keystore = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-application-crypto = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-application-crypto = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "5.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 #local dependencies
 itp-types = { path = "../core-primitives/types" }
-itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
+itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }

@@ -11,15 +11,15 @@ derive_more = { version = "0.99.5" }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "update-substrate", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master", optional = true }
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
 
 # std-only deps
 jsonrpc-core = { version = "18", optional = true }
 
 # substrate deps
-sp-core = { version = "4.1.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
@@ -27,6 +27,7 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
+itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-storage-verifier = { path = "../storage-verified", default-features = false }
@@ -45,6 +46,7 @@ std = [
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-teerex-storage/std",
+    "itp-time-utils/std",
     "itp-types/std",
     "itp-ocall-api/std",
     "itp-storage-verifier/std",
@@ -55,6 +57,7 @@ sgx = [
     "sgx_tstd",
     "sgx-crypto-helper",
     "ita-stf/sgx",
+    "itp-time-utils/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage-verifier/sgx",

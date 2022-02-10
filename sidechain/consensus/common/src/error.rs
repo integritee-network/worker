@@ -15,9 +15,10 @@
 
 */
 
-//! Error types in sidechain Consensus
+//! Error types in sidechain consensus
 
-use its_primitives::types::block::BlockHash;
+use itp_types::BlockHash as ParentchainBlockHash;
+use its_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use sgx_types::sgx_status_t;
 use std::{
 	boxed::Box,
@@ -38,6 +39,8 @@ pub enum Error {
 	Sgx(sgx_status_t),
 	#[error("Unable to create block proposal.")]
 	CannotPropose,
+	#[error("Encountered poisoned lock")]
+	LockPoisoning,
 	#[error("Message sender {0} is not a valid authority")]
 	InvalidAuthority(String),
 	#[error("Could not get authorities: {0:?}.")]
@@ -49,9 +52,11 @@ pub enum Error {
 	#[error("Failed to sign using key: {0:?}. Reason: {1}")]
 	CannotSign(Vec<u8>, String),
 	#[error("Bad parentchain block (Hash={0}). Reason: {1}")]
-	BadParentchainBlock(BlockHash, String),
-	#[error("Bad parentchain block (Hash={0}). Reason: {1}")]
-	BadSidechainBlock(BlockHash, String),
+	BadParentchainBlock(ParentchainBlockHash, String),
+	#[error("Bad sidechain block (Hash={0}). Reason: {1}")]
+	BadSidechainBlock(SidechainBlockHash, String),
+	#[error("Could not import new block due to {2}. (Last imported by number: {0:?})")]
+	BlockAncestryMismatch(BlockNumber, SidechainBlockHash, String),
 }
 
 impl core::convert::From<std::io::Error> for Error {

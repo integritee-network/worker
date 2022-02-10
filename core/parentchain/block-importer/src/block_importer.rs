@@ -37,22 +37,22 @@ use itp_types::{OpaqueCall, H256};
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
-	traits::{Block as BlockT, NumberFor},
+	traits::{Block as ParentchainBlockTrait, NumberFor},
 };
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Parentchain block import implementation.
 pub struct ParentchainBlockImporter<
-	PB,
+	ParentchainBlock,
 	ValidatorAccessor,
 	OCallApi,
 	StfExecutor,
 	ExtrinsicsFactory,
 	IndirectCallsExecutor,
 > where
-	PB: BlockT<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<PB>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -63,21 +63,28 @@ pub struct ParentchainBlockImporter<
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	indirect_calls_executor: Arc<IndirectCallsExecutor>,
-	_phantom: PhantomData<PB>,
+	_phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCallsExecutor>
+impl<
+		ParentchainBlock,
+		ValidatorAccessor,
+		OCallApi,
+		StfExecutor,
+		ExtrinsicsFactory,
+		IndirectCallsExecutor,
+	>
 	ParentchainBlockImporter<
-		PB,
+		ParentchainBlock,
 		ValidatorAccessor,
 		OCallApi,
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
 	> where
-	PB: BlockT<Hash = H256, Header = ParentchainHeader>,
-	NumberFor<PB>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<PB>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -101,25 +108,31 @@ impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCa
 	}
 }
 
-impl<PB, ValidatorAccessor, OCallApi, StfExecutor, ExtrinsicsFactory, IndirectCallsExecutor>
-	ImportParentchainBlocks
+impl<
+		ParentchainBlock,
+		ValidatorAccessor,
+		OCallApi,
+		StfExecutor,
+		ExtrinsicsFactory,
+		IndirectCallsExecutor,
+	> ImportParentchainBlocks
 	for ParentchainBlockImporter<
-		PB,
+		ParentchainBlock,
 		ValidatorAccessor,
 		OCallApi,
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
 	> where
-	PB: BlockT<Hash = H256, Header = ParentchainHeader>,
-	NumberFor<PB>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<PB>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + GetStorageVerified,
 	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
-	type SignedBlockType = SignedBlockG<PB>;
+	type SignedBlockType = SignedBlockG<ParentchainBlock>;
 
 	fn import_parentchain_blocks(
 		&self,

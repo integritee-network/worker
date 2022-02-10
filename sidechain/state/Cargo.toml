@@ -63,13 +63,13 @@ itp-storage = { path = "../../core-primitives/storage", default-features = false
 its-primitives = { path = "../primitives", default-features = false }
 
 # scs deps
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "update-substrate" }
-sp-io = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "update-substrate", features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master" }
+sp-io = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", branch = "integritee-network-master", features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
 
 # substrate deps
-sp-core = { version = "4.1.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # test deps
 [dev-dependencies]
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}

@@ -21,7 +21,9 @@ pub extern crate alloc;
 
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
-use itp_types::{TrustedOperationStatus, WorkerRequest, WorkerResponse};
+use itp_types::{
+	BlockHash, ShardIdentifier, TrustedOperationStatus, WorkerRequest, WorkerResponse,
+};
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 
@@ -71,8 +73,21 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 }
 
 pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
-	fn propose_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
-	fn store_sidechain_blocks<SB: Encode>(&self, signed_blocks: Vec<SB>) -> SgxResult<()>;
+	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()>;
+
+	fn store_sidechain_blocks<SignedSidechainBlock: Encode>(
+		&self,
+		signed_blocks: Vec<SignedSidechainBlock>,
+	) -> SgxResult<()>;
+
+	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
+		&self,
+		last_known_block_hash: BlockHash,
+		shard_identifier: ShardIdentifier,
+	) -> SgxResult<Vec<SignedSidechainBlock>>;
 }
 
 /// Newtype for IPFS CID

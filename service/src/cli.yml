@@ -26,20 +26,44 @@ args:
         default_value: "9944"
     - ws-external:
         long: ws-external
-        help: let worker api listen to external requests too      
+        help: Set this flag in case the worker should listen to external requests.
     - mu-ra-port:
         short: r
         long: mu-ra-port
         help: Set the websocket port to listen for mu-ra requests
         takes_value: true
         default_value: "3443"
-    - worker-rpc-port:
+    - trusted-worker-port:
         short: P
-        long: worker-rpc-port
-        help: Set the websocket port where the worker rpc direct invocations port listens
+        long: trusted-worker-port
+        help: Set the trusted websocket port of the worker, running directly in the enclave.
         takes_value: true
         default_value: "2000"
-    
+    - untrusted-worker-port:
+        short: w
+        long: untrusted-worker-port
+        help: Set the untrusted websocket port of the worker
+        takes_value: true
+        default_value: "2001"
+    - trusted-external-address:
+        short: T
+        long: trusted-external-address
+        help: Set the trusted worker address to be advertised on the parentchain. If no port is given, the same as in `trusted-worker-port` will be used.
+        takes_value: true
+        required: false
+    - untrusted-external-address:
+        short: U
+        long: untrusted-external-address
+        help: Set the untrusted worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `untrusted-worker-port` will be used.
+        takes_value: true
+        required: false
+    - mu-ra-external-address:
+        short: M
+        long: mu-ra-external-address
+        help: Set the mutual remote attestation worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `mu-ra-port` will be used.
+        takes_value: true
+        required: false
+
 subcommands:
     - run:
         about: Start the integritee-service
@@ -48,11 +72,6 @@ subcommands:
                 long: skip-ra
                 short: s
                 help: skip remote attestation. Set this flag if running enclave in SW mode
-            - w-server:
-                short: U
-                long: worker-url
-                help: Set the worker's IP address to be advertised in onchain registry. Include port if not 443
-                takes_value: true
             - shard:
                 required: false
                 index: 1
@@ -61,13 +80,9 @@ subcommands:
                 long: dev
                 short: d
                 help: Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
-    - request-keys:
+    - request-state:
         about: join a shard by requesting key provisioning from another worker
         args:
-            - provider:
-                required: true
-                index: 1
-                help: URL and port of a peer worker providing provisioning (i.e. 'my.server.io:3443')
             - shard:
                 long: shard
                 short: s

@@ -36,14 +36,15 @@ use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
 use its_primitives::{
-	traits::{Block as SidechainBlockT, SignedBlock},
+	traits::{Block as SidechainBlockTrait, SignedBlock},
 	types::block::BlockHash,
 };
 use its_validateer_fetch::ValidateerFetch;
+use sp_core::ByteArray;
 use sp_runtime::{
-	app_crypto::{sp_core::H256, Pair, Public},
+	app_crypto::{sp_core::H256, Pair},
 	generic::SignedBlock as SignedParentchainBlock,
-	traits::Block as ParentchainBlock,
+	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
 use std::{string::ToString, sync::Arc, time::Duration, vec::Vec};
 
@@ -55,10 +56,7 @@ mod verifier;
 pub use verifier::*;
 
 #[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod block_importer_tests;
+mod test;
 
 /// Aura consensus struct.
 pub struct Aura<
@@ -126,24 +124,26 @@ pub enum SlotClaimStrategy {
 }
 
 type AuthorityId<P> = <P as Pair>::Public;
-type ShardIdentifierFor<SB> = <<SB as SignedBlock>::Block as SidechainBlockT>::ShardIdentifier;
+type ShardIdentifierFor<SignedSidechainBlock> =
+	<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::ShardIdentifier;
 
-impl<AuthorityPair, PB, SB, E, OcallApi, ImportTrigger> SimpleSlotWorker<PB>
-	for Aura<AuthorityPair, PB, SB, E, OcallApi, ImportTrigger>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
+	SimpleSlotWorker<ParentchainBlock>
+	for Aura<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
 where
 	AuthorityPair: Pair,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
-	PB: ParentchainBlock<Hash = BlockHash>,
-	E: Environment<PB, SB, Error = ConsensusError>,
-	E::Proposer: Proposer<PB, SB>,
-	SB: SignedBlock + Send + 'static,
+	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
+	E: Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError>,
+	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
+	SignedSidechainBlock: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
-	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<PB>>,
+	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
 	type Claim = AuthorityPair::Public;
 	type EpochData = Vec<AuthorityId<AuthorityPair>>;
-	type Output = SB;
+	type Output = SignedSidechainBlock;
 
 	fn logging_target(&self) -> &'static str {
 		"aura"
@@ -151,10 +151,10 @@ where
 
 	fn epoch_data(
 		&self,
-		header: &PB::Header,
+		header: &ParentchainBlock::Header,
 		_slot: Slot,
 	) -> Result<Self::EpochData, ConsensusError> {
-		authorities::<_, AuthorityPair, PB>(&self.ocall_api, header)
+		authorities::<_, AuthorityPair, ParentchainBlock::Header>(&self.ocall_api, header)
 	}
 
 	fn authorities_len(&self, epoch_data: &Self::EpochData) -> Option<usize> {
@@ -163,7 +163,7 @@ where
 
 	fn claim_slot(
 		&self,
-		_header: &PB::Header,
+		_header: &ParentchainBlock::Header,
 		slot: Slot,
 		epoch_data: &Self::EpochData,
 	) -> Option<Self::Claim> {
@@ -186,13 +186,13 @@ where
 
 	fn proposer(
 		&mut self,
-		header: PB::Header,
+		header: ParentchainBlock::Header,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError> {
 		self.environment.init(header, shard)
 	}
 
-	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<PB>) -> Duration {
+	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<ParentchainBlock>) -> Duration {
 		proposing_remaining_duration(slot_info, duration_now())
 	}
 
@@ -202,8 +202,8 @@ where
 
 	fn import_latest_parentchain_block(
 		&self,
-		current_latest_imported_header: &PB::Header,
-	) -> Result<PB::Header, ConsensusError> {
+		current_latest_imported_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, ConsensusError> {
 		let maybe_latest_imported_header = self
 			.parentchain_import_trigger
 			.import_all()
@@ -216,8 +216,8 @@ where
 }
 
 /// unit-testable remaining duration fn.
-fn proposing_remaining_duration<PB: ParentchainBlock>(
-	slot_info: &SlotInfo<PB>,
+fn proposing_remaining_duration<ParentchainBlock: ParentchainBlockTrait>(
+	slot_info: &SlotInfo<ParentchainBlock>,
 	now: Duration,
 ) -> Duration {
 	// if a `now` before slot begin is passed such that `slot_remaining` would be bigger than `slot.slot_duration`
@@ -233,20 +233,20 @@ fn proposing_remaining_duration<PB: ParentchainBlock>(
 	std::cmp::min(slot_remaining, proposing_duration)
 }
 
-fn authorities<C, P, B>(
-	ocall_api: &C,
-	header: &B::Header,
+fn authorities<ValidateerFetcher, P, ParentchainHeader>(
+	ocall_api: &ValidateerFetcher,
+	header: &ParentchainHeader,
 ) -> Result<Vec<AuthorityId<P>>, ConsensusError>
 where
-	C: ValidateerFetch + GetStorageVerified,
+	ValidateerFetcher: ValidateerFetch + GetStorageVerified,
 	P: Pair,
-	B: ParentchainBlock<Hash = H256>,
+	ParentchainHeader: ParentchainHeaderTrait<Hash = H256>,
 {
 	Ok(ocall_api
 		.current_validateers(header)
 		.map_err(|e| ConsensusError::CouldNotGetAuthorities(e.to_string()))?
 		.into_iter()
-		.map(|e| AuthorityId::<P>::from_slice(e.pubkey.as_ref()))
+		.filter_map(|e| AuthorityId::<P>::from_slice(e.pubkey.as_ref()).ok())
 		.collect())
 }
 
@@ -272,7 +272,10 @@ fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&A
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::mock::{default_header, validateer, EnvironmentMock, TestAura, SLOT_DURATION};
+	use crate::test::{
+		fixtures::{default_header, types::TestAura, validateer, SLOT_DURATION},
+		mocks::environment_mock::EnvironmentMock,
+	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 	use itp_test::{
 		builders::{
@@ -311,11 +314,7 @@ mod tests {
 	}
 
 	fn default_authorities() -> Vec<Public> {
-		vec![
-			Keyring::Alice.public().into(),
-			Keyring::Bob.public().into(),
-			Keyring::Charlie.public().into(),
-		]
+		vec![Keyring::Alice.public(), Keyring::Bob.public(), Keyring::Charlie.public()]
 	}
 
 	fn onchain_mock(authorities: Vec<Public>) -> OnchainMock {

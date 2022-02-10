@@ -15,7 +15,7 @@
 
 */
 
-use crate::{block_importer::BlockImporter, mock::validateer, ShardIdentifierFor};
+use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIdentifierFor};
 use codec::Encode;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_sgx_crypto::{aes::Aes, StateCrypto};
@@ -218,7 +218,7 @@ fn sidechain_block_import_triggers_parentchain_block_import() {
 		default_authority_signed_block(&latest_parentchain_header, state_handler.as_ref());
 
 	block_importer
-		.import_block(signed_sidechain_block.clone(), &previous_parentchain_header)
+		.import_block(signed_sidechain_block, &previous_parentchain_header)
 		.unwrap();
 
 	assert!(parentchain_block_import_trigger.has_import_been_called());

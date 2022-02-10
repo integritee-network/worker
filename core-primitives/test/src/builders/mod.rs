@@ -18,5 +18,6 @@
 
 //! Builder patterns for common structs used in tests.
 
+pub mod enclave_gen_builder;
 pub mod parentchain_block_builder;
 pub mod parentchain_header_builder;

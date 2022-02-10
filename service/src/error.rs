@@ -1,6 +1,8 @@
 use codec::Error as CodecError;
 use substrate_api_client::ApiClientError;
 
+pub type ServiceResult<T> = Result<T, Error>;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("{0}")]
@@ -11,6 +13,8 @@ pub enum Error {
 	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
 	#[error("Enclave API error: {0}")]
 	EnclaveApi(#[from] itp_enclave_api::error::Error),
+	#[error("Trusted Rpc Client error: {0}")]
+	TrustedRpcClient(#[from] itc_rpc_client::error::Error),
 	#[error("{0}")]
 	JsonRpSeeClient(#[from] jsonrpsee::types::Error),
 	#[error("{0}")]
@@ -21,6 +25,8 @@ pub enum Error {
 	ApplicationSetup,
 	#[error("Retrieved empty value")]
 	EmptyValue,
+	#[error("Insufficient buffer size")]
+	InsufficientBufferSize,
 	#[error("Custom Error: {0}")]
-	Custom(Box<dyn std::error::Error>),
+	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

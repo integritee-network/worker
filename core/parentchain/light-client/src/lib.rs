@@ -44,7 +44,7 @@ use sp_finality_grandpa::{
 };
 use sp_runtime::{
 	generic::{Digest, OpaqueDigestItemId},
-	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
+	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
 	Justification, Justifications, OpaqueExtrinsic,
 };
 use state::RelayState;
@@ -70,22 +70,22 @@ pub type AuthorityListRef<'a> = &'a [(AuthorityId, AuthorityWeight)];
 
 // disambiguate associated types
 /// Block number type
-pub type NumberFor<Block> = <<Block as BlockT>::Header as HeaderT>::Number;
+pub type NumberFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTrait>::Number;
 /// Hash type of Block
-pub type HashFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hash;
+pub type HashFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTrait>::Hash;
 /// Hashing function used to produce `HashOf<Block>`
-pub type HashingFor<Block> = <<Block as BlockT>::Header as HeaderT>::Hashing;
+pub type HashingFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTrait>::Hashing;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::concurrent_access::GlobalValidatorAccessor;
 
 /// Global validator accessor type
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub type ValidatorAccessor<PB> =
-	GlobalValidatorAccessor<LightValidation<PB>, PB, crate::io::LightClientSeal<PB>>;
+pub type ValidatorAccessor<Block> =
+	GlobalValidatorAccessor<LightValidation<Block>, Block, crate::io::LightClientSeal<Block>>;
 
 /// Validator trait
-pub trait Validator<Block: BlockT>
+pub trait Validator<Block: ParentchainBlockTrait>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
@@ -130,12 +130,12 @@ where
 }
 
 #[derive(Encode, Decode, Clone, Default)]
-pub struct LightValidation<Block: BlockT> {
+pub struct LightValidation<Block: ParentchainBlockTrait> {
 	num_relays: RelayId,
 	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
 }
 
-impl<Block: BlockT> LightValidation<Block> {
+impl<Block: ParentchainBlockTrait> LightValidation<Block> {
 	pub fn new() -> Self {
 		Self { num_relays: Default::default(), tracked_relays: Default::default() }
 	}
@@ -239,7 +239,7 @@ impl<Block: BlockT> LightValidation<Block> {
 	}
 }
 
-impl<Block: BlockT> Validator<Block> for LightValidation<Block>
+impl<Block: ParentchainBlockTrait> Validator<Block> for LightValidation<Block>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
@@ -414,7 +414,7 @@ where
 	}
 }
 
-pub trait LightClientState<Block: BlockT> {
+pub trait LightClientState<Block: ParentchainBlockTrait> {
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error>;
 
 	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
@@ -428,7 +428,7 @@ pub trait LightClientState<Block: BlockT> {
 	fn num_relays(&self) -> RelayId;
 }
 
-impl<Block: BlockT> LightClientState<Block> for LightValidation<Block> {
+impl<Block: ParentchainBlockTrait> LightClientState<Block> for LightValidation<Block> {
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.verify_tx_inclusion.len())
@@ -457,16 +457,20 @@ impl<Block: BlockT> LightClientState<Block> for LightValidation<Block> {
 	}
 }
 
-pub fn grandpa_log<Block: BlockT>(digest: &Digest) -> Option<ConsensusLog<NumberFor<Block>>> {
+pub fn grandpa_log<Block: ParentchainBlockTrait>(
+	digest: &Digest,
+) -> Option<ConsensusLog<NumberFor<Block>>> {
 	let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
 	digest.convert_first(|l| l.try_to::<ConsensusLog<NumberFor<Block>>>(id))
 }
 
-pub fn pending_change<Block: BlockT>(digest: &Digest) -> Option<ScheduledChange<NumberFor<Block>>> {
+pub fn pending_change<Block: ParentchainBlockTrait>(
+	digest: &Digest,
+) -> Option<ScheduledChange<NumberFor<Block>>> {
 	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }
 
-impl<B: BlockT> fmt::Debug for LightValidation<B> {
+impl<B: ParentchainBlockTrait> fmt::Debug for LightValidation<B> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,

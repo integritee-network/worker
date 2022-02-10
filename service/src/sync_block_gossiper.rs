@@ -19,7 +19,7 @@
 use crate::{
 	error::Error,
 	globals::{tokio_handle::GetTokioHandle, worker::GetWorker},
-	worker::{WorkerResult, WorkerT},
+	worker::{AsyncBlockGossiper, WorkerResult},
 };
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use log::*;
