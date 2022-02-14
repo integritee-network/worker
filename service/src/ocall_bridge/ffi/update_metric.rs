@@ -16,7 +16,7 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, WorkerMetricsBridge};
+use crate::ocall_bridge::bridge_api::{Bridge, MetricsBridge};
 use log::*;
 use sgx_types::sgx_status_t;
 use std::{slice, sync::Arc};
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn ocall_update_metric(
 fn update_metric(
 	metric_ptr: *const u8,
 	metric_size: u32,
-	oc_api: Arc<dyn WorkerMetricsBridge>,
+	oc_api: Arc<dyn MetricsBridge>,
 ) -> sgx_status_t {
 	let metric_encoded: Vec<u8> =
 		unsafe { Vec::from(slice::from_raw_parts(metric_ptr, metric_size as usize)) };

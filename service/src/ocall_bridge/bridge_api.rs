@@ -82,7 +82,7 @@ impl Bridge {
 			.get_ipfs_api()
 	}
 
-	pub fn get_metrics_api() -> Arc<dyn WorkerMetricsBridge> {
+	pub fn get_metrics_api() -> Arc<dyn MetricsBridge> {
 		COMPONENT_FACTORY
 			.read()
 			.as_ref()
@@ -113,7 +113,7 @@ pub trait GetOCallBridgeComponents {
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge>;
 
 	/// Metrics OCall API.
-	fn get_metrics_api(&self) -> Arc<dyn WorkerMetricsBridge>;
+	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge>;
 }
 
 /// OCall bridge errors
@@ -193,7 +193,7 @@ pub trait WorkerOnChainBridge {
 
 /// Trait for updating metrics from inside the enclave.
 #[cfg_attr(test, automock)]
-pub trait WorkerMetricsBridge {
+pub trait MetricsBridge {
 	fn update_metric(&self, metric_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 

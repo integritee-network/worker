@@ -16,6 +16,7 @@ std = [
     "itc-tls-websocket-server/std",
     "itp-component-container/std",
     "itp-enclave-metrics/std",
+    "itp-ocall-api/std",
     "itp-stf-state-handler/std",
     "itp-types/std",
     "its-top-pool/std",

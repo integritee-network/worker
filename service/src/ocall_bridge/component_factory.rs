@@ -19,8 +19,8 @@
 use crate::{
 	ocall_bridge::{
 		bridge_api::{
-			GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge, SidechainBridge,
-			WorkerMetricsBridge, WorkerOnChainBridge,
+			GetOCallBridgeComponents, IpfsBridge, MetricsBridge, RemoteAttestationBridge,
+			SidechainBridge, WorkerOnChainBridge,
 		},
 		ipfs_ocall::IpfsOCall,
 		metrics_ocall::MetricsOCall,
@@ -28,7 +28,7 @@ use crate::{
 		sidechain_ocall::SidechainOCall,
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
-	prometheus_metrics::ReceiveEnclaveMetric,
+	prometheus_metrics::ReceiveEnclaveMetrics,
 	sync_block_gossiper::GossipBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
@@ -135,7 +135,7 @@ impl<
 	PeerUpdater: UpdateWorkerPeers + 'static,
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock> + 'static,
 	TokioHandle: GetTokioHandle + 'static,
-	MetricsReceiver: ReceiveEnclaveMetric + 'static,
+	MetricsReceiver: ReceiveEnclaveMetrics + 'static,
 {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))
@@ -159,7 +159,7 @@ impl<
 		Arc::new(IpfsOCall {})
 	}
 
-	fn get_metrics_api(&self) -> Arc<dyn WorkerMetricsBridge> {
+	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge> {
 		Arc::new(MetricsOCall::new(self.metrics_receiver.clone()))
 	}
 }

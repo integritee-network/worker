@@ -17,8 +17,8 @@
 */
 
 use crate::{
-	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerMetricsBridge},
-	prometheus_metrics::ReceiveEnclaveMetric,
+	ocall_bridge::bridge_api::{MetricsBridge, OCallBridgeError, OCallBridgeResult},
+	prometheus_metrics::ReceiveEnclaveMetrics,
 };
 use codec::Decode;
 use itp_enclave_metrics::EnclaveMetric;
@@ -34,9 +34,9 @@ impl<MetricsReceiver> MetricsOCall<MetricsReceiver> {
 	}
 }
 
-impl<MetricsReceiver> WorkerMetricsBridge for MetricsOCall<MetricsReceiver>
+impl<MetricsReceiver> MetricsBridge for MetricsOCall<MetricsReceiver>
 where
-	MetricsReceiver: ReceiveEnclaveMetric,
+	MetricsReceiver: ReceiveEnclaveMetrics,
 {
 	fn update_metric(&self, metric_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		let metric: EnclaveMetric =

@@ -30,6 +30,8 @@ use std::{net::SocketAddr, sync::Arc};
 use warp::{Filter, Rejection, Reply};
 
 lazy_static! {
+	/// Register all the prometheus metrics we want to monitor (aside from the default process ones).
+
 	static ref ENCLAVE_ACCOUNT_FREE_BALANCE: IntGauge =
 		register_int_gauge!("enclave_account_free_balance", "Free balance of the enclave account")
 			.unwrap();
@@ -134,13 +136,13 @@ fn gather_metrics_into_reply(metrics: &[MetricFamily]) -> ServiceResult<String> 
 }
 
 /// Trait to receive metric updates from inside the enclave.
-pub trait ReceiveEnclaveMetric {
+pub trait ReceiveEnclaveMetrics {
 	fn receive_enclave_metric(&self, metric: EnclaveMetric) -> ServiceResult<()>;
 }
 
 pub struct EnclaveMetricsReceiver;
 
-impl ReceiveEnclaveMetric for EnclaveMetricsReceiver {
+impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 	fn receive_enclave_metric(&self, metric: EnclaveMetric) -> ServiceResult<()> {
 		match metric {
 			EnclaveMetric::SetSidechainBlockHeight(h) => {
