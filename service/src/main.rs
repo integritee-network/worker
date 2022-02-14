@@ -18,7 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 use crate::{
-	account_funding::{setup_account_funding, EnclaveWallet},
+	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
@@ -330,7 +330,8 @@ fn start_worker<E, T, D>(
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
 	if config.enable_metrics_server {
-		let enclave_wallet = Arc::new(EnclaveWallet::new(node_api.clone(), tee_accountid.clone()));
+		let enclave_wallet =
+			Arc::new(EnclaveAccountInfoProvider::new(node_api.clone(), tee_accountid.clone()));
 		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
 		let metrics_server_port = config
 			.try_parse_metrics_server_port()

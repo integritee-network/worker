@@ -29,25 +29,25 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{rpc::WsRpcClient, Api, Balance, GenericAddress, XtStatus};
 
-/// Draft for an enclave wallet trait (WIP).
-pub trait EnclaveWalletInfo {
+/// Information about the enclave on-chain account.
+pub trait EnclaveAccountInfo {
 	fn free_balance(&self) -> ServiceResult<Balance>;
 }
 
-pub struct EnclaveWallet {
+pub struct EnclaveAccountInfoProvider {
 	node_api: Api<sr25519::Pair, WsRpcClient>,
 	account_id: AccountId32,
 }
 
-impl EnclaveWalletInfo for EnclaveWallet {
+impl EnclaveAccountInfo for EnclaveAccountInfoProvider {
 	fn free_balance(&self) -> ServiceResult<Balance> {
 		self.node_api.get_free_balance(&self.account_id).map_err(|e| e.into())
 	}
 }
 
-impl EnclaveWallet {
+impl EnclaveAccountInfoProvider {
 	pub fn new(node_api: Api<sr25519::Pair, WsRpcClient>, account_id: AccountId32) -> Self {
-		EnclaveWallet { node_api, account_id }
+		EnclaveAccountInfoProvider { node_api, account_id }
 	}
 }
 

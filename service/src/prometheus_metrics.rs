@@ -18,7 +18,7 @@
 //! Service for prometheus metrics, hosted on a http server.
 
 use crate::{
-	account_funding::EnclaveWalletInfo,
+	account_funding::EnclaveAccountInfo,
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
@@ -76,7 +76,7 @@ pub struct MetricsHandler<Wallet> {
 #[async_trait]
 impl<Wallet> HandleMetrics for MetricsHandler<Wallet>
 where
-	Wallet: EnclaveWalletInfo + Send + Sync,
+	Wallet: EnclaveAccountInfo + Send + Sync,
 {
 	type ReplyType = String;
 
@@ -97,7 +97,7 @@ where
 
 impl<Wallet> MetricsHandler<Wallet>
 where
-	Wallet: EnclaveWalletInfo + Send + Sync,
+	Wallet: EnclaveAccountInfo + Send + Sync,
 {
 	pub fn new(enclave_wallet: Arc<Wallet>) -> Self {
 		MetricsHandler { enclave_wallet }
