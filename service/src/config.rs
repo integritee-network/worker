@@ -25,6 +25,8 @@ pub struct Config {
 	pub mu_ra_external_address: Option<String>,
 	/// Port for mutual-remote attestation requests.
 	pub mu_ra_port: String,
+	/// Enable the metrics server
+	pub enable_metrics_server: bool,
 	/// Port for the metrics server
 	pub metrics_server_port: String,
 }
@@ -41,6 +43,7 @@ impl Config {
 		untrusted_worker_port: String,
 		mu_ra_external_address: Option<String>,
 		mu_ra_port: String,
+		enable_metrics_server: bool,
 		metrics_server_port: String,
 	) -> Self {
 		Self {
@@ -53,6 +56,7 @@ impl Config {
 			untrusted_worker_port,
 			mu_ra_external_address,
 			mu_ra_port,
+			enable_metrics_server,
 			metrics_server_port,
 		}
 	}
@@ -108,6 +112,7 @@ impl From<&ArgMatches<'_>> for Config {
 		let trusted_port = m.value_of("trusted-worker-port").unwrap_or(DEFAULT_TRUSTED_PORT);
 		let untrusted_port = m.value_of("untrusted-worker-port").unwrap_or(DEFAULT_UNTRUSTED_PORT);
 		let mu_ra_port = m.value_of("mu-ra-port").unwrap_or(DEFAULT_MU_RA_PORT);
+		let is_metrics_server_enabled = m.is_present("enable-metrics");
 		let metrics_server_port = m.value_of("metrics-port").unwrap_or(DEFAULT_METRICS_PORT);
 
 		Self::new(
@@ -123,6 +128,7 @@ impl From<&ArgMatches<'_>> for Config {
 			m.value_of("mu-ra-external-address")
 				.map(|url| add_port_if_necessary(url, mu_ra_port)),
 			mu_ra_port.to_string(),
+			is_metrics_server_enabled,
 			metrics_server_port.to_string(),
 		)
 	}
