@@ -307,20 +307,9 @@ fn start_worker<E, T, D>(
 
 	let tokio_handle = tokio_handle_getter.get_handle();
 
-	// ------------------------------------------------------------------------
-	// Start trusted worker rpc server.
-	let direct_invocation_server_addr = config.trusted_worker_url_internal();
-	let enclave_for_direct_invocation = enclave.clone();
-	thread::spawn(move || {
-		println!(
-			"[+] Trusted RPC direction invocation server listening on {}",
-			direct_invocation_server_addr
-		);
-		enclave_for_direct_invocation
-			.init_direct_invocation_server(direct_invocation_server_addr)
-			.unwrap();
-		println!("[+] RPC direction invocation server shut down");
-	});
+	//-------------------------------------------------------------------------
+	// Initialize the enclave base components.
+	enclave.init_enclave_base_components().unwrap();
 
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
@@ -405,6 +394,26 @@ fn start_worker<E, T, D>(
 		)
 		.unwrap();
 	}
+
+	// ------------------------------------------------------------------------
+	// Initialize sidechain components (has to be AFTER init_light_client()
+	enclave.init_enclave_sidechain_components().unwrap();
+
+	// ------------------------------------------------------------------------
+	// Start trusted worker rpc server
+	// (requires the sidechain components to be initialized).
+	let direct_invocation_server_addr = config.trusted_worker_url_internal();
+	let enclave_for_direct_invocation = enclave.clone();
+	thread::spawn(move || {
+		println!(
+			"[+] Trusted RPC direction invocation server listening on {}",
+			direct_invocation_server_addr
+		);
+		enclave_for_direct_invocation
+			.init_direct_invocation_server(direct_invocation_server_addr)
+			.unwrap();
+		println!("[+] RPC direction invocation server shut down");
+	});
 
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.

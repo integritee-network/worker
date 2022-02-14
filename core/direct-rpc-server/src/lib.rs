@@ -49,7 +49,7 @@ mod builders;
 
 pub mod rpc_connection_registry;
 pub mod rpc_responder;
-mod rpc_watch_extractor;
+pub mod rpc_watch_extractor;
 pub mod rpc_ws_handler;
 
 /// General web-socket error type

@@ -38,10 +38,12 @@ use crate::{
 		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
 		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStfExecutor,
 		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_AUTHOR_COMPONENT,
+		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
@@ -76,14 +78,14 @@ use itp_settings::node::{
 use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::SealedIO;
-use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState, GlobalFileStateHandler,
 };
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
 use its_sidechain::{
-	aura::block_importer::BlockImporter, top_pool_executor::TopPoolOperationHandler,
+	aura::block_importer::BlockImporter, block_composer::BlockComposer,
+	top_pool_executor::TopPoolOperationHandler,
 };
 use log::*;
 use sgx_types::sgx_status_t;
@@ -383,6 +385,137 @@ pub unsafe extern "C" fn get_state(
 	sgx_status_t::SGX_SUCCESS
 }
 
+/// Initialize generic enclave components.
+///
+/// Call this once at startup. Needs to be the first component initializer to be called.
+#[no_mangle]
+pub unsafe extern "C" fn init_enclave_base_components() -> sgx_status_t {
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
+
+	let ocall_api = Arc::new(OcallApi);
+	GLOBAL_OCALL_API_COMPONENT.initialize(ocall_api.clone());
+
+	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler));
+	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+/// Initialize generic enclave components.
+///
+/// Call this once at startup. Has to be called AFTER the light-client
+/// (parentchain components) have been initialized.
+#[no_mangle]
+pub unsafe extern "C" fn init_enclave_sidechain_components() -> sgx_status_t {
+	let shielding_key = match Rsa3072Seal::unseal() {
+		Ok(k) => k,
+		Err(e) => {
+			error!("Failed to unseal shielding key: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let signer = match Ed25519Seal::unseal() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("Error retrieving signer key pair: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let state_key = match AesSeal::unseal() {
+		Ok(k) => k,
+		Err(e) => {
+			error!("Failed to unseal state key: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let stf_executor =
+		match GLOBAL_STF_EXECUTOR_COMPONENT.get() {
+			Some(a) => a,
+			None => {
+				error!("Failed to retrieve global STF executor component (maybe it is not initialized?)");
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+	let state_handler =
+		match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+			Some(a) => a,
+			None => {
+				error!("Failed to retrieve global state handler component (maybe it is not initialized?)");
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+	let ocall_api = match GLOBAL_OCALL_API_COMPONENT.get() {
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global ocall api component (maybe it is not initialized?)");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
+	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
+
+	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
+		connection_registry.clone(),
+		state_handler.clone(),
+		ocall_api.clone(),
+		shielding_key,
+	);
+	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
+
+	let top_pool_operation_handler =
+		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor.clone()));
+	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
+
+	let io_handler = public_api_rpc_handler(rpc_author.clone());
+	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
+	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
+
+	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
+		TopPoolOperationHandler::new(rpc_author.clone(), stf_executor),
+	);
+
+	let parentchain_block_import_dispatcher = match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+		.get()
+	{
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global parentchain import dispatcher component (maybe it is not initialized?)");
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
+		state_handler,
+		state_key,
+		signer.clone(),
+		top_pool_executor,
+		parentchain_block_import_dispatcher,
+		ocall_api.clone(),
+	));
+
+	let sidechain_block_syncer =
+		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
+	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer.clone());
+
+	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
+
+	let sidechain_block_import_queue_worker =
+		Arc::new(EnclaveSidechainBlockImportQueueWorker::new(
+			sidechain_block_import_queue,
+			sidechain_block_syncer,
+		));
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
+
+	let block_composer = Arc::new(BlockComposer::new(signer, state_key));
+	GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.initialize(block_composer);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
 /// Call this once at worker startup to initialize the TOP pool and direct invocation RPC server.
 ///
 /// This function will run the RPC server on the same thread as it is called and will loop there.
@@ -403,37 +536,13 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		},
 	};
 
-	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
-	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
-
-	let rsa_shielding_key = match Rsa3072Seal::unseal() {
-		Ok(k) => k,
-		Err(e) => {
-			error!("Failed to unseal shielding key: {:?}", e);
+	let rpc_handler = match GLOBAL_RPC_WS_HANDLER_COMPONENT.get() {
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global RPC WS handler (maybe it's not initialized?)");
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let ocall_api = Arc::new(OcallApi);
-
-	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
-		connection_registry.clone(),
-		state_handler.clone(),
-		ocall_api.clone(),
-		rsa_shielding_key,
-	);
-
-	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
-
-	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler));
-	let top_pool_operation_handler =
-		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor));
-
-	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
-
-	let io_handler = public_api_rpc_handler(rpc_author);
-	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 
 	run_ws_server(server_addr.as_str(), rpc_handler);
 
@@ -502,17 +611,17 @@ pub unsafe extern "C" fn init_light_client(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	let state_key = match AesSeal::unseal() {
-		Ok(k) => k,
-		Err(e) => {
-			error!("Failed to unseal state key: {:?}", e);
+	let stf_executor = match GLOBAL_STF_EXECUTOR_COMPONENT.get() {
+		Some(a) => a,
+		None => {
+			error!("Failed to retrieve global STF executor (maybe it is not initialized?)");
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	let rpc_author = match GLOBAL_RPC_AUTHOR_COMPONENT.get() {
+	let ocall_api = match GLOBAL_OCALL_API_COMPONENT.get() {
 		Some(a) => a,
 		None => {
-			error!("Failed to retrieve global top pool author");
+			error!("Failed to retrieve global o-call api (maybe it is not initialized?)");
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
@@ -527,17 +636,17 @@ pub unsafe extern "C" fn init_light_client(
 			},
 		};
 
-	let file_state_handler = Arc::new(GlobalFileStateHandler);
-	let ocall_api = Arc::new(OcallApi);
-	let stf_executor = Arc::new(StfExecutor::new(ocall_api.clone(), file_state_handler.clone()));
 	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
+
+	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
+
 	let indirect_calls_executor =
 		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
 	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,
-		ocall_api.clone(),
-		stf_executor.clone(),
+		ocall_api,
+		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
 	);
@@ -547,35 +656,7 @@ pub unsafe extern "C" fn init_light_client(
 		parentchain_block_import_queue,
 	));
 
-	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-		.initialize(parentchain_block_import_dispatcher.clone());
-
-	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
-		TopPoolOperationHandler::new(rpc_author, stf_executor),
-	);
-	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
-		file_state_handler,
-		state_key,
-		signer,
-		top_pool_executor,
-		parentchain_block_import_dispatcher,
-		ocall_api.clone(),
-	));
-
-	let sidechain_block_syncer =
-		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
-
-	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer.clone());
-
-	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
-	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
-
-	let sidechain_block_import_queue_worker =
-		Arc::new(EnclaveSidechainBlockImportQueueWorker::new(
-			sidechain_block_import_queue,
-			sidechain_block_syncer,
-		));
-	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
+	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.initialize(parentchain_block_import_dispatcher);
 
 	sgx_status_t::SGX_SUCCESS
 }
