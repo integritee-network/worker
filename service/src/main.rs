@@ -18,6 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 use crate::{
+	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
@@ -27,6 +28,7 @@ use crate::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
+	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker_peers_updater::WorkerPeersUpdater,
@@ -57,7 +59,6 @@ use itp_settings::{
 		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
 	sidechain::SLOT_DURATION,
-	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
 };
 use its_consensus_slots::start_slot_worker;
 use its_peer_fetch::{
@@ -72,7 +73,7 @@ use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
-	sr25519, Pair,
+	sr25519,
 };
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
@@ -89,16 +90,18 @@ use std::{
 	time::{Duration, Instant},
 };
 use substrate_api_client::{
-	rpc::WsRpcClient, utils::FromHexString, Api, GenericAddress, Header as HeaderTrait, XtStatus,
+	rpc::WsRpcClient, utils::FromHexString, Api, Header as HeaderTrait, XtStatus,
 };
 use teerex_primitives::ShardIdentifier;
 
+mod account_funding;
 mod config;
 mod enclave;
 mod error;
 mod globals;
 mod ocall_bridge;
 mod parentchain_block_syncer;
+mod prometheus_metrics;
 mod sync_block_gossiper;
 mod sync_state;
 mod tests;
@@ -143,6 +146,7 @@ fn main() {
 	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.clone());
 	let peer_sidechain_block_fetcher =
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
+	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
@@ -153,6 +157,7 @@ fn main() {
 		peer_updater,
 		peer_sidechain_block_fetcher,
 		tokio_handle.clone(),
+		enclave_metrics_receiver,
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
@@ -263,8 +268,8 @@ fn start_worker<E, T, D>(
 	sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	dev: bool,
-	mut node_api: Api<sr25519::Pair, WsRpcClient>,
-	tokio_handle: Arc<T>,
+	node_api: Api<sr25519::Pair, WsRpcClient>,
+	tokio_handle_getter: Arc<T>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -300,6 +305,8 @@ fn start_worker<E, T, D>(
 		)
 	});
 
+	let tokio_handle = tokio_handle_getter.get_handle();
+
 	// ------------------------------------------------------------------------
 	// Start trusted worker rpc server.
 	let direct_invocation_server_addr = config.trusted_worker_url_internal();
@@ -316,14 +323,28 @@ fn start_worker<E, T, D>(
 	});
 
 	// ------------------------------------------------------------------------
-	// Start the substrate-api-client to communicate with the node.
+	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
-
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
-	// Perform a remote attestation and get an unchecked extrinsic back.
+	// Start prometheus metrics server.
+	if config.enable_metrics_server {
+		let enclave_wallet =
+			Arc::new(EnclaveAccountInfoProvider::new(node_api.clone(), tee_accountid.clone()));
+		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
+		let metrics_server_port = config
+			.try_parse_metrics_server_port()
+			.expect("metrics server port to be a valid port number");
+		tokio_handle.spawn(async move {
+			if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
+				error!("Unexpected error in Prometheus metrics server: {:?}", e);
+			}
+		});
+	}
 
+	// ------------------------------------------------------------------------
+	// Perform a remote attestation and get an unchecked extrinsic back.
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -345,7 +366,7 @@ fn start_worker<E, T, D>(
 	xthex.insert_str(0, "0x");
 
 	// Account funds
-	if let Err(x) = account_funding(&mut node_api, &tee_accountid, xthex.clone(), dev) {
+	if let Err(x) = setup_account_funding(&node_api, &tee_accountid, xthex.clone(), dev) {
 		error!("Starting worker failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return
@@ -387,14 +408,13 @@ fn start_worker<E, T, D>(
 
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.
-	let handle = tokio_handle.get_handle();
 	// FIXME: this should be removed - this server should only handle untrusted things.
 	// i.e move sidechain block importing to trusted worker.
 	let enclave_for_block_gossip_rpc_server = enclave.clone();
 	let untrusted_url = config.untrusted_worker_url();
 	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
 	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	let _untrusted_rpc_join_handle = handle.spawn(async move {
+	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
 		itc_rpc_server::run_server(
 			&untrusted_url,
 			enclave_for_block_gossip_rpc_server,
@@ -682,125 +702,11 @@ fn init_shard(shard: &ShardIdentifier) {
 	file.write_all(b"").unwrap();
 }
 
-// get the public signing key of the TEE
+/// Get the public signing key of the TEE.
 fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	AccountId32::from(*tee_public.as_array_ref())
-}
-
-fn account_funding(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-	extrinsic_prefix: String,
-	dev: bool,
-) -> Result<(), Error> {
-	// Account funds
-	if dev {
-		// Development mode, the faucet will ensure that the enclave has enough funds
-		ensure_account_has_funds(api, accountid)?;
-	} else {
-		// Production mode, there is no faucet.
-		let registration_fees = enclave_registration_fees(api, &extrinsic_prefix)?;
-		info!("Registration fees = {:?}", registration_fees);
-		let free_balance = api.get_free_balance(accountid)?;
-		info!("TEE's free balance = {:?}", free_balance);
-
-		let min_required_funds =
-			registration_fees.saturating_mul(REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS);
-		let missing_funds = min_required_funds.saturating_sub(free_balance);
-
-		if missing_funds > 0 {
-			// If there are not enough funds, then the user can send the missing TEER to the enclave address and start again.
-			println!(
-				"Enclave account: {:}, missing funds {}",
-				accountid.to_ss58check(),
-				missing_funds
-			);
-			return Err(Error::Custom(
-				"Enclave does not have enough funds on the parentchain to register.".into(),
-			))
-		}
-	}
-	Ok(())
-}
-// Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-) -> Result<(), Error> {
-	// check account balance
-	let free_balance = api.get_free_balance(accountid)?;
-	info!("TEE's free balance = {:?}", free_balance);
-
-	let existential_deposit = api.get_existential_deposit()?;
-	info!("Existential deposit is = {:?}", existential_deposit);
-
-	let min_required_funds =
-		existential_deposit.saturating_mul(EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS);
-	let missing_funds = min_required_funds.saturating_sub(free_balance);
-
-	if missing_funds > 0 {
-		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
-	}
-	Ok(())
-}
-
-fn enclave_registration_fees(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	xthex_prefixed: &str,
-) -> Result<u128, Error> {
-	let reg_fee_details = api.get_fee_details(xthex_prefixed, None)?;
-	match reg_fee_details {
-		Some(details) => match details.inclusion_fee {
-			Some(fee) => Ok(fee.inclusion_fee()),
-			None => Err(Error::Custom(
-				"Inclusion fee for the registration of the enclave is None!".into(),
-			)),
-		},
-		None =>
-			Err(Error::Custom("Fee Details for the registration of the enclave is None !".into())),
-	}
-}
-
-// Alice sends some funds to the account
-fn bootstrap_funds_from_alice(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-	funding_amount: u128,
-) -> Result<(), Error> {
-	let alice = AccountKeyring::Alice.pair();
-	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
-	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
-	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
-
-	let alice_free = api.get_free_balance(&alice_acc)?;
-	info!("    Alice's free balance = {:?}", alice_free);
-	let nonce = api.get_nonce_of(&alice_acc)?;
-	info!("    Alice's Account Nonce is {}", nonce);
-
-	if funding_amount > alice_free {
-		println!(
-			"funding amount is to high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
-			funding_amount
-		);
-		return Err(Error::ApplicationSetup)
-	}
-
-	let signer_orig = api.signer.clone();
-	api.signer = Some(alice);
-
-	println!("[+] bootstrap funding Enclave from Alice's funds");
-	let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
-	let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)?;
-	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
-
-	// Verify funds have arrived.
-	let free_balance = api.get_free_balance(accountid);
-	info!("TEE's NEW free balance = {:?}", free_balance);
-
-	api.signer = signer_orig;
-	Ok(())
 }
 
 /// Ensure we're synced up until the parentchain block where we have registered ourselves.

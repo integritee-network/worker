@@ -10,7 +10,7 @@ settings:
 
 # All subcommands must be listed in the 'subcommand:' object, where the key to
 # the list is the name of the subcommand, and all settings for that command are
-# are part of a Hash
+# part of a Hash
 args:
     - node-server:
         short: u
@@ -62,6 +62,16 @@ args:
         long: mu-ra-external-address
         help: Set the mutual remote attestation worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `mu-ra-port` will be used.
         takes_value: true
+        required: false
+    - enable-metrics:
+        long: enable-metrics
+        help: Enable the metrics http server to serve metrics
+    - metrics-port:
+        short: i
+        long: metrics-port
+        help: Set the port on which the metrics are served.
+        takes_value: true
+        default_value: "8787"
         required: false
 
 subcommands:

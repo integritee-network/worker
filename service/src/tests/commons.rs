@@ -53,5 +53,7 @@ pub fn local_worker_config(
 		untrusted_worker_port,
 		None,
 		mu_ra_port,
+		false,
+		"8787".to_string(),
 	)
 }

@@ -20,6 +20,7 @@ sp-runtime = { version = "5.0.0", default-features = false, git = "https://githu
 # local deps
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", default-features = false }
+itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
@@ -51,6 +52,7 @@ default = ["std"]
 std = [
    "ita-stf/std",
    "itc-parentchain-block-import-dispatcher/std",
+   "itp-enclave-metrics/std",
    "itp-ocall-api/std",
    "itp-sgx-crypto/std",
    "itp-stf-executor/std",
@@ -72,6 +74,7 @@ sgx = [
    "sgx_tstd",
    "ita-stf/sgx",
    "itc-parentchain-block-import-dispatcher/sgx",
+   "itp-enclave-metrics/sgx",
    "itp-sgx-crypto/sgx",
    "itp-stf-executor/sgx",
    "itp-stf-state-handler/sgx",

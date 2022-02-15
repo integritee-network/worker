@@ -17,6 +17,7 @@ members = [
     "core-primitives/component-container",
     "core-primitives/enclave-api",
     "core-primitives/enclave-api/ffi",
+    "core-primitives/enclave-metrics",
     "core-primitives/extrinsics-factory",
     "core-primitives/node-api-extensions",
     "core-primitives/nonce-cache",

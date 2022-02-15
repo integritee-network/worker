@@ -22,7 +22,10 @@ use crate::test::mocks::rpc_responder_mock::RpcResponderMock;
 use itc_parentchain::block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_sgx_crypto::Aes;
 use itp_stf_executor::executor::StfExecutor;
-use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
+use itp_test::mock::{
+	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
+	onchain_mock::OnchainMock,
+};
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter,
@@ -63,7 +66,8 @@ pub type TestRpcResponder = RpcResponderMock<H256>;
 pub type TestTopPool =
 	BasicPool<SidechainApi<ParentchainBlock>, ParentchainBlock, TestRpcResponder>;
 
-pub type TestRpcAuthor = Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKey>;
+pub type TestRpcAuthor =
+	Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKey, MetricsOCallMock>;
 
 pub type TestTopPoolExecutor =
 	TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, TestRpcAuthor, TestStfExecutor>;

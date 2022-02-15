@@ -6,6 +6,7 @@ static DEFAULT_NODE_PORT: &str = "9944";
 static DEFAULT_TRUSTED_PORT: &str = "2000";
 static DEFAULT_UNTRUSTED_PORT: &str = "2001";
 static DEFAULT_MU_RA_PORT: &str = "3443";
+static DEFAULT_METRICS_PORT: &str = "8787";
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -24,6 +25,10 @@ pub struct Config {
 	pub mu_ra_external_address: Option<String>,
 	/// Port for mutual-remote attestation requests.
 	pub mu_ra_port: String,
+	/// Enable the metrics server
+	pub enable_metrics_server: bool,
+	/// Port for the metrics server
+	pub metrics_server_port: String,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -38,6 +43,8 @@ impl Config {
 		untrusted_worker_port: String,
 		mu_ra_external_address: Option<String>,
 		mu_ra_port: String,
+		enable_metrics_server: bool,
+		metrics_server_port: String,
 	) -> Self {
 		Self {
 			node_ip,
@@ -49,6 +56,8 @@ impl Config {
 			untrusted_worker_port,
 			mu_ra_external_address,
 			mu_ra_port,
+			enable_metrics_server,
+			metrics_server_port,
 		}
 	}
 
@@ -92,6 +101,10 @@ impl Config {
 			None => format!("{}:{}", self.worker_ip, self.mu_ra_port),
 		}
 	}
+
+	pub fn try_parse_metrics_server_port(&self) -> Option<u16> {
+		self.metrics_server_port.parse::<u16>().ok()
+	}
 }
 
 impl From<&ArgMatches<'_>> for Config {
@@ -99,6 +112,8 @@ impl From<&ArgMatches<'_>> for Config {
 		let trusted_port = m.value_of("trusted-worker-port").unwrap_or(DEFAULT_TRUSTED_PORT);
 		let untrusted_port = m.value_of("untrusted-worker-port").unwrap_or(DEFAULT_UNTRUSTED_PORT);
 		let mu_ra_port = m.value_of("mu-ra-port").unwrap_or(DEFAULT_MU_RA_PORT);
+		let is_metrics_server_enabled = m.is_present("enable-metrics");
+		let metrics_server_port = m.value_of("metrics-port").unwrap_or(DEFAULT_METRICS_PORT);
 
 		Self::new(
 			m.value_of("node-server").unwrap_or(DEFAULT_NODE_SERVER).into(),
@@ -113,6 +128,8 @@ impl From<&ArgMatches<'_>> for Config {
 			m.value_of("mu-ra-external-address")
 				.map(|url| add_port_if_necessary(url, mu_ra_port)),
 			mu_ra_port.to_string(),
+			is_metrics_server_enabled,
+			metrics_server_port.to_string(),
 		)
 	}
 }

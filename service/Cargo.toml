@@ -24,10 +24,12 @@ serde_derive = "1.0"
 jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
 async-trait = "0.1.50"
 tokio = { version = "1.6.1", features = ["full"] }
+prometheus = { version = "0.13.0", features = ["process"] }
+warp = "0.3"
+futures = "0.3"
 
 # ipfs
 ipfs-api = "0.11.0"
-futures = "0.3"
 multihash = "0.8"
 cid = "<0.3.1"
 sha2 = { version = "0.7", default-features = false }
@@ -45,6 +47,7 @@ itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
+itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-settings = { path = "../core-primitives/settings" }
 itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }

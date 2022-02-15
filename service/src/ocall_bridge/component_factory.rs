@@ -19,14 +19,16 @@
 use crate::{
 	ocall_bridge::{
 		bridge_api::{
-			GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge, SidechainBridge,
-			WorkerOnChainBridge,
+			GetOCallBridgeComponents, IpfsBridge, MetricsBridge, RemoteAttestationBridge,
+			SidechainBridge, WorkerOnChainBridge,
 		},
 		ipfs_ocall::IpfsOCall,
+		metrics_ocall::MetricsOCall,
 		remote_attestation_ocall::RemoteAttestationOCall,
 		sidechain_ocall::SidechainOCall,
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
+	prometheus_metrics::ReceiveEnclaveMetrics,
 	sync_block_gossiper::GossipBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
@@ -49,6 +51,7 @@ pub struct OCallBridgeComponentFactory<
 	PeerUpdater,
 	PeerBlockFetcher,
 	TokioHandle,
+	MetricsReceiver,
 > {
 	node_api_factory: Arc<NodeApi>,
 	block_gossiper: Arc<Gossiper>,
@@ -57,9 +60,19 @@ pub struct OCallBridgeComponentFactory<
 	peer_updater: Arc<PeerUpdater>,
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
 	tokio_handle: Arc<TokioHandle>,
+	metrics_receiver: Arc<MetricsReceiver>,
 }
 
-impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+impl<
+		NodeApi,
+		Gossiper,
+		EnclaveApi,
+		Storage,
+		PeerUpdater,
+		PeerBlockFetcher,
+		TokioHandle,
+		MetricsReceiver,
+	>
 	OCallBridgeComponentFactory<
 		NodeApi,
 		Gossiper,
@@ -68,8 +81,10 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 		PeerUpdater,
 		PeerBlockFetcher,
 		TokioHandle,
+		MetricsReceiver,
 	>
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		node_api_factory: Arc<NodeApi>,
 		block_gossiper: Arc<Gossiper>,
@@ -78,6 +93,7 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 		peer_updater: Arc<PeerUpdater>,
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
 		tokio_handle: Arc<TokioHandle>,
+		metrics_receiver: Arc<MetricsReceiver>,
 	) -> Self {
 		OCallBridgeComponentFactory {
 			node_api_factory,
@@ -87,12 +103,21 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 			peer_updater,
 			peer_block_fetcher,
 			tokio_handle,
+			metrics_receiver,
 		}
 	}
 }
 
-impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
-	GetOCallBridgeComponents
+impl<
+		NodeApi,
+		Gossiper,
+		EnclaveApi,
+		Storage,
+		PeerUpdater,
+		PeerBlockFetcher,
+		TokioHandle,
+		MetricsReceiver,
+	> GetOCallBridgeComponents
 	for OCallBridgeComponentFactory<
 		NodeApi,
 		Gossiper,
@@ -101,6 +126,7 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 		PeerUpdater,
 		PeerBlockFetcher,
 		TokioHandle,
+		MetricsReceiver,
 	> where
 	NodeApi: CreateNodeApi + 'static,
 	Gossiper: GossipBlocks + 'static,
@@ -109,6 +135,7 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 	PeerUpdater: UpdateWorkerPeers + 'static,
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock> + 'static,
 	TokioHandle: GetTokioHandle + 'static,
+	MetricsReceiver: ReceiveEnclaveMetrics + 'static,
 {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))
@@ -130,5 +157,9 @@ impl<NodeApi, Gossiper, EnclaveApi, Storage, PeerUpdater, PeerBlockFetcher, Toki
 
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {
 		Arc::new(IpfsOCall {})
+	}
+
+	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge> {
+		Arc::new(MetricsOCall::new(self.metrics_receiver.clone()))
 	}
 }

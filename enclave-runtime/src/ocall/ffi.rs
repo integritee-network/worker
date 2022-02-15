@@ -58,6 +58,12 @@ extern "C" {
 		resp_size: u32,
 	) -> sgx_status_t;
 
+	pub fn ocall_update_metric(
+		ret_val: *mut sgx_status_t,
+		metric_ptr: *const u8,
+		metric_size: u32,
+	) -> sgx_status_t;
+
 	pub fn ocall_propose_sidechain_blocks(
 		ret_val: *mut sgx_status_t,
 		signed_blocks: *const u8,

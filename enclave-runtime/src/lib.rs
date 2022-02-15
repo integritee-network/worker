@@ -36,10 +36,12 @@ use crate::{
 	error::{Error, Result},
 	global_components::{
 		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
-		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveTopPoolOperationHandler,
-		EnclaveValidatorAccessor, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStfExecutor,
+		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_AUTHOR_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
@@ -82,7 +84,6 @@ use itp_storage::StorageProof;
 use itp_types::{Block, Header, SignedBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, top_pool_executor::TopPoolOperationHandler,
-	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
 };
 use log::*;
 use sgx_types::sgx_status_t;
@@ -413,18 +414,23 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		},
 	};
 
-	its_sidechain::top_pool_rpc_author::initializer::initialize_top_pool_rpc_author(
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	let ocall_api = Arc::new(OcallApi);
+
+	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
 		connection_registry.clone(),
+		state_handler.clone(),
+		ocall_api.clone(),
 		rsa_shielding_key,
 	);
 
-	let rpc_author = match GLOBAL_RPC_AUTHOR_COMPONENT.get() {
-		Some(a) => a,
-		None => {
-			error!("Failed to retrieve global top pool author");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
+	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
+
+	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler));
+	let top_pool_operation_handler =
+		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor));
+
+	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
 
 	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));

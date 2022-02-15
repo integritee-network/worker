@@ -48,7 +48,7 @@ use itp_stf_executor::{
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
-	handle_state_mock, handle_state_mock::HandleStateMock,
+	handle_state_mock, handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
 };
 use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
@@ -78,7 +78,8 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
-type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock>;
+type TestRpcAuthor =
+	Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock, MetricsOCallMock>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -608,6 +609,7 @@ pub fn test_setup() -> (
 			AllowAllTopsFilter,
 			state_handler.clone(),
 			encryption_key.clone(),
+			Arc::new(MetricsOCallMock {}),
 		)),
 		state,
 		shard,

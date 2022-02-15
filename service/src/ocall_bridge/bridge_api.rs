@@ -82,6 +82,14 @@ impl Bridge {
 			.get_ipfs_api()
 	}
 
+	pub fn get_metrics_api() -> Arc<dyn MetricsBridge> {
+		COMPONENT_FACTORY
+			.read()
+			.as_ref()
+			.expect("Component factory has not been set. Use `initialize()`")
+			.get_metrics_api()
+	}
+
 	pub fn initialize(component_factory: Arc<dyn GetOCallBridgeComponents + Send + Sync>) {
 		debug!("Initializing OCall bridge with component factory");
 
@@ -103,6 +111,9 @@ pub trait GetOCallBridgeComponents {
 
 	/// ipfs OCall API
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge>;
+
+	/// Metrics OCall API.
+	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge>;
 }
 
 /// OCall bridge errors
@@ -116,6 +127,8 @@ pub enum OCallBridgeError {
 	GetUpdateInfo(sgx_status_t),
 	#[error("GetIasSocket Error: {0}")]
 	GetIasSocket(String),
+	#[error("UpdateMetric Error: {0}")]
+	UpdateMetric(String),
 	#[error("Propose sidechain block failed: {0}")]
 	ProposeSidechainBlock(String),
 	#[error("Failed to fetch sidechain blocks from peer: {0}")]
@@ -176,6 +189,12 @@ pub trait WorkerOnChainBridge {
 	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
 
 	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+}
+
+/// Trait for updating metrics from inside the enclave.
+#[cfg_attr(test, automock)]
+pub trait MetricsBridge {
+	fn update_metric(&self, metric_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
 /// Trait for all the OCalls related to sidechain operations

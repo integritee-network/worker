@@ -15,6 +15,8 @@ std = [
     "itc-direct-rpc-server/std",
     "itc-tls-websocket-server/std",
     "itp-component-container/std",
+    "itp-enclave-metrics/std",
+    "itp-ocall-api/std",
     "itp-stf-state-handler/std",
     "itp-types/std",
     "its-top-pool/std",
@@ -30,6 +32,7 @@ sgx = [
     "itc-direct-rpc-server/sgx",
     "itc-tls-websocket-server/sgx",
     "itp-component-container/sgx",
+    "itp-enclave-metrics/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-types/sgx",
@@ -49,6 +52,8 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-features = false }
 itc-tls-websocket-server = { path = "../../core/tls-websocket-server", default-features = false }
 itp-component-container = { path = "../../core-primitives/component-container", default-features = false }
+itp-enclave-metrics = { path = "../../core-primitives/enclave-metrics", default-features = false }
+itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", default-features = false }
 itp-test = { path = "../../core-primitives/test", default-features = false, optional = true }

@@ -15,11 +15,20 @@
 
 */
 
-pub mod handle_state_mock;
-pub mod metrics_ocall_mock;
-pub mod onchain_mock;
-pub mod sidechain_ocall_api_mock;
-pub mod trusted_operation_pool_mock;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "sgx")]
-pub mod shielding_crypto_mock;
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
+use codec::{Decode, Encode};
+
+#[derive(Encode, Decode)]
+pub enum EnclaveMetric {
+	SetSidechainBlockHeight(u64),
+	TopPoolSizeSet(u64),
+	TopPoolSizeIncrement,
+	TopPoolSizeDecrement,
+}
