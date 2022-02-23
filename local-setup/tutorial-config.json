@@ -1,0 +1,52 @@
+{
+  "node": {
+    "bin": "../integritee-node/target/release/integritee-node",
+    "flags": [
+      "--tmp",
+      "--dev",
+      "-lruntime=info",
+      "--ws-port",
+      "9944",
+      "--port",
+      "30390",
+      "--rpc-port",
+      "8990"
+    ]
+  },
+  "workers": [
+    {
+      "source": "bin",
+      "flags": [
+        "-P",
+        "2000",
+        "-p",
+        "9944",
+        "-w",
+        "2001",
+        "-r",
+        "3443"
+      ],
+      "subcommand_flags": [
+        "--skip-ra",
+        "--dev"
+      ]
+    },
+    {
+      "source": "bin",
+      "flags": [
+        "-P",
+        "3000",
+        "-p",
+        "9944",
+        "-w",
+        "3001",
+        "-r",
+        "3444"
+      ],
+      "subcommand_flags": [
+        "--skip-ra",
+        "--dev"
+      ]
+    }
+  ]
+}
