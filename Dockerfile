@@ -6,13 +6,11 @@ ARG BINARY_FILE=integritee-service-dev
 
 RUN echo "Oh dang look at that ${BINARY_FILE}"
 
-COPY ${BINARY_FILE} /usr/local/bin
-RUN chmod +x /usr/local/bin/${BINARY_FILE}
+COPY ${BINARY_FILE} /usr/local/bin/integritee
+RUN chmod +x /usr/local/bin/integritee
 
 # checks
-RUN ldd /usr/local/bin/${BINARY_FILE} && \
-	/usr/local/bin/${BINARY_FILE} --version
+RUN ldd /usr/local/bin/integritee && \
+	/usr/local/bin/integritee --version
 
-ENV entrypoint="/usr/local/bin/${BINARY_FILE}"
-
-ENTRYPOINT ${entrypoint}
+ENTRYPOINT ["/usr/local/bin/integritee"]
