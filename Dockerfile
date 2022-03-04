@@ -1,12 +1,15 @@
 FROM integritee/integritee-dev:0.1.9
 LABEL maintainer="zoltan@integritee.network"
 
-# By default we warp the service-dev
-ARG BINARY_FILE=integritee-service-dev
+# By default we warp the service
+ARG BINARY_FILE=integritee-service
 
-RUN echo "Oh dang look at that ${BINARY_FILE}"
+COPY bin/enclave.signed.so bin/end.rsa bin/end.fullchain /usr/local/bin/
+COPY bin/${BINARY_FILE} /usr/local/bin/integritee
 
-COPY ${BINARY_FILE} /usr/local/bin/integritee
+WORKDIR /usr/local/bin
+RUN touch spid.txt key.txt
+
 RUN chmod +x /usr/local/bin/integritee
 
 # checks

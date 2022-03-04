@@ -27,7 +27,7 @@ jobs:
 
   build-test:
     runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.7"
+    container: "integritee/integritee-dev:0.1.9"
     steps:
       - uses: actions/checkout@v2
       - name: init rust
@@ -62,7 +62,7 @@ jobs:
 
   clippy:
     runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.7"
+    container: "integritee/integritee-dev:0.1.9"
     steps:
       - uses: actions/checkout@v2
       - name: init rust
@@ -97,7 +97,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: build-test
-    container: "integritee/integritee-dev:0.1.7"
+    container: "integritee/integritee-dev:0.1.9"
     strategy:
       fail-fast: false
       matrix:
@@ -251,11 +251,20 @@ jobs:
           name: integritee-client-${{ github.sha }}
           path: integritee-client-tmp
 
+      - name: Download Enclave Signed
+        uses: actions/download-artifact@v2
+        with:
+          name: enclave-signed-${{ github.sha }}
+          path: enclave-signed-tmp
+
       - name: Move service binaries
         run: mv integritee-worker-tmp/integritee-service ./integritee-service-dev
 
       - name: Move service client binaries
         run: mv integritee-client-tmp/integritee-cli ./integritee-client
+
+      - name: Move service client binaries
+        run: mv enclave-signed-tmp/enclave.signed.so ./enclave.signed.so
 
       - name: Create required package.json
         run: test -f package.json || echo '{}' >package.json
@@ -280,3 +289,4 @@ jobs:
           files: |
             integritee-client
             integritee-service-dev
+            enclave.signed.so
