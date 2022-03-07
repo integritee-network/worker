@@ -7,7 +7,7 @@ on:
 
 jobs:
   main:
-    name: Push Integritee Node to Dockerhub
+    name: Push Integritee Services to Dockerhub
     runs-on: ubuntu-latest
     strategy:
       matrix:
