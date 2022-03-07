@@ -7,8 +7,13 @@ ARG BINARY_FILE=integritee-service
 COPY bin/enclave.signed.so bin/end.rsa bin/end.fullchain /usr/local/bin/
 COPY bin/${BINARY_FILE} /usr/local/bin/integritee
 
+
 WORKDIR /usr/local/bin
 RUN touch spid.txt key.txt
+RUN if [[ "x$BINARY_FILE" != "xintegritee-client" ]] ; then ./integritee init-shard; fi
+RUN if [[ "x$BINARY_FILE" != "xintegritee-client" ]] ; then ./integritee shielding-key; fi
+RUN if [[ "x$BINARY_FILE" != "xintegritee-client" ]] ; then ./integritee signing-key; fi
+RUN if [[ "x$BINARY_FILE" != "xintegritee-client" ]] ; then ./integritee mrenclave > ~/mrenclave.b58; fi
 
 RUN chmod +x /usr/local/bin/integritee
 
