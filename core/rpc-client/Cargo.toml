@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 # crates.io
-codec = { package = "parity-scale-codec", version = "2.0.0", features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = "0.4"
 openssl = { version = "0.10" }
 serde_derive = "1.0"

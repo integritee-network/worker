@@ -22,7 +22,7 @@ thiserror = { version = "1.0", optional = true }
 
 # crates.io no-std compatible libraries
 log = { version = "0.4", default-features = false }
-sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [dev-dependencies]
 itp-types = { path = "../../../core-primitives/types" }

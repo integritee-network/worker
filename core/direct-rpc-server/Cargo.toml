@@ -29,10 +29,10 @@ sgx_types   = { branch = "master", git = "https://github.com/apache/teaclave-sgx
 sgx_tstd    = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
 
 # no-std dependencies
-codec  = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 # internal dependencies
 itp-types = { path = "../../core-primitives/types", default-features = false }
