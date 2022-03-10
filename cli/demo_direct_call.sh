@@ -84,10 +84,6 @@ echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's inc
 $CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
-echo "* Waiting 3 seconds"
-sleep 3
-echo ""
-
 echo "* Get balance of Alice's incognito account"
 RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
 echo $RESULT

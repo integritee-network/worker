@@ -81,10 +81,6 @@ echo "* Issue ${INITIALFUNDS} tokens to Alice's incognito account (on worker 1)"
 ${CLIENTWORKER1} trusted set-balance ${ICGACCOUNTALICE} ${INITIALFUNDS} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
-echo "* Waiting 2 seconds"
-sleep 2
-echo ""
-
 echo "Get balance of Alice's incognito account (on worker 1)"
 ${CLIENTWORKER1} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
 echo ""
@@ -94,17 +90,9 @@ echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito acco
 $CLIENTWORKER1 trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
 echo ""
 
-echo "* Waiting 2 seconds"
-sleep 2
-echo ""
-
 # Send funds from Alice to Bobs account, on worker 2
 echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
 $CLIENTWORKER2 trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
-echo ""
-
-echo "* Waiting 2 seconds"
-sleep 2
 echo ""
 
 echo "* Get balance of Alice's incognito account (on worker 2)"
@@ -139,5 +127,3 @@ fi
 echo ""
 
 exit 0
-
-
