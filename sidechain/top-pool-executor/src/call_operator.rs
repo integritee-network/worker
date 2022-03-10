@@ -16,14 +16,14 @@
 */
 
 use crate::{error::Result, TopPoolOperationHandler};
-use ita_stf::TrustedCallSigned;
+use ita_stf::{hash::TrustedOperationOrHash, TrustedCallSigned};
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_types::{ShardIdentifier, H256};
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
@@ -44,13 +44,15 @@ pub trait TopPoolCallOperator<
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Vec<TrustedCallSigned>>;
 
-	/// Removes the given trusted calls from the top pool.
-	/// Returns all hashes that were NOT successfully removed.
 	fn remove_calls_from_pool(
 		&self,
-		shard: &ShardIdentifierFor<SignedSidechainBlock>,
-		calls: Vec<ExecutedOperation>,
+		shard: &ShardIdentifier,
+		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation>;
+
+	/// Removes the given trusted calls from the top pool and updated the top status accordingly.
+	/// Returns all hashes that were NOT successfully removed.
+	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation>;
 }
 
 impl<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
@@ -63,7 +65,7 @@ where
 	SignedSidechainBlock::Block:
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
-		+ OnBlockCreated<Hash = ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
 	<StfExecutor as StateUpdateProposer>::Externalities:
@@ -91,6 +93,24 @@ where
 				failed_to_remove.push(executed_call);
 			}
 		}
+		failed_to_remove
+	}
+
+	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation> {
+		let signed_top_hashes = block.signed_top_hashes();
+		let executed_operations = signed_top_hashes
+			.iter()
+			.map(|hash| {
+				// Only successfully executed operations are included in a block.
+				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
+			})
+			.collect();
+
+		let failed_to_remove = self.remove_calls_from_pool(&block.shard_id(), executed_operations);
+
+		// notify pool about in block
+		self.rpc_author.on_block_imported(signed_top_hashes, block.hash());
+
 		failed_to_remove
 	}
 }

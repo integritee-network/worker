@@ -26,7 +26,7 @@ use its_primitives::traits::{
 	Block as SidechainBlockTrait, SignBlock, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::Pair;
@@ -69,7 +69,7 @@ where
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
-		+ OnBlockCreated<Hash = ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
@@ -91,7 +91,7 @@ where
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
-		+ OnBlockCreated<Hash = ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
@@ -150,7 +150,6 @@ where
 
 		let opaque_call = create_proposed_sidechain_block_call(shard, block_hash);
 
-		self.rpc_author.on_block_imported(block.signed_top_hashes(), block.hash());
 		let signed_block = block.sign_block(&self.signer);
 
 		Ok((opaque_call, signed_block))
