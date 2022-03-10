@@ -18,7 +18,7 @@
 use crate::{error::Result, TopPoolOperationHandler};
 use ita_stf::{hash::TrustedOperationOrHash, TrustedCallSigned};
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
-use itp_types::{ShardIdentifier, H256};
+use itp_types::H256;
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
@@ -46,7 +46,7 @@ pub trait TopPoolCallOperator<
 
 	fn remove_calls_from_pool(
 		&self,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation>;
 
@@ -71,13 +71,16 @@ where
 	<StfExecutor as StateUpdateProposer>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 {
-	fn get_trusted_calls(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedCallSigned>> {
+	fn get_trusted_calls(
+		&self,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
+	) -> Result<Vec<TrustedCallSigned>> {
 		Ok(self.rpc_author.get_pending_tops_separated(*shard)?.0)
 	}
 
 	fn remove_calls_from_pool(
 		&self,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation> {
 		let mut failed_to_remove = Vec::new();
