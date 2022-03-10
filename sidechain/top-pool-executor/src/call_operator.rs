@@ -44,6 +44,8 @@ pub trait TopPoolCallOperator<
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Vec<TrustedCallSigned>>;
 
+	/// Removes the given trusted calls from the top pool.
+	/// Returns all hashes that were NOT successfully removed.
 	fn remove_calls_from_pool(
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
