@@ -154,12 +154,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 fn test_compose_block_and_confirmation() {
 	// given
-	let (rpc_author, _, shard, _, _, state_handler) = test_setup();
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
-		test_account(),
-		state_key(),
-		rpc_author.clone(),
-	);
+	let (_, _, shard, _, _, state_handler) = test_setup();
+	let block_composer =
+		BlockComposer::<Block, SignedBlock, _, _>::new(test_account(), state_key());
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 
@@ -285,11 +282,8 @@ fn test_create_block_and_confirmation_works() {
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
-		test_account(),
-		state_key(),
-		rpc_author.clone(),
-	);
+	let block_composer =
+		BlockComposer::<Block, SignedBlock, _, _>::new(test_account(), state_key());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -356,11 +350,8 @@ fn test_create_state_diff() {
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
-		test_account(),
-		state_key(),
-		rpc_author.clone(),
-	);
+	let block_composer =
+		BlockComposer::<Block, SignedBlock, _, _>::new(test_account(), state_key());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();

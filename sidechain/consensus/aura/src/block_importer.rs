@@ -21,7 +21,6 @@
 pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, SidechainBlockTrait};
-use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
 	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 };
@@ -29,7 +28,6 @@ use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
-use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::H256;
@@ -47,7 +45,7 @@ use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header},
 };
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{marker::PhantomData, sync::Arc};
 
 /// Implements `BlockImport`.
 #[derive(Clone)]
