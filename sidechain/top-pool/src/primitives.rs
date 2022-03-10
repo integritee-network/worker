@@ -258,7 +258,7 @@ pub trait TrustedOperationPool: Send + Sync {
 	) -> Option<Arc<Self::InPoolOperation>>;
 
 	/// Notify the listener of top inclusion in sidechain block
-	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
 
 	/// Notify the RPC client of a state update
 	fn rpc_send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<(), error::Error>;

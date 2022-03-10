@@ -269,8 +269,8 @@ where
 	}
 
 	fn watch_top(
-		&self,
-		ext: Vec<u8>,
+		&son_block_imported
+		ext: Vec<u8>,on_block_imported
 		shard: ShardIdentifier,
 	) -> PoolFuture<TxHash<TopPool>, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::SubmitWatch)

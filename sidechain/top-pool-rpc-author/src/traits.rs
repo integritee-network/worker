@@ -78,5 +78,5 @@ pub trait SendState {
 pub trait OnBlockCreated {
 	type Hash;
 
-	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
 }

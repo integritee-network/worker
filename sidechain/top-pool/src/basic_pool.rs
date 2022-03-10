@@ -230,8 +230,8 @@ where
 		self.pool.validated_pool().ready_by_hash(hash, shard)
 	}
 
-	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
-		self.pool.validated_pool().on_block_created(hashes, block_hash);
+	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
+		self.pool.validated_pool().on_block_imported(hashes, block_hash);
 	}
 
 	fn rpc_send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<(), Error> {

@@ -150,7 +150,7 @@ where
 
 		let opaque_call = create_proposed_sidechain_block_call(shard, block_hash);
 
-		self.rpc_author.on_block_created(block.signed_top_hashes(), block.hash());
+		self.rpc_author.on_block_imported(block.signed_top_hashes(), block.hash());
 		let signed_block = block.sign_block(&self.signer);
 
 		Ok((opaque_call, signed_block))
