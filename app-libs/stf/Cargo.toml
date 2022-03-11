@@ -17,8 +17,6 @@ sgx = [
 std = [
     # crates.io
     "base58",
-    "clap",
-    "clap-nested",
     "codec/std",
     "hex",
     "log/std",
@@ -47,8 +45,6 @@ test = []
 [dependencies]
 # crates.io
 base58 = { version = "0.1", optional = true }
-clap = { version = "2.33", optional = true }
-clap-nested = { version = "0.3.1", optional = true }
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
 hex = { version = "0.4.2", optional = true }

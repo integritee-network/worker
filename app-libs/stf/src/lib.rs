@@ -101,9 +101,6 @@ pub mod stf_sgx;
 #[cfg(feature = "sgx")]
 pub mod helpers;
 
-#[cfg(feature = "std")]
-pub mod cli;
-
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 
