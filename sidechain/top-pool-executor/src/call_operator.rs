@@ -52,7 +52,7 @@ pub trait TopPoolCallOperator<
 		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation>;
 
-	/// Removes the given trusted calls from the top pool and updated the top status accordingly.
+	/// Removes the calls within the imported block from the top pool and updates their status accordingly.
 	/// Returns all hashes that were NOT successfully removed.
 	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation>;
 }
@@ -102,6 +102,7 @@ where
 	}
 
 	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation> {
+		// Remove calls from pool.
 		let signed_top_hashes = block.signed_top_hashes();
 		let executed_operations = signed_top_hashes
 			.iter()
@@ -113,7 +114,7 @@ where
 
 		let failed_to_remove = self.remove_calls_from_pool(&block.shard_id(), executed_operations);
 
-		// notify pool about in block
+		// Notify pool about status updates.
 		self.rpc_author.on_block_imported(signed_top_hashes, block.hash());
 
 		failed_to_remove
