@@ -54,7 +54,7 @@ use its_primitives::traits::{
 	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
 use std::{marker::PhantomData, sync::Arc};
@@ -77,7 +77,7 @@ where
 	SignedSidechainBlock::Block:
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
-		+ OnBlockCreated<Hash = ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
 	<StfExecutor as StateUpdateProposer>::Externalities:

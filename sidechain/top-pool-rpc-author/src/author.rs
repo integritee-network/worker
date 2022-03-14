@@ -22,7 +22,7 @@ use crate::{
 	client_error::Error as ClientError,
 	error::{Error as StateRpcError, Result},
 	top_filter::{AllowAllTopsFilter, Filter},
-	traits::{AuthorApi, OnBlockCreated, SendState},
+	traits::{AuthorApi, OnBlockImported, SendState},
 };
 use codec::{Decode, Encode};
 use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
@@ -277,7 +277,7 @@ where
 	}
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi> OnBlockCreated
+impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi> OnBlockImported
 	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
@@ -288,8 +288,8 @@ where
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
 
-	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
-		self.top_pool.on_block_created(hashes, block_hash)
+	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
+		self.top_pool.on_block_imported(hashes, block_hash)
 	}
 }
 

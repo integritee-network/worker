@@ -18,7 +18,7 @@
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_AUTHOR_COMPONENT,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
 	},
 	ocall::OcallApi,
@@ -181,12 +181,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			Error::ComponentNotInitialized
 		})?;
 
-	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve rpc author component. Maybe it's not initialized?");
-		Error::ComponentNotInitialized
-	})?;
-
-	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key, rpc_author));
+	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key));
 
 	match yield_next_slot(
 		slot_beginning_timestamp,

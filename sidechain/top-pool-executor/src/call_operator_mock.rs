@@ -97,4 +97,9 @@ where
 		remove_call_invoked_lock.push((*shard, calls));
 		Default::default()
 	}
+
+	fn on_block_imported(&self, _block: &SignedSidechainBlock::Block) {
+		// Do nothing for now
+		// FIXME: We should include unit tests to see if pool is notified about block import
+	}
 }

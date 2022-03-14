@@ -96,8 +96,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer =
-		Arc::new(TestBlockComposer::new(signer.clone(), state_key, rpc_author.clone()));
+	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key));
 	let proposer_environment =
 		ProposerFactory::new(top_pool_operation_handler, stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();

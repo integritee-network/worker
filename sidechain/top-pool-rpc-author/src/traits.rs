@@ -28,7 +28,7 @@ use std::vec::Vec;
 /// Trait alias for a full STF author API
 pub trait FullAuthor = AuthorApi<H256, H256>
 	+ SendState<Hash = H256>
-	+ OnBlockCreated<Hash = H256>
+	+ OnBlockImported<Hash = H256>
 	+ Send
 	+ Sync
 	+ 'static;
@@ -75,8 +75,8 @@ pub trait SendState {
 }
 
 /// Trait to notify listeners/observer of a newly created block
-pub trait OnBlockCreated {
+pub trait OnBlockImported {
 	type Hash;
 
-	fn on_block_created(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
 }

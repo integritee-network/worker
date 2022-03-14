@@ -18,12 +18,12 @@
 use crate::{error::Result, TopPoolOperationHandler};
 use ita_stf::TrustedCallSigned;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
-use itp_types::{ShardIdentifier, H256};
+use itp_types::H256;
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
@@ -49,8 +49,11 @@ pub trait TopPoolCallOperator<
 	fn remove_calls_from_pool(
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
-		calls: Vec<ExecutedOperation>,
+		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation>;
+
+	// Notify pool about block import for status updates
+	fn on_block_imported(&self, block: &SignedSidechainBlock::Block);
 }
 
 impl<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
@@ -63,19 +66,22 @@ where
 	SignedSidechainBlock::Block:
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
-		+ OnBlockCreated<Hash = ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
 	<StfExecutor as StateUpdateProposer>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 {
-	fn get_trusted_calls(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedCallSigned>> {
+	fn get_trusted_calls(
+		&self,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
+	) -> Result<Vec<TrustedCallSigned>> {
 		Ok(self.rpc_author.get_pending_tops_separated(*shard)?.0)
 	}
 
 	fn remove_calls_from_pool(
 		&self,
-		shard: &ShardIdentifier,
+		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation> {
 		let mut failed_to_remove = Vec::new();
@@ -92,5 +98,9 @@ where
 			}
 		}
 		failed_to_remove
+	}
+
+	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) {
+		self.rpc_author.on_block_imported(block.signed_top_hashes(), block.hash());
 	}
 }

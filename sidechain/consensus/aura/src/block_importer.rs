@@ -132,21 +132,25 @@ impl<
 		}
 	}
 
-	pub(crate) fn remove_calls_from_top_pool(
-		&self,
-		signed_top_hashes: &[H256],
-		shard: &ShardIdentifierFor<SignedSidechainBlock>,
-	) {
-		let executed_operations = signed_top_hashes
+	pub(crate) fn update_top_pool(&self, sidechain_block: &SignedSidechainBlock::Block) {
+		// FIXME: we should take the rpc author here directly #547.
+
+		// Notify pool about imported block for status updates of the calls.
+		self.top_pool_executor.on_block_imported(sidechain_block);
+
+		// Remove calls from pool.
+		let executed_operations = sidechain_block
+			.signed_top_hashes()
 			.iter()
 			.map(|hash| {
 				// Only successfully executed operations are included in a block.
 				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
 			})
 			.collect();
-		// FIXME: we should take the rpc author here directly #547
-		let unremoved_calls =
-			self.top_pool_executor.remove_calls_from_pool(shard, executed_operations);
+
+		let unremoved_calls = self
+			.top_pool_executor
+			.remove_calls_from_pool(&sidechain_block.shard_id(), executed_operations);
 
 		for unremoved_call in unremoved_calls {
 			error!(
@@ -321,10 +325,7 @@ impl<
 		// If the block has been proposed by this enclave, remove all successfully applied
 		// trusted calls from the top pool.
 		if self.block_author_is_self(sidechain_block.block_author()) {
-			self.remove_calls_from_top_pool(
-				sidechain_block.signed_top_hashes(),
-				&sidechain_block.shard_id(),
-			)
+			self.update_top_pool(sidechain_block)
 		}
 
 		// Send metric about sidechain block height (i.e. block number)
