@@ -402,7 +402,7 @@ pub unsafe extern "C" fn init_enclave_base_components() -> sgx_status_t {
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Initialize generic enclave components.
+/// Initialize sidechain enclave components.
 ///
 /// Call this once at startup. Has to be called AFTER the light-client
 /// (parentchain components) have been initialized.
