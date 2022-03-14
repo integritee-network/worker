@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["integritee-client", "integritee-service-dev"]
+        binary: ["integritee-client", "integritee-demo-validateer"]
     steps:
       - uses: actions/checkout@v2
 

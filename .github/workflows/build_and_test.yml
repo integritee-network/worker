@@ -258,7 +258,7 @@ jobs:
           path: enclave-signed-tmp
 
       - name: Move service binaries
-        run: mv integritee-worker-tmp/integritee-service ./integritee-service-dev
+        run: mv integritee-worker-tmp/integritee-service ./integritee-demo-validateer
 
       - name: Move service client binaries
         run: mv integritee-client-tmp/integritee-cli ./integritee-client
@@ -288,5 +288,5 @@ jobs:
           draft: true
           files: |
             integritee-client
-            integritee-service-dev
+            integritee-demo-validateer
             enclave.signed.so
