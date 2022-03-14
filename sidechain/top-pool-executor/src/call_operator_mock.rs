@@ -22,8 +22,8 @@ use crate::{
 	error::Result,
 };
 use core::marker::PhantomData;
-use ita_stf::{hash::TrustedOperationOrHash, TrustedCallSigned};
-use its_primitives::traits::{Block, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
+use ita_stf::TrustedCallSigned;
+use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::HashMap, sync::RwLock};
 
@@ -98,16 +98,8 @@ where
 		Default::default()
 	}
 
-	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation> {
-		let signed_top_hashes = block.signed_top_hashes();
-		let executed_operations = signed_top_hashes
-			.iter()
-			.map(|hash| {
-				// Only successfully executed operations are included in a block.
-				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
-			})
-			.collect();
-
-		self.remove_calls_from_pool(&block.shard_id(), executed_operations)
+	fn on_block_imported(&self, _block: &SignedSidechainBlock::Block) {
+		// Do nothing for now
+		// FIXME: We should include unit tests to see if pool is notified about block import
 	}
 }

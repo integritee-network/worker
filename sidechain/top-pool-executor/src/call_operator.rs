@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, TopPoolOperationHandler};
-use ita_stf::{hash::TrustedOperationOrHash, TrustedCallSigned};
+use ita_stf::TrustedCallSigned;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_types::H256;
 use its_primitives::traits::{
@@ -52,9 +52,8 @@ pub trait TopPoolCallOperator<
 		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation>;
 
-	/// Removes the calls within the imported block from the top pool and updates their status accordingly.
-	/// Returns all hashes that were NOT successfully removed.
-	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation>;
+	// Notify pool about block import for status updates
+	fn on_block_imported(&self, block: &SignedSidechainBlock::Block);
 }
 
 impl<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
@@ -101,22 +100,7 @@ where
 		failed_to_remove
 	}
 
-	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) -> Vec<ExecutedOperation> {
-		// Remove calls from pool.
-		let signed_top_hashes = block.signed_top_hashes();
-		let executed_operations = signed_top_hashes
-			.iter()
-			.map(|hash| {
-				// Only successfully executed operations are included in a block.
-				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
-			})
-			.collect();
-
-		let failed_to_remove = self.remove_calls_from_pool(&block.shard_id(), executed_operations);
-
-		// Notify pool about status updates.
-		self.rpc_author.on_block_imported(signed_top_hashes, block.hash());
-
-		failed_to_remove
+	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) {
+		self.rpc_author.on_block_imported(block.signed_top_hashes(), block.hash());
 	}
 }

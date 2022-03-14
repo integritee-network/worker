@@ -21,6 +21,7 @@
 pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, SidechainBlockTrait};
+use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
 	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 };
@@ -28,6 +29,7 @@ use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::StateCrypto;
+use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage_verifier::GetStorageVerified;
 use itp_types::H256;
@@ -45,7 +47,7 @@ use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header},
 };
-use std::{marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Implements `BlockImport`.
 #[derive(Clone)]
@@ -131,8 +133,24 @@ impl<
 	}
 
 	pub(crate) fn update_top_pool(&self, sidechain_block: &SignedSidechainBlock::Block) {
-		// FIXME: we should take the rpc author here directly #547
-		let unremoved_calls = self.top_pool_executor.on_block_imported(sidechain_block);
+		// FIXME: we should take the rpc author here directly #547.
+
+		// Notify pool about imported block for status updates of the calls.
+		self.top_pool_executor.on_block_imported(sidechain_block);
+
+		// Remove calls from pool.
+		let executed_operations = sidechain_block
+			.signed_top_hashes()
+			.iter()
+			.map(|hash| {
+				// Only successfully executed operations are included in a block.
+				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
+			})
+			.collect();
+
+		let unremoved_calls = self
+			.top_pool_executor
+			.remove_calls_from_pool(&sidechain_block.shard_id(), executed_operations);
 
 		for unremoved_call in unremoved_calls {
 			error!(
