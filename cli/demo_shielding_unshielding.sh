@@ -81,7 +81,7 @@ echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
 echo ""
 
 echo "* Create a new incognito account for Bob"
-ICGACCOUNTBOB=$(${CLIENT} trusted new-account --mrenclave ${MRENCLAVE})
+ICGACCOUNTBOB=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} new-account )
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
@@ -97,7 +97,7 @@ sleep 10
 echo ""
 
 echo "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
 echo ""
 
 echo "* Get balance of Alice's on-chain account"
@@ -105,19 +105,19 @@ ${CLIENT} balance "//Alice"
 echo ""
 
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE}
+$CLIENT trusted --mrenclave ${MRENCLAVE} transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
 echo ""
 
 echo "* Bob's incognito account balance"
-${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTBOB}
 echo ""
 
 echo "* Un-shield ${AMOUNTUNSHIELD} tokens from Alice's incognito account"
-${CLIENT} trusted unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD} ${MRENCLAVE} --mrenclave ${MRENCLAVE} --xt-signer //Alice
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --xt-signer //Alice unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNTUNSHIELD}
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -125,7 +125,7 @@ sleep 10
 echo ""
 
 echo "Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}  | xargs)
 echo $RESULT
 
 echo "* Get balance of Alice's on-chain account"
