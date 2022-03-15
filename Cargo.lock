@@ -30,7 +30,7 @@ version = "0.1.0"
 source = "git+https://github.com/scs/substrate-api-client?branch=master#f05bd92a3f88f9b0404586ad9079623019b27059"
 dependencies = [
  "ac-primitives",
- "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-metadata",
  "frame-support",
  "frame-system",
  "hex",
@@ -1214,23 +1214,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "frame-metadata"
-version = "15.0.0"
-source = "git+https://github.com/paritytech/frame-metadata.git?branch=main#d241ab9c1ba89e119263812f963a601be158e661"
-dependencies = [
- "cfg-if 1.0.0",
- "parity-scale-codec",
- "scale-info",
- "serde 1.0.136",
-]
-
-[[package]]
 name = "frame-support"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#f5f286db0da99761792b69bf4a997535dcc8f260"
 dependencies = [
  "bitflags",
- "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-metadata",
  "frame-support-procedural",
  "impl-trait-for-tuples",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2722,7 +2711,7 @@ name = "itp-storage"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "frame-metadata 15.0.0 (git+https://github.com/paritytech/frame-metadata.git?branch=main)",
+ "frame-metadata",
  "frame-support",
  "hash-db",
  "parity-scale-codec",
@@ -6904,7 +6893,7 @@ dependencies = [
  "ac-compose-macros",
  "ac-node-api",
  "ac-primitives",
- "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-metadata",
  "frame-support",
  "frame-system",
  "hex",

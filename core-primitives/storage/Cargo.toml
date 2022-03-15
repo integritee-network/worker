@@ -8,6 +8,7 @@ resolver = "2"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["chain-error"] }
 derive_more = { version = "0.99.5" }
+frame-metadata = { version = "15.0.0", features = ["v14"], default-features = false}
 hash-db = { version = "0.15.2", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
@@ -16,7 +17,6 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # substrate deps
-frame-metadata = { version = "15.0.0", features = ["v14"], default-features = false, git = "https://github.com/paritytech/frame-metadata.git", branch = "main" }
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
