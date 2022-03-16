@@ -73,8 +73,8 @@ sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incub
 #my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
 
 #[patch."https://github.com/scs/substrate-api-client"]
-#substrate-api-client = { path = "../substrate-api-client" }
-#substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }
+#substrate-api-client = { path = "../../scs/substrate-api-client" }
+#substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
 #pallet-claims = { path = '../pallets/claims' }

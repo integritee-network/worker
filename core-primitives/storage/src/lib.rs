@@ -24,7 +24,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 pub use error::Error;
-pub use frame_metadata::v13::StorageHasher;
+pub use frame_metadata::v14::StorageHasher;
 pub use keys::*;
 pub use proof::*;
 pub use storage_entry::*;

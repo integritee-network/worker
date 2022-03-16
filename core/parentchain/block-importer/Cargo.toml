@@ -27,9 +27,9 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 thiserror = { version = "1.0", optional = true }
 
 # crates.io no-std compatible libraries
-codec  = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
-sp-runtime = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 #beefy-merkle-tree = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = "keccak" }
 #remove as soon as we can import beefy-merkle-tree:
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
