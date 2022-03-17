@@ -27,7 +27,6 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
-	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
@@ -51,7 +50,7 @@ use itp_enclave_api::{
 };
 use itp_node_api_extensions::{
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
-	AccountApi, ChainApi, PalletTeerexApi,
+	AccountApi, PalletTeerexApi,
 };
 use itp_settings::{
 	files::{
@@ -73,7 +72,6 @@ use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519,
 };
-use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use std::{
 	fs::{self, File},
@@ -331,6 +329,7 @@ fn start_worker<E, T, D>(
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 	let tee_accountid = enclave_account(enclave.as_ref());
 	println!("MRENCLAVE account {:} ", &tee_accountid.to_ss58check());
+
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
 	if config.enable_metrics_server {
@@ -712,24 +711,24 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 */
 
-pub fn init_light_client<E: EnclaveBase + Sidechain>(
-	api: &Api<sr25519::Pair, WsRpcClient>,
-	enclave_api: Arc<E>,
-) -> Result<Header, Error> {
-	let genesis_hash = api.get_genesis_hash().unwrap();
-	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
-	info!("Got genesis Header: \n {:?} \n", genesis_header);
-	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
-	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
-
-	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
-
-	let authority_list = VersionedAuthorityList::from(grandpas);
-
-	Ok(enclave_api
-		.init_light_client(genesis_header, authority_list, grandpa_proof)
-		.unwrap())
-}
+// pub fn init_light_client<E: EnclaveBase + Sidechain>(
+// 	api: &Api<sr25519::Pair, WsRpcClient>,
+// 	enclave_api: Arc<E>,
+// ) -> Result<Header, Error> {
+// 	let genesis_hash = api.get_genesis_hash().unwrap();
+// 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
+// 	info!("Got genesis Header: \n {:?} \n", genesis_header);
+// 	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+// 	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
+//
+// 	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+//
+// 	let authority_list = VersionedAuthorityList::from(grandpas);
+//
+// 	Ok(enclave_api
+// 		.init_light_client(genesis_header, authority_list, grandpa_proof)
+// 		.unwrap())
+// }
 
 /*
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
