@@ -40,7 +40,6 @@ jobs:
           cd bin
           ./integritee-service test -u -e
 
-      # Todo: #REBRAND path names
       - name: Upload worker
         uses: actions/upload-artifact@v2
         with:
@@ -167,10 +166,10 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: ci.yml
-          name: integritee-node-dev-d9454f9f8f397a43bba2d4431f852e829d62004c
+          name: integritee-node-dev-7cb4c1df36a86072753c016ff1fdab1588bc4446
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1663936560
+          run_id: 1980987369
           path: node
           repo: integritee-network/integritee-node
 
@@ -204,7 +203,7 @@ jobs:
         run: |
           touch ${{ env.LOG_DIR}}/local-setup.log
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
-          sleep 60
+          sleep 150
 
       - name: ${{ matrix.demo_name }}
         # * the change the symbolic link which points to the target/release... folder.

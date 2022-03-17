@@ -21,7 +21,9 @@ use itp_time_utils::now_as_u64;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
-use its_primitives::traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock};
+use its_primitives::traits::{
+	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
+};
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use log::*;
@@ -34,28 +36,46 @@ use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration};
 
 pub type ExternalitiesFor<T> = <T as StateUpdateProposer>::Externalities;
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block.
-pub struct SlotProposer<PB: Block, SB: SignedBlock, TopPoolExecutor, StfExecutor, BlockComposer> {
+pub struct SlotProposer<
+	ParentchainBlock: Block,
+	SignedSidechainBlock: SignedSidechainBlockTrait,
+	TopPoolExecutor,
+	StfExecutor,
+	BlockComposer,
+> {
 	pub(crate) top_pool_executor: Arc<TopPoolExecutor>,
 	pub(crate) stf_executor: Arc<StfExecutor>,
 	pub(crate) block_composer: Arc<BlockComposer>,
-	pub(crate) parentchain_header: PB::Header,
-	pub(crate) shard: ShardIdentifierFor<SB>,
-	pub(crate) _phantom: PhantomData<PB>,
+	pub(crate) parentchain_header: ParentchainBlock::Header,
+	pub(crate) shard: ShardIdentifierFor<SignedSidechainBlock>,
+	pub(crate) _phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<PB, SB, TopPoolExecutor, BlockComposer, StfExecutor> Proposer<PB, SB>
-	for SlotProposer<PB, SB, TopPoolExecutor, StfExecutor, BlockComposer>
-where
-	PB: Block<Hash = H256>,
-	NumberFor<PB>: BlockNumberOps,
-	SB: SignedBlock<Public = sp_core::ed25519::Public, Signature = MultiSignature> + 'static,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, StfExecutor>
+	Proposer<ParentchainBlock, SignedSidechainBlock>
+	for SlotProposer<
+		ParentchainBlock,
+		SignedSidechainBlock,
+		TopPoolExecutor,
+		StfExecutor,
+		BlockComposer,
+	> where
+	ParentchainBlock: Block<Hash = H256>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
+	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
+		+ 'static,
+	SignedSidechainBlock::Block:
+		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
 	StfExecutor: StateUpdateProposer,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
-	TopPoolExecutor: TopPoolCallOperator<PB, SB> + Send + Sync + 'static,
-	BlockComposer: ComposeBlockAndConfirmation<ExternalitiesFor<StfExecutor>, PB, SidechainBlockT = SB>
-		+ Send
+	TopPoolExecutor:
+		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
+	BlockComposer: ComposeBlockAndConfirmation<
+			ExternalitiesFor<StfExecutor>,
+			ParentchainBlock,
+			SignedSidechainBlock = SignedSidechainBlock,
+		> + Send
 		+ Sync
 		+ 'static,
 {
@@ -65,7 +85,10 @@ where
 	/// 1) Retrieve all trusted calls from the top pool.
 	/// 2) Calculate a new state that will be proposed in the sidechain block.
 	/// 3) Compose the sidechain block and the parentchain confirmation.
-	fn propose(&self, max_duration: Duration) -> Result<Proposal<SB>, ConsensusError> {
+	fn propose(
+		&self,
+		max_duration: Duration,
+	) -> Result<Proposal<SignedSidechainBlock>, ConsensusError> {
 		let latest_parentchain_header = &self.parentchain_header;
 
 		// 1) Retrieve trusted calls from top pool.
@@ -98,8 +121,10 @@ where
 				&self.shard,
 				max_duration,
 				|s| {
-					let mut sidechain_db =
-						SidechainDB::<SB::Block, ExternalitiesFor<StfExecutor>>::new(s);
+					let mut sidechain_db = SidechainDB::<
+						SignedSidechainBlock::Block,
+						ExternalitiesFor<StfExecutor>,
+					>::new(s);
 					sidechain_db
 						.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
 					sidechain_db.set_timestamp(&now_as_u64());

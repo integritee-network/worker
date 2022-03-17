@@ -16,7 +16,7 @@
 */
 
 use codec::Encode;
-use frame_metadata::v13::StorageHasher;
+use frame_metadata::v14::StorageHasher;
 use sp_std::vec::Vec;
 
 pub fn storage_value_key(module_prefix: &str, storage_prefix: &str) -> Vec<u8> {

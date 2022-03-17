@@ -14,4 +14,9 @@
 	limitations under the License.
 
 */
+
 pub mod direct_client;
+pub mod error;
+#[cfg(test)]
+pub mod mock;
+pub mod ws_client;

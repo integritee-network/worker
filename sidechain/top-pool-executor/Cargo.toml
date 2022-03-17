@@ -29,12 +29,12 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 thiserror = { version = "1.0", optional = true }
 
 # no-std compatible libraries
-codec  = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 
 # substrate
-sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 
 [features]

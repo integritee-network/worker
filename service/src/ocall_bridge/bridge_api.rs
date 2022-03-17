@@ -82,6 +82,14 @@ impl Bridge {
 			.get_ipfs_api()
 	}
 
+	pub fn get_metrics_api() -> Arc<dyn MetricsBridge> {
+		COMPONENT_FACTORY
+			.read()
+			.as_ref()
+			.expect("Component factory has not been set. Use `initialize()`")
+			.get_metrics_api()
+	}
+
 	pub fn initialize(component_factory: Arc<dyn GetOCallBridgeComponents + Send + Sync>) {
 		debug!("Initializing OCall bridge with component factory");
 
@@ -103,10 +111,13 @@ pub trait GetOCallBridgeComponents {
 
 	/// ipfs OCall API
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge>;
+
+	/// Metrics OCall API.
+	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge>;
 }
 
 /// OCall bridge errors
-#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum OCallBridgeError {
 	#[error("GetQuote Error: {0}")]
 	GetQuote(sgx_status_t),
@@ -116,14 +127,20 @@ pub enum OCallBridgeError {
 	GetUpdateInfo(sgx_status_t),
 	#[error("GetIasSocket Error: {0}")]
 	GetIasSocket(String),
+	#[error("UpdateMetric Error: {0}")]
+	UpdateMetric(String),
 	#[error("Propose sidechain block failed: {0}")]
 	ProposeSidechainBlock(String),
+	#[error("Failed to fetch sidechain blocks from peer: {0}")]
+	FetchSidechainBlocksFromPeer(String),
 	#[error("Sending extrinsics to parentchain failed: {0}")]
 	SendExtrinsicsToParentchain(String),
 	#[error("IPFS Error: {0}")]
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
 	DirectInvocationError(String),
+	#[error("Node API factory error: {0}")]
+	NodeApiFactory(#[from] itp_node_api_extensions::node_api_factory::NodeApiFactoryError),
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
@@ -132,11 +149,7 @@ impl From<OCallBridgeError> for sgx_status_t {
 			OCallBridgeError::GetQuote(s) => s,
 			OCallBridgeError::InitQuote(s) => s,
 			OCallBridgeError::GetUpdateInfo(s) => s,
-			OCallBridgeError::GetIasSocket(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::ProposeSidechainBlock(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::SendExtrinsicsToParentchain(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::IpfsError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
-			OCallBridgeError::DirectInvocationError(_) => sgx_status_t::SGX_ERROR_UNEXPECTED,
+			_ => sgx_status_t::SGX_ERROR_UNEXPECTED,
 		}
 	}
 }
@@ -178,11 +191,24 @@ pub trait WorkerOnChainBridge {
 	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
+/// Trait for updating metrics from inside the enclave.
+#[cfg_attr(test, automock)]
+pub trait MetricsBridge {
+	fn update_metric(&self, metric_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+}
+
 /// Trait for all the OCalls related to sidechain operations
 #[cfg_attr(test, automock)]
 pub trait SidechainBridge {
 	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+
 	fn store_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+
+	fn fetch_sidechain_blocks_from_peer(
+		&self,
+		last_known_block_hash_encoded: Vec<u8>,
+		shard_identifier_encoded: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>>;
 }
 
 /// type for IPFS

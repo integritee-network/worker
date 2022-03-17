@@ -23,12 +23,14 @@ use codec::Encode;
 use ita_stf::{hash::TrustedOperationOrHash, TrustedGetterSigned};
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_types::{ShardIdentifier, H256};
-use its_primitives::traits::{Block as SidechainBlockT, SignedBlock as SignedBlockT};
+use its_primitives::traits::{
+	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
+};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockCreated, SendState};
+use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::{traits::Block as BlockT, MultiSignature};
+use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
 use std::{time::Duration, vec, vec::Vec};
 
 /// Interface to the trusted getters within the top pool
@@ -53,14 +55,17 @@ pub trait TopPoolGetterOperator {
 	) -> Result<Vec<H256>>;
 }
 
-impl<PB, SB, RpcAuthor, StfExecutor> TopPoolGetterOperator
-	for TopPoolOperationHandler<PB, SB, RpcAuthor, StfExecutor>
+impl<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor> TopPoolGetterOperator
+	for TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
 where
-	PB: BlockT<Hash = H256>,
-	SB: SignedBlockT<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	RpcAuthor:
-		AuthorApi<H256, PB::Hash> + OnBlockCreated<Hash = PB::Hash> + SendState<Hash = PB::Hash>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
+	SignedSidechainBlock::Block:
+		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
+		+ SendState<Hash = ParentchainBlock::Hash>,
 	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
 	<StfExecutor as StateUpdateProposer>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,

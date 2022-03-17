@@ -16,12 +16,13 @@
 */
 
 use crate::{
+	parentchain_block_syncer::SyncParentchainBlocks,
 	tests::mocks::{
 		parentchain_api_mock::ParentchainApiMock, sidechain_api_mock::SidechainApiMock,
 	},
 	ParentchainBlockSyncer,
 };
-use itp_api_client_extensions::ChainApi;
+use itp_node_api_extensions::ChainApi;
 use std::sync::Arc;
 
 #[test]

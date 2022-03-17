@@ -36,16 +36,24 @@ pub fn test_trusted_getter_signed(who: AccountKeyring) -> Getter {
 	Getter::trusted(getter.sign(&KeyPair::Sr25519(who.pair())))
 }
 
-/// Local Worker config. Fields are the default values except for
-/// the worker's rpc server.
 #[cfg(test)]
-pub fn local_worker_config(worker_url: String) -> Config {
-	let mut url = worker_url.split(":");
+pub fn local_worker_config(
+	worker_url: String,
+	untrusted_worker_port: String,
+	mu_ra_port: String,
+) -> Config {
+	let mut url = worker_url.split(':');
 	Config::new(
 		Default::default(),
 		Default::default(),
 		url.next().unwrap().into(),
+		None,
 		url.next().unwrap().into(),
-		Default::default(),
+		None,
+		untrusted_worker_port,
+		None,
+		mu_ra_port,
+		false,
+		"8787".to_string(),
 	)
 }

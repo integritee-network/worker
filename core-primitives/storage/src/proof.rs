@@ -82,14 +82,17 @@ mod tests {
 	fn storage_proof_check() {
 		// construct storage proof
 		let mut backend = new_in_mem::<Blake2Hasher>();
-		backend.insert(vec![
-			(None, vec![(b"key1".to_vec(), Some(b"value1".to_vec()))]),
-			(None, vec![(b"key2".to_vec(), Some(b"value2".to_vec()))]),
-			(None, vec![(b"key3".to_vec(), Some(b"value3".to_vec()))]),
-			// Value is too big to fit in a branch node
-			(None, vec![(b"key11".to_vec(), Some(vec![0u8; 32]))]),
-		]);
-		let root = backend.storage_root(std::iter::empty()).0;
+		backend.insert(
+			vec![
+				(None, vec![(b"key1".to_vec(), Some(b"value1".to_vec()))]),
+				(None, vec![(b"key2".to_vec(), Some(b"value2".to_vec()))]),
+				(None, vec![(b"key3".to_vec(), Some(b"value3".to_vec()))]),
+				// Value is too big to fit in a branch node
+				(None, vec![(b"key11".to_vec(), Some(vec![0u8; 32]))]),
+			],
+			Default::default(),
+		);
+		let root = backend.storage_root(std::iter::empty(), Default::default()).0;
 		let proof: StorageProof = prove_read(backend, &[&b"key1"[..], &b"key2"[..], &b"key22"[..]])
 			.unwrap()
 			.iter_nodes()

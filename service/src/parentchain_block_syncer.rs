@@ -16,8 +16,8 @@
 
 */
 
-use itp_api_client_extensions::ChainApi;
 use itp_enclave_api::sidechain::Sidechain;
+use itp_node_api_extensions::ChainApi;
 use itp_types::SignedBlock;
 use log::{error, trace};
 use my_node_runtime::Header;
@@ -25,6 +25,11 @@ use std::{cmp::min, sync::Arc};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 
+pub trait SyncParentchainBlocks {
+	/// Fetches the parentchainblocks to sync from the parentchain and feeds them to the enclave.
+	/// Returns the latest synced block Header.
+	fn sync_parentchain(&self, last_synced_header: Header) -> Header;
+}
 /// Supplies functionality to sync parentchain blocks.
 pub(crate) struct ParentchainBlockSyncer<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
 	parentchain_api: ParentchainApi,
@@ -39,11 +44,15 @@ where
 	pub fn new(parentchain_api: ParentchainApi, enclave_api: Arc<EnclaveApi>) -> Self {
 		ParentchainBlockSyncer { parentchain_api, enclave_api }
 	}
+}
 
-	/// Fetches the amount of blocks to sync from the parentchain and feeds them to the enclave.
-	/// Returns the latest synced block Header.
-	///
-	pub fn sync_parentchain(&self, last_synced_header: Header) -> Header {
+impl<ParentchainApi, EnclaveApi> SyncParentchainBlocks
+	for ParentchainBlockSyncer<ParentchainApi, EnclaveApi>
+where
+	ParentchainApi: ChainApi,
+	EnclaveApi: Sidechain,
+{
+	fn sync_parentchain(&self, last_synced_header: Header) -> Header {
 		trace!("Getting current head");
 		let curr_block: SignedBlock = self.parentchain_api.last_finalized_block().unwrap().unwrap();
 		let curr_block_number = curr_block.block.header.number;

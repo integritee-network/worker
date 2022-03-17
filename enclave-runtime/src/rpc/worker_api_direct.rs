@@ -17,6 +17,7 @@
 
 use codec::Encode;
 use core::result::Result;
+use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
 use its_sidechain::{
@@ -25,6 +26,7 @@ use its_sidechain::{
 	top_pool_rpc_author::traits::AuthorApi,
 };
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
+use sgx_runtime::Runtime;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
 fn compute_encoded_return_error(error_msg: &str) -> Vec<u8> {
@@ -74,6 +76,34 @@ where
 		Ok(json!(json_value.encode()))
 	});
 
+	let mu_ra_url_name: &str = "author_getMuRaUrl";
+	io.add_sync_method(mu_ra_url_name, move |_: Params| {
+		let url = match GLOBAL_PRIMITIVES_CACHE.get_mu_ra_url() {
+			Ok(url) => url,
+			Err(status) => {
+				let error_msg: String = format!("Could not get mu ra url due to: {}", status);
+				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+			},
+		};
+
+		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.encode()))
+	});
+
+	let untrusted_url_name: &str = "author_getUntrustedUrl";
+	io.add_sync_method(untrusted_url_name, move |_: Params| {
+		let url = match GLOBAL_PRIMITIVES_CACHE.get_untrusted_worker_url() {
+			Ok(url) => url,
+			Err(status) => {
+				let error_msg: String = format!("Could not get untrusted url due to: {}", status);
+				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+			},
+		};
+
+		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.encode()))
+	});
+
 	// chain_subscribeAllHeads
 	let chain_subscribe_all_heads_name: &str = "chain_subscribeAllHeads";
 	io.add_sync_method(chain_subscribe_all_heads_name, |_: Params| {
@@ -84,8 +114,9 @@ where
 	// state_getMetadata
 	let state_get_metadata_name: &str = "state_getMetadata";
 	io.add_sync_method(state_get_metadata_name, |_: Params| {
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+		let metadata = Runtime::metadata();
+		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.encode()))
 	});
 
 	// state_getRuntimeVersion

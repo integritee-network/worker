@@ -4,7 +4,13 @@
     "flags": [
       "--tmp",
       "--dev",
-      "-lruntime=info"
+      "-lruntime=info",
+      "--ws-port",
+      "9990",
+      "--port",
+      "30390",
+      "--rpc-port",
+      "8990"
     ]
   },
   "workers": [
@@ -12,7 +18,13 @@
       "source": "bin",
       "flags": [
         "-P",
-        "2000"
+        "2090",
+        "-p",
+        "9990",
+        "-r",
+        "3490",
+        "-w",
+        "2091"
       ],
       "subcommand_flags": [
         "--skip-ra",
@@ -25,7 +37,13 @@
       "source": "bin",
       "flags": [
         "-P",
-        "3000"
+        "3090",
+        "-p",
+        "9990",
+        "-r",
+        "3590",
+        "-w",
+        "3091"
       ],
       "subcommand_flags": [
         "--skip-ra",

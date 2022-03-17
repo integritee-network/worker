@@ -42,7 +42,7 @@ NPORT=${NPORT:-9944}
 RPORT=${RPORT:-2000}
 
 echo "Using node-port ${NPORT}"
-echo "Using worker-rpc-port ${RPORT}"
+echo "Using trusted-worker-port ${RPORT}"
 
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
@@ -89,12 +89,10 @@ RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} |
 echo $RESULT
 echo ""
 
-
 echo "* Bob's incognito account balance"
 RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE} | xargs)
 echo $RESULT
 echo ""
-
 
 
 # the following tests are for automated CI

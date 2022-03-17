@@ -23,9 +23,10 @@
 use crate::ocall::OcallApi;
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
-	block_import_queue::BlockImportQueue, block_importer::ParentchainBlockImporter,
-	indirect_calls_executor::IndirectCallsExecutor, light_client::ValidatorAccessor,
+	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
+	light_client::ValidatorAccessor,
 };
+use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
@@ -35,13 +36,17 @@ use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
+	consensus_common::{BlockImportQueueWorker, PeerBlockSync},
 	primitives::{
 		traits::SignedBlock as SignedSidechainBlockTrait,
 		types::SignedBlock as SignedSidechainBlock,
 	},
 	state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
-	top_pool_rpc_author::global_author_container::EnclaveRpcAuthor,
+	top_pool_rpc_author::{
+		author::{Author, AuthorTopFilter},
+		pool_types::BPool,
+	},
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
@@ -59,13 +64,15 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
 >;
-pub type EnclaveBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
+pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
-	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveBlockImportQueue>;
+	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveParentchainBlockImportQueue>;
 
 /// Sidechain types
 pub type EnclaveSidechainState =
 	SidechainDB<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block, SgxExternalities>;
+pub type EnclaveRpcAuthor =
+	Author<BPool, AuthorTopFilter, GlobalFileStateHandler, Rsa3072KeyPair, OcallApi>;
 pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -83,11 +90,41 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
 >;
+pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
+pub type EnclaveSidechainBlockSyncer =
+	PeerBlockSync<ParentchainBlock, SignedSidechainBlock, EnclaveSidechainBlockImporter, OcallApi>;
+pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	EnclaveSidechainBlockImportQueue,
+	EnclaveSidechainBlockSyncer,
+>;
 
+/// Global component instances
+
+/// Parentchain import dispatcher.
 pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new();
 
-pub static GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT: ComponentContainer<
-	EnclaveSidechainBlockImporter,
+/// Sidechain import queue.
+pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT: ComponentContainer<
+	EnclaveSidechainBlockImportQueue,
+> = ComponentContainer::new();
+
+/// Sidechain import queue worker - processes the import queue.
+pub static GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT: ComponentContainer<
+	EnclaveSidechainBlockImportQueueWorker,
+> = ComponentContainer::new();
+
+/// Sidechain block syncer.
+pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<
+	EnclaveSidechainBlockSyncer,
+> = ComponentContainer::new();
+
+pub static GLOBAL_RPC_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
+	ComponentContainer::new();
+
+pub static GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT: ComponentContainer<
+	EnclaveTopPoolOperationHandler,
 > = ComponentContainer::new();

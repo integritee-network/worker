@@ -23,6 +23,7 @@ use crate::{
 		cert_tests::*, fixtures::initialize_test_state::init_state,
 		mocks::rpc_responder_mock::RpcResponderMock, sidechain_aura_tests,
 	},
+	tls_ra,
 };
 use codec::{Decode, Encode};
 use ita_stf::{
@@ -47,7 +48,7 @@ use itp_stf_executor::{
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
-	handle_state_mock, handle_state_mock::HandleStateMock,
+	handle_state_mock, handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
 };
 use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
@@ -77,7 +78,8 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
-type TestRpcAuthor = Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock>;
+type TestRpcAuthor =
+	Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock, MetricsOCallMock>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -130,6 +132,18 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
+		// tls_ra unit tests
+		tls_ra::seal_handler::test::seal_shielding_key_works,
+		tls_ra::seal_handler::test::seal_shielding_key_fails_for_invalid_key,
+		tls_ra::seal_handler::test::unseal_seal_shielding_key_works,
+		tls_ra::seal_handler::test::seal_signing_key_works,
+		tls_ra::seal_handler::test::seal_signing_key_fails_for_invalid_key,
+		tls_ra::seal_handler::test::unseal_seal_signing_key_works,
+		tls_ra::seal_handler::test::seal_state_works,
+		tls_ra::seal_handler::test::seal_state_fails_for_invalid_state,
+		tls_ra::seal_handler::test::unseal_seal_state_works,
+		tls_ra::tests::test_tls_ra_server_client_networking,
+
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
@@ -140,12 +154,9 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 fn test_compose_block_and_confirmation() {
 	// given
-	let (rpc_author, _, shard, _, _, state_handler) = test_setup();
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
-		test_account(),
-		state_key(),
-		rpc_author.clone(),
-	);
+	let (_, _, shard, _, _, state_handler) = test_setup();
+	let block_composer =
+		BlockComposer::<Block, SignedBlock, _, _>::new(test_account(), state_key());
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 
@@ -271,11 +282,8 @@ fn test_create_block_and_confirmation_works() {
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
-		test_account(),
-		state_key(),
-		rpc_author.clone(),
-	);
+	let block_composer =
+		BlockComposer::<Block, SignedBlock, _, _>::new(test_account(), state_key());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -342,11 +350,8 @@ fn test_create_state_diff() {
 		rpc_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
-		test_account(),
-		state_key(),
-		rpc_author.clone(),
-	);
+	let block_composer =
+		BlockComposer::<Block, SignedBlock, _, _>::new(test_account(), state_key());
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -595,6 +600,7 @@ pub fn test_setup() -> (
 			AllowAllTopsFilter,
 			state_handler.clone(),
 			encryption_key.clone(),
+			Arc::new(MetricsOCallMock {}),
 		)),
 		state,
 		shard,

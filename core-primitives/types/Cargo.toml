@@ -5,8 +5,8 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.10.1", default-features = false, features = ["codec"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+primitive-types = { version = "0.11.1", default-features = false, features = ["codec"] }
 chrono          = { version = "0.4.19", default-features = false, features = ["alloc"]}
 serde           = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json      = { version = "1.0", default-features = false, features = ["alloc"] }
@@ -19,8 +19,8 @@ itp-storage = { path = "../storage", default-features = false }
 
 # substrate-deps
 sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [features]
 default = ['std']
@@ -37,4 +37,4 @@ std = [ 'codec/std',
 sgx = [ 'sgx_tstd' ]
 
 [dev-dependencies]
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}

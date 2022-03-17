@@ -17,9 +17,11 @@
 */
 
 use crate::{error::Error, utils, Enclave, EnclaveResult};
+use codec::Encode;
 use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::EXTRINSIC_MAX_SIZE;
+use itp_types::ShardIdentifier;
 use sgx_types::*;
 
 /// general remote attestation methods
@@ -59,17 +61,18 @@ pub trait RemoteAttestationCallBacks {
 
 /// TLS remote attestations methods
 pub trait TlsRemoteAttestation {
-	fn run_key_provisioning_server(
+	fn run_state_provisioning_server(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: bool,
 	) -> EnclaveResult<()>;
 
-	fn request_key_provisioning(
+	fn request_state_provisioning(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
+		shard: &ShardIdentifier,
 		skip_ra: bool,
 	) -> EnclaveResult<()>;
 }
@@ -206,7 +209,7 @@ impl RemoteAttestationCallBacks for Enclave {
 }
 
 impl TlsRemoteAttestation for Enclave {
-	fn run_key_provisioning_server(
+	fn run_state_provisioning_server(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
@@ -215,7 +218,7 @@ impl TlsRemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe {
-			ffi::run_key_provisioning_server(
+			ffi::run_state_provisioning_server(
 				self.eid,
 				&mut retval,
 				socket_fd,
@@ -230,20 +233,25 @@ impl TlsRemoteAttestation for Enclave {
 		Ok(())
 	}
 
-	fn request_key_provisioning(
+	fn request_state_provisioning(
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
+		shard: &ShardIdentifier,
 		skip_ra: bool,
 	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
+		let encoded_shard = shard.encode();
+
 		let result = unsafe {
-			ffi::request_key_provisioning(
+			ffi::request_state_provisioning(
 				self.eid,
 				&mut retval,
 				socket_fd,
 				sign_type,
+				encoded_shard.as_ptr(),
+				encoded_shard.len() as u32,
 				skip_ra.into(),
 			)
 		};

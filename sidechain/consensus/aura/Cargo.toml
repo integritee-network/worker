@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 log = { version = "0.4.14", default-features = false }
-finality-grandpa = { version = "0.14.3", default-features = false, features = ["derive-codec"] }
+finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 
 # sgx deps
@@ -14,12 +14,13 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
-sp-core = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 # local deps
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", default-features = false }
+itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
@@ -37,20 +38,21 @@ its-top-pool-executor = { path = "../../top-pool-executor", default-features = f
 its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
 
 [dev-dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 env_logger = "0.9.0"
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
 its-test = { path = "../../test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 [features]
 default = ["std"]
 std = [
    "ita-stf/std",
    "itc-parentchain-block-import-dispatcher/std",
+   "itp-enclave-metrics/std",
    "itp-ocall-api/std",
    "itp-sgx-crypto/std",
    "itp-stf-executor/std",
@@ -72,6 +74,7 @@ sgx = [
    "sgx_tstd",
    "ita-stf/sgx",
    "itc-parentchain-block-import-dispatcher/sgx",
+   "itp-enclave-metrics/sgx",
    "itp-sgx-crypto/sgx",
    "itp-stf-executor/sgx",
    "itp-stf-state-handler/sgx",

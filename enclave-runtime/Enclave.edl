@@ -32,7 +32,10 @@ enclave {
 
 	trusted {
 		/* define ECALLs here. */
-		public sgx_status_t init();
+		public sgx_status_t init(
+			[in, size=mu_ra_addr_size] uint8_t* mu_ra_addr, uint32_t mu_ra_addr_size,
+			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
+		);
 
 		public sgx_status_t get_state(
 			[in, size=cyphertext_size] uint8_t* cyphertext, uint32_t cyphertext_size,
@@ -98,8 +101,13 @@ enclave {
 
 		public sgx_status_t dump_ra_to_disk();
 
-		public sgx_status_t run_key_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
-        public sgx_status_t request_key_provisioning(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
+		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
+        public sgx_status_t request_state_provisioning(
+			int fd,
+			sgx_quote_sign_type_t quote_type,
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
+			int skip_ra
+		);
 
 		public sgx_status_t call_rpc_methods(
 			[in, size=request_len] uint8_t* request, uint32_t request_len,
@@ -145,12 +153,22 @@ enclave {
 	        [out, size = resp_size] uint8_t * response, uint32_t resp_size
 	    );
 
+		sgx_status_t ocall_update_metric(
+	        [in, size = metric_size] uint8_t * metric, uint32_t metric_size
+	    );
+
 		sgx_status_t ocall_propose_sidechain_blocks(
 	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
 	    );
 
 		sgx_status_t ocall_store_sidechain_blocks(
 	        [in, size = signed_blocks_size] uint8_t * signed_blocks, uint32_t signed_blocks_size
+	    );
+
+	    sgx_status_t ocall_fetch_sidechain_blocks_from_peer(
+	        [in, size = last_known_block_hash_size] uint8_t * last_known_block_hash, uint32_t last_known_block_hash_size,
+	        [in, size = shard_identifier_size] uint8_t * shard_identifier, uint32_t shard_identifier_size,
+	        [out, size = sidechain_blocks_size] uint8_t * sidechain_blocks, uint32_t sidechain_blocks_size
 	    );
 
         sgx_status_t ocall_send_to_parentchain(
