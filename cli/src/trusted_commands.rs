@@ -75,10 +75,10 @@ pub struct TrustedArgs {
 
 #[derive(Subcommand)]
 pub enum TrustedCommands {
-	/// generates a new incognito account for the given integritee shard
+	/// generates a new incognito account for the given shard
 	NewAccount,
 
-	/// lists all accounts in keystore for the integritee chain
+	/// lists all incognito accounts in a given shard
 	ListAccounts,
 
 	/// send funds from one incognito account to another
@@ -108,12 +108,12 @@ pub enum TrustedCommands {
 		account: String,
 	},
 
-	/// Transfer funds from an incognito account to an on-chain account
+	/// Transfer funds from an incognito account to an parentchain account
 	UnshieldFunds {
 		/// Sender's incognito AccountId in ss58check format
 		from: String,
 
-		/// Recipient's on-chain AccountId in ss58check format
+		/// Recipient's parentchain AccountId in ss58check format
 		to: String,
 
 		/// amount to be transferred

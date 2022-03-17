@@ -44,16 +44,16 @@ const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 
 #[derive(Subcommand)]
 pub enum Commands {
-	/// query on-chain balance for AccountId
+	/// query parentchain balance for AccountId
 	Balance {
 		/// AccountId in ss58check format
 		account: String,
 	},
 
-	/// generates a new account for the integritee chain
+	/// generates a new account for the integritee chain in your local keystore
 	NewAccount,
 
-	/// lists all accounts in keystore for the integritee chain
+	/// lists all accounts in your local keystore for the integritee chain
 	ListAccounts,
 
 	/// query node metadata and print it as json to stdout
@@ -69,7 +69,7 @@ pub enum Commands {
 		accounts: Vec<String>,
 	},
 
-	/// transfer funds from one on-chain account to another
+	/// transfer funds from one parentchain account to another
 	Transfer {
 		/// sender's AccountId in ss58check format
 		from: String,
@@ -84,9 +84,9 @@ pub enum Commands {
 	/// query enclave registry and list all workers
 	ListWorkers,
 
-	/// listen to on-chain events
+	/// listen to parentchain events
 	Listen {
-		/// exit after given number of Integritee events
+		/// exit after given number of parentchain events
 		#[clap(short, long = "exit-after")]
 		events: Option<u32>,
 
@@ -95,9 +95,9 @@ pub enum Commands {
 		blocks: Option<u32>,
 	},
 
-	/// Transfer funds from an on-chain account to an incognito account
+	/// Transfer funds from an parentchain account to an incognito account
 	ShieldFunds {
-		/// Sender's on-chain AccountId in ss58check format
+		/// Sender's parentchain AccountId in ss58check format
 		from: String,
 
 		/// Recipient's incognito AccountId in ss58check format
