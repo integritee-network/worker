@@ -72,25 +72,25 @@ echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
 echo "* Issue ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} trusted set-balance ${ICGACCOUNTALICE} ${AMOUNTSHIELD} --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct set-balance ${ICGACCOUNTALICE} ${AMOUNTSHIELD}
 echo ""
 
 echo "Get balance of Alice's incognito account"
-${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
 echo ""
 
 #send funds from Alice to bobs account
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
+$CLIENT trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE} | xargs)
 echo $RESULT
 echo ""
 
 echo "* Bob's incognito account balance"
-RESULT=$(${CLIENT} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE} | xargs)
+RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTBOB} | xargs)
 echo $RESULT
 echo ""
 

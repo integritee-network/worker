@@ -78,30 +78,30 @@ echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
 echo "* Issue ${INITIALFUNDS} tokens to Alice's incognito account (on worker 1)"
-${CLIENTWORKER1} trusted set-balance ${ICGACCOUNTALICE} ${INITIALFUNDS} --mrenclave ${MRENCLAVE} --direct
+${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} --direct set-balance ${ICGACCOUNTALICE} ${INITIALFUNDS}
 echo ""
 
 echo "Get balance of Alice's incognito account (on worker 1)"
-${CLIENTWORKER1} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE}
+${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
 echo ""
 
 # Send funds from Alice to Bobs account, on worker 1
 echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 1)"
-$CLIENTWORKER1 trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 # Send funds from Alice to Bobs account, on worker 2
 echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
-$CLIENTWORKER2 trusted transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER} --mrenclave ${MRENCLAVE} --direct
+$CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 echo "* Get balance of Alice's incognito account (on worker 2)"
-ALICE_BALANCE=$(${CLIENTWORKER2} trusted balance ${ICGACCOUNTALICE} --mrenclave ${MRENCLAVE} | xargs)
+ALICE_BALANCE=$(${CLIENTWORKER2} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE} | xargs)
 echo "$ALICE_BALANCE"
 echo ""
 
 echo "* Get balance of Bob's incognito account (on worker 2)"
-BOB_BALANCE=$(${CLIENTWORKER2} trusted balance ${ICGACCOUNTBOB} --mrenclave ${MRENCLAVE} | xargs)
+BOB_BALANCE=$(${CLIENTWORKER2} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTBOB} | xargs)
 echo "$BOB_BALANCE"
 echo ""
 

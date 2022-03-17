@@ -12,8 +12,7 @@ json = "0.12.0"
 substrate-bip39 = "0.4.2"
 tiny-bip39 = "0.6.2"
 serde_json = "1.0"
-clap = "2.33"
-clap-nested = "0.3.1"
+clap = { version = "3.1.6", features = ["derive"]}
 primitive-types = { version = "0.11.1", default-features = false, features = ["codec"] }
 base58 			        = "0.1"
 chrono = "*"

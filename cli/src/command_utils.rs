@@ -1,0 +1,91 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+use crate::Cli;
+use codec::Encode;
+use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
+use log::*;
+use my_node_runtime::{AccountId, Signature};
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use sp_application_crypto::sr25519;
+use sp_core::{crypto::Ss58Codec, Pair};
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use std::path::PathBuf;
+use substrate_api_client::{rpc::WsRpcClient, Api};
+use substrate_client_keystore::LocalKeystore;
+
+type AccountPublic = <Signature as Verify>::Signer;
+pub(crate) const KEYSTORE_PATH: &str = "my_keystore";
+
+pub(crate) fn encode_encrypt<E: Encode>(
+	cli: &Cli,
+	to_encrypt: E,
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+	let worker_api_direct = get_worker_api_direct(cli);
+	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
+		Ok(key) => key,
+		Err(err_msg) => return Err(err_msg.to_string()),
+	};
+
+	let encoded = to_encrypt.encode();
+	let mut encrypted: Vec<u8> = Vec::new();
+	shielding_pubkey.encrypt_buffer(&encoded, &mut encrypted).unwrap();
+	Ok((encoded, encrypted))
+}
+
+pub(crate) fn get_chain_api(cli: &Cli) -> Api<sr25519::Pair, WsRpcClient> {
+	let url = format!("{}:{}", cli.node_url, cli.node_port);
+	info!("connecting to {}", url);
+	Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(&url)).unwrap()
+}
+
+pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
+	match &account[..2] {
+		"//" => AccountPublic::from(sr25519::Pair::from_string(account, None).unwrap().public())
+			.into_account(),
+		_ => AccountPublic::from(sr25519::Public::from_ss58check(account).unwrap()).into_account(),
+	}
+}
+
+pub(crate) fn get_worker_api_direct(cli: &Cli) -> DirectWorkerApi {
+	let url = format!("{}:{}", cli.worker_url, cli.trusted_worker_port);
+	info!("Connecting to integritee-service-direct-port on '{}'", url);
+	DirectWorkerApi::new(url)
+}
+
+/// get a pair either form keyring (well known keys) or from the store
+pub(crate) fn get_pair_from_str(account: &str) -> sr25519::AppPair {
+	info!("getting pair for {}", account);
+	match &account[..2] {
+		"//" => sr25519::AppPair::from_string(account, None).unwrap(),
+		_ => {
+			info!("fetching from keystore at {}", &KEYSTORE_PATH);
+			// open store without password protection
+			let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None)
+				.expect("store should exist");
+			info!("store opened");
+			let _pair = store
+				.key_pair::<sr25519::AppPair>(
+					&sr25519::Public::from_ss58check(account).unwrap().into(),
+				)
+				.unwrap()
+				.unwrap();
+			drop(store);
+			_pair
+		},
+	}
+}
