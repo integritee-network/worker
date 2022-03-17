@@ -27,10 +27,10 @@ use sp_core::{hashing::blake2_256, H256};
 use sp_io::storage;
 use std::vec::Vec;
 
-impl<SB, T> SidechainState for SidechainDB<SB, T>
+impl<SidechainBlock, T> SidechainState for SidechainDB<SidechainBlock, T>
 where
 	T: SgxExternalitiesTrait + StateHash + Clone,
-	SB: Clone,
+	SidechainBlock: Clone,
 {
 	type Externalities = T;
 	type StateUpdate = StateUpdate;

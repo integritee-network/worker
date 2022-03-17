@@ -35,7 +35,7 @@ mod sgx_reexports {
 
 use codec::{Decode, Encode};
 use its_primitives::{
-	traits::Block as SidechainBlockT,
+	traits::Block as SidechainBlockTrait,
 	types::{BlockHash, BlockNumber, Timestamp},
 };
 use sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
@@ -135,23 +135,24 @@ pub trait SidechainState: Clone {
 }
 
 /// trait to set and get the last sidechain block of the sidechain state
-pub trait LastBlockExt<SB: SidechainBlockT> {
+pub trait LastBlockExt<SidechainBlock: SidechainBlockTrait> {
 	/// get the last block of the sidechain state
-	fn get_last_block(&self) -> Option<SB>;
+	fn get_last_block(&self) -> Option<SidechainBlock>;
 
 	/// set the last block of the sidechain state
-	fn set_last_block(&mut self, block: &SB);
+	fn set_last_block(&mut self, block: &SidechainBlock);
 }
 
-impl<SB: SidechainBlockT, E> LastBlockExt<SB> for SidechainDB<SB, E>
+impl<SidechainBlock: SidechainBlockTrait, E> LastBlockExt<SidechainBlock>
+	for SidechainDB<SidechainBlock, E>
 where
-	SidechainDB<SB, E>: SidechainState + SidechainSystemExt,
+	SidechainDB<SidechainBlock, E>: SidechainState + SidechainSystemExt,
 {
-	fn get_last_block(&self) -> Option<SB> {
+	fn get_last_block(&self) -> Option<SidechainBlock> {
 		self.get_with_name("System", "LastBlock")
 	}
 
-	fn set_last_block(&mut self, block: &SB) {
+	fn set_last_block(&mut self, block: &SidechainBlock) {
 		self.set_last_block_hash(&block.hash());
 		self.set_with_name("System", "LastBlock", block)
 	}

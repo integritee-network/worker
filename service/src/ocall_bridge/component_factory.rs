@@ -17,20 +17,25 @@
 */
 
 use crate::{
-	node_api_factory::CreateNodeApi,
 	ocall_bridge::{
 		bridge_api::{
-			GetOCallBridgeComponents, IpfsBridge, RemoteAttestationBridge, SidechainBridge,
-			WorkerOnChainBridge,
+			GetOCallBridgeComponents, IpfsBridge, MetricsBridge, RemoteAttestationBridge,
+			SidechainBridge, WorkerOnChainBridge,
 		},
 		ipfs_ocall::IpfsOCall,
+		metrics_ocall::MetricsOCall,
 		remote_attestation_ocall::RemoteAttestationOCall,
 		sidechain_ocall::SidechainOCall,
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
+	prometheus_metrics::ReceiveEnclaveMetrics,
 	sync_block_gossiper::GossipBlocks,
+	worker_peers_updater::UpdateWorkerPeers,
+	GetTokioHandle,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
+use itp_node_api_extensions::node_api_factory::CreateNodeApi;
+use its_peer_fetch::FetchBlocksFromPeer;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
 use std::sync::Arc;
@@ -38,37 +43,112 @@ use std::sync::Arc;
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
 /// our dependency graph is worker -> ocall bridge
-pub struct OCallBridgeComponentFactory<N, B, E, D> {
-	node_api_factory: Arc<N>,
-	block_gossiper: Arc<B>,
-	enclave_api: Arc<E>,
-	block_storage: Arc<D>,
+pub struct OCallBridgeComponentFactory<
+	NodeApi,
+	Gossiper,
+	EnclaveApi,
+	Storage,
+	PeerUpdater,
+	PeerBlockFetcher,
+	TokioHandle,
+	MetricsReceiver,
+> {
+	node_api_factory: Arc<NodeApi>,
+	block_gossiper: Arc<Gossiper>,
+	enclave_api: Arc<EnclaveApi>,
+	block_storage: Arc<Storage>,
+	peer_updater: Arc<PeerUpdater>,
+	peer_block_fetcher: Arc<PeerBlockFetcher>,
+	tokio_handle: Arc<TokioHandle>,
+	metrics_receiver: Arc<MetricsReceiver>,
 }
 
-impl<N, B, E, D> OCallBridgeComponentFactory<N, B, E, D> {
+impl<
+		NodeApi,
+		Gossiper,
+		EnclaveApi,
+		Storage,
+		PeerUpdater,
+		PeerBlockFetcher,
+		TokioHandle,
+		MetricsReceiver,
+	>
+	OCallBridgeComponentFactory<
+		NodeApi,
+		Gossiper,
+		EnclaveApi,
+		Storage,
+		PeerUpdater,
+		PeerBlockFetcher,
+		TokioHandle,
+		MetricsReceiver,
+	>
+{
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		node_api_factory: Arc<N>,
-		block_gossiper: Arc<B>,
-		enclave_api: Arc<E>,
-		block_storage: Arc<D>,
+		node_api_factory: Arc<NodeApi>,
+		block_gossiper: Arc<Gossiper>,
+		enclave_api: Arc<EnclaveApi>,
+		block_storage: Arc<Storage>,
+		peer_updater: Arc<PeerUpdater>,
+		peer_block_fetcher: Arc<PeerBlockFetcher>,
+		tokio_handle: Arc<TokioHandle>,
+		metrics_receiver: Arc<MetricsReceiver>,
 	) -> Self {
-		OCallBridgeComponentFactory { node_api_factory, block_gossiper, enclave_api, block_storage }
+		OCallBridgeComponentFactory {
+			node_api_factory,
+			block_gossiper,
+			enclave_api,
+			block_storage,
+			peer_updater,
+			peer_block_fetcher,
+			tokio_handle,
+			metrics_receiver,
+		}
 	}
 }
 
-impl<N, B, E, D> GetOCallBridgeComponents for OCallBridgeComponentFactory<N, B, E, D>
-where
-	N: CreateNodeApi + 'static,
-	B: GossipBlocks + 'static,
-	E: RemoteAttestationCallBacks + 'static,
-	D: BlockStorage<SignedSidechainBlock> + 'static,
+impl<
+		NodeApi,
+		Gossiper,
+		EnclaveApi,
+		Storage,
+		PeerUpdater,
+		PeerBlockFetcher,
+		TokioHandle,
+		MetricsReceiver,
+	> GetOCallBridgeComponents
+	for OCallBridgeComponentFactory<
+		NodeApi,
+		Gossiper,
+		EnclaveApi,
+		Storage,
+		PeerUpdater,
+		PeerBlockFetcher,
+		TokioHandle,
+		MetricsReceiver,
+	> where
+	NodeApi: CreateNodeApi + 'static,
+	Gossiper: GossipBlocks + 'static,
+	EnclaveApi: RemoteAttestationCallBacks + 'static,
+	Storage: BlockStorage<SignedSidechainBlock> + 'static,
+	PeerUpdater: UpdateWorkerPeers + 'static,
+	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock> + 'static,
+	TokioHandle: GetTokioHandle + 'static,
+	MetricsReceiver: ReceiveEnclaveMetrics + 'static,
 {
 	fn get_ra_api(&self) -> Arc<dyn RemoteAttestationBridge> {
 		Arc::new(RemoteAttestationOCall::new(self.enclave_api.clone()))
 	}
 
 	fn get_sidechain_api(&self) -> Arc<dyn SidechainBridge> {
-		Arc::new(SidechainOCall::new(self.block_gossiper.clone(), self.block_storage.clone()))
+		Arc::new(SidechainOCall::new(
+			self.block_gossiper.clone(),
+			self.block_storage.clone(),
+			self.peer_updater.clone(),
+			self.peer_block_fetcher.clone(),
+			self.tokio_handle.clone(),
+		))
 	}
 
 	fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge> {
@@ -77,5 +157,9 @@ where
 
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {
 		Arc::new(IpfsOCall {})
+	}
+
+	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge> {
+		Arc::new(MetricsOCall::new(self.metrics_receiver.clone()))
 	}
 }

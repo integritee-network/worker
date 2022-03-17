@@ -15,16 +15,16 @@
 
 */
 
-use frame_support::sp_runtime::traits::Block;
+use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
 use itp_enclave_api::{sidechain::Sidechain, EnclaveResult};
 
 /// Mock for Parentchain Api
 pub struct SidechainApiMock;
 
 impl Sidechain for SidechainApiMock {
-	fn sync_parentchain<PB: Block>(
+	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
 		&self,
-		_blocks: &[sp_runtime::generic::SignedBlock<PB>],
+		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
 		_nonce: u32,
 	) -> EnclaveResult<()> {
 		Ok(())

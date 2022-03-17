@@ -1,14 +1,18 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
+
 		http://www.apache.org/licenses/LICENSE-2.0
+
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	See the License for the specific language governing permissions and
 	limitations under the License.
+
 */
 
 use super::{db::SidechainDB, Error, Result};
@@ -97,18 +101,65 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		self.db.get(block_hash)
 	}
 
-	/// update sidechain storage
+	/// Get all blocks after (i.e. children of) a specified block.
+	pub fn get_blocks_after(
+		&self,
+		block_hash: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		// Ensure we find the block in storage (otherwise we would return all blocks for a specific shard).
+		// The exception is, if the hash is the default hash, which represents block 0. In that case we want to return all blocks.
+		if block_hash != &BlockHash::default() && self.get_block(block_hash)?.is_none() {
+			warn!("Could not find starting block in storage, returning empty vector");
+			return Ok(Vec::new())
+		}
+
+		// We get the latest block and then traverse the parents until we find our starting block.
+		let last_block_of_shard = self.last_block_of_shard(shard_identifier).ok_or_else(|| {
+			Error::LastBlockNotFound("Failed to find last block information".to_string())
+		})?;
+		let latest_block = self.get_block(&last_block_of_shard.hash)?.ok_or_else(|| {
+			Error::LastBlockNotFound("Failed to retrieve last block from storage".to_string())
+		})?;
+
+		let mut current_block = latest_block;
+		let mut blocks_to_return = Vec::<SignedBlock>::new();
+		while &current_block.hash() != block_hash {
+			let parent_block_hash = current_block.block().parent_hash();
+
+			blocks_to_return.push(current_block);
+
+			if parent_block_hash == BlockHash::default() {
+				break
+			}
+
+			current_block =
+				self.get_block(&parent_block_hash)?.ok_or(Error::FailedToFindParentBlock)?;
+		}
+
+		// Reverse because we iterate from newest to oldest, but result should be oldest first.
+		blocks_to_return.reverse();
+
+		Ok(blocks_to_return)
+	}
+
+	/// Update sidechain storage with blocks.
+	///
+	/// Blocks are iterated through one by one. In case more than one block per shard is included,
+	/// be sure to give them in the correct order (oldest first).
 	pub fn store_blocks(&mut self, blocks_to_store: Vec<SignedBlock>) -> Result<()> {
 		let mut batch = WriteBatch::default();
 		let mut new_shard = false;
 		for block in blocks_to_store.into_iter() {
-			self.add_block_to_batch(&block, &mut new_shard, &mut batch);
+			if let Err(e) = self.add_block_to_batch(&block, &mut new_shard, &mut batch) {
+				error!("Could not store block {:?} due to: {:?}", block, e);
+			};
 		}
-		// update stored_shards_key -> vec<shard> only if a new shard was included
+		// Update stored_shards_key -> vec<shard> only if a new shard was included,
 		if new_shard {
 			SidechainDB::add_to_batch(&mut batch, STORED_SHARDS_KEY, self.shards().clone());
 		}
-		// store everything in DB
+		// Store everything.
 		self.db.write(batch)
 	}
 
@@ -127,10 +178,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			current_block_number = previous_block.number;
 			self.delete_block(&mut batch, &previous_block.hash, &current_block_number, shard);
 		}
-		// remove shard from list
+		// Remove shard from list.
 		// STORED_SHARDS_KEY -> Vec<(Shard)>
 		self.shards.retain(|&x| x != *shard);
-		// add updated shards to Batch DB
+		// Add updated shards to batch.
 		SidechainDB::add_to_batch(&mut batch, STORED_SHARDS_KEY, &self.shards);
 		// Update DB
 		self.db.write(batch)
@@ -161,12 +212,12 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		}
 	}
 
-	/// prunes all shards except for the newest blocks (according to blocknumber)
-	pub fn prune_shards(&mut self, blocks_to_keep: BlockNumber) {
+	/// Prunes all shards except for the newest blocks (according to blocknumber).
+	pub fn prune_shards(&mut self, number_of_blocks_to_keep: BlockNumber) {
 		for shard in self.shards().clone() {
 			// get last block:
 			if let Some(last_block) = self.last_block_of_shard(&shard) {
-				let threshold_block = last_block.number - blocks_to_keep;
+				let threshold_block = last_block.number - number_of_blocks_to_keep;
 				if let Err(e) = self.prune_shard_from_block_number(&shard, threshold_block) {
 					error!("Could not purge shard {:?} due to {:?}", shard, e);
 				}
@@ -181,19 +232,20 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		signed_block: &SignedBlock,
 		new_shard: &mut bool,
 		batch: &mut WriteBatch,
-	) {
+	) -> Result<()> {
 		let shard = &signed_block.block().shard_id();
 		if self.shards.contains(shard) {
 			if !self.verify_block_ancestry(signed_block.block()) {
-				// do not include block if its not a direct ancestor of the last block in line
-				return
+				// Do not include block if its not a direct ancestor of the last block in line.
+				return Err(Error::HeaderAncestryMismatch)
 			}
 		} else {
 			self.shards.push(*shard);
 			*new_shard = true;
 		}
-		// add block to DB batch
+		// Add block to DB batch.
 		self.add_last_block(batch, signed_block);
+		Ok(())
 	}
 
 	fn verify_block_ancestry(&self, block: &<SignedBlock as SignedBlockT>::Block) -> bool {
@@ -215,8 +267,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		true
 	}
 
-	/// implementations of helper functions, not meant for pub use
-	/// gets the previous block of given shard and block number, if there is one
+	/// Implementations of helper functions, not meant for pub use
+	/// gets the previous block of given shard and block number, if there is one.
 	fn get_previous_block(
 		&self,
 		shard: &ShardIdentifierFor<SignedBlock>,
@@ -227,12 +279,10 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			.get_block_hash(shard, prev_block_number)?
 			.map(|block_hash| LastSidechainBlock { hash: block_hash, number: prev_block_number }))
 	}
-	/// reads shards from DB
 	fn load_shards_from_db(&self) -> Result<Vec<ShardIdentifierFor<SignedBlock>>> {
 		Ok(self.db.get(STORED_SHARDS_KEY)?.unwrap_or_default())
 	}
 
-	/// reads last block from DB
 	fn load_last_block_from_db(
 		&self,
 		shard: &ShardIdentifierFor<SignedBlock>,
@@ -254,24 +304,24 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		}
 	}
 
-	/// adds the block to the WriteBatch
+	/// Adds the block to the WriteBatch.
 	fn add_last_block(&mut self, batch: &mut WriteBatch, block: &SignedBlock) {
 		let hash = block.hash();
 		let block_number = block.block().block_number();
 		let shard = block.block().shard_id();
-		// Block hash -> Signed Block
+		// Block hash -> Signed Block.
 		SidechainDB::add_to_batch(batch, hash, block);
 
-		// (Shard, Block number) -> Blockhash (for block pruning)
+		// (Shard, Block number) -> Blockhash (for block pruning).
 		SidechainDB::add_to_batch(batch, (shard, block_number), hash);
 
-		// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state
+		// (last_block_key, shard) -> (Blockhash, BlockNr) current blockchain state.
 		let last_block = LastSidechainBlock { hash, number: block_number };
 		self.last_blocks.insert(shard, last_block); // add in memory
 		SidechainDB::add_to_batch(batch, (LAST_BLOCK_KEY, shard), last_block);
 	}
 
-	/// delete block to the WriteBach
+	/// Add delete block to the WriteBatch.
 	fn delete_block(
 		&self,
 		batch: &mut WriteBatch,
@@ -279,28 +329,36 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		block_number: &BlockNumber,
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) {
-		// Block hash -> Signed Block
+		// Block hash -> Signed Block.
 		SidechainDB::delete_to_batch(batch, block_hash);
-		// (Shard, Block number) -> Blockhash (for block pruning)
+		// (Shard, Block number) -> Blockhash (for block pruning).
 		SidechainDB::delete_to_batch(batch, (shard, block_number));
 	}
 
-	/// delete last block & add to the last block (write batch only)
+	/// Add delete command to remove last block to WriteBatch and remove it from memory.
+	///
+	/// This includes adding a delete command of the following:
+	/// - Block hash -> Signed Block.
+	/// - (Shard, Block number) -> Blockhash (for block pruning).
+	/// - ((LAST_BLOCK_KEY, shard) -> BlockHash) -> Blockhash (for block pruning).
+	///
+	/// Careful usage of this command: In case the last block is deleted, (LAST_BLOCK_KEY, shard) will be empty
+	/// even though there might be a new last block (i.e. the previous block of the removed last block).
 	fn delete_last_block(
 		&mut self,
 		batch: &mut WriteBatch,
 		last_block: &LastSidechainBlock,
 		shard: &ShardIdentifierFor<SignedBlock>,
 	) {
-		// add block to delete batch
-		// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock
+		// Add delete block to batch.
+		// (LAST_BLOCK_KEY, Shard) -> LastSidechainBlock.
 		SidechainDB::delete_to_batch(batch, (LAST_BLOCK_KEY, *shard));
 		self.delete_block(batch, &last_block.hash, &last_block.number, shard);
 
-		// delete last block from local memory
-		// careful here: This deletes the local memory before db has been actually pruned
-		// (it's been only added to the write batch).
-		// But this can be fixed upon reloading the db / restarting the worker
+		// Delete last block from local memory.
+		// Careful here: This deletes the local memory before db has been actually pruned
+		// (it's only been added to the write batch).
+		// But this can be fixed upon reloading the db / restarting the worker.
 		self.last_blocks.remove(shard);
 	}
 }
@@ -308,27 +366,25 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::test_utils::{
+		create_signed_block_with_shard as create_signed_block, create_temp_dir, get_storage,
+	};
 	use itp_types::ShardIdentifier;
 	use its_primitives::{
-		traits::{Block as BlockT, SignBlock, SignedBlock as SignedBlockT},
-		types::{Block, SignedBlock},
+		traits::{Block as BlockT, SignedBlock as SignedBlockT},
+		types::SignedBlock,
 	};
-	use rocksdb::{Options, DB};
-	use sp_core::{crypto::Pair, ed25519, H256};
-	use std::{
-		path::PathBuf,
-		time::{SystemTime, UNIX_EPOCH},
-	};
+	use sp_core::H256;
 
 	#[test]
 	fn load_shards_from_db_works() {
 		// given
-		let path = PathBuf::from("load_shards_from_db_works");
+		let temp_dir = create_temp_dir();
 		let shard_one = H256::from_low_u64_be(1);
 		let shard_two = H256::from_low_u64_be(2);
 		// when
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// ensure db starts empty
 			assert_eq!(sidechain_db.load_shards_from_db().unwrap(), vec![]);
 			// write signed_block to db
@@ -338,19 +394,17 @@ mod test {
 		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let loaded_shards = updated_sidechain_db.load_shards_from_db().unwrap();
 			assert!(loaded_shards.contains(&shard_one));
 			assert!(loaded_shards.contains(&shard_two));
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn load_last_block_from_db_works() {
 		// given
-		let path = PathBuf::from("load_last_block_from_db_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(20, shard);
 		let signed_last_block = LastSidechainBlock {
@@ -359,7 +413,7 @@ mod test {
 		};
 		// when
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// ensure db starts empty
 			assert!(sidechain_db.load_last_block_from_db(&shard).unwrap().is_none());
 			// write signed_block to db
@@ -369,19 +423,16 @@ mod test {
 		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let loaded_block =
 				updated_sidechain_db.load_last_block_from_db(&shard).unwrap().unwrap();
 			assert_eq!(loaded_block, signed_last_block);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn create_new_sidechain_storage_works() {
-		// given
-		let path = PathBuf::from("create_new_sidechain_storage_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let shard_vector = vec![shard];
 		let signed_block = create_signed_block(20, shard);
@@ -389,9 +440,8 @@ mod test {
 			hash: signed_block.hash(),
 			number: signed_block.block().block_number(),
 		};
-		// when
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// ensure db starts empty
 			assert!(sidechain_db.load_last_block_from_db(&shard).unwrap().is_none());
 			// write shards to db
@@ -400,32 +450,26 @@ mod test {
 			sidechain_db.db.put(STORED_SHARDS_KEY, shard_vector.clone()).unwrap();
 		}
 
-		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			assert_eq!(updated_sidechain_db.shards, shard_vector);
 			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), signed_last_block);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn add_last_block_works() {
-		// given
-		let path = PathBuf::from("add_last_block_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 
-		// when
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let mut batch = WriteBatch::default();
 			sidechain_db.add_last_block(&mut batch, &signed_block);
 			sidechain_db.db.write(batch).unwrap();
 
-			// then
 			// ensure DB contains previously stored data:
 			let last_block = sidechain_db.last_block_of_shard(&shard).unwrap();
 			assert_eq!(last_block.number, signed_block.block().block_number());
@@ -435,19 +479,16 @@ mod test {
 			assert_eq!(stored_block_hash, signed_block.hash());
 			assert_eq!(sidechain_db.get_block(&stored_block_hash).unwrap().unwrap(), signed_block);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn delete_block_works() {
-		// given
-		let path = PathBuf::from("delete_block_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		{
 			// fill db
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.db.put(signed_block.hash(), signed_block.clone()).unwrap();
 			sidechain_db
 				.db
@@ -480,10 +521,9 @@ mod test {
 			sidechain_db.db.write(batch).unwrap();
 		}
 
-		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// ensure DB does not contain block anymore:
 			assert!(updated_sidechain_db
 				.db
@@ -499,14 +539,11 @@ mod test {
 				.unwrap()
 				.is_none());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn delete_last_block_works() {
-		// given
-		let path = PathBuf::from("delete_last_block_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
@@ -515,7 +552,7 @@ mod test {
 		};
 		{
 			// fill db
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.db.put(signed_block.hash(), signed_block.clone()).unwrap();
 			sidechain_db
 				.db
@@ -572,14 +609,11 @@ mod test {
 				.unwrap()
 				.is_none());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn verify_block_ancestry_returns_true_if_correct_successor() {
-		// given
-		let path = PathBuf::from("verify_block_ancestry_returns_true_if_correct_successor");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
@@ -588,7 +622,7 @@ mod test {
 		};
 		let signed_block_two = create_signed_block(9, shard);
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.shards.push(shard);
 			sidechain_db.last_blocks.insert(shard, last_block);
 			// when
@@ -597,14 +631,11 @@ mod test {
 			// then
 			assert!(result);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn verify_block_ancestry_returns_false_if_not_correct_successor() {
-		// given
-		let path = PathBuf::from("verify_block_ancestry_returns_false_if_not_correct_successor");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
@@ -613,27 +644,25 @@ mod test {
 		};
 		let signed_block_two = create_signed_block(5, shard);
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.shards.push(shard);
 			sidechain_db.last_blocks.insert(shard, last_block);
+
 			// when
 			let result = sidechain_db.verify_block_ancestry(&signed_block_two.block());
 
 			// then
 			assert!(!result);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn verify_block_ancestry_returns_false_no_last_block_registered() {
-		// given
-		let path = PathBuf::from("verify_block_ancestry_returns_false_no_last_block_registered");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.shards.push(shard);
 			// when
 			let result = sidechain_db.verify_block_ancestry(&signed_block.block());
@@ -641,55 +670,44 @@ mod test {
 			// then
 			assert!(!result);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn verify_block_ancestry_returns_false_if_no_shard() {
-		// given
-		let path = PathBuf::from("verify_block_ancestry_returns_false_if_no_shard");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		{
-			let sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
-			// when
+			let sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let result = sidechain_db.verify_block_ancestry(&signed_block.block());
-
-			// then
 			assert!(!result);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn add_block_to_batch_works_with_new_shard() {
 		// given
-		let path = PathBuf::from("add_block_to_batch_works_with_new_shard");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		let mut new_shard = false;
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let mut batch = WriteBatch::default();
 			assert!(batch.is_empty());
-			// when
-			sidechain_db.add_block_to_batch(&signed_block, &mut new_shard, &mut batch);
 
-			// then
+			sidechain_db
+				.add_block_to_batch(&signed_block, &mut new_shard, &mut batch)
+				.unwrap();
+
 			assert!(new_shard);
-			// ensure Writebatch is not empty anymore:
 			assert!(!batch.is_empty());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn add_block_to_batch_does_not_add_shard_if_existent() {
-		// given
-		let path = PathBuf::from("add_block_to_batch_does_not_add_shard_if_existent");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
@@ -699,27 +717,24 @@ mod test {
 		let signed_block_two = create_signed_block(9, shard);
 		let mut new_shard = false;
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let mut batch = WriteBatch::default();
 			assert!(batch.is_empty());
 			sidechain_db.shards.push(shard);
 			sidechain_db.last_blocks.insert(shard, last_block);
-			// when
-			sidechain_db.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch);
 
-			// then
+			sidechain_db
+				.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch)
+				.unwrap();
+
 			assert!(!new_shard);
-			// ensure Writebatch is not empty anymore:
 			assert!(!batch.is_empty());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn add_block_to_batch_does_not_add_block_if_not_ancestor() {
-		// given
-		let path = PathBuf::from("add_block_to_batch_does_not_add_block_if_not_ancestor");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
@@ -729,42 +744,37 @@ mod test {
 		let signed_block_two = create_signed_block(10, shard);
 		let mut new_shard = false;
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			let mut batch = WriteBatch::default();
 			sidechain_db.shards.push(shard);
 			sidechain_db.last_blocks.insert(shard, last_block);
-			// when
-			sidechain_db.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch);
 
-			// then
+			let result =
+				sidechain_db.add_block_to_batch(&signed_block_two, &mut new_shard, &mut batch);
+
+			assert!(result.is_err());
 			assert!(!new_shard);
-			// ensure Writebatch is not empty anymore:
 			assert!(batch.is_empty());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn store_block_works() {
-		// given
-		let path = PathBuf::from("store_block_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block = create_signed_block(20, shard);
 		let signed_block_vector: Vec<SignedBlock> = vec![signed_block.clone()];
 
-		// when
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
 			sidechain_db.store_blocks(signed_block_vector).unwrap();
 		}
 
-		// then
 		{
 			// open new DB of same path:
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// ensure DB contains previously stored data:
 			assert_eq!(*updated_sidechain_db.shards(), vec![shard]);
 			let last_block = updated_sidechain_db.last_block_of_shard(&shard).unwrap();
@@ -778,14 +788,11 @@ mod test {
 				signed_block
 			);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn store_blocks_on_multi_sharding_works() {
-		// given
-		let path = PathBuf::from("store_blocks_on_multi_sharding_works");
+		let temp_dir = create_temp_dir();
 		let shard_one = H256::from_low_u64_be(1);
 		let shard_two = H256::from_low_u64_be(2);
 		let signed_block_one = create_signed_block(20, shard_one);
@@ -794,17 +801,15 @@ mod test {
 		let signed_block_vector: Vec<SignedBlock> =
 			vec![signed_block_one.clone(), signed_block_two.clone()];
 
-		// when
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// db needs to start empty
 			assert_eq!(sidechain_db.shards, vec![]);
 			sidechain_db.store_blocks(signed_block_vector).unwrap();
 		}
 
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			assert_eq!(updated_sidechain_db.shards()[0], shard_one);
 			assert_eq!(updated_sidechain_db.shards()[1], shard_two);
 			let last_block_one: &LastSidechainBlock =
@@ -816,35 +821,30 @@ mod test {
 			assert_eq!(last_block_one.hash, signed_block_one.hash());
 			assert_eq!(last_block_two.hash, signed_block_two.hash());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn store_mulitple_block_on_one_shard_works() {
-		// given
-		let path = PathBuf::from("store_mulitple_block_on_one_shard_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block_one = create_signed_block(20, shard);
 		let signed_block_two = create_signed_block(21, shard);
 		let signed_block_vector_one = vec![signed_block_one.clone()];
 		let signed_block_vector_two = vec![signed_block_two.clone()];
 
-		// when
 		{
 			// first iteration
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
 		}
 		{
 			// second iteration
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
 		}
 
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// last block is really equal to second block:
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
@@ -866,34 +866,29 @@ mod test {
 			assert_eq!(db_block_one, signed_block_one);
 			assert_eq!(db_block_two, signed_block_two);
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn wrong_succession_order_does_not_get_accepted() {
-		// given
-		let path = PathBuf::from("wrong_succession_order_does_not_get_accepted");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block_one = create_signed_block(7, shard);
 		let signed_block_two = create_signed_block(21, shard);
 		let signed_block_vector_one = vec![signed_block_one.clone()];
 		let signed_block_vector_two = vec![signed_block_two.clone()];
 
-		// when
 		{
 			// first iteration
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(signed_block_vector_one).unwrap();
 		}
 		{
 			// second iteration
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(signed_block_vector_two).unwrap();
 		}
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// last block is equal to first block:
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
@@ -911,19 +906,16 @@ mod test {
 			assert!(db_block_hash_empty.is_none());
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn get_previous_block_returns_correct_block() {
-		// given
-		let path = PathBuf::from("get_previous_block_returns_correct_block");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let signed_block_one = create_signed_block(1, shard);
 		// create sidechain_db
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(vec![signed_block_one.clone()]).unwrap();
 			// create last block one for comparison
 			let last_block = LastSidechainBlock {
@@ -940,48 +932,36 @@ mod test {
 			// when
 			assert_eq!(some_block, last_block);
 		}
-
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn get_previous_block_returns_none_when_no_block() {
-		// given
-		let path = PathBuf::from("get_previous_block_returns_none_when_no_block");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
-		// create sidechain_db
 		{
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(vec![create_signed_block(1, shard)]).unwrap();
 
-			// then
 			let no_block = sidechain_db.get_previous_block(&shard, 1).unwrap();
 
-			// when
 			assert!(no_block.is_none());
 		}
-
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn purge_shard_works() {
-		// given
-		let path = PathBuf::from("purge_shard_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let block_one = create_signed_block(1, shard);
 		let block_two = create_signed_block(2, shard);
 		let block_three = create_signed_block(3, shard);
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
-			// when
 			sidechain_db.purge_shard(&shard).unwrap();
 
 			// test if local storage has been cleansed
@@ -989,9 +969,8 @@ mod test {
 			assert!(sidechain_db.last_blocks.get(&shard).is_none());
 		}
 
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// test if local storage is still clean
 			assert!(!updated_sidechain_db.shards.contains(&shard));
 			assert!(updated_sidechain_db.last_blocks.get(&shard).is_none());
@@ -1004,14 +983,11 @@ mod test {
 			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_three.hash()).unwrap().is_none());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn purge_shard_from_block_works() {
-		// given
-		let path = PathBuf::from("purge_shard_from_block_works");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let block_one = create_signed_block(1, shard);
 		let block_two = create_signed_block(2, shard);
@@ -1023,18 +999,16 @@ mod test {
 
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
-			// when
 			sidechain_db.prune_shard_from_block_number(&shard, 2).unwrap();
 		}
 
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// test local memory
 			assert!(updated_sidechain_db.shards.contains(&shard));
 			assert_eq!(*updated_sidechain_db.last_blocks.get(&shard).unwrap(), last_block);
@@ -1054,26 +1028,22 @@ mod test {
 			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_one.hash()).unwrap().is_none());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn purge_shard_from_block_works_for_last_block() {
-		// given
-		let path = PathBuf::from("purge_shard_from_block_works_for_last_block");
+		let temp_dir = create_temp_dir();
 		let shard = H256::from_low_u64_be(1);
 		let block_one = create_signed_block(1, shard);
 		let block_two = create_signed_block(2, shard);
 		let block_three = create_signed_block(3, shard);
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(vec![block_one.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_three.clone()]).unwrap();
 
-			// when
 			sidechain_db.prune_shard_from_block_number(&shard, 3).unwrap();
 
 			// test if local storage has been cleansed
@@ -1081,9 +1051,8 @@ mod test {
 			assert!(sidechain_db.last_blocks.get(&shard).is_none());
 		}
 
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// test if local storage is still clean
 			assert!(!updated_sidechain_db.shards.contains(&shard));
 			assert!(updated_sidechain_db.last_blocks.get(&shard).is_none());
@@ -1096,14 +1065,11 @@ mod test {
 			assert!(updated_sidechain_db.get_block(&block_two.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_three.hash()).unwrap().is_none());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
 	}
 
 	#[test]
 	fn prune_shards_works_for_multiple_shards() {
-		// given
-		let path = PathBuf::from("prune_shards_works_for_multiple_shards");
+		let temp_dir = create_temp_dir();
 		// shard one
 		let shard_one = H256::from_low_u64_be(1);
 		let block_one = create_signed_block(1, shard_one);
@@ -1125,7 +1091,7 @@ mod test {
 		};
 		{
 			// create sidechain_db
-			let mut sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			sidechain_db.store_blocks(vec![block_one.clone(), block_one_s.clone()]).unwrap();
 			sidechain_db.store_blocks(vec![block_two.clone(), block_two_s.clone()]).unwrap();
 			sidechain_db
@@ -1133,13 +1099,11 @@ mod test {
 				.unwrap();
 			sidechain_db.store_blocks(vec![block_four_s.clone()]).unwrap();
 
-			// when
 			sidechain_db.prune_shards(2);
 		}
 
-		// then
 		{
-			let updated_sidechain_db = SidechainStorage::<SignedBlock>::new(path.clone()).unwrap();
+			let updated_sidechain_db = get_storage(temp_dir.path().to_path_buf());
 			// test if shard one has been cleansed of block 1, with 2 and 3 still beeing there:
 			assert_eq!(
 				*updated_sidechain_db.last_block_of_shard(&shard_one).unwrap(),
@@ -1189,28 +1153,5 @@ mod test {
 			assert!(updated_sidechain_db.get_block(&block_one_s.hash()).unwrap().is_none());
 			assert!(updated_sidechain_db.get_block(&block_two_s.hash()).unwrap().is_none());
 		}
-		// clean up
-		let _ = DB::destroy(&Options::default(), path).unwrap();
-	}
-
-	fn create_signed_block(block_number: u64, shard: ShardIdentifier) -> SignedBlock {
-		let signer_pair = ed25519::Pair::from_string("//Alice", None).unwrap();
-		let author = signer_pair.public();
-		let parent_hash = H256::random();
-		let layer_one_head = H256::random();
-		let signed_top_hashes = vec![];
-		let encrypted_payload: Vec<u8> = vec![];
-
-		let block = Block::new(
-			author,
-			block_number,
-			parent_hash,
-			layer_one_head,
-			shard,
-			signed_top_hashes,
-			encrypted_payload,
-			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
-		);
-		block.sign_block(&signer_pair)
 	}
 }

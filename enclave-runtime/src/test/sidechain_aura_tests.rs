@@ -36,7 +36,7 @@ use itp_sgx_crypto::{Aes, ShieldingCrypto, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::{
 	builders::parentchain_header_builder::ParentchainHeaderBuilder,
-	mock::handle_state_mock::HandleStateMock,
+	mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock},
 };
 use itp_time_utils::duration_now;
 use itp_types::{AccountId, Block as ParentchainBlock, Enclave, ShardIdentifier};
@@ -83,6 +83,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		AuthorTopFilter {},
 		state_handler.clone(),
 		shielding_key,
+		Arc::new(MetricsOCallMock {}),
 	));
 	let top_pool_operation_handler =
 		Arc::new(TestTopPoolExecutor::new(rpc_author.clone(), stf_executor.clone()));
@@ -95,8 +96,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer =
-		Arc::new(TestBlockComposer::new(signer.clone(), state_key, rpc_author.clone()));
+	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key));
 	let proposer_environment =
 		ProposerFactory::new(top_pool_operation_handler, stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();

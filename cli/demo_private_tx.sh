@@ -22,7 +22,7 @@ NPORT=${1:-9944}
 RPORT=${3:-2000}
 
 echo "Using node-port ${NPORT}"
-echo "Using worker-rpc-port ${RPORT}"
+echo "Using trusted-worker-port ${RPORT}"
 echo ""
 
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"

@@ -50,7 +50,10 @@ fn worker_request(
 	match oc_api.worker_request(request_vec) {
 		Ok(r) => {
 			let resp_slice = unsafe { slice::from_raw_parts_mut(response, resp_size as usize) };
-			write_slice_and_whitespace_pad(resp_slice, r);
+			if let Err(e) = write_slice_and_whitespace_pad(resp_slice, r) {
+				error!("Failed to transfer worker request response to o-call buffer: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			}
 			sgx_status_t::SGX_SUCCESS
 		},
 		Err(e) => {

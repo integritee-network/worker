@@ -24,8 +24,6 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 
 pub use itc_parentchain_block_import_dispatcher as block_import_dispatcher;
 
-pub use itc_parentchain_block_import_queue as block_import_queue;
-
 pub use itc_parentchain_block_importer as block_importer;
 
 pub use itc_parentchain_indirect_calls_executor as indirect_calls_executor;

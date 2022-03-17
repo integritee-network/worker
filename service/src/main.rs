@@ -14,20 +14,23 @@
 	limitations under the License.
 
 */
+
+#![cfg_attr(test, feature(assert_matches))]
+
 use crate::{
+	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
 	globals::{
 		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 		worker::{GlobalWorker, Worker},
 	},
-	node_api_factory::{CreateNodeApi, GlobalUrlNodeApiFactory},
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
-	parentchain_block_syncer::ParentchainBlockSyncer,
+	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
-	worker::worker_url_into_async_rpc_url,
+	worker_peers_updater::WorkerPeersUpdater,
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
@@ -35,10 +38,8 @@ use codec::Encode;
 use config::Config;
 use enclave::{
 	api::enclave_init,
-	tls_ra::{enclave_request_key_provisioning, enclave_run_key_provisioning_server},
+	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
-use itc_rpc_client::direct_client::DirectClient;
-use itp_api_client_extensions::{AccountApi, ChainApi};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -47,25 +48,30 @@ use itp_enclave_api::{
 	teeracle_api::TeeracleApi,
 	teerex_api::TeerexApi,
 };
+use itp_node_api_extensions::{
+	node_api_factory::{CreateNodeApi, NodeApiFactory},
+	AccountApi, PalletTeerexApi,
+};
 use itp_settings::{
 	files::{
 		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH,
 		SIGNING_KEY_FILE,
 	},
 	node::MARKET_DATA_UPDATE_INTERVAL,
-	worker::{EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS},
+};
+use its_peer_fetch::{
+	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
-use its_storage::{BlockPruner, SidechainStorageLock};
+use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::Header;
 use parse_duration::parse;
 use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
-	sr25519, Pair,
+	sr25519,
 };
-use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use std::{
 	fs::{self, File},
@@ -76,20 +82,23 @@ use std::{
 	thread,
 	time::{Duration, Instant},
 };
-use substrate_api_client::{rpc::WsRpcClient, Api, GenericAddress, XtStatus};
+use substrate_api_client::{rpc::WsRpcClient, Api, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
 
+mod account_funding;
 mod config;
 mod enclave;
 mod error;
 mod globals;
-mod node_api_factory;
 mod ocall_bridge;
 mod parentchain_block_syncer;
+mod prometheus_metrics;
 mod sync_block_gossiper;
+mod sync_state;
 mod tests;
 mod utils;
 mod worker;
+mod worker_peers_updater;
 
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -101,7 +110,7 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	let mut config = Config::from(&matches);
+	let config = Config::from(&matches);
 
 	GlobalTokioHandle::initialize();
 
@@ -115,13 +124,20 @@ fn main() {
 	// build the entire dependency tree
 	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
-	let sync_block_gossiper = Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker));
+	let sync_block_gossiper =
+		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
+	let peer_updater = Arc::new(WorkerPeersUpdater::new(worker));
 	let sidechain_blockstorage = Arc::new(
 		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
 			.unwrap(),
 	);
-	let node_api_factory = Arc::new(GlobalUrlNodeApiFactory::new(config.node_url()));
-	let enclave = Arc::new(enclave_init().unwrap());
+	let node_api_factory =
+		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
+	let enclave = Arc::new(enclave_init(&config).unwrap());
+	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.clone());
+	let peer_sidechain_block_fetcher =
+		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
+	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
@@ -129,18 +145,14 @@ fn main() {
 		sync_block_gossiper,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
+		peer_updater,
+		peer_sidechain_block_fetcher,
+		tokio_handle.clone(),
+		enclave_metrics_receiver,
 	)));
 
 	if let Some(smatches) = matches.subcommand_matches("run") {
 		let shard = extract_shard(smatches, enclave.as_ref());
-
-		// Todo: Is this deprecated?? It is only used in remote attestation.
-		config.set_ext_api_url(
-			smatches
-				.value_of("w-server")
-				.map(ToString::to_string)
-				.unwrap_or_else(|| format!("ws://127.0.0.1:{}", config.worker_rpc_port)),
-		);
 
 		println!("Worker Config: {:?}", config);
 		let skip_ra = smatches.is_present("skip-ra");
@@ -153,13 +165,14 @@ fn main() {
 
 		println!("Update exchange rate interval is {:?}", interval);
 
-		let node_api = node_api_factory.create_api().set_signer(AccountKeyring::Alice.pair());
+		let node_api =
+			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
 		GlobalWorker::reset_worker(Worker::new(
 			config.clone(),
 			node_api.clone(),
 			enclave.clone(),
-			DirectClient::new(config.worker_url()),
+			Vec::new(),
 		));
 
 		start_worker(
@@ -173,10 +186,16 @@ fn main() {
 			node_api,
 			tokio_handle,
 		);
-	} else if let Some(smatches) = matches.subcommand_matches("request-keys") {
-		let shard = extract_shard(smatches, enclave.as_ref());
-		let provider_url = smatches.value_of("provider").expect("provider must be specified");
-		request_keys(provider_url, &shard, enclave.as_ref(), smatches.is_present("skip-ra"));
+	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
+		println!("*** Requesting state from a registered worker \n");
+		let node_api =
+			node_api_factory.create_api().expect("Failed to create parentchain node API");
+		sync_state::sync_state(
+			&node_api,
+			&extract_shard(smatches, enclave.as_ref()),
+			enclave.as_ref(),
+			smatches.is_present("skip-ra"),
+		);
 	} else if matches.is_present("shielding-key") {
 		info!("*** Get the public key from the TEE\n");
 		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
@@ -212,19 +231,21 @@ fn main() {
 	} else if let Some(_matches) = matches.subcommand_matches("test") {
 		if _matches.is_present("provisioning-server") {
 			println!("*** Running Enclave MU-RA TLS server\n");
-			enclave_run_key_provisioning_server(
+			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.worker_mu_ra_port),
+				&config.mu_ra_url(),
 				_matches.is_present("skip-ra"),
 			);
 			println!("[+] Done!");
 		} else if _matches.is_present("provisioning-client") {
 			println!("*** Running Enclave MU-RA TLS client\n");
-			enclave_request_key_provisioning(
+			let shard = extract_shard(_matches, enclave.as_ref());
+			enclave_request_state_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				&format!("localhost:{}", config.worker_mu_ra_port),
+				&config.mu_ra_url_external(),
+				&shard,
 				_matches.is_present("skip-ra"),
 			)
 			.unwrap();
@@ -247,8 +268,8 @@ fn start_worker<E, T, D>(
 	skip_ra: bool,
 	dev: bool,
 	interval: Duration,
-	mut node_api: Api<sr25519::Pair, WsRpcClient>,
-	tokio_handle: Arc<T>,
+	node_api: Api<sr25519::Pair, WsRpcClient>,
+	tokio_handle_getter: Arc<T>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -259,7 +280,7 @@ fn start_worker<E, T, D>(
 		+ TeerexApi
 		+ TeeracleApi
 		+ Clone,
-	D: BlockPruner + Sync + Send + 'static,
+	D: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
 {
 	println!("IntegriTEE Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
@@ -274,11 +295,11 @@ fn start_worker<E, T, D>(
 
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
-	println!("MU-RA server listening on ws://{}", config.mu_ra_url());
+	println!("MU-RA server listening on {}", config.mu_ra_url());
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
 	thread::spawn(move || {
-		enclave_run_key_provisioning_server(
+		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 			&ra_url,
@@ -286,13 +307,15 @@ fn start_worker<E, T, D>(
 		)
 	});
 
+	let tokio_handle = tokio_handle_getter.get_handle();
+
 	// ------------------------------------------------------------------------
-	// start worker api direct invocation server
-	let direct_invocation_server_addr = config.worker_url();
+	// Start trusted worker rpc server.
+	let direct_invocation_server_addr = config.trusted_worker_url_internal();
 	let enclave_for_direct_invocation = enclave.clone();
 	thread::spawn(move || {
 		println!(
-			"[+] RPC direction invocation server listening on wss://{}",
+			"[+] Trusted RPC direction invocation server listening on {}",
 			direct_invocation_server_addr
 		);
 		enclave_for_direct_invocation
@@ -301,43 +324,44 @@ fn start_worker<E, T, D>(
 		println!("[+] RPC direction invocation server shut down");
 	});
 
-	// listen for sidechain_block import request. Later the `start_worker_api_direct_server`
-	// should be merged into this one.
-	let url = worker_url_into_async_rpc_url(&config.worker_url()).unwrap();
-
-	let handle = tokio_handle.get_handle();
-	let enclave_for_block_gossip_rpc_server = enclave.clone();
-	handle.spawn(async move {
-		itc_rpc_server::run_server(&url, enclave_for_block_gossip_rpc_server)
-			.await
-			.unwrap()
-	});
 	// ------------------------------------------------------------------------
-	// start the substrate-api-client to communicate with the node
+	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
-
 	let tee_accountid = enclave_account(enclave.as_ref());
 	println!("MRENCLAVE account {:} ", &tee_accountid.to_ss58check());
-	// ------------------------------------------------------------------------
-	// perform a remote attestation and get an unchecked extrinsic back
 
-	// get enclaves's account nonce
+	// ------------------------------------------------------------------------
+	// Start prometheus metrics server.
+	if config.enable_metrics_server {
+		let enclave_wallet =
+			Arc::new(EnclaveAccountInfoProvider::new(node_api.clone(), tee_accountid.clone()));
+		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
+		let metrics_server_port = config
+			.try_parse_metrics_server_port()
+			.expect("metrics server port to be a valid port number");
+		tokio_handle.spawn(async move {
+			if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
+				error!("Unexpected error in Prometheus metrics server: {:?}", e);
+			}
+		});
+	}
+
+	// ------------------------------------------------------------------------
+	// Perform a remote attestation and get an unchecked extrinsic back.
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
-
+	let trusted_url = config.trusted_worker_url_external();
 	let uxt = if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
-		enclave
-			.mock_register_xt(node_api.genesis_hash, nonce, &config.ext_api_url.unwrap())
-			.unwrap()
+		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
 		enclave
-			.perform_ra(genesis_hash, nonce, config.ext_api_url.unwrap().as_bytes().to_vec())
+			.perform_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
 			.unwrap()
 	};
 
@@ -345,57 +369,105 @@ fn start_worker<E, T, D>(
 	xthex.insert_str(0, "0x");
 
 	// Account funds
-	if let Err(x) = account_funding(&mut node_api, &tee_accountid, xthex.clone(), dev) {
+	if let Err(x) = setup_account_funding(&node_api, &tee_accountid, xthex.clone(), dev) {
 		error!("Starting worker failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return
 	}
 
-	// send the extrinsic and wait for confirmation
 	println!("[>] Register the enclave (send the extrinsic)");
-	let tx_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
-	println!("[<] Extrinsic got finalized. Hash: {:?}\n", tx_hash);
+	let register_enclave_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_enclave_xt_hash);
+
+	let register_enclave_xt_header =
+		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
+	let we_are_primary_validateer =
+		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
+
+	if we_are_primary_validateer {
+		println!("[+] We are the primary validateer");
+	} else {
+		println!("[+] We are NOT the primary validateer");
+	}
 
 	// start update exchange rate loop
-	let api5 = node_api.clone();
+	let api5 = node_api;
 	let market_enclave_api = enclave;
 	start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
 
 	/*
-	   let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
-	   println!("*** [+] Finished syncing light client\n");
+	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
+	println!("*** [+] Finished syncing light client, syncing parent chain...");
 
-	   // ------------------------------------------------------------------------
-	   // start interval block production (execution of trusted calls, sidechain block production)
-	   let side_chain_enclave_api = enclave.clone();
-	   thread::Builder::new()
-		   .name("interval_block_production_timer".to_owned())
-		   .spawn(move || {
-			   let future = start_slot_worker(
-				   || execute_trusted_calls(side_chain_enclave_api.as_ref()),
-				   SLOT_DURATION,
-			   );
-			   block_on(future);
-		   })
-		   .unwrap();
+	// Syncing all parentchain blocks, this might take a while..
+	let parentchain_block_syncer =
+		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
+	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 
-	   // ------------------------------------------------------------------------
-	   // start parentchain syncing loop (subscribe to header updates)
-	   let api4 = node_api.clone();
-	   let parentchain_sync_enclave_api = enclave.clone();
-	   thread::Builder::new()
-		   .name("parent_chain_sync_loop".to_owned())
-		   .spawn(move || {
-			   if let Err(e) = subscribe_to_parentchain_new_headers(
-				   parentchain_sync_enclave_api,
-				   &api4,
-				   last_synced_header,
-			   ) {
-				   error!("Parentchain block syncing terminated with a failure: {:?}", e);
-			   }
-			   println!("[+] Parentchain block syncing has terminated");
-		   })
-		   .unwrap();
+	// If we're the first validateer to register, also trigger parentchain block import.
+	if we_are_primary_validateer {
+		last_synced_header = import_parentchain_blocks_until_self_registry(
+			enclave.clone(),
+			parentchain_block_syncer,
+			&last_synced_header,
+			&register_enclave_xt_header,
+		)
+		.unwrap();
+	}
+
+	// ------------------------------------------------------------------------
+	// Start untrusted worker rpc server.
+	// FIXME: this should be removed - this server should only handle untrusted things.
+	// i.e move sidechain block importing to trusted worker.
+	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let untrusted_url = config.untrusted_worker_url();
+	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
+	let sidechain_storage_for_rpc = sidechain_storage.clone();
+	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
+		itc_rpc_server::run_server(
+			&untrusted_url,
+			enclave_for_block_gossip_rpc_server,
+			sidechain_storage_for_rpc,
+		)
+		.await
+		.unwrap();
+	});
+
+	thread::sleep(Duration::from_secs(3));
+
+	// ------------------------------------------------------------------------
+	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
+	let sidechain_enclave_api = enclave.clone();
+	println!("[+] Spawning thread for sidechain block production");
+	thread::Builder::new()
+		.name("interval_block_production_timer".to_owned())
+		.spawn(move || {
+			let future = start_slot_worker(
+				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
+				SLOT_DURATION,
+			);
+			block_on(future);
+			println!("[!] Sidechain block production loop has terminated");
+		})
+		.unwrap();
+
+	// ------------------------------------------------------------------------
+	// start parentchain syncing loop (subscribe to header updates)
+	let api4 = node_api.clone();
+	let parentchain_sync_enclave_api = enclave.clone();
+	thread::Builder::new()
+		.name("parentchain_sync_loop".to_owned())
+		.spawn(move || {
+			if let Err(e) = subscribe_to_parentchain_new_headers(
+				parentchain_sync_enclave_api,
+				&api4,
+				last_synced_header,
+			) {
+				error!("Parentchain block syncing terminated with a failure: {:?}", e);
+			}
+			println!("[!] Parentchain block syncing has terminated");
+		})
+		.unwrap();
 
 	   //-------------------------------------------------------------------------
 	   // start execution of trusted getters
@@ -539,33 +611,6 @@ where
 		}
 	}
 }
-
-fn request_keys<E: TlsRemoteAttestation>(
-	provider_url: &str,
-	_shard: &ShardIdentifier,
-	enclave_api: &E,
-	skip_ra: bool,
-) {
-	// FIXME: we now assume that keys are equal for all shards
-
-	// initialize the enclave
-	#[cfg(feature = "production")]
-	println!("*** Starting enclave in production mode");
-	#[cfg(not(feature = "production"))]
-	println!("*** Starting enclave in development mode");
-
-	println!("Requesting key provisioning from worker at {}", provider_url);
-
-	enclave_request_key_provisioning(
-		enclave_api,
-		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-		provider_url,
-		skip_ra,
-	)
-	.unwrap();
-	println!("key provisioning successfully performed");
-}
-
 /*
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
@@ -600,18 +645,18 @@ fn print_events(events: Events, _sender: Sender<String>) {
 			Event::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(sender, worker_url) => {
+					my_node_runtime::pallet_teerex::Event::AddedEnclave(sender, worker_url) => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", sender);
 						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 					},
-					my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
+					my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
 						println!(
 							"[+] Received trusted call for shard {}",
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
+					my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
 						sender,
 						block_hash,
 						merkle_root,
@@ -621,7 +666,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    Block Hash: {:?}", hex::encode(block_hash));
 						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ProposedSidechainBlock(
+					my_node_runtime::pallet_teerex::Event::ProposedSidechainBlock(
 						sender,
 						payload,
 					) => {
@@ -629,13 +674,11 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    From:    {:?}", sender);
 						debug!("    Payload: {:?}", hex::encode(payload));
 					},
-					my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(incognito_account) => {
+					my_node_runtime::pallet_teerex::Event::ShieldFunds(incognito_account) => {
 						info!("[+] Received ShieldFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},
-					my_node_runtime::pallet_teerex::RawEvent::UnshieldedFunds(
-						incognito_account,
-					) => {
+					my_node_runtime::pallet_teerex::Event::UnshieldedFunds(incognito_account) => {
 						info!("[+] Received UnshieldedFunds event");
 						debug!("    For:    {:?}", incognito_account);
 					},
@@ -668,33 +711,24 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 */
 
-pub fn init_light_client<E: EnclaveBase + Sidechain>(
-	api: &Api<sr25519::Pair, WsRpcClient>,
-	enclave_api: Arc<E>,
-) -> Result<Header, Error> {
-	let genesis_hash = api.get_genesis_hash().unwrap();
-	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
-	info!("Got genesis Header: \n {:?} \n", genesis_header);
-	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
-	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
-
-	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
-
-	let authority_list = VersionedAuthorityList::from(grandpas);
-
-	let latest = enclave_api
-		.init_light_client(genesis_header, authority_list, grandpa_proof)
-		.unwrap();
-
-	info!("Finished initializing light client, syncing parent chain...");
-
-	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api.clone());
-	let latest_synced_header = parentchain_block_syncer.sync_parentchain(latest);
-
-	enclave_api.trigger_parentchain_block_import().map_err(Error::EnclaveApi)?;
-
-	Ok(latest_synced_header)
-}
+// pub fn init_light_client<E: EnclaveBase + Sidechain>(
+// 	api: &Api<sr25519::Pair, WsRpcClient>,
+// 	enclave_api: Arc<E>,
+// ) -> Result<Header, Error> {
+// 	let genesis_hash = api.get_genesis_hash().unwrap();
+// 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
+// 	info!("Got genesis Header: \n {:?} \n", genesis_header);
+// 	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+// 	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
+//
+// 	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+//
+// 	let authority_list = VersionedAuthorityList::from(grandpas);
+//
+// 	Ok(enclave_api
+// 		.init_light_client(genesis_header, authority_list, grandpa_proof)
+// 		.unwrap())
+// }
 
 /*
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
@@ -752,123 +786,44 @@ fn init_shard(shard: &ShardIdentifier) {
 	file.write_all(b"").unwrap();
 }
 
-// get the public signing key of the TEE
+/// Get the public signing key of the TEE.
 fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	AccountId32::from(*tee_public.as_array_ref())
 }
 
-fn account_funding(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-	extrinsic_prefix: String,
-	dev: bool,
-) -> Result<(), Error> {
-	// Account funds
-	if dev {
-		// Development mode, the faucet will ensure that the enclave has enough funds
-		ensure_account_has_funds(api, accountid)?;
-	} else {
-		// Production mode, there is no faucet.
-		let registration_fees = enclave_registration_fees(api, &extrinsic_prefix)?;
-		info!("Registration fees = {:?}", registration_fees);
-		let free_balance = api.get_free_balance(accountid)?;
-		info!("TEE's free balance = {:?}", free_balance);
+/*
+/// Ensure we're synced up until the parentchain block where we have registered ourselves.
+fn import_parentchain_blocks_until_self_registry<
+	E: EnclaveBase + TeerexApi + Sidechain,
+	ParentchainSyncer: SyncParentchainBlocks,
+>(
+	enclave_api: Arc<E>,
+	parentchain_block_syncer: Arc<ParentchainSyncer>,
+	last_synced_header: &Header,
+	register_enclave_xt_header: &Header,
+) -> Result<Header, Error> {
+	info!(
+		"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
+	);
+	let mut last_synced_header = last_synced_header.clone();
 
-		let min_required_funds =
-			registration_fees.saturating_mul(REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS);
-		let missing_funds = min_required_funds.saturating_sub(free_balance);
-
-		if missing_funds > 0 {
-			// If there are not enough funds, then the user can send the missing TEER to the enclave address and start again.
-			println!(
-				"Enclave account: {:}, missing funds {}",
-				accountid.to_ss58check(),
-				missing_funds
-			);
-			return Err(Error::Custom(
-				"Enclave does not have enough funds on the parentchain to register.".into(),
-			))
-		}
+	while last_synced_header.number() < register_enclave_xt_header.number() {
+		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 	}
-	Ok(())
+	enclave_api.trigger_parentchain_block_import()?;
+
+	Ok(last_synced_header)
 }
-// Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-) -> Result<(), Error> {
-	// check account balance
-	let free_balance = api.get_free_balance(accountid)?;
-	info!("TEE's free balance = {:?}", free_balance);
+*/
 
-	let existential_deposit = api.get_existential_deposit()?;
-	info!("Existential deposit is = {:?}", existential_deposit);
-
-	let min_required_funds =
-		existential_deposit.saturating_mul(EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS);
-	let missing_funds = min_required_funds.saturating_sub(free_balance);
-
-	if missing_funds > 0 {
-		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
-	}
-	Ok(())
-}
-
-fn enclave_registration_fees(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	xthex_prefixed: &str,
-) -> Result<u128, Error> {
-	let reg_fee_details = api.get_fee_details(xthex_prefixed, None)?;
-	match reg_fee_details {
-		Some(details) => match details.inclusion_fee {
-			Some(fee) => Ok(fee.inclusion_fee()),
-			None => Err(Error::Custom(
-				"Inclusion fee for the registration of the enclave is None!".into(),
-			)),
-		},
-		None =>
-			Err(Error::Custom("Fee Details for the registration of the enclave is None !".into())),
-	}
-}
-
-// Alice sends some funds to the account
-fn bootstrap_funds_from_alice(
-	api: &mut Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-	funding_amount: u128,
-) -> Result<(), Error> {
-	let alice = AccountKeyring::Alice.pair();
-	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
-	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
-	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
-
-	let alice_free = api.get_free_balance(&alice_acc)?;
-	info!("    Alice's free balance = {:?}", alice_free);
-	let nonce = api.get_nonce_of(&alice_acc)?;
-	info!("    Alice's Account Nonce is {}", nonce);
-
-	if funding_amount > alice_free {
-		println!(
-			"funding amount is to high: please change MIN_FUND_INCREASE_FACTOR ({:?})",
-			funding_amount
-		);
-		return Err(Error::ApplicationSetup)
-	}
-
-	let signer_orig = api.signer.clone();
-	api.signer = Some(alice);
-
-	println!("[+] bootstrap funding Enclave from Alice's funds");
-	let xt = api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
-	let xt_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)?;
-	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
-
-	// Verify funds have arrived.
-	let free_balance = api.get_free_balance(accountid);
-	info!("TEE's NEW free balance = {:?}", free_balance);
-
-	api.signer = signer_orig;
-	Ok(())
+/// Checks if we are the first validateer to register on the parentchain.
+fn we_are_primary_validateer(
+	node_api: &Api<sr25519::Pair, WsRpcClient>,
+	register_enclave_xt_header: &Header,
+) -> Result<bool, Error> {
+	let enclave_count_of_previous_block =
+		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
+	Ok(enclave_count_of_previous_block == 0)
 }

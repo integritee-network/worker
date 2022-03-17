@@ -15,6 +15,7 @@
 
 */
 
+use crate::config::Config;
 use itp_enclave_api::{
 	enclave_base::EnclaveBase, error::Error as EnclaveApiError, Enclave, EnclaveResult,
 };
@@ -26,7 +27,7 @@ use sgx_urts::SgxEnclave;
 use std::io::{Read, Write};
 use std::{fs::File, path::PathBuf};
 
-pub fn enclave_init() -> EnclaveResult<Enclave> {
+pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 	const LEN: usize = 1024;
 	let mut launch_token = [0; LEN];
 	let mut launch_token_updated = 0;
@@ -102,7 +103,7 @@ pub fn enclave_init() -> EnclaveResult<Enclave> {
 
 	// create an enclave API and initialize it
 	let enclave_api = Enclave::new(enclave);
-	enclave_api.init()?;
+	enclave_api.init(&config.mu_ra_url_external(), &config.untrusted_worker_url_external())?;
 
 	Ok(enclave_api)
 }

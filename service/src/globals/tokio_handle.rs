@@ -38,7 +38,11 @@ pub struct GlobalTokioHandle;
 impl GlobalTokioHandle {
 	/// this needs to be called once at application startup!
 	pub fn initialize() {
-		let rt = tokio::runtime::Runtime::new().unwrap();
+		let rt = tokio::runtime::Builder::new_multi_thread()
+			.enable_all()
+			.worker_threads(2)
+			.build()
+			.unwrap();
 		*TOKIO_HANDLE.write() = Some(rt);
 	}
 
@@ -56,6 +60,25 @@ impl GlobalTokioHandle {
 impl GetTokioHandle for GlobalTokioHandle {
 	fn get_handle(&self) -> Handle {
 		GlobalTokioHandle::read_handle()
+	}
+}
+
+/// Implementation for a scoped Tokio handle.
+///
+///
+pub struct ScopedTokioHandle {
+	tokio_runtime: tokio::runtime::Runtime,
+}
+
+impl Default for ScopedTokioHandle {
+	fn default() -> Self {
+		ScopedTokioHandle { tokio_runtime: tokio::runtime::Runtime::new().unwrap() }
+	}
+}
+
+impl GetTokioHandle for ScopedTokioHandle {
+	fn get_handle(&self) -> Handle {
+		self.tokio_runtime.handle().clone()
 	}
 }
 
@@ -77,7 +100,7 @@ mod tests {
 
 		let handle = GlobalTokioHandle.get_handle();
 
-		let result = handle.spawn_blocking(|| format!("now running on a worker thread")).await;
+		let result = handle.spawn_blocking(|| "now running on a worker thread").await;
 
 		assert!(result.is_ok());
 		assert!(!result.unwrap().is_empty())

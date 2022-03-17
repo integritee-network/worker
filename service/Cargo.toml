@@ -25,16 +25,18 @@ jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
 async-trait = "0.1.50"
 tokio = { version = "1.6.1", features = ["full"] }
 parse_duration = "2.1.1"
+prometheus = { version = "0.13.0", features = ["process"] }
+warp = "0.3"
+futures = "0.3"
 
 # ipfs
 ipfs-api = "0.11.0"
-futures = "0.3"
 multihash = "0.8"
 cid = "<0.3.1"
 sha2 = { version = "0.7", default-features = false }
 
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.10.1", default-features = false, features = ["codec"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+primitive-types = { version = "0.11.1", default-features = false, features = ["codec"] }
 
 sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -44,12 +46,14 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
-itp-api-client-extensions = { path = "../core-primitives/api-client-extensions" }
+itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
+itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-settings = { path = "../core-primitives/settings" }
 itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
+its-peer-fetch = { path = "../sidechain/peer-fetch" }
 its-primitives = { path = "../sidechain/primitives"}
 its-storage = { path = "../sidechain/storage" }
 
@@ -57,13 +61,13 @@ its-storage = { path = "../sidechain/storage" }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.7" }
+substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }
 
 # Substrate dependencies
-sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-balances = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-core = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 frame-system = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-finality-grandpa = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
 frame-support = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -74,6 +78,9 @@ default = []
 production = ['itp-settings/production']
 
 [dev-dependencies]
+# crates.io
 anyhow = "1.0.40"
-its-test = { path = "../sidechain/test" }
 mockall = "0.10.1"
+# local
+its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
+its-test = { path = "../sidechain/test" }

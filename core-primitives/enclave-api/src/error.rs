@@ -8,5 +8,5 @@ pub enum Error {
 	#[error("Enclave Error: {0}")]
 	Sgx(sgx_status_t),
 	#[error("Error, other: {0}")]
-	Other(Box<dyn std::error::Error + Sync + Send>),
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

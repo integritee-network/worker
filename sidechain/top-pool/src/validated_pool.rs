@@ -688,7 +688,7 @@ where
 	}
 
 	/// Notify the listener of top inclusion in sidechain block
-	pub fn on_block_created(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
+	pub fn on_block_imported(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
 		for top_hash in hashes.iter() {
 			self.listener.write().unwrap().in_block(top_hash, block_hash);
 		}

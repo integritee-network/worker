@@ -36,7 +36,9 @@ use derive_more::From;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlock};
+use its_primitives::traits::{
+	Block as SidechainBlock, ShardIdentifierFor, SignedBlock as SignedSidechainBlock,
+};
 use log::{debug, info, warn};
 pub use slots::*;
 use sp_runtime::traits::{Block as ParentchainBlock, Header};
@@ -230,7 +232,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 				},
 			};
 
-		let proposer = match self.proposer(latest_imported_parentchain_header, shard) {
+		let proposer = match self.proposer(latest_imported_parentchain_header.clone(), shard) {
 			Ok(p) => p,
 			Err(e) => {
 				warn!(target: logging_target, "Could not create proposer: {:?}", e);
@@ -247,13 +249,18 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 		};
 
 		if !timestamp_within_slot(&slot_info, &proposing.block) && !self.allow_delayed_proposal() {
-			debug!(
+			warn!(
 				target: logging_target,
 				"⌛️ Discarding proposal for slot {}; block production took too long", *slot,
 			);
 
 			return None
 		}
+
+		info!("Proposing sidechain block (number: {}, hash: {}) based on parentchain block (number: {:?}, hash: {:?})",
+			proposing.block.block().block_number(), proposing.block.hash(),
+			latest_imported_parentchain_header.number(), latest_imported_parentchain_header.hash()
+		);
 
 		Some(SlotResult {
 			block: proposing.block,

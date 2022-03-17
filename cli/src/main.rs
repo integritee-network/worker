@@ -57,7 +57,7 @@ use teerex_primitives::Request;
 
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_api_client_extensions::{PalletTeerexApi, ADD_TO_WHITELIST, TEERACLE, TEEREX};
+use itp_node_api_extensions::{PalletTeerexApi, ADD_TO_WHITELIST, TEERACLE, TEEREX};
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
@@ -104,9 +104,9 @@ fn main() {
 						.help("worker url"),
 				)
 				.arg(
-					Arg::with_name("worker-rpc-port")
+					Arg::with_name("trusted-worker-port")
 						.short("P")
-						.long("worker-rpc-port")
+						.long("trusted-worker-port")
 						.global(true)
 						.takes_value(true)
 						.value_name("STRING")
@@ -154,6 +154,16 @@ fn main() {
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let meta = get_chain_api(matches).get_metadata().unwrap();
 					println!("Metadata:\n {}", Metadata::pretty_format(&meta).unwrap());
+					Ok(())
+				}),
+		)
+		.add_cmd(
+			Command::new("print-sgx-metadata")
+				.description("query sgx-runtime metadata and print it as json to stdout")
+				.runner(|_args: &str, matches: &ArgMatches<'_>| {
+					let worker_api_direct = get_worker_api_direct(matches);
+					let metadata = worker_api_direct.get_state_metadata().unwrap();
+					println!("Metadata:\n {}", Metadata::pretty_format(&metadata).unwrap());
 					Ok(())
 				}),
 		)
@@ -281,10 +291,10 @@ fn main() {
 				.description("query enclave registry and list all workers")
 				.runner(|_args: &str, matches: &ArgMatches<'_>| {
 					let api = get_chain_api(matches);
-					let wcount = api.enclave_count().unwrap();
+					let wcount = api.enclave_count(None).unwrap();
 					println!("number of workers registered: {}", wcount);
 					for w in 1..=wcount {
-						let enclave = api.enclave(w).unwrap();
+						let enclave = api.enclave(w, None).unwrap();
 						if enclave.is_none() {
 							println!("error reading enclave data");
 							continue
@@ -558,10 +568,7 @@ fn get_state(matches: &ArgMatches<'_>, getter: TrustedOperation) -> Option<Vec<u
 
 	let direct_api = get_worker_api_direct(matches);
 	let (sender, receiver) = channel();
-	match direct_api.watch(jsonrpc_call, sender) {
-		Ok(_) => {},
-		Err(_) => panic!("Error when sending direct invocation call"),
-	}
+	direct_api.watch(jsonrpc_call, sender);
 
 	loop {
 		match receiver.recv() {
@@ -595,7 +602,7 @@ fn encode_encrypt<E: Encode>(
 	let worker_api_direct = get_worker_api_direct(matches);
 	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
 		Ok(key) => key,
-		Err(err_msg) => return Err(err_msg),
+		Err(err_msg) => return Err(err_msg.to_string()),
 	};
 
 	let encoded = to_encrypt.encode();
@@ -656,7 +663,7 @@ fn get_worker_api_direct(matches: &ArgMatches<'_>) -> DirectWorkerApi {
 	let url = format!(
 		"{}:{}",
 		matches.value_of("worker-url").unwrap(),
-		matches.value_of("worker-rpc-port").unwrap()
+		matches.value_of("trusted-worker-port").unwrap()
 	);
 	info!("Connecting to integritee-service-direct-port on '{}'", url);
 	DirectWorkerApi::new(url)
@@ -707,10 +714,7 @@ fn send_direct_request(
 
 	debug!("setup sender and receiver");
 	let (sender, receiver) = channel();
-	match direct_api.watch(jsonrpc_call, sender) {
-		Ok(_) => {},
-		Err(_) => panic!("Error when sending direct invocation call"),
-	}
+	direct_api.watch(jsonrpc_call, sender);
 
 	debug!("waiting for rpc response");
 	loop {
@@ -806,7 +810,7 @@ fn listen(matches: &ArgMatches<'_>) {
 							println!(">>>>>>>>>> integritee event: {:?}", ee);
 							count += 1;
 							match &ee {
-								my_node_runtime::pallet_teerex::RawEvent::AddedEnclave(
+								my_node_runtime::pallet_teerex::Event::AddedEnclave(
 									accountid,
 									url,
 								) => {
@@ -817,18 +821,18 @@ fn listen(matches: &ArgMatches<'_>) {
 											.unwrap_or_else(|_| "error".to_string())
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::RemovedEnclave(
+								my_node_runtime::pallet_teerex::Event::RemovedEnclave(
 									accountid,
 								) => {
 									println!("RemovedEnclave: {:?}", accountid);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::Forwarded(shard) => {
+								my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
 									println!(
 										"Forwarded request for shard {}",
 										shard.encode().to_base58()
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
+								my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
 									accountid,
 									block_hash,
 									merkle_root,
@@ -838,7 +842,7 @@ fn listen(matches: &ArgMatches<'_>) {
 										accountid, block_hash, merkle_root
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::ProposedSidechainBlock(
+								my_node_runtime::pallet_teerex::Event::ProposedSidechainBlock(
 									accountid,
 									block_hash,
 								) => {
@@ -847,16 +851,17 @@ fn listen(matches: &ArgMatches<'_>) {
 										accountid, block_hash
 									);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::ShieldFunds(
+								my_node_runtime::pallet_teerex::Event::ShieldFunds(
 									incognito_account,
 								) => {
 									println!("ShieldFunds for {:?}", incognito_account);
 								},
-								my_node_runtime::pallet_teerex::RawEvent::UnshieldedFunds(
+								my_node_runtime::pallet_teerex::Event::UnshieldedFunds(
 									public_account,
 								) => {
 									println!("UnshieldFunds for {:?}", public_account);
 								},
+								_ => debug!("ignoring unsupported teerex event: {:?}", ee),
 							}
 						},
 						Event::Teeracle(teeracle_event) => {
@@ -939,7 +944,7 @@ where
 			for evr in &evts {
 				info!("received event {:?}", evr.event);
 				if let Event::Teerex(pe) = &evr.event {
-					if let my_node_runtime::pallet_teerex::RawEvent::ProcessedParentchainBlock(
+					if let my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
 						sender,
 						block_hash,
 						_merkle_root,

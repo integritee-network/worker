@@ -6,7 +6,6 @@ members = [
     "cli",
     "core/direct-rpc-server",
     "core/parentchain/block-import-dispatcher",
-    "core/parentchain/block-import-queue",
     "core/parentchain/block-importer",
     "core/parentchain/indirect-calls-executor",
     "core/parentchain/light-client",
@@ -15,13 +14,16 @@ members = [
     "core/rpc-client",
     "core/rpc-server",
     "core/tls-websocket-server",
-    "core-primitives/api-client-extensions",
+    "core-primitives/block-import-queue",
     "core-primitives/component-container",
     "core-primitives/enclave-api",
     "core-primitives/enclave-api/ffi",
+    "core-primitives/enclave-metrics",
     "core-primitives/extrinsics-factory",
+    "core-primitives/node-api-extensions",
     "core-primitives/nonce-cache",
     "core-primitives/ocall-api",
+    "core-primitives/primitives-cache",
     "core-primitives/settings",
     "core-primitives/sgx/crypto",
     "core-primitives/sgx/io",
@@ -38,6 +40,7 @@ members = [
     "sidechain/consensus/aura",
     "sidechain/consensus/common",
     "sidechain/consensus/slots",
+    "sidechain/peer-fetch",
     "sidechain/primitives",
     "sidechain/rpc-handler",
     "sidechain/sidechain-crate",
@@ -73,6 +76,10 @@ sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incub
 
 #[patch."https://github.com/integritee-network/integritee-node"]
 #my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
+
+#[patch."https://github.com/scs/substrate-api-client"]
+#substrate-api-client = { path = "../../scs/substrate-api-client" }
+#substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
 #pallet-claims = { path = '../pallets/claims' }

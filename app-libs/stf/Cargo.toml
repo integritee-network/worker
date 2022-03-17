@@ -49,7 +49,7 @@ test = []
 base58 = { version = "0.1", optional = true }
 clap = { version = "2.33", optional = true }
 clap-nested = { version = "0.3.1", optional = true }
-codec = { version = "2.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
 hex = { version = "0.4.2", optional = true }
 log = { version = "0.4", default-features = false }
@@ -66,12 +66,12 @@ its-primitives = { default-features = false, path = "../../sidechain/primitives"
 its-state = { default-features = false, optional = true, path = "../../sidechain/state" }
 
 # Substrate dependencies
-sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = ["full_crypto"] }
+sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master", features = ["full_crypto"] }
 balances = { version = "4.0.0-dev", package = 'pallet-balances', default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 system = { version = "4.0.0-dev",  package = "frame-system", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 support = { version = "4.0.0-dev",  package = "frame-support", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-application-crypto = { version = "4.0.0-dev", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-application-crypto = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sc-keystore = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master", optional = true }
 
 # scs / integritee
@@ -83,4 +83,4 @@ substrate-api-client = { git = "https://github.com/scs/substrate-api-client", br
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "master", optional = true }
 
 [dev-dependencies]
-sp-keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }

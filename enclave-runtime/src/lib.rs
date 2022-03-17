@@ -35,12 +35,16 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		EnclaveSidechainBlockImporter, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT,
+		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStfExecutor,
+		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_AUTHOR_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::{public_api_rpc_handler, sidechain_io_handler},
-	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw},
 };
 use base58::ToBase58;
@@ -56,16 +60,17 @@ use itc_parentchain::{
 		triggered_dispatcher::{TriggerParentchainBlockImport, TriggeredDispatcher},
 		DispatchBlockImport,
 	},
-	block_import_queue::BlockImportQueue,
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
 use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
+use itp_block_import_queue::{BlockImportQueue, PushToBlockQueue};
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::node::{
 	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEERACLE_MODULE,
 	TEEREX_MODULE, UPDATE_EXCHANGE_RATE,
@@ -80,9 +85,7 @@ use itp_stf_state_handler::{
 use itp_storage::StorageProof;
 use itp_types::{Block, Header, OpaqueCall, SignedBlock};
 use its_sidechain::{
-	aura::block_importer::{BlockImport, BlockImporter},
-	top_pool_executor::TopPoolOperationHandler,
-	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
+	aura::block_importer::BlockImporter, top_pool_executor::TopPoolOperationHandler,
 };
 use log::*;
 use sgx_types::sgx_status_t;
@@ -102,7 +105,7 @@ pub mod cert;
 pub mod error;
 pub mod rpc;
 mod sync;
-pub mod tls_ra;
+mod tls_ra;
 pub mod top_pool_execution;
 
 #[cfg(feature = "test")]
@@ -124,14 +127,18 @@ pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
 #[no_mangle]
-pub unsafe extern "C" fn init() -> sgx_status_t {
-	// initialize the logging environment in the enclave
+pub unsafe extern "C" fn init(
+	mu_ra_addr: *const u8,
+	mu_ra_addr_size: u32,
+	untrusted_worker_addr: *const u8,
+	untrusted_worker_addr_size: u32,
+) -> sgx_status_t {
+	// Initialize the logging environment in the enclave.
 	env_logger::init();
 
 	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
 		return e.into()
 	}
-
 	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
@@ -142,21 +149,48 @@ pub unsafe extern "C" fn init() -> sgx_status_t {
 		return e.into()
 	}
 
-	// create the aes key that is used for state encryption such that a key is always present in tests.
-	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker
+	// Create the aes key that is used for state encryption such that a key is always present in tests.
+	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker.
 	if let Err(e) = aes::create_sealed_if_absent().map_err(Error::Crypto) {
 		return e.into()
 	}
 
 	let state_handler = GlobalFileStateHandler;
 
-	// for debug purposes, list shards. no problem to panic if fails
+	// For debug purposes, list shards. no problem to panic if fails.
 	let shards = state_handler.list_shards().unwrap();
 	debug!("found the following {} shards on disk:", shards.len());
 	for s in shards {
 		debug!("{}", s.encode().to_base58())
 	}
-	//shards.into_iter().map(|s| debug!("{}", s.encode().to_base58()));
+
+	let mu_ra_url =
+		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
+			.map_err(Error::Codec)
+		{
+			Ok(addr) => addr,
+			Err(e) => return e.into(),
+		};
+
+	let untrusted_worker_url = match String::decode(&mut slice::from_raw_parts(
+		untrusted_worker_addr,
+		untrusted_worker_addr_size as usize,
+	))
+	.map_err(Error::Codec)
+	{
+		Ok(addr) => addr,
+		Err(e) => return e.into(),
+	};
+
+	if let Err(e) = itp_primitives_cache::set_primitives(
+		GLOBAL_PRIMITIVES_CACHE.as_ref(),
+		&mu_ra_url,
+		&untrusted_worker_url,
+	)
+	.map_err(Error::PrimitivesAccess)
+	{
+		return e.into()
+	}
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -287,7 +321,10 @@ pub unsafe extern "C" fn call_rpc_methods(
 
 	let res = match sidechain_rpc_int(request) {
 		Ok(res) => res,
-		Err(e) => return e.into(),
+		Err(e) => {
+			error!("RPC request failed: {:?}", e);
+			return e.into()
+		},
 	};
 
 	let response_slice = slice::from_raw_parts_mut(response, response_len as usize);
@@ -297,21 +334,12 @@ pub unsafe extern "C" fn call_rpc_methods(
 }
 
 fn sidechain_rpc_int(request: &str) -> Result<String> {
-	let _sidechain_lock = EnclaveLock::write_all()?;
-
-	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
-
-	let latest_parentchain_header = validator_access.execute_on_validator(|v| {
-		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
-		Ok(latest_parentchain_header)
-	})?;
-
-	let sidechain_block_importer = GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT
+	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT
 		.get()
 		.ok_or(Error::ComponentNotInitialized)?;
 
 	let io = sidechain_io_handler(move |signed_block| {
-		sidechain_block_importer.import_block(signed_block, &latest_parentchain_header)
+		sidechain_block_import_queue.push_single(signed_block)
 	});
 
 	// note: errors are still returned as Option<String>
@@ -389,18 +417,23 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		},
 	};
 
-	its_sidechain::top_pool_rpc_author::initializer::initialize_top_pool_rpc_author(
+	let state_handler = Arc::new(GlobalFileStateHandler);
+	let ocall_api = Arc::new(OcallApi);
+
+	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
 		connection_registry.clone(),
+		state_handler.clone(),
+		ocall_api.clone(),
 		rsa_shielding_key,
 	);
 
-	let rpc_author = match GLOBAL_RPC_AUTHOR_COMPONENT.get() {
-		Some(a) => a,
-		None => {
-			error!("Failed to retrieve global top pool author");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
+	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
+
+	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler));
+	let top_pool_operation_handler =
+		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor));
+
+	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
 
 	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
@@ -511,11 +544,14 @@ pub unsafe extern "C" fn init_light_client(
 		extrinsics_factory,
 		indirect_calls_executor,
 	);
-	let block_queue = BlockImportQueue::<SignedBlock>::default();
-	let block_import_dispatcher =
-		Arc::new(TriggeredDispatcher::new(parentchain_block_importer, block_queue));
+	let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
+	let parentchain_block_import_dispatcher = Arc::new(TriggeredDispatcher::new(
+		parentchain_block_importer,
+		parentchain_block_import_queue,
+	));
 
-	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.initialize(block_import_dispatcher.clone());
+	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+		.initialize(parentchain_block_import_dispatcher.clone());
 
 	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
 		TopPoolOperationHandler::new(rpc_author, stf_executor),
@@ -525,10 +561,24 @@ pub unsafe extern "C" fn init_light_client(
 		state_key,
 		signer,
 		top_pool_executor,
-		block_import_dispatcher,
-		ocall_api,
+		parentchain_block_import_dispatcher,
+		ocall_api.clone(),
 	));
-	GLOBAL_SIDECHAIN_BLOCK_IMPORTER_COMPONENT.initialize(sidechain_block_importer);
+
+	let sidechain_block_syncer =
+		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
+
+	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer.clone());
+
+	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
+
+	let sidechain_block_import_queue_worker =
+		Arc::new(EnclaveSidechainBlockImportQueueWorker::new(
+			sidechain_block_import_queue,
+			sidechain_block_syncer,
+		));
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -569,13 +619,12 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 /// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
 /// with sidechain block production.
 ///
-/// Imports all blocks in the queue except the latest one, which has to be triggered by the sidechain component.
 /// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
 pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 	match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
-		Some(dispatcher) => match dispatcher.import_all_but_latest() {
+		Some(dispatcher) => match dispatcher.import_all() {
 			Ok(_) => sgx_status_t::SGX_SUCCESS,
 			Err(e) => {
 				error!("Failed to trigger import of parentchain blocks: {:?}", e);

@@ -17,13 +17,19 @@
 
 use crate::{
 	error::{Error, Result},
-	global_components::GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+	global_components::{
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+	},
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
+	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 };
 use codec::Encode;
 use itc_parentchain::{
-	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
+	block_import_dispatcher::triggered_dispatcher::{
+		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
+	},
 	light_client::{
 		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
 		ValidatorAccessor,
@@ -44,14 +50,13 @@ use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	block_composer::BlockComposer,
-	consensus_common::{Environment, Error as ConsensusError},
+	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
 	primitives::{
 		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
 		types::block::SignedBlock as SignedSidechainBlock,
 	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
-	top_pool_executor::{TopPoolGetterOperator, TopPoolOperationHandler},
-	top_pool_rpc_author::global_author_container::GLOBAL_RPC_AUTHOR_COMPONENT,
+	top_pool_executor::TopPoolGetterOperator,
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
@@ -77,20 +82,16 @@ pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve author mutex. It might not be initialized?");
-		Error::MutexAccess
-	})?;
+	let top_pool_executor =
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
+			error!("Failed to retrieve top pool operation handler component. It might not be initialized?");
+			Error::ComponentNotInitialized
+		})?;
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-
 	let shards = state_handler.list_shards()?;
 	let mut remaining_shards = shards.len() as u32;
 	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	let top_pool_executor =
-		TopPoolOperationHandler::<Block, SignedSidechainBlock, _, _>::new(rpc_author, stf_executor);
 
 	// Execute trusted getters for each shard. Each shard gets equal amount of time to execute
 	// getters.
@@ -140,6 +141,8 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
 
+	let slot_beginning_timestamp = duration_now();
+
 	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
 		.get()
 		.ok_or(Error::ComponentNotInitialized)?;
@@ -149,19 +152,23 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
 	// (in case we have a block in the queue, but not imported yet).
-	let (latest_parentchain_header, genesis_hash) = validator_access.execute_on_validator(|v| {
-		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
-		let genesis_hash = v.genesis_hash(v.num_relays())?;
-		Ok((latest_parentchain_header, genesis_hash))
-	})?;
+	let (current_parentchain_header, genesis_hash) =
+		validator_access.execute_on_validator(|v| {
+			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+			let genesis_hash = v.genesis_hash(v.num_relays())?;
+			Ok((latest_parentchain_header, genesis_hash))
+		})?;
+
+	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
+	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
+	let sidechain_block_import_queue_worker = GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT
+		.get()
+		.ok_or(Error::ComponentNotInitialized)?;
+	let latest_parentchain_header =
+		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
 	let authority = Ed25519Seal::unseal()?;
 	let state_key = AesSeal::unseal()?;
-
-	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve author mutex. Maybe it's not initialized?");
-		Error::ComponentNotInitialized
-	})?;
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
 	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
@@ -169,15 +176,15 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
 
 	let top_pool_executor =
-		Arc::new(TopPoolOperationHandler::<Block, SignedSidechainBlock, _, _>::new(
-			rpc_author.clone(),
-			stf_executor.clone(),
-		));
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
+			error!("Failed to retrieve top pool operation handler component. Maybe it's not initialized?");
+			Error::ComponentNotInitialized
+		})?;
 
-	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key, rpc_author));
+	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key));
 
 	match yield_next_slot(
-		duration_now(),
+		slot_beginning_timestamp,
 		SLOT_DURATION,
 		latest_parentchain_header,
 		&mut LastSlotSeal,
@@ -220,35 +227,46 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 }
 
 /// Executes aura for the given `slot`.
-pub(crate) fn exec_aura_on_slot<Authority, PB, SB, OCallApi, PEnvironment, BlockImportTrigger>(
-	slot: SlotInfo<PB>,
+pub(crate) fn exec_aura_on_slot<
+	Authority,
+	ParentchainBlock,
+	SignedSidechainBlock,
+	OCallApi,
+	PEnvironment,
+	BlockImportTrigger,
+>(
+	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
 	ocall_api: OCallApi,
 	block_import_trigger: Arc<BlockImportTrigger>,
 	proposer_environment: PEnvironment,
-	shards: Vec<ShardIdentifierFor<SB>>,
-) -> Result<(Vec<SB>, Vec<OpaqueCall>)>
+	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
+) -> Result<(Vec<SignedSidechainBlock>, Vec<OpaqueCall>)>
 where
-	PB: BlockTrait<Hash = H256>,
-	SB: SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
-	SB::Block: SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
-	SB::Signature: From<Authority::Signature>,
+	ParentchainBlock: BlockTrait<Hash = H256>,
+	SignedSidechainBlock:
+		SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
+	SignedSidechainBlock::Block:
+		SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
+	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
 	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
-	NumberFor<PB>: BlockNumberOps,
-	PEnvironment: Environment<PB, SB, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<PB>>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
+	PEnvironment:
+		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
+	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
+		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>,
 {
 	log::info!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let mut aura = Aura::<_, PB, SB, PEnvironment, _, _>::new(
+	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
 		authority,
 		ocall_api,
 		block_import_trigger,
 		proposer_environment,
 	)
-	.with_claim_strategy(SlotClaimStrategy::Always)
+	.with_claim_strategy(SlotClaimStrategy::RoundRobin)
 	.with_allow_delayed_proposal(true);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
@@ -262,19 +280,25 @@ where
 }
 
 /// Gossips sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
-pub(crate) fn send_blocks_and_extrinsics<PB, SB, OCallApi, ValidatorAccessor, ExtrinsicsFactory>(
-	blocks: Vec<SB>,
+pub(crate) fn send_blocks_and_extrinsics<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	OCallApi,
+	ValidatorAccessor,
+	ExtrinsicsFactory,
+>(
+	blocks: Vec<SignedSidechainBlock>,
 	opaque_calls: Vec<OpaqueCall>,
 	ocall_api: OCallApi,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
 where
-	PB: BlockTrait,
-	SB: SignedBlock + 'static,
+	ParentchainBlock: BlockTrait,
+	SignedSidechainBlock: SignedBlock + 'static,
 	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
-	ValidatorAccessor: ValidatorAccess<PB> + Send + Sync + 'static,
-	NumberFor<PB>: BlockNumberOps,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
 	ocall_api.propose_sidechain_blocks(blocks)?;

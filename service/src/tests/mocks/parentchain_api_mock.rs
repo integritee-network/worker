@@ -15,7 +15,7 @@
 
 */
 
-use itp_api_client_extensions::{ApiResult, ChainApi, StorageProof};
+use itp_node_api_extensions::{ApiResult, ChainApi, StorageProof};
 use itp_test::builders::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
@@ -37,8 +37,7 @@ impl ParentchainApiMock {
 		self.parentchain = (1..=number_of_blocks)
 			.map(|n| {
 				let header = ParentchainHeaderBuilder::default().with_number(n).build();
-				let block = ParentchainBlockBuilder::default().with_header(header).build_signed();
-				block
+				ParentchainBlockBuilder::default().with_header(header).build_signed()
 			})
 			.collect();
 		self

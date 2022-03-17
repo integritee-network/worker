@@ -26,7 +26,7 @@ use itp_stf_executor::traits::{StatePostProcessing, StfExecuteShieldFunds, StfEx
 use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
 use sp_core::blake2_256;
-use sp_runtime::traits::{Block as BlockT, Header};
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::{sync::Arc, vec::Vec};
 use substrate_api_client::UncheckedExtrinsicV4;
 
@@ -35,12 +35,12 @@ pub trait ExecuteIndirectCalls {
 	/// Scans blocks for extrinsics that ask the enclave to execute some actions.
 	/// Executes indirect invocation calls, including shielding and unshielding calls.
 	/// Returns all unshielding call confirmations as opaque calls and the hashes of executed shielding calls.
-	fn execute_indirect_calls_in_extrinsics<PB>(
+	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
-		block: &PB,
+		block: &ParentchainBlock,
 	) -> Result<(Vec<OpaqueCall>, Vec<H256>)>
 	where
-		PB: BlockT<Hash = H256>;
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
 pub struct IndirectCallsExecutor<ShieldingKey, StfExecutor> {
@@ -95,12 +95,12 @@ where
 	ShieldingKey: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
-	fn execute_indirect_calls_in_extrinsics<PB>(
+	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
-		block: &PB,
+		block: &ParentchainBlock,
 	) -> Result<(Vec<OpaqueCall>, Vec<H256>)>
 	where
-		PB: BlockT<Hash = H256>,
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
 		debug!("Scanning block {:?} for relevant xt", block.header().number());
 		let mut opaque_calls = Vec::<OpaqueCall>::new();

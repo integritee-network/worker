@@ -33,7 +33,16 @@ pub type Amount = u128;
 pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
+pub type BlockHash = H256;
 
+pub type IpfsHash = [u8; 46];
+pub type MrEnclave = [u8; 32];
+
+pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
+pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
+pub type CallWorkerFn = ([u8; 2], Request);
+
+pub type Enclave = EnclaveGen<AccountId>;
 /// Simple blob to hold an encoded call
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct OpaqueCall(pub Vec<u8>);
@@ -58,18 +67,8 @@ pub struct Request {
 	pub cyphertext: Vec<u8>,
 }
 
-pub type IpfsHash = [u8; 46];
-
-pub type MrEnclave = [u8; 32];
-
-pub type BlockHash = H256;
-
-pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
-pub type CallWorkerFn = ([u8; 2], Request);
-
 // Todo: move this improved enclave definition into a primitives crate in the pallet_teerex repo.
-#[derive(Encode, Decode, Default, Clone, PartialEq, sp_core::RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, sp_core::RuntimeDebug)]
 pub struct EnclaveGen<AccountId> {
 	pub pubkey: AccountId,
 	// FIXME: this is redundant information
@@ -84,8 +83,6 @@ impl<AccountId> EnclaveGen<AccountId> {
 		Self { pubkey, mr_enclave, timestamp, url }
 	}
 }
-
-pub type Enclave = EnclaveGen<AccountId>;
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
 pub enum DirectRequestStatus {

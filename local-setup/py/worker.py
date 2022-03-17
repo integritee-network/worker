@@ -143,15 +143,15 @@ class Worker:
     def write_signer_pub(self):
         return run_subprocess(self.cli + ['signing-key'], stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
-    def request_keys(self, provider_addr: str, skip_ra: bool = False):
+    def sync_state(self, flags: [str] = None, skip_ra: bool = False):
         """ Returns the keys from another worker. """
 
         if skip_ra:
-            flags = ['request-keys', '--skip-ra', provider_addr]
+            subcommand_flags = ['request-state', '--skip-ra']
         else:
-            flags = ['request-keys', provider_addr]
+            subcommand_flags = ['request-state']
 
-        return run_subprocess(self.cli + flags, stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
+        return run_subprocess(self.cli + flags + subcommand_flags, stdout=subprocess.PIPE, stderr=self.std_err, cwd=self.cwd)
 
     def _shard_path(self, shard):
         return pathlib.Path(f'{self.cwd}/shards/{shard}')
@@ -163,12 +163,12 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='info,ws=warn,sp_io=warn,'
+        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=warn,'
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'
-                                        'enclave_runtime=info,'
-                                        'integritee_service=info,'
+                                        'enclave_runtime=warn,'
+                                        'integritee_service=warn,'
                                         'ita_stf=debug')
 
         return Popen(

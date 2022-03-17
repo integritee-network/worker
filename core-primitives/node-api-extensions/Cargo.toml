@@ -1,0 +1,25 @@
+[package]
+name = "itp-node-api-extensions"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+
+[dependencies]
+# crates.io
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+thiserror = "1.0"
+
+# substrate
+sp-core = { version = "6.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-finality-grandpa = { version = "4.0.0-dev",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-runtime = { version = "6.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "master" }
+
+# scs
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master" }
+
+# integritee
+itp-types = { path = "../types" }
+
+[features]
+# used for unit testing only!
+mocks = []

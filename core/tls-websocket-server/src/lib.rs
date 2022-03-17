@@ -72,7 +72,7 @@ pub enum WebSocketError {
 	#[error("Web-socket write error: {0}")]
 	SocketWriteError(String),
 	#[error("Web-socket handler error: {0}")]
-	HandlerError(Box<dyn std::error::Error>),
+	HandlerError(Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 pub type WebSocketResult<T> = Result<T, WebSocketError>;
