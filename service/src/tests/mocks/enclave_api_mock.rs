@@ -30,10 +30,6 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(())
 	}
 
-	fn init_enclave_base_components(&self) -> EnclaveResult<()> {
-		Ok(())
-	}
-
 	fn init_enclave_sidechain_components(&self) -> EnclaveResult<()> {
 		Ok(())
 	}

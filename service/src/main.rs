@@ -307,10 +307,6 @@ fn start_worker<E, T, D>(
 
 	let tokio_handle = tokio_handle_getter.get_handle();
 
-	//-------------------------------------------------------------------------
-	// Initialize the enclave base components.
-	enclave.init_enclave_base_components().unwrap();
-
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
@@ -377,7 +373,7 @@ fn start_worker<E, T, D>(
 	}
 
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
-	println!("*** [+] Finished syncing light client, syncing parent chain...");
+	println!("*** [+] Finished syncing light client, syncing parentchain...");
 
 	// Syncing all parentchain blocks, this might take a while..
 	let parentchain_block_syncer =
@@ -406,13 +402,13 @@ fn start_worker<E, T, D>(
 	let enclave_for_direct_invocation = enclave.clone();
 	thread::spawn(move || {
 		println!(
-			"[+] Trusted RPC direction invocation server listening on {}",
+			"[+] Trusted RPC direct invocation server listening on {}",
 			direct_invocation_server_addr
 		);
 		enclave_for_direct_invocation
 			.init_direct_invocation_server(direct_invocation_server_addr)
 			.unwrap();
-		println!("[+] RPC direction invocation server shut down");
+		println!("[+] RPC direct invocation server shut down");
 	});
 
 	// ------------------------------------------------------------------------
