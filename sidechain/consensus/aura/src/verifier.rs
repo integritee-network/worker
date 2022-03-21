@@ -81,13 +81,8 @@ where
 			self.slot_duration,
 		);
 
-		verify_author::<AuthorityPair, ParentchainBlock::Header, SignedSidechainBlock, _>(
-			&slot,
-			signed_block.block(),
-			parentchain_header,
-			ctx,
-		)?;
-
+		// We check the ancestry before the author, because the parentchain block might not match
+		// in case we try to import a sidechain block that was already imported longer than 1 parentchain block ago.
 		match self.sidechain_state.get_last_block() {
 			Some(last_block) => verify_block_ancestry::<SignedSidechainBlock::Block>(
 				signed_block.block(),
@@ -95,6 +90,13 @@ where
 			)?,
 			None => ensure_first_block(signed_block.block())?,
 		}
+
+		verify_author::<AuthorityPair, ParentchainBlock::Header, SignedSidechainBlock, _>(
+			&slot,
+			signed_block.block(),
+			parentchain_header,
+			ctx,
+		)?;
 
 		Ok(signed_block)
 	}

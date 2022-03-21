@@ -270,9 +270,11 @@ pub unsafe extern "C" fn call_rpc_methods(
 }
 
 fn sidechain_rpc_int(request: &str) -> Result<String> {
-	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let sidechain_block_import_queue =
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get().ok_or_else(|| {
+			error!("Failed to retrieve sidechain block import queue component (maybe it's not initialized?)");
+			Error::ComponentNotInitialized
+		})?;
 
 	let io = sidechain_io_handler(move |signed_block| {
 		sidechain_block_import_queue.push_single(signed_block)

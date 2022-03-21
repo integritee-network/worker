@@ -328,6 +328,39 @@ fn start_worker<E, T, D>(
 	}
 
 	// ------------------------------------------------------------------------
+	// Start trusted worker rpc server
+	let direct_invocation_server_addr = config.trusted_worker_url_internal();
+	let enclave_for_direct_invocation = enclave.clone();
+	thread::spawn(move || {
+		println!(
+			"[+] Trusted RPC direct invocation server listening on {}",
+			direct_invocation_server_addr
+		);
+		enclave_for_direct_invocation
+			.init_direct_invocation_server(direct_invocation_server_addr)
+			.unwrap();
+		println!("[+] RPC direct invocation server shut down");
+	});
+
+	// ------------------------------------------------------------------------
+	// Start untrusted worker rpc server.
+	// FIXME: this should be removed - this server should only handle untrusted things.
+	// i.e move sidechain block importing to trusted worker.
+	let enclave_for_block_gossip_rpc_server = enclave.clone();
+	let untrusted_url = config.untrusted_worker_url();
+	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
+	let sidechain_storage_for_rpc = sidechain_storage.clone();
+	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
+		itc_rpc_server::run_server(
+			&untrusted_url,
+			enclave_for_block_gossip_rpc_server,
+			sidechain_storage_for_rpc,
+		)
+		.await
+		.unwrap();
+	});
+
+	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
@@ -393,40 +426,6 @@ fn start_worker<E, T, D>(
 	// ------------------------------------------------------------------------
 	// Initialize sidechain components (has to be AFTER init_light_client()
 	enclave.init_enclave_sidechain_components().unwrap();
-
-	// ------------------------------------------------------------------------
-	// Start trusted worker rpc server
-	// (requires the sidechain components to be initialized).
-	let direct_invocation_server_addr = config.trusted_worker_url_internal();
-	let enclave_for_direct_invocation = enclave.clone();
-	thread::spawn(move || {
-		println!(
-			"[+] Trusted RPC direct invocation server listening on {}",
-			direct_invocation_server_addr
-		);
-		enclave_for_direct_invocation
-			.init_direct_invocation_server(direct_invocation_server_addr)
-			.unwrap();
-		println!("[+] RPC direct invocation server shut down");
-	});
-
-	// ------------------------------------------------------------------------
-	// Start untrusted worker rpc server.
-	// FIXME: this should be removed - this server should only handle untrusted things.
-	// i.e move sidechain block importing to trusted worker.
-	let enclave_for_block_gossip_rpc_server = enclave.clone();
-	let untrusted_url = config.untrusted_worker_url();
-	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
-	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
-		itc_rpc_server::run_server(
-			&untrusted_url,
-			enclave_for_block_gossip_rpc_server,
-			sidechain_storage_for_rpc,
-		)
-		.await
-		.unwrap();
-	});
 
 	thread::sleep(Duration::from_secs(3));
 

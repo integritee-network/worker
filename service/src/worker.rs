@@ -136,8 +136,17 @@ where
 		let mut peer_urls = Vec::<String>::new();
 		for enclave in enclaves {
 			// FIXME: This is temporary only, as block gossiping should be moved to trusted ws server.
+			let enclave_url = enclave.url.clone();
 			let worker_api_direct = DirectWorkerApi::new(enclave.url);
-			peer_urls.push(worker_api_direct.get_untrusted_worker_url()?);
+			let untrusted_worker_url =
+				worker_api_direct.get_untrusted_worker_url().map_err(|e| {
+					error!(
+						"Failed to get untrusted worker url (enclave: {}): {:?}",
+						enclave_url, e
+					);
+					e
+				})?;
+			peer_urls.push(untrusted_worker_url);
 		}
 		Ok(peer_urls)
 	}

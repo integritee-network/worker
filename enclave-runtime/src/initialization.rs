@@ -84,7 +84,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let ocall_api = Arc::new(OcallApi);
 	GLOBAL_OCALL_API_COMPONENT.initialize(ocall_api.clone());
 
-	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler.clone()));
+	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api.clone(), state_handler.clone()));
 	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
 	// For debug purposes, list shards. no problem to panic if fails.
@@ -101,14 +101,29 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	)
 	.map_err(Error::PrimitivesAccess)?;
 
+	let shielding_key = Rsa3072Seal::unseal()?;
+	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
+	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
+
+	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
+		connection_registry.clone(),
+		state_handler,
+		ocall_api,
+		shielding_key,
+	);
+	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
+
+	let io_handler = public_api_rpc_handler(rpc_author.clone());
+	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
+	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
+
+	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
+
 	Ok(())
 }
 
 pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
-	let shielding_key = Rsa3072Seal::unseal()?;
-	let signer = Ed25519Seal::unseal()?;
-	let state_key = AesSeal::unseal()?;
-
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get().ok_or_else(|| {
 		error!("Failed to retrieve global STF executor component (maybe it is not initialized?)");
 		Error::ComponentNotInitialized
@@ -124,24 +139,14 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		Error::ComponentNotInitialized
 	})?;
 
-	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
-	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
-
-	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
-		connection_registry.clone(),
-		state_handler.clone(),
-		ocall_api.clone(),
-		shielding_key,
-	);
-	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
+	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
+		error!("Failed to retrieve global RPC AUTHOR component (maybe it is not initialized?)");
+		Error::ComponentNotInitialized
+	})?;
 
 	let top_pool_operation_handler =
 		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor.clone()));
 	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
-
-	let io_handler = public_api_rpc_handler(rpc_author.clone());
-	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
-	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
 
 	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
 		TopPoolOperationHandler::new(rpc_author, stf_executor),
@@ -153,21 +158,26 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		Error::ComponentNotInitialized
 	})?;
 
+	let signer = Ed25519Seal::unseal()?;
+	let state_key = AesSeal::unseal()?;
+
 	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
 		state_handler,
 		state_key,
-		signer.clone(),
+		signer,
 		top_pool_executor,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
 	));
 
+	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get().ok_or_else(|| {
+		error!("Failed to retrieve global sidechain block import queue component (maybe it is not initialized?)");
+		Error::ComponentNotInitialized
+	})?;
+
 	let sidechain_block_syncer =
 		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
 	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer.clone());
-
-	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
-	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
 
 	let sidechain_block_import_queue_worker =
 		Arc::new(EnclaveSidechainBlockImportQueueWorker::new(
