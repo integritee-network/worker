@@ -20,10 +20,7 @@
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
-	globals::{
-		tokio_handle::{GetTokioHandle, GlobalTokioHandle},
-		worker::{GlobalWorker, Worker},
-	},
+	globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -31,6 +28,7 @@ use crate::{
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
+	worker::Worker,
 	worker_peers_updater::WorkerPeersUpdater,
 };
 use base58::ToBase58;
@@ -48,6 +46,7 @@ use itp_enclave_api::{
 	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
 	sidechain::Sidechain,
 	teerex_api::TeerexApi,
+	Enclave,
 };
 use itp_node_api_extensions::{
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
@@ -112,6 +111,8 @@ mod worker_peers_updater;
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+pub type EnclaveWorker = Worker<Config, NodeApiFactory, Enclave>;
+
 fn main() {
 	// Setup logging
 	env_logger::init();
@@ -131,11 +132,7 @@ fn main() {
 	info!("*** Starting service in SGX debug mode");
 
 	// build the entire dependency tree
-	let worker = Arc::new(GlobalWorker {});
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
-	let sync_block_gossiper =
-		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
-	let peer_updater = Arc::new(WorkerPeersUpdater::new(worker));
 	let sidechain_blockstorage = Arc::new(
 		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
 			.unwrap(),
@@ -143,6 +140,15 @@ fn main() {
 	let node_api_factory =
 		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
+	let worker = Arc::new(EnclaveWorker::new(
+		config.clone(),
+		enclave.clone(),
+		node_api_factory.clone(),
+		Vec::new(),
+	));
+	let sync_block_gossiper =
+		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
+	let peer_updater = Arc::new(WorkerPeersUpdater::new(worker));
 	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.clone());
 	let peer_sidechain_block_fetcher =
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
@@ -169,13 +175,6 @@ fn main() {
 
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
-
-		GlobalWorker::reset_worker(Worker::new(
-			config.clone(),
-			node_api.clone(),
-			enclave.clone(),
-			Vec::new(),
-		));
 
 		start_worker(
 			config,
