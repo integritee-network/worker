@@ -108,7 +108,7 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 	let _ = state_facade.load_initialized(&shard_id).unwrap();
 
 	let encryption_key = ShieldingCryptoMock::default();
-	let ocall_mock = Arc::new(MetricsOCallMock {});
+	let ocall_mock = Arc::new(MetricsOCallMock::default());
 
 	(
 		Author::new(

@@ -95,6 +95,7 @@ mod parentchain_block_syncer;
 mod prometheus_metrics;
 mod sync_block_gossiper;
 mod sync_state;
+mod teeracle_metrics;
 mod tests;
 mod utils;
 mod worker;
@@ -545,7 +546,7 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 */
 /// Send extrinsic to chain according to the market data update interval in the settings
 /// with the current market data (for now only exchange rate).
-fn start_interval_market_update<E: EnclaveBase + TeeracleApi>(
+fn start_interval_market_update<E: TeeracleApi>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	interval: Duration,
 	enclave_api: &E,
@@ -558,15 +559,17 @@ fn start_interval_market_update<E: EnclaveBase + TeeracleApi>(
 	);
 }
 
-fn execute_update_market<E: EnclaveBase + TeeracleApi>(
-	node_api: &Api<sr25519::Pair, WsRpcClient>,
-	enclave: &E,
-) {
+fn execute_update_market<E: TeeracleApi>(node_api: &Api<sr25519::Pair, WsRpcClient>, enclave: &E) {
+	use teeracle_metrics::{
+		increment_number_of_request_failures, set_extrinsics_inclusion_success,
+	};
+
 	// Get market data for usd (hardcoded)
 	let updated_extrinsic =
 		match enclave.update_market_data_xt(node_api.genesis_hash, "TEER", "USD") {
 			Err(e) => {
 				error!("{:?}", e);
+				increment_number_of_request_failures();
 				return
 			},
 			Ok(r) => r,
@@ -580,10 +583,15 @@ fn execute_update_market<E: EnclaveBase + TeeracleApi>(
 	let extrinsic_hash = match node_api.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
 		Err(e) => {
 			error!("{:?}: ", e);
+			set_extrinsics_inclusion_success(false);
 			return
 		},
-		Ok(r) => r,
+		Ok(r) => {
+			set_extrinsics_inclusion_success(true);
+			r
+		},
 	};
+
 	println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
 }
 

@@ -14,11 +14,16 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 # no-std dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 
+# internal
+itp-types = { path = "../types", default-features = false }
+
 [features]
 default = ["std"]
 std = [
+    "itp-types/std",
     "codec/std",
 ]
 sgx = [
+    "itp-types/sgx",
     "sgx_tstd",
 ]

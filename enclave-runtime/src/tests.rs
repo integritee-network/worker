@@ -600,7 +600,7 @@ pub fn test_setup() -> (
 			AllowAllTopsFilter,
 			state_handler.clone(),
 			encryption_key.clone(),
-			Arc::new(MetricsOCallMock {}),
+			Arc::new(MetricsOCallMock::default()),
 		)),
 		state,
 		shard,

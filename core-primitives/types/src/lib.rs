@@ -1,17 +1,19 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
+
+use codec::{Decode, Encode};
+use itp_storage::storage_entry::StorageEntry;
 use sp_runtime::{
 	generic::{Block as BlockG, Header as HeaderG, SignedBlock as SignedBlockG},
 	traits::BlakeTwo256,
 	OpaqueExtrinsic,
 };
 use std::vec::Vec;
+use substrate_fixed::types::U32F32;
 
-use itp_storage::storage_entry::StorageEntry;
 pub use rpc::*;
 pub mod rpc;
 
@@ -41,6 +43,9 @@ pub type MrEnclave = [u8; 32];
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
+
+/// Teeracle types
+pub type ExchangeRate = U32F32;
 
 pub type Enclave = EnclaveGen<AccountId>;
 /// Simple blob to hold an encoded call

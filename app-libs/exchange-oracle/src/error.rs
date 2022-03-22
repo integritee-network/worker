@@ -23,12 +23,12 @@ use std::boxed::Box;
 pub enum Error {
 	#[error("Rest client error")]
 	RestClient(itc_rest_client::error::Error),
-	#[error("Other error")]
-	Other(Box<dyn std::error::Error>),
 	#[error("Could not retrieve any data")]
 	NoValidData,
 	#[error("Value for exchange rate is null")]
 	EmptyExchangeRate,
 	#[error("Invalid id for crypto currency")]
 	InvalidCryptoCurrencyId,
+	#[error("Other error")]
+	Other(Box<dyn std::error::Error>),
 }

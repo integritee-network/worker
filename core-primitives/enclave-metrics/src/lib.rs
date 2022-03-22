@@ -24,11 +24,24 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
+use itp_types::ExchangeRate;
+use std::string::String;
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub enum EnclaveMetric {
 	SetSidechainBlockHeight(u64),
 	TopPoolSizeSet(u64),
 	TopPoolSizeIncrement,
 	TopPoolSizeDecrement,
+	ExchangeRateOracle(ExchangeRateOracleMetric),
+}
+
+#[derive(Encode, Decode, Debug)]
+pub enum ExchangeRateOracleMetric {
+	/// Exchange Rate from CoinGecko - (Source, TradingPair, ExchangeRate)
+	ExchangeRate(String, String, ExchangeRate),
+	/// Response time of the request in [ms]. (Source, ResponseTime)
+	ResponseTime(String, u128),
+	/// Increment the number of requests (Source)
+	NumberRequestsIncrement(String),
 }

@@ -33,13 +33,11 @@ pub mod sgx_reexport_prelude {
 }
 
 use crate::{error::Error, types::TradingPair};
-use substrate_fixed::types::U32F32;
+use itp_types::ExchangeRate;
 
 pub mod coingecko;
 pub mod error;
 pub mod types;
-
-pub type ExchangeRate = U32F32;
 
 pub trait GetExchangeRate {
 	/// Get the cryptocurrency/fiat_currency exchange rate

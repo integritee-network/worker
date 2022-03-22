@@ -11,6 +11,7 @@ chrono          = { version = "0.4.19", default-features = false, features = ["a
 serde           = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json      = { version = "1.0", default-features = false, features = ["alloc"] }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "master", default-features = false }
+substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9"}
 
 sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true}
 
