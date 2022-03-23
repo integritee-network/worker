@@ -1,24 +1,44 @@
 version: "3.3"
 services:
   integritee-node:
-    image: "integritee/integritee-node-dev:1.0.6"
-    ports: 
+    image: "integritee/integritee-node-dev:1.0.7"
+    ports:
      - 9944:9944
     command: --dev --rpc-methods unsafe --ws-external --rpc-external
     logging:
       driver: none
   integritee-worker-1:
-    image: "integritee-worker:dev"
-    environment:
-     - RUST_LOG='info,info,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=info,integritee_service=info,ita_stf=debug'
-    command: /usr/local/bin/integritee-service --ws-external -u ws://integritee-node run --dev --skip-ra -U ws://integritee-worker-1:2000
+    image: "gaudiworker:0.0.0"
+    ports:
+      - 1234:1234
+    entrypoint: bash -c "
+      sleep 5
+      && ls -lh
+      && /usr/local/bin/integritee shielding-key
+      && /usr/local/bin/integritee signing-key
+      && ls -lh
+      && /usr/local/bin/integritee --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 run --dev --skip-ra"
     restart: always
   integritee-worker-2:
-    image: "integritee-worker:dev"
-    environment:
-     - RUST_LOG='info,info,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=info,integritee_service=info,ita_stf=debug'
-    command: bash -c "
-         sleep 20
-         && /usr/local/bin/integritee-service request-keys integritee-worker-1:3443 --skip-ra 
-         && /usr/local/bin/integritee-service --ws-external -u ws://integritee-node run --dev --skip-ra -U ws://integritee-worker-2:2000"
+    image: "gaudiworker:0.0.0"
+    entrypoint: bash -c "
+      echo Hello 1
+      && sleep 10
+      && status_code=404
+      && echo Hello 2
+      && while [[ $$status_code -ne 200 ]] ; do
+        echo You again???;
+        sleep 2;
+        status_code=$$(curl --write-out '%{http_code}' --silent --output /dev/null integritee-worker-1:1234/is_initialized);
+        echo You got $$status_code, my friend;
+      done
+      && echo Hello 3
+      && sleep 10
+      && ls -lh
+      && /usr/local/bin/integritee shielding-key
+      && /usr/local/bin/integritee signing-key
+      && ls -lh
+      && /usr/local/bin/integritee -u ws://integritee-node request-state --skip-ra
+      && echo Hello 4
+      && /usr/local/bin/integritee --ws-external -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 run --dev --skip-ra"
     restart: always
