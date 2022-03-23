@@ -14,17 +14,12 @@
 	limitations under the License.
 
 */
+
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{
-	error::Error,
-	types::{TradingPair, TradingPairId},
-	GetExchangeRate,
-};
+use crate::{error::Error, exchange_rate_oracle::OracleSource, types::TradingPair};
 use itc_rest_client::{http_client::HttpClient, rest_client::RestClient, RestGet, RestPath};
-use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric};
-use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_types::ExchangeRate;
 use lazy_static::lazy_static;
 use log::*;
@@ -32,8 +27,7 @@ use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
 	string::{String, ToString},
-	sync::Arc,
-	time::{Duration, Instant},
+	time::Duration,
 	vec::Vec,
 };
 use url::Url;
@@ -53,91 +47,47 @@ lazy_static! {
 		("BTC", "bitcoin"),
 	]);
 }
-/// REST client to make requests to CoinGecko.
-pub struct CoinGeckoClient<OCallApi> {
-	client: RestClient<HttpClient>,
-	ocall_api: Arc<OCallApi>,
-}
 
-impl<OCallApi> CoinGeckoClient<OCallApi>
-where
-	OCallApi: EnclaveMetricsOCallApi,
-{
-	pub fn new(baseurl: Url, ocall_api: Arc<OCallApi>) -> Self {
-		let http_client = HttpClient::new(true, Some(COINGECKO_TIMEOUT), None, None);
-		let rest_client = RestClient::new(http_client, baseurl);
-		CoinGeckoClient { client: rest_client, ocall_api }
-	}
+/// CoinGecko oracle source.
+pub struct CoinGeckoSource;
 
-	pub fn base_url() -> Result<Url, Error> {
-		Url::parse(COINGECKO_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
-	}
-
-	fn update_metric(&self, metric: ExchangeRateOracleMetric) {
-		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::ExchangeRateOracle(metric)) {
-			error!("Failed to update enclave metric, sgx_status_t: {}", e)
-		}
-	}
-
-	fn metric_source() -> String {
-		"coingecko".to_string()
-	}
-}
-
-impl<OCallApi> TradingPairId for CoinGeckoClient<OCallApi> {
-	fn crypto_currency_id(&mut self, trading_pair: TradingPair) -> Result<String, Error> {
-		let key = trading_pair.crypto_currency;
-		match SYMBOL_ID_MAP.get(&key as &str) {
+impl CoinGeckoSource {
+	fn map_crypto_currency_id(trading_pair: &TradingPair) -> Result<String, Error> {
+		let key = &trading_pair.crypto_currency;
+		match SYMBOL_ID_MAP.get(key.as_str()) {
 			Some(v) => Ok(v.to_string()),
 			None => Err(Error::InvalidCryptoCurrencyId),
 		}
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CoinGeckoMarketStruct {
-	id: String,
-	symbol: String,
-	name: String,
-	current_price: Option<f32>,
-	last_updated: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CoinGeckoMarket(pub Vec<CoinGeckoMarketStruct>);
-
-impl RestPath<String> for CoinGeckoMarket {
-	fn get_path(path: String) -> Result<String, itc_rest_client::error::Error> {
-		Ok(path)
+impl OracleSource for CoinGeckoSource {
+	fn id(&self) -> String {
+		"coingecko".to_string()
 	}
-}
 
-impl<OCallApi> GetExchangeRate for CoinGeckoClient<OCallApi>
-where
-	OCallApi: EnclaveMetricsOCallApi,
-{
-	fn get_exchange_rate(&mut self, trading_pair: TradingPair) -> Result<ExchangeRate, Error> {
-		self.update_metric(
-			ExchangeRateOracleMetric::NumberRequestsIncrement(Self::metric_source()),
-		);
+	fn request_timeout(&self) -> Option<Duration> {
+		Some(COINGECKO_TIMEOUT)
+	}
 
-		let fiat_id = self.fiat_currency_id(trading_pair.clone())?;
-		let crypto_id = self.crypto_currency_id(trading_pair.clone())?;
+	fn base_url(&self) -> Result<Url, Error> {
+		Url::parse(COINGECKO_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
+	}
 
-		let timer_start = Instant::now();
+	fn send_exchange_rate_request(
+		&self,
+		rest_client: &mut RestClient<HttpClient>,
+		trading_pair: TradingPair,
+	) -> Result<ExchangeRate, Error> {
+		let fiat_id = trading_pair.fiat_currency.clone();
+		let crypto_id = Self::map_crypto_currency_id(&trading_pair)?;
 
-		let response = self
-			.client
+		let response = rest_client
 			.get_with::<String, CoinGeckoMarket>(
 				COINGECKO_PATH.to_string(),
 				&[(COINGECKO_PARAM_CURRENCY, &fiat_id), (COINGECKO_PARAM_COIN, &crypto_id)],
 			)
 			.map_err(Error::RestClient)?;
-
-		self.update_metric(ExchangeRateOracleMetric::ResponseTime(
-			Self::metric_source(),
-			timer_start.elapsed().as_millis(),
-		));
 
 		let list = response.0;
 		if list.is_empty() {
@@ -146,15 +96,7 @@ where
 		}
 
 		match list[0].current_price {
-			Some(r) => {
-				let exchange_rate = ExchangeRate::from_num(r);
-				self.update_metric(ExchangeRateOracleMetric::ExchangeRate(
-					Self::metric_source(),
-					trading_pair.key(),
-					exchange_rate,
-				));
-				Ok(exchange_rate)
-			},
+			Some(r) => Ok(ExchangeRate::from_num(r)),
 			None => {
 				error!("Failed to get the exchange rate {}", TradingPair::key(trading_pair));
 				Err(Error::EmptyExchangeRate)
@@ -163,21 +105,41 @@ where
 	}
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct CoinGeckoMarketStruct {
+	id: String,
+	symbol: String,
+	name: String,
+	current_price: Option<f32>,
+	last_updated: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CoinGeckoMarket(pub Vec<CoinGeckoMarketStruct>);
+
+impl RestPath<String> for CoinGeckoMarket {
+	fn get_path(path: String) -> Result<String, itc_rest_client::error::Error> {
+		Ok(path)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use codec::Decode;
+	use crate::{
+		exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
+	};
 	use core::assert_matches::assert_matches;
-	use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
-	type TestCoinGeckoClient = CoinGeckoClient<MetricsOCallMock>;
+	use std::sync::Arc;
+
+	type TestCoinGeckoClient = ExchangeRateOracle<CoinGeckoSource, MetricsExporterMock>;
 
 	fn get_coingecko_crypto_currency_id(crypto_currency: &str) -> Result<String, Error> {
-		let mut coingecko_client = create_coingecko_client();
 		let trading_pair = TradingPair {
 			crypto_currency: crypto_currency.to_string(),
 			fiat_currency: "USD".to_string(),
 		};
-		coingecko_client.crypto_currency_id(trading_pair)
+		CoinGeckoSource::map_crypto_currency_id(&trading_pair)
 	}
 
 	#[test]
@@ -212,7 +174,7 @@ mod tests {
 
 	#[test]
 	fn get_exchange_rate_for_undefined_coingecko_crypto_currency_fails() {
-		let mut coingecko_client = create_coingecko_client();
+		let coingecko_client = create_coingecko_client();
 		let trading_pair = TradingPair {
 			crypto_currency: "invalid_coin".to_string(),
 			fiat_currency: "USD".to_string(),
@@ -223,7 +185,7 @@ mod tests {
 
 	#[test]
 	fn get_exchange_rate_for_undefined_fiat_currency_fails() {
-		let mut coingecko_client = create_coingecko_client();
+		let coingecko_client = create_coingecko_client();
 		let trading_pair =
 			TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "CH".to_string() };
 		let result = coingecko_client.get_exchange_rate(trading_pair);
@@ -231,58 +193,36 @@ mod tests {
 	}
 
 	#[test]
-	fn get_exchange_rate_updates_metrics() {
-		let url = TestCoinGeckoClient::base_url().unwrap();
-		let metrics_ocall_api = Arc::new(MetricsOCallMock::default());
-		let mut coingecko_client = CoinGeckoClient::new(url, metrics_ocall_api.clone());
-
-		let trading_pair =
-			TradingPair { crypto_currency: "BTC".to_string(), fiat_currency: "USD".to_string() };
-		let _bit_usd = coingecko_client.get_exchange_rate(trading_pair.clone()).unwrap();
-
-		let metrics_updates = metrics_ocall_api.get_metrics_updates();
-		assert_eq!(3, metrics_updates.len());
-		let exchange_rate_metric: EnclaveMetric =
-			Decode::decode(&mut metrics_updates.get(2).unwrap().clone().as_slice()).unwrap();
-
-		let _trading_pair_key = trading_pair.key();
-		assert_matches!(
-			exchange_rate_metric,
-			EnclaveMetric::ExchangeRateOracle(ExchangeRateOracleMetric::ExchangeRate(
-				_,
-				_trading_pair_key,
-				_bit_usd
-			))
-		);
-	}
-
-	#[test]
 	fn get_exchange_rate_from_coingecko_works() {
-		let mut coingecko_client = create_coingecko_client();
+		let coingecko_client = create_coingecko_client();
 		let dot_usd = coingecko_client
 			.get_exchange_rate(TradingPair {
 				crypto_currency: "DOT".to_string(),
 				fiat_currency: "USD".to_string(),
 			})
-			.unwrap();
+			.unwrap()
+			.0;
 		let bit_usd = coingecko_client
 			.get_exchange_rate(TradingPair {
 				crypto_currency: "BTC".to_string(),
 				fiat_currency: "USD".to_string(),
 			})
-			.unwrap();
+			.unwrap()
+			.0;
 		let dot_chf = coingecko_client
 			.get_exchange_rate(TradingPair {
 				crypto_currency: "DOT".to_string(),
 				fiat_currency: "chf".to_string(),
 			})
-			.unwrap();
+			.unwrap()
+			.0;
 		let bit_chf = coingecko_client
 			.get_exchange_rate(TradingPair {
 				crypto_currency: "BTC".to_string(),
 				fiat_currency: "chf".to_string(),
 			})
-			.unwrap();
+			.unwrap()
+			.0;
 
 		let zero = ExchangeRate::from_num(0);
 		//Ensure that get_exchange_rate return a positive rate
@@ -292,7 +232,6 @@ mod tests {
 	}
 
 	fn create_coingecko_client() -> TestCoinGeckoClient {
-		let url = TestCoinGeckoClient::base_url().unwrap();
-		CoinGeckoClient::new(url, Arc::new(MetricsOCallMock::default()))
+		TestCoinGeckoClient::new(CoinGeckoSource {}, Arc::new(MetricsExporterMock::default()))
 	}
 }

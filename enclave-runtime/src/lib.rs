@@ -49,7 +49,7 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
-use ita_exchange_oracle::{coingecko::CoinGeckoClient, types::TradingPair, GetExchangeRate};
+use ita_exchange_oracle::{create_coingecko_oracle, types::TradingPair, GetExchangeRate};
 use ita_stf::{Getter, ShardIdentifier, Stf};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -683,22 +683,15 @@ fn update_market_data_internal(
 	crypto_currency: String,
 	fiat_currency: String,
 ) -> Result<Vec<OpaqueExtrinsic>> {
-	type ExchangeRateClient = CoinGeckoClient<OcallApi>;
-
 	let signer = Ed25519Seal::unseal()?;
 
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
 
 	// Get the exchange rate
-	let url = match ExchangeRateClient::base_url() {
-		Ok(u) => u,
-		Err(e) => return Err(Error::Other(e.into())),
-	};
-
 	let trading_pair = TradingPair { crypto_currency, fiat_currency };
-	let mut coingecko_client = ExchangeRateClient::new(url.clone(), Arc::new(OcallApi));
-	let rate = match coingecko_client.get_exchange_rate(trading_pair.clone()) {
+	let coingecko_client = create_coingecko_oracle(Arc::new(OcallApi));
+	let (rate, base_url) = match coingecko_client.get_exchange_rate(trading_pair.clone()) {
 		Ok(r) => r,
 		Err(e) => {
 			error!("[-] Failed to get the newest exchange rate from coingecko. {:?}", e);
@@ -706,18 +699,18 @@ fn update_market_data_internal(
 		},
 	};
 
-	let src = url.as_str();
+	let source_base_url = base_url.as_str();
 
 	println!(
 		"Update the exchange rate:  {} = {:?} for source {}",
 		trading_pair.clone().key(),
 		rate,
-		src,
+		source_base_url,
 	);
 
 	let call = OpaqueCall::from_tuple(&(
 		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
-		src.as_bytes().to_vec(),
+		source_base_url.as_bytes().to_vec(),
 		trading_pair.key().as_bytes().to_vec(),
 		Some(rate),
 	));

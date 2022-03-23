@@ -15,15 +15,11 @@
 
 */
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
-
-use crate::error::Error;
 use codec::{Decode, Encode};
 use std::string::String;
 
 /// Market identifier for order
-#[derive(Debug, Clone, Encode, Decode)]
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TradingPair {
 	pub crypto_currency: String,
 	pub fiat_currency: String,
@@ -32,15 +28,5 @@ pub struct TradingPair {
 impl TradingPair {
 	pub fn key(self) -> String {
 		format!("{}/{}", self.crypto_currency, self.fiat_currency)
-	}
-}
-
-pub trait TradingPairId {
-	fn crypto_currency_id(&mut self, trading_pair: TradingPair) -> Result<String, Error> {
-		Ok(trading_pair.crypto_currency)
-	}
-
-	fn fiat_currency_id(&mut self, trading_pair: TradingPair) -> Result<String, Error> {
-		Ok(trading_pair.fiat_currency)
 	}
 }

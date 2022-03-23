@@ -32,14 +32,37 @@ pub mod sgx_reexport_prelude {
 	pub use url_sgx as url;
 }
 
-use crate::{error::Error, types::TradingPair};
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+use crate::{
+	coingecko::CoinGeckoSource, error::Error, exchange_rate_oracle::ExchangeRateOracle,
+	metrics_exporter::MetricsExporter, types::TradingPair,
+};
+use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_types::ExchangeRate;
+use std::sync::Arc;
+use url::Url;
 
 pub mod coingecko;
 pub mod error;
+pub mod exchange_rate_oracle;
+pub mod metrics_exporter;
 pub mod types;
+
+#[cfg(test)]
+mod mock;
+
+pub type CoinGeckoExchangeRateOracle<OCallApi> =
+	ExchangeRateOracle<CoinGeckoSource, MetricsExporter<OCallApi>>;
+
+pub fn create_coingecko_oracle<OCallApi: EnclaveMetricsOCallApi>(
+	ocall_api: Arc<OCallApi>,
+) -> CoinGeckoExchangeRateOracle<OCallApi> {
+	ExchangeRateOracle::new(CoinGeckoSource {}, Arc::new(MetricsExporter::new(ocall_api)))
+}
 
 pub trait GetExchangeRate {
 	/// Get the cryptocurrency/fiat_currency exchange rate
-	fn get_exchange_rate(&mut self, trading_pair: TradingPair) -> Result<ExchangeRate, Error>;
+	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error>;
 }

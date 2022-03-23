@@ -84,6 +84,7 @@ cid = { git = "https://github.com/whalelephant/rust-cid", branch = "nstd", defau
 multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "nstd", default-features = false }
 
 # local deps
+ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, features = ["sgx"] }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"]  }
@@ -106,7 +107,6 @@ itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-featu
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
 itp-types = { path = "../core-primitives/types", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
-ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, features = ["sgx"] }
 
 # substrate deps
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
