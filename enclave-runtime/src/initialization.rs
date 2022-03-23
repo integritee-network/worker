@@ -105,6 +105,13 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
 	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
 
+	// We initialize components for the public RPC / direct invocation server here, so we can start the server
+	// before registering on the parentchain. If we started the RPC AFTER registering on the parentchain and
+	// initializing the light-client, there is a period of time where a peer might want to reach us,
+	// but the RPC server is not yet up and running, resulting in error messages or even in that
+	// validateer completely breaking (IO PipeError).
+	// Corresponding GH issues are #545 and #600.
+
 	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
 		connection_registry.clone(),
 		state_handler,
@@ -113,12 +120,12 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	);
 	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
 
-	let io_handler = public_api_rpc_handler(rpc_author.clone());
+	let io_handler = public_api_rpc_handler(rpc_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
 
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
-	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue.clone());
+	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
 	Ok(())
 }
