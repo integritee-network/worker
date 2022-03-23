@@ -58,7 +58,7 @@ where
 
 	/// Verify the given data and return the `BlockImportParams` if successful
 	fn verify(
-		&mut self,
+		&self,
 		block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,

@@ -119,7 +119,7 @@ where
 				});
 
 		let block_import_params = self.verify_import(&shard, |state| {
-			let mut verifier = self.verifier(state);
+			let verifier = self.verifier(state);
 
 			verifier.verify(
 				signed_sidechain_block.clone(),

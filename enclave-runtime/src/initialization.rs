@@ -164,7 +164,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
 		state_handler,
 		state_key,
-		signer,
+		signer.clone(),
 		top_pool_executor,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
