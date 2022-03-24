@@ -81,8 +81,8 @@ where
 			self.slot_duration,
 		);
 
-		// We check the ancestry before the author, because the parentchain block might not match
-		// in case we try to import a sidechain block that was already imported longer than 1 parentchain block ago.
+		// We need to check the ancestry first to ensure that an already imported block does not result
+		// in an author verification error, but rather a `BlockAlreadyImported` error.
 		match self.sidechain_state.get_last_block() {
 			Some(last_block) => verify_block_ancestry::<SignedSidechainBlock::Block>(
 				signed_block.block(),
