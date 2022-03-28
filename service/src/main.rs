@@ -427,8 +427,6 @@ fn start_worker<E, T, D>(
 	// Initialize sidechain components (has to be AFTER init_light_client()
 	enclave.init_enclave_sidechain_components().unwrap();
 
-	thread::sleep(Duration::from_secs(3));
-
 	// ------------------------------------------------------------------------
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 	let sidechain_enclave_api = enclave.clone();
