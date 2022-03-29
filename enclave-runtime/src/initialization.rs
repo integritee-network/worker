@@ -131,25 +131,11 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 }
 
 pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global STF executor component (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
+	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global state handler component (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
-
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global O-call API component (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
-
-	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global RPC AUTHOR component (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get()?;
 
 	let top_pool_operation_handler =
 		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor.clone()));
@@ -159,11 +145,8 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		TopPoolOperationHandler::new(rpc_author, stf_executor),
 	);
 
-	let parentchain_block_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-		.get().ok_or_else(|| {
-		error!("Failed to retrieve global parentchain import dispatcher component (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
+	let parentchain_block_import_dispatcher =
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
 	let signer = Ed25519Seal::unseal()?;
 	let state_key = AesSeal::unseal()?;
@@ -177,10 +160,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		ocall_api.clone(),
 	));
 
-	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global sidechain block import queue component (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
+	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
 
 	let sidechain_block_syncer =
 		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
@@ -214,15 +194,8 @@ pub(crate) fn init_light_client(
 	let signer = Ed25519Seal::unseal()?;
 	let shielding_key = Rsa3072Seal::unseal()?;
 
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global STF executor (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
-
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global O-call API (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
+	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
@@ -253,10 +226,7 @@ pub(crate) fn init_light_client(
 }
 
 pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResult<()> {
-	let rpc_handler = GLOBAL_RPC_WS_HANDLER_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve global RPC handler (maybe it is not initialized?)");
-		Error::ComponentNotInitialized
-	})?;
+	let rpc_handler = GLOBAL_RPC_WS_HANDLER_COMPONENT.get()?;
 
 	run_ws_server(server_addr.as_str(), rpc_handler);
 

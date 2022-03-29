@@ -15,22 +15,18 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
-
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
+use crate::sgx_reexport_prelude::*;
 
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use thiserror_sgx as thiserror;
+use std::{boxed::Box, string::String};
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+/// extrinsics factory error
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("Component is not initialized: {0}")]
+	ComponentNotInitialized(String),
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
-
-mod atomic_container;
-pub mod component_container;
-pub mod error;
-
-pub use component_container::*;

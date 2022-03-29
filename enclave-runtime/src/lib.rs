@@ -270,11 +270,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 }
 
 fn sidechain_rpc_int(request: &str) -> Result<String> {
-	let sidechain_block_import_queue =
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve sidechain block import queue component (maybe it's not initialized?)");
-			Error::ComponentNotInitialized
-		})?;
+	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
 
 	let io = sidechain_io_handler(move |signed_block| {
 		sidechain_block_import_queue.push_single(signed_block)
@@ -314,14 +310,13 @@ pub unsafe extern "C" fn get_state(
 		}
 	}
 
-	let state_handler =
-		match GLOBAL_STATE_HANDLER_COMPONENT.get() {
-			Some(a) => a,
-			None => {
-				error!("Failed to retrieve global state handler component (maybe it is not initialized?)");
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
+	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+		Ok(a) => a,
+		Err(e) => {
+			error!("Failed to retrieve global state handler component: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
 	let mut state = match state_handler.load_initialized(&shard) {
 		Ok(s) => s,
@@ -459,9 +454,7 @@ pub unsafe extern "C" fn sync_parentchain(
 /// * sends `confirm_call` xt's of the executed unshielding calls
 /// * sends `confirm_blocks` xt's for every synced parentchain block
 fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
-	let block_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let block_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
 	block_import_dispatcher.dispatch_import(blocks_to_sync).map_err(|e| e.into())
 }
@@ -474,13 +467,13 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 #[no_mangle]
 pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 	match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
-		Some(dispatcher) => match dispatcher.import_all() {
+		Ok(dispatcher) => match dispatcher.import_all() {
 			Ok(_) => sgx_status_t::SGX_SUCCESS,
 			Err(e) => {
 				error!("Failed to trigger import of parentchain blocks: {:?}", e);
 				sgx_status_t::SGX_ERROR_UNEXPECTED
 			},
 		},
-		None => (Error::ComponentNotInitialized).into(),
+		Err(e) => Error::ComponentContainer(e).into(),
 	}
 }

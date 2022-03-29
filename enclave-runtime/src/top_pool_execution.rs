@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	error::{Error, Result},
+	error::Result,
 	global_components::{
 		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
@@ -80,11 +80,7 @@ pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let top_pool_executor =
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve top pool operation handler component. It might not be initialized?");
-			Error::ComponentNotInitialized
-		})?;
+	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
 	let shards = state_handler.list_shards()?;
@@ -141,9 +137,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let slot_beginning_timestamp = duration_now();
 
-	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
 	let validator_access = ValidatorAccessor::<Block>::default();
 
@@ -157,39 +151,20 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
-	let sidechain_block_import_queue_worker = GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let sidechain_block_import_queue_worker =
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve stf executor component. Maybe it's not initialized?");
-		Error::ComponentNotInitialized
-	})?;
+	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 
-	let top_pool_executor =
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve top pool operation handler component. Maybe it's not initialized?");
-			Error::ComponentNotInitialized
-		})?;
+	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
 
-	let block_composer =
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve sidechain block composer component. Maybe it's not initialized?");
-			Error::ComponentNotInitialized
-		})?;
+	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve extrinsics factory component. Maybe it's not initialized?");
-		Error::ComponentNotInitialized
-	})?;
-
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get().ok_or_else(|| {
-		error!("Failed to retrieve state handler component. Maybe it's not initialized?");
-		Error::ComponentNotInitialized
-	})?;
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
 	let authority = Ed25519Seal::unseal()?;
 
