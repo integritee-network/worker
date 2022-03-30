@@ -15,7 +15,7 @@
 
 */
 
-//! Service to determine if the integritee services is alive and registered to the node,
+//! Service to determine if the integritee services is initialized and registered on the node,
 //! hosted on a http server.
 
 use crate::error::ServiceResult;
@@ -26,14 +26,14 @@ use std::net::SocketAddr;
 use warp::Filter;
 
 lazy_static! {
-	static ref ALIVE_HANDLE: RwLock<bool> = RwLock::new(false);
+	static ref INITIALIZED_HANDLE: RwLock<bool> = RwLock::new(false);
 }
 
-pub async fn start_alive_server() -> ServiceResult<()> {
+pub async fn start_initialized_server() -> ServiceResult<()> {
 	let port = 1234;
-	let is_alive_route = warp::path!("is_alive").and_then(|| async move {
-		if *ALIVE_HANDLE.read() {
-			Ok("I am alive")
+	let is_initialized_route = warp::path!("is_initialized").and_then(|| async move {
+		if *INITIALIZED_HANDLE.read() {
+			Ok("I am initialized.")
 		} else {
 			Err(warp::reject::not_found())
 		}
@@ -41,15 +41,15 @@ pub async fn start_alive_server() -> ServiceResult<()> {
 
 	let socket_addr: SocketAddr = ([0, 0, 0, 0], port).into();
 
-	info!("Running alive server on: {:?}", socket_addr);
-	warp::serve(is_alive_route).run(socket_addr).await;
+	info!("Running initialized server on: {:?}", socket_addr);
+	warp::serve(is_initialized_route).run(socket_addr).await;
 
-	info!("Alive server shut down");
+	info!("Initialized server shut down");
 	Ok(())
 }
 
-/// Set alive handler value to true.
-pub fn set_alive() {
-	let mut alive_lock = ALIVE_HANDLE.write();
-	*alive_lock = true;
+/// Set initialized handler value to true.
+pub fn set_initialized() {
+	let mut initialized_lock = INITIALIZED_HANDLE.write();
+	*initialized_lock = true;
 }
