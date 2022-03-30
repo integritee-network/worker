@@ -19,6 +19,7 @@
 
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
+	alive_service::{set_alive, start_alive_server},
 	error::Error,
 	globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 	ocall_bridge::{
@@ -94,6 +95,7 @@ use substrate_api_client::{
 use teerex_primitives::ShardIdentifier;
 
 mod account_funding;
+mod alive_service;
 mod config;
 mod enclave;
 mod error;
@@ -312,6 +314,14 @@ fn start_worker<E, T, D>(
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
+	// Start alive server
+	tokio_handle.spawn(async move {
+		if let Err(e) = start_alive_server().await {
+			error!("Unexpected error in alive server: {:?}", e);
+		}
+	});
+
+	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
 	if config.enable_metrics_server {
 		let enclave_wallet =
@@ -495,6 +505,9 @@ fn start_worker<E, T, D>(
 			node_api.subscribe_events(sender2).unwrap();
 		})
 		.unwrap();
+
+	// Set that the service is alive.
+	set_alive();
 
 	println!("[+] Subscribed to events. waiting...");
 	let timeout = Duration::from_millis(10);
