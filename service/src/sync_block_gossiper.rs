@@ -16,19 +16,17 @@
 
 */
 
-use crate::{
-	error::Error,
-	globals::{tokio_handle::GetTokioHandle, worker::GetWorker},
-	worker::{AsyncBlockGossiper, WorkerResult},
-};
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
-use log::*;
-use std::sync::Arc;
-
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
+
+use crate::{
+	globals::tokio_handle::GetTokioHandle,
+	worker::{AsyncBlockGossiper, WorkerResult},
+};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use std::sync::Arc;
 
 /// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner
 #[cfg_attr(test, automock)]
@@ -50,18 +48,10 @@ impl<T, W> SyncBlockGossiper<T, W> {
 impl<T, W> GossipBlocks for SyncBlockGossiper<T, W>
 where
 	T: GetTokioHandle,
-	W: GetWorker,
+	W: AsyncBlockGossiper,
 {
 	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
-		match self.worker.get_worker().as_ref() {
-			Some(w) => {
-				let handle = self.tokio_handle.get_handle();
-				handle.block_on(w.gossip_blocks(blocks))
-			},
-			None => {
-				error!("Failed to get worker instance");
-				Err(Error::ApplicationSetup)
-			},
-		}
+		let handle = self.tokio_handle.get_handle();
+		handle.block_on(self.worker.gossip_blocks(blocks))
 	}
 }

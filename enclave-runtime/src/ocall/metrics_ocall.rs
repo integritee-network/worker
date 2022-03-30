@@ -15,7 +15,7 @@
 
 */
 
-use crate::{ocall::ffi, OcallApi};
+use crate::ocall::{ffi, OcallApi};
 use codec::Encode;
 use frame_support::ensure;
 use itp_ocall_api::EnclaveMetricsOCallApi;

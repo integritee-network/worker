@@ -51,7 +51,7 @@ where
 	type Context = VerifierContext;
 
 	fn verify(
-		&mut self,
+		&self,
 		_block: SignedSidechainBlock,
 		_parentchain_header: &ParentchainBlock::Header,
 		_ctx: &Self::Context,

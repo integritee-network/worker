@@ -43,6 +43,8 @@ enclave {
 			[out, size=value_size] uint8_t* value, uint32_t value_size
 		);
 
+        public sgx_status_t init_enclave_sidechain_components();
+
         public sgx_status_t init_direct_invocation_server(
             [in, size=server_addr_size] uint8_t* server_addr, uint32_t server_addr_size
         );

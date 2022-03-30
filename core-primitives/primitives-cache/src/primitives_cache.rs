@@ -81,8 +81,8 @@ pub mod tests {
 	pub fn set_primitives_works() {
 		let cache = PrimitivesCache::default();
 		let mut lock = cache.load_for_mutation().unwrap();
-		let mu_ra_url = "hello";
-		let untrusted_url = "world";
+		let mu_ra_url = "hello".to_string();
+		let untrusted_url = "world".to_string();
 		let primitives = Primitives::new(mu_ra_url, untrusted_url);
 		*lock = primitives.clone();
 		std::mem::drop(lock);
@@ -92,8 +92,8 @@ pub mod tests {
 	#[test]
 	pub fn concurrent_read_access_blocks_until_write_is_done() {
 		let cache = Arc::new(PrimitivesCache::default());
-		let mu_ra_url = "hello";
-		let untrusted_url = "world";
+		let mu_ra_url = "hello".to_string();
+		let untrusted_url = "world".to_string();
 		let primitives = Primitives::new(mu_ra_url, untrusted_url);
 
 		let mut write_lock = cache.load_for_mutation().unwrap();

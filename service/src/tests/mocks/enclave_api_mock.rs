@@ -30,6 +30,10 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(())
 	}
 
+	fn init_enclave_sidechain_components(&self) -> EnclaveResult<()> {
+		Ok(())
+	}
+
 	fn init_direct_invocation_server(&self, _rpc_server_addr: String) -> EnclaveResult<()> {
 		unreachable!()
 	}

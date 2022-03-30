@@ -25,7 +25,7 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
 	Rpc(its_sidechain::top_pool_rpc_author::error::Error),
 	Codec(codec::Error),
-	ComponentNotInitialized,
+	ComponentContainer(itp_component_container::error::Error),
 	Crypto(itp_sgx_crypto::Error),
 	ChainStorage(itp_storage_verifier::Error),
 	ExtrinsicsFactory(itp_extrinsics_factory::error::Error),

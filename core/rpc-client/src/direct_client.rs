@@ -108,6 +108,7 @@ impl DirectApi for DirectClient {
 		info!("[+] Got untrusted websocket url of worker: {}", untrusted_url);
 		Ok(untrusted_url)
 	}
+
 	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
 		let jsonrpc_call: String =
 			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), vec![]);

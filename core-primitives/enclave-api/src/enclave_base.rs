@@ -35,6 +35,9 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	/// Initialize the enclave (needs to be called once at application startup).
 	fn init(&self, mu_ra_addr: &str, untrusted_worker_addr: &str) -> EnclaveResult<()>;
 
+	/// Initialize the enclave sidechain components.
+	fn init_enclave_sidechain_components(&self) -> EnclaveResult<()>;
+
 	/// Initialize the direct invocation RPC server.
 	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
 
@@ -79,6 +82,17 @@ impl EnclaveBase for Enclave {
 				encoded_untrusted_worker_addr.len() as u32,
 			)
 		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
+	}
+
+	fn init_enclave_sidechain_components(&self) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let result = unsafe { ffi::init_enclave_sidechain_components(self.eid, &mut retval) };
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));

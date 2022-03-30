@@ -25,6 +25,7 @@ use its_primitives::traits::{
 	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainState};
+use log::warn;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::vec::Vec;
 
@@ -111,10 +112,14 @@ where
 		let shard = sidechain_block.shard_id();
 
 		let peeked_parentchain_header =
-			self.peek_parentchain_header(&sidechain_block, parentchain_header)?;
+			self.peek_parentchain_header(&sidechain_block, parentchain_header)
+				.unwrap_or_else(|e| {
+					warn!("Could not peek parentchain block, returning latest parentchain block ({:?})", e);
+					parentchain_header.clone()
+				});
 
 		let block_import_params = self.verify_import(&shard, |state| {
-			let mut verifier = self.verifier(state);
+			let verifier = self.verifier(state);
 
 			verifier.verify(
 				signed_sidechain_block.clone(),

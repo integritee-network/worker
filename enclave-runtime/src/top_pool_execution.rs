@@ -16,14 +16,15 @@
 */
 
 use crate::{
-	error::{Error, Result},
+	error::Result,
 	global_components::{
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
-	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 };
 use codec::Encode;
 use itc_parentchain::{
@@ -36,20 +37,17 @@ use itc_parentchain::{
 	},
 };
 use itp_component_container::ComponentGetter;
-use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
-use itp_nonce_cache::GLOBAL_NONCE_CACHE;
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::{AesSeal, Ed25519Seal};
+use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::SealedIO;
-use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
 use itp_storage_verifier::GetStorageVerified;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
-	block_composer::BlockComposer,
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
 	primitives::{
 		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
@@ -82,11 +80,7 @@ pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let top_pool_executor =
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve top pool operation handler component. It might not be initialized?");
-			Error::ComponentNotInitialized
-		})?;
+	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
 
 	let state_handler = Arc::new(GlobalFileStateHandler);
 	let shards = state_handler.list_shards()?;
@@ -143,45 +137,36 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let slot_beginning_timestamp = duration_now();
 
-	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
 	let validator_access = ValidatorAccessor::<Block>::default();
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
 	// (in case we have a block in the queue, but not imported yet).
-	let (current_parentchain_header, genesis_hash) =
-		validator_access.execute_on_validator(|v| {
-			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
-			let genesis_hash = v.genesis_hash(v.num_relays())?;
-			Ok((latest_parentchain_header, genesis_hash))
-		})?;
+	let current_parentchain_header = validator_access.execute_on_validator(|v| {
+		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+		Ok(latest_parentchain_header)
+	})?;
 
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
-	let sidechain_block_import_queue_worker = GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let sidechain_block_import_queue_worker =
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
+
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
+	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
+
+	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
+
+	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
+
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+
 	let authority = Ed25519Seal::unseal()?;
-	let state_key = AesSeal::unseal()?;
-
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let extrinsics_factory =
-		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
-
-	let top_pool_executor =
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve top pool operation handler component. Maybe it's not initialized?");
-			Error::ComponentNotInitialized
-		})?;
-
-	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key));
 
 	match yield_next_slot(
 		slot_beginning_timestamp,
@@ -214,7 +199,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 				opaque_calls,
 				OcallApi,
 				&validator_access,
-				&extrinsics_factory,
+				extrinsics_factory.as_ref(),
 			)?
 		},
 		None => {
