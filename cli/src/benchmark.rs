@@ -9,15 +9,15 @@ pub struct StopWatch {
 }
 
 impl StopWatch {
-	fn start() -> Self {
+	pub fn start() -> Self {
 		StopWatch { start: Instant::now(), measurements: HashMap::new() }
 	}
 
-	fn take(&mut self, measurement_name: &str) {
+	pub fn take(&mut self, measurement_name: &str) {
 		self.measurements.insert(String::from(measurement_name), self.start.elapsed());
 	}
 
-	fn get(&self, measurement_name: &str) -> Option<&Duration> {
+	pub fn get(&self, measurement_name: &str) -> Option<&Duration> {
 		self.measurements.get(measurement_name)
 	}
 }

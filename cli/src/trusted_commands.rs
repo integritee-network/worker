@@ -16,6 +16,7 @@
 */
 
 use crate::{
+	benchmark,
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
@@ -135,6 +136,20 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 	}
 }
 
+pub fn match_trusted_benchmark_commands(cli: &Cli, trusted_args: &TrustedArgs) {
+	match &trusted_args.command {
+		TrustedCommands::NewAccount => new_account(trusted_args),
+		TrustedCommands::ListAccounts => list_accounts(trusted_args),
+		TrustedCommands::Transfer { from, to, amount } =>
+			transfer_benchmark(cli, trusted_args, from, to, amount),
+		TrustedCommands::SetBalance { account, amount } =>
+			set_balance(cli, trusted_args, account, amount),
+		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
+		TrustedCommands::UnshieldFunds { from, to, amount } =>
+			unshield_funds(cli, trusted_args, from, to, amount),
+	}
+}
+
 fn perform_operation(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
@@ -176,6 +191,36 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 		.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 	let _ = perform_operation(cli, trusted_args, &top);
+}
+
+fn transfer_benchmark(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_from: &str,
+	arg_to: &str,
+	amount: &Balance,
+) {
+	let from = get_pair_from_str(trusted_args, arg_from);
+	let to = get_accountid_from_str(arg_to);
+	info!("from ss58 is {}", from.public().to_ss58check());
+	info!("to ss58 is {}", to.to_ss58check());
+
+	println!("send trusted call transfer from {} to {}: {}", from.public(), to, amount);
+	let (mrenclave, shard) = get_identifiers(trusted_args);
+
+	let nonce = 0;
+	let mut stop_watch = benchmark::StopWatch::start();
+	let top: TrustedOperation =
+		TrustedCall::balance_transfer(from.public().into(), to, *amount)
+			.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+			.into_trusted_operation(trusted_args.direct);
+	let _ = perform_operation(cli, trusted_args, &top);
+	stop_watch.take("balance_transfer");
+	println!(
+		"execution time balance_transfer (nonce {}): {}ms",
+		nonce,
+		stop_watch.get("balance_transfer").unwrap().as_millis()
+	);
 }
 
 fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Balance) {
