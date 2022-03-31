@@ -21,6 +21,7 @@ use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
 	globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle},
+	initialized_service::{set_initialized, start_initialized_server},
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -98,6 +99,7 @@ mod config;
 mod enclave;
 mod error;
 mod globals;
+mod initialized_service;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod prometheus_metrics;
@@ -312,6 +314,14 @@ fn start_worker<E, T, D>(
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
+	// Start initialized server
+	tokio_handle.spawn(async move {
+		if let Err(e) = start_initialized_server().await {
+			error!("Unexpected error in initialized server: {:?}", e);
+		}
+	});
+
+	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
 	if config.enable_metrics_server {
 		let enclave_wallet =
@@ -495,6 +505,9 @@ fn start_worker<E, T, D>(
 			node_api.subscribe_events(sender2).unwrap();
 		})
 		.unwrap();
+
+	// Set that the service is initialized.
+	set_initialized();
 
 	println!("[+] Subscribed to events. waiting...");
 	let timeout = Duration::from_millis(10);
