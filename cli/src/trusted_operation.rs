@@ -16,6 +16,7 @@
 */
 
 use crate::{
+	benchmark,
 	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
 	trusted_commands::TrustedArgs,
 	Cli,
@@ -222,6 +223,82 @@ fn send_direct_request(
 			Err(e) => {
 				error!("failed to receive rpc response: {:?}", e);
 				direct_api.close().unwrap();
+				return None
+			},
+		};
+	}
+}
+
+/// sends a rpc watch request to the worker api server
+pub fn send_direct_request_with_time_monitoring(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	operation_call: TrustedOperation,
+	stop_watch: &mut benchmark::StopWatch,
+) -> Option<Vec<u8>> {
+	let (_operation_call_encoded, operation_call_encrypted) =
+		match encode_encrypt(cli, operation_call) {
+			Ok((encoded, encrypted)) => (encoded, encrypted),
+			Err(msg) => {
+				println!("[Error] {}", msg);
+				return None
+			},
+		};
+	let shard = read_shard(trusted_args).unwrap();
+
+	// compose jsonrpc call
+	let data = Request { shard, cyphertext: operation_call_encrypted };
+	let direct_invocation_call = RpcRequest {
+		jsonrpc: "2.0".to_owned(),
+		method: "author_submitAndWatchExtrinsic".to_owned(),
+		params: data.encode(),
+		id: 1,
+	};
+	let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
+
+	debug!("get direct api");
+	let direct_api = get_worker_api_direct(cli);
+
+	debug!("setup sender and receiver");
+	let (sender, receiver) = channel();
+	direct_api.watch(jsonrpc_call, sender);
+
+	debug!("waiting for rpc response");
+	loop {
+		match receiver.recv() {
+			Ok(response) => {
+				debug!("received response");
+				let response: RpcResponse = serde_json::from_str(&response).unwrap();
+				if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+					debug!("successfully decoded rpc response");
+					match return_value.status {
+						DirectRequestStatus::Error => {
+							debug!("request status is error");
+							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
+								println!("[Error] {}", value);
+							}
+							return None
+						},
+						DirectRequestStatus::TrustedOperationStatus(status) => {
+							stop_watch.take(&format!("{:?}", status));
+							debug!("request status is: {:?}", status);
+							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
+								println!("Trusted call {:?} is {:?}", value, status);
+							}
+						},
+						_ => {
+							debug!("request status is ignored");
+							return None
+						},
+					}
+					if !return_value.do_watch {
+						debug!("do watch is false, closing connection");
+						return None
+					}
+				};
+			},
+			Err(e) => {
+				error!("failed to receive rpc response: {:?}", e);
 				return None
 			},
 		};

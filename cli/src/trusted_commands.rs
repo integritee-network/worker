@@ -20,7 +20,7 @@ use crate::{
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_operation::perform_trusted_operation,
+	trusted_operation::{perform_trusted_operation, send_direct_request_with_time_monitoring},
 	Cli,
 };
 use codec::Decode;
@@ -210,17 +210,22 @@ fn transfer_benchmark(
 
 	let nonce = 0;
 	let mut stop_watch = benchmark::StopWatch::start();
-	let top: TrustedOperation =
-		TrustedCall::balance_transfer(from.public().into(), to, *amount)
-			.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
-			.into_trusted_operation(trusted_args.direct);
-	let _ = perform_operation(cli, trusted_args, &top);
-	stop_watch.take("balance_transfer");
-	println!(
-		"execution time balance_transfer (nonce {}): {}ms",
-		nonce,
-		stop_watch.get("balance_transfer").unwrap().as_millis()
-	);
+	let top: TrustedOperation = TrustedCall::balance_transfer(from.public().into(), to, *amount)
+		.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+		.into_trusted_operation(trusted_args.direct);
+
+	match top {
+		TrustedOperation::direct_call(call) => send_direct_request_with_time_monitoring(
+			cli,
+			trusted_args,
+			TrustedOperation::direct_call(call),
+			&mut stop_watch,
+		),
+		_ => None,
+	};
+
+	println!("execution time balance_transfer (nonce {}):", nonce);
+	stop_watch.print();
 }
 
 fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Balance) {
