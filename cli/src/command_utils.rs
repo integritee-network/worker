@@ -36,6 +36,16 @@ pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
 }
 
+pub(crate) fn encode_encrypt_with_key<E: Encode>(
+	shielding_pubkey: Rsa3072PubKey,
+	to_encrypt: E,
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+	let encoded = to_encrypt.encode();
+	let mut encrypted: Vec<u8> = Vec::new();
+	shielding_pubkey.encrypt_buffer(&encoded, &mut encrypted).unwrap();
+	Ok((encoded, encrypted))
+}
+
 pub(crate) fn get_chain_api(cli: &Cli) -> Api<sr25519::Pair, WsRpcClient> {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);

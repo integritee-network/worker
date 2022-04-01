@@ -17,6 +17,7 @@
 
 use crate::{
 	benchmark,
+	command_utils::get_worker_api_direct,
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
@@ -25,8 +26,10 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use itc_rpc_client::direct_client::DirectApi;
 use log::*;
 use my_node_runtime::Balance;
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
@@ -214,11 +217,19 @@ fn transfer_benchmark(
 		.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
+	// get shielding pubkey
+	let worker_api_direct = get_worker_api_direct(cli);
+	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
+		Ok(key) => key,
+		Err(err_msg) => panic!("{}", err_msg.to_string()),
+	};
+
 	match top {
 		TrustedOperation::direct_call(call) => send_direct_request_with_time_monitoring(
 			cli,
 			trusted_args,
 			TrustedOperation::direct_call(call),
+			shielding_pubkey,
 			&mut stop_watch,
 		),
 		_ => None,

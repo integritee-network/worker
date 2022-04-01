@@ -17,7 +17,10 @@
 
 use crate::{
 	benchmark,
-	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
+	command_utils::{
+		encode_encrypt, encode_encrypt_with_key, get_chain_api, get_pair_from_str,
+		get_shielding_key, get_worker_api_direct,
+	},
 	trusted_commands::TrustedArgs,
 	Cli,
 };
@@ -234,10 +237,11 @@ pub fn send_direct_request_with_time_monitoring(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	operation_call: TrustedOperation,
+	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 	stop_watch: &mut benchmark::StopWatch,
 ) -> Option<Vec<u8>> {
 	let (_operation_call_encoded, operation_call_encrypted) =
-		match encode_encrypt(cli, operation_call) {
+		match encode_encrypt_with_key(shielding_pubkey, operation_call) {
 			Ok((encoded, encrypted)) => (encoded, encrypted),
 			Err(msg) => {
 				println!("[Error] {}", msg);
