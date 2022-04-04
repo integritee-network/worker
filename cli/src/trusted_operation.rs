@@ -16,7 +16,6 @@
 */
 
 use crate::{
-	benchmark,
 	command_utils::{
 		encode_encrypt, encode_encrypt_with_key, get_chain_api, get_pair_from_str,
 		get_shielding_key, get_worker_api_direct,
@@ -37,7 +36,11 @@ use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
-use std::{result::Result as StdResult, sync::mpsc::channel};
+use std::{
+	result::Result as StdResult,
+	sync::mpsc::{channel, Receiver},
+	time::Instant,
+};
 use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
 
@@ -233,13 +236,12 @@ fn send_direct_request(
 }
 
 /// sends a rpc watch request to the worker api server
-pub fn send_direct_request_with_time_monitoring(
+pub fn initialize_receiver_for_direct_request(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	operation_call: TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
-	stop_watch: &mut benchmark::StopWatch,
-) -> Option<Vec<u8>> {
+) -> Option<Receiver<String>> {
 	let (_operation_call_encoded, operation_call_encrypted) =
 		match encode_encrypt_with_key(shielding_pubkey, operation_call) {
 			Ok((encoded, encrypted)) => (encoded, encrypted),
@@ -267,6 +269,13 @@ pub fn send_direct_request_with_time_monitoring(
 	let (sender, receiver) = channel();
 	direct_api.watch(jsonrpc_call, sender);
 
+	Some(receiver)
+}
+
+pub fn wait_until(
+	receiver: &Receiver<String>,
+	until: fn(TrustedOperationStatus) -> bool,
+) -> Option<Instant> {
 	debug!("waiting for rpc response");
 	loop {
 		match receiver.recv() {
@@ -284,10 +293,13 @@ pub fn send_direct_request_with_time_monitoring(
 							return None
 						},
 						DirectRequestStatus::TrustedOperationStatus(status) => {
-							stop_watch.take(&format!("{:?}", status));
 							debug!("request status is: {:?}", status);
 							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
 								println!("Trusted call {:?} is {:?}", value, status);
+							}
+
+							if until(status) {
+								return Some(Instant::now())
 							}
 						},
 						_ => {

@@ -16,23 +16,31 @@
 */
 
 use crate::{
-	benchmark,
 	command_utils::get_worker_api_direct,
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_operation::{perform_trusted_operation, send_direct_request_with_time_monitoring},
+	trusted_operation::{
+		initialize_receiver_for_direct_request, perform_trusted_operation, wait_until,
+	},
 	Cli,
 };
 use codec::Decode;
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
+use itp_types::{
+	TrustedOperationStatus,
+	TrustedOperationStatus::{InSidechainBlock, Submitted},
+};
 use log::*;
 use my_node_runtime::Balance;
+use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use std::time::Instant;
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+use synchronoise::SignalEvent;
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -211,12 +219,6 @@ fn transfer_benchmark(
 	println!("send trusted call transfer from {} to {}: {}", from.public(), to, amount);
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
-	let nonce = 0;
-	let mut stop_watch = benchmark::StopWatch::start();
-	let top: TrustedOperation = TrustedCall::balance_transfer(from.public().into(), to, *amount)
-		.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
-		.into_trusted_operation(trusted_args.direct);
-
 	// get shielding pubkey
 	let worker_api_direct = get_worker_api_direct(cli);
 	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
@@ -224,19 +226,81 @@ fn transfer_benchmark(
 		Err(err_msg) => panic!("{}", err_msg.to_string()),
 	};
 
-	match top {
-		TrustedOperation::direct_call(call) => send_direct_request_with_time_monitoring(
-			cli,
-			trusted_args,
-			TrustedOperation::direct_call(call),
-			shielding_pubkey,
-			&mut stop_watch,
-		),
-		_ => None,
-	};
+	// signals to synchronize threads
+	let mut submitted_signals = Vec::new();
+	for n in 0..11 {
+		submitted_signals.insert(n, SignalEvent::manual(false));
+	}
+	submitted_signals.get(0).unwrap().signal();
 
-	println!("execution time balance_transfer (nonce {}):", nonce);
-	stop_watch.print();
+	(0..10)
+		.into_par_iter()
+		.map(|nonce| {
+			let mut output = Vec::new();
+
+			output.push(format!("execution time balance_transfer (nonce {}):", nonce));
+
+			let top: TrustedOperation =
+				TrustedCall::balance_transfer(from.public().into(), to.clone(), *amount)
+					.sign(&KeyPair::Sr25519(from.clone()), nonce, &mrenclave, &shard)
+					.into_trusted_operation(trusted_args.direct);
+
+			submitted_signals.get(nonce as usize).unwrap().wait();
+
+			let start_time = Instant::now();
+
+			let receiver = match top {
+				TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
+					cli,
+					trusted_args,
+					TrustedOperation::direct_call(call),
+					shielding_pubkey,
+				),
+				_ => {
+					output.push("TrustedOperation was not created.".to_string());
+					None
+				},
+			};
+
+			match receiver {
+				Some(r) => {
+					match wait_until(&r, is_submitted) {
+						Some(t) => output.push(format!(
+							"Submitted : {}ms",
+							(t.duration_since(start_time)).as_millis()
+						)),
+						None => output.push("transaction was not submitted.".to_string()),
+					};
+
+					submitted_signals.get((nonce + 1) as usize).unwrap().signal();
+
+					match wait_until(&r, is_sidechain_block) {
+						Some(t) => output.push(format!(
+							"InSidechainBlock : {}ms",
+							(t.duration_since(start_time)).as_millis()
+						)),
+						None =>
+							output.push("transaction was not added to sidechain block.".to_string()),
+					};
+				},
+				None => output.push(format!("Something went wrong for nonce {}", nonce)),
+			}
+
+			output
+		})
+		.for_each(|output| {
+			for t in output {
+				println!("{}", t);
+			}
+		});
+}
+
+fn is_submitted(s: TrustedOperationStatus) -> bool {
+	matches!(s, Submitted)
+}
+
+fn is_sidechain_block(s: TrustedOperationStatus) -> bool {
+	matches!(s, InSidechainBlock(_))
 }
 
 fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Balance) {
