@@ -35,7 +35,7 @@ use itp_storage_verifier::GetStorageVerified;
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
-	Block as BlockTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
+	Header as HeaderT, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };
 use its_state::SidechainDB;
 use its_top_pool_executor::TopPoolCallOperator;
@@ -97,7 +97,8 @@ impl<
 	Authority::Public: std::fmt::Debug,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
-	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderT<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
 		+ GetStorageVerified
@@ -150,7 +151,7 @@ impl<
 
 		let unremoved_calls = self
 			.top_pool_executor
-			.remove_calls_from_pool(&sidechain_block.shard_id(), executed_operations);
+			.remove_calls_from_pool(&sidechain_block.header().shard_id(), executed_operations);
 
 		for unremoved_call in unremoved_calls {
 			error!(
@@ -190,7 +191,8 @@ impl<
 	Authority::Public: std::fmt::Debug,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
-	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderT<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
 		+ GetStorageVerified
@@ -311,7 +313,7 @@ impl<
 						"Failed to find parentchain header in import queue (hash: {}) that is \
 			associated with the current sidechain block that is to be imported (number: {}, hash: {})",
 						sidechain_block.layer_one_head(),
-						sidechain_block.block_number(),
+						sidechain_block.header().block_number(),
 						sidechain_block.hash()
 					)
 					.into(),
@@ -330,7 +332,7 @@ impl<
 
 		// Send metric about sidechain block height (i.e. block number)
 		let block_height_metric =
-			EnclaveMetric::SetSidechainBlockHeight(sidechain_block.block_number());
+			EnclaveMetric::SetSidechainBlockHeight(sidechain_block.header().block_number());
 		if let Err(e) = self.ocall_api.update_metric(block_height_metric) {
 			warn!("Failed to update sidechain block height metric: {:?}", e);
 		}

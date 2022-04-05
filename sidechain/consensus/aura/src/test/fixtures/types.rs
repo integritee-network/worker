@@ -24,7 +24,10 @@ use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mo
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::Block as ParentchainBlock;
 use its_primitives::{
-	traits::{Block as SidechainBlockTrait, SignedBlock as SignedBlockTrait},
+	traits::{
+		Block as SidechainBlockTrait, Header as SidechainHeaderTrait,
+		SignedBlock as SignedBlockTrait,
+	},
 	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
 use sp_runtime::{app_crypto::ed25519, generic::SignedBlock};
@@ -32,7 +35,7 @@ use sp_runtime::{app_crypto::ed25519, generic::SignedBlock};
 type AuthorityPair = ed25519::Pair;
 
 pub type ShardIdentifierFor<SidechainBlock> =
-	<<SidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::ShardIdentifier;
+	<<<SidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType as SidechainHeaderTrait>::ShardIdentifier;
 
 pub type TestAura = Aura<
 	AuthorityPair,

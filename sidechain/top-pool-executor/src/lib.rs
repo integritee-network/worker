@@ -79,8 +79,7 @@ where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
-	SignedSidechainBlock::Block:
-		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash>
 		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,

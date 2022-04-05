@@ -22,7 +22,7 @@ use codec::Decode;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_sgx_crypto::StateCrypto;
 use its_primitives::traits::{
-	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
+	Block as SidechainBlockT, Header, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainState};
 use log::*;
@@ -109,7 +109,7 @@ where
 		parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
-		let shard = sidechain_block.shard_id();
+		let shard = sidechain_block.header().shard_id();
 
 		debug!(
 			"Attempting to import sidechain block (number: {}, parentchain hash: {:?})",

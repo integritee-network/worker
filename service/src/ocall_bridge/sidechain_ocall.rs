@@ -86,7 +86,7 @@ where
 		if !signed_blocks.is_empty() {
 			info!(
 				"Enclave produced sidechain blocks: {:?}",
-				signed_blocks.iter().map(|b| b.block.block_number).collect::<Vec<u64>>()
+				signed_blocks.iter().map(|b| b.block.header.block_number).collect::<Vec<u64>>()
 			);
 		} else {
 			debug!("Enclave did not produce sidechain blocks");

@@ -63,7 +63,7 @@ use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	primitives::{
-		traits::{Block as BlockT, SignedBlock as SignedBlockT},
+		traits::{Block as BlockT, Header as SidechainHeaderT, SignedBlock as SignedBlockT},
 		types::block::SignedBlock,
 	},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
@@ -190,7 +190,7 @@ fn test_compose_block_and_confirmation() {
 	));
 
 	assert!(signed_block.verify_signature());
-	assert_eq!(signed_block.block().block_number(), 1);
+	assert_eq!(signed_block.block().header().block_number(), 1);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
@@ -342,7 +342,7 @@ fn test_create_block_and_confirmation_works() {
 	));
 
 	assert!(signed_block.verify_signature());
-	assert_eq!(signed_block.block().block_number(), 1);
+	assert_eq!(signed_block.block().header().block_number(), 1);
 	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }

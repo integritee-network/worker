@@ -23,12 +23,13 @@ use itp_sgx_crypto::StateCrypto;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, SignBlock, SignedBlock as SignedSidechainBlockTrait,
+	Block as SidechainBlockTrait, Header as HeaderT, SignBlock,
+	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_core::Pair;
+use sp_core::{blake2_256, Pair};
 use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header},
 	MultiSignature,
@@ -63,8 +64,9 @@ where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
-	SignedSidechainBlock::Block:
-		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderT<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
@@ -82,8 +84,9 @@ where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
-	SignedSidechainBlock::Block:
-		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderT<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
@@ -106,7 +109,7 @@ where
 		let state_hash_new = db.state_hash();
 
 		let (block_number, parent_hash) = match db.get_last_block() {
-			Some(block) => (block.block_number() + 1, block.hash()),
+			Some(block) => (block.header().block_number() + 1, block.hash()),
 			None => {
 				info!("Seems to be first sidechain block.");
 				(1, Default::default())
@@ -126,12 +129,18 @@ where
 			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
 
+		let header =
+			<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType::new(
+				block_number,
+				parent_hash,
+				shard,
+				blake2_256(&payload).into()
+			);
+
 		let block = SignedSidechainBlock::Block::new(
+			header,
 			author_public,
-			block_number,
-			parent_hash,
 			latest_parentchain_header.hash(),
-			shard,
 			top_call_hashes,
 			payload,
 			now_as_u64(),

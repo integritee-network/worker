@@ -21,13 +21,13 @@
 use itp_time_utils;
 use itp_types::H256;
 use its_primitives::{
-	traits::{Block as BlockTrait, SignBlock},
+	traits::{Block as BlockTrait, Header as HeaderT, SignBlock},
 	types::{
 		block::{BlockHash, BlockNumber, Timestamp},
 		Block, ShardIdentifier, SignedBlock,
 	},
 };
-use sp_core::{ed25519, Pair};
+use sp_core::{blake2_256, ed25519, Pair};
 
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
@@ -112,12 +112,17 @@ impl SidechainBlockBuilder {
 	}
 
 	pub fn build(&self) -> Block {
-		Block::new(
-			self.signer.public(),
+		let header = HeaderT::new(
 			self.number,
 			self.parent_hash,
-			self.parentchain_block_hash,
 			self.shard,
+			blake2_256(&self.encrypted_payload).into(),
+		);
+
+		Block::new(
+			header,
+			self.signer.public(),
+			self.parentchain_block_hash,
 			self.signed_top_hashes.clone(),
 			self.encrypted_payload.clone(),
 			self.timestamp,

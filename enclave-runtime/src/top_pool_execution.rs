@@ -50,7 +50,7 @@ use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
 	primitives::{
-		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
+		traits::{Block as SidechainBlockT, Header as HeaderT, ShardIdentifierFor, SignedBlock},
 		types::block::SignedBlock as SignedSidechainBlock,
 	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
@@ -231,8 +231,9 @@ where
 	ParentchainBlock: BlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
-	SignedSidechainBlock::Block:
-		SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
+	SignedSidechainBlock::Block: SidechainBlockT<Public = Authority::Public>,
+	<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockT>::HeaderType:
+		HeaderT<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
