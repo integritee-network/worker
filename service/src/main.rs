@@ -34,7 +34,7 @@ use crate::{
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
-use codec::Encode;
+use codec::{Decode, Encode};
 use config::Config;
 use enclave::{
 	api::enclave_init,
@@ -73,6 +73,7 @@ use sp_core::{
 	sr25519,
 };
 use sp_keyring::AccountKeyring;
+use sp_runtime::OpaqueExtrinsic;
 use std::{
 	fs::{self, File},
 	io::{stdin, Write},
@@ -84,6 +85,7 @@ use std::{
 };
 use substrate_api_client::{rpc::WsRpcClient, Api, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
+use tokio::runtime::Handle;
 
 mod account_funding;
 mod config;
@@ -394,7 +396,7 @@ fn start_worker<E, T, D>(
 	// start update exchange rate loop
 	let api5 = node_api;
 	let market_enclave_api = enclave;
-	start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
+	start_interval_market_update(&api5, interval, market_enclave_api.as_ref(), &tokio_handle);
 
 	/*
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
@@ -550,16 +552,21 @@ fn start_interval_market_update<E: TeeracleApi>(
 	api: &Api<sr25519::Pair, WsRpcClient>,
 	interval: Duration,
 	enclave_api: &E,
+	tokio_handle: &Handle,
 ) {
 	schedule_on_repeating_intervals(
 		|| {
-			execute_update_market(api, enclave_api);
+			execute_update_market(api, enclave_api, tokio_handle);
 		},
 		interval,
 	);
 }
 
-fn execute_update_market<E: TeeracleApi>(node_api: &Api<sr25519::Pair, WsRpcClient>, enclave: &E) {
+fn execute_update_market<E: TeeracleApi>(
+	node_api: &Api<sr25519::Pair, WsRpcClient>,
+	enclave: &E,
+	tokio_handle: &Handle,
+) {
 	use teeracle_metrics::{
 		increment_number_of_request_failures, set_extrinsics_inclusion_success,
 	};
@@ -575,24 +582,38 @@ fn execute_update_market<E: TeeracleApi>(node_api: &Api<sr25519::Pair, WsRpcClie
 			Ok(r) => r,
 		};
 
-	let mut hex_encoded_extrinsic = hex::encode(updated_extrinsic);
-	hex_encoded_extrinsic.insert_str(0, "0x");
-
-	// Send the extrinsic to the parentchain and wait for InBlock confirmation.
-	println!("[>] Update the exchange rate (send the extrinsic)");
-	let extrinsic_hash = match node_api.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
+	let extrinsics: Vec<OpaqueExtrinsic> = match Decode::decode(&mut updated_extrinsic.as_slice()) {
+		Ok(calls) => calls,
 		Err(e) => {
 			error!("{:?}: ", e);
-			set_extrinsics_inclusion_success(false);
 			return
-		},
-		Ok(r) => {
-			set_extrinsics_inclusion_success(true);
-			r
 		},
 	};
 
-	println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
+	// Send the extrinsics to the parentchain and wait for InBlock confirmation.
+	for call in extrinsics.into_iter() {
+		let node_api_clone = node_api.clone();
+		tokio_handle.spawn(async move {
+			let mut hex_encoded_extrinsic = hex::encode(call.encode());
+			hex_encoded_extrinsic.insert_str(0, "0x");
+
+			println!("[>] Update the exchange rate (send the extrinsic)");
+			let extrinsic_hash =
+				match node_api_clone.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
+					Err(e) => {
+						error!("{:?}: ", e);
+						set_extrinsics_inclusion_success(false);
+						return
+					},
+					Ok(hash) => {
+						set_extrinsics_inclusion_success(true);
+						hash
+					},
+				};
+
+			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
+		});
+	}
 }
 
 /// Schedules a task on perpetually looping intervals.

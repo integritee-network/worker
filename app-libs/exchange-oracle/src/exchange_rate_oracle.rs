@@ -26,14 +26,14 @@ use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
 
 /// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
-pub trait OracleSource {
-	fn id(&self) -> String;
+pub trait OracleSource: Default {
+	fn metrics_id(&self) -> String;
 
 	fn request_timeout(&self) -> Option<Duration>;
 
 	fn base_url(&self) -> Result<Url, Error>;
 
-	fn send_exchange_rate_request(
+	fn execute_exchange_rate_request(
 		&self,
 		rest_client: &mut RestClient<HttpClient>,
 		trading_pair: TradingPair,
@@ -53,10 +53,6 @@ where
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		ExchangeRateOracle { oracle_source, metrics_exporter }
 	}
-
-	pub fn base_url(&self) -> Result<Url, Error> {
-		self.oracle_source.base_url()
-	}
 }
 
 impl<OracleSourceType, MetricsExporter> GetExchangeRate
@@ -66,7 +62,7 @@ where
 	MetricsExporter: ExportMetrics,
 {
 	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error> {
-		let source_id = self.oracle_source.id();
+		let source_id = self.oracle_source.metrics_id();
 		self.metrics_exporter.increment_number_requests(source_id.clone());
 
 		let base_url = self.oracle_source.base_url()?;
@@ -77,12 +73,13 @@ where
 
 		match self
 			.oracle_source
-			.send_exchange_rate_request(&mut rest_client, trading_pair.clone())
+			.execute_exchange_rate_request(&mut rest_client, trading_pair.clone())
 		{
-			Ok(er) => {
+			Ok(exchange_rate) => {
 				self.metrics_exporter.record_response_time(source_id.clone(), timer_start);
-				self.metrics_exporter.update_exchange_rate(source_id, er, trading_pair);
-				Ok((er, base_url))
+				self.metrics_exporter
+					.update_exchange_rate(source_id, exchange_rate, trading_pair);
+				Ok((exchange_rate, base_url))
 			},
 			Err(e) => Err(e),
 		}

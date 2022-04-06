@@ -36,15 +36,17 @@ pub mod sgx_reexport_prelude {
 use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	coingecko::CoinGeckoSource, error::Error, exchange_rate_oracle::ExchangeRateOracle,
-	metrics_exporter::MetricsExporter, types::TradingPair,
+	coin_gecko::CoinGeckoSource, coin_market_cap::CoinMarketCapSource, error::Error,
+	exchange_rate_oracle::ExchangeRateOracle, metrics_exporter::MetricsExporter,
+	types::TradingPair,
 };
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_types::ExchangeRate;
 use std::sync::Arc;
 use url::Url;
 
-pub mod coingecko;
+pub mod coin_gecko;
+pub mod coin_market_cap;
 pub mod error;
 pub mod exchange_rate_oracle;
 pub mod metrics_exporter;
@@ -53,13 +55,25 @@ pub mod types;
 #[cfg(test)]
 mod mock;
 
+#[cfg(test)]
+mod test;
+
 pub type CoinGeckoExchangeRateOracle<OCallApi> =
 	ExchangeRateOracle<CoinGeckoSource, MetricsExporter<OCallApi>>;
 
-pub fn create_coingecko_oracle<OCallApi: EnclaveMetricsOCallApi>(
+pub type CoinMarketCapExchangeRateOracle<OCallApi> =
+	ExchangeRateOracle<CoinMarketCapSource, MetricsExporter<OCallApi>>;
+
+pub fn create_coin_gecko_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
 ) -> CoinGeckoExchangeRateOracle<OCallApi> {
 	ExchangeRateOracle::new(CoinGeckoSource {}, Arc::new(MetricsExporter::new(ocall_api)))
+}
+
+pub fn create_coin_market_cap_oracle<OCallApi: EnclaveMetricsOCallApi>(
+	ocall_api: Arc<OCallApi>,
+) -> CoinMarketCapExchangeRateOracle<OCallApi> {
+	ExchangeRateOracle::new(CoinMarketCapSource {}, Arc::new(MetricsExporter::new(ocall_api)))
 }
 
 pub trait GetExchangeRate {

@@ -22,7 +22,6 @@ use crate::{error::Error, exchange_rate_oracle::OracleSource, types::TradingPair
 use itc_rest_client::{http_client::HttpClient, rest_client::RestClient, RestGet, RestPath};
 use itp_types::ExchangeRate;
 use lazy_static::lazy_static;
-use log::*;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -38,7 +37,7 @@ const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
 const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
 
-//TODO: Get coingecko coins' id from coingecko API ? For now add here the mapping symbol to id
+//TODO: Get CoinGecko coins' id from coingecko API ? For now add here the mapping symbol to id
 lazy_static! {
 	static ref SYMBOL_ID_MAP: HashMap<&'static str, &'static str> = HashMap::from([
 		("DOT", "polkadot"),
@@ -49,6 +48,7 @@ lazy_static! {
 }
 
 /// CoinGecko oracle source.
+#[derive(Default)]
 pub struct CoinGeckoSource;
 
 impl CoinGeckoSource {
@@ -62,8 +62,8 @@ impl CoinGeckoSource {
 }
 
 impl OracleSource for CoinGeckoSource {
-	fn id(&self) -> String {
-		"coingecko".to_string()
+	fn metrics_id(&self) -> String {
+		"coin_gecko".to_string()
 	}
 
 	fn request_timeout(&self) -> Option<Duration> {
@@ -74,7 +74,7 @@ impl OracleSource for CoinGeckoSource {
 		Url::parse(COINGECKO_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
 	}
 
-	fn send_exchange_rate_request(
+	fn execute_exchange_rate_request(
 		&self,
 		rest_client: &mut RestClient<HttpClient>,
 		trading_pair: TradingPair,
@@ -91,16 +91,12 @@ impl OracleSource for CoinGeckoSource {
 
 		let list = response.0;
 		if list.is_empty() {
-			error!("Got no market data from coinGecko. Check params {:?} ", trading_pair);
-			return Err(Error::NoValidData)
+			return Err(Error::NoValidData(COINGECKO_URL.to_string(), trading_pair.key()))
 		}
 
 		match list[0].current_price {
 			Some(r) => Ok(ExchangeRate::from_num(r)),
-			None => {
-				error!("Failed to get the exchange rate {}", TradingPair::key(trading_pair));
-				Err(Error::EmptyExchangeRate)
-			},
+			None => Err(Error::EmptyExchangeRate(trading_pair)),
 		}
 	}
 }
@@ -134,7 +130,7 @@ mod tests {
 
 	type TestCoinGeckoClient = ExchangeRateOracle<CoinGeckoSource, MetricsExporterMock>;
 
-	fn get_coingecko_crypto_currency_id(crypto_currency: &str) -> Result<String, Error> {
+	fn get_coin_gecko_crypto_currency_id(crypto_currency: &str) -> Result<String, Error> {
 		let trading_pair = TradingPair {
 			crypto_currency: crypto_currency.to_string(),
 			fiat_currency: "USD".to_string(),
@@ -144,94 +140,44 @@ mod tests {
 
 	#[test]
 	fn crypto_currency_id_works_for_dot() {
-		let coin_id = get_coingecko_crypto_currency_id("DOT").unwrap();
+		let coin_id = get_coin_gecko_crypto_currency_id("DOT").unwrap();
 		assert_eq!(&coin_id, "polkadot");
 	}
 
 	#[test]
 	fn crypto_currency_id_works_for_teer() {
-		let coin_id = get_coingecko_crypto_currency_id("TEER").unwrap();
+		let coin_id = get_coin_gecko_crypto_currency_id("TEER").unwrap();
 		assert_eq!(&coin_id, "integritee");
 	}
 
 	#[test]
 	fn crypto_currency_id_works_for_ksm() {
-		let coin_id = get_coingecko_crypto_currency_id("KSM").unwrap();
+		let coin_id = get_coin_gecko_crypto_currency_id("KSM").unwrap();
 		assert_eq!(&coin_id, "kusama");
 	}
 
 	#[test]
 	fn crypto_currency_id_works_for_btc() {
-		let coin_id = get_coingecko_crypto_currency_id("BTC").unwrap();
+		let coin_id = get_coin_gecko_crypto_currency_id("BTC").unwrap();
 		assert_eq!(&coin_id, "bitcoin");
 	}
 
 	#[test]
 	fn crypto_currency_id_fails_for_undefined_crypto_currency() {
-		let result = get_coingecko_crypto_currency_id("Undefined");
-		assert_matches!(result, Err(Error::InvalidCryptoCurrencyId));
-	}
-
-	#[test]
-	fn get_exchange_rate_for_undefined_coingecko_crypto_currency_fails() {
-		let coingecko_client = create_coingecko_client();
-		let trading_pair = TradingPair {
-			crypto_currency: "invalid_coin".to_string(),
-			fiat_currency: "USD".to_string(),
-		};
-		let result = coingecko_client.get_exchange_rate(trading_pair);
+		let result = get_coin_gecko_crypto_currency_id("Undefined");
 		assert_matches!(result, Err(Error::InvalidCryptoCurrencyId));
 	}
 
 	#[test]
 	fn get_exchange_rate_for_undefined_fiat_currency_fails() {
-		let coingecko_client = create_coingecko_client();
+		let coin_gecko_client = create_coin_gecko_client();
 		let trading_pair =
 			TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "CH".to_string() };
-		let result = coingecko_client.get_exchange_rate(trading_pair);
+		let result = coin_gecko_client.get_exchange_rate(trading_pair);
 		assert_matches!(result, Err(Error::RestClient(_)));
 	}
 
-	#[test]
-	fn get_exchange_rate_from_coingecko_works() {
-		let coingecko_client = create_coingecko_client();
-		let dot_usd = coingecko_client
-			.get_exchange_rate(TradingPair {
-				crypto_currency: "DOT".to_string(),
-				fiat_currency: "USD".to_string(),
-			})
-			.unwrap()
-			.0;
-		let bit_usd = coingecko_client
-			.get_exchange_rate(TradingPair {
-				crypto_currency: "BTC".to_string(),
-				fiat_currency: "USD".to_string(),
-			})
-			.unwrap()
-			.0;
-		let dot_chf = coingecko_client
-			.get_exchange_rate(TradingPair {
-				crypto_currency: "DOT".to_string(),
-				fiat_currency: "chf".to_string(),
-			})
-			.unwrap()
-			.0;
-		let bit_chf = coingecko_client
-			.get_exchange_rate(TradingPair {
-				crypto_currency: "BTC".to_string(),
-				fiat_currency: "chf".to_string(),
-			})
-			.unwrap()
-			.0;
-
-		let zero = ExchangeRate::from_num(0);
-		//Ensure that get_exchange_rate return a positive rate
-		assert!(dot_usd > zero);
-		//Ensure that the exchange rates' values make sense
-		assert_eq!((dot_usd / bit_usd).round(), (dot_chf / bit_chf).round());
-	}
-
-	fn create_coingecko_client() -> TestCoinGeckoClient {
+	fn create_coin_gecko_client() -> TestCoinGeckoClient {
 		TestCoinGeckoClient::new(CoinGeckoSource {}, Arc::new(MetricsExporterMock::default()))
 	}
 }

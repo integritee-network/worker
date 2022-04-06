@@ -49,9 +49,13 @@ echo "Using worker market data update interval ${INTERVAL}"
 echo "Count the update events for ${DURATION}"
 echo ""
 
-MARKET_DATA_SRC="https://api.coingecko.com/"
+COIN_GECKO="https://api.coingecko.com/"
+COIN_MARKET_CAP="https://pro-api.coinmarketcap.com/"
 let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-1"
 echo "MIN_EXPECTED_NUM_OF_EVENTS ${MIN_EXPECTED_NUM_OF_EVENTS}"
+
+let "MIN_EXPECTED_NUM_OF_EVENTS_2 = 2*$MIN_EXPECTED_NUM_OF_EVENTS"
+echo "MIN_EXPECTED_NUM_OF_EVENTS_2 ${MIN_EXPECTED_NUM_OF_EVENTS_2}"
 
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
@@ -74,9 +78,9 @@ read NO_EVENTS <<< $($CLIENT exchange-rate-events ${DURATION} | awk '/  EVENTS_C
 echo "Got ${NO_EVENTS} exchange rate updates when no trusted oracle service is in the whitelist"
 echo ""
 
-echo "Add MRENCLAVE as trusted oracle service for ${MARKET_DATA_SRC}"
-${CLIENT} add-whitelist //Alice ${MARKET_DATA_SRC} ${MRENCLAVE}
-echo "MRENCLAVE in Whitelist for ${MARKET_DATA_SRC}"
+echo "Add MRENCLAVE as trusted oracle service for ${COIN_GECKO}"
+${CLIENT} add-whitelist //Alice ${COIN_GECKO} ${MRENCLAVE}
+echo "MRENCLAVE in Whitelist for ${COIN_GECKO}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds, after a trusted oracle service has been added to the whitelist."
@@ -87,19 +91,40 @@ read EVENTS_COUNT <<< $($CLIENT exchange-rate-events ${DURATION} | awk '/  EVENT
 echo "Got ${EVENTS_COUNT} exchange rate updates from the trusted oracle service in ${DURATION} second"
 echo ""
 
+
+
+
+echo "Add MRENCLAVE as trusted oracle service for ${COIN_MARKET_CAP}"
+${CLIENT} add-whitelist //Alice ${COIN_MARKET_CAP} ${MRENCLAVE}
+echo "MRENCLAVE in Whitelist for ${COIN_MARKET_CAP}"
+echo ""
+
+echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds, after a second trusted oracle service has been added to the whitelist."
+${CLIENT} exchange-rate-events ${DURATION}
+echo ""
+
+read EVENTS_COUNT_2 <<< $($CLIENT exchange-rate-events ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
+echo "Got ${EVENTS_COUNT_2} exchange rate updates from 2 trusted oracle services in ${DURATION} second"
+echo ""
+
+
 # the following test is for automated CI
 # it only works if the teeracle's whitelist is empty at the start (run it from genesis)
-
-if [ "$EVENTS_COUNT" > "$MIN_EXPECTED_NUM_OF_EVENTS" ]; then
-   if [ "0" = "$NO_EVENTS" ]; then
-       echo "test passed"
-       exit 0
+if [ "$EVENTS_COUNT_2" > "$MIN_EXPECTED_NUM_OF_EVENTS_2" ]; then
+   if [ "$EVENTS_COUNT" > "$MIN_EXPECTED_NUM_OF_EVENTS" ]; then
+       if [ "0" = "$NO_EVENTS" ]; then
+           echo "test passed"
+           exit 0
+       else
+           echo "The test ran through but we received ExchangeRateUpdated events before the enclave was added to the whitelist. Was the enclave previously whitelisted? Perhaps by another teeracle?"
+           exit 1
+      fi
    else
-       echo "The test ran through but we received ExchangeRateUpdated events before the enclave was added to the whitelist. Was the enclave previously whitelisted? Perhaps by another teeracle?"
-       exit 1
+    echo "test failed: $MIN_EXPECTED_NUM_OF_EVENTS!< $EVENTS_COUNT"
+    exit 1
    fi
 else
-    echo "test failed: $MIN_EXPECTED_NUM_OF_EVENTS !< ${EVENTS_COUNT} "
+    echo "test failed: $MIN_EXPECTED_NUM_OF_EVENTS_2 !< $EVENTS_COUNT_2 "
     exit 1
 fi
 

@@ -74,10 +74,11 @@ impl ExportMetrics for MetricsExporterMock {
 }
 
 /// Mock oracle source.
+#[derive(Default)]
 pub(crate) struct OracleSourceMock;
 
 impl OracleSource for OracleSourceMock {
-	fn id(&self) -> String {
+	fn metrics_id(&self) -> String {
 		"source_mock".to_string()
 	}
 
@@ -89,7 +90,7 @@ impl OracleSource for OracleSourceMock {
 		Url::parse("https://mock.base.url").map_err(|e| Error::Other(format!("{:?}", e).into()))
 	}
 
-	fn send_exchange_rate_request(
+	fn execute_exchange_rate_request(
 		&self,
 		_rest_client: &mut RestClient<HttpClient>,
 		_trading_pair: TradingPair,

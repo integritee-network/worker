@@ -16,19 +16,22 @@
 */
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
-use std::boxed::Box;
+use crate::types::TradingPair;
+use std::{boxed::Box, string::String};
 
 /// Exchange rate error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("Rest client error")]
 	RestClient(itc_rest_client::error::Error),
-	#[error("Could not retrieve any data")]
-	NoValidData,
+	#[error("Could not retrieve any data from {0} for {1}")]
+	NoValidData(String, String),
 	#[error("Value for exchange rate is null")]
-	EmptyExchangeRate,
+	EmptyExchangeRate(TradingPair),
 	#[error("Invalid id for crypto currency")]
 	InvalidCryptoCurrencyId,
+	#[error("Invalid id for fiat currency")]
+	InvalidFiatCurrencyId,
 	#[error("Other error")]
 	Other(Box<dyn std::error::Error>),
 }

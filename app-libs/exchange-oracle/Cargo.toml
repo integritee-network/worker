@@ -52,3 +52,4 @@ itp-types = { path = "../../core-primitives/types", default-features = false }
 
 [dev-dependencies]
 itp-test = { path = "../../core-primitives/test" }
+substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }

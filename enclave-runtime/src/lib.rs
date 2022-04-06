@@ -49,7 +49,13 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::{alloc::string::String, Decode, Encode};
-use ita_exchange_oracle::{create_coingecko_oracle, types::TradingPair, GetExchangeRate};
+use ita_exchange_oracle::{
+	create_coin_gecko_oracle, create_coin_market_cap_oracle,
+	exchange_rate_oracle::{ExchangeRateOracle, OracleSource},
+	metrics_exporter::ExportMetrics,
+	types::TradingPair,
+	GetExchangeRate,
+};
 use ita_stf::{Getter, ShardIdentifier, Stf};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -664,17 +670,15 @@ pub unsafe extern "C" fn update_market_data_xt(
 		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
 	};
 
-	// Only one extrinsic to send over the node api directly.
-	let extrinsic = match extrinsics.get(0) {
-		Some(xt) => xt,
-		None => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-	};
-
+	if extrinsics.is_empty() {
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
-	write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode());
+	write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode());
+
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -687,16 +691,43 @@ fn update_market_data_internal(
 
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
+	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
 
 	// Get the exchange rate
 	let trading_pair = TradingPair { crypto_currency, fiat_currency };
-	let coingecko_client = create_coingecko_oracle(Arc::new(OcallApi));
-	let (rate, base_url) = match coingecko_client.get_exchange_rate(trading_pair.clone()) {
-		Ok(r) => r,
+
+	let coin_gecko_oracle = create_coin_gecko_oracle(Arc::new(OcallApi));
+
+	match get_exchange_rate(trading_pair.clone(), coin_gecko_oracle) {
+		Ok(opaque_call) => extrinsic_calls.push(opaque_call),
 		Err(e) => {
-			error!("[-] Failed to get the newest exchange rate from coingecko. {:?}", e);
-			return Err(Error::Other(e.into()))
+			error!("[-] Failed to get the newest exchange rate from CoinGecko. {:?}", e);
 		},
+	};
+
+	let coin_market_cap_oracle = create_coin_market_cap_oracle(Arc::new(OcallApi));
+	match get_exchange_rate(trading_pair, coin_market_cap_oracle) {
+		Ok(oc) => extrinsic_calls.push(oc),
+		Err(e) => {
+			error!("[-] Failed to get the newest exchange rate from CoinMarketCap. {:?}", e);
+		},
+	};
+
+	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice())?;
+	Ok(extrinsics)
+}
+
+fn get_exchange_rate<OracleSourceType, MetricsExporter>(
+	trading_pair: TradingPair,
+	oracle: ExchangeRateOracle<OracleSourceType, MetricsExporter>,
+) -> Result<OpaqueCall>
+where
+	OracleSourceType: OracleSource,
+	MetricsExporter: ExportMetrics,
+{
+	let (rate, base_url) = match oracle.get_exchange_rate(trading_pair.clone()) {
+		Ok(result) => result,
+		Err(e) => return Err(Error::Other(e.into())),
 	};
 
 	let source_base_url = base_url.as_str();
@@ -715,6 +746,5 @@ fn update_market_data_internal(
 		Some(rate),
 	));
 
-	let extrinsics = extrinsics_factory.create_extrinsics(vec![call].as_slice())?;
-	Ok(extrinsics)
+	Ok(call)
 }
