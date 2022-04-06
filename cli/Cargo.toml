@@ -24,6 +24,7 @@ codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 rayon = "1.5.1"
 synchronoise = "1.0.0"
+hdrhistogram = "7.5.0"
 
 # scs / integritee
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20" }

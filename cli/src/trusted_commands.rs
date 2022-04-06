@@ -26,6 +26,7 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
+use hdrhistogram::Histogram;
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_types::{
@@ -38,7 +39,11 @@ use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::time::Instant;
+use std::{
+	collections::HashMap,
+	thread::sleep,
+	time::{Duration, Instant},
+};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 use synchronoise::SignalEvent;
 
@@ -228,17 +233,18 @@ fn transfer_benchmark(
 
 	// signals to synchronize threads
 	let mut submitted_signals = Vec::new();
-	for n in 0..11 {
+	for n in 0..201 {
 		submitted_signals.insert(n, SignalEvent::manual(false));
 	}
 	submitted_signals.get(0).unwrap().signal();
 
-	(0..10)
+	let overall_start = Instant::now();
+
+	let outputs: Vec<(Vec<String>, Option<Instant>)> = (0..200)
 		.into_par_iter()
 		.map(|nonce| {
 			let mut output = Vec::new();
-
-			output.push(format!("execution time balance_transfer (nonce {}):", nonce));
+			let mut time_until_in_block = None;
 
 			let top: TrustedOperation =
 				TrustedCall::balance_transfer(from.public().into(), to.clone(), *amount)
@@ -248,6 +254,11 @@ fn transfer_benchmark(
 			submitted_signals.get(nonce as usize).unwrap().wait();
 
 			let start_time = Instant::now();
+			output.push(format!(
+				"starting balance_transfer (nonce {}, at:{}ms):",
+				nonce,
+				start_time.duration_since(overall_start).as_millis()
+			));
 
 			let receiver = match top {
 				TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
@@ -274,11 +285,20 @@ fn transfer_benchmark(
 
 					submitted_signals.get((nonce + 1) as usize).unwrap().signal();
 
+					sleep(Duration::new(0, 200000000)); // sleep for 200ms
+
 					match wait_until(&r, is_sidechain_block) {
-						Some(t) => output.push(format!(
-							"InSidechainBlock : {}ms",
-							(t.duration_since(start_time)).as_millis()
-						)),
+						Some(t) => {
+							output.push(format!(
+								"InSidechainBlock : {}ms",
+								(t.duration_since(start_time)).as_millis()
+							));
+							output.push(format!(
+								"InSidechainBlock at: {}ms",
+								t.duration_since(overall_start).as_millis()
+							));
+							time_until_in_block = Some(t);
+						},
 						None =>
 							output.push("transaction was not added to sidechain block.".to_string()),
 					};
@@ -286,13 +306,40 @@ fn transfer_benchmark(
 				None => output.push(format!("Something went wrong for nonce {}", nonce)),
 			}
 
-			output
+			(output, time_until_in_block)
 		})
-		.for_each(|output| {
-			for t in output {
-				println!("{}", t);
+		.collect();
+
+	let mut throughput: HashMap<u64, u64> = HashMap::new();
+
+	for output in outputs {
+		for t in output.0 {
+			println!("{}", t);
+		}
+
+		if let Some(t) = output.1 {
+			let s = t.duration_since(overall_start).as_secs();
+			let mut current = 0;
+			if throughput.contains_key(&s) {
+				current = *throughput.get(&s).unwrap();
 			}
-		});
+			throughput.insert(s, current + 1);
+		}
+	}
+
+	let mut hist = Histogram::<u64>::new(1).unwrap();
+	for (_, value) in throughput {
+		hist += value;
+	}
+
+	for v in hist.iter_recorded() {
+		println!(
+			"{}'th percentile of data is {} with {} samples",
+			v.percentile(),
+			v.value_iterated_to(),
+			v.count_at_value()
+		);
+	}
 }
 
 fn is_submitted(s: TrustedOperationStatus) -> bool {
