@@ -18,6 +18,7 @@
 
 //! Builder pattern for a signed sidechain block.
 
+use codec::Encode;
 use itp_time_utils;
 use itp_types::H256;
 use its_primitives::{
@@ -27,7 +28,8 @@ use its_primitives::{
 		Block, ShardIdentifier, SignedBlock,
 	},
 };
-use sp_core::{blake2_256, ed25519, Pair};
+use sp_core::{ed25519, Pair};
+use sp_runtime::traits::{BlakeTwo256, Hash};
 
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
@@ -111,13 +113,22 @@ impl SidechainBlockBuilder {
 		self
 	}
 
+	/// Calculate the payload of a sidechain block
+	pub fn block_payload_hash(&self) -> H256 {
+		(
+			self.timestamp,
+			self.parentchain_block_hash,
+			self.signer.public(),
+			&self.signed_top_hashes.clone(),
+			&self.encrypted_payload.clone(),
+		)
+			.using_encoded(BlakeTwo256::hash)
+	}
+
 	pub fn build(&self) -> Block {
-		let header = HeaderT::new(
-			self.number,
-			self.parent_hash,
-			self.shard,
-			blake2_256(&self.encrypted_payload).into(),
-		);
+		let payload_hash = self.block_payload_hash();
+
+		let header = HeaderT::new(self.number, self.parent_hash, self.shard, payload_hash);
 
 		Block::new(
 			header,

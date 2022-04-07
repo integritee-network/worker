@@ -29,9 +29,9 @@ use its_primitives::traits::{
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_core::{blake2_256, Pair};
+use sp_core::{ed25519, Pair};
 use sp_runtime::{
-	traits::{Block as ParentchainBlockTrait, Header},
+	traits::{BlakeTwo256, Block as ParentchainBlockTrait, Hash, Header},
 	MultiSignature,
 };
 use std::{format, marker::PhantomData, vec::Vec};
@@ -129,21 +129,31 @@ where
 			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
 
+		let now = now_as_u64();
+		let layer_one_hash = latest_parentchain_header.hash();
+		let payload_hash = calculate_payload_hash(
+			now,
+			layer_one_hash,
+			author_public,
+			top_call_hashes.clone(),
+			payload.clone(),
+		);
+
 		let header =
 			<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType::new(
 				block_number,
 				parent_hash,
 				shard,
-				blake2_256(&payload).into()
+				payload_hash,
 			);
 
 		let block = SignedSidechainBlock::Block::new(
 			header,
 			author_public,
-			latest_parentchain_header.hash(),
+			layer_one_hash,
 			top_call_hashes,
 			payload,
-			now_as_u64(),
+			now,
 		);
 
 		let block_hash = block.hash();
@@ -160,4 +170,16 @@ where
 /// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
 fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
+}
+
+/// Calculate the payload of a sidechain block
+fn calculate_payload_hash(
+	timestamp: u64,
+	layer_one_head: H256,
+	block_author: ed25519::Public,
+	signed_top_hashes: Vec<H256>,
+	state_payload: Vec<u8>,
+) -> H256 {
+	(timestamp, layer_one_head, block_author, signed_top_hashes, state_payload)
+		.using_encoded(BlakeTwo256::hash)
 }
