@@ -29,8 +29,7 @@ lazy_static! {
 	static ref INITIALIZED_HANDLE: RwLock<bool> = RwLock::new(false);
 }
 
-pub async fn start_initialized_server() -> ServiceResult<()> {
-	let port = 1234;
+pub async fn start_is_initialized_server(port: u16) -> ServiceResult<()> {
 	let is_initialized_route = warp::path!("is_initialized").and_then(|| async move {
 		if *INITIALIZED_HANDLE.read() {
 			Ok("I am initialized.")

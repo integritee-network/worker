@@ -21,7 +21,7 @@ use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
 	globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle},
-	initialized_service::{set_initialized, start_initialized_server},
+	initialized_service::{set_initialized, start_is_initialized_server},
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -314,10 +314,13 @@ fn start_worker<E, T, D>(
 	let tee_accountid = enclave_account(enclave.as_ref());
 
 	// ------------------------------------------------------------------------
-	// Start initialized server
+	// Start `is_initialized` server.
+	let untrusted_http_server_port = config
+		.try_parse_untrusted_http_server_port()
+		.expect("untrusted http server port to be a valid port number");
 	tokio_handle.spawn(async move {
-		if let Err(e) = start_initialized_server().await {
-			error!("Unexpected error in initialized server: {:?}", e);
+		if let Err(e) = start_is_initialized_server(untrusted_http_server_port).await {
+			error!("Unexpected error in `is_initialized` server: {:?}", e);
 		}
 	});
 
