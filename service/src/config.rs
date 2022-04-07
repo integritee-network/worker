@@ -246,7 +246,7 @@ mod test {
 		assert_eq!(config.trusted_external_worker_address, Some(trusted_ext_addr.to_string()));
 		assert_eq!(config.untrusted_external_worker_address, Some(untrusted_ext_addr.to_string()));
 		assert_eq!(config.mu_ra_external_address, Some(mu_ra_ext_addr.to_string()));
-		assert_eq!(config.untrusted_http_port, Some(untrusted_http_port.to_string()));
+		assert_eq!(config.untrusted_http_port, untrusted_http_port.to_string());
 	}
 
 	#[test]
