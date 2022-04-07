@@ -23,7 +23,7 @@ use itp_sgx_crypto::StateCrypto;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderT, SignBlock,
+	Block as SidechainBlockTrait, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
@@ -66,7 +66,7 @@ where
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderT<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
@@ -86,7 +86,7 @@ where
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderT<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,

@@ -22,7 +22,7 @@ use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Environment, Error as ConsensusError};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderT, ShardIdentifierFor,
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
@@ -69,7 +69,7 @@ where
 		+ 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderT<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256>,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
 	StfExecutor: StateUpdateProposer + Send + Sync + 'static,

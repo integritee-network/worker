@@ -15,7 +15,7 @@
 
 */
 
-use crate::traits::Header as HeaderT;
+use crate::traits::Header as HeaderTrait;
 use codec::{Decode, Encode};
 use sp_core::H256;
 
@@ -40,7 +40,7 @@ pub struct Header {
 	pub payload_hash: H256,
 }
 
-impl HeaderT for Header {
+impl HeaderTrait for Header {
 	type ShardIdentifier = H256;
 
 	/// get block number

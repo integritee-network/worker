@@ -21,7 +21,7 @@ use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch}
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderT, ShardIdentifierFor,
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
@@ -66,7 +66,7 @@ where
 		SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderT<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256>,
 	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
 		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,

@@ -22,7 +22,7 @@ use codec::Encode;
 use itp_time_utils;
 use itp_types::H256;
 use its_primitives::{
-	traits::{Block as BlockTrait, Header as HeaderT, SignBlock},
+	traits::{Block as BlockTrait, Header as HeaderTrait, SignBlock},
 	types::{
 		block::{BlockHash, BlockNumber, Timestamp},
 		Block, ShardIdentifier, SignedBlock,
@@ -128,7 +128,7 @@ impl SidechainBlockBuilder {
 	pub fn build(&self) -> Block {
 		let payload_hash = self.block_payload_hash();
 
-		let header = HeaderT::new(self.number, self.parent_hash, self.shard, payload_hash);
+		let header = HeaderTrait::new(self.number, self.parent_hash, self.shard, payload_hash);
 
 		Block::new(
 			header,

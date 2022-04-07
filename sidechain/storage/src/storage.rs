@@ -18,7 +18,7 @@
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
 use its_primitives::{
-	traits::{Block as BlockT, Header as HeaderT, SignedBlock as SignedBlockT},
+	traits::{Block as BlockTrait, Header as HeaderTrait, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
 };
 use log::*;
@@ -32,7 +32,7 @@ const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
 /// ShardIdentifier type
 type ShardIdentifierFor<B> =
-	<<<B as SignedBlockT>::Block as BlockT>::HeaderType as HeaderT>::ShardIdentifier;
+	<<<B as SignedBlockT>::Block as BlockTrait>::HeaderType as HeaderTrait>::ShardIdentifier;
 
 /// Helper struct, contains the blocknumber
 /// and blockhash of the last sidechain block

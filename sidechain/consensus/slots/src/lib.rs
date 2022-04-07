@@ -37,7 +37,7 @@ use itp_time_utils::{duration_now, remaining_time};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
 use its_primitives::traits::{
-	Block as SidechainBlock, Header as HeaderT, ShardIdentifierFor,
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlock,
 };
 use log::{debug, info, warn};

@@ -22,7 +22,10 @@ use itp_storage_verifier::GetStorageVerified;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{
-	traits::{Block as SidechainBlockTrait, Header, SignedBlock as SignedSidechainBlockTrait},
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait,
+		SignedBlock as SignedSidechainBlockTrait,
+	},
 	types::block::BlockHash,
 };
 use its_state::LastBlockExt;

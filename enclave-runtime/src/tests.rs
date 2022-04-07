@@ -63,7 +63,9 @@ use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	primitives::{
-		traits::{Block as BlockT, Header as SidechainHeaderT, SignedBlock as SignedBlockT},
+		traits::{
+			Block as BlockTrait, Header as SidechainHeaderTrait, SignedBlock as SignedBlockTrait,
+		},
 		types::block::SignedBlock,
 	},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},

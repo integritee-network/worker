@@ -35,7 +35,7 @@ use itp_storage_verifier::GetStorageVerified;
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
-	Header as HeaderT, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
+	Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };
 use its_state::SidechainDB;
 use its_top_pool_executor::TopPoolCallOperator;
@@ -98,7 +98,7 @@ impl<
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderT<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
 		+ GetStorageVerified
@@ -192,7 +192,7 @@ impl<
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderT<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
 		+ GetStorageVerified

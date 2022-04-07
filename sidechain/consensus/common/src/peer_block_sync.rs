@@ -21,7 +21,8 @@ use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_types::H256;
 use its_primitives::{
 	traits::{
-		Block as BlockTrait, Header, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
+		Block as BlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+		SignedBlock as SignedSidechainBlockTrait,
 	},
 	types::BlockHash,
 };
@@ -57,8 +58,8 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	<<SignedSidechainBlock as its_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
-		Header<ShardIdentifier = H256>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType:
+		HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 {
@@ -116,7 +117,7 @@ where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	<<SignedSidechainBlock as its_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
-	Header<ShardIdentifier = H256>,
+	HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 {

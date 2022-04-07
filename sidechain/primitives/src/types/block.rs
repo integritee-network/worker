@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	traits::{Block as BlockT, SignedBlock as SignedBlockT},
+	traits::{Block as BlockTrait, SignedBlock as SignedBlockTrait},
 	types::header::Header,
 };
 use codec::{Decode, Encode};
@@ -66,7 +66,7 @@ pub struct Block {
 	pub state_payload: Vec<u8>,
 }
 
-impl BlockT for Block {
+impl BlockTrait for Block {
 	type HeaderType = Header;
 
 	type Public = ed25519::Public;
@@ -116,7 +116,7 @@ impl BlockT for Block {
 	}
 }
 
-impl SignedBlockT for SignedBlock {
+impl SignedBlockTrait for SignedBlock {
 	type Block = Block;
 
 	type Public = ed25519::Public;
