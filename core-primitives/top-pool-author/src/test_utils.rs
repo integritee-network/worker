@@ -45,11 +45,11 @@ where
 
 /// Get all pending trusted operations, grouped into calls and getters
 pub fn get_pending_tops_separated<R>(
-	rpc_author: &R,
+	top_pool_author: &R,
 	shard: ShardIdentifier,
 ) -> (Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)
 where
 	R: AuthorApi<H256, H256>,
 {
-	rpc_author.get_pending_tops_separated(shard).unwrap()
+	top_pool_author.get_pending_tops_separated(shard).unwrap()
 }

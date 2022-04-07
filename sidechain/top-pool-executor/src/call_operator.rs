@@ -18,12 +18,12 @@
 use crate::{error::Result, TopPoolOperationHandler};
 use ita_stf::TrustedCallSigned;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
+use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
@@ -76,7 +76,7 @@ where
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Vec<TrustedCallSigned>> {
-		Ok(self.rpc_author.get_pending_tops_separated(*shard)?.0)
+		Ok(self.top_pool_author.get_pending_tops_separated(*shard)?.0)
 	}
 
 	fn remove_calls_from_pool(
@@ -86,7 +86,7 @@ where
 	) -> Vec<ExecutedOperation> {
 		let mut failed_to_remove = Vec::new();
 		for executed_call in executed_calls {
-			if let Err(e) = self.rpc_author.remove_top(
+			if let Err(e) = self.top_pool_author.remove_top(
 				vec![executed_call.trusted_operation_or_hash.clone()],
 				*shard,
 				executed_call.is_success(),
@@ -101,6 +101,6 @@ where
 	}
 
 	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) {
-		self.rpc_author.on_block_imported(block.signed_top_hashes(), block.hash());
+		self.top_pool_author.on_block_imported(block.signed_top_hashes(), block.hash());
 	}
 }

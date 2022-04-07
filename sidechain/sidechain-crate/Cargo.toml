@@ -14,9 +14,7 @@ std = [
     "its-primitives/std",
     "its-rpc-handler/std",
     "its-state/std",
-    "its-top-pool/std",
     "its-top-pool-executor/std",
-    "its-top-pool-rpc-author/std",
     "its-validateer-fetch/std",
 ]
 sgx = [
@@ -26,11 +24,8 @@ sgx = [
     "its-consensus-slots/sgx",
     "its-rpc-handler/sgx",
     "its-state/sgx",
-    "its-top-pool/sgx",
     "its-top-pool-executor/sgx",
-    "its-top-pool-rpc-author/sgx",
 ]
-test = ["its-top-pool-rpc-author/test"]
 
 [dependencies]
 its-block-composer = { path = "../block-composer", default-features = false }
@@ -40,7 +35,5 @@ its-consensus-slots = { path = "../consensus/slots", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 its-rpc-handler = { path = "../rpc-handler", default-features = false }
 its-state = { path = "../state", default-features = false }
-its-top-pool = { path = "../top-pool", default-features = false }
 its-top-pool-executor = { path = "../top-pool-executor", default-features = false }
-its-top-pool-rpc-author = { path = "../top-pool-rpc-author", default-features = false }
 its-validateer-fetch = { path = "../validateer-fetch", default-features = false }

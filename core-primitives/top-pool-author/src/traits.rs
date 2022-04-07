@@ -20,8 +20,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::error::Result;
 use ita_stf::{hash, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use itp_top_pool::primitives::PoolFuture;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
-use its_top_pool::primitives::PoolFuture;
 use jsonrpc_core::Error as RpcError;
 use std::vec::Vec;
 

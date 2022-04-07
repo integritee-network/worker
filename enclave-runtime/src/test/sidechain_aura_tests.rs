@@ -39,14 +39,14 @@ use itp_test::{
 	mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock},
 };
 use itp_time_utils::duration_now;
+use itp_top_pool::pool::Options as PoolOptions;
+use itp_top_pool_author::{api::SidechainApi, author::AuthorTopFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, Enclave, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
 	primitives::types::SignedBlock as SignedSidechainBlock,
 	slots::{slot_from_time_stamp_and_duration, SlotInfo},
 	state::SidechainState,
-	top_pool::pool::Options as PoolOptions,
-	top_pool_rpc_author::{api::SidechainApi, author::AuthorTopFilter, traits::AuthorApi},
 };
 use jsonrpc_core::futures::executor;
 use log::*;
@@ -78,7 +78,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	let stf_executor = Arc::new(TestStfExecutor::new(ocall_api.clone(), state_handler.clone()));
 	let top_pool = create_top_pool();
 
-	let rpc_author = Arc::new(TestRpcAuthor::new(
+	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
 		AuthorTopFilter {},
 		state_handler.clone(),
@@ -86,7 +86,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		Arc::new(MetricsOCallMock {}),
 	));
 	let top_pool_operation_handler =
-		Arc::new(TestTopPoolExecutor::new(rpc_author.clone(), stf_executor.clone()));
+		Arc::new(TestTopPoolExecutor::new(top_pool_author.clone(), stf_executor.clone()));
 	let parentchain_block_import_trigger = Arc::new(TestParentchainBlockImportTrigger::default());
 	let block_importer = Arc::new(TestBlockImporter::new(
 		state_handler.clone(),
@@ -124,12 +124,12 @@ pub fn produce_sidechain_block_and_import_it() {
 		200000,
 	);
 	info!("Add trusted operations to TOP pool..");
-	executor::block_on(rpc_author.submit_top(trusted_operation, shard_id)).unwrap();
-	executor::block_on(rpc_author.submit_top(invalid_trusted_operation, shard_id)).unwrap();
+	executor::block_on(top_pool_author.submit_top(trusted_operation, shard_id)).unwrap();
+	executor::block_on(top_pool_author.submit_top(invalid_trusted_operation, shard_id)).unwrap();
 
 	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
-	assert_eq!(2, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
-	assert!(rpc_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
+	assert_eq!(2, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	assert!(top_pool_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
 
 	info!("Setup AURA SlotInfo");
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
@@ -168,7 +168,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	assert!(parentchain_block_import_trigger.has_import_been_called());
 
 	// Ensure that invalid calls are removed from pool. Valid calls should only be removed upon block import.
-	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	assert_eq!(1, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
@@ -184,7 +184,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	.unwrap();
 
 	// After importing the sidechain block, the trusted operation should be removed.
-	assert!(rpc_author.get_pending_tops_separated(shard_id).unwrap().0.is_empty());
+	assert!(top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.is_empty());
 
 	// After importing the block, the state hash must be changed.
 	// We don't have a way to directly compare state hashes, because calculating the state hash

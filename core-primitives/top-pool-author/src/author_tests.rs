@@ -30,8 +30,8 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
-	trusted_operation_pool_mock::TrustedOperationPoolMock,
 };
+use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedOperationPoolMock;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use sp_core::{ed25519, Pair, H256};
 use sp_runtime::traits::{BlakeTwo256, Hash};

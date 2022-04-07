@@ -46,3 +46,6 @@ pub mod watcher;
 
 #[cfg(test)]
 mod mocks;
+
+#[cfg(feature = "mocks")]
+pub mod mocks;

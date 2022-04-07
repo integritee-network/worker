@@ -49,12 +49,12 @@ pub use call_operator::TopPoolCallOperator;
 pub use getter_operator::TopPoolGetterOperator;
 
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
+use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
 use std::{marker::PhantomData, sync::Arc};
@@ -62,28 +62,33 @@ use std::{marker::PhantomData, sync::Arc};
 /// Executes operations on the top pool
 ///
 /// Operations can either be Getters or Calls
-pub struct TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor> {
-	rpc_author: Arc<RpcAuthor>,
+pub struct TopPoolOperationHandler<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	TopPoolAuthor,
+	StfExecutor,
+> {
+	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
 
-impl<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
-	TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, RpcAuthor, StfExecutor>
+impl<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, StfExecutor>
+	TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, StfExecutor>
 where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>,
 	SignedSidechainBlock::Block:
 		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
-	RpcAuthor: AuthorApi<H256, ParentchainBlock::Hash>
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash>
 		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	StfExecutor: StateUpdateProposer + StfExecuteTimedGettersBatch,
 	<StfExecutor as StateUpdateProposer>::Externalities:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 {
-	pub fn new(rpc_author: Arc<RpcAuthor>, stf_executor: Arc<StfExecutor>) -> Self {
-		TopPoolOperationHandler { rpc_author, stf_executor, _phantom: Default::default() }
+	pub fn new(top_pool_author: Arc<TopPoolAuthor>, stf_executor: Arc<StfExecutor>) -> Self {
+		TopPoolOperationHandler { top_pool_author, stf_executor, _phantom: Default::default() }
 	}
 }

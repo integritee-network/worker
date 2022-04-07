@@ -24,23 +24,23 @@ use itc_direct_rpc_server::rpc_responder::RpcResponder;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::ShieldingCrypto;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
-use its_top_pool::pool::Options as PoolOptions;
+use itp_top_pool::pool::Options as PoolOptions;
 use std::sync::Arc;
 
-pub type SidechainRpcAuthor<StateHandler, ShieldingCrypto, OCallApi> =
+pub type TopPoolAuthor<StateHandler, ShieldingCrypto, OCallApi> =
 	Author<BPool, AuthorTopFilter, StateHandler, ShieldingCrypto, OCallApi>;
 
-/// Initialize the author components.
+/// Initialize the TOP pool author component.
 ///
 /// Creates and initializes the global author container from which the
-/// RPC author can be accessed. We do this in a centralized manner, to allow
+/// TOP pool author can be accessed. We do this in a centralized manner, to allow
 /// easy feature-gating of the entire sidechain/top-pool feature.
-pub fn create_top_pool_rpc_author<StateHandler, ShieldingKey, OCallApi>(
+pub fn create_top_pool_author<StateHandler, ShieldingKey, OCallApi>(
 	connection_registry: Arc<EnclaveRpcConnectionRegistry>,
 	state_handler: Arc<StateHandler>,
 	ocall_api: Arc<OCallApi>,
 	shielding_crypto: ShieldingKey,
-) -> Arc<SidechainRpcAuthor<StateHandler, ShieldingKey, OCallApi>>
+) -> Arc<TopPoolAuthor<StateHandler, ShieldingKey, OCallApi>>
 where
 	StateHandler: QueryShardState,
 	ShieldingKey: ShieldingCrypto,

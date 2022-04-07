@@ -22,12 +22,12 @@ use crate::{
 use codec::Encode;
 use ita_stf::{hash::TrustedOperationOrHash, TrustedGetterSigned};
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
+use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::{ShardIdentifier, H256};
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_rpc_author::traits::{AuthorApi, OnBlockImported, SendState};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
@@ -85,13 +85,13 @@ where
 				|trusted_getter_signed: &TrustedGetterSigned,
 				 state_result: StfExecutorResult<Option<Vec<u8>>>| {
 					let hash_of_getter =
-						self.rpc_author.hash_of(&trusted_getter_signed.clone().into());
+						self.top_pool_author.hash_of(&trusted_getter_signed.clone().into());
 
 					match state_result {
 						Ok(r) => {
 							// let client know of current state
 							trace!("Updating client");
-							match self.rpc_author.send_state(hash_of_getter, r.encode()) {
+							match self.top_pool_author.send_state(hash_of_getter, r.encode()) {
 								Ok(_) => trace!("Successfully updated client"),
 								Err(e) => error!("Could not send state to client {:?}", e),
 							}
@@ -114,7 +114,7 @@ where
 	}
 
 	fn get_trusted_getters(&self, shard: &ShardIdentifier) -> Result<Vec<TrustedGetterSigned>> {
-		Ok(self.rpc_author.get_pending_tops_separated(*shard)?.1)
+		Ok(self.top_pool_author.get_pending_tops_separated(*shard)?.1)
 	}
 
 	fn remove_getter_from_pool(
@@ -122,6 +122,6 @@ where
 		shard: &ShardIdentifier,
 		getter: TrustedOperationOrHash<H256>,
 	) -> Result<Vec<H256>> {
-		Ok(self.rpc_author.remove_top(vec![getter], *shard, false)?)
+		Ok(self.top_pool_author.remove_top(vec![getter], *shard, false)?)
 	}
 }

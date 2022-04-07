@@ -23,7 +23,7 @@ pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Debug, Display, From)]
 pub enum Error {
-	Rpc(its_sidechain::top_pool_rpc_author::error::Error),
+	TopPoolAuthor(itp_top_pool_author::error::Error),
 	Codec(codec::Error),
 	ComponentContainer(itp_component_container::error::Error),
 	Crypto(itp_sgx_crypto::Error),

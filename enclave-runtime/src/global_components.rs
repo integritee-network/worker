@@ -39,6 +39,10 @@ use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::Aes;
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::GlobalFileStateHandler;
+use itp_top_pool_author::{
+	author::{Author, AuthorTopFilter},
+	pool_types::BPool,
+};
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
@@ -50,10 +54,6 @@ use its_sidechain::{
 	},
 	state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
-	top_pool_rpc_author::{
-		author::{Author, AuthorTopFilter},
-		pool_types::BPool,
-	},
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
@@ -136,6 +136,10 @@ pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
 pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandler> =
 	ComponentContainer::new("state handler");
 
+/// TOP pool author.
+pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
+	ComponentContainer::new("top_pool_author");
+
 /// Parentchain component instances
 ///-------------------------------------------------------------------------------------------------
 
@@ -174,10 +178,6 @@ pub static GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT: ComponentContainer<
 pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<
 	EnclaveSidechainBlockSyncer,
 > = ComponentContainer::new("sidechain_block_syncer");
-
-/// Sidechain RPC (top pool) author.
-pub static GLOBAL_RPC_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
-	ComponentContainer::new("sidechain_rpc_author");
 
 /// Sidechain top pool operation handler.
 pub static GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT: ComponentContainer<

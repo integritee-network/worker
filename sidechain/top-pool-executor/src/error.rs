@@ -31,7 +31,7 @@ pub enum Error {
 	#[error("STF execution error: {0}")]
 	StfExecution(#[from] itp_stf_executor::error::Error),
 	#[error("TOP pool RPC author error: {0}")]
-	TopPoolRpcAuthor(#[from] its_top_pool_rpc_author::error::Error),
+	TopPoolAuthor(#[from] itp_top_pool_author::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

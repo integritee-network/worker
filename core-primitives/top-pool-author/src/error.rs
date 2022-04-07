@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::client_error::Error as ClientError;
 use core::pin::Pin;
 use derive_more::{Display, From};
-use its_top_pool::error::{Error as PoolError, IntoPoolError};
+use itp_top_pool::error::{Error as PoolError, IntoPoolError};
 use jsonrpc_core as rpc;
 use std::{boxed::Box, error, format, string::String};
 

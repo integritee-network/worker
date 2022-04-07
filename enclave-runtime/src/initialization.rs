@@ -22,11 +22,11 @@ use crate::{
 		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStfExecutor,
 		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
 		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_AUTHOR_COMPONENT,
-		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::public_api_rpc_handler,
@@ -112,15 +112,15 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	// validateer completely breaking (IO PipeError).
 	// Corresponding GH issues are #545 and #600.
 
-	let rpc_author = its_sidechain::top_pool_rpc_author::initializer::create_top_pool_rpc_author(
+	let top_pool_author = itp_top_pool_author::initializer::create_top_pool_author(
 		connection_registry.clone(),
 		state_handler,
 		ocall_api,
 		shielding_key,
 	);
-	GLOBAL_RPC_AUTHOR_COMPONENT.initialize(rpc_author.clone());
+	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
-	let io_handler = public_api_rpc_handler(rpc_author);
+	let io_handler = public_api_rpc_handler(top_pool_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
 
@@ -135,14 +135,16 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let rpc_author = GLOBAL_RPC_AUTHOR_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let top_pool_operation_handler =
-		Arc::new(EnclaveTopPoolOperationHandler::new(rpc_author.clone(), stf_executor.clone()));
+	let top_pool_operation_handler = Arc::new(EnclaveTopPoolOperationHandler::new(
+		top_pool_author.clone(),
+		stf_executor.clone(),
+	));
 	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
 
 	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
-		TopPoolOperationHandler::new(rpc_author, stf_executor),
+		TopPoolOperationHandler::new(top_pool_author, stf_executor),
 	);
 
 	let parentchain_block_import_dispatcher =

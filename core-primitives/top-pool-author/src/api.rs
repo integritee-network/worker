@@ -23,11 +23,11 @@ use crate::sgx_reexport_prelude::*;
 use crate::error;
 use codec::Encode;
 use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
-use itp_types::BlockHash as SidechainBlockHash;
-use its_top_pool::{
+use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
 	primitives::TrustedOperationSource,
 };
+use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::future::{ready, Future, Ready};
 use log::*;
 use sp_runtime::{

@@ -33,6 +33,8 @@ members = [
     "core-primitives/teerex-storage",
     "core-primitives/test",
     "core-primitives/time-utils",
+    "core-primitives/top-pool",
+    "core-primitives/top-pool-author",
     "core-primitives/types",
     "service",
     "sidechain/block-composer",
@@ -44,9 +46,7 @@ members = [
     "sidechain/rpc-handler",
     "sidechain/sidechain-crate",
     "sidechain/state",
-    "sidechain/top-pool",
     "sidechain/top-pool-executor",
-    "sidechain/top-pool-rpc-author",
     "sidechain/validateer-fetch",
 ]
 
