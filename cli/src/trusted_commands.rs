@@ -39,13 +39,8 @@ use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{
-	collections::HashMap,
-	thread::sleep,
-	time::{Duration, Instant},
-};
+use std::{collections::HashMap, time::Instant};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use synchronoise::SignalEvent;
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -156,8 +151,8 @@ pub fn match_trusted_benchmark_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 	match &trusted_args.command {
 		TrustedCommands::NewAccount => new_account(trusted_args),
 		TrustedCommands::ListAccounts => list_accounts(trusted_args),
-		TrustedCommands::Transfer { from, to, amount } =>
-			transfer_benchmark(cli, trusted_args, from, to, amount),
+		TrustedCommands::Transfer { from, to: _, amount: _ } =>
+			transfer_benchmark(cli, trusted_args, from),
 		TrustedCommands::SetBalance { account, amount } =>
 			set_balance(cli, trusted_args, account, amount),
 		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
@@ -209,19 +204,9 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 	let _ = perform_operation(cli, trusted_args, &top);
 }
 
-fn transfer_benchmark(
-	cli: &Cli,
-	trusted_args: &TrustedArgs,
-	arg_from: &str,
-	arg_to: &str,
-	amount: &Balance,
-) {
-	let from = get_pair_from_str(trusted_args, arg_from);
-	let to = get_accountid_from_str(arg_to);
-	info!("from ss58 is {}", from.public().to_ss58check());
-	info!("to ss58 is {}", to.to_ss58check());
+fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
+	let alice = get_pair_from_str(trusted_args, arg_from);
 
-	println!("send trusted call transfer from {} to {}: {}", from.public(), to, amount);
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
 	// get shielding pubkey
@@ -231,34 +216,30 @@ fn transfer_benchmark(
 		Err(err_msg) => panic!("{}", err_msg.to_string()),
 	};
 
-	// signals to synchronize threads
-	let mut submitted_signals = Vec::new();
-	for n in 0..201 {
-		submitted_signals.insert(n, SignalEvent::manual(false));
-	}
-	submitted_signals.get(0).unwrap().signal();
-
 	let overall_start = Instant::now();
 
-	let outputs: Vec<(Vec<String>, Option<Instant>)> = (0..200)
+	let outputs: Vec<(Vec<String>, Option<Instant>)> = (0..1)
 		.into_par_iter()
-		.map(|nonce| {
+		.map(|_i| {
 			let mut output = Vec::new();
 			let mut time_until_in_block = None;
 
-			let top: TrustedOperation =
-				TrustedCall::balance_transfer(from.public().into(), to.clone(), *amount)
-					.sign(&KeyPair::Sr25519(from.clone()), nonce, &mrenclave, &shard)
-					.into_trusted_operation(trusted_args.direct);
+			// create new accounts to use
+			let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+			let a1: sr25519::AppPair = store.generate().unwrap();
+			let a2: sr25519::AppPair = store.generate().unwrap();
+			let account1 = get_pair_from_str(trusted_args, a1.public().to_string().as_str());
+			let account2 = get_pair_from_str(trusted_args, a2.public().to_string().as_str());
+			drop(store);
 
-			submitted_signals.get(nonce as usize).unwrap().wait();
-
-			let start_time = Instant::now();
-			output.push(format!(
-				"starting balance_transfer (nonce {}, at:{}ms):",
-				nonce,
-				start_time.duration_since(overall_start).as_millis()
-			));
+			// transfer amount from Alice to new account
+			let top: TrustedOperation = TrustedCall::balance_transfer(
+				alice.public().into(),
+				account1.public().into(),
+				1000,
+			)
+			.sign(&KeyPair::Sr25519(alice.clone()), 0, &mrenclave, &shard)
+			.into_trusted_operation(trusted_args.direct);
 
 			let receiver = match top {
 				TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
@@ -275,71 +256,114 @@ fn transfer_benchmark(
 
 			match receiver {
 				Some(r) => {
-					match wait_until(&r, is_submitted) {
-						Some(t) => output.push(format!(
-							"Submitted : {}ms",
-							(t.duration_since(start_time)).as_millis()
-						)),
-						None => output.push("transaction was not submitted.".to_string()),
-					};
-
-					submitted_signals.get((nonce + 1) as usize).unwrap().signal();
-
-					sleep(Duration::new(0, 200000000)); // sleep for 200ms
-
 					match wait_until(&r, is_sidechain_block) {
-						Some(t) => {
-							output.push(format!(
-								"InSidechainBlock : {}ms",
-								(t.duration_since(start_time)).as_millis()
-							));
-							output.push(format!(
-								"InSidechainBlock at: {}ms",
-								t.duration_since(overall_start).as_millis()
-							));
-							time_until_in_block = Some(t);
-						},
+						Some(_) =>
+							output.push("initialization of new account successfull".to_string()),
 						None =>
-							output.push("transaction was not added to sidechain block.".to_string()),
+							output.push("initialization of new account NOT successfull".to_string()),
 					};
 				},
-				None => output.push(format!("Something went wrong for nonce {}", nonce)),
+				None => output
+					.push("Something went wrong on initialization of new account.".to_string()),
+			}
+
+			println!("account1 is {}", account1.public());
+			println!("account2 is {}", account2.public());
+
+			for nonce in 0..1 {
+				//account1 -> account2
+				let top: TrustedOperation = TrustedCall::balance_transfer(
+					account1.public().into(),
+					account2.public().into(),
+					500,
+				)
+				.sign(&KeyPair::Sr25519(account1.clone()), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
+
+				let start_time = Instant::now();
+				output.push(format!(
+					"starting balance_transfer (nonce {}, at:{}ms):",
+					nonce,
+					start_time.duration_since(overall_start).as_millis()
+				));
+
+				let receiver = match top {
+					TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
+						cli,
+						trusted_args,
+						TrustedOperation::direct_call(call),
+						shielding_pubkey,
+					),
+					_ => {
+						output.push("TrustedOperation was not created.".to_string());
+						None
+					},
+				};
+
+				match receiver {
+					Some(r) => {
+						match wait_until(&r, is_submitted) {
+							Some(t) => output.push(format!(
+								"Submitted : {}ms",
+								(t.duration_since(start_time)).as_millis()
+							)),
+							None => output.push("transaction was not submitted.".to_string()),
+						};
+
+						match wait_until(&r, is_sidechain_block) {
+							Some(t) => {
+								output.push(format!(
+									"InSidechainBlock : {}ms",
+									(t.duration_since(start_time)).as_millis()
+								));
+								output.push(format!(
+									"InSidechainBlock at: {}ms",
+									t.duration_since(overall_start).as_millis()
+								));
+								time_until_in_block = Some(t);
+							},
+							None => output
+								.push("transaction was not added to sidechain block.".to_string()),
+						};
+					},
+					None => output.push(format!("Something went wrong for nonce {}", nonce)),
+				}
 			}
 
 			(output, time_until_in_block)
 		})
 		.collect();
 
-	let mut throughput: HashMap<u64, u64> = HashMap::new();
+	// let mut throughput: HashMap<u64, u64> = HashMap::new();
 
 	for output in outputs {
 		for t in output.0 {
 			println!("{}", t);
 		}
 
-		if let Some(t) = output.1 {
-			let s = t.duration_since(overall_start).as_secs();
-			let mut current = 0;
-			if throughput.contains_key(&s) {
-				current = *throughput.get(&s).unwrap();
-			}
-			throughput.insert(s, current + 1);
-		}
+		// if let Some(t) = output.1 {
+		// 	let s = t.duration_since(overall_start).as_secs();
+		// 	let mut current = 0;
+		// 	if throughput.contains_key(&s) {
+		// 		current = *throughput.get(&s).unwrap();
+		// 	}
+		// 	throughput.insert(s, current + 1);
+		// }
 	}
 
-	let mut hist = Histogram::<u64>::new(1).unwrap();
-	for (_, value) in throughput {
-		hist += value;
-	}
-
-	for v in hist.iter_recorded() {
-		println!(
-			"{}'th percentile of data is {} with {} samples",
-			v.percentile(),
-			v.value_iterated_to(),
-			v.count_at_value()
-		);
-	}
+	// let mut hist = Histogram::<u64>::new(1).unwrap();
+	// for (_, value) in throughput {
+	// 	hist += value;
+	// }
+	//
+	// for v in hist.iter_recorded() {
+	// 	println!(
+	// 		"{}'th percentile of data is {} with {} samples",
+	// 		v.percentile(),
+	// 		v.value_iterated_to(),
+	// 		v.count_at_value()
+	// 	);
+	// }
 }
 
 fn is_submitted(s: TrustedOperationStatus) -> bool {
