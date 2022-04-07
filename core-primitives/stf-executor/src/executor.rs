@@ -54,7 +54,7 @@ pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	pub fn new(ocall_api: Arc<OCallApi>, state_handler: Arc<StateHandler>) -> Self {
@@ -124,7 +124,7 @@ impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTrustedCall
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn execute_trusted_call<PH>(
@@ -167,7 +167,7 @@ impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteShieldFunds
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn execute_shield_funds(
@@ -198,7 +198,7 @@ impl<OCallApi, StateHandler, ExternalitiesT> StfUpdateState
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT> + QueryShardState,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256> + QueryShardState,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
@@ -266,7 +266,7 @@ impl<OCallApi, StateHandler, ExternalitiesT> StateUpdateProposer
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	type Externalities = ExternalitiesT;
@@ -285,7 +285,7 @@ where
 	{
 		let ends_at = duration_now() + max_exec_duration;
 
-		let state = self.state_handler.load_initialized(shard)?;
+		let state = self.state_handler.load(shard)?;
 		let state_hash_before_execution = state_hash(&state);
 
 		// Execute any pre-processing steps.
@@ -327,7 +327,7 @@ impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedGettersBatch
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
 	OCallApi: EnclaveAttestationOCallApi + GetStorageVerified,
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	type Externalities = ExternalitiesT;
@@ -350,7 +350,7 @@ where
 		}
 
 		// load state once per shard
-		let mut state = self.state_handler.load_initialized(&shard)?;
+		let mut state = self.state_handler.load(&shard)?;
 
 		for trusted_getter_signed in trusted_getters.into_iter() {
 			// get state
@@ -371,7 +371,7 @@ where
 impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteGenericUpdate
 	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
 where
-	StateHandler: HandleState<StateT = ExternalitiesT>,
+	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
 	ExternalitiesT: SgxExternalitiesTrait + Encode,
 {
 	type Externalities = ExternalitiesT;

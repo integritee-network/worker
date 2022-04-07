@@ -318,7 +318,7 @@ pub unsafe extern "C" fn get_state(
 		},
 	};
 
-	let mut state = match state_handler.load_initialized(&shard) {
+	let mut state = match state_handler.load(&shard) {
 		Ok(s) => s,
 		Err(e) => return Error::StfStateHandler(e).into(),
 	};
@@ -423,6 +423,19 @@ pub unsafe extern "C" fn init_light_client(
 			error!("Failed to initialize light-client: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_status_t {
+	let shard_identifier =
+		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+
+	if let Err(e) = initialization::init_shard(&shard_identifier) {
+		error!("Failed to initialize shard ({:?}): {:?}", shard_identifier, e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
 	sgx_status_t::SGX_SUCCESS

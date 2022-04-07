@@ -25,7 +25,7 @@ use its_primitives::traits::{
 	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainState};
-use log::warn;
+use log::*;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::vec::Vec;
 
@@ -110,6 +110,12 @@ where
 	) -> Result<ParentchainBlock::Header, Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.shard_id();
+
+		debug!(
+			"Attempting to import sidechain block (number: {}, parentchain hash: {:?})",
+			signed_sidechain_block.block().block_number(),
+			signed_sidechain_block.block().layer_one_head()
+		);
 
 		let peeked_parentchain_header =
 			self.peek_parentchain_header(&sidechain_block, parentchain_header)

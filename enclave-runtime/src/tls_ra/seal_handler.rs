@@ -121,7 +121,7 @@ where
 	}
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
-		let state = self.state_handler.load_initialized(shard)?;
+		let state = self.state_handler.load(shard)?;
 		Ok(state.state.encode())
 	}
 }
@@ -192,6 +192,7 @@ pub mod test {
 		let seal_handler = SealHandlerMock::default();
 		let state = <HandleStateMock as HandleState>::StateT::default();
 		let shard = ShardIdentifier::default();
+		let _init_hash = seal_handler.state_handler.initialize_shard(&shard).unwrap();
 
 		let result = seal_handler.seal_state(&state.encode(), &shard);
 
@@ -210,6 +211,7 @@ pub mod test {
 	pub fn unseal_seal_state_works() {
 		let seal_handler = SealHandlerMock::default();
 		let shard = ShardIdentifier::default();
+		seal_handler.state_handler.initialize_shard(&shard).unwrap();
 		// Fill our mock state:
 		let (lock, mut state) = seal_handler.state_handler.load_for_mutation(&shard).unwrap();
 		let (key, value) = ("my_key", "my_value");

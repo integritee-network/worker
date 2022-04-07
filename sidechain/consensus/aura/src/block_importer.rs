@@ -253,7 +253,7 @@ impl<
 	{
 		let state = self
 			.state_handler
-			.load_initialized(shard)
+			.load(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 		verifying_function(Self::SidechainState::new(state))
 	}

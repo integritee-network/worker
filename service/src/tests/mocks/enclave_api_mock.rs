@@ -47,6 +47,10 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(genesis_header)
 	}
 
+	fn init_shard(&self, _shard: Vec<u8>) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
 	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()> {
 		unimplemented!()
 	}

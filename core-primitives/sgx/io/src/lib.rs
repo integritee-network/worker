@@ -9,8 +9,10 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use std::{
+	convert::AsRef,
 	fs,
 	io::{Read, Result as IOResult, Write},
+	path::Path,
 	string::String,
 	vec::Vec,
 };
@@ -38,17 +40,17 @@ pub trait SealedIO: Sized {
 	fn seal(unsealed: Self::Unsealed) -> Result<(), Self::Error>;
 }
 
-pub fn read(path: &str) -> IOResult<Vec<u8>> {
+pub fn read<P: AsRef<Path>>(path: P) -> IOResult<Vec<u8>> {
 	let mut buf = Vec::new();
 	fs::File::open(path).map(|mut f| f.read_to_end(&mut buf))??;
 	Ok(buf)
 }
 
-pub fn write(bytes: &[u8], path: &str) -> IOResult<()> {
+pub fn write<P: AsRef<Path>>(bytes: &[u8], path: P) -> IOResult<()> {
 	fs::File::create(path).map(|mut f| f.write_all(bytes))?
 }
 
-pub fn read_to_string(filepath: &str) -> IOResult<String> {
+pub fn read_to_string<P: AsRef<Path>>(filepath: P) -> IOResult<String> {
 	let mut contents = String::new();
 	fs::File::open(filepath).map(|mut f| f.read_to_string(&mut contents))??;
 	Ok(contents)
@@ -57,18 +59,20 @@ pub fn read_to_string(filepath: &str) -> IOResult<String> {
 #[cfg(feature = "sgx")]
 mod sgx {
 	use std::{
+		convert::AsRef,
 		io::{Read, Result, Write},
+		path::Path,
 		sgxfs::SgxFile,
 		vec::Vec,
 	};
 
-	pub fn unseal(path: &str) -> Result<Vec<u8>> {
+	pub fn unseal<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
 		let mut buf = Vec::new();
 		SgxFile::open(path).map(|mut f| f.read_to_end(&mut buf))??;
 		Ok(buf)
 	}
 
-	pub fn seal(bytes: &[u8], path: &str) -> Result<()> {
+	pub fn seal<P: AsRef<Path>>(bytes: &[u8], path: P) -> Result<()> {
 		SgxFile::create(path).map(|mut f| f.write_all(bytes))?
 	}
 }

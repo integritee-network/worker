@@ -23,10 +23,11 @@ use crate::{
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys},
+	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
-use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
@@ -139,7 +140,13 @@ pub unsafe extern "C" fn request_state_provisioning(
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let state_handler = Arc::new(GlobalFileStateHandler);
+	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, _>::new(state_handler);
 
 	if let Err(e) =

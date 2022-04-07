@@ -85,11 +85,15 @@ type TestTopPoolAuthor =
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		attestation::tests::decode_spid_works,
-		itp_stf_state_handler::tests::test_write_and_load_state_works,
-		itp_stf_state_handler::tests::test_sgx_state_decode_encode_works,
-		itp_stf_state_handler::tests::test_encrypt_decrypt_state_type_works,
-		itp_stf_state_handler::tests::test_write_access_locks_read_until_finished,
-		itp_stf_state_handler::tests::test_ensure_subsequent_state_loads_have_same_hash,
+		itp_stf_state_handler::test::sgx_tests::test_write_and_load_state_works,
+		itp_stf_state_handler::test::sgx_tests::test_sgx_state_decode_encode_works,
+		itp_stf_state_handler::test::sgx_tests::test_encrypt_decrypt_state_type_works,
+		itp_stf_state_handler::test::sgx_tests::test_write_access_locks_read_until_finished,
+		itp_stf_state_handler::test::sgx_tests::test_ensure_subsequent_state_loads_have_same_hash,
+		itp_stf_state_handler::test::sgx_tests::test_state_handler_file_backend_is_initialized,
+		itp_stf_state_handler::test::sgx_tests::test_multiple_state_updates_create_snapshots_up_to_cache_size,
+		itp_stf_state_handler::test::sgx_tests::test_state_files_from_handler_can_be_loaded_again,
+		itp_stf_state_handler::test::sgx_tests::test_file_io_get_state_hash_works,
 		test_compose_block_and_confirmation,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
@@ -109,7 +113,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		author_tests::submitting_getter_to_author_when_top_is_filtered_inserts_in_pool,
 		handle_state_mock::tests::initialized_shards_list_is_empty,
 		handle_state_mock::tests::shard_exists_after_inserting,
-		handle_state_mock::tests::load_initialized_inserts_default_state,
+		handle_state_mock::tests::initialize_creates_default_state,
 		handle_state_mock::tests::load_mutate_and_write_works,
 		handle_state_mock::tests::ensure_subsequent_state_loads_have_same_hash,
 		handle_state_mock::tests::ensure_encode_and_encrypt_does_not_affect_state_hash,
@@ -452,14 +456,14 @@ fn test_executing_call_updates_account_nonce() {
 	}
 
 	// then
-	let mut state = state_handler.load_initialized(&shard).unwrap();
+	let mut state = state_handler.load(&shard).unwrap();
 	let nonce = Stf::account_nonce(&mut state, &sender.public().into());
 	assert_eq!(nonce, 1);
 }
 
 fn test_call_set_update_parentchain_block() {
 	let (_, _, shard, _, _, state_handler) = test_setup();
-	let mut state = state_handler.load_initialized(&shard).unwrap();
+	let mut state = state_handler.load(&shard).unwrap();
 
 	let block_number = 3;
 	let parent_hash = H256::from([1; 32]);

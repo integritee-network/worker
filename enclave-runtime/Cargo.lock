@@ -1415,6 +1415,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-io",
+ "itp-time-utils",
  "itp-types",
  "lazy_static",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",

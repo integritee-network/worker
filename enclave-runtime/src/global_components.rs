@@ -21,7 +21,7 @@
 //! and ensures that the global instances are initialized once.
 
 use crate::ocall::OcallApi;
-use ita_stf::Hash;
+use ita_stf::{Hash, State as StfState};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_watch_extractor::RpcWatchExtractor,
 	rpc_ws_handler::RpcWsHandler,
@@ -38,7 +38,9 @@ use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::Aes;
 use itp_stf_executor::executor::StfExecutor;
-use itp_stf_state_handler::GlobalFileStateHandler;
+use itp_stf_state_handler::{
+	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
+};
 use itp_top_pool_author::{
 	author::{Author, AuthorTopFilter},
 	pool_types::BPool,
@@ -55,11 +57,14 @@ use its_sidechain::{
 	state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
 };
+use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
 use sp_core::ed25519::Pair;
 
-pub type EnclaveStateHandler = GlobalFileStateHandler;
+pub type EnclaveStateSnapshotRepository =
+	StateSnapshotRepository<SgxStateFileIo<Aes>, StfState, H256>;
+pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler, SgxExternalities>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;

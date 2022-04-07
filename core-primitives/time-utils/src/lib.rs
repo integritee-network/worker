@@ -31,6 +31,11 @@ pub fn now_as_u64() -> u64 {
 	duration_now().as_millis() as u64
 }
 
+/// Returns the current timestamp based on the unix epoch in nanoseconds.
+pub fn now_as_nanos() -> u128 {
+	duration_now().as_nanos()
+}
+
 /// Calculates the remaining time `until`.
 pub fn remaining_time(until: Duration) -> Option<Duration> {
 	until.checked_sub(duration_now())

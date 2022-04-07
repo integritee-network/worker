@@ -56,6 +56,10 @@ enclave {
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
+        public sgx_status_t init_shard(
+            [in, size=shard_size] uint8_t* shard, uint32_t shard_size
+        );
+
         public sgx_status_t trigger_parentchain_block_import();
 
         public sgx_status_t execute_trusted_getters();

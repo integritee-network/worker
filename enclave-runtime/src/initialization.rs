@@ -34,6 +34,7 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::Encode;
+use ita_stf::State as StfState;
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -50,16 +51,21 @@ use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
-use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
+use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
+use itp_sgx_crypto::{aes, ed25519, rsa3072, Aes, AesSeal, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::SealedIO;
-use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
+use itp_stf_state_handler::{
+	file_io::sgx::SgxStateFileIo, handle_state::HandleState, query_shard_state::QueryShardState,
+	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
+};
 use itp_storage::StorageProof;
-use itp_types::{Block, Header, SignedBlock};
+use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer,
 	top_pool_executor::TopPoolOperationHandler,
 };
 use log::*;
+use primitive_types::H256;
 use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
 use std::{string::String, sync::Arc};
@@ -75,10 +81,17 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	rsa3072::create_sealed_if_absent()?;
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
-	// It will be overwritten anyway if mutual remote attastation is performed with the primary worker.
+	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
 	aes::create_sealed_if_absent().map_err(Error::Crypto)?;
 
-	let state_handler = Arc::new(GlobalFileStateHandler);
+	let state_key = AesSeal::unseal()?;
+
+	let state_file_io = Arc::new(SgxStateFileIo::new(state_key));
+	let state_snapshot_repository_loader =
+		StateSnapshotRepositoryLoader::<SgxStateFileIo<Aes>, StfState, H256>::new(state_file_io);
+	let state_snapshot_repository =
+		state_snapshot_repository_loader.load_from_files(STATE_SNAPSHOTS_CACHE_SIZE)?;
+	let state_handler = Arc::new(StateHandler::new(state_snapshot_repository));
 	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
 
 	let ocall_api = Arc::new(OcallApi);
@@ -232,5 +245,11 @@ pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResul
 
 	run_ws_server(server_addr.as_str(), rpc_handler);
 
+	Ok(())
+}
+
+pub(crate) fn init_shard(shard: &ShardIdentifier) -> EnclaveResult<()> {
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	let _ = state_handler.initialize_shard(shard)?;
 	Ok(())
 }

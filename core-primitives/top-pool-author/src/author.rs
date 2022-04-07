@@ -114,11 +114,14 @@ where
 		shard: ShardIdentifier,
 		submission_mode: TopSubmissionMode,
 	) -> PoolFuture<TxHash<TopPool>, RpcError> {
-		// check if shard already exists
-		if !self.state_facade.exists(&shard) {
-			//FIXME: Should this be an error? -> Issue error handling
-			return Box::pin(ready(Err(ClientError::InvalidShard.into())))
-		}
+		// check if shard exists
+		match self.state_facade.shard_exists(&shard) {
+			Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
+			Ok(shard_exists) =>
+				if !shard_exists {
+					return Box::pin(ready(Err(ClientError::InvalidShard.into())))
+				},
+		};
 
 		// decrypt call
 		let request_vec = match self.encryption_key.decrypt(ext.as_slice()) {

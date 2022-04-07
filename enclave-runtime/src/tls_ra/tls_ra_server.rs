@@ -23,10 +23,11 @@ use crate::{
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, UnsealStateAndKeys},
+	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
-use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
@@ -37,6 +38,7 @@ use std::{
 	net::TcpStream,
 	sync::Arc,
 };
+
 /// Server part of the TCP-level connection and the underlying TLS-level session.
 ///
 /// Includes a seal handler, which handles the reading part of the data to be sent.
@@ -104,7 +106,13 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let state_handler = Arc::new(GlobalFileStateHandler);
+	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, _>::new(state_handler);
 
 	if let Err(e) =
