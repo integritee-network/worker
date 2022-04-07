@@ -19,17 +19,14 @@ use crate::{
 	error::{Error, Result},
 	file_io::StateFileIo,
 	state_snapshot_primitives::{
-		generate_current_timestamp_file_name, initialize_shard_with_file, SnapshotHistory,
-		StateFileMetaData,
+		generate_current_timestamp_state_id, initialize_shard_with_snapshot, SnapshotHistory,
+		StateId, StateSnapshotMetaData,
 	},
 };
 use core::ops::RangeBounds;
 use itp_types::ShardIdentifier;
 use log::*;
-use std::{
-	collections::VecDeque, fmt::Debug, format, marker::PhantomData, string::String, sync::Arc,
-	vec::Vec,
-};
+use std::{collections::VecDeque, fmt::Debug, format, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Trait for versioned state access. Manages history of state snapshots.
 pub trait VersionedStateAccess {
@@ -46,7 +43,7 @@ pub trait VersionedStateAccess {
 		state: Self::StateType,
 	) -> Result<Self::HashType>;
 
-	/// Reverts the current state to a version defined by a given state hash.
+	/// Reverts the state of a given shard to a state version identified by a state hash.
 	fn revert_to(
 		&mut self,
 		shard_identifier: &ShardIdentifier,
@@ -111,7 +108,7 @@ where
 	fn get_snapshot_history_mut(
 		&mut self,
 		shard_identifier: &ShardIdentifier,
-	) -> Result<&mut VecDeque<StateFileMetaData<HashType>>> {
+	) -> Result<&mut VecDeque<StateSnapshotMetaData<HashType>>> {
 		self.snapshot_history
 			.get_mut(shard_identifier)
 			.ok_or_else(|| Error::InvalidShard(*shard_identifier))
@@ -120,16 +117,16 @@ where
 	fn get_snapshot_history(
 		&self,
 		shard_identifier: &ShardIdentifier,
-	) -> Result<&VecDeque<StateFileMetaData<HashType>>> {
+	) -> Result<&VecDeque<StateSnapshotMetaData<HashType>>> {
 		self.snapshot_history
 			.get(shard_identifier)
 			.ok_or_else(|| Error::InvalidShard(*shard_identifier))
 	}
 
-	fn get_latest_file_metadata(
+	fn get_latest_snapshot_metadata(
 		&self,
 		shard_identifier: &ShardIdentifier,
-	) -> Result<&StateFileMetaData<HashType>> {
+	) -> Result<&StateSnapshotMetaData<HashType>> {
 		let snapshot_history = self.get_snapshot_history(shard_identifier)?;
 		snapshot_history.front().ok_or(Error::EmptyRepository)
 	}
@@ -139,49 +136,48 @@ where
 		shard_identifier: &ShardIdentifier,
 		range: R,
 	) -> Result<()> {
-		let state_files_to_remove = self
+		let state_snapshots_to_remove = self
 			.get_snapshot_history_mut(shard_identifier)?
 			.drain(range)
 			.collect::<Vec<_>>();
 
-		self.remove_files(shard_identifier, state_files_to_remove.as_slice());
+		self.remove_snapshots(shard_identifier, state_snapshots_to_remove.as_slice());
 		Ok(())
 	}
 
-	/// Remove files referenced by metadata.
+	/// Remove snapshots referenced by metadata.
 	/// Does not stop on error, it's guaranteed to call `remove` on all elements.
 	/// Logs any errors that occur.
-	fn remove_files(
+	fn remove_snapshots(
 		&self,
 		shard_identifier: &ShardIdentifier,
-		files_metadata: &[StateFileMetaData<HashType>],
+		snapshots_metadata: &[StateSnapshotMetaData<HashType>],
 	) {
-		for file_metadata in files_metadata {
-			if let Err(e) = self.file_io.remove(shard_identifier, file_metadata.file_name.as_str())
-			{
+		for snapshot_metadata in snapshots_metadata {
+			if let Err(e) = self.file_io.remove(shard_identifier, snapshot_metadata.state_id) {
 				// We just log an error, don't want to return the error here, because the operation
 				// in general was successful, just a side-effect that failed.
-				error!("Failed to remove state file '{}': {:?}", file_metadata.file_name, e);
+				error!("Failed to remove state, with id '{}': {:?}", snapshot_metadata.state_id, e);
 			}
 		}
 	}
 
-	fn write_new_state_file(
+	fn write_new_state(
 		&self,
 		shard_identifier: &ShardIdentifier,
 		state: State,
-	) -> Result<(HashType, String)> {
-		let file_name = generate_current_timestamp_file_name();
-		let state_hash = self.file_io.write(shard_identifier, file_name.as_str(), state)?;
-		Ok((state_hash, file_name))
+	) -> Result<(HashType, StateId)> {
+		let state_id = generate_current_timestamp_state_id();
+		let state_hash = self.file_io.write(shard_identifier, state_id, state)?;
+		Ok((state_hash, state_id))
 	}
 
-	fn load_file(
+	fn load_state(
 		&self,
 		shard_identifier: &ShardIdentifier,
-		file_metadata: &StateFileMetaData<HashType>,
+		snapshot_metadata: &StateSnapshotMetaData<HashType>,
 	) -> Result<State> {
-		self.file_io.load(shard_identifier, file_metadata.file_name.as_str())
+		self.file_io.load(shard_identifier, snapshot_metadata.state_id)
 	}
 }
 
@@ -195,8 +191,8 @@ where
 	type HashType = HashType;
 
 	fn load_latest(&self, shard_identifier: &ShardIdentifier) -> Result<Self::StateType> {
-		let latest_file_metadata = self.get_latest_file_metadata(shard_identifier)?;
-		self.file_io.load(shard_identifier, latest_file_metadata.file_name.as_str())
+		let latest_snapshot_metadata = self.get_latest_snapshot_metadata(shard_identifier)?;
+		self.file_io.load(shard_identifier, latest_snapshot_metadata.state_id)
 	}
 
 	fn update(
@@ -208,11 +204,11 @@ where
 			return Err(Error::InvalidShard(*shard_identifier))
 		}
 
-		let (state_hash, file_name) = self.write_new_state_file(shard_identifier, state)?;
+		let (state_hash, state_id) = self.write_new_state(shard_identifier, state)?;
 		let cache_size = self.snapshot_history_cache_size;
 
 		let snapshot_history = self.get_snapshot_history_mut(shard_identifier)?;
-		snapshot_history.push_front(StateFileMetaData::new(state_hash, file_name));
+		snapshot_history.push_front(StateSnapshotMetaData::new(state_hash, state_id));
 
 		// In case we're above max queue size we remove the oldest entries and corresponding files
 		if snapshot_history.len() > cache_size {
@@ -231,21 +227,21 @@ where
 
 		// We use `position()` instead of `find()`, because it then allows us to easily drain
 		// all the newer states.
-		let file_metadata_index = snapshot_history
+		let snapshot_metadata_index = snapshot_history
 			.iter()
 			.position(|fmd| fmd.state_hash == *state_hash)
 			.ok_or_else(|| Error::StateNotFoundInRepository(format!("{:?}", state_hash)))?;
 
 		// Should never fail, since we got the index from above, with `position()`.
-		let file_metadata = snapshot_history
-			.get(file_metadata_index)
+		let snapshot_metadata = snapshot_history
+			.get(snapshot_metadata_index)
 			.ok_or_else(|| Error::StateNotFoundInRepository(format!("{:?}", state_hash)))?;
 
-		let state = self.load_file(shard_identifier, file_metadata)?;
+		let state = self.load_state(shard_identifier, snapshot_metadata)?;
 
 		// Remove any state versions newer than the one we're resetting to
 		// (do this irreversible operation last, to ensure the loading has succeeded)
-		self.prune_snapshot_history_by_range(shard_identifier, ..file_metadata_index)?;
+		self.prune_snapshot_history_by_range(shard_identifier, ..snapshot_metadata_index)?;
 
 		Ok(state)
 	}
@@ -259,10 +255,12 @@ where
 			return state_snapshots.front().map(|s| s.state_hash).ok_or(Error::EmptyRepository)
 		}
 
-		let file_metadata = initialize_shard_with_file(shard_identifier, self.file_io.as_ref())?;
+		let snapshot_metadata =
+			initialize_shard_with_snapshot(shard_identifier, self.file_io.as_ref())?;
 
-		let state_hash = file_metadata.state_hash;
-		self.snapshot_history.insert(*shard_identifier, VecDeque::from([file_metadata]));
+		let state_hash = snapshot_metadata.state_hash;
+		self.snapshot_history
+			.insert(*shard_identifier, VecDeque::from([snapshot_metadata]));
 		Ok(state_hash)
 	}
 
@@ -312,8 +310,8 @@ mod tests {
 		assert_eq!(shards.len(), file_io.list_shards().unwrap().len());
 		assert_eq!(shards.len(), state_snapshot_repository.snapshot_history.len());
 		assert_eq!(shards.len(), state_snapshot_repository.list_shards().unwrap().len());
-		for files_per_shard in state_snapshot_repository.snapshot_history.values() {
-			assert_eq!(1, files_per_shard.len());
+		for states_per_shard in state_snapshot_repository.snapshot_history.values() {
+			assert_eq!(1, states_per_shard.len());
 		}
 		for shard in shards {
 			assert!(state_snapshot_repository.load_latest(&shard).is_ok());
@@ -331,7 +329,7 @@ mod tests {
 		);
 
 		let shard_to_update = shards.get(1).unwrap();
-		assert_eq!(1, file_io.get_files_for_shard(shard_to_update).unwrap().len());
+		assert_eq!(1, file_io.get_states_for_shard(shard_to_update).unwrap().len());
 
 		let new_state = 1234u64;
 
@@ -341,7 +339,7 @@ mod tests {
 			state_snapshot_repository.snapshot_history.get(shard_to_update).unwrap();
 		assert_eq!(2, snapshot_history.len());
 		assert_eq!(new_state, state_snapshot_repository.load_latest(shard_to_update).unwrap());
-		assert_eq!(2, file_io.get_files_for_shard(shard_to_update).unwrap().len());
+		assert_eq!(2, file_io.get_states_for_shard(shard_to_update).unwrap().len());
 	}
 
 	#[test]
@@ -365,7 +363,7 @@ mod tests {
 		);
 		assert_eq!(
 			TEST_SNAPSHOT_REPOSITORY_CACHE_SIZE,
-			file_io.get_files_for_shard(&shard_id).unwrap().len()
+			file_io.get_states_for_shard(&shard_id).unwrap().len()
 		);
 	}
 
@@ -380,7 +378,7 @@ mod tests {
 		let snapshot_history = state_snapshot_repository.snapshot_history.get(&shard_id).unwrap();
 		assert_eq!(1, snapshot_history.len());
 		assert_eq!(0u64, state_snapshot_repository.load_latest(&shard_id).unwrap());
-		assert_eq!(1, file_io.get_files_for_shard(&shard_id).unwrap().len());
+		assert_eq!(1, file_io.get_states_for_shard(&shard_id).unwrap().len());
 	}
 
 	#[test]
@@ -403,7 +401,7 @@ mod tests {
 		assert_eq!(2u64, reverted_state);
 		assert_eq!(3, state_snapshot_repository.snapshot_history.get(&shard_id).unwrap().len()); // because we have initialized version '0' as well
 		assert_eq!(2u64, state_snapshot_repository.load_latest(&shard_id).unwrap());
-		assert_eq!(3, file_io.get_files_for_shard(&shard_id).unwrap().len());
+		assert_eq!(3, file_io.get_states_for_shard(&shard_id).unwrap().len());
 	}
 
 	#[test]
@@ -438,7 +436,7 @@ mod tests {
 	) -> (Arc<TestFileIo>, TestSnapshotRepository) {
 		let file_io = create_test_file_io(shards);
 		let repository_loader = StateSnapshotRepositoryLoader::new(file_io.clone());
-		(file_io, repository_loader.load_from_files(snapshot_history_size).unwrap())
+		(file_io, repository_loader.load_snapshot_repository(snapshot_history_size).unwrap())
 	}
 
 	fn create_test_file_io(shards: &[ShardIdentifier]) -> Arc<TestFileIo> {

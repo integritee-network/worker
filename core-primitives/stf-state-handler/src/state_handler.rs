@@ -30,10 +30,11 @@ use crate::{
 use itp_types::ShardIdentifier;
 use std::vec::Vec;
 
-/// Implementation of the `HandleState` trait using global files and locks.
+/// Implementation of the `HandleState` trait.
 ///
-/// For each call it will make a file access and encrypt/decrypt the state from file I/O.
-/// The lock it uses is therefore an 'empty' dummy lock, that guards against concurrent file access.
+/// It's concurrency wrapper around a state snapshot repository, which handles
+/// access to any shards and state files. The state handler ensure we have thread-safe
+/// concurrent access to that repository.
 pub struct StateHandler<Repository> {
 	state_snapshot_repository: RwLock<Repository>,
 }

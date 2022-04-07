@@ -232,12 +232,12 @@ pub fn test_file_io_get_state_hash_works() {
 
 	let file_io = TestStateFileIo::new(AesSeal::unseal().unwrap());
 
-	let file_name = "1234_state.bin";
-	let state_hash = file_io.create_initialized(&shard, file_name).unwrap();
-	assert_eq!(state_hash, file_io.compute_hash(&shard, file_name).unwrap());
+	let state_id = 1234u128;
+	let state_hash = file_io.create_initialized(&shard, state_id).unwrap();
+	assert_eq!(state_hash, file_io.compute_hash(&shard, state_id).unwrap());
 
-	let state_hash = file_io.write(&shard, file_name, given_hello_world_state()).unwrap();
-	assert_eq!(state_hash, file_io.compute_hash(&shard, file_name).unwrap());
+	let state_hash = file_io.write(&shard, state_id, given_hello_world_state()).unwrap();
+	assert_eq!(state_hash, file_io.compute_hash(&shard, state_id).unwrap());
 }
 
 pub fn test_state_files_from_handler_can_be_loaded_again() {
@@ -279,8 +279,9 @@ fn initialize_state_handler() -> Arc<TestStateHandler> {
 	let state_key = AesSeal::unseal().unwrap();
 	let file_io = Arc::new(TestStateFileIo::new(state_key));
 	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
-	let state_snapshot_repository =
-		state_repository_loader.load_from_files(STATE_SNAPSHOTS_CACHE_SIZE).unwrap();
+	let state_snapshot_repository = state_repository_loader
+		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
+		.unwrap();
 	Arc::new(TestStateHandler::new(state_snapshot_repository))
 }
 

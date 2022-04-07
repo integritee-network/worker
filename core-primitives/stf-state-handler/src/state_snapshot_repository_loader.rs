@@ -19,16 +19,14 @@ use crate::{
 	error::Result,
 	file_io::StateFileIo,
 	state_snapshot_primitives::{
-		extract_timestamp_from_file_name, initialize_shard_with_file, SnapshotHistory,
-		StateFileMetaData,
+		initialize_shard_with_snapshot, SnapshotHistory, StateId, StateSnapshotMetaData,
 	},
 	state_snapshot_repository::StateSnapshotRepository,
 };
 use itp_types::ShardIdentifier;
 use log::*;
 use std::{
-	collections::VecDeque, fmt::Debug, iter::FromIterator, marker::PhantomData, string::String,
-	sync::Arc, vec::Vec,
+	collections::VecDeque, fmt::Debug, iter::FromIterator, marker::PhantomData, sync::Arc, vec::Vec,
 };
 
 /// Loads a state snapshot repository from existing shards directory with state files.
@@ -46,11 +44,12 @@ where
 		StateSnapshotRepositoryLoader { file_io, phantom_data: Default::default() }
 	}
 
-	pub fn load_from_files(
+	/// Load a state snapshot repository from an existing set of files and directories.
+	pub fn load_snapshot_repository(
 		&self,
 		snapshot_history_cache_size: usize,
 	) -> Result<StateSnapshotRepository<FileIo, State, HashType>> {
-		let snapshot_history = self.load_state_snapshot_history_from_files()?;
+		let snapshot_history = self.load_state_snapshot_history()?;
 
 		StateSnapshotRepository::new(
 			self.file_io.clone(),
@@ -59,95 +58,72 @@ where
 		)
 	}
 
-	fn load_state_snapshot_history_from_files(&self) -> Result<SnapshotHistory<HashType>> {
+	fn load_state_snapshot_history(&self) -> Result<SnapshotHistory<HashType>> {
 		let mut repository = SnapshotHistory::new();
 
 		let shards = self.file_io.list_shards()?;
-		debug!("Found {} shard directories to load state from", shards.len());
+		debug!("Found {} shard(s) to load state from", shards.len());
 
 		for shard in shards {
-			let files_names = self.file_io.list_shard_files(&shard)?;
-			let timestamp_file_name_tuples =
-				get_sorted_timestamps_for_file_names(files_names.as_slice());
+			let mut state_ids = self.file_io.list_state_ids_for_shard(&shard)?;
+			// Sort by id (which are timestamp), highest, i.e. newest, first
+			state_ids.sort_unstable();
+			state_ids.reverse();
 
-			let mut file_meta_data: Vec<_> =
-				self.map_to_file_metadata(&shard, timestamp_file_name_tuples);
+			let mut snapshot_metadata: Vec<_> = self.map_to_snapshot_metadata(&shard, state_ids);
 
-			if file_meta_data.is_empty() {
+			if snapshot_metadata.is_empty() {
 				warn!(
-					"No (valid) state files found for shard {:?}, initializing shard state",
+					"No (valid) states found for shard {:?}, initializing empty shard state",
 					shard
 				);
-				let initial_file_metadata =
-					initialize_shard_with_file(&shard, self.file_io.as_ref())?;
-				file_meta_data.push(initial_file_metadata);
+				let initial_snapshot_metadata =
+					initialize_shard_with_snapshot(&shard, self.file_io.as_ref())?;
+				snapshot_metadata.push(initial_snapshot_metadata);
 			} else {
 				debug!(
-					"Found {} state snapshot file(s) for shard {}, latest snapshot is {}",
-					file_meta_data.len(),
+					"Found {} state snapshot(s) for shard {}, latest snapshot is {}",
+					snapshot_metadata.len(),
 					&shard,
-					file_meta_data.first().map(|f| f.file_name.as_str()).unwrap_or_default()
+					snapshot_metadata.first().map(|f| f.state_id).unwrap_or_default()
 				);
 			}
 
-			let snapshot_history = VecDeque::from_iter(file_meta_data);
+			let snapshot_history = VecDeque::from_iter(snapshot_metadata);
 
 			repository.insert(shard, snapshot_history);
 		}
 		Ok(repository)
 	}
 
-	fn map_to_file_metadata(
+	fn map_to_snapshot_metadata(
 		&self,
 		shard: &ShardIdentifier,
-		sorted_timestamp_file_name_tuples: Vec<(u128, String)>,
-	) -> Vec<StateFileMetaData<HashType>> {
-		sorted_timestamp_file_name_tuples
+		state_ids: Vec<StateId>,
+	) -> Vec<StateSnapshotMetaData<HashType>> {
+		state_ids
 			.into_iter()
-			.flat_map(|timestamp_file_name_tuple| {
+			.flat_map(|state_id| {
 				self.file_io
-					.compute_hash(shard, timestamp_file_name_tuple.1.as_str())
+					.compute_hash(shard, state_id)
 					.map_err(|e| {
 						warn!(
-								"Failed to compute hash for state snapshot file {}: {:?}, ignoring file as a result",
-								timestamp_file_name_tuple.1, e
+								"Failed to compute hash for state snapshot with id {}: {:?}, ignoring snapshot as a result",
+								state_id, e
 							);
 					})
 					.ok()
-					.map(|h| StateFileMetaData::new(h, timestamp_file_name_tuple.1))
+					.map(|h| StateSnapshotMetaData::new(h, state_id))
 			})
 			.collect()
 	}
-}
-
-fn get_sorted_timestamps_for_file_names(file_names: &[String]) -> Vec<(u128, String)> {
-	let mut timestamp_file_name_tuples: Vec<(u128, String)> =
-		file_names
-			.iter()
-			.flat_map(|file_name| {
-				extract_timestamp_from_file_name(file_name.as_str())
-					.map(|t| (t, file_name.clone()))
-					// Maybe there is a better way? Need to call a function in case of `None`.
-					.ok_or_else(|| {
-						warn!("Found state snapshot file ({}) that does not match pattern, ignoring it", file_name)
-					})
-					.ok()
-			})
-			.collect();
-
-	timestamp_file_name_tuples.sort_by(|a, b| b.0.cmp(&a.0));
-	timestamp_file_name_tuples
 }
 
 #[cfg(test)]
 mod tests {
 
 	use super::*;
-	use crate::{
-		in_memory_state_file_io::InMemoryStateFileIo,
-		state_snapshot_primitives::generate_file_name_from_timestamp,
-	};
-	use itp_types::ShardIdentifier;
+	use crate::in_memory_state_file_io::InMemoryStateFileIo;
 	use std::collections::hash_map::DefaultHasher;
 
 	type TestState = u64;
@@ -161,7 +137,7 @@ mod tests {
 			vec![ShardIdentifier::random(), ShardIdentifier::random(), ShardIdentifier::random()];
 		let (_, loader) = create_test_fixtures(shards.as_slice());
 
-		let snapshot_history = loader.load_state_snapshot_history_from_files().unwrap();
+		let snapshot_history = loader.load_state_snapshot_history().unwrap();
 		assert_eq!(shards.len(), snapshot_history.len());
 		for snapshots in snapshot_history.values() {
 			assert_eq!(1, snapshots.len());
@@ -172,7 +148,7 @@ mod tests {
 	fn loading_without_shards_returns_empty_directory() {
 		let (_, loader) = create_test_fixtures(&[]);
 
-		let snapshot_history = loader.load_state_snapshot_history_from_files().unwrap();
+		let snapshot_history = loader.load_state_snapshot_history().unwrap();
 		assert!(snapshot_history.is_empty());
 	}
 
@@ -182,24 +158,20 @@ mod tests {
 			vec![ShardIdentifier::random(), ShardIdentifier::random(), ShardIdentifier::random()];
 		let (file_io, loader) = create_test_fixtures(shards.as_slice());
 
-		add_files_with_timestamps(
+		add_state_snapshots(
 			file_io.as_ref(),
 			&shards[0],
 			&[1_000_000, 2_000_000, 3_000_000, 4_000_000],
 		);
-		add_files_with_timestamps(file_io.as_ref(), &shards[1], &[10_000_000, 9_000_000]);
-		add_files_with_timestamps(
-			file_io.as_ref(),
-			&shards[2],
-			&[14_000_000, 11_000_000, 12_000_000],
-		);
+		add_state_snapshots(file_io.as_ref(), &shards[1], &[10_000_000, 9_000_000]);
+		add_state_snapshots(file_io.as_ref(), &shards[2], &[14_000_000, 11_000_000, 12_000_000]);
 
-		let snapshot_history = loader.load_state_snapshot_history_from_files().unwrap();
+		let snapshot_history = loader.load_state_snapshot_history().unwrap();
 
 		assert_eq!(shards.len(), snapshot_history.len());
-		assert_latest_file_starts_with(&snapshot_history, &shards[0], "4000");
-		assert_latest_file_starts_with(&snapshot_history, &shards[1], "10000");
-		assert_latest_file_starts_with(&snapshot_history, &shards[2], "14000");
+		assert_latest_state_id(&snapshot_history, &shards[0], 4_000_000);
+		assert_latest_state_id(&snapshot_history, &shards[1], 10_000_000);
+		assert_latest_state_id(&snapshot_history, &shards[2], 14_000_000);
 	}
 
 	#[test]
@@ -208,42 +180,36 @@ mod tests {
 		let (file_io, loader) = create_test_fixtures(&[shard]);
 
 		// Only 2 of these file names are valid
-		file_io.create_initialized(&shard, "oijef.bin").unwrap();
-		file_io.create_initialized(&shard, "other-invalid_state.bin").unwrap();
-		file_io
-			.create_initialized(&shard, generate_file_name_from_timestamp(8_000_000).as_str())
-			.unwrap();
-		file_io
-			.create_initialized(&shard, generate_file_name_from_timestamp(4_000_000).as_str())
-			.unwrap();
+		file_io.create_initialized(&shard, 12).unwrap();
+		file_io.create_initialized(&shard, 13).unwrap();
+		file_io.create_initialized(&shard, 8_000_000).unwrap();
+		file_io.create_initialized(&shard, 4_000_000).unwrap();
 
-		let snapshot_history = loader.load_state_snapshot_history_from_files().unwrap();
+		let snapshot_history = loader.load_state_snapshot_history().unwrap();
 		assert_eq!(2, snapshot_history.get(&shard).unwrap().len());
-		assert_latest_file_starts_with(&snapshot_history, &shard, "8000000");
+		assert_latest_state_id(&snapshot_history, &shard, 8_000_000);
 	}
 
-	fn add_files_with_timestamps(
-		file_io: &TestFileIo,
-		shard: &ShardIdentifier,
-		timestamps: &[u128],
-	) {
-		for timestamp in timestamps {
-			add_file_with_timestamp(file_io, shard, *timestamp);
+	fn add_state_snapshots(file_io: &TestFileIo, shard: &ShardIdentifier, state_ids: &[StateId]) {
+		for state_id in state_ids {
+			add_snapshot_with_state_ids(file_io, shard, *state_id);
 		}
 	}
 
-	fn add_file_with_timestamp(file_io: &TestFileIo, shard: &ShardIdentifier, timestamp: u128) {
-		file_io
-			.create_initialized(shard, generate_file_name_from_timestamp(timestamp).as_str())
-			.unwrap();
+	fn add_snapshot_with_state_ids(
+		file_io: &TestFileIo,
+		shard: &ShardIdentifier,
+		state_id: StateId,
+	) {
+		file_io.create_initialized(shard, state_id).unwrap();
 	}
 
-	fn assert_latest_file_starts_with(
+	fn assert_latest_state_id(
 		snapshot_history: &SnapshotHistory<TestStateHash>,
 		shard: &ShardIdentifier,
-		str: &str,
+		state_id: StateId,
 	) {
-		assert!(snapshot_history.get(shard).unwrap().front().unwrap().file_name.starts_with(str))
+		assert_eq!(snapshot_history.get(shard).unwrap().front().unwrap().state_id, state_id)
 	}
 
 	fn create_test_fixtures(shards: &[ShardIdentifier]) -> (Arc<TestFileIo>, TestLoader) {

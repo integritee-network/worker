@@ -24,9 +24,12 @@ use rust_base58::base58::{FromBase58, ToBase58};
 #[cfg(feature = "sgx")]
 use base58::{FromBase58, ToBase58};
 
-use crate::error::{Error, Result};
+use crate::{
+	error::{Error, Result},
+	state_snapshot_primitives::StateId,
+};
 use codec::{Decode, Encode};
-use itp_settings::files::SHARDS_PATH;
+use itp_settings::files::{ENCRYPTED_STATE_FILE, SHARDS_PATH};
 use itp_types::ShardIdentifier;
 use log::error;
 use std::{
@@ -41,42 +44,46 @@ pub trait StateFileIo {
 	type StateType;
 	type HashType;
 
-	/// Load a state file (returns error if it does not exist).
-	fn load(&self, shard_identifier: &ShardIdentifier, file_name: &str) -> Result<Self::StateType>;
+	/// Load a state (returns error if it does not exist).
+	fn load(
+		&self,
+		shard_identifier: &ShardIdentifier,
+		state_id: StateId,
+	) -> Result<Self::StateType>;
 
-	/// Compute the state hash of a specific state file (returns error if it does not exist).
+	/// Compute the state hash of a specific state (returns error if it does not exist).
 	fn compute_hash(
 		&self,
 		shard_identifier: &ShardIdentifier,
-		file_name: &str,
+		state_id: StateId,
 	) -> Result<Self::HashType>;
 
-	/// Create an empty (default initialized) state file.
+	/// Create an empty (default initialized) state.
 	fn create_initialized(
 		&self,
 		shard_identifier: &ShardIdentifier,
-		file_name: &str,
+		state_id: StateId,
 	) -> Result<Self::HashType>;
 
-	/// Write the state to file.
+	/// Write the state.
 	fn write(
 		&self,
 		shard_identifier: &ShardIdentifier,
-		file_name: &str,
+		state_id: StateId,
 		state: Self::StateType,
 	) -> Result<Self::HashType>;
 
-	/// Remove a state file.
-	fn remove(&self, shard_identifier: &ShardIdentifier, file_name: &str) -> Result<()>;
+	/// Remove a state.
+	fn remove(&self, shard_identifier: &ShardIdentifier, state_id: StateId) -> Result<()>;
 
-	/// Checks if a given shard directory exists and contains state files.
+	/// Checks if a given shard directory exists and contains at least one state instance.
 	fn shard_exists(&self, shard_identifier: &ShardIdentifier) -> bool;
 
 	/// Lists all shards.
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>>;
 
-	/// List all files for a shard.
-	fn list_shard_files(&self, shard_identifier: &ShardIdentifier) -> Result<Vec<String>>;
+	/// List all states for a shard.
+	fn list_state_ids_for_shard(&self, shard_identifier: &ShardIdentifier) -> Result<Vec<StateId>>;
 }
 
 #[cfg(feature = "sgx")]
@@ -89,7 +96,7 @@ pub mod sgx {
 	use itp_types::H256;
 	use log::*;
 	use sgx_tcrypto::rsgx_sha256_slice;
-	use std::{path::Path, string::ToString};
+	use std::path::Path;
 
 	/// SGX state file I/O
 	pub struct SgxStateFileIo<StateKey> {
@@ -140,13 +147,13 @@ pub mod sgx {
 		fn load(
 			&self,
 			shard_identifier: &ShardIdentifier,
-			file_name: &str,
+			state_id: StateId,
 		) -> Result<Self::StateType> {
-			if !state_file_exists(shard_identifier, file_name) {
-				return Err(Error::InvalidStateFile(file_name.to_string()))
+			if !file_for_state_exists(shard_identifier, state_id) {
+				return Err(Error::InvalidStateId(state_id))
 			}
 
-			let state_path = state_file_path(shard_identifier, file_name);
+			let state_path = state_file_path(shard_identifier, state_id);
 			trace!("loading state from: {:?}", state_path);
 			let state_vec = self.read(&state_path)?;
 
@@ -171,13 +178,13 @@ pub mod sgx {
 		fn compute_hash(
 			&self,
 			shard_identifier: &ShardIdentifier,
-			file_name: &str,
+			state_id: StateId,
 		) -> Result<Self::HashType> {
-			if !state_file_exists(shard_identifier, file_name) {
-				return Err(Error::InvalidStateFile(file_name.to_string()))
+			if !file_for_state_exists(shard_identifier, state_id) {
+				return Err(Error::InvalidStateId(state_id))
 			}
 
-			let state_file_path = state_file_path(shard_identifier, file_name);
+			let state_file_path = state_file_path(shard_identifier, state_id);
 			let bytes = io_read(state_file_path)?;
 			let state_hash = rsgx_sha256_slice(&bytes)?;
 			Ok(H256::from_slice(state_hash.as_ref()))
@@ -186,11 +193,11 @@ pub mod sgx {
 		fn create_initialized(
 			&self,
 			shard_identifier: &ShardIdentifier,
-			file_name: &str,
+			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
 			let state = Stf::init_state();
-			self.write(shard_identifier, file_name, state)
+			self.write(shard_identifier, state_id, state)
 		}
 
 		/// Writes the state (without the state diff) encrypted into the enclave storage
@@ -198,10 +205,10 @@ pub mod sgx {
 		fn write(
 			&self,
 			shard_identifier: &ShardIdentifier,
-			file_name: &str,
+			state_id: StateId,
 			state: Self::StateType,
 		) -> Result<Self::HashType> {
-			let state_path = state_file_path(shard_identifier, file_name);
+			let state_path = state_file_path(shard_identifier, state_id);
 			trace!("writing state to: {:?}", state_path);
 
 			// only save the state, the state diff is pruned
@@ -215,8 +222,8 @@ pub mod sgx {
 			Ok(state_hash.into())
 		}
 
-		fn remove(&self, shard_identifier: &ShardIdentifier, file_name: &str) -> Result<()> {
-			fs::remove_file(state_file_path(shard_identifier, file_name))
+		fn remove(&self, shard_identifier: &ShardIdentifier, state_id: StateId) -> Result<()> {
+			fs::remove_file(state_file_path(shard_identifier, state_id))
 				.map_err(|e| Error::Other(e.into()))
 		}
 
@@ -228,9 +235,24 @@ pub mod sgx {
 			list_shards()
 		}
 
-		fn list_shard_files(&self, shard_identifier: &ShardIdentifier) -> Result<Vec<String>> {
+		fn list_state_ids_for_shard(
+			&self,
+			shard_identifier: &ShardIdentifier,
+		) -> Result<Vec<StateId>> {
 			let shard_path = shard_path(shard_identifier);
-			Ok(list_items_in_directory(&shard_path))
+			let directory_items = list_items_in_directory(&shard_path);
+
+			Ok(directory_items
+				.iter()
+				.flat_map(|item| {
+					extract_state_id_from_file_name(item.as_str())
+						// Maybe there is a better way? Need to call a function in case of `None`.
+						.ok_or_else(|| {
+							warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
+						})
+						.ok()
+				})
+				.collect())
 		}
 	}
 }
@@ -243,9 +265,9 @@ pub fn remove_shard_dir(shard: &ShardIdentifier) {
 	}
 }
 
-pub(crate) fn state_file_path(shard: &ShardIdentifier, file_name: &str) -> PathBuf {
+pub(crate) fn state_file_path(shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
 	let mut shard_file_path = shard_path(shard);
-	shard_file_path.push(file_name);
+	shard_file_path.push(to_file_name(state_id));
 	shard_file_path
 }
 
@@ -253,9 +275,19 @@ pub(crate) fn shard_path(shard: &ShardIdentifier) -> PathBuf {
 	PathBuf::from(format!("{}/{}", SHARDS_PATH, shard.encode().to_base58()))
 }
 
+fn to_file_name(state_id: StateId) -> String {
+	format!("{}_{}", state_id, ENCRYPTED_STATE_FILE)
+}
+
 #[allow(unused)]
-fn state_file_exists(shard: &ShardIdentifier, file_name: &str) -> bool {
-	state_file_path(shard, file_name).exists()
+fn extract_state_id_from_file_name(file_name: &str) -> Option<StateId> {
+	let state_id_str = file_name.strip_suffix(format!("_{}", ENCRYPTED_STATE_FILE).as_str())?;
+	state_id_str.parse::<StateId>().ok()
+}
+
+#[allow(unused)]
+fn file_for_state_exists(shard: &ShardIdentifier, state_id: StateId) -> bool {
+	state_file_path(shard, state_id).exists()
 }
 
 #[allow(unused)]
@@ -290,12 +322,60 @@ fn list_items_in_directory(directory: &Path) -> Vec<String> {
 }
 
 #[allow(unused)]
+/// List any valid shards that are found in the shard path.
+/// Ignore any items (files, directories) that are not valid shard identifiers.
 pub(crate) fn list_shards() -> Result<Vec<ShardIdentifier>> {
 	let directory_items = list_items_in_directory(&PathBuf::from(SHARDS_PATH));
-	let mut shards = Vec::new();
-	for item in directory_items {
-		let shard_encoded = item.from_base58()?;
-		shards.push(ShardIdentifier::decode(&mut shard_encoded.as_slice())?);
+	Ok(directory_items
+		.iter()
+		.flat_map(|item| {
+			item.from_base58()
+				.ok()
+				.map(|encoded_shard_id| {
+					ShardIdentifier::decode(&mut encoded_shard_id.as_slice()).ok()
+				})
+				.flatten()
+		})
+		.collect())
+}
+
+#[cfg(test)]
+mod tests {
+
+	use super::*;
+	use crate::state_snapshot_primitives::generate_current_timestamp_state_id;
+
+	#[test]
+	fn state_id_to_file_name_works() {
+		assert!(to_file_name(generate_current_timestamp_state_id()).ends_with(ENCRYPTED_STATE_FILE));
+		assert!(to_file_name(generate_current_timestamp_state_id())
+			.strip_suffix(format!("_{}", ENCRYPTED_STATE_FILE).as_str())
+			.is_some());
 	}
-	Ok(shards)
+
+	#[test]
+	fn extract_timestamp_from_file_name_works() {
+		assert_eq!(
+			123456u128,
+			extract_state_id_from_file_name(format!("123456_{}", ENCRYPTED_STATE_FILE).as_str())
+				.unwrap()
+		);
+		assert_eq!(
+			0u128,
+			extract_state_id_from_file_name(format!("0_{}", ENCRYPTED_STATE_FILE).as_str())
+				.unwrap()
+		);
+
+		assert!(extract_state_id_from_file_name(
+			format!("987345{}", ENCRYPTED_STATE_FILE).as_str()
+		)
+		.is_none());
+		assert!(
+			extract_state_id_from_file_name(format!("{}", ENCRYPTED_STATE_FILE).as_str()).is_none()
+		);
+		assert!(extract_state_id_from_file_name(
+			format!("1234_{}-other", ENCRYPTED_STATE_FILE).as_str()
+		)
+		.is_none());
+	}
 }

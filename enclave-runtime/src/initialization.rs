@@ -90,7 +90,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let state_snapshot_repository_loader =
 		StateSnapshotRepositoryLoader::<SgxStateFileIo<Aes>, StfState, H256>::new(state_file_io);
 	let state_snapshot_repository =
-		state_snapshot_repository_loader.load_from_files(STATE_SNAPSHOTS_CACHE_SIZE)?;
+		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
 	let state_handler = Arc::new(StateHandler::new(state_snapshot_repository));
 	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
 
