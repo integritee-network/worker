@@ -182,9 +182,10 @@ mod tests {
 	use itp_sgx_io::StaticSealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{
-		traits::{Block as BlockT, Header as SidechainHeaderT, SignBlock},
+		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
 	};
+	use its_test::sidechain_header_builder::SidechainHeaderBuilder;
 	use sp_keyring::ed25519::{ed25519, Keyring};
 	use sp_runtime::{testing::H256, traits::Header as HeaderT};
 	use std::{fmt::Debug, time::SystemTime};
@@ -208,7 +209,7 @@ mod tests {
 	}
 
 	fn test_block_with_time_stamp(timestamp: u64) -> SignedBlock {
-		let header = SidechainHeaderT::new(0, H256::random(), H256::random(), Default::default());
+		let header = SidechainHeaderBuilder::default().build();
 
 		Block::new(
 			header,

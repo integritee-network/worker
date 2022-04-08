@@ -21,3 +21,4 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 pub mod sidechain_block_builder;
+pub mod sidechain_header_builder;
