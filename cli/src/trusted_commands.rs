@@ -41,6 +41,7 @@ use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use std::{collections::HashMap, time::Instant};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+use synchronoise::SignalEvent;
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -216,13 +217,21 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 		Err(err_msg) => panic!("{}", err_msg.to_string()),
 	};
 
+	// signals to synchronize threads
+	let mut submitted_signals = Vec::new();
+	for n in 0..11 {
+		submitted_signals.insert(n, SignalEvent::manual(false));
+	}
+	submitted_signals.get(0).unwrap().signal();
+
 	let overall_start = Instant::now();
 
-	let outputs: Vec<(Vec<String>, Option<Instant>)> = (0..1)
+	let outputs: Vec<(Vec<String>, Vec<u64>)> = (0..10)
 		.into_par_iter()
-		.map(|_i| {
+		.map(|nonce_alice1| {
+			let nonce_alice = nonce_alice1 * 2;
 			let mut output = Vec::new();
-			let mut time_until_in_block = None;
+			let mut in_sidechain_block_timestamps = Vec::new();
 
 			// create new accounts to use
 			let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
@@ -232,105 +241,95 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 			let account2 = get_pair_from_str(trusted_args, a2.public().to_string().as_str());
 			drop(store);
 
-			// transfer amount from Alice to new account
+			submitted_signals.get(nonce_alice1 as usize).unwrap().wait();
+
+			// transfer amount from Alice to new accounts
 			let top: TrustedOperation = TrustedCall::balance_transfer(
 				alice.public().into(),
 				account1.public().into(),
-				1000,
+				100000,
 			)
-			.sign(&KeyPair::Sr25519(alice.clone()), 0, &mrenclave, &shard)
+			.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
-			let receiver = match top {
-				TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
-					cli,
-					trusted_args,
-					TrustedOperation::direct_call(call),
-					shielding_pubkey,
-				),
-				_ => {
-					output.push("TrustedOperation was not created.".to_string());
-					None
-				},
-			};
+			let results = run_transaction(cli, trusted_args, shielding_pubkey, top);
 
-			match receiver {
-				Some(r) => {
-					match wait_until(&r, is_sidechain_block) {
-						Some(_) =>
-							output.push("initialization of new account successfull".to_string()),
-						None =>
-							output.push("initialization of new account NOT successfull".to_string()),
-					};
-				},
-				None => output
-					.push("Something went wrong on initialization of new account.".to_string()),
+			if results.iter().any(|r| r.0 == "InSidechainBlock") {
+				output.push("initialization of new account1 successfull".to_string());
+			} else {
+				output.push("initialization of new account1 NOT successfull".to_string());
 			}
 
-			println!("account1 is {}", account1.public());
-			println!("account2 is {}", account2.public());
+			let top2: TrustedOperation = TrustedCall::balance_transfer(
+				alice.public().into(),
+				account2.public().into(),
+				100000,
+			)
+			.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
+			.into_trusted_operation(trusted_args.direct);
 
-			for nonce in 0..1 {
+			let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2);
+
+			if results2.iter().any(|r| r.0 == "InSidechainBlock") {
+				output.push("initialization of new account2 successfull".to_string());
+			} else {
+				output.push("initialization of new account2 NOT successfull".to_string());
+			}
+
+			submitted_signals.get((nonce_alice1 + 1) as usize).unwrap().signal();
+
+			output.push(format!("account1 is {}", account1.public()));
+			output.push(format!("account2 is {}", account2.public()));
+
+			for nonce in 0..10 {
 				//account1 -> account2
 				let top: TrustedOperation = TrustedCall::balance_transfer(
 					account1.public().into(),
 					account2.public().into(),
-					500,
+					50000,
 				)
 				.sign(&KeyPair::Sr25519(account1.clone()), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time = Instant::now();
-				output.push(format!(
-					"starting balance_transfer (nonce {}, at:{}ms):",
-					nonce,
-					start_time.duration_since(overall_start).as_millis()
-				));
+				let results = run_transaction(cli, trusted_args, shielding_pubkey, top);
+				for (key, value) in results {
+					output.push(format!(
+						"{}: {}",
+						key,
+						value.duration_since(start_time).as_millis()
+					));
+					if key == "InSidechainBlock" {
+						in_sidechain_block_timestamps
+							.push(value.duration_since(overall_start).as_secs());
+					}
+				}
 
-				let receiver = match top {
-					TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
-						cli,
-						trusted_args,
-						TrustedOperation::direct_call(call),
-						shielding_pubkey,
-					),
-					_ => {
-						output.push("TrustedOperation was not created.".to_string());
-						None
-					},
-				};
+				//account2 -> account1
+				let top2: TrustedOperation = TrustedCall::balance_transfer(
+					account2.public().into(),
+					account1.public().into(),
+					50000,
+				)
+				.sign(&KeyPair::Sr25519(account2.clone()), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
 
-				match receiver {
-					Some(r) => {
-						match wait_until(&r, is_submitted) {
-							Some(t) => output.push(format!(
-								"Submitted : {}ms",
-								(t.duration_since(start_time)).as_millis()
-							)),
-							None => output.push("transaction was not submitted.".to_string()),
-						};
-
-						match wait_until(&r, is_sidechain_block) {
-							Some(t) => {
-								output.push(format!(
-									"InSidechainBlock : {}ms",
-									(t.duration_since(start_time)).as_millis()
-								));
-								output.push(format!(
-									"InSidechainBlock at: {}ms",
-									t.duration_since(overall_start).as_millis()
-								));
-								time_until_in_block = Some(t);
-							},
-							None => output
-								.push("transaction was not added to sidechain block.".to_string()),
-						};
-					},
-					None => output.push(format!("Something went wrong for nonce {}", nonce)),
+				let start_time2 = Instant::now();
+				let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2);
+				for (key, value) in results2 {
+					output.push(format!(
+						"{}: {}",
+						key,
+						value.duration_since(start_time2).as_millis()
+					));
+					if key == "InSidechainBlock" {
+						in_sidechain_block_timestamps
+							.push(value.duration_since(overall_start).as_secs());
+					}
 				}
 			}
 
-			(output, time_until_in_block)
+			(output, in_sidechain_block_timestamps)
 		})
 		.collect();
 
@@ -364,6 +363,37 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 	// 		v.count_at_value()
 	// 	);
 	// }
+}
+
+fn run_transaction(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	shielding_pubkey: Rsa3072PubKey,
+	top: TrustedOperation,
+) -> Vec<(String, Instant)> {
+	let mut timestamps = Vec::new();
+
+	let receiver = match top {
+		TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
+			cli,
+			trusted_args,
+			TrustedOperation::direct_call(call),
+			shielding_pubkey,
+		),
+		_ => None,
+	};
+
+	if let Some(r) = receiver {
+		if let Some(t) = wait_until(&r, is_submitted) {
+			timestamps.push(("Submitted".to_string(), t))
+		}
+
+		if let Some(t) = wait_until(&r, is_sidechain_block) {
+			timestamps.push(("InSidechainBlock".to_string(), t))
+		}
+	};
+
+	timestamps
 }
 
 fn is_submitted(s: TrustedOperationStatus) -> bool {
