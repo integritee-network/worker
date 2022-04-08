@@ -39,7 +39,12 @@ use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{collections::HashMap, time::Instant};
+use std::{
+	collections::HashMap,
+	fs::File,
+	io::{BufWriter, Write},
+	time::Instant,
+};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 use synchronoise::SignalEvent;
 
@@ -219,14 +224,14 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 
 	// signals to synchronize threads
 	let mut submitted_signals = Vec::new();
-	for n in 0..11 {
+	for n in 0..101 {
 		submitted_signals.insert(n, SignalEvent::manual(false));
 	}
 	submitted_signals.get(0).unwrap().signal();
 
 	let overall_start = Instant::now();
 
-	let outputs: Vec<(Vec<String>, Vec<u64>)> = (0..10)
+	let outputs: Vec<(Vec<String>, Vec<u64>)> = (0..100)
 		.into_par_iter()
 		.map(|nonce_alice1| {
 			let nonce_alice = nonce_alice1 * 2;
@@ -252,7 +257,7 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 			.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
-			let results = run_transaction(cli, trusted_args, shielding_pubkey, top);
+			let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true);
 
 			if results.iter().any(|r| r.0 == "InSidechainBlock") {
 				output.push("initialization of new account1 successfull".to_string());
@@ -268,7 +273,7 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 			.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
-			let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2);
+			let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true);
 
 			if results2.iter().any(|r| r.0 == "InSidechainBlock") {
 				output.push("initialization of new account2 successfull".to_string());
@@ -292,7 +297,7 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time = Instant::now();
-				let results = run_transaction(cli, trusted_args, shielding_pubkey, top);
+				let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true);
 				for (key, value) in results {
 					output.push(format!(
 						"{}: {}",
@@ -315,7 +320,7 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time2 = Instant::now();
-				let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2);
+				let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true);
 				for (key, value) in results2 {
 					output.push(format!(
 						"{}: {}",
@@ -333,36 +338,45 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 		})
 		.collect();
 
-	// let mut throughput: HashMap<u64, u64> = HashMap::new();
+	let mut throughput: HashMap<u64, u64> = HashMap::new();
+
+	let file = File::create(format!(
+		"benchmark_{}.txt",
+		chrono::offset::Local::now().format("%Y-%m-%d_%H_%M")
+	))
+	.expect("unable to create file");
+	let mut file = BufWriter::new(file);
 
 	for output in outputs {
 		for t in output.0 {
+			writeln!(file, "{}", t).expect("cannot write to file");
 			println!("{}", t);
 		}
 
-		// if let Some(t) = output.1 {
-		// 	let s = t.duration_since(overall_start).as_secs();
-		// 	let mut current = 0;
-		// 	if throughput.contains_key(&s) {
-		// 		current = *throughput.get(&s).unwrap();
-		// 	}
-		// 	throughput.insert(s, current + 1);
-		// }
+		for t in output.1 {
+			let mut current = 0;
+			if throughput.contains_key(&t) {
+				current = *throughput.get(&t).unwrap();
+			}
+			throughput.insert(t, current + 1);
+		}
 	}
 
-	// let mut hist = Histogram::<u64>::new(1).unwrap();
-	// for (_, value) in throughput {
-	// 	hist += value;
-	// }
-	//
-	// for v in hist.iter_recorded() {
-	// 	println!(
-	// 		"{}'th percentile of data is {} with {} samples",
-	// 		v.percentile(),
-	// 		v.value_iterated_to(),
-	// 		v.count_at_value()
-	// 	);
-	// }
+	let mut hist = Histogram::<u64>::new(1).unwrap();
+	for (_, value) in throughput {
+		hist += value;
+	}
+
+	for v in hist.iter_recorded() {
+		let text = format!(
+			"{}'th percentile of data is {} with {} samples",
+			v.percentile(),
+			v.value_iterated_to(),
+			v.count_at_value()
+		);
+		writeln!(file, "{}", text).expect("cannot write to file");
+		println!("{}", text);
+	}
 }
 
 fn run_transaction(
@@ -370,6 +384,7 @@ fn run_transaction(
 	trusted_args: &TrustedArgs,
 	shielding_pubkey: Rsa3072PubKey,
 	top: TrustedOperation,
+	wait_for_sidechain_block: bool,
 ) -> Vec<(String, Instant)> {
 	let mut timestamps = Vec::new();
 
@@ -388,8 +403,10 @@ fn run_transaction(
 			timestamps.push(("Submitted".to_string(), t))
 		}
 
-		if let Some(t) = wait_until(&r, is_sidechain_block) {
-			timestamps.push(("InSidechainBlock".to_string(), t))
+		if wait_for_sidechain_block {
+			if let Some(t) = wait_until(&r, is_sidechain_block) {
+				timestamps.push(("InSidechainBlock".to_string(), t))
+			}
 		}
 	};
 
