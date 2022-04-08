@@ -172,7 +172,7 @@ fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
 }
 
-/// Calculate the payload of a sidechain block
+/// Calculate the payload of a sidechain block.
 fn calculate_payload_hash(
 	timestamp: u64,
 	layer_one_head: H256,

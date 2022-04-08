@@ -25,7 +25,7 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_types::{BlockHash, ShardIdentifier};
 use its_peer_fetch::FetchBlocksFromPeer;
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use its_storage::BlockStorage;
 use log::*;
 use std::sync::Arc;
@@ -86,7 +86,10 @@ where
 		if !signed_blocks.is_empty() {
 			info!(
 				"Enclave produced sidechain blocks: {:?}",
-				signed_blocks.iter().map(|b| b.block.header.block_number).collect::<Vec<u64>>()
+				signed_blocks
+					.iter()
+					.map(|b| b.block.header().block_number)
+					.collect::<Vec<u64>>()
 			);
 		} else {
 			debug!("Enclave did not produce sidechain blocks");

@@ -43,7 +43,7 @@ pub struct Header {
 impl HeaderTrait for Header {
 	type ShardIdentifier = H256;
 
-	/// get block number
+	/// Get block number.
 	fn block_number(&self) -> u64 {
 		self.block_number
 	}

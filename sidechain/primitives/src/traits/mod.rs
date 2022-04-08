@@ -30,7 +30,7 @@ pub trait Header {
 	/// Identifier for the shards.
 	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
 
-	/// get block number
+	/// Get block number.
 	fn block_number(&self) -> u64;
 	/// get parent hash of block
 	fn parent_hash(&self) -> H256;
@@ -56,7 +56,7 @@ pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
 	/// Public key type of the block author
 	type Public: Public;
 
-	/// get header reference
+	/// Get header of the block.
 	fn header(&self) -> Self::HeaderType;
 	/// get timestamp of block
 	fn timestamp(&self) -> u64;

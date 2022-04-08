@@ -71,7 +71,7 @@ impl BlockTrait for Block {
 
 	type Public = ed25519::Public;
 
-	/// get header reference
+	/// Get header of the block.
 	fn header(&self) -> Self::HeaderType {
 		self.header
 	}

@@ -113,7 +113,7 @@ impl SidechainBlockBuilder {
 		self
 	}
 
-	/// Calculate the payload of a sidechain block
+	/// Calculate the payload of a sidechain block.
 	pub fn block_payload_hash(&self) -> H256 {
 		(
 			self.timestamp,
