@@ -101,7 +101,7 @@ where
 		let bytes = self.read_until(header.payload_length as usize)?;
 		match header.opcode {
 			Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
-			Opcode::SigningKey => self.seal_handler.seal_signing_key(&bytes)?,
+			Opcode::StateKey => self.seal_handler.seal_state_key(&bytes)?,
 			Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
 		};
 		Ok(true)

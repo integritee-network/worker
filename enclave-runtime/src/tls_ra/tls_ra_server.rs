@@ -73,10 +73,10 @@ where
 	/// Sends all relevant data to the client.
 	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let shielding_key = self.seal_handler.unseal_shielding_key()?;
-		let signing_key = self.seal_handler.unseal_signing_key()?;
+		let state_key = self.seal_handler.unseal_state_key()?;
 		let state = self.seal_handler.unseal_state(shard)?;
 		self.write(Opcode::ShieldingKey, &shielding_key)?;
-		self.write(Opcode::SigningKey, &signing_key)?;
+		self.write(Opcode::StateKey, &state_key)?;
 		self.write(Opcode::State, &state)?;
 		Ok(())
 	}

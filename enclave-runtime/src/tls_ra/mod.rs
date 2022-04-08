@@ -47,7 +47,7 @@ impl TcpHeader {
 #[derive(Copy, Clone, Debug)]
 pub enum Opcode {
 	ShieldingKey = 0,
-	SigningKey = 1,
+	StateKey = 1,
 	State = 2,
 }
 
@@ -55,7 +55,7 @@ impl From<u8> for Opcode {
 	fn from(item: u8) -> Self {
 		match item {
 			0 => Opcode::ShieldingKey,
-			1 => Opcode::SigningKey,
+			1 => Opcode::StateKey,
 			2 => Opcode::State,
 			_ => unimplemented!(),
 		}
