@@ -21,40 +21,46 @@
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
-use itp_sgx_crypto::{Aes, AesSeal, Error as CryptoError};
-use itp_sgx_io::SealedIO;
-use itp_stf_state_handler::handle_state::HandleState;
+use itp_sgx_crypto::{Aes, Error as CryptoError};
+use itp_sgx_io::StaticSealedIO;
+use itp_stf_state_handler::{
+	handle_state::HandleState,
+	state_key_repository::{AccessStateKey, MutateStateKey},
+};
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
-pub trait SealedIOForShieldingKey = SealedIO<Unsealed = Rsa3072KeyPair, Error = CryptoError>;
-pub trait SealedIOForStateKey = SealedIO<Unsealed = Aes, Error = CryptoError>;
+pub trait SealedIOForShieldingKey = StaticSealedIO<Unsealed = Rsa3072KeyPair, Error = CryptoError>;
 
 /// Handles the sealing and unsealing of the shielding key, state key and the state.
 #[derive(Default)]
-pub struct SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
+pub struct SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyHandler: SealedIOForStateKey,
+	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
 	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
 	// See https://github.com/integritee-network/sgx-runtime/issues/46.
 	StateHandler: HandleState<StateT = StfState>,
 {
 	state_handler: Arc<StateHandler>,
-	_phantom_key_handler: PhantomData<(ShieldingKeyHandler, StateKeyHandler)>,
+	state_key_repository: Arc<StateKeyRepository>,
+	_phantom_key_handler: PhantomData<ShieldingKeyHandler>,
 }
 
-impl<ShieldingKeyHandler, StateKeyHandler, StateHandler>
-	SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
+impl<ShieldingKeyHandler, StateKeyRepository, StateHandler>
+	SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyHandler: SealedIOForStateKey,
+	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
-	pub fn new(state_handler: Arc<StateHandler>) -> Self {
-		Self { state_handler, _phantom_key_handler: Default::default() }
+	pub fn new(
+		state_handler: Arc<StateHandler>,
+		state_key_repository: Arc<StateKeyRepository>,
+	) -> Self {
+		Self { state_handler, state_key_repository, _phantom_key_handler: Default::default() }
 	}
 }
 pub trait SealStateAndKeys {
@@ -69,11 +75,11 @@ pub trait UnsealStateAndKeys {
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
 }
 
-impl<ShieldingKeyHandler, StateKeyHandler, StateHandler> SealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
+impl<ShieldingKeyHandler, StateKeyRepository, StateHandler> SealStateAndKeys
+	for SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyHandler: SealedIOForStateKey,
+	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
@@ -81,14 +87,14 @@ where
 			error!("    [Enclave] Received Invalid RSA key");
 			EnclaveError::Other(e.into())
 		})?;
-		ShieldingKeyHandler::seal(key)?;
+		ShieldingKeyHandler::seal_to_static_file(key)?;
 		info!("Successfully stored a new shielding key");
 		Ok(())
 	}
 
 	fn seal_state_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
 		let aes = Aes::decode(&mut bytes)?;
-		AesSeal::seal(Aes::new(aes.key, aes.init_vec))?;
+		self.state_key_repository.update_key(aes)?;
 		info!("Successfully stored a new state key");
 		Ok(())
 	}
@@ -96,28 +102,30 @@ where
 	fn seal_state(&self, mut bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let state = StfStateType::decode(&mut bytes)?;
 		let state_with_empty_diff = StfState { state, state_diff: Default::default() };
-		let (state_lock, _) = self.state_handler.load_for_mutation(shard)?;
 
-		self.state_handler.write(state_with_empty_diff, state_lock, shard)?;
+		self.state_handler.reset(state_with_empty_diff, shard)?;
 		info!("Successfully updated shard {:?} with provisioned state", shard);
 		Ok(())
 	}
 }
 
-impl<ShieldingKeyHandler, StateKeyHandler, StateHandler> UnsealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
+impl<ShieldingKeyHandler, StateKeyRepository, StateHandler> UnsealStateAndKeys
+	for SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyHandler: SealedIOForStateKey,
+	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
-		let shielding_key = ShieldingKeyHandler::unseal()?;
+		let shielding_key = ShieldingKeyHandler::unseal_from_static_file()?;
 		serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))
 	}
 
 	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>> {
-		Ok(AesSeal::unseal()?.encode())
+		self.state_key_repository
+			.retrieve_key()
+			.map(|k| k.encode())
+			.map_err(|e| EnclaveError::Other(e.into()))
 	}
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
@@ -129,11 +137,13 @@ where
 #[cfg(feature = "test")]
 pub mod test {
 	use super::*;
-	use itp_sgx_crypto::mocks::{AesSealMock, Rsa3072SealMock};
+	use itp_sgx_crypto::mocks::sgx::Rsa3072SealMock;
+	use itp_stf_state_handler::test::mocks::state_key_repository_mock::StateKeyRepositoryMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use sgx_externalities::SgxExternalitiesTrait;
 
-	type SealHandlerMock = SealHandler<Rsa3072SealMock, AesSealMock, HandleStateMock>;
+	type SealHandlerMock =
+		SealHandler<Rsa3072SealMock, StateKeyRepositoryMock<Aes>, HandleStateMock>;
 
 	pub fn seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();
@@ -216,7 +226,7 @@ pub mod test {
 		let (lock, mut state) = seal_handler.state_handler.load_for_mutation(&shard).unwrap();
 		let (key, value) = ("my_key", "my_value");
 		state.insert(key.encode(), value.encode());
-		seal_handler.state_handler.write(state, lock, &shard).unwrap();
+		seal_handler.state_handler.write_after_mutation(state, lock, &shard).unwrap();
 
 		let state_in_bytes = seal_handler.unseal_state(&shard).unwrap();
 

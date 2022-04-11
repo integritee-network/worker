@@ -30,17 +30,17 @@ pub mod sgx {
 	use crate::error::{Error, Result};
 	use codec::Encode;
 	use itp_settings::files::SEALED_SIGNER_SEED_FILE;
-	use itp_sgx_io::{seal, unseal, SealedIO};
+	use itp_sgx_io::{seal, unseal, SealedIO, StaticSealedIO};
 	use log::*;
 	use sgx_rand::{Rng, StdRng};
 	use sp_core::{crypto::Pair, ed25519};
 	use std::{path::Path, sgxfs::SgxFile};
 
-	impl SealedIO for Ed25519Seal {
+	impl StaticSealedIO for Ed25519Seal {
 		type Error = Error;
 		type Unsealed = ed25519::Pair;
 
-		fn unseal() -> Result<ed25519::Pair> {
+		fn unseal_from_static_file() -> Result<ed25519::Pair> {
 			let raw = unseal(SEALED_SIGNER_SEED_FILE)?;
 
 			let key = ed25519::Pair::from_seed_slice(&raw)
@@ -49,8 +49,21 @@ pub mod sgx {
 			Ok(key.into())
 		}
 
-		fn seal(unsealed: Self::Unsealed) -> Result<()> {
+		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<()> {
 			Ok(unsealed.seed().using_encoded(|bytes| seal(bytes, SEALED_SIGNER_SEED_FILE))?)
+		}
+	}
+
+	impl SealedIO for Ed25519Seal {
+		type Error = Error;
+		type Unsealed = ed25519::Pair;
+
+		fn unseal(&self) -> Result<Self::Unsealed> {
+			Self::unseal_from_static_file()
+		}
+
+		fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
+			Self::seal_to_static_file(unsealed)
 		}
 	}
 

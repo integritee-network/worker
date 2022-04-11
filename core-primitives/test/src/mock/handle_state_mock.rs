@@ -86,7 +86,7 @@ impl HandleState for HandleStateMock {
 		Ok((write_lock, initialized_state))
 	}
 
-	fn write(
+	fn write_after_mutation(
 		&self,
 		state: StfState,
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
@@ -94,6 +94,11 @@ impl HandleState for HandleStateMock {
 	) -> Result<Self::HashType> {
 		state_lock.insert(*shard, state.clone());
 		Ok(state.using_encoded(blake2_256).into())
+	}
+
+	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
+		let write_lock = self.state_map.write().unwrap();
+		self.write_after_mutation(state, write_lock, shard)
 	}
 }
 
@@ -153,7 +158,7 @@ pub mod tests {
 		let (key, value) = ("my_key", "my_value");
 		state.insert(key.encode(), value.encode());
 
-		state_handler.write(state, lock, &shard).unwrap();
+		state_handler.write_after_mutation(state, lock, &shard).unwrap();
 
 		let updated_state = state_handler.load(&shard).unwrap();
 
@@ -170,7 +175,7 @@ pub mod tests {
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 		let initial_state = Stf::init_state();
 		let state_hash_before_execution = hash_of(&initial_state.state);
-		state_handler.write(initial_state, lock, &shard).unwrap();
+		state_handler.write_after_mutation(initial_state, lock, &shard).unwrap();
 
 		let state_loaded = state_handler.load(&shard).unwrap();
 		let loaded_state_hash = hash_of(&state_loaded.state);

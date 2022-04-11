@@ -25,11 +25,12 @@ use crate::{
 	state_handler::StateHandler,
 	state_snapshot_repository::StateSnapshotRepository,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader,
+	test::mocks::state_key_repository_mock::StateKeyRepositoryMock,
 };
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{Aes, AesSeal, StateCrypto};
-use itp_sgx_io::{write, SealedIO};
+use itp_sgx_io::{write, StaticSealedIO};
 use itp_types::{ShardIdentifier, H256};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::hashing::blake2_256;
@@ -37,7 +38,7 @@ use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
-type TestStateFileIo = SgxStateFileIo<Aes>;
+type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock<Aes>>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo, StfState, H256>;
 type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo, StfState, H256>;
 type TestStateHandler = StateHandler<TestStateRepository>;
@@ -79,7 +80,7 @@ pub fn test_sgx_state_decode_encode_works() {
 pub fn test_encrypt_decrypt_state_type_works() {
 	// given
 	let state = given_hello_world_state();
-	let state_key = AesSeal::unseal().unwrap();
+	let state_key = AesSeal::unseal_from_static_file().unwrap();
 
 	// when
 	let mut state_buffer = state.state.encode();
@@ -101,7 +102,7 @@ pub fn test_write_and_load_state_works() {
 
 	// when
 	let (lock, _s) = state_handler.load_for_mutation(&shard).unwrap();
-	let _hash = state_handler.write(state.clone(), lock, &shard).unwrap();
+	let _hash = state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
 	let result = state_handler.load(&shard).unwrap();
 
@@ -118,7 +119,7 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	let (state_handler, shard_dir_handle) = initialize_state_handler_with_directory_handle(&shard);
 
 	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
-	state_handler.write(initial_state.clone(), lock, &shard).unwrap();
+	state_handler.write_after_mutation(initial_state.clone(), lock, &shard).unwrap();
 
 	let state_loaded = state_handler.load(&shard).unwrap();
 
@@ -158,7 +159,7 @@ pub fn test_write_access_locks_read_until_finished() {
 	assert!(state_to_mutate.get(new_state_key.clone().as_slice()).is_none());
 	state_to_mutate.insert(new_state_key, "mega_secret_value".encode());
 
-	let _hash = state_handler.write(state_to_mutate, lock, &shard).unwrap();
+	let _hash = state_handler.write_after_mutation(state_to_mutate, lock, &shard).unwrap();
 
 	join_handle.join().unwrap();
 
@@ -229,8 +230,10 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 pub fn test_file_io_get_state_hash_works() {
 	let shard: ShardIdentifier = [21u8; 32].into();
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
+	let state_key_access =
+		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
 
-	let file_io = TestStateFileIo::new(AesSeal::unseal().unwrap());
+	let file_io = TestStateFileIo::new(state_key_access);
 
 	let state_id = 1234u128;
 	let state_hash = file_io.create_initialized(&shard, state_id).unwrap();
@@ -271,8 +274,10 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let shard: ShardIdentifier = [21u8; 32].into();
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
+	let state_key_access =
+		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
 
-	let file_io = TestStateFileIo::new(AesSeal::unseal().unwrap());
+	let file_io = TestStateFileIo::new(state_key_access);
 
 	let mut invalid_state_file_path = shard_path(&shard);
 	invalid_state_file_path.push("invalid-state.bin");
@@ -291,8 +296,9 @@ fn initialize_state_handler_with_directory_handle(
 }
 
 fn initialize_state_handler() -> Arc<TestStateHandler> {
-	let state_key = AesSeal::unseal().unwrap();
-	let file_io = Arc::new(TestStateFileIo::new(state_key));
+	let state_key_access =
+		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
+	let file_io = Arc::new(TestStateFileIo::new(state_key_access));
 	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
 	let state_snapshot_repository = state_repository_loader
 		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
@@ -307,7 +313,7 @@ fn update_state(
 ) -> H256 {
 	let (lock, mut state_to_mutate) = state_handler.load_for_mutation(shard).unwrap();
 	state_to_mutate.insert(kv_pair.0, kv_pair.1);
-	state_handler.write(state_to_mutate, lock, shard).unwrap()
+	state_handler.write_after_mutation(state_to_mutate, lock, shard).unwrap()
 }
 
 fn given_hello_world_state() -> StfState {

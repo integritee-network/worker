@@ -308,7 +308,7 @@ fn init_state_and_shard_with_state_handler<S: HandleState<StateT = State>>(
 	let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
 	test_genesis_setup(&mut state);
 
-	state_handler.write(state.clone(), lock, &shard).unwrap();
+	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
 	(state, shard)
 }

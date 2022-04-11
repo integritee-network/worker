@@ -21,7 +21,7 @@
 
 pub use sp_consensus_slots::Slot;
 
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
@@ -127,12 +127,12 @@ pub trait GetLastSlot {
 	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError>;
 }
 
-impl<T: SealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for T {
+impl<T: StaticSealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for T {
 	fn get_last_slot(&self) -> Result<Slot, ConsensusError> {
-		Self::unseal()
+		T::unseal_from_static_file()
 	}
 	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError> {
-		Self::seal(slot)
+		T::seal_to_static_file(slot)
 	}
 }
 
@@ -140,7 +140,7 @@ impl<T: SealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for T {
 pub mod sgx {
 	use super::*;
 	use codec::{Decode, Encode};
-	use itp_sgx_io::{seal, unseal, SealedIO};
+	use itp_sgx_io::{seal, unseal, StaticSealedIO};
 	use lazy_static::lazy_static;
 	use std::sync::SgxRwLock;
 
@@ -152,11 +152,11 @@ pub mod sgx {
 
 	const LAST_SLOT_BIN: &'static str = "last_slot.bin";
 
-	impl SealedIO for LastSlotSeal {
+	impl StaticSealedIO for LastSlotSeal {
 		type Error = ConsensusError;
 		type Unsealed = Slot;
 
-		fn unseal() -> Result<Self::Unsealed, Self::Error> {
+		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
 			let _ = FILE_LOCK.read().map_err(|e| Self::Error::Other(format!("{:?}", e).into()))?;
 
 			match unseal(LAST_SLOT_BIN) {
@@ -168,7 +168,7 @@ pub mod sgx {
 			}
 		}
 
-		fn seal(unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<(), Self::Error> {
 			let _ = FILE_LOCK.write().map_err(|e| Self::Error::Other(format!("{:?}", e).into()))?;
 			Ok(unsealed.using_encoded(|bytes| seal(bytes, LAST_SLOT_BIN))?)
 		}
@@ -179,7 +179,7 @@ pub mod sgx {
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
-	use itp_sgx_io::SealedIO;
+	use itp_sgx_io::StaticSealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
@@ -193,15 +193,15 @@ mod tests {
 
 	struct LastSlotSealMock;
 
-	impl SealedIO for LastSlotSealMock {
+	impl StaticSealedIO for LastSlotSealMock {
 		type Error = ConsensusError;
 		type Unsealed = Slot;
 
-		fn unseal() -> Result<Self::Unsealed, Self::Error> {
+		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
 			Ok(slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION))
 		}
 
-		fn seal(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
 			println!("Seal method stub called.");
 			Ok(())
 		}

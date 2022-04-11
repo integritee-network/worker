@@ -19,4 +19,7 @@
 pub(crate) mod mocks;
 
 #[cfg(all(feature = "test", feature = "sgx"))]
+pub mod mocks;
+
+#[cfg(all(feature = "test", feature = "sgx"))]
 pub mod sgx_tests;

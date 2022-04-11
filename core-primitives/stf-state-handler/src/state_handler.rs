@@ -76,13 +76,20 @@ where
 		Ok((state_write_lock, loaded_state))
 	}
 
-	fn write(
+	fn write_after_mutation(
 		&self,
 		state: Self::StateT,
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType> {
 		state_lock.update(shard, state)
+	}
+
+	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
+		let mut state_write_lock =
+			self.state_snapshot_repository.write().map_err(|_| Error::LockPoisoning)?;
+
+		state_write_lock.update(shard, state)
 	}
 }
 
@@ -135,7 +142,7 @@ mod tests {
 			assert_eq!(new_state, latest_state);
 		});
 
-		let _hash = state_handler.write(new_state, lock, &shard_id).unwrap();
+		let _hash = state_handler.write_after_mutation(new_state, lock, &shard_id).unwrap();
 
 		join_handle.join().unwrap();
 	}

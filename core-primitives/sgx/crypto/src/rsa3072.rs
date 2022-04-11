@@ -23,7 +23,7 @@ use crate::{
 };
 use derive_more::Display;
 use itp_settings::files::RSA3072_SEALED_KEY_FILE;
-use itp_sgx_io::{seal, unseal, SealedIO};
+use itp_sgx_io::{seal, unseal, SealedIO, StaticSealedIO};
 use log::*;
 use sgx_crypto_helper::{
 	rsa3072::{Rsa3072KeyPair, Rsa3072PubKey},
@@ -34,20 +34,33 @@ use std::{sgxfs::SgxFile, vec::Vec};
 #[derive(Copy, Clone, Debug, Display)]
 pub struct Rsa3072Seal;
 
-impl SealedIO for Rsa3072Seal {
+impl StaticSealedIO for Rsa3072Seal {
 	type Error = Error;
 	type Unsealed = Rsa3072KeyPair;
-	fn unseal() -> Result<Self::Unsealed> {
+	fn unseal_from_static_file() -> Result<Self::Unsealed> {
 		let raw = unseal(RSA3072_SEALED_KEY_FILE)?;
 		let key: Rsa3072KeyPair =
 			serde_json::from_slice(&raw).map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(key.into())
 	}
 
-	fn seal(unsealed: Rsa3072KeyPair) -> Result<()> {
+	fn seal_to_static_file(unsealed: Rsa3072KeyPair) -> Result<()> {
 		let key_json =
 			serde_json::to_vec(&unsealed).map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(seal(&key_json, RSA3072_SEALED_KEY_FILE)?)
+	}
+}
+
+impl SealedIO for Rsa3072Seal {
+	type Error = Error;
+	type Unsealed = Rsa3072KeyPair;
+
+	fn unseal(&self) -> Result<Self::Unsealed> {
+		Self::unseal_from_static_file()
+	}
+
+	fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
+		Self::seal_to_static_file(unsealed)
 	}
 }
 
@@ -71,7 +84,7 @@ impl ShieldingCrypto for Rsa3072KeyPair {
 
 impl Rsa3072Seal {
 	pub fn unseal_pubkey() -> Result<Rsa3072PubKey> {
-		let pair = Self::unseal()?;
+		let pair = Self::unseal_from_static_file()?;
 		let pubkey = pair.export_pubkey().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(pubkey)
 	}
@@ -88,5 +101,5 @@ pub fn create_sealed_if_absent() -> Result<()> {
 pub fn create_sealed() -> Result<()> {
 	let rsa_keypair = Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-	Rsa3072Seal::seal(rsa_keypair)
+	Rsa3072Seal::seal_to_static_file(rsa_keypair)
 }

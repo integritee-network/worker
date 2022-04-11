@@ -30,14 +30,30 @@ pub trait IO: Sized {
 
 /// Abstraction around IO that is supposed to use `SgxFile`. We expose it also in `std` to
 /// be able to put it as trait bounds in `std` and use it in tests.
+///
+/// This is the static method (or associated function) version, should be made obsolete over time,
+/// since it has state, but hides it in a global state. Makes it difficult to mock.
+pub trait StaticSealedIO: Sized {
+	type Error: From<std::io::Error> + std::fmt::Debug + 'static;
+
+	/// Type that is unsealed.
+	type Unsealed;
+
+	fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error>;
+	fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<(), Self::Error>;
+}
+
+/// Abstraction around IO that is supposed to use `SgxFile`. We expose it also in `std` to
+/// be able to put it as trait bounds in `std` and use it in tests.
+///
 pub trait SealedIO: Sized {
 	type Error: From<std::io::Error> + std::fmt::Debug + 'static;
 
 	/// Type that is unsealed.
 	type Unsealed;
 
-	fn unseal() -> Result<Self::Unsealed, Self::Error>;
-	fn seal(unsealed: Self::Unsealed) -> Result<(), Self::Error>;
+	fn unseal(&self) -> Result<Self::Unsealed, Self::Error>;
+	fn seal(&self, unsealed: Self::Unsealed) -> Result<(), Self::Error>;
 }
 
 pub fn read<P: AsRef<Path>>(path: P) -> IOResult<Vec<u8>> {

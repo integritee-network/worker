@@ -33,7 +33,7 @@ pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 	let mut state = Stf::init_state();
 	state.prune_state_diff();
 
-	state_handler.write(state.clone(), lock, &shard).unwrap();
+	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
 	(state, shard)
 }

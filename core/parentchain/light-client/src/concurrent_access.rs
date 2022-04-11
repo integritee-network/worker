@@ -29,7 +29,7 @@ use crate::{
 	LightClientState, Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::StaticSealedIO;
 use lazy_static::lazy_static;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
 use std::marker::PhantomData;
@@ -69,7 +69,7 @@ where
 pub struct GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
 	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
-	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -80,7 +80,7 @@ impl<Validator, ParentchainBlock, Seal> Default
 	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
 	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
-	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -92,7 +92,7 @@ where
 impl<Validator, ParentchainBlock, Seal> GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
 	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
-	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -105,7 +105,7 @@ impl<Validator, ParentchainBlock, Seal> ValidatorAccess<ParentchainBlock>
 	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
 	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
-	Seal: SealedIO<Error = Error, Unsealed = Validator>,
+	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -116,7 +116,7 @@ where
 		F: FnOnce(&Self::ValidatorType) -> Result<R>,
 	{
 		let _read_lock = VALIDATOR_LOCK.read().map_err(|_| Error::PoisonedLock)?;
-		let validator = Seal::unseal()?;
+		let validator = Seal::unseal_from_static_file()?;
 		getter_function(&validator)
 	}
 
@@ -125,9 +125,9 @@ where
 		F: FnOnce(&mut Self::ValidatorType) -> Result<R>,
 	{
 		let _write_lock = VALIDATOR_LOCK.write().map_err(|_| Error::PoisonedLock)?;
-		let mut validator = Seal::unseal()?;
+		let mut validator = Seal::unseal_from_static_file()?;
 		let result = mutating_function(&mut validator);
-		Seal::seal(validator)?;
+		Seal::seal_to_static_file(validator)?;
 		result
 	}
 }

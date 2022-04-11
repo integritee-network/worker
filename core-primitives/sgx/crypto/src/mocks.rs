@@ -15,41 +15,72 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
 use crate::{
+	aes::Aes,
 	error::{Error, Result},
-	Aes,
 };
-use itp_sgx_io::SealedIO;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use itp_sgx_io::{SealedIO, StaticSealedIO};
 
 #[derive(Default)]
-pub struct AesSealMock {}
+pub struct AesSealMock {
+	aes: RwLock<Aes>,
+}
+
+impl StaticSealedIO for AesSealMock {
+	type Error = Error;
+	type Unsealed = Aes;
+
+	fn unseal_from_static_file() -> Result<Self::Unsealed> {
+		Ok(Aes::default())
+	}
+
+	fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<()> {
+		Ok(())
+	}
+}
 
 impl SealedIO for AesSealMock {
 	type Error = Error;
 	type Unsealed = Aes;
 
-	fn unseal() -> Result<Self::Unsealed> {
-		Ok(Aes::default())
+	fn unseal(&self) -> std::result::Result<Self::Unsealed, Self::Error> {
+		self.aes
+			.read()
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))
+			.map(|k| k.clone())
 	}
 
-	fn seal(_unsealed: Self::Unsealed) -> Result<()> {
+	fn seal(&self, unsealed: Self::Unsealed) -> std::result::Result<(), Self::Error> {
+		let mut aes_lock = self.aes.write().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		*aes_lock = unsealed;
 		Ok(())
 	}
 }
 
-#[derive(Default)]
-pub struct Rsa3072SealMock {}
+#[cfg(feature = "sgx")]
+pub mod sgx {
+	use super::*;
+	use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
-impl SealedIO for Rsa3072SealMock {
-	type Error = Error;
-	type Unsealed = Rsa3072KeyPair;
+	#[derive(Default)]
+	pub struct Rsa3072SealMock {}
 
-	fn unseal() -> Result<Self::Unsealed> {
-		Ok(Rsa3072KeyPair::default())
-	}
+	impl StaticSealedIO for Rsa3072SealMock {
+		type Error = Error;
+		type Unsealed = Rsa3072KeyPair;
 
-	fn seal(_unsealed: Self::Unsealed) -> Result<()> {
-		Ok(())
+		fn unseal_from_static_file() -> Result<Self::Unsealed> {
+			Ok(Rsa3072KeyPair::default())
+		}
+
+		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<()> {
+			Ok(())
+		}
 	}
 }

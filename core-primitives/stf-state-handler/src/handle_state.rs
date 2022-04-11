@@ -53,10 +53,15 @@ pub trait HandleState {
 	/// Writes the state (without the state diff) encrypted into the enclave.
 	///
 	/// Returns the hash of the saved state (independent of the diff!).
-	fn write(
+	fn write_after_mutation(
 		&self,
 		state: Self::StateT,
 		state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType>;
+
+	/// Reset (or override) a state.
+	///
+	/// Use in cases where the previous state is of no interest. Otherwise use `load_for_mutation` and `write_after_mutation`.
+	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType>;
 }

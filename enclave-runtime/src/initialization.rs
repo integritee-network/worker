@@ -19,14 +19,15 @@ use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
 		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
-		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStfExecutor,
-		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStateFileIo,
+		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPoolOperationHandler,
+		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::public_api_rpc_handler,
@@ -52,10 +53,10 @@ use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
-use itp_sgx_crypto::{aes, ed25519, rsa3072, Aes, AesSeal, Ed25519Seal, Rsa3072Seal};
-use itp_sgx_io::SealedIO;
+use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::{
-	file_io::sgx::SgxStateFileIo, handle_state::HandleState, query_shard_state::QueryShardState,
+	handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
 use itp_storage::StorageProof;
@@ -75,7 +76,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	env_logger::init();
 
 	ed25519::create_sealed_if_absent().map_err(Error::Crypto)?;
-	let signer = Ed25519Seal::unseal().map_err(Error::Crypto)?;
+	let signer = Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto)?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
 	rsa3072::create_sealed_if_absent()?;
@@ -84,13 +85,17 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
 	aes::create_sealed_if_absent().map_err(Error::Crypto)?;
 
-	let state_key = AesSeal::unseal()?;
+	let state_key = AesSeal::unseal_from_static_file()?;
+	let state_key_repository =
+		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
+	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let state_file_io = Arc::new(SgxStateFileIo::new(state_key));
+	let state_file_io = Arc::new(EnclaveStateFileIo::new(state_key_repository));
 	let state_snapshot_repository_loader =
-		StateSnapshotRepositoryLoader::<SgxStateFileIo<Aes>, StfState, H256>::new(state_file_io);
+		StateSnapshotRepositoryLoader::<EnclaveStateFileIo, StfState, H256>::new(state_file_io);
 	let state_snapshot_repository =
 		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
+
 	let state_handler = Arc::new(StateHandler::new(state_snapshot_repository));
 	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
 
@@ -114,7 +119,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	)
 	.map_err(Error::PrimitivesAccess)?;
 
-	let shielding_key = Rsa3072Seal::unseal()?;
+	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
 	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
 
@@ -163,8 +168,8 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let parentchain_block_import_dispatcher =
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
-	let signer = Ed25519Seal::unseal()?;
-	let state_key = AesSeal::unseal()?;
+	let signer = Ed25519Seal::unseal_from_static_file()?;
+	let state_key = AesSeal::unseal_from_static_file()?;
 
 	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
 		state_handler,
@@ -206,8 +211,8 @@ pub(crate) fn init_light_client(
 	)?;
 
 	// Initialize the global parentchain block import dispatcher instance.
-	let signer = Ed25519Seal::unseal()?;
-	let shielding_key = Rsa3072Seal::unseal()?;
+	let signer = Ed25519Seal::unseal_from_static_file()?;
+	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;

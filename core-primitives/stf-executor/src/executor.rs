@@ -157,7 +157,7 @@ where
 		calls.append(&mut extrinsic_callbacks);
 
 		trace!("Updating state of shard {:?}", shard);
-		self.state_handler.write(state, state_lock, shard)?;
+		self.state_handler.write_after_mutation(state, state_lock, shard)?;
 
 		Ok(maybe_call_hash)
 	}
@@ -190,7 +190,9 @@ where
 		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
 			.map_err::<Error, _>(|e| e.into())?;
 
-		self.state_handler.write(state, state_lock, shard).map_err(|e| e.into())
+		self.state_handler
+			.write_after_mutation(state, state_lock, shard)
+			.map_err(|e| e.into())
 	}
 }
 
@@ -222,7 +224,7 @@ where
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
 			match Stf::update_parentchain_block(&mut state, header.clone()) {
 				Ok(_) => {
-					self.state_handler.write(state, state_lock, &shard_id)?;
+					self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 				},
 				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
 			}
@@ -252,7 +254,7 @@ where
 							error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
 						}
 
-						self.state_handler.write(state, state_lock, &shard_id)?;
+						self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 					}
 				},
 				None => debug!("No shards are on the chain yet"),
@@ -393,7 +395,7 @@ where
 
 		let new_state_hash = self
 			.state_handler
-			.write(new_state, state_lock, shard)
+			.write_after_mutation(new_state, state_lock, shard)
 			.map_err(|e| Error::StateHandler(e))?;
 		Ok((result, new_state_hash))
 	}

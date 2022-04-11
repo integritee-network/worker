@@ -23,6 +23,8 @@ use itp_types::ShardIdentifier;
 use std::{
 	collections::{HashMap, VecDeque},
 	marker::PhantomData,
+	string::ToString,
+	vec::Vec,
 };
 
 #[derive(Default, Clone)]
@@ -32,6 +34,7 @@ pub struct VersionedStateAccessMock<State, Hash> {
 }
 
 impl<State, Hash> VersionedStateAccessMock<State, Hash> {
+	#[cfg(test)]
 	pub fn new(state_history: HashMap<ShardIdentifier, VecDeque<State>>) -> Self {
 		VersionedStateAccessMock { state_history, phantom_data: Default::default() }
 	}

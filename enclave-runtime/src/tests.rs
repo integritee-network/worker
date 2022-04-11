@@ -169,7 +169,7 @@ fn test_compose_block_and_confirmation() {
 	let mut db = SidechainDB::<SignedBlock, _>::new(state.clone());
 	db.set_block_number(&1);
 	let state_hash_before_execution = db.state_hash();
-	state_handler.write(db.ext.clone(), lock, &shard).unwrap();
+	state_handler.write_after_mutation(db.ext.clone(), lock, &shard).unwrap();
 
 	// when
 	let (opaque_call, signed_block) = block_composer

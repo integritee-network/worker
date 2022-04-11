@@ -16,21 +16,21 @@
 */
 
 use crate::{error::Error, mocks::validator_mock::ValidatorMock};
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::StaticSealedIO;
 
 /// A seal that returns a mock validator.
 #[derive(Clone)]
 pub struct ValidatorMockSeal;
 
-impl SealedIO for ValidatorMockSeal {
+impl StaticSealedIO for ValidatorMockSeal {
 	type Error = Error;
 	type Unsealed = ValidatorMock;
 
-	fn unseal() -> Result<Self::Unsealed, Self::Error> {
+	fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
 		Ok(ValidatorMock)
 	}
 
-	fn seal(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+	fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
 		Ok(())
 	}
 }

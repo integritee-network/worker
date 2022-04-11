@@ -90,25 +90,26 @@ pub trait StateFileIo {
 pub mod sgx {
 
 	use super::*;
+	use crate::state_key_repository::AccessStateKey;
 	use ita_stf::{State as StfState, StateType as StfStateType, Stf};
 	use itp_sgx_crypto::StateCrypto;
 	use itp_sgx_io::{read as io_read, write as io_write};
 	use itp_types::H256;
 	use log::*;
 	use sgx_tcrypto::rsgx_sha256_slice;
-	use std::path::Path;
+	use std::{path::Path, sync::Arc};
 
 	/// SGX state file I/O.
-	pub struct SgxStateFileIo<StateKey> {
-		state_key: StateKey,
+	pub struct SgxStateFileIo<StateKeyRepository> {
+		state_key_repository: Arc<StateKeyRepository>,
 	}
 
-	impl<StateKey> SgxStateFileIo<StateKey>
+	impl<StateKeyRepository> SgxStateFileIo<StateKeyRepository>
 	where
-		StateKey: StateCrypto<Error = itp_sgx_crypto::Error>,
+		StateKeyRepository: AccessStateKey,
 	{
-		pub fn new(state_key: StateKey) -> Self {
-			SgxStateFileIo { state_key }
+		pub fn new(state_key_repository: Arc<StateKeyRepository>) -> Self {
+			SgxStateFileIo { state_key_repository }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -125,21 +126,29 @@ pub mod sgx {
 				path
 			);
 
-			self.state_key.decrypt(&mut bytes).map_err(Error::CryptoError)?;
+			let state_key = self.state_key_repository.retrieve_key()?;
+
+			state_key
+				.decrypt(&mut bytes)
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 			trace!("buffer decrypted = {:?}", bytes);
 
 			Ok(bytes)
 		}
 
 		fn encrypt(&self, mut state: Vec<u8>) -> Result<Vec<u8>> {
-			self.state_key.encrypt(&mut state).map_err(Error::CryptoError)?;
+			let state_key = self.state_key_repository.retrieve_key()?;
+
+			state_key
+				.encrypt(&mut state)
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 			Ok(state)
 		}
 	}
 
 	impl<StateKey> StateFileIo for SgxStateFileIo<StateKey>
 	where
-		StateKey: StateCrypto<Error = itp_sgx_crypto::Error>,
+		StateKey: AccessStateKey,
 	{
 		type StateType = StfState;
 		type HashType = H256;
