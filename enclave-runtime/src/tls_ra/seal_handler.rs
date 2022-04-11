@@ -16,7 +16,7 @@
 */
 
 //! Abstraction of the reading (unseal) and storing (seal) part of the
-//! shielding key, signing key and state.
+//! shielding key, state key and state.
 
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
@@ -30,27 +30,27 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
 pub trait SealedIOForShieldingKey = SealedIO<Unsealed = Rsa3072KeyPair, Error = CryptoError>;
-pub trait SealedIOForSigningKey = SealedIO<Unsealed = Aes, Error = CryptoError>;
+pub trait SealedIOForStateKey = SealedIO<Unsealed = Aes, Error = CryptoError>;
 
-/// Handles the sealing and unsealing of the shielding key, signing key and the state.
+/// Handles the sealing and unsealing of the shielding key, state key and the state.
 #[derive(Default)]
-pub struct SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+pub struct SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	StateKeyHandler: SealedIOForStateKey,
 	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
 	// See https://github.com/integritee-network/sgx-runtime/issues/46.
 	StateHandler: HandleState<StateT = StfState>,
 {
 	state_handler: Arc<StateHandler>,
-	_phantom_key_handler: PhantomData<(ShieldingKeyHandler, SigningKeyHandler)>,
+	_phantom_key_handler: PhantomData<(ShieldingKeyHandler, StateKeyHandler)>,
 }
 
-impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
-	SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+impl<ShieldingKeyHandler, StateKeyHandler, StateHandler>
+	SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	StateKeyHandler: SealedIOForStateKey,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	pub fn new(state_handler: Arc<StateHandler>) -> Self {
@@ -59,21 +59,21 @@ where
 }
 pub trait SealStateAndKeys {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
-	fn seal_signing_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
+	fn seal_state_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
 	fn seal_state(&self, bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()>;
 }
 
 pub trait UnsealStateAndKeys {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>>;
-	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>>;
-	fn unseal_state(&self, state: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
+	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>>;
+	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
 }
 
-impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler> SealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+impl<ShieldingKeyHandler, StateKeyHandler, StateHandler> SealStateAndKeys
+	for SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	StateKeyHandler: SealedIOForStateKey,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
@@ -86,10 +86,10 @@ where
 		Ok(())
 	}
 
-	fn seal_signing_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
+	fn seal_state_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
 		let aes = Aes::decode(&mut bytes)?;
 		AesSeal::seal(Aes::new(aes.key, aes.init_vec))?;
-		info!("Successfully stored a new signing key");
+		info!("Successfully stored a new state key");
 		Ok(())
 	}
 
@@ -104,11 +104,11 @@ where
 	}
 }
 
-impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler> UnsealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+impl<ShieldingKeyHandler, StateKeyHandler, StateHandler> UnsealStateAndKeys
+	for SealHandler<ShieldingKeyHandler, StateKeyHandler, StateHandler>
 where
 	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	StateKeyHandler: SealedIOForStateKey,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
@@ -116,7 +116,7 @@ where
 		serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))
 	}
 
-	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>> {
+	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>> {
 		Ok(AesSeal::unseal()?.encode())
 	}
 
@@ -162,28 +162,28 @@ pub mod test {
 		assert!(result.is_ok());
 	}
 
-	pub fn seal_signing_key_works() {
+	pub fn seal_state_key_works() {
 		let seal_handler = SealHandlerMock::default();
 		let key_pair_in_bytes = Aes::default().encode();
 
-		let result = seal_handler.seal_signing_key(&key_pair_in_bytes);
+		let result = seal_handler.seal_state_key(&key_pair_in_bytes);
 
 		assert!(result.is_ok());
 	}
 
-	pub fn seal_signing_key_fails_for_invalid_key() {
+	pub fn seal_state_key_fails_for_invalid_key() {
 		let seal_handler = SealHandlerMock::default();
 
-		let result = seal_handler.seal_signing_key(&[1, 2, 3]);
+		let result = seal_handler.seal_state_key(&[1, 2, 3]);
 
 		assert!(result.is_err());
 	}
 
-	pub fn unseal_seal_signing_key_works() {
+	pub fn unseal_seal_state_key_works() {
 		let seal_handler = SealHandlerMock::default();
-		let key_pair_in_bytes = seal_handler.unseal_signing_key().unwrap();
+		let key_pair_in_bytes = seal_handler.unseal_state_key().unwrap();
 
-		let result = seal_handler.seal_signing_key(&key_pair_in_bytes);
+		let result = seal_handler.seal_state_key(&key_pair_in_bytes);
 
 		assert!(result.is_ok());
 	}
