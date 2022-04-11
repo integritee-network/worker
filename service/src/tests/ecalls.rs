@@ -18,7 +18,7 @@
 use crate::tests::commons::test_trusted_getter_signed;
 use codec::Encode;
 use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
-use itp_stf_state_handler::file_io::remove_shard_dir;
+use itp_stf_state_handler::file_io::purge_shard_dir;
 use log::*;
 use sp_core::hash::H256;
 use sp_keyring::AccountKeyring;
@@ -34,7 +34,7 @@ pub fn get_state_works<E: EnclaveBase>(enclave_api: &E) -> EnclaveResult<()> {
 
 	assert!(!res.is_empty());
 
-	remove_shard_dir(&shard);
+	purge_shard_dir(&shard);
 
 	Ok(())
 }

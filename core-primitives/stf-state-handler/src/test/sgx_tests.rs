@@ -18,7 +18,7 @@
 use crate::{
 	error::{Error, Result},
 	file_io::{
-		init_shard, remove_shard_dir, sgx::SgxStateFileIo, shard_exists, shard_path, StateFileIo,
+		init_shard, purge_shard_dir, sgx::SgxStateFileIo, shard_exists, shard_path, StateFileIo,
 	},
 	handle_state::HandleState,
 	query_shard_state::QueryShardState,
@@ -57,7 +57,7 @@ impl ShardDirectoryHandle {
 
 impl Drop for ShardDirectoryHandle {
 	fn drop(&mut self) {
-		remove_shard_dir(&self.shard)
+		purge_shard_dir(&self.shard)
 	}
 }
 
@@ -320,7 +320,7 @@ fn given_hello_world_state() -> StfState {
 
 fn given_initialized_shard(shard: &ShardIdentifier) -> Result<()> {
 	if shard_exists(&shard) {
-		remove_shard_dir(shard);
+		purge_shard_dir(shard);
 	}
 	init_shard(&shard)
 }

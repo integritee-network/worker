@@ -32,8 +32,8 @@ use std::vec::Vec;
 
 /// Implementation of the `HandleState` trait.
 ///
-/// It's concurrency wrapper around a state snapshot repository, which handles
-/// access to any shards and state files. The state handler ensure we have thread-safe
+/// It's a concurrency wrapper around a state snapshot repository, which handles
+/// access to any shards and state files. The state handler ensures we have thread-safe
 /// concurrent access to that repository.
 pub struct StateHandler<Repository> {
 	state_snapshot_repository: RwLock<Repository>,

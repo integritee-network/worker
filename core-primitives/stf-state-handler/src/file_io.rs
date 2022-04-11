@@ -98,7 +98,7 @@ pub mod sgx {
 	use sgx_tcrypto::rsgx_sha256_slice;
 	use std::path::Path;
 
-	/// SGX state file I/O
+	/// SGX state file I/O.
 	pub struct SgxStateFileIo<StateKey> {
 		state_key: StateKey,
 	}
@@ -200,8 +200,8 @@ pub mod sgx {
 			self.write(shard_identifier, state_id, state)
 		}
 
-		/// Writes the state (without the state diff) encrypted into the enclave storage
-		/// Returns the hash of the saved state (independent of the diff!)
+		/// Writes the state (without the state diff) encrypted into the enclave storage.
+		/// Returns the hash of the saved state (independent of the diff!).
 		fn write(
 			&self,
 			shard_identifier: &ShardIdentifier,
@@ -211,7 +211,7 @@ pub mod sgx {
 			let state_path = state_file_path(shard_identifier, state_id);
 			trace!("writing state to: {:?}", state_path);
 
-			// only save the state, the state diff is pruned
+			// Only save the state, the state diff is pruned.
 			let cyphertext = self.encrypt(state.state.encode())?;
 
 			let state_hash = rsgx_sha256_slice(&cyphertext)?;
@@ -257,7 +257,7 @@ pub mod sgx {
 }
 
 /// Remove a shard directory with all of its content.
-pub fn remove_shard_dir(shard: &ShardIdentifier) {
+pub fn purge_shard_dir(shard: &ShardIdentifier) {
 	let shard_dir_path = shard_path(shard);
 	if let Err(e) = std::fs::remove_dir_all(&shard_dir_path) {
 		error!("Failed to remove shard directory {:?}: {:?}", shard_dir_path, e);

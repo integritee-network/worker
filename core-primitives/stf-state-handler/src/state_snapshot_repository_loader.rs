@@ -103,17 +103,15 @@ where
 	) -> Vec<StateSnapshotMetaData<HashType>> {
 		state_ids
 			.into_iter()
-			.flat_map(|state_id| {
-				self.file_io
-					.compute_hash(shard, state_id)
-					.map_err(|e| {
-						warn!(
+			.flat_map(|state_id| match self.file_io.compute_hash(shard, state_id) {
+				Ok(hash) => Some(StateSnapshotMetaData::new(hash, state_id)),
+				Err(e) => {
+					warn!(
 								"Failed to compute hash for state snapshot with id {}: {:?}, ignoring snapshot as a result",
 								state_id, e
 							);
-					})
-					.ok()
-					.map(|h| StateSnapshotMetaData::new(h, state_id))
+					None
+				},
 			})
 			.collect()
 	}
