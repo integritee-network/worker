@@ -53,7 +53,7 @@ where
 	type StateT = Repository::StateType;
 	type HashType = Repository::HashType;
 
-	fn initialize_shard(&self, shard: &ShardIdentifier) -> Result<Self::HashType> {
+	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType> {
 		let mut state_write_lock =
 			self.state_snapshot_repository.write().map_err(|_| Error::LockPoisoning)?;
 		state_write_lock.initialize_new_shard(shard)

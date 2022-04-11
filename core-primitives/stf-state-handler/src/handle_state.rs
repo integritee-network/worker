@@ -33,7 +33,7 @@ pub trait HandleState {
 	/// Initialize a new shard.
 	///
 	/// Initializes a default state for the shard and returns its hash.
-	fn initialize_shard(&self, shard: &ShardIdentifier) -> Result<Self::HashType>;
+	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType>;
 
 	/// Load the state for a given shard.
 	///

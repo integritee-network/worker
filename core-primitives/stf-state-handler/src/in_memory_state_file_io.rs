@@ -120,7 +120,7 @@ where
 		states_for_shard
 			.get(&state_id)
 			.map(|(_, s)| -> State { s.clone() })
-			.ok_or_else(|| Error::InvalidStateId(state_id))
+			.ok_or(Error::InvalidStateId(state_id))
 	}
 
 	fn compute_hash(
@@ -179,7 +179,7 @@ where
 
 		states_for_shard
 			.remove(&state_id)
-			.ok_or_else(|| Error::InvalidStateId(state_id))
+			.ok_or(Error::InvalidStateId(state_id))
 			.map(|_| {})
 	}
 

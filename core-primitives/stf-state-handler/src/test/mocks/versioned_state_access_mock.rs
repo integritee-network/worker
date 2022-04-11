@@ -81,9 +81,9 @@ where
 
 	fn initialize_new_shard(
 		&mut self,
-		shard_identifier: &ShardIdentifier,
+		shard_identifier: ShardIdentifier,
 	) -> Result<Self::HashType> {
-		self.state_history.insert(*shard_identifier, VecDeque::from([State::default()]));
+		self.state_history.insert(shard_identifier, VecDeque::from([State::default()]));
 		Ok(Hash::default())
 	}
 

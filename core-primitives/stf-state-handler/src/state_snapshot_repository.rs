@@ -51,10 +51,8 @@ pub trait VersionedStateAccess {
 	) -> Result<Self::StateType>;
 
 	/// Initialize a new shard.
-	fn initialize_new_shard(
-		&mut self,
-		shard_identifier: &ShardIdentifier,
-	) -> Result<Self::HashType>;
+	fn initialize_new_shard(&mut self, shard_identifier: ShardIdentifier)
+		-> Result<Self::HashType>;
 
 	/// Checks if a shard for a given identifier exists.
 	fn shard_exists(&self, shard_identifier: &ShardIdentifier) -> bool;
@@ -248,19 +246,19 @@ where
 
 	fn initialize_new_shard(
 		&mut self,
-		shard_identifier: &ShardIdentifier,
+		shard_identifier: ShardIdentifier,
 	) -> Result<Self::HashType> {
-		if let Some(state_snapshots) = self.snapshot_history.get(shard_identifier) {
+		if let Some(state_snapshots) = self.snapshot_history.get(&shard_identifier) {
 			warn!("Shard ({:?}) already exists, will not initialize again", shard_identifier);
 			return state_snapshots.front().map(|s| s.state_hash).ok_or(Error::EmptyRepository)
 		}
 
 		let snapshot_metadata =
-			initialize_shard_with_snapshot(shard_identifier, self.file_io.as_ref())?;
+			initialize_shard_with_snapshot(&shard_identifier, self.file_io.as_ref())?;
 
 		let state_hash = snapshot_metadata.state_hash;
 		self.snapshot_history
-			.insert(*shard_identifier, VecDeque::from([snapshot_metadata]));
+			.insert(shard_identifier, VecDeque::from([snapshot_metadata]));
 		Ok(state_hash)
 	}
 
@@ -413,7 +411,7 @@ mod tests {
 		assert!(state_snapshot_repository.load_latest(&shard_id).is_err());
 		assert!(state_snapshot_repository.list_shards().unwrap().is_empty());
 
-		let _hash = state_snapshot_repository.initialize_new_shard(&shard_id).unwrap();
+		let _hash = state_snapshot_repository.initialize_new_shard(shard_id).unwrap();
 
 		assert!(state_snapshot_repository.load_latest(&shard_id).is_ok());
 		assert_eq!(1, state_snapshot_repository.list_shards().unwrap().len());
@@ -424,7 +422,7 @@ mod tests {
 		let shard_id = ShardIdentifier::random();
 		let (_, mut state_snapshot_repository) = create_state_snapshot_repository(&[shard_id], 2);
 
-		let _hash = state_snapshot_repository.initialize_new_shard(&shard_id).unwrap();
+		let _hash = state_snapshot_repository.initialize_new_shard(shard_id).unwrap();
 
 		assert!(state_snapshot_repository.load_latest(&shard_id).is_ok());
 		assert_eq!(1, state_snapshot_repository.list_shards().unwrap().len());

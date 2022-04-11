@@ -248,7 +248,7 @@ pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResul
 	Ok(())
 }
 
-pub(crate) fn init_shard(shard: &ShardIdentifier) -> EnclaveResult<()> {
+pub(crate) fn init_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let _ = state_handler.initialize_shard(shard)?;
 	Ok(())

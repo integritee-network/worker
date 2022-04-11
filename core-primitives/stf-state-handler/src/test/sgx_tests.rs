@@ -29,7 +29,7 @@ use crate::{
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{Aes, AesSeal, StateCrypto};
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::{write, SealedIO};
 use itp_types::{ShardIdentifier, H256};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::hashing::blake2_256;
@@ -266,6 +266,21 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 			.get("test_key_3".encode().as_slice())
 			.unwrap()
 	);
+}
+
+pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
+	let shard: ShardIdentifier = [21u8; 32].into();
+	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
+
+	let file_io = TestStateFileIo::new(AesSeal::unseal().unwrap());
+
+	let mut invalid_state_file_path = shard_path(&shard);
+	invalid_state_file_path.push("invalid-state.bin");
+	write(&[0, 1, 2, 3, 4, 5], invalid_state_file_path).unwrap();
+
+	file_io.create_initialized(&shard, 1234).unwrap();
+
+	assert_eq!(1, file_io.list_state_ids_for_shard(&shard).unwrap().len());
 }
 
 fn initialize_state_handler_with_directory_handle(

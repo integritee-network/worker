@@ -41,7 +41,7 @@ pub struct HandleStateMock {
 }
 
 impl HandleStateMock {
-	pub fn from_shard(shard: &ShardIdentifier) -> Result<Self> {
+	pub fn from_shard(shard: ShardIdentifier) -> Result<Self> {
 		let state_handler = HandleStateMock { state_map: Default::default() };
 		state_handler.initialize_shard(shard)?;
 		Ok(state_handler)
@@ -53,15 +53,15 @@ impl HandleState for HandleStateMock {
 	type StateT = StfState;
 	type HashType = H256;
 
-	fn initialize_shard(&self, shard: &ShardIdentifier) -> Result<Self::HashType> {
-		let maybe_state = self.state_map.read().unwrap().get(shard).cloned();
+	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType> {
+		let maybe_state = self.state_map.read().unwrap().get(&shard).cloned();
 
 		return match maybe_state {
 			// Initialize with default state, if it doesn't exist yet.
 			None => {
 				let state = StfState::default();
 				let state_hash = state.using_encoded(blake2_256).into();
-				self.state_map.write().unwrap().insert(*shard, state);
+				self.state_map.write().unwrap().insert(shard, state);
 				Ok(state_hash)
 			},
 			Some(s) => Ok(s.using_encoded(blake2_256).into()),
@@ -127,7 +127,7 @@ pub mod tests {
 	pub fn shard_exists_after_inserting() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
-		state_handler.initialize_shard(&shard).unwrap();
+		state_handler.initialize_shard(shard).unwrap();
 
 		assert!(state_handler.load(&shard).is_ok());
 		assert!(state_handler.shard_exists(&shard).unwrap());
@@ -136,7 +136,7 @@ pub mod tests {
 	pub fn initialize_creates_default_state() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
-		state_handler.initialize_shard(&shard).unwrap();
+		state_handler.initialize_shard(shard).unwrap();
 
 		let loaded_state_result = state_handler.load(&shard);
 
@@ -146,7 +146,7 @@ pub mod tests {
 	pub fn load_mutate_and_write_works() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
-		state_handler.initialize_shard(&shard).unwrap();
+		state_handler.initialize_shard(shard).unwrap();
 
 		let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
 
@@ -165,7 +165,7 @@ pub mod tests {
 	pub fn ensure_subsequent_state_loads_have_same_hash() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
-		state_handler.initialize_shard(&shard).unwrap();
+		state_handler.initialize_shard(shard).unwrap();
 
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 		let initial_state = Stf::init_state();

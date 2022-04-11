@@ -245,12 +245,11 @@ pub mod sgx {
 			Ok(directory_items
 				.iter()
 				.flat_map(|item| {
-					extract_state_id_from_file_name(item.as_str())
-						// Maybe there is a better way? Need to call a function in case of `None`.
-						.ok_or_else(|| {
-							warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
-						})
-						.ok()
+					let maybe_state_id = extract_state_id_from_file_name(item.as_str());
+					if maybe_state_id.is_none() {
+						warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
+					}
+					maybe_state_id
 				})
 				.collect())
 		}
@@ -291,6 +290,7 @@ fn file_for_state_exists(shard: &ShardIdentifier, state_id: StateId) -> bool {
 }
 
 #[allow(unused)]
+/// Returns true if a shard directory for a given identifier exists AND contains at least one state file.
 pub(crate) fn shard_exists(shard: &ShardIdentifier) -> bool {
 	let shard_path = shard_path(shard);
 	if !shard_path.exists() {
@@ -351,6 +351,12 @@ mod tests {
 		assert!(to_file_name(generate_current_timestamp_state_id())
 			.strip_suffix(format!("_{}", ENCRYPTED_STATE_FILE).as_str())
 			.is_some());
+
+		let now_time_stamp = generate_current_timestamp_state_id();
+		assert_eq!(
+			extract_state_id_from_file_name(to_file_name(now_time_stamp).as_str()).unwrap(),
+			now_time_stamp
+		);
 	}
 
 	#[test]

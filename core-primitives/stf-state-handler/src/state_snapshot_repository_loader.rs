@@ -174,22 +174,6 @@ mod tests {
 		assert_latest_state_id(&snapshot_history, &shards[2], 14_000_000);
 	}
 
-	#[test]
-	fn ignore_invalid_file_names() {
-		let shard = ShardIdentifier::random();
-		let (file_io, loader) = create_test_fixtures(&[shard]);
-
-		// Only 2 of these file names are valid
-		file_io.create_initialized(&shard, 12).unwrap();
-		file_io.create_initialized(&shard, 13).unwrap();
-		file_io.create_initialized(&shard, 8_000_000).unwrap();
-		file_io.create_initialized(&shard, 4_000_000).unwrap();
-
-		let snapshot_history = loader.load_state_snapshot_history().unwrap();
-		assert_eq!(2, snapshot_history.get(&shard).unwrap().len());
-		assert_latest_state_id(&snapshot_history, &shard, 8_000_000);
-	}
-
 	fn add_state_snapshots(file_io: &TestFileIo, shard: &ShardIdentifier, state_ids: &[StateId]) {
 		for state_id in state_ids {
 			add_snapshot_with_state_ids(file_io, shard, *state_id);

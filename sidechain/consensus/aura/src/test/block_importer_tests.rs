@@ -75,7 +75,7 @@ fn default_authority() -> Pair {
 fn test_fixtures(
 	parentchain_block_import_trigger: Arc<TestParentchainBlockImportTrigger>,
 ) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolCallOperator>) {
-	let state_handler = Arc::new(HandleStateMock::from_shard(&shard()).unwrap());
+	let state_handler = Arc::new(HandleStateMock::from_shard(shard()).unwrap());
 	let top_pool_call_operator = Arc::new(TestTopPoolCallOperator::default());
 	let ocall_api = Arc::new(
 		OnchainMock::default()

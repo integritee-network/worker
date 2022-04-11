@@ -433,7 +433,7 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 	let shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	if let Err(e) = initialization::init_shard(&shard_identifier) {
+	if let Err(e) = initialization::init_shard(shard_identifier) {
 		error!("Failed to initialize shard ({:?}): {:?}", shard_identifier, e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}

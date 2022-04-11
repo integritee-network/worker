@@ -104,7 +104,7 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 	let top_pool = Arc::new(TrustedOperationPoolMock::default());
 
 	let shard_id = shard_id();
-	let state_facade = HandleStateMock::from_shard(&shard_id).unwrap();
+	let state_facade = HandleStateMock::from_shard(shard_id).unwrap();
 	let _ = state_facade.load(&shard_id).unwrap();
 
 	let encryption_key = ShieldingCryptoMock::default();
