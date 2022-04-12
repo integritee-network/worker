@@ -49,7 +49,7 @@ where
 		&self,
 		snapshot_history_cache_size: usize,
 	) -> Result<StateSnapshotRepository<FileIo, State, HashType>> {
-		let snapshot_history = self.load_state_snapshot_history()?;
+		let snapshot_history = self.load_and_initialize_state_snapshot_history()?;
 
 		StateSnapshotRepository::new(
 			self.file_io.clone(),
@@ -58,7 +58,7 @@ where
 		)
 	}
 
-	fn load_state_snapshot_history(&self) -> Result<SnapshotHistory<HashType>> {
+	fn load_and_initialize_state_snapshot_history(&self) -> Result<SnapshotHistory<HashType>> {
 		let mut repository = SnapshotHistory::new();
 
 		let shards = self.file_io.list_shards()?;
@@ -135,7 +135,7 @@ mod tests {
 			vec![ShardIdentifier::random(), ShardIdentifier::random(), ShardIdentifier::random()];
 		let (_, loader) = create_test_fixtures(shards.as_slice());
 
-		let snapshot_history = loader.load_state_snapshot_history().unwrap();
+		let snapshot_history = loader.load_and_initialize_state_snapshot_history().unwrap();
 		assert_eq!(shards.len(), snapshot_history.len());
 		for snapshots in snapshot_history.values() {
 			assert_eq!(1, snapshots.len());
@@ -146,7 +146,7 @@ mod tests {
 	fn loading_without_shards_returns_empty_directory() {
 		let (_, loader) = create_test_fixtures(&[]);
 
-		let snapshot_history = loader.load_state_snapshot_history().unwrap();
+		let snapshot_history = loader.load_and_initialize_state_snapshot_history().unwrap();
 		assert!(snapshot_history.is_empty());
 	}
 
@@ -164,7 +164,7 @@ mod tests {
 		add_state_snapshots(file_io.as_ref(), &shards[1], &[10_000_000, 9_000_000]);
 		add_state_snapshots(file_io.as_ref(), &shards[2], &[14_000_000, 11_000_000, 12_000_000]);
 
-		let snapshot_history = loader.load_state_snapshot_history().unwrap();
+		let snapshot_history = loader.load_and_initialize_state_snapshot_history().unwrap();
 
 		assert_eq!(shards.len(), snapshot_history.len());
 		assert_latest_state_id(&snapshot_history, &shards[0], 4_000_000);

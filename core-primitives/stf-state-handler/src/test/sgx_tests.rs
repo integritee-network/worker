@@ -18,7 +18,9 @@
 use crate::{
 	error::{Error, Result},
 	file_io::{
-		init_shard, purge_shard_dir, sgx::SgxStateFileIo, shard_exists, shard_path, StateFileIo,
+		purge_shard_dir,
+		sgx::{init_shard, shard_exists, SgxStateFileIo},
+		shard_path, StateFileIo,
 	},
 	handle_state::HandleState,
 	query_shard_state::QueryShardState,
