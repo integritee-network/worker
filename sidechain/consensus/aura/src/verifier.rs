@@ -23,7 +23,7 @@ use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{
 	traits::{
-		Block as SidechainBlockTrait, Header as HeaderTrait,
+		Block as SidechainBlockTrait, BlockData, Header as HeaderTrait,
 		SignedBlock as SignedSidechainBlockTrait,
 	},
 	types::block::BlockHash,
@@ -80,7 +80,7 @@ where
 		);
 
 		let slot = slot_from_time_stamp_and_duration(
-			Duration::from_millis(signed_block.block().timestamp()),
+			Duration::from_millis(signed_block.block().block_data().timestamp()),
 			self.slot_duration,
 		);
 
@@ -120,7 +120,7 @@ where
 	Context: ValidateerFetch + GetStorageVerified,
 {
 	ensure!(
-		parentchain_head.hash() == block.layer_one_head(),
+		parentchain_head.hash() == block.block_data().layer_one_head(),
 		ConsensusError::BadParentchainBlock(
 			parentchain_head.hash(),
 			"Invalid parentchain head".into(),
@@ -133,11 +133,11 @@ where
 		.ok_or_else(|| ConsensusError::CouldNotGetAuthorities("No authorities found".into()))?;
 
 	ensure!(
-		expected_author == block.block_author(),
+		expected_author == block.block_data().block_author(),
 		ConsensusError::InvalidAuthority(format!(
 			"Expected author: {:?}, author found in block: {:?}",
 			expected_author,
-			block.block_author()
+			block.block_data().block_author()
 		))
 	);
 

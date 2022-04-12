@@ -21,7 +21,7 @@ use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch}
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
@@ -103,6 +103,7 @@ where
 	}
 
 	fn on_block_imported(&self, block: &SignedSidechainBlock::Block) {
-		self.top_pool_author.on_block_imported(block.signed_top_hashes(), block.hash());
+		self.top_pool_author
+			.on_block_imported(block.block_data().signed_top_hashes(), block.hash());
 	}
 }

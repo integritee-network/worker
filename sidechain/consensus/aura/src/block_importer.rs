@@ -35,7 +35,7 @@ use itp_storage_verifier::GetStorageVerified;
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
-	Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
+	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };
 use its_state::SidechainDB;
 use its_top_pool_executor::TopPoolCallOperator;
@@ -141,6 +141,7 @@ impl<
 
 		// Remove calls from pool.
 		let executed_operations = sidechain_block
+			.block_data()
 			.signed_top_hashes()
 			.iter()
 			.map(|hash| {
@@ -278,7 +279,8 @@ impl<
 		let maybe_latest_imported_block = self
 			.parentchain_block_importer
 			.import_until(|signed_parentchain_block| {
-				signed_parentchain_block.block.hash() == sidechain_block.layer_one_head()
+				signed_parentchain_block.block.hash()
+					== sidechain_block.block_data().layer_one_head()
 			})
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
@@ -292,12 +294,13 @@ impl<
 		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, ConsensusError> {
-		if sidechain_block.layer_one_head() == last_imported_parentchain_header.hash() {
+		if sidechain_block.block_data().layer_one_head() == last_imported_parentchain_header.hash()
+		{
 			debug!("No queue peek necessary, sidechain block references latest imported parentchain block");
 			return Ok(last_imported_parentchain_header.clone())
 		}
 
-		let parentchain_header_hash_to_peek = sidechain_block.layer_one_head();
+		let parentchain_header_hash_to_peek = sidechain_block.block_data().layer_one_head();
 		let maybe_signed_parentchain_block = self
 			.parentchain_block_importer
 			.peek(|parentchain_block| {
@@ -312,7 +315,7 @@ impl<
 					format!(
 						"Failed to find parentchain header in import queue (hash: {}) that is \
 			associated with the current sidechain block that is to be imported (number: {}, hash: {})",
-						sidechain_block.layer_one_head(),
+						sidechain_block.block_data().layer_one_head(),
 						sidechain_block.header().block_number(),
 						sidechain_block.hash()
 					)
@@ -326,7 +329,7 @@ impl<
 
 		// If the block has been proposed by this enclave, remove all successfully applied
 		// trusted calls from the top pool.
-		if self.block_author_is_self(sidechain_block.block_author()) {
+		if self.block_author_is_self(sidechain_block.block_data().block_author()) {
 			self.update_top_pool(sidechain_block)
 		}
 

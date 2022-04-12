@@ -25,7 +25,7 @@ use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
+	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
@@ -86,7 +86,7 @@ pub(crate) fn timestamp_within_slot<
 	slot: &SlotInfo<ParentchainBlock>,
 	proposal: &SignedSidechainBlock,
 ) -> bool {
-	let proposal_stamp = proposal.block().timestamp();
+	let proposal_stamp = proposal.block().block_data().timestamp();
 
 	slot.timestamp.as_millis() as u64 <= proposal_stamp
 		&& slot.ends_at.as_millis() as u64 >= proposal_stamp
@@ -211,15 +211,15 @@ mod tests {
 	fn test_block_with_time_stamp(timestamp: u64) -> SignedBlock {
 		let header = SidechainHeaderBuilder::default().build();
 
-		Block::new(
-			header,
+		let block_data = BlockData::new(
 			ed25519::Public([0; 32]),
 			H256::random(),
 			Default::default(),
 			Default::default(),
 			timestamp,
-		)
-		.sign_block(&Keyring::Alice.pair())
+		);
+
+		Block::new(header, block_data).sign_block(&Keyring::Alice.pair())
 	}
 
 	fn slot(slot: u64) -> SlotInfo<ParentchainBlock> {

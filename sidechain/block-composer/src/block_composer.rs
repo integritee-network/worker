@@ -23,7 +23,7 @@ use itp_sgx_crypto::StateCrypto;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderTrait, SignBlock,
+	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
@@ -78,6 +78,8 @@ where
 }
 
 type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType;
+type BlockDataTypeOf<T> =
+	<<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::BlockDataType;
 
 impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKey, Externalities>
 	ComposeBlockAndConfirmation<Externalities, ParentchainBlock>
@@ -148,14 +150,15 @@ where
 			block_data_hash,
 		);
 
-		let block = SignedSidechainBlock::Block::new(
-			header,
+		let block_data = BlockDataTypeOf::<SignedSidechainBlock>::new(
 			author_public,
 			layer_one_hash,
 			top_call_hashes,
 			payload,
 			now,
 		);
+
+		let block = SignedSidechainBlock::Block::new(header, block_data);
 
 		let block_hash = block.hash();
 		debug!("Block hash {}", block_hash);
