@@ -36,7 +36,7 @@ pub enum Error {
 	Client(Box<dyn std::error::Error + Sync + Send + 'static>),
 	/// TrustedOperation pool error,
 	#[display(fmt = "TrustedOperation pool error: {}", _0)]
-	Pool(its_top_pool::error::Error),
+	Pool(itp_top_pool::error::Error),
 	/// Verification error
 	#[display(fmt = "Extrinsic verification error")]
 	#[from(ignore)]
@@ -107,7 +107,7 @@ const UNSUPPORTED_KEY_TYPE: i64 = POOL_INVALID_TX + 7;
 
 impl From<Error> for rpc_core::Error {
 	fn from(e: Error) -> Self {
-		use its_top_pool::error::Error as PoolError;
+		use itp_top_pool::error::Error as PoolError;
 
 		match e {
 			Error::BadFormat => rpc_core::Error {

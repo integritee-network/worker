@@ -19,11 +19,11 @@ use codec::Encode;
 use core::result::Result;
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_sgx_crypto::Rsa3072Seal;
+use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
 use its_sidechain::{
 	primitives::types::SignedBlock,
 	rpc_handler::{direct_top_pool_api, import_block_api},
-	top_pool_rpc_author::traits::AuthorApi,
 };
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use sgx_runtime::Runtime;
@@ -43,14 +43,14 @@ fn get_all_rpc_methods_string(io_handler: &IoHandler) -> String {
 	format!("methods: [{}]", method_string)
 }
 
-pub fn public_api_rpc_handler<R>(rpc_author: Arc<R>) -> IoHandler
+pub fn public_api_rpc_handler<R>(top_pool_author: Arc<R>) -> IoHandler
 where
 	R: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	let io = IoHandler::new();
 
 	// Add direct TOP pool rpc methods
-	let mut io = direct_top_pool_api::add_top_pool_direct_rpc_methods(rpc_author, io);
+	let mut io = direct_top_pool_api::add_top_pool_direct_rpc_methods(top_pool_author, io);
 
 	// author_getShieldingKey
 	let rsa_pubkey_name: &str = "author_getShieldingKey";

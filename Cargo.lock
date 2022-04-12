@@ -2788,7 +2788,6 @@ dependencies = [
  "itp-teerex-storage",
  "itp-time-utils",
  "itp-types",
- "its-top-pool",
  "jsonrpc-core 16.1.0",
  "jsonrpc-core 18.0.0",
  "parity-scale-codec",
@@ -2806,6 +2805,62 @@ name = "itp-time-utils"
 version = "0.8.0"
 dependencies = [
  "sgx_tstd",
+]
+
+[[package]]
+name = "itp-top-pool"
+version = "0.8.0"
+dependencies = [
+ "byteorder 1.4.3",
+ "derive_more",
+ "ita-stf",
+ "itc-direct-rpc-server",
+ "itp-types",
+ "its-primitives",
+ "jsonrpc-core 16.1.0",
+ "jsonrpc-core 18.0.0",
+ "linked-hash-map 0.5.2",
+ "linked-hash-map 0.5.4",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "retain_mut",
+ "serde 1.0.136",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-top-pool-author"
+version = "0.8.0"
+dependencies = [
+ "derive_more",
+ "ita-stf",
+ "itc-direct-rpc-server",
+ "itc-tls-websocket-server",
+ "itp-enclave-metrics",
+ "itp-ocall-api",
+ "itp-sgx-crypto",
+ "itp-stf-state-handler",
+ "itp-test",
+ "itp-top-pool",
+ "itp-types",
+ "jsonrpc-core 16.1.0",
+ "jsonrpc-core 18.0.0",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "sgx_tcrypto_helper",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2835,10 +2890,10 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-stf-executor",
  "itp-time-utils",
+ "itp-top-pool-author",
  "itp-types",
  "its-primitives",
  "its-state",
- "its-top-pool-rpc-author",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sgx-externalities",
@@ -2969,9 +3024,9 @@ dependencies = [
 name = "its-rpc-handler"
 version = "0.8.0"
 dependencies = [
+ "itp-top-pool-author",
  "itp-types",
  "its-primitives",
- "its-top-pool-rpc-author",
  "jsonrpc-core 16.1.0",
  "jsonrpc-core 18.0.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2994,9 +3049,7 @@ dependencies = [
  "its-primitives",
  "its-rpc-handler",
  "its-state",
- "its-top-pool",
  "its-top-pool-executor",
- "its-top-pool-rpc-author",
  "its-validateer-fetch",
 ]
 
@@ -3049,76 +3102,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "its-top-pool"
-version = "0.8.0"
-dependencies = [
- "byteorder 1.4.3",
- "derive_more",
- "ita-stf",
- "itc-direct-rpc-server",
- "itp-types",
- "its-primitives",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
- "linked-hash-map 0.5.2",
- "linked-hash-map 0.5.4",
- "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec",
- "parity-util-mem",
- "retain_mut",
- "serde 1.0.136",
- "sgx_tstd",
- "sgx_types",
- "sp-application-crypto",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.30",
- "thiserror 1.0.9",
-]
-
-[[package]]
 name = "its-top-pool-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
  "itp-stf-executor",
  "itp-time-utils",
+ "itp-top-pool-author",
  "itp-types",
  "its-primitives",
  "its-state",
- "its-top-pool-rpc-author",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sgx-externalities",
- "sgx_tstd",
- "sgx_types",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.30",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "its-top-pool-rpc-author"
-version = "0.8.0"
-dependencies = [
- "derive_more",
- "ita-stf",
- "itc-direct-rpc-server",
- "itc-tls-websocket-server",
- "itp-component-container",
- "itp-enclave-metrics",
- "itp-ocall-api",
- "itp-sgx-crypto",
- "itp-stf-state-handler",
- "itp-test",
- "itp-types",
- "its-top-pool",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
- "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec",
- "sgx_tcrypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",

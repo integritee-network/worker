@@ -14,10 +14,10 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
+itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 its-state = { path = "../state", default-features = false }
-its-top-pool-rpc-author = { path = "../top-pool-rpc-author", default-features = false }
 
 # integritee dependencies
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
@@ -44,10 +44,11 @@ std = [
     "ita-stf/std",
     "itp-stf-executor/std",
     "itp-time-utils/std",
+    "itp-top-pool-author/std",
     "itp-types/std",
     "its-primitives/std",
     "its-state/std",
-    "its-top-pool-rpc-author/std",
+
     # crate.io
     "codec/std",
     "log/std",
@@ -63,9 +64,9 @@ sgx = [
     "ita-stf/sgx",
     "itp-stf-executor/sgx",
     "itp-time-utils/sgx",
+    "itp-top-pool-author/sgx",
     "itp-types/sgx",
     "its-state/sgx",
-    "its-top-pool-rpc-author/sgx",
     "thiserror_sgx",
 ]
 

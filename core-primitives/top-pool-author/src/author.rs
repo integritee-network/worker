@@ -30,14 +30,14 @@ use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::ShieldingCrypto;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
-use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
-use its_top_pool::{
+use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
 	primitives::{
 		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
 		TxHash,
 	},
 };
+use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
 use jsonrpc_core::{
 	futures::future::{ready, TryFutureExt},
 	Error as RpcError,

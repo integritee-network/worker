@@ -25,10 +25,10 @@ use rust_base58::base58::FromBase58;
 use base58::FromBase58;
 
 use codec::{Decode, Encode};
+use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
 	DirectRequestStatus, Request, RpcReturnValue, ShardIdentifier, TrustedOperationStatus,
 };
-use its_top_pool_rpc_author::traits::AuthorApi;
 use jsonrpc_core::{
 	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
 };
@@ -37,7 +37,7 @@ use std::{borrow::ToOwned, format, string::String, sync::Arc, vec, vec::Vec};
 type Hash = sp_core::H256;
 
 pub fn add_top_pool_direct_rpc_methods<R>(
-	rpc_author: Arc<R>,
+	top_pool_author: Arc<R>,
 	mut io_handler: IoHandler,
 ) -> IoHandler
 where
@@ -45,7 +45,7 @@ where
 {
 	// author_submitAndWatchExtrinsic
 	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
-	let submit_watch_author = rpc_author.clone();
+	let submit_watch_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {
 		match params.parse::<Vec<u8>>() {
 			Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
@@ -80,7 +80,7 @@ where
 
 	// author_submitExtrinsic
 	let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
-	let submit_author = rpc_author.clone();
+	let submit_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
 		match params.parse::<Vec<u8>>() {
 			Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
@@ -115,7 +115,7 @@ where
 
 	// author_pendingExtrinsics
 	let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
-	let pending_author = rpc_author;
+	let pending_author = top_pool_author;
 	io_handler.add_sync_method(author_pending_extrinsic_name, move |params: Params| {
 		match params.parse::<Vec<String>>() {
 			Ok(shards) => {

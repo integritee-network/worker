@@ -15,4 +15,8 @@
 
 */
 
+#[cfg(test)]
 pub mod rpc_responder_mock;
+
+#[cfg(feature = "mocks")]
+pub mod trusted_operation_pool_mock;
