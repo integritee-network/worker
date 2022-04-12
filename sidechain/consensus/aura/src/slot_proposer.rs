@@ -22,7 +22,8 @@ use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
@@ -64,8 +65,9 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
 		+ 'static,
-	SignedSidechainBlock::Block:
-		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderTrait<ShardIdentifier = H256>,
 	StfExecutor: StateUpdateProposer,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,

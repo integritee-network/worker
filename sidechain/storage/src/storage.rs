@@ -18,7 +18,7 @@
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
 use its_primitives::{
-	traits::{Block as BlockT, SignedBlock as SignedBlockT},
+	traits::{Block as BlockTrait, Header as HeaderTrait, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
 };
 use log::*;
@@ -31,7 +31,9 @@ const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 const STORED_SHARDS_KEY: &[u8] = b"stored_shards";
 
 /// ShardIdentifier type
-type ShardIdentifierFor<B> = <<B as SignedBlockT>::Block as BlockT>::ShardIdentifier;
+type ShardIdentifierFor<B> =
+	<<<B as SignedBlockT>::Block as BlockTrait>::HeaderType as HeaderTrait>::ShardIdentifier;
+
 /// Helper struct, contains the blocknumber
 /// and blockhash of the last sidechain block
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Debug, Default)]
@@ -125,7 +127,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		let mut current_block = latest_block;
 		let mut blocks_to_return = Vec::<SignedBlock>::new();
 		while &current_block.hash() != block_hash {
-			let parent_block_hash = current_block.block().parent_hash();
+			let parent_block_hash = current_block.block().header().parent_hash();
 
 			blocks_to_return.push(current_block);
 
@@ -233,7 +235,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		new_shard: &mut bool,
 		batch: &mut WriteBatch,
 	) -> Result<()> {
-		let shard = &signed_block.block().shard_id();
+		let shard = &signed_block.block().header().shard_id();
 		if self.shards.contains(shard) {
 			if !self.verify_block_ancestry(signed_block.block()) {
 				// Do not include block if its not a direct ancestor of the last block in line.
@@ -249,8 +251,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	}
 
 	fn verify_block_ancestry(&self, block: &<SignedBlock as SignedBlockT>::Block) -> bool {
-		let shard = &block.shard_id();
-		let current_block_nr = block.block_number();
+		let shard = &block.header().shard_id();
+		let current_block_nr = block.header().block_number();
 		if let Some(last_block) = self.last_block_of_shard(shard) {
 			if last_block.number != current_block_nr - 1 {
 				error!("[Sidechain DB] Sidechainblock (nr: {:?}) is not a succession of the previous block (nr: {:?}) in shard: {:?}",
@@ -307,8 +309,8 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	/// Adds the block to the WriteBatch.
 	fn add_last_block(&mut self, batch: &mut WriteBatch, block: &SignedBlock) {
 		let hash = block.hash();
-		let block_number = block.block().block_number();
-		let shard = block.block().shard_id();
+		let block_number = block.block().header().block_number();
+		let shard = block.block().header().shard_id();
 		// Block hash -> Signed Block.
 		SidechainDB::add_to_batch(batch, hash, block);
 
@@ -370,10 +372,7 @@ mod test {
 		create_signed_block_with_shard as create_signed_block, create_temp_dir, get_storage,
 	};
 	use itp_types::ShardIdentifier;
-	use its_primitives::{
-		traits::{Block as BlockT, SignedBlock as SignedBlockT},
-		types::SignedBlock,
-	};
+	use its_primitives::{traits::SignedBlock as SignedBlockT, types::SignedBlock};
 	use sp_core::H256;
 
 	#[test]
@@ -409,7 +408,7 @@ mod test {
 		let signed_block = create_signed_block(20, shard);
 		let signed_last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		// when
 		{
@@ -438,7 +437,7 @@ mod test {
 		let signed_block = create_signed_block(20, shard);
 		let signed_last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		{
 			let mut sidechain_db = get_storage(temp_dir.path().to_path_buf());
@@ -472,7 +471,7 @@ mod test {
 
 			// ensure DB contains previously stored data:
 			let last_block = sidechain_db.last_block_of_shard(&shard).unwrap();
-			assert_eq!(last_block.number, signed_block.block().block_number());
+			assert_eq!(last_block.number, signed_block.block().header().block_number());
 			assert_eq!(last_block.hash, signed_block.hash());
 			let stored_block_hash =
 				sidechain_db.get_block_hash(&shard, last_block.number).unwrap().unwrap();
@@ -492,14 +491,14 @@ mod test {
 			sidechain_db.db.put(signed_block.hash(), signed_block.clone()).unwrap();
 			sidechain_db
 				.db
-				.put((shard, signed_block.block().block_number()), signed_block.hash())
+				.put((shard, signed_block.block().header().block_number()), signed_block.hash())
 				.unwrap();
 			assert_eq!(
 				sidechain_db
 					.db
 					.get::<(ShardIdentifier, BlockNumber), H256>((
 						shard,
-						signed_block.block().block_number()
+						signed_block.block().header().block_number()
 					))
 					.unwrap()
 					.unwrap(),
@@ -515,7 +514,7 @@ mod test {
 			sidechain_db.delete_block(
 				&mut batch,
 				&signed_block.hash(),
-				&signed_block.block().block_number(),
+				&signed_block.block().header().block_number(),
 				&shard,
 			);
 			sidechain_db.db.write(batch).unwrap();
@@ -529,7 +528,7 @@ mod test {
 				.db
 				.get::<(ShardIdentifier, BlockNumber), H256>((
 					shard,
-					signed_block.block().block_number()
+					signed_block.block().header().block_number()
 				))
 				.unwrap()
 				.is_none());
@@ -548,7 +547,7 @@ mod test {
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		{
 			// fill db
@@ -556,7 +555,7 @@ mod test {
 			sidechain_db.db.put(signed_block.hash(), signed_block.clone()).unwrap();
 			sidechain_db
 				.db
-				.put((shard, signed_block.block().block_number()), signed_block.hash())
+				.put((shard, signed_block.block().header().block_number()), signed_block.hash())
 				.unwrap();
 			sidechain_db.db.put((LAST_BLOCK_KEY, shard), last_block.clone()).unwrap();
 			assert_eq!(
@@ -564,7 +563,7 @@ mod test {
 					.db
 					.get::<(ShardIdentifier, BlockNumber), H256>((
 						shard,
-						signed_block.block().block_number()
+						signed_block.block().header().block_number()
 					))
 					.unwrap()
 					.unwrap(),
@@ -594,7 +593,7 @@ mod test {
 				.db
 				.get::<(ShardIdentifier, BlockNumber), H256>((
 					shard,
-					signed_block.block().block_number()
+					signed_block.block().header().block_number()
 				))
 				.unwrap()
 				.is_none());
@@ -618,7 +617,7 @@ mod test {
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		let signed_block_two = create_signed_block(9, shard);
 		{
@@ -640,7 +639,7 @@ mod test {
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		let signed_block_two = create_signed_block(5, shard);
 		{
@@ -712,7 +711,7 @@ mod test {
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		let signed_block_two = create_signed_block(9, shard);
 		let mut new_shard = false;
@@ -739,7 +738,7 @@ mod test {
 		let signed_block = create_signed_block(8, shard);
 		let last_block = LastSidechainBlock {
 			hash: signed_block.hash(),
-			number: signed_block.block().block_number(),
+			number: signed_block.block().header().block_number(),
 		};
 		let signed_block_two = create_signed_block(10, shard);
 		let mut new_shard = false;
@@ -778,7 +777,7 @@ mod test {
 			// ensure DB contains previously stored data:
 			assert_eq!(*updated_sidechain_db.shards(), vec![shard]);
 			let last_block = updated_sidechain_db.last_block_of_shard(&shard).unwrap();
-			assert_eq!(last_block.number, signed_block.block().block_number());
+			assert_eq!(last_block.number, signed_block.block().header().block_number());
 			assert_eq!(last_block.hash, signed_block.hash());
 			let stored_block_hash =
 				updated_sidechain_db.get_block_hash(&shard, last_block.number).unwrap().unwrap();
@@ -892,16 +891,16 @@ mod test {
 			// last block is equal to first block:
 			let last_block: &LastSidechainBlock =
 				updated_sidechain_db.last_blocks.get(&shard).unwrap();
-			assert_eq!(last_block.number, signed_block_one.block().block_number());
+			assert_eq!(last_block.number, signed_block_one.block().header().block_number());
 
 			// storage contains only one blocks:
 			// (shard,blocknumber) -> blockhash
 			let db_block_hash_one = updated_sidechain_db
-				.get_block_hash(&shard, signed_block_one.block().block_number())
+				.get_block_hash(&shard, signed_block_one.block().header().block_number())
 				.unwrap()
 				.unwrap();
 			let db_block_hash_empty = updated_sidechain_db
-				.get_block_hash(&shard, signed_block_two.block().block_number())
+				.get_block_hash(&shard, signed_block_two.block().header().block_number())
 				.unwrap();
 			assert!(db_block_hash_empty.is_none());
 			assert_eq!(db_block_hash_one, signed_block_one.hash());
@@ -920,12 +919,12 @@ mod test {
 			// create last block one for comparison
 			let last_block = LastSidechainBlock {
 				hash: signed_block_one.hash(),
-				number: signed_block_one.block().block_number(),
+				number: signed_block_one.block().header().block_number(),
 			};
 
 			// then
 			let some_block = sidechain_db
-				.get_previous_block(&shard, signed_block_one.block().block_number() + 1)
+				.get_previous_block(&shard, signed_block_one.block().header().block_number() + 1)
 				.unwrap()
 				.unwrap();
 
@@ -994,7 +993,7 @@ mod test {
 		let block_three = create_signed_block(3, shard);
 		let last_block = LastSidechainBlock {
 			hash: block_three.hash(),
-			number: block_three.block().block_number(),
+			number: block_three.block().header().block_number(),
 		};
 
 		{
@@ -1077,7 +1076,7 @@ mod test {
 		let block_three = create_signed_block(3, shard_one);
 		let last_block_one = LastSidechainBlock {
 			hash: block_three.hash(),
-			number: block_three.block().block_number(),
+			number: block_three.block().header().block_number(),
 		};
 		// shard two
 		let shard_two = H256::from_low_u64_be(2);
@@ -1087,7 +1086,7 @@ mod test {
 		let block_four_s = create_signed_block(4, shard_two);
 		let last_block_two = LastSidechainBlock {
 			hash: block_four_s.hash(),
-			number: block_four_s.block().block_number(),
+			number: block_four_s.block().header().block_number(),
 		};
 		{
 			// create sidechain_db

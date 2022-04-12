@@ -23,14 +23,15 @@ use itp_sgx_crypto::StateCrypto;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, SignBlock, SignedBlock as SignedSidechainBlockTrait,
+	Block as SidechainBlockTrait, Header as HeaderTrait, SignBlock,
+	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_core::Pair;
+use sp_core::{ed25519, Pair};
 use sp_runtime::{
-	traits::{Block as ParentchainBlockTrait, Header},
+	traits::{BlakeTwo256, Block as ParentchainBlockTrait, Hash, Header},
 	MultiSignature,
 };
 use std::{format, marker::PhantomData, vec::Vec};
@@ -63,8 +64,9 @@ where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
-	SignedSidechainBlock::Block:
-		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
@@ -75,6 +77,8 @@ where
 	}
 }
 
+type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType;
+
 impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKey, Externalities>
 	ComposeBlockAndConfirmation<Externalities, ParentchainBlock>
 	for BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKey>
@@ -82,8 +86,9 @@ where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
-	SignedSidechainBlock::Block:
-		SidechainBlockTrait<ShardIdentifier = H256, Public = sp_core::ed25519::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
@@ -106,7 +111,7 @@ where
 		let state_hash_new = db.state_hash();
 
 		let (block_number, parent_hash) = match db.get_last_block() {
-			Some(block) => (block.block_number() + 1, block.hash()),
+			Some(block) => (block.header().block_number() + 1, block.hash()),
 			None => {
 				info!("Seems to be first sidechain block.");
 				(1, Default::default())
@@ -126,15 +131,30 @@ where
 			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
 
-		let block = SignedSidechainBlock::Block::new(
+		let now = now_as_u64();
+		let layer_one_hash = latest_parentchain_header.hash();
+		let block_data_hash = calculate_block_data_hash(
+			now,
+			layer_one_hash,
 			author_public,
+			&top_call_hashes,
+			&payload,
+		);
+
+		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
 			block_number,
 			parent_hash,
-			latest_parentchain_header.hash(),
 			shard,
+			block_data_hash,
+		);
+
+		let block = SignedSidechainBlock::Block::new(
+			header,
+			author_public,
+			layer_one_hash,
 			top_call_hashes,
 			payload,
-			now_as_u64(),
+			now,
 		);
 
 		let block_hash = block.hash();
@@ -151,4 +171,16 @@ where
 /// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
 fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
+}
+
+/// Calculate the payload of a sidechain block.
+fn calculate_block_data_hash(
+	timestamp: u64,
+	layer_one_head: H256,
+	block_author: ed25519::Public,
+	signed_top_hashes: &[H256],
+	encrypted_state_diff: &[u8],
+) -> H256 {
+	(timestamp, layer_one_head, block_author, signed_top_hashes, encrypted_state_diff)
+		.using_encoded(BlakeTwo256::hash)
 }

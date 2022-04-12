@@ -37,7 +37,8 @@ use itp_time_utils::{duration_now, remaining_time};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
 use its_primitives::traits::{
-	Block as SidechainBlock, ShardIdentifierFor, SignedBlock as SignedSidechainBlock,
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlock,
 };
 use log::{debug, info, warn};
 pub use slots::*;
@@ -258,7 +259,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 		}
 
 		info!("Proposing sidechain block (number: {}, hash: {}) based on parentchain block (number: {:?}, hash: {:?})",
-			proposing.block.block().block_number(), proposing.block.hash(),
+			proposing.block.block().header().block_number(), proposing.block.hash(),
 			latest_imported_parentchain_header.number(), latest_imported_parentchain_header.hash()
 		);
 

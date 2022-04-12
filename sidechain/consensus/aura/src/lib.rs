@@ -36,7 +36,7 @@ use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
 use its_primitives::{
-	traits::{Block as SidechainBlockTrait, SignedBlock},
+	traits::{Block as SidechainBlockTrait, Header as HeaderTrait, SignedBlock},
 	types::block::BlockHash,
 };
 use its_validateer_fetch::ValidateerFetch;
@@ -125,7 +125,7 @@ pub enum SlotClaimStrategy {
 
 type AuthorityId<P> = <P as Pair>::Public;
 type ShardIdentifierFor<SignedSidechainBlock> =
-	<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::ShardIdentifier;
+	<<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::HeaderType as HeaderTrait>::ShardIdentifier;
 
 impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
 	SimpleSlotWorker<ParentchainBlock>

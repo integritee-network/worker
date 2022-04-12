@@ -20,7 +20,10 @@ use core::marker::PhantomData;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_types::H256;
 use its_primitives::{
-	traits::{Block as BlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait},
+	traits::{
+		Block as BlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+		SignedBlock as SignedSidechainBlockTrait,
+	},
 	types::BlockHash,
 };
 use log::*;
@@ -55,7 +58,8 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType:
+		HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 {
@@ -82,7 +86,7 @@ where
 		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
 
 		for block_to_import in blocks_to_import {
-			let block_number = block_to_import.block().block_number();
+			let block_number = block_to_import.block().header().block_number();
 
 			latest_imported_parentchain_header = match self
 				.importer
@@ -112,7 +116,8 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	<<SignedSidechainBlock as its_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
+	HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 {
@@ -121,8 +126,8 @@ where
 		sidechain_block: SignedSidechainBlock,
 		current_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header> {
-		let shard_identifier = sidechain_block.block().shard_id();
-		let sidechain_block_number = sidechain_block.block().block_number();
+		let shard_identifier = sidechain_block.block().header().shard_id();
+		let sidechain_block_number = sidechain_block.block().header().block_number();
 
 		// Attempt to import the block - in case we encounter an ancestry error, we go into
 		// peer fetching mode to fetch sidechain blocks from a peer and import those first.

@@ -229,9 +229,9 @@ fn get_state_hashes_from_block(
 	signed_block: &SignedSidechainBlock,
 	state_key: &Aes,
 ) -> (H256, H256) {
-	let mut state_payload = signed_block.block.state_payload.clone();
-	state_key.decrypt(&mut state_payload).unwrap();
-	let decoded_state = StatePayload::decode(&mut state_payload.as_slice()).unwrap();
+	let mut encrypted_state_diff = signed_block.block.encrypted_state_diff.clone();
+	state_key.decrypt(&mut encrypted_state_diff).unwrap();
+	let decoded_state = StatePayload::decode(&mut encrypted_state_diff.as_slice()).unwrap();
 	(decoded_state.state_hash_apriori(), decoded_state.state_hash_aposteriori())
 }
 

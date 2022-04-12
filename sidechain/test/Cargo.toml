@@ -5,6 +5,8 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
+codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
@@ -15,16 +17,19 @@ its-primitives = { path = "../primitives", default-features = false }
 
 # Substrate dependencies
 sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master", default_features = false }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
 
 
 [features]
 default = ["std"]
 std = [
+    "codec/std",
     "itp-time-utils/std",
     "itp-types/std",
     "its-primitives/std",
     # substrate
     "sp-core/std",
+    "sp-runtime/std",
 ]
 sgx = [
     "itp-time-utils/sgx",

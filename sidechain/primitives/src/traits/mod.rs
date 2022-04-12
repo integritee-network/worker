@@ -26,43 +26,57 @@ use sp_core::{blake2_256, Pair, Public, H256};
 use sp_runtime::traits::Member;
 use sp_std::{fmt::Debug, prelude::*};
 
+pub trait Header {
+	/// Identifier for the shards.
+	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
+
+	/// Get block number.
+	fn block_number(&self) -> u64;
+	/// get parent hash of block
+	fn parent_hash(&self) -> H256;
+	/// get shard id of block
+	fn shard_id(&self) -> Self::ShardIdentifier;
+	/// get hash of the block's payload
+	fn block_data_hash(&self) -> H256;
+
+	fn new(
+		block_number: u64,
+		parent_hash: H256,
+		shard: Self::ShardIdentifier,
+		block_data_hash: H256,
+	) -> Self;
+}
+
 /// Abstraction around a sidechain block.
 /// Todo: Make more generic.
 pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
-	/// Identifier for the shards
-	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
+	/// Sidechain block header type.
+	type HeaderType: Header;
 
 	/// Public key type of the block author
 	type Public: Public;
 
-	/// get the block number
-	fn block_number(&self) -> u64;
-	/// get parent hash of block
-	fn parent_hash(&self) -> H256;
+	/// Get header of the block.
+	fn header(&self) -> Self::HeaderType;
 	/// get timestamp of block
 	fn timestamp(&self) -> u64;
 	/// get layer one head of block
 	fn layer_one_head(&self) -> H256;
-	/// get shard id of block
-	fn shard_id(&self) -> Self::ShardIdentifier;
 	/// get author of block
 	fn block_author(&self) -> &Self::Public;
 	/// get reference of extrinsics of block
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
-	fn state_payload(&self) -> &Vec<u8>;
+	fn encrypted_state_diff(&self) -> &Vec<u8>;
 	/// get the `blake2_256` hash of the block
 	fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
 	}
 	/// Todo: group arguments in structs -> Header
-	#[allow(clippy::too_many_arguments)]
 	fn new(
+		header: Self::HeaderType,
 		author: Self::Public,
-		block_number: u64,
-		parent_hash: H256,
 		layer_one_head: H256,
-		shard: Self::ShardIdentifier,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
 		timestamp: u64,
@@ -71,7 +85,7 @@ pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
 
 /// ShardIdentifier for a [`SignedBlock`]
 pub type ShardIdentifierFor<SignedSidechainBlock> =
-	<<SignedSidechainBlock as SignedBlock>::Block as Block>::ShardIdentifier;
+<<<SignedSidechainBlock as SignedBlock>::Block as Block>::HeaderType as Header>::ShardIdentifier;
 
 /// A block and it's corresponding signature by the [`Block`] author.
 pub trait SignedBlock: Encode + Decode + Send + Sync + Debug + Clone {

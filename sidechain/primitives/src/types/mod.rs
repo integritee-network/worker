@@ -16,5 +16,6 @@
 */
 
 pub mod block;
+pub mod header;
 
 pub use block::*;

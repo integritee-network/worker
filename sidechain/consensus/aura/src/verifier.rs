@@ -22,7 +22,10 @@ use itp_storage_verifier::GetStorageVerified;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{
-	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait,
+		SignedBlock as SignedSidechainBlockTrait,
+	},
 	types::block::BlockHash,
 };
 use its_state::LastBlockExt;
@@ -149,28 +152,31 @@ fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(
 
 	// We have already imported this block.
 	ensure!(
-		block.block_number() > last_block.block_number(),
-		ConsensusError::BlockAlreadyImported(block.block_number(), last_block.block_number())
+		block.header().block_number() > last_block.header().block_number(),
+		ConsensusError::BlockAlreadyImported(
+			block.header().block_number(),
+			last_block.header().block_number()
+		)
 	);
 
 	// We are missing some blocks between our last known block and the one we're trying to import.
 	ensure!(
-		last_block.block_number() + 1 == block.block_number(),
+		last_block.header().block_number() + 1 == block.header().block_number(),
 		ConsensusError::BlockAncestryMismatch(
-			last_block.block_number(),
+			last_block.header().block_number(),
 			last_block.hash(),
 			format!(
 				"Invalid block number, {} does not succeed {}",
-				block.block_number(),
-				last_block.block_number()
+				block.header().block_number(),
+				last_block.header().block_number()
 			)
 		)
 	);
 
 	ensure!(
-		last_block.hash() == block.parent_hash(),
+		last_block.hash() == block.header().parent_hash(),
 		ConsensusError::BlockAncestryMismatch(
-			last_block.block_number(),
+			last_block.header().block_number(),
 			last_block.hash(),
 			"Parent hash does not match".into(),
 		)
@@ -183,17 +189,17 @@ fn ensure_first_block<SidechainBlock: SidechainBlockTrait>(
 	block: &SidechainBlock,
 ) -> Result<(), ConsensusError> {
 	ensure!(
-		block.block_number() == 1,
+		block.header().block_number() == 1,
 		ConsensusError::InvalidFirstBlock(
-			block.block_number(),
+			block.header().block_number(),
 			"No last block found, expecting first block. But block to import has number != 1"
 				.into()
 		)
 	);
 	ensure!(
-		block.parent_hash() == Default::default(),
+		block.header().parent_hash() == Default::default(),
 		ConsensusError::InvalidFirstBlock(
-			block.block_number(),
+			block.header().block_number(),
 			"No last block found, excepting first block. But block to import has parent_hash != 0"
 				.into()
 		)

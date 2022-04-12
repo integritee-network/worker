@@ -18,7 +18,6 @@
 use crate::{Error, Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itp_block_import_queue::PopFromBlockQueue;
-use itp_types::H256;
 use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::sync::Arc;
@@ -48,7 +47,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	SignedSidechainBlock::Block: BlockTrait,
 	BlockImportQueue: PopFromBlockQueue<BlockType = SignedSidechainBlock>,
 	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
 {
@@ -74,7 +73,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 	> where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	SignedSidechainBlock::Block: BlockTrait<ShardIdentifier = H256>,
+	SignedSidechainBlock::Block: BlockTrait,
 	BlockImportQueue: PopFromBlockQueue<BlockType = SignedSidechainBlock>,
 	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
 {

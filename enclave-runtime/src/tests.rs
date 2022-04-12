@@ -63,7 +63,9 @@ use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	primitives::{
-		traits::{Block as BlockT, SignedBlock as SignedBlockT},
+		traits::{
+			Block as BlockTrait, Header as SidechainHeaderTrait, SignedBlock as SignedBlockTrait,
+		},
 		types::block::SignedBlock,
 	},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
@@ -190,7 +192,7 @@ fn test_compose_block_and_confirmation() {
 	));
 
 	assert!(signed_block.verify_signature());
-	assert_eq!(signed_block.block().block_number(), 1);
+	assert_eq!(signed_block.block().header().block_number(), 1);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
@@ -342,7 +344,7 @@ fn test_create_block_and_confirmation_works() {
 	));
 
 	assert!(signed_block.verify_signature());
-	assert_eq!(signed_block.block().block_number(), 1);
+	assert_eq!(signed_block.block().header().block_number(), 1);
 	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
@@ -402,8 +404,9 @@ fn test_create_state_diff() {
 		)
 		.unwrap();
 
-	let state_payload = state_payload_from_encrypted(signed_block.block().state_payload());
-	let state_diff = state_payload.state_update();
+	let encrypted_state_diff =
+		encrypted_state_diff_from_encrypted(signed_block.block().encrypted_state_diff());
+	let state_diff = encrypted_state_diff.state_update();
 
 	// then
 	let sender_acc_info: AccountInfo =
@@ -572,7 +575,7 @@ pub fn test_top_pool() -> TestTopPool {
 }
 
 /// Decrypt `encrypted` and decode it into `StatePayload`
-pub fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
+pub fn encrypted_state_diff_from_encrypted(encrypted: &[u8]) -> StatePayload {
 	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
 	let state_key = state_key();
 	state_key.decrypt(&mut encrypted_payload).unwrap();

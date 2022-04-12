@@ -2981,6 +2981,7 @@ dependencies = [
  "itp-types",
  "its-consensus-common",
  "its-primitives",
+ "its-test",
  "lazy_static",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -3099,8 +3100,10 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "its-primitives",
+ "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
