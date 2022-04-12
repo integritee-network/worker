@@ -209,8 +209,8 @@ jobs:
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
-          touch ${{ env.LOG_DIR}}/local-setup.log
-          ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
+          touch ${{ env.LOG_DIR }}/local-setup.log
+          ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee -i ${{ env.LOG_DIR }}/local-setup.log &
           sleep 150
 
       - name: ${{ matrix.demo_name }}

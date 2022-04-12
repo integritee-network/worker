@@ -194,7 +194,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	let mut state = state_handler.load_initialized(&shard_id).unwrap();
+	let mut state = state_handler.load(&shard_id).unwrap();
 	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).unwrap().free;
 	assert_eq!(free_balance, transfered_amount);
 }
@@ -236,7 +236,7 @@ fn get_state_hashes_from_block(
 }
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
-	let state = state_handler.load_initialized(shard_id).unwrap();
+	let state = state_handler.load(shard_id).unwrap();
 	let sidechain_state = TestSidechainDb::new(state);
 	sidechain_state.state_hash()
 }

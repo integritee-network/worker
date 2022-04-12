@@ -19,7 +19,7 @@ use crate::{error::Result, Error, LightClientState, LightValidation, NumberFor, 
 use codec::{Decode, Encode};
 use derive_more::Display;
 use itp_settings::files::LIGHT_CLIENT_DB;
-use itp_sgx_io::{seal, unseal, SealedIO};
+use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_storage::StorageProof;
 use log::*;
 use sp_finality_grandpa::VersionedAuthorityList;
@@ -31,15 +31,15 @@ pub struct LightClientSeal<B> {
 	_phantom: B,
 }
 
-impl<B: Block> SealedIO for LightClientSeal<B> {
+impl<B: Block> StaticSealedIO for LightClientSeal<B> {
 	type Error = Error;
 	type Unsealed = LightValidation<B>;
 
-	fn unseal() -> Result<Self::Unsealed> {
+	fn unseal_from_static_file() -> Result<Self::Unsealed> {
 		Ok(unseal(LIGHT_CLIENT_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
-	fn seal(unsealed: Self::Unsealed) -> Result<()> {
+	fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<()> {
 		debug!("backup light client state");
 		if fs::copy(LIGHT_CLIENT_DB, format!("{}.1", LIGHT_CLIENT_DB)).is_err() {
 			warn!("could not backup previous light client state");
@@ -62,7 +62,7 @@ where
 		return init_validator::<B>(header, auth, proof)
 	}
 
-	let validator = LightClientSeal::<B>::unseal()?;
+	let validator = LightClientSeal::<B>::unseal_from_static_file()?;
 
 	let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
 	if genesis == header.hash() {
@@ -85,7 +85,7 @@ where
 	let mut validator = LightValidation::<B>::new();
 
 	validator.initialize_relay(header, auth.into(), proof)?;
-	LightClientSeal::<B>::seal(validator.clone())?;
+	LightClientSeal::<B>::seal_to_static_file(validator.clone())?;
 
 	Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 }

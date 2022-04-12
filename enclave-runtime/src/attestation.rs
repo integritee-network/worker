@@ -41,7 +41,7 @@ use itp_settings::{
 	node::{REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE},
 };
 use itp_sgx_crypto::Ed25519Seal;
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::StaticSealedIO;
 use log::*;
 use sgx_rand::*;
 use sgx_tcrypto::*;
@@ -449,7 +449,7 @@ pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
 	ocall_api: &A,
 	skip_ra: bool,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-	let chain_signer = Ed25519Seal::unseal()?;
+	let chain_signer = Ed25519Seal::unseal_from_static_file()?;
 	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
 
 	info!("    [Enclave] Generate keypair");
@@ -520,7 +520,7 @@ pub unsafe extern "C" fn perform_ra(
 	let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let signer = match Ed25519Seal::unseal() {
+	let signer = match Ed25519Seal::unseal_from_static_file() {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};

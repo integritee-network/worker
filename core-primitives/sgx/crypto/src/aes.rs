@@ -30,7 +30,7 @@ use std::convert::{TryFrom, TryInto};
 
 type AesOfb = Ofb<Aes128>;
 
-#[derive(Debug, Default, Encode, Decode, Clone, Copy)]
+#[derive(Debug, Default, Encode, Decode, Clone, Copy, PartialEq, Eq)]
 pub struct Aes {
 	pub key: [u8; 16],
 	pub init_vec: [u8; 16],
@@ -78,21 +78,34 @@ pub mod sgx {
 
 	use super::*;
 	use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
-	use itp_sgx_io::{seal, unseal, SealedIO};
+	use itp_sgx_io::{seal, unseal, SealedIO, StaticSealedIO};
 	use log::info;
 	use sgx_rand::{Rng, StdRng};
 	use std::sgxfs::SgxFile;
+
+	impl StaticSealedIO for AesSeal {
+		type Error = Error;
+		type Unsealed = Aes;
+
+		fn unseal_from_static_file() -> Result<Self::Unsealed> {
+			Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
+		}
+
+		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<()> {
+			Ok(unsealed.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
+		}
+	}
 
 	impl SealedIO for AesSeal {
 		type Error = Error;
 		type Unsealed = Aes;
 
-		fn unseal() -> Result<Self::Unsealed> {
-			Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
+		fn unseal(&self) -> Result<Self::Unsealed> {
+			Self::unseal_from_static_file()
 		}
 
-		fn seal(unsealed: Self::Unsealed) -> Result<()> {
-			Ok(unsealed.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
+		fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
+			Self::seal_to_static_file(unsealed)
 		}
 	}
 
@@ -112,6 +125,6 @@ pub mod sgx {
 
 		rand.fill_bytes(&mut key);
 		rand.fill_bytes(&mut iv);
-		AesSeal::seal(Aes::new(key, iv))
+		AesSeal::seal_to_static_file(Aes::new(key, iv))
 	}
 }

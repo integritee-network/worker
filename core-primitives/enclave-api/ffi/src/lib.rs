@@ -49,6 +49,13 @@ extern "C" {
 		latest_header_size: usize,
 	) -> sgx_status_t;
 
+	pub fn init_shard(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		shard: *const u8,
+		shard_size: u32,
+	) -> sgx_status_t;
+
 	pub fn trigger_parentchain_block_import(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

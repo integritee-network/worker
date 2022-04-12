@@ -41,8 +41,8 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::Ed25519Seal;
-use itp_sgx_io::SealedIO;
-use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
+use itp_sgx_io::StaticSealedIO;
+use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_storage_verifier::GetStorageVerified;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{Block, OpaqueCall, H256};
@@ -81,9 +81,9 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
 	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
-
-	let state_handler = Arc::new(GlobalFileStateHandler);
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let shards = state_handler.list_shards()?;
+
 	let mut remaining_shards = shards.len() as u32;
 	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
@@ -166,7 +166,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
-	let authority = Ed25519Seal::unseal()?;
+	let authority = Ed25519Seal::unseal_from_static_file()?;
 
 	match yield_next_slot(
 		slot_beginning_timestamp,

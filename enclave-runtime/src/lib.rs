@@ -57,7 +57,7 @@ use itp_settings::node::{
 };
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::StorageProof;
 use itp_types::{Header, SignedBlock};
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 		return e.into()
 	}
 
-	let signer = match Ed25519Seal::unseal().map_err(Error::Crypto) {
+	let signer = match Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto) {
 		Ok(pair) => pair,
 		Err(e) => return e.into(),
 	};
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 		.get_mrenclave_of_self()
 		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
 
-	let signer = Ed25519Seal::unseal().unwrap();
+	let signer = Ed25519Seal::unseal_from_static_file().unwrap();
 	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
 
 	let nonce_cache = GLOBAL_NONCE_CACHE.clone();
@@ -318,7 +318,7 @@ pub unsafe extern "C" fn get_state(
 		},
 	};
 
-	let mut state = match state_handler.load_initialized(&shard) {
+	let mut state = match state_handler.load(&shard) {
 		Ok(s) => s,
 		Err(e) => return Error::StfStateHandler(e).into(),
 	};
@@ -423,6 +423,19 @@ pub unsafe extern "C" fn init_light_client(
 			error!("Failed to initialize light-client: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_status_t {
+	let shard_identifier =
+		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+
+	if let Err(e) = initialization::init_shard(shard_identifier) {
+		error!("Failed to initialize shard ({:?}): {:?}", shard_identifier, e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
 	sgx_status_t::SGX_SUCCESS

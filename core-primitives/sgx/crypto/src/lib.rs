@@ -33,5 +33,5 @@ pub use self::rsa3072::*;
 pub use error::*;
 pub use traits::*;
 
-#[cfg(all(feature = "mocks", feature = "sgx"))]
+#[cfg(feature = "mocks")]
 pub mod mocks;

@@ -22,20 +22,25 @@ use std::sync::SgxRwLockWriteGuard as RwLockWriteGuard;
 use std::sync::RwLockWriteGuard;
 
 use crate::error::Result;
-use itp_types::{ShardIdentifier, H256};
+use itp_types::ShardIdentifier;
 
-/// Facade for handling STF state loading and storing (e.g. from file)
+/// Facade for handling STF state loading and storing (e.g. from file).
 pub trait HandleState {
 	type WriteLockPayload;
 	type StateT;
+	type HashType;
 
-	/// Load the state for a given shard
+	/// Initialize a new shard.
 	///
-	/// Initializes the shard and state if necessary, so this is guaranteed to
-	/// return a state
-	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<Self::StateT>;
+	/// Initializes a default state for the shard and returns its hash.
+	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType>;
 
-	/// Load the state in order to mutate it
+	/// Load the state for a given shard.
+	///
+	/// Requires the shard to exist and be initialized, otherwise returns an error.
+	fn load(&self, shard: &ShardIdentifier) -> Result<Self::StateT>;
+
+	/// Load the state in order to mutate it.
 	///
 	/// Returns a write lock to protect against any concurrent access as long as
 	/// the lock is held. Finalize the operation by calling `write` and returning
@@ -45,13 +50,18 @@ pub trait HandleState {
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, Self::StateT)>;
 
-	/// Writes the state (without the state diff) encrypted into the enclave
+	/// Writes the state (without the state diff) encrypted into the enclave.
 	///
-	/// Returns the hash of the saved state (independent of the diff!)
-	fn write(
+	/// Returns the hash of the saved state (independent of the diff!).
+	fn write_after_mutation(
 		&self,
 		state: Self::StateT,
 		state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
-	) -> Result<H256>;
+	) -> Result<Self::HashType>;
+
+	/// Reset (or override) a state.
+	///
+	/// Use in cases where the previous state is of no interest. Otherwise use `load_for_mutation` and `write_after_mutation`.
+	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType>;
 }

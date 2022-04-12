@@ -237,7 +237,7 @@ impl<
 		let updated_state = mutating_function(Self::SidechainState::new(state))?;
 
 		self.state_handler
-			.write(updated_state.ext, write_lock, shard)
+			.write_after_mutation(updated_state.ext, write_lock, shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		Ok(())
@@ -253,7 +253,7 @@ impl<
 	{
 		let state = self
 			.state_handler
-			.load_initialized(shard)
+			.load(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 		verifying_function(Self::SidechainState::new(state))
 	}

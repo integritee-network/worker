@@ -27,12 +27,13 @@ pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 ) -> (State, ShardIdentifier) {
 	let shard = ShardIdentifier::default();
 
+	let _hash = state_handler.initialize_shard(shard).unwrap();
 	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 
 	let mut state = Stf::init_state();
 	state.prune_state_diff();
 
-	state_handler.write(state.clone(), lock, &shard).unwrap();
+	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
 	(state, shard)
 }

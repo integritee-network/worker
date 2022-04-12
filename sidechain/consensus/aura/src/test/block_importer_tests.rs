@@ -75,7 +75,7 @@ fn default_authority() -> Pair {
 fn test_fixtures(
 	parentchain_block_import_trigger: Arc<TestParentchainBlockImportTrigger>,
 ) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolCallOperator>) {
-	let state_handler = Arc::new(HandleStateMock::default());
+	let state_handler = Arc::new(HandleStateMock::from_shard(shard()).unwrap());
 	let top_pool_call_operator = Arc::new(TestTopPoolCallOperator::default());
 	let ocall_api = Arc::new(
 		OnchainMock::default()
@@ -101,7 +101,7 @@ fn test_fixtures_with_default_import_trigger(
 
 fn empty_encrypted_state_update(state_handler: &HandleStateMock) -> Vec<u8> {
 	let apriori_state_hash =
-		TestSidechainState::new(state_handler.load_initialized(&shard()).unwrap()).state_hash();
+		TestSidechainState::new(state_handler.load(&shard()).unwrap()).state_hash();
 	let empty_state_diff = SgxExternalitiesDiffType::default();
 	let mut state_update =
 		StateUpdate::new(apriori_state_hash, apriori_state_hash, empty_state_diff).encode();

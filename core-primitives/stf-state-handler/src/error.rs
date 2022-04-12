@@ -24,13 +24,25 @@ use rust_base58::base58::FromBase58Error;
 #[cfg(feature = "sgx")]
 use base58::FromBase58Error;
 
+use crate::state_snapshot_primitives::StateId;
+use itp_types::ShardIdentifier;
 use sgx_types::sgx_status_t;
-use std::{boxed::Box, format};
+use std::{boxed::Box, format, string::String};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+	#[error("Empty state repository")]
+	EmptyRepository,
+	#[error("State ID is invalid and does not exist: {0}")]
+	InvalidStateId(StateId),
+	#[error("Shard is invalid and does not exist: {0}")]
+	InvalidShard(ShardIdentifier),
+	#[error("State with hash {0} could not be found in the state repository")]
+	StateNotFoundInRepository(String),
+	#[error("Cache size for registry is zero")]
+	ZeroCacheSize,
 	#[error("Could not acquire lock, lock is poisoned")]
 	LockPoisoning,
 	#[error("OsString conversion error")]

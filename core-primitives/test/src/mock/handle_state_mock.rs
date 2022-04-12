@@ -22,13 +22,13 @@ use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 use std::sync::{RwLock, RwLockWriteGuard};
 
 use codec::Encode;
-use ita_stf::{ShardIdentifier, State as StfState};
+use ita_stf::State as StfState;
 use itp_stf_state_handler::{
 	error::{Error, Result},
 	handle_state::HandleState,
 	query_shard_state::QueryShardState,
 };
-use itp_types::H256;
+use itp_types::{ShardIdentifier, H256};
 use sp_core::blake2_256;
 use std::{collections::HashMap, format, vec::Vec};
 
@@ -40,52 +40,72 @@ pub struct HandleStateMock {
 	state_map: RwLock<HashMap<ShardIdentifier, StfState>>,
 }
 
+impl HandleStateMock {
+	pub fn from_shard(shard: ShardIdentifier) -> Result<Self> {
+		let state_handler = HandleStateMock { state_map: Default::default() };
+		state_handler.initialize_shard(shard)?;
+		Ok(state_handler)
+	}
+}
+
 impl HandleState for HandleStateMock {
 	type WriteLockPayload = HashMap<ShardIdentifier, StfState>;
 	type StateT = StfState;
+	type HashType = H256;
 
-	fn load_initialized(&self, shard: &ShardIdentifier) -> Result<StfState> {
-		let maybe_state = self.state_map.read().unwrap().get(shard).cloned();
+	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType> {
+		let maybe_state = self.state_map.read().unwrap().get(&shard).cloned();
 
 		return match maybe_state {
 			// Initialize with default state, if it doesn't exist yet.
 			None => {
-				self.state_map.write().unwrap().insert(*shard, StfState::default());
-
-				self.state_map.read().unwrap().get(shard).cloned().ok_or_else(|| {
-					Error::Other(
-						format!("state does not exist after inserting it, shard {:?}", shard)
-							.into(),
-					)
-				})
+				let state = StfState::default();
+				let state_hash = state.using_encoded(blake2_256).into();
+				self.state_map.write().unwrap().insert(shard, state);
+				Ok(state_hash)
 			},
-			Some(s) => Ok(s),
+			Some(s) => Ok(s.using_encoded(blake2_256).into()),
 		}
+	}
+
+	fn load(&self, shard: &ShardIdentifier) -> Result<StfState> {
+		self.state_map
+			.read()
+			.unwrap()
+			.get(shard)
+			.cloned()
+			.ok_or_else(|| Error::Other(format!("shard is not initialized {:?}", shard).into()))
 	}
 
 	fn load_for_mutation(
 		&self,
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, StfState)> {
-		let initialized_state = self.load_initialized(shard)?;
+		let initialized_state = self.load(shard)?;
 		let write_lock = self.state_map.write().unwrap();
 		Ok((write_lock, initialized_state))
 	}
 
-	fn write(
+	fn write_after_mutation(
 		&self,
 		state: StfState,
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
-	) -> Result<H256> {
+	) -> Result<Self::HashType> {
 		state_lock.insert(*shard, state.clone());
 		Ok(state.using_encoded(blake2_256).into())
+	}
+
+	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
+		let write_lock = self.state_map.write().unwrap();
+		self.write_after_mutation(state, write_lock, shard)
 	}
 }
 
 impl QueryShardState for HandleStateMock {
-	fn exists(&self, shard: &ShardIdentifier) -> bool {
-		self.state_map.read().unwrap().get(shard).is_some()
+	fn shard_exists(&self, shard: &ShardIdentifier) -> Result<bool> {
+		let state_map_lock = self.state_map.read().map_err(|_| Error::LockPoisoning)?;
+		Ok(state_map_lock.get(shard).is_some())
 	}
 
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
@@ -112,15 +132,18 @@ pub mod tests {
 	pub fn shard_exists_after_inserting() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
-		let _loaded_state_result = state_handler.load_initialized(&shard);
-		assert!(state_handler.exists(&shard));
+		state_handler.initialize_shard(shard).unwrap();
+
+		assert!(state_handler.load(&shard).is_ok());
+		assert!(state_handler.shard_exists(&shard).unwrap());
 	}
 
-	pub fn load_initialized_inserts_default_state() {
+	pub fn initialize_creates_default_state() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
+		state_handler.initialize_shard(shard).unwrap();
 
-		let loaded_state_result = state_handler.load_initialized(&shard);
+		let loaded_state_result = state_handler.load(&shard);
 
 		assert!(loaded_state_result.is_ok());
 	}
@@ -128,33 +151,33 @@ pub mod tests {
 	pub fn load_mutate_and_write_works() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
+		state_handler.initialize_shard(shard).unwrap();
 
 		let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
 
 		let (key, value) = ("my_key", "my_value");
 		state.insert(key.encode(), value.encode());
 
-		state_handler.write(state, lock, &shard).unwrap();
+		state_handler.write_after_mutation(state, lock, &shard).unwrap();
 
-		let updated_state = state_handler.load_initialized(&shard).unwrap();
+		let updated_state = state_handler.load(&shard).unwrap();
 
 		let inserted_value =
 			updated_state.get(key.encode().as_slice()).expect("value for key should exist");
 		assert_eq!(*inserted_value, value.encode());
 	}
 
-	// This is the same test as for the `GlobalFileStateHandler` to ensure we don't have any effects
-	// from having the state in-memory (as here) vs. in file (`GlobalFileStateHandler`).
 	pub fn ensure_subsequent_state_loads_have_same_hash() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
+		state_handler.initialize_shard(shard).unwrap();
 
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 		let initial_state = Stf::init_state();
 		let state_hash_before_execution = hash_of(&initial_state.state);
-		state_handler.write(initial_state, lock, &shard).unwrap();
+		state_handler.write_after_mutation(initial_state, lock, &shard).unwrap();
 
-		let state_loaded = state_handler.load_initialized(&shard).unwrap();
+		let state_loaded = state_handler.load(&shard).unwrap();
 		let loaded_state_hash = hash_of(&state_loaded.state);
 
 		assert_eq!(state_hash_before_execution, loaded_state_hash);

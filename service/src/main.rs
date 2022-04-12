@@ -55,8 +55,8 @@ use itp_node_api_extensions::{
 };
 use itp_settings::{
 	files::{
-		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL,
-		SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
+		SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT,
+		SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 	},
 	sidechain::SLOT_DURATION,
 };
@@ -79,8 +79,7 @@ use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use std::{
 	fs::{self, File},
-	io::{stdin, Write},
-	path::{Path, PathBuf},
+	path::PathBuf,
 	str,
 	sync::{
 		mpsc::{channel, Sender},
@@ -229,7 +228,14 @@ fn main() {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(_matches) = matches.subcommand_matches("init-shard") {
 		let shard = extract_shard(_matches, enclave.as_ref());
-		init_shard(&shard);
+		match enclave.init_shard(shard.encode()) {
+			Err(e) => {
+				println!("Failed to initialize shard {:?}: {:?}", shard, e);
+			},
+			Ok(_) => {
+				println!("Successfully initialized shard {:?}", shard);
+			},
+		}
 	} else if let Some(_matches) = matches.subcommand_matches("test") {
 		if _matches.is_present("provisioning-server") {
 			println!("*** Running Enclave MU-RA TLS server\n");
@@ -698,25 +704,6 @@ fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
 	if let Err(e) = enclave_api.execute_trusted_calls() {
 		error!("{:?}", e);
 	};
-}
-
-fn init_shard(shard: &ShardIdentifier) {
-	let path = format!("{}/{}", SHARDS_PATH, shard.encode().to_base58());
-	println!("initializing shard at {}", path);
-	fs::create_dir_all(path.clone()).expect("could not create dir");
-
-	let path = format!("{}/{}", path, ENCRYPTED_STATE_FILE);
-	if Path::new(&path).exists() {
-		println!("shard state exists. Overwrite? [y/N]");
-		let buffer = &mut String::new();
-		stdin().read_line(buffer).unwrap();
-		match buffer.trim() {
-			"y" | "Y" => (),
-			_ => return,
-		}
-	}
-	let mut file = fs::File::create(path).unwrap();
-	file.write_all(b"").unwrap();
 }
 
 /// Get the public signing key of the TEE.

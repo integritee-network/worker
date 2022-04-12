@@ -16,6 +16,7 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(assert_matches)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -31,17 +32,15 @@ pub mod sgx_reexport_prelude {
 }
 
 pub mod error;
+pub mod file_io;
 pub mod handle_state;
+mod in_memory_state_file_io;
 pub mod query_shard_state;
+pub mod state_handler;
+pub mod state_key_repository;
+mod state_snapshot_primitives;
+pub mod state_snapshot_repository;
+pub mod state_snapshot_repository_loader;
+pub mod test;
 
-#[cfg(feature = "sgx")]
-pub mod global_file_state_handler;
-
-#[cfg(feature = "sgx")]
-pub use global_file_state_handler::GlobalFileStateHandler;
-
-#[cfg(feature = "sgx")]
-mod file_io;
-
-#[cfg(all(feature = "test", feature = "sgx"))]
-pub mod tests;
+pub use state_handler::StateHandler;

@@ -49,6 +49,7 @@ itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-settings = { path = "../core-primitives/settings" }
+itp-stf-state-handler = { path = "../core-primitives/stf-state-handler" }
 itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }

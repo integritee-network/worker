@@ -21,12 +21,14 @@ use super::{authentication::ServerAuth, Opcode, TcpHeader};
 use crate::{
 	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
 	error::{Error as EnclaveError, Result as EnclaveResult},
+	global_components::GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys},
+	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
-use itp_stf_state_handler::GlobalFileStateHandler;
+use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
@@ -139,8 +141,23 @@ pub unsafe extern "C" fn request_state_provisioning(
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, _>::new(state_handler);
+	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let state_key_repository = match GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let seal_handler = SealHandler::<Rsa3072Seal, _, _>::new(state_handler, state_key_repository);
 
 	if let Err(e) =
 		request_state_provisioning_internal(socket_fd, sign_type, shard, skip_ra, seal_handler)

@@ -15,18 +15,5 @@
 
 */
 
-use crate::error::Result;
-use itp_types::ShardIdentifier;
-use std::vec::Vec;
-
-/// Trait for querying shard information on the state
-///
-/// The reason this is a separate trait, is that it does not require any
-/// SGX exclusive data structures (feature sgx)
-pub trait QueryShardState {
-	/// Query whether a given shard exists
-	fn shard_exists(&self, shard: &ShardIdentifier) -> Result<bool>;
-
-	/// List all available shards
-	fn list_shards(&self) -> Result<Vec<ShardIdentifier>>;
-}
+pub mod state_key_repository_mock;
+pub mod versioned_state_access_mock;

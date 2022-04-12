@@ -53,6 +53,7 @@ pub mod files {
 	pub static RA_API_KEY_FILE: &str = "key.txt";
 
 	pub const SPID_MIN_LENGTH: usize = 32;
+	pub const STATE_SNAPSHOTS_CACHE_SIZE: usize = 120;
 }
 
 /// Settings concerning the worker
