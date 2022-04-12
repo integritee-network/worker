@@ -114,7 +114,7 @@ where
 
 		debug!(
 			"Attempting to import sidechain block (number: {}, parentchain hash: {:?})",
-			signed_sidechain_block.block().block_number(),
+			signed_sidechain_block.block().header().block_number(),
 			signed_sidechain_block.block().layer_one_head()
 		);
 
