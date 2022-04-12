@@ -133,14 +133,19 @@ where
 
 		let now = now_as_u64();
 		let layer_one_hash = latest_parentchain_header.hash();
-		let payload_hash =
-			calculate_payload_hash(now, layer_one_hash, author_public, &top_call_hashes, &payload);
+		let block_data_hash = calculate_block_data_hash(
+			now,
+			layer_one_hash,
+			author_public,
+			&top_call_hashes,
+			&payload,
+		);
 
 		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
 			block_number,
 			parent_hash,
 			shard,
-			payload_hash,
+			block_data_hash,
 		);
 
 		let block = SignedSidechainBlock::Block::new(
@@ -169,7 +174,7 @@ fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H
 }
 
 /// Calculate the payload of a sidechain block.
-fn calculate_payload_hash(
+fn calculate_block_data_hash(
 	timestamp: u64,
 	layer_one_head: H256,
 	block_author: ed25519::Public,

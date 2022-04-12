@@ -114,7 +114,7 @@ impl SidechainBlockBuilder {
 	}
 
 	/// Calculate the payload of a sidechain block.
-	pub fn block_payload_hash(&self) -> H256 {
+	pub fn block_data_hash(&self) -> H256 {
 		(
 			self.timestamp,
 			self.parentchain_block_hash,
@@ -126,9 +126,9 @@ impl SidechainBlockBuilder {
 	}
 
 	pub fn build(&self) -> Block {
-		let payload_hash = self.block_payload_hash();
+		let block_data_hash = self.block_data_hash();
 
-		let header = HeaderTrait::new(self.number, self.parent_hash, self.shard, payload_hash);
+		let header = HeaderTrait::new(self.number, self.parent_hash, self.shard, block_data_hash);
 
 		Block::new(
 			header,

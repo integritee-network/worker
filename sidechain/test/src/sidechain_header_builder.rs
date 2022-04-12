@@ -26,7 +26,7 @@ pub struct SidechainHeaderBuilder {
 	parent_hash: H256,
 	block_number: u64,
 	shard_id: ShardIdentifier,
-	payload_hash: H256,
+	block_data_hash: H256,
 }
 
 impl SidechainHeaderBuilder {
@@ -45,8 +45,8 @@ impl SidechainHeaderBuilder {
 		self
 	}
 
-	pub fn with_payload_hash(mut self, payload_hash: H256) -> Self {
-		self.payload_hash = payload_hash;
+	pub fn with_block_data_hash(mut self, block_data_hash: H256) -> Self {
+		self.block_data_hash = block_data_hash;
 		self
 	}
 
@@ -55,7 +55,7 @@ impl SidechainHeaderBuilder {
 			parent_hash: self.parent_hash,
 			block_number: self.block_number,
 			shard_id: self.shard_id,
-			payload_hash: self.payload_hash,
+			block_data_hash: self.block_data_hash,
 		}
 	}
 }

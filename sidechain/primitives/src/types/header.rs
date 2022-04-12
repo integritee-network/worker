@@ -37,7 +37,7 @@ pub struct Header {
 	pub shard_id: ShardIdentifier,
 
 	/// The payload hash.
-	pub payload_hash: H256,
+	pub block_data_hash: H256,
 }
 
 impl HeaderTrait for Header {
@@ -52,16 +52,16 @@ impl HeaderTrait for Header {
 	fn shard_id(&self) -> Self::ShardIdentifier {
 		self.shard_id
 	}
-	fn payload_hash(&self) -> H256 {
-		self.payload_hash
+	fn block_data_hash(&self) -> H256 {
+		self.block_data_hash
 	}
 
 	fn new(
 		block_number: u64,
 		parent_hash: H256,
 		shard: Self::ShardIdentifier,
-		payload_hash: H256,
+		block_data_hash: H256,
 	) -> Header {
-		Header { block_number, parent_hash, shard_id: shard, payload_hash }
+		Header { block_number, parent_hash, shard_id: shard, block_data_hash }
 	}
 }

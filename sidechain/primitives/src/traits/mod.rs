@@ -37,13 +37,13 @@ pub trait Header {
 	/// get shard id of block
 	fn shard_id(&self) -> Self::ShardIdentifier;
 	/// get hash of the block's payload
-	fn payload_hash(&self) -> H256;
+	fn block_data_hash(&self) -> H256;
 
 	fn new(
 		block_number: u64,
 		parent_hash: H256,
 		shard: Self::ShardIdentifier,
-		payload_hash: H256,
+		block_data_hash: H256,
 	) -> Self;
 }
 
