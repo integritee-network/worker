@@ -230,11 +230,13 @@ mod tests {
 
 	#[test]
 	fn initialize_with_shard_creates_empty_directory() {
-		let shard = ShardIdentifier::random();
+		let shard = ShardIdentifier::from([2u8; 32]);
 		let state_file_io = create_in_memory_state_file_io(&[shard]);
 
 		assert!(state_file_io.list_state_ids_for_shard(&shard).unwrap().is_empty());
-		assert!(state_file_io.list_state_ids_for_shard(&ShardIdentifier::random()).is_err());
+		assert!(state_file_io
+			.list_state_ids_for_shard(&ShardIdentifier::from([3u8; 32]))
+			.is_err());
 	}
 
 	#[test]

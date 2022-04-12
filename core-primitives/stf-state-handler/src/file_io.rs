@@ -164,21 +164,18 @@ pub mod sgx {
 
 			let state_path = state_file_path(shard_identifier, state_id);
 			trace!("loading state from: {:?}", state_path);
-			let state_vec = self.read(&state_path)?;
+			let state_encoded = self.read(&state_path)?;
 
-			// state is now decrypted!
-			let state: StfStateType = match state_vec.len() {
-				0 => {
-					debug!("state at {:?} is empty. will initialize it.", state_path);
-					Stf::init_state().state
-				},
-				n => {
-					debug!("State loaded from {:?} with size {}B, deserializing...", state_path, n);
-					StfStateType::decode(&mut state_vec.as_slice())?
-				},
-			};
+			// State is now decrypted.
+			debug!(
+				"State loaded from {:?} with size {}B, deserializing...",
+				state_path,
+				state_encoded.len()
+			);
+			let state = StfStateType::decode(&mut state_encoded.as_slice())?;
+
 			trace!("state decoded successfully");
-			// add empty state-diff
+			// Add empty state-diff.
 			let state_with_diff = StfState { state, state_diff: Default::default() };
 			trace!("New state created: {:?}", state_with_diff);
 			Ok(state_with_diff)
