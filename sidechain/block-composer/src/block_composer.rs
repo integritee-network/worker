@@ -77,6 +77,8 @@ where
 	}
 }
 
+type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType;
+
 impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKey, Externalities>
 	ComposeBlockAndConfirmation<Externalities, ParentchainBlock>
 	for BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKey>
@@ -131,21 +133,15 @@ where
 
 		let now = now_as_u64();
 		let layer_one_hash = latest_parentchain_header.hash();
-		let payload_hash = calculate_payload_hash(
-			now,
-			layer_one_hash,
-			author_public,
-			top_call_hashes.clone(),
-			payload.clone(),
-		);
+		let payload_hash =
+			calculate_payload_hash(now, layer_one_hash, author_public, &top_call_hashes, &payload);
 
-		let header =
-			<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType::new(
-				block_number,
-				parent_hash,
-				shard,
-				payload_hash,
-			);
+		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
+			block_number,
+			parent_hash,
+			shard,
+			payload_hash,
+		);
 
 		let block = SignedSidechainBlock::Block::new(
 			header,
@@ -177,8 +173,8 @@ fn calculate_payload_hash(
 	timestamp: u64,
 	layer_one_head: H256,
 	block_author: ed25519::Public,
-	signed_top_hashes: Vec<H256>,
-	state_payload: Vec<u8>,
+	signed_top_hashes: &[H256],
+	state_payload: &[u8],
 ) -> H256 {
 	(timestamp, layer_one_head, block_author, signed_top_hashes, state_payload)
 		.using_encoded(BlakeTwo256::hash)

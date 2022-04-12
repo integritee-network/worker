@@ -43,19 +43,15 @@ pub struct Header {
 impl HeaderTrait for Header {
 	type ShardIdentifier = H256;
 
-	/// Get block number.
 	fn block_number(&self) -> u64 {
 		self.block_number
 	}
-	/// get parent hash of block
 	fn parent_hash(&self) -> H256 {
 		self.parent_hash
 	}
-	/// get shard id of block
 	fn shard_id(&self) -> Self::ShardIdentifier {
 		self.shard_id
 	}
-	/// get hash of the block's payload
 	fn payload_hash(&self) -> H256 {
 		self.payload_hash
 	}

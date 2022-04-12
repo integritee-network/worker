@@ -119,8 +119,8 @@ impl SidechainBlockBuilder {
 			self.timestamp,
 			self.parentchain_block_hash,
 			self.signer.public(),
-			&self.signed_top_hashes.clone(),
-			&self.encrypted_payload.clone(),
+			self.signed_top_hashes.as_slice(),
+			self.encrypted_payload.as_slice(),
 		)
 			.using_encoded(BlakeTwo256::hash)
 	}
