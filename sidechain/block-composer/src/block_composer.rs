@@ -179,8 +179,8 @@ fn calculate_block_data_hash(
 	layer_one_head: H256,
 	block_author: ed25519::Public,
 	signed_top_hashes: &[H256],
-	state_payload: &[u8],
+	encrypted_state_diff: &[u8],
 ) -> H256 {
-	(timestamp, layer_one_head, block_author, signed_top_hashes, state_payload)
+	(timestamp, layer_one_head, block_author, signed_top_hashes, encrypted_state_diff)
 		.using_encoded(BlakeTwo256::hash)
 }

@@ -404,8 +404,9 @@ fn test_create_state_diff() {
 		)
 		.unwrap();
 
-	let state_payload = state_payload_from_encrypted(signed_block.block().state_payload());
-	let state_diff = state_payload.state_update();
+	let encrypted_state_diff =
+		encrypted_state_diff_from_encrypted(signed_block.block().encrypted_state_diff());
+	let state_diff = encrypted_state_diff.state_update();
 
 	// then
 	let sender_acc_info: AccountInfo =
@@ -574,7 +575,7 @@ pub fn test_top_pool() -> TestTopPool {
 }
 
 /// Decrypt `encrypted` and decode it into `StatePayload`
-pub fn state_payload_from_encrypted(encrypted: &[u8]) -> StatePayload {
+pub fn encrypted_state_diff_from_encrypted(encrypted: &[u8]) -> StatePayload {
 	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
 	let state_key = state_key();
 	state_key.decrypt(&mut encrypted_payload).unwrap();

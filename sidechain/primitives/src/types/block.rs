@@ -63,7 +63,7 @@ pub struct Block {
 
 	pub signed_top_hashes: Vec<H256>,
 	// encrypted state payload
-	pub state_payload: Vec<u8>,
+	pub encrypted_state_diff: Vec<u8>,
 }
 
 impl BlockTrait for Block {
@@ -92,8 +92,8 @@ impl BlockTrait for Block {
 		&self.signed_top_hashes
 	}
 	/// get encrypted payload
-	fn state_payload(&self) -> &Vec<u8> {
-		&self.state_payload
+	fn encrypted_state_diff(&self) -> &Vec<u8> {
+		&self.encrypted_state_diff
 	}
 	/// Constructs an unsigned block
 	fn new(
@@ -111,7 +111,7 @@ impl BlockTrait for Block {
 			layer_one_head,
 			signed_top_hashes,
 			block_author: author,
-			state_payload: encrypted_payload,
+			encrypted_state_diff: encrypted_payload,
 		}
 	}
 }

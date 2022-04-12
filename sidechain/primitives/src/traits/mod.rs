@@ -67,7 +67,7 @@ pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
 	/// get reference of extrinsics of block
 	fn signed_top_hashes(&self) -> &[H256];
 	/// get encrypted payload
-	fn state_payload(&self) -> &Vec<u8>;
+	fn encrypted_state_diff(&self) -> &Vec<u8>;
 	/// get the `blake2_256` hash of the block
 	fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()

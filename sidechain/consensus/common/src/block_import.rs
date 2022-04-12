@@ -140,7 +140,7 @@ where
 
 		self.apply_state_update(&shard, |mut state| {
 			let update = state_update_from_encrypted(
-				block_import_params.block().state_payload(),
+				block_import_params.block().encrypted_state_diff(),
 				self.state_key(),
 			)?;
 
