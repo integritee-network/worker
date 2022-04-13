@@ -140,6 +140,9 @@ where
 			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
 
+		// TODO Output for performance benchmarking. Should not stay here for productive code.
+		error!("Producing block with {} transactions", top_call_hashes.len());
+
 		let block_data = BlockDataTypeOf::<SignedSidechainBlock>::new(
 			author_public,
 			latest_parentchain_header.hash(),
