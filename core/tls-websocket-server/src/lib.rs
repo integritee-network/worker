@@ -36,49 +36,32 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-extern crate alloc;
-
-use crate::{connection::TungsteniteWsConnection, ws_server::TungsteniteWsServer};
-use alloc::boxed::Box;
+use crate::{
+	connection::TungsteniteWsConnection,
+	connection_id_generator::{ConnectionId, ConnectionIdGenerator},
+	error::WebSocketResult,
+	ws_server::TungsteniteWsServer,
+};
 use log::*;
 use std::{
-	io::Error as IoError,
-	net::AddrParseError,
 	string::{String, ToString},
 	sync::Arc,
 };
 
 mod common;
 pub mod connection;
+pub mod connection_id_generator;
+pub mod connection_repository;
+pub mod error;
 mod ws_server;
 
-/// General web-socket error type
-#[derive(Debug, thiserror::Error)]
-pub enum WebSocketError {
-	#[error("Invalid certificate error: {0}")]
-	InvalidCertificate(String),
-	#[error("Invalid private key error: {0}")]
-	InvalidPrivateKey(String),
-	#[error("Invalid web-socket address error: {0}")]
-	InvalidWsAddress(AddrParseError),
-	#[error("TCP bind error: {0}")]
-	TcpBindError(IoError),
-	#[error("Web-socket hand shake error")]
-	HandShakeError,
-	#[error("Web-socket connection already closed error")]
-	ConnectionClosed,
-	#[error("Web-socket connection has not yet been established")]
-	ConnectionNotYetEstablished,
-	#[error("Web-socket write error: {0}")]
-	SocketWriteError(String),
-	#[error("Web-socket handler error: {0}")]
-	HandlerError(Box<dyn std::error::Error + Sync + Send + 'static>),
-}
+#[cfg(test)]
+mod test;
 
-pub type WebSocketResult<T> = Result<T, WebSocketError>;
-
-/// abstraction of a web socket connection
+/// Abstraction of a web socket connection.
 pub trait WebSocketConnection: Send + Sync {
+	fn id(&self) -> ConnectionId;
+
 	fn process_request<F>(&mut self, initial_call: F) -> WebSocketResult<String>
 	where
 		F: Fn(&str) -> String;
@@ -111,7 +94,9 @@ where
 	let cert = "end.fullchain".to_string();
 	let key = "end.rsa".to_string();
 
-	let web_socket_server = TungsteniteWsServer::new(addr_plain.to_string(), cert, key);
+	let id_generator = Arc::new(ConnectionIdGenerator::default());
+	let web_socket_server =
+		TungsteniteWsServer::new(addr_plain.to_string(), cert, key, id_generator);
 
 	match web_socket_server.run(handler) {
 		Ok(()) => {},

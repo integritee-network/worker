@@ -19,8 +19,11 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	common::make_config, connection::TungsteniteWsConnection, WebSocketError, WebSocketHandler,
-	WebSocketResult, WebSocketServer,
+	common::make_config,
+	connection::TungsteniteWsConnection,
+	connection_id_generator::GenerateConnectionId,
+	error::{WebSocketError, WebSocketResult},
+	WebSocketHandler, WebSocketServer,
 };
 use log::*;
 use net::SocketAddr;
@@ -28,19 +31,28 @@ use rustls::ServerSession;
 use std::{net, net::TcpListener, string::String, sync::Arc};
 
 /// Secure web-socket server implementation using the tungstenite library
-pub struct TungsteniteWsServer {
+pub struct TungsteniteWsServer<IdGenerator> {
 	ws_address: String,
 	cert_path: String,
 	private_key_path: String,
+	id_generator: Arc<IdGenerator>,
 }
 
-impl TungsteniteWsServer {
-	pub fn new(ws_address: String, cert_path: String, private_key_path: String) -> Self {
-		TungsteniteWsServer { ws_address, cert_path, private_key_path }
+impl<IdGenerator> TungsteniteWsServer<IdGenerator> {
+	pub fn new(
+		ws_address: String,
+		cert_path: String,
+		private_key_path: String,
+		id_generator: Arc<IdGenerator>,
+	) -> Self {
+		TungsteniteWsServer { ws_address, cert_path, private_key_path, id_generator }
 	}
 }
 
-impl WebSocketServer for TungsteniteWsServer {
+impl<IdGenerator> WebSocketServer for TungsteniteWsServer<IdGenerator>
+where
+	IdGenerator: GenerateConnectionId,
+{
 	type Connection = TungsteniteWsConnection;
 
 	fn run<Handler>(&self, handler: Arc<Handler>) -> WebSocketResult<()>
@@ -64,9 +76,19 @@ impl WebSocketServer for TungsteniteWsServer {
 					let cloned_config = config.clone();
 
 					let server_session = ServerSession::new(&cloned_config);
+					let next_connection_id = match self.id_generator.next_id() {
+						Ok(id) => id,
+						Err(e) => {
+							error!("Failed to generate next connection id ({:?}), refusing connection attempt", e);
+							continue
+						},
+					};
 
-					let connection = match TungsteniteWsConnection::connect(stream, server_session)
-					{
+					let connection = match TungsteniteWsConnection::connect(
+						stream,
+						server_session,
+						next_connection_id,
+					) {
 						Ok(c) => c,
 						Err(e) => {
 							error!("failed to establish web-socket connection: {:?}", e);

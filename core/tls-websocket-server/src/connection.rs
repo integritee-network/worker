@@ -18,7 +18,10 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{WebSocketConnection, WebSocketError, WebSocketResult};
+use crate::{
+	connection_id_generator::ConnectionId, error::WebSocketError, WebSocketConnection,
+	WebSocketResult,
+};
 use log::*;
 use rustls::ServerSession;
 use std::{
@@ -33,17 +36,19 @@ type RustlsWebSocket = WebSocket<RustlsStream>;
 
 pub struct TungsteniteWsConnection {
 	web_socket: RustlsWebSocket,
+	id: ConnectionId,
 }
 
 impl TungsteniteWsConnection {
 	pub fn connect(
 		tcp_stream: TcpStream,
 		server_session: ServerSession,
+		connection_id: ConnectionId,
 	) -> WebSocketResult<TungsteniteWsConnection> {
 		let tls_stream = rustls::StreamOwned::new(server_session, tcp_stream);
 		let web_socket = accept(tls_stream).map_err(|_| WebSocketError::HandShakeError)?;
 
-		Ok(TungsteniteWsConnection { web_socket })
+		Ok(TungsteniteWsConnection { web_socket, id: connection_id })
 	}
 
 	fn read_next_message(&mut self) -> WebSocketResult<String> {
@@ -69,6 +74,10 @@ impl TungsteniteWsConnection {
 }
 
 impl WebSocketConnection for TungsteniteWsConnection {
+	fn id(&self) -> ConnectionId {
+		self.id
+	}
+
 	fn process_request<F>(&mut self, initial_call: F) -> WebSocketResult<String>
 	where
 		F: Fn(&str) -> String,
