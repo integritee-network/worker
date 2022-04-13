@@ -114,9 +114,6 @@ pub enum Commands {
 	/// trusted calls to worker enclave
 	#[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
 	Trusted(TrustedArgs),
-
-	/// benchmark on trusted calls to worker enclave
-	BenchmarkTrusted(TrustedArgs),
 }
 
 pub fn match_command(cli: &Cli) {
@@ -133,8 +130,6 @@ pub fn match_command(cli: &Cli) {
 		Commands::ShieldFunds { from, to, amount, shard } =>
 			shield_funds(cli, from, to, amount, shard),
 		Commands::Trusted(trusted) => trusted_commands::match_trusted_commands(cli, trusted),
-		Commands::BenchmarkTrusted(trusted) =>
-			trusted_commands::match_trusted_benchmark_commands(cli, trusted),
 	};
 }
 

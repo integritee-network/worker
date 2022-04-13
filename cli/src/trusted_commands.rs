@@ -46,7 +46,6 @@ use std::{
 	time::Instant,
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use synchronoise::SignalEvent;
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -137,6 +136,9 @@ pub enum TrustedCommands {
 		/// amount to be transferred
 		amount: Balance,
 	},
+
+	/// Run Benchmark
+	Benchmark,
 }
 
 pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
@@ -150,20 +152,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
 		TrustedCommands::UnshieldFunds { from, to, amount } =>
 			unshield_funds(cli, trusted_args, from, to, amount),
-	}
-}
-
-pub fn match_trusted_benchmark_commands(cli: &Cli, trusted_args: &TrustedArgs) {
-	match &trusted_args.command {
-		TrustedCommands::NewAccount => new_account(trusted_args),
-		TrustedCommands::ListAccounts => list_accounts(trusted_args),
-		TrustedCommands::Transfer { from, to: _, amount: _ } =>
-			transfer_benchmark(cli, trusted_args, from),
-		TrustedCommands::SetBalance { account, amount } =>
-			set_balance(cli, trusted_args, account, amount),
-		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
-		TrustedCommands::UnshieldFunds { from, to, amount } =>
-			unshield_funds(cli, trusted_args, from, to, amount),
+		TrustedCommands::Benchmark => transfer_benchmark(cli, trusted_args),
 	}
 }
 
@@ -210,8 +199,8 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 	let _ = perform_operation(cli, trusted_args, &top);
 }
 
-fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
-	let alice = get_pair_from_str(trusted_args, arg_from);
+fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
+	let alice = get_pair_from_str(trusted_args, "//Alice");
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
@@ -222,69 +211,60 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 		Err(err_msg) => panic!("{}", err_msg.to_string()),
 	};
 
-	// signals to synchronize threads
-	let mut submitted_signals = Vec::new();
-	for n in 0..101 {
-		submitted_signals.insert(n, SignalEvent::manual(false));
+	let mut accounts = Vec::new();
+
+	for i in 0..10 {
+		let nonce_alice = i * 2;
+		println!("Initialization {}", i);
+
+		// create new accounts to use
+		let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+		let a1: sr25519::AppPair = store.generate().unwrap();
+		let a2: sr25519::AppPair = store.generate().unwrap();
+		let account1 = get_pair_from_str(trusted_args, a1.public().to_string().as_str());
+		let account2 = get_pair_from_str(trusted_args, a2.public().to_string().as_str());
+		drop(store);
+
+		// transfer amount from Alice to new accounts
+		let top: TrustedOperation =
+			TrustedCall::balance_transfer(alice.public().into(), account1.public().into(), 100000)
+				.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
+
+		let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true);
+
+		if results.iter().any(|r| r.0 == "InSidechainBlock") {
+			println!("initialization of new account1 successfull");
+		} else {
+			println!("initialization of new account1 NOT successfull");
+		}
+
+		let top2: TrustedOperation =
+			TrustedCall::balance_transfer(alice.public().into(), account2.public().into(), 100000)
+				.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
+
+		let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true);
+
+		if results2.iter().any(|r| r.0 == "InSidechainBlock") {
+			println!("initialization of new account2 successfull");
+		} else {
+			println!("initialization of new account2 NOT successfull");
+		}
+
+		println!("account1 is {}", account1.public());
+		println!("account2 is {}", account2.public());
+
+		accounts.push((account1, account2));
 	}
-	submitted_signals.get(0).unwrap().signal();
 
 	let overall_start = Instant::now();
 
-	let outputs: Vec<(Vec<String>, Vec<u64>)> = (0..100)
+	let outputs: Vec<(Vec<String>, Vec<u64>)> = accounts
 		.into_par_iter()
-		.map(|nonce_alice1| {
-			let nonce_alice = nonce_alice1 * 2;
-			let mut output = Vec::new();
+		.map(|(account1, account2)| {
+			let mut output: Vec<String> = Vec::new();
 			let mut in_sidechain_block_timestamps = Vec::new();
-
-			// create new accounts to use
-			let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-			let a1: sr25519::AppPair = store.generate().unwrap();
-			let a2: sr25519::AppPair = store.generate().unwrap();
-			let account1 = get_pair_from_str(trusted_args, a1.public().to_string().as_str());
-			let account2 = get_pair_from_str(trusted_args, a2.public().to_string().as_str());
-			drop(store);
-
-			submitted_signals.get(nonce_alice1 as usize).unwrap().wait();
-
-			// transfer amount from Alice to new accounts
-			let top: TrustedOperation = TrustedCall::balance_transfer(
-				alice.public().into(),
-				account1.public().into(),
-				100000,
-			)
-			.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
-			.into_trusted_operation(trusted_args.direct);
-
-			let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true);
-
-			if results.iter().any(|r| r.0 == "InSidechainBlock") {
-				output.push("initialization of new account1 successfull".to_string());
-			} else {
-				output.push("initialization of new account1 NOT successfull".to_string());
-			}
-
-			let top2: TrustedOperation = TrustedCall::balance_transfer(
-				alice.public().into(),
-				account2.public().into(),
-				100000,
-			)
-			.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
-			.into_trusted_operation(trusted_args.direct);
-
-			let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true);
-
-			if results2.iter().any(|r| r.0 == "InSidechainBlock") {
-				output.push("initialization of new account2 successfull".to_string());
-			} else {
-				output.push("initialization of new account2 NOT successfull".to_string());
-			}
-
-			submitted_signals.get((nonce_alice1 + 1) as usize).unwrap().signal();
-
-			output.push(format!("account1 is {}", account1.public()));
-			output.push(format!("account2 is {}", account2.public()));
 
 			for nonce in 0..10 {
 				//account1 -> account2
@@ -338,6 +318,7 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str) {
 		})
 		.collect();
 
+	// Create and Calculate Benchmark Output
 	let mut throughput: HashMap<u64, u64> = HashMap::new();
 
 	let file = File::create(format!(
