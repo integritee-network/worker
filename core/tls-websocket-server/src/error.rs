@@ -43,6 +43,8 @@ pub enum WebSocketError {
 	SocketWriteError(String),
 	#[error("Lock poisoning")]
 	LockPoisoning,
+	#[error("I/O error: {0}")]
+	IoError(#[from] std::io::Error),
 	#[error("Web-socket handler error: {0}")]
 	HandlerError(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

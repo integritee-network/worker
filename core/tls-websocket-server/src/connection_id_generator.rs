@@ -23,7 +23,7 @@ use std::sync::RwLock;
 
 use crate::{error::WebSocketError, WebSocketResult};
 
-pub type ConnectionId = u128;
+pub type ConnectionId = usize;
 
 /// Trait to generate IDs (nonce) for websocket connections.
 pub trait GenerateConnectionId {

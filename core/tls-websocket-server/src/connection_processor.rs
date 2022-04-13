@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	connection_repository::ConnectionRepositoryControl, error::WebSocketResult, ConnectionId,
+	connection_registry::ConnectionRepositoryControl, error::WebSocketResult, ConnectionId,
 	WebSocketConnection, WebSocketHandler,
 };
 use log::*;
@@ -28,6 +28,9 @@ pub trait ProcessWebSocketConnections {
 	fn process_connections(&self) -> WebSocketResult<()>;
 }
 
+/// Web-socket connections processor.
+///
+/// Processes all active connections (serially) and handles any pending messages.
 pub struct ConnectionProcessor<Connection, ConnectionRepository, MessageHandler> {
 	repository: Arc<ConnectionRepository>,
 	handler: Arc<MessageHandler>,
@@ -41,6 +44,10 @@ where
 	ConnectionRepository: ConnectionRepositoryControl<Connection>,
 	MessageHandler: WebSocketHandler,
 {
+	pub fn new(repository: Arc<ConnectionRepository>, handler: Arc<MessageHandler>) -> Self {
+		ConnectionProcessor { repository, handler, phantom_data: Default::default() }
+	}
+
 	pub fn send_response(
 		&self,
 		connection_id: ConnectionId,
@@ -119,4 +126,23 @@ enum ConnectionProcessingResult {
 	UnsupportedMessageType,
 	MessageProcessed,
 	HeartBeat,
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::{
+		connection_registry::ConnectionRegistry,
+		test::mocks::web_socket_handler_mock::WebSocketHandlerMock,
+	};
+
+	#[test]
+	fn if_message_is_close_then_remove_connection_from_repository() {
+		let repository = Arc::new(ConnectionRegistry::default());
+		let mut handler = Arc::new(WebSocketHandlerMock::new(None));
+
+		handler.response = Some("tadita".to_string());
+
+		let processor = ConnectionProcessor::new(repository.clone(), handler.clone());
+	}
 }

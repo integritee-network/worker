@@ -15,28 +15,46 @@
 
 */
 
-use crate::{connection_id_generator::ConnectionId, error::WebSocketResult, WebSocketConnection};
+use crate::{
+	connection_id_generator::ConnectionId,
+	error::{WebSocketError, WebSocketResult},
+	WebSocketConnection,
+};
+use std::vec::Vec;
 use tungstenite::Message;
 
 /// Mock implementation of a web socket connection.
-#[derive(PartialEq, Eq, Hash, Default, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Default, Clone)]
 pub(crate) struct WebSocketConnectionMock {
-	id: ConnectionId,
+	pub id: ConnectionId,
+	pub messages_to_read: Vec<Message>,
+	pub messages_written: Vec<Message>,
+	pub is_closed: bool,
 }
 
 impl WebSocketConnectionMock {
 	pub fn new(id: ConnectionId) -> Self {
-		WebSocketConnectionMock { id }
+		WebSocketConnectionMock {
+			id,
+			messages_to_read: Default::default(),
+			messages_written: Default::default(),
+			is_closed: false,
+		}
+	}
+
+	pub fn with_messages_to_read(mut self, messages: Vec<Message>) -> Self {
+		self.messages_to_read = messages;
+		self
 	}
 }
 
 impl WebSocketConnection for WebSocketConnectionMock {
-	fn id(&self) -> ConnectionId {
+	fn id(&self) -> Token {
 		self.id
 	}
 
 	fn read_message(&mut self) -> WebSocketResult<Message> {
-		todo!()
+		self.messages_to_read.pop().ok_or(WebSocketError::ConnectionClosed)
 	}
 
 	fn write_pending(&mut self) -> WebSocketResult<()> {
@@ -50,9 +68,12 @@ impl WebSocketConnection for WebSocketConnectionMock {
 		Ok(Default::default())
 	}
 
-	fn send_update(&mut self, _message: String) -> WebSocketResult<()> {
+	fn send_update(&mut self, message: String) -> WebSocketResult<()> {
+		self.messages_written.push(Message::Text(message));
 		Ok(())
 	}
 
-	fn close(&mut self) {}
+	fn close(&mut self) {
+		self.is_closed = true;
+	}
 }

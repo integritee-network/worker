@@ -32,10 +32,12 @@ use std::{
 	fmt::Debug,
 };
 
+/// Trait for storing newly established web-socket connections.
 pub trait AddNewConnection<Connection> {
 	fn add_new_connection(&self, connection: Connection) -> WebSocketResult<()>;
 }
 
+/// Control facade for the web-socket connection repository.
 pub trait ConnectionRepositoryControl<Connection> {
 	fn move_new_connections_to_active(&self) -> WebSocketResult<()>;
 
@@ -63,7 +65,7 @@ pub trait ConnectionRepositoryControl<Connection> {
 /// Tracks new connections in a separate collection, so we can concurrently
 /// process the active connections and add new ones.
 #[derive(Default)]
-pub struct ConnectionRepository<Connection>
+pub struct ConnectionRegistry<Connection>
 where
 	Connection: WebSocketConnection,
 {
@@ -71,9 +73,9 @@ where
 	new_connections: RwLock<VecDeque<Connection>>,
 }
 
-impl<Connection> ConnectionRepository<Connection> where Connection: WebSocketConnection {}
+impl<Connection> ConnectionRegistry<Connection> where Connection: WebSocketConnection {}
 
-impl<Connection> AddNewConnection<Connection> for ConnectionRepository<Connection>
+impl<Connection> AddNewConnection<Connection> for ConnectionRegistry<Connection>
 where
 	Connection: WebSocketConnection,
 {
@@ -84,7 +86,7 @@ where
 	}
 }
 
-impl<Connection> ConnectionRepositoryControl<Connection> for ConnectionRepository<Connection>
+impl<Connection> ConnectionRepositoryControl<Connection> for ConnectionRegistry<Connection>
 where
 	Connection: WebSocketConnection,
 {
@@ -163,7 +165,7 @@ mod tests {
 		test::mocks::web_socket_connection_mock::WebSocketConnectionMock,
 	};
 
-	type TestConnectionRepository = ConnectionRepository<WebSocketConnectionMock>;
+	type TestConnectionRepository = ConnectionRegistry<WebSocketConnectionMock>;
 
 	#[test]
 	fn moving_new_connections_works() {

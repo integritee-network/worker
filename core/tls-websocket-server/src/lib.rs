@@ -43,6 +43,7 @@ use crate::{
 	ws_server::TungsteniteWsServer,
 };
 use log::*;
+use mio::Token;
 use std::{
 	string::{String, ToString},
 	sync::Arc,
@@ -53,7 +54,7 @@ mod common;
 pub mod connection;
 pub mod connection_id_generator;
 mod connection_processor;
-pub mod connection_repository;
+pub mod connection_registry;
 pub mod error;
 mod ws_server;
 
@@ -62,7 +63,7 @@ mod test;
 
 /// Abstraction of a web socket connection.
 pub trait WebSocketConnection: Send + Sync {
-	fn id(&self) -> ConnectionId;
+	fn id(&self) -> Token;
 
 	fn read_message(&mut self) -> WebSocketResult<Message>;
 
@@ -94,7 +95,7 @@ pub trait WebSocketHandler {
 pub trait WebSocketServer {
 	type Connection;
 
-	fn run<Handler>(&self, handler: Arc<Handler>) -> WebSocketResult<()>
+	fn run<Handler>(&mut self, handler: Arc<Handler>) -> WebSocketResult<()>
 	where
 		Handler: WebSocketHandler<Connection = Self::Connection>;
 }
@@ -107,7 +108,7 @@ where
 	let key = "end.rsa".to_string();
 
 	let id_generator = Arc::new(ConnectionIdGenerator::default());
-	let web_socket_server =
+	let mut web_socket_server =
 		TungsteniteWsServer::new(addr_plain.to_string(), cert, key, id_generator);
 
 	match web_socket_server.run(handler) {

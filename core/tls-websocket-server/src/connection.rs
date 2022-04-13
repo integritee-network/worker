@@ -18,13 +18,11 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{
-	connection_id_generator::ConnectionId, error::WebSocketError, WebSocketConnection,
-	WebSocketResult,
-};
+use crate::{error::WebSocketError, WebSocketConnection, WebSocketResult};
 use log::*;
-use rustls::ServerSession;
-use std::{format, net::TcpStream, string::String};
+use mio::{net::TcpStream, Token};
+use rustls::{ServerSession, Session};
+use std::{format, string::String};
 use tungstenite::{accept, Message, WebSocket};
 
 type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;
@@ -32,19 +30,72 @@ type RustlsWebSocket = WebSocket<RustlsStream>;
 
 pub struct TungsteniteWsConnection {
 	web_socket: RustlsWebSocket,
-	id: ConnectionId,
+	connection_token: Token,
 }
 
 impl TungsteniteWsConnection {
 	pub fn connect(
 		tcp_stream: TcpStream,
 		server_session: ServerSession,
-		connection_id: ConnectionId,
+		connection_token: Token,
 	) -> WebSocketResult<TungsteniteWsConnection> {
 		let tls_stream = rustls::StreamOwned::new(server_session, tcp_stream);
 		let web_socket = accept(tls_stream).map_err(|_| WebSocketError::HandShakeError)?;
 
-		Ok(TungsteniteWsConnection { web_socket, id: connection_id })
+		Ok(TungsteniteWsConnection { web_socket, connection_token })
+	}
+
+	pub fn register(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
+		poll.register(
+			self.web_socket.get_ref(),
+			self.connection_token,
+			self.event_set(),
+			mio::PollOpt::level() | mio::PollOpt::oneshot(),
+		)?;
+
+		Ok(())
+	}
+
+	/// What IO events we're currently waiting for,
+	/// based on wants_read/wants_write.
+	fn event_set(&self) -> mio::Ready {
+		let wants_read = self.web_socket.get_ref().sess.wants_read();
+		let wants_write = self.web_socket.get_ref().sess.wants_write();
+
+		if wants_read && wants_write {
+			mio::Ready::readable() | mio::Ready::writable()
+		} else if wants_write {
+			mio::Ready::writable()
+		} else {
+			mio::Ready::readable()
+		}
+	}
+
+	/// We're a connection, and we have something to do.
+	fn ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) {
+		// If we're readable: read some TLS.  Then
+		// see if that yielded new plaintext.  Then
+		// see if the backend is readable too.
+		if ev.readiness().is_readable() {
+
+			self.web_socket.read_message()
+
+			self.do_tls_read();
+			self.try_plain_read();
+			self.try_back_read();
+		}
+
+		if ev.readiness().is_writable() {
+			self.do_tls_write();
+		}
+
+		if self.closing {
+			let _ = self.socket.shutdown(Shutdown::Both);
+			self.close_back();
+			self.closed = true;
+		} else {
+			self.reregister(poll);
+		}
 	}
 
 	fn read_next_message(&mut self) -> WebSocketResult<String> {
@@ -70,8 +121,8 @@ impl TungsteniteWsConnection {
 }
 
 impl WebSocketConnection for TungsteniteWsConnection {
-	fn id(&self) -> ConnectionId {
-		self.id
+	fn id(&self) -> Token {
+		self.connection_token
 	}
 
 	fn read_message(&mut self) -> WebSocketResult<Message> {
