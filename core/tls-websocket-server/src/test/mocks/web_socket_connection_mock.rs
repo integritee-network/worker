@@ -16,6 +16,7 @@
 */
 
 use crate::{connection_id_generator::ConnectionId, error::WebSocketResult, WebSocketConnection};
+use tungstenite::Message;
 
 /// Mock implementation of a web socket connection.
 #[derive(PartialEq, Eq, Hash, Default, Clone, Copy)]
@@ -34,6 +35,14 @@ impl WebSocketConnection for WebSocketConnectionMock {
 		self.id
 	}
 
+	fn read_message(&mut self) -> WebSocketResult<Message> {
+		todo!()
+	}
+
+	fn write_pending(&mut self) -> WebSocketResult<()> {
+		todo!()
+	}
+
 	fn process_request<F>(&mut self, _initial_call: F) -> WebSocketResult<String>
 	where
 		F: Fn(&str) -> String,
@@ -41,7 +50,7 @@ impl WebSocketConnection for WebSocketConnectionMock {
 		Ok(Default::default())
 	}
 
-	fn send_update(&mut self, _message: &str) -> WebSocketResult<()> {
+	fn send_update(&mut self, _message: String) -> WebSocketResult<()> {
 		Ok(())
 	}
 

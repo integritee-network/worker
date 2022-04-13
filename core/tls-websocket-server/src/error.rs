@@ -15,6 +15,7 @@
 
 */
 
+use crate::ConnectionId;
 use std::{boxed::Box, io::Error as IoError, net::AddrParseError, string::String};
 
 pub type WebSocketResult<T> = Result<T, WebSocketError>;
@@ -32,6 +33,8 @@ pub enum WebSocketError {
 	TcpBindError(IoError),
 	#[error("Web-socket hand shake error")]
 	HandShakeError,
+	#[error("{0} is not a valid and active web-socket connection id")]
+	InvalidConnection(ConnectionId),
 	#[error("Web-socket connection already closed error")]
 	ConnectionClosed,
 	#[error("Web-socket connection has not yet been established")]

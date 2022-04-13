@@ -51,7 +51,7 @@ impl WebSocketConnection for ConnectionMock {
 		}
 	}
 
-	fn send_update(&mut self, message: &str) -> WebSocketResult<()> {
+	fn send_update(&mut self, message: String) -> WebSocketResult<()> {
 		if let Some(updates_sink) = self.maybe_updates_sink.as_ref() {
 			updates_sink.push_update(String::from(message));
 		}

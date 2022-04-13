@@ -47,10 +47,12 @@ use std::{
 	string::{String, ToString},
 	sync::Arc,
 };
+use tungstenite::Message;
 
 mod common;
 pub mod connection;
 pub mod connection_id_generator;
+mod connection_processor;
 pub mod connection_repository;
 pub mod error;
 mod ws_server;
@@ -62,11 +64,15 @@ mod test;
 pub trait WebSocketConnection: Send + Sync {
 	fn id(&self) -> ConnectionId;
 
+	fn read_message(&mut self) -> WebSocketResult<Message>;
+
+	fn write_pending(&mut self) -> WebSocketResult<()>;
+
 	fn process_request<F>(&mut self, initial_call: F) -> WebSocketResult<String>
 	where
 		F: Fn(&str) -> String;
 
-	fn send_update(&mut self, message: &str) -> WebSocketResult<()>;
+	fn send_update(&mut self, message: String) -> WebSocketResult<()>;
 
 	fn close(&mut self);
 }
@@ -76,6 +82,12 @@ pub trait WebSocketHandler {
 	type Connection: WebSocketConnection;
 
 	fn handle(&self, connection: Self::Connection) -> WebSocketResult<()>;
+
+	fn handle_message(
+		&self,
+		connection_id: ConnectionId,
+		message: String,
+	) -> WebSocketResult<Option<String>>;
 }
 
 /// Run a web-socket server with a given handler

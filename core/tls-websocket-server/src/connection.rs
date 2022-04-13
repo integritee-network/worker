@@ -24,11 +24,7 @@ use crate::{
 };
 use log::*;
 use rustls::ServerSession;
-use std::{
-	format,
-	net::TcpStream,
-	string::{String, ToString},
-};
+use std::{format, net::TcpStream, string::String};
 use tungstenite::{accept, Message, WebSocket};
 
 type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;
@@ -62,13 +58,13 @@ impl TungsteniteWsConnection {
 		}
 	}
 
-	fn write_message(&mut self, message: &str) -> WebSocketResult<()> {
+	fn write_message(&mut self, message: String) -> WebSocketResult<()> {
 		if !self.web_socket.can_write() {
 			return Err(WebSocketError::ConnectionClosed)
 		}
 
 		self.web_socket
-			.write_message(Message::Text(message.to_string()))
+			.write_message(Message::Text(message))
 			.map_err(|e| WebSocketError::SocketWriteError(format!("{:?}", e)))
 	}
 }
@@ -76,6 +72,14 @@ impl TungsteniteWsConnection {
 impl WebSocketConnection for TungsteniteWsConnection {
 	fn id(&self) -> ConnectionId {
 		self.id
+	}
+
+	fn read_message(&mut self) -> WebSocketResult<Message> {
+		self.web_socket.read_message().map_err(|_| WebSocketError::ConnectionClosed)
+	}
+
+	fn write_pending(&mut self) -> WebSocketResult<()> {
+		self.web_socket.write_pending().map_err(|_| WebSocketError::ConnectionClosed)
 	}
 
 	fn process_request<F>(&mut self, initial_call: F) -> WebSocketResult<String>
@@ -88,13 +92,13 @@ impl WebSocketConnection for TungsteniteWsConnection {
 
 		let response = (initial_call)(request.as_str());
 
-		self.write_message(response.as_str())?;
+		self.write_message(response.clone())?;
 
 		debug!("successfully processed web socket request");
 		Ok(response)
 	}
 
-	fn send_update(&mut self, message: &str) -> WebSocketResult<()> {
+	fn send_update(&mut self, message: String) -> WebSocketResult<()> {
 		debug!("sending web socket update");
 		self.write_message(message)
 	}
