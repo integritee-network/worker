@@ -21,7 +21,6 @@
 use its_primitives::types::{header::Header, ShardIdentifier};
 use sp_core::H256;
 
-#[derive(Default)]
 pub struct SidechainHeaderBuilder {
 	parent_hash: H256,
 	block_number: u64,
@@ -29,7 +28,27 @@ pub struct SidechainHeaderBuilder {
 	block_data_hash: H256,
 }
 
+impl Default for SidechainHeaderBuilder {
+	fn default() -> Self {
+		SidechainHeaderBuilder {
+			parent_hash: Default::default(),
+			block_number: 1,
+			shard_id: Default::default(),
+			block_data_hash: Default::default(),
+		}
+	}
+}
+
 impl SidechainHeaderBuilder {
+	pub fn random() -> Self {
+		SidechainHeaderBuilder {
+			parent_hash: H256::random(),
+			block_number: 42,
+			shard_id: ShardIdentifier::random(),
+			block_data_hash: H256::random(),
+		}
+	}
+
 	pub fn with_parent_hash(mut self, parent_hash: H256) -> Self {
 		self.parent_hash = parent_hash;
 		self

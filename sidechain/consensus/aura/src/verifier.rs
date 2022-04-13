@@ -221,53 +221,103 @@ mod tests {
 		builders::parentchain_header_builder::ParentchainHeaderBuilder,
 		mock::onchain_mock::OnchainMock,
 	};
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use its_primitives::types::SignedBlock;
+	use its_test::{
+		sidechain_block_builder::SidechainBlockBuilder,
+		sidechain_block_data_builder::SidechainBlockDataBuilder,
+		sidechain_header_builder::SidechainHeaderBuilder,
+	};
 	use sp_keyring::ed25519::Keyring;
-	use sp_runtime::{app_crypto::ed25519, testing::H256};
+	use sp_runtime::testing::H256;
 
 	fn assert_ancestry_mismatch_err<T: Debug>(result: Result<T, ConsensusError>) {
 		assert_matches!(result, Err(ConsensusError::BlockAncestryMismatch(_, _, _,)))
 	}
 
-	fn block2_builder(signer: ed25519::Pair, parent_hash: H256) -> SidechainBlockBuilder {
-		block1_builder(signer).with_parent_hash(parent_hash).with_number(2)
+	fn block1(signer: Keyring) -> SignedBlock {
+		let block_data = SidechainBlockDataBuilder::default()
+			.with_signer(signer.pair())
+			.with_timestamp(0)
+			.with_layer_one_head(default_header().hash())
+			.build();
+
+		let header = SidechainHeaderBuilder::default().with_block_number(1).build();
+
+		SidechainBlockBuilder::default()
+			.with_header(header)
+			.with_block_data(block_data)
+			.with_signer(signer.pair())
+			.build_signed()
 	}
 
-	fn block1_builder(signer: ed25519::Pair) -> SidechainBlockBuilder {
-		SidechainBlockBuilder::default()
-			.with_signer(signer)
-			.with_parentchain_block_hash(default_header().hash())
-			.with_number(1)
+	fn block2(signer: Keyring, parent_hash: H256) -> SignedBlock {
+		let block_data = SidechainBlockDataBuilder::default()
+			.with_signer(signer.pair())
 			.with_timestamp(0)
+			.with_layer_one_head(default_header().hash())
+			.build();
+
+		let header = SidechainHeaderBuilder::default()
+			.with_parent_hash(parent_hash)
+			.with_block_number(2)
+			.build();
+
+		SidechainBlockBuilder::default()
+			.with_header(header)
+			.with_block_data(block_data)
+			.with_signer(signer.pair())
+			.build_signed()
+	}
+
+	fn block3(signer: Keyring, parent_hash: H256, block_number: u64) -> SignedBlock {
+		let block_data = SidechainBlockDataBuilder::default()
+			.with_signer(signer.pair())
+			.with_timestamp(0)
+			.with_layer_one_head(default_header().hash())
+			.build();
+
+		let header = SidechainHeaderBuilder::default()
+			.with_parent_hash(parent_hash)
+			.with_block_number(block_number)
+			.build();
+
+		SidechainBlockBuilder::default()
+			.with_header(header)
+			.with_block_data(block_data)
+			.with_signer(signer.pair())
+			.build_signed()
 	}
 
 	#[test]
 	fn ensure_first_block_works() {
-		let b = SidechainBlockBuilder::default().build();
-		assert_ok!(ensure_first_block(&b));
+		let block = SidechainBlockBuilder::default().build();
+		assert_ok!(ensure_first_block(&block));
 	}
 
 	#[test]
 	fn ensure_first_block_errs_with_invalid_block_number() {
-		let b = SidechainBlockBuilder::default().with_number(2).build();
-		assert_matches!(ensure_first_block(&b), Err(ConsensusError::InvalidFirstBlock(2, _)))
+		let header = SidechainHeaderBuilder::default().with_block_number(2).build();
+		let block = SidechainBlockBuilder::default().with_header(header).build();
+		assert_matches!(ensure_first_block(&block), Err(ConsensusError::InvalidFirstBlock(2, _)))
 	}
 
 	#[test]
 	fn ensure_first_block_errs_with_invalid_parent_hash() {
 		let parent = H256::random();
-		let b = SidechainBlockBuilder::default().with_parent_hash(parent).build();
+		let header = SidechainHeaderBuilder::default().with_parent_hash(parent).build();
+		let block = SidechainBlockBuilder::default().with_header(header).build();
 
-		assert_matches!(ensure_first_block(&b), Err(ConsensusError::InvalidFirstBlock(_, _)));
+		assert_matches!(ensure_first_block(&block), Err(ConsensusError::InvalidFirstBlock(_, _)));
 	}
 
 	#[test]
 	fn verify_block_ancestry_works() {
 		let last_block = SidechainBlockBuilder::default().build();
-		let curr_block = SidechainBlockBuilder::default()
+		let header = SidechainHeaderBuilder::default()
 			.with_parent_hash(last_block.hash())
-			.with_number(2)
+			.with_block_number(2)
 			.build();
+		let curr_block = SidechainBlockBuilder::default().with_header(header).build();
 
 		assert_ok!(verify_block_ancestry(&curr_block, &last_block));
 	}
@@ -275,10 +325,11 @@ mod tests {
 	#[test]
 	fn verify_block_ancestry_errs_with_invalid_parent_block_number() {
 		let last_block = SidechainBlockBuilder::default().build();
-		let curr_block = SidechainBlockBuilder::default()
+		let header = SidechainHeaderBuilder::default()
 			.with_parent_hash(last_block.hash())
-			.with_number(5)
+			.with_block_number(5)
 			.build();
+		let curr_block = SidechainBlockBuilder::default().with_header(header).build();
 
 		assert_ancestry_mismatch_err(verify_block_ancestry(&curr_block, &last_block));
 	}
@@ -286,7 +337,8 @@ mod tests {
 	#[test]
 	fn verify_block_ancestry_errs_with_invalid_parent_hash() {
 		let last_block = SidechainBlockBuilder::default().build();
-		let curr_block = SidechainBlockBuilder::default().with_number(2).build();
+		let header = SidechainHeaderBuilder::default().with_block_number(2).build();
+		let curr_block = SidechainBlockBuilder::default().with_header(header).build();
 
 		assert_ancestry_mismatch_err(verify_block_ancestry(&curr_block, &last_block));
 	}
@@ -297,7 +349,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let signer = Keyring::Alice;
 
-		let curr_block = block2_builder(signer.pair(), last_block.hash()).build_signed();
+		let curr_block = block2(signer, last_block.hash());
 
 		let state_mock = StateMock { last_block: Some(last_block) };
 		let onchain_mock = OnchainMock::default()
@@ -312,7 +364,7 @@ mod tests {
 	fn verify_works_for_first_block() {
 		let signer = Keyring::Alice;
 
-		let curr_block = block1_builder(signer.pair()).build_signed();
+		let curr_block = block1(signer);
 
 		let state_mock = StateMock { last_block: None };
 		let onchain_mock = OnchainMock::default()
@@ -328,7 +380,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let signer = Keyring::Alice;
 
-		let curr_block = block2_builder(signer.pair(), last_block.hash()).build_signed();
+		let curr_block = block2(signer, last_block.hash());
 
 		let state_mock = StateMock { last_block: Some(last_block) };
 		let onchain_mock = OnchainMock::default().with_validateer_set(Some(vec![
@@ -349,7 +401,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let signer = Keyring::Alice;
 
-		let curr_block = block2_builder(signer.pair(), Default::default()).build_signed();
+		let curr_block = block2(signer, Default::default());
 
 		let state_mock = StateMock { last_block: Some(last_block) };
 		let onchain_mock = OnchainMock::default()
@@ -368,7 +420,7 @@ mod tests {
 	fn verify_errs_on_wrong_first_block() {
 		let signer = Keyring::Alice;
 
-		let curr_block = block2_builder(signer.pair(), Default::default()).build_signed();
+		let curr_block = block2(signer, Default::default());
 
 		let state_mock = StateMock { last_block: None };
 		let onchain_mock = OnchainMock::default()
@@ -389,8 +441,7 @@ mod tests {
 
 		// Current block has also number 1, same as last. So import should return an error
 		// that a block with this number is already imported.
-		let curr_block =
-			block2_builder(signer.pair(), last_block.hash()).with_number(1).build_signed();
+		let curr_block = block3(signer, last_block.hash(), 1);
 
 		let state_mock = StateMock { last_block: Some(last_block) };
 		let onchain_mock = OnchainMock::default()
@@ -415,12 +466,23 @@ mod tests {
 		let parentchain_header_1 = ParentchainHeaderBuilder::default().with_number(1).build();
 		let parentchain_header_2 = ParentchainHeaderBuilder::default().with_number(2).build();
 
-		let sidechain_block_builder = SidechainBlockBuilder::default()
-			.with_parentchain_block_hash(parentchain_header_1.hash())
-			.with_signer(signer.pair());
+		let block_data = SidechainBlockDataBuilder::default()
+			.with_layer_one_head(parentchain_header_1.hash())
+			.with_signer(signer.pair())
+			.build();
+		let last_block = SidechainBlockBuilder::default()
+			.with_block_data(block_data)
+			.with_signer(signer.pair())
+			.build();
 
-		let last_block = sidechain_block_builder.build();
-		let signed_block_to_verify = sidechain_block_builder.build_signed();
+		let block_data_for_signed_block = SidechainBlockDataBuilder::default()
+			.with_layer_one_head(parentchain_header_1.hash())
+			.with_signer(signer.pair())
+			.build();
+		let signed_block_to_verify = SidechainBlockBuilder::default()
+			.with_block_data(block_data_for_signed_block)
+			.with_signer(signer.pair())
+			.build_signed();
 
 		let state_mock = StateMock { last_block: Some(last_block) };
 		let onchain_mock = OnchainMock::default()

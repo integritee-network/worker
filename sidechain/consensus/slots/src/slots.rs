@@ -185,9 +185,12 @@ mod tests {
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
 	};
-	use its_test::sidechain_header_builder::SidechainHeaderBuilder;
-	use sp_keyring::ed25519::{ed25519, Keyring};
-	use sp_runtime::{testing::H256, traits::Header as HeaderT};
+	use its_test::{
+		sidechain_block_data_builder::SidechainBlockDataBuilder,
+		sidechain_header_builder::SidechainHeaderBuilder,
+	};
+	use sp_keyring::ed25519::Keyring;
+	use sp_runtime::traits::Header as HeaderT;
 	use std::{fmt::Debug, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
@@ -211,13 +214,7 @@ mod tests {
 	fn test_block_with_time_stamp(timestamp: u64) -> SignedBlock {
 		let header = SidechainHeaderBuilder::default().build();
 
-		let block_data = BlockData::new(
-			ed25519::Public([0; 32]),
-			H256::random(),
-			Default::default(),
-			Default::default(),
-			timestamp,
-		);
+		let block_data = SidechainBlockDataBuilder::default().with_timestamp(timestamp).build();
 
 		Block::new(header, block_data).sign_block(&Keyring::Alice.pair())
 	}
