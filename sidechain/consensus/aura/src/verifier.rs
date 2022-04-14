@@ -221,7 +221,7 @@ mod tests {
 		builders::parentchain_header_builder::ParentchainHeaderBuilder,
 		mock::onchain_mock::OnchainMock,
 	};
-	use its_primitives::types::SignedBlock;
+	use its_primitives::types::{header::Header, SignedBlock};
 	use its_test::{
 		sidechain_block_builder::SidechainBlockBuilder,
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
@@ -234,14 +234,12 @@ mod tests {
 		assert_matches!(result, Err(ConsensusError::BlockAncestryMismatch(_, _, _,)))
 	}
 
-	fn block1(signer: Keyring) -> SignedBlock {
+	fn block(signer: Keyring, header: Header) -> SignedBlock {
 		let block_data = SidechainBlockDataBuilder::default()
 			.with_signer(signer.pair())
 			.with_timestamp(0)
 			.with_layer_one_head(default_header().hash())
 			.build();
-
-		let header = SidechainHeaderBuilder::default().with_block_number(1).build();
 
 		SidechainBlockBuilder::default()
 			.with_header(header)
@@ -250,42 +248,28 @@ mod tests {
 			.build_signed()
 	}
 
-	fn block2(signer: Keyring, parent_hash: H256) -> SignedBlock {
-		let block_data = SidechainBlockDataBuilder::default()
-			.with_signer(signer.pair())
-			.with_timestamp(0)
-			.with_layer_one_head(default_header().hash())
-			.build();
+	fn block1(signer: Keyring) -> SignedBlock {
+		let header = SidechainHeaderBuilder::default().with_block_number(1).build();
 
+		block(signer, header)
+	}
+
+	fn block2(signer: Keyring, parent_hash: H256) -> SignedBlock {
 		let header = SidechainHeaderBuilder::default()
 			.with_parent_hash(parent_hash)
 			.with_block_number(2)
 			.build();
 
-		SidechainBlockBuilder::default()
-			.with_header(header)
-			.with_block_data(block_data)
-			.with_signer(signer.pair())
-			.build_signed()
+		block(signer, header)
 	}
 
 	fn block3(signer: Keyring, parent_hash: H256, block_number: u64) -> SignedBlock {
-		let block_data = SidechainBlockDataBuilder::default()
-			.with_signer(signer.pair())
-			.with_timestamp(0)
-			.with_layer_one_head(default_header().hash())
-			.build();
-
 		let header = SidechainHeaderBuilder::default()
 			.with_parent_hash(parent_hash)
 			.with_block_number(block_number)
 			.build();
 
-		SidechainBlockBuilder::default()
-			.with_header(header)
-			.with_block_data(block_data)
-			.with_signer(signer.pair())
-			.build_signed()
+		block(signer, header)
 	}
 
 	#[test]
