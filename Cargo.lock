@@ -3080,6 +3080,7 @@ dependencies = [
 name = "its-storage"
 version = "0.8.0"
 dependencies = [
+ "itp-time-utils",
  "itp-types",
  "its-primitives",
  "its-test",

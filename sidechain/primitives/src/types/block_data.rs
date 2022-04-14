@@ -31,7 +31,7 @@ pub struct BlockData {
 	pub timestamp: u64,
 	/// Parentchain header this block is based on.
 	pub layer_one_head: H256,
-	///  Must be registered on layer one as an enclave for the respective shard.
+	/// Must be registered on layer one as an enclave for the respective shard.
 	pub block_author: ed25519::Public,
 	/// Hashes of signed trusted operations.
 	pub signed_top_hashes: Vec<H256>,

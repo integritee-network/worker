@@ -18,7 +18,6 @@
 
 //! Builder pattern for sidechain block data.
 
-use codec::Encode;
 use itp_time_utils;
 use itp_types::H256;
 use its_primitives::types::{
@@ -26,7 +25,6 @@ use its_primitives::types::{
 	block_data::BlockData,
 };
 use sp_core::{ed25519, Pair};
-use sp_runtime::traits::{BlakeTwo256, Hash};
 
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
@@ -87,25 +85,13 @@ impl SidechainBlockDataBuilder {
 		self
 	}
 
-	/// Calculate the payload of a sidechain block.
-	pub fn block_data_hash(&self) -> H256 {
-		(
-			self.timestamp,
-			self.layer_one_head,
-			self.signer.public(),
-			self.signed_top_hashes.as_slice(),
-			self.encrypted_state_diff.as_slice(),
-		)
-			.using_encoded(BlakeTwo256::hash)
-	}
-
-	pub fn build(&self) -> BlockData {
+	pub fn build(self) -> BlockData {
 		BlockData {
 			timestamp: self.timestamp,
 			block_author: self.signer.public(),
 			layer_one_head: self.layer_one_head,
-			signed_top_hashes: self.signed_top_hashes.clone(),
-			encrypted_state_diff: self.encrypted_state_diff.clone(),
+			signed_top_hashes: self.signed_top_hashes,
+			encrypted_state_diff: self.encrypted_state_diff,
 		}
 	}
 }

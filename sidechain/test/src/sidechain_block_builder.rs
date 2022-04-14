@@ -35,7 +35,7 @@ type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
 
 pub struct SidechainBlockBuilder {
-	signer: Option<ed25519::Pair>,
+	signer: ed25519::Pair,
 	header: Header,
 	block_data: BlockData,
 }
@@ -43,7 +43,7 @@ pub struct SidechainBlockBuilder {
 impl Default for SidechainBlockBuilder {
 	fn default() -> Self {
 		SidechainBlockBuilder {
-			signer: Some(Pair::from_seed(&ENCLAVE_SEED)),
+			signer: Pair::from_seed(&ENCLAVE_SEED),
 			header: SidechainHeaderBuilder::default().build(),
 			block_data: SidechainBlockDataBuilder::default().build(),
 		}
@@ -53,7 +53,7 @@ impl Default for SidechainBlockBuilder {
 impl SidechainBlockBuilder {
 	pub fn random() -> Self {
 		SidechainBlockBuilder {
-			signer: Some(Pair::from_seed(&ENCLAVE_SEED)),
+			signer: Pair::from_seed(&ENCLAVE_SEED),
 			header: SidechainHeaderBuilder::random().build(),
 			block_data: SidechainBlockDataBuilder::random().build(),
 		}
@@ -70,7 +70,7 @@ impl SidechainBlockBuilder {
 	}
 
 	pub fn with_signer(mut self, signer: ed25519::Pair) -> Self {
-		self.signer = Some(signer);
+		self.signer = signer;
 		self
 	}
 
@@ -84,10 +84,7 @@ impl SidechainBlockBuilder {
 	}
 
 	pub fn build_signed(self) -> SignedBlock {
-		let signer = match &self.signer {
-			Some(signer) => signer.clone(),
-			None => Pair::from_seed(&ENCLAVE_SEED),
-		};
+		let signer = self.signer.clone();
 		self.build().sign_block(&signer)
 	}
 }

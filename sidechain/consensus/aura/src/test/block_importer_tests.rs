@@ -28,7 +28,7 @@ use itp_test::{
 	},
 	mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
 };
-use itp_time_utils::duration_now;
+use itp_time_utils::{duration_now, now_as_u64};
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
 use its_primitives::{
@@ -126,7 +126,7 @@ fn signed_block(
 		.build();
 
 	let block_data = SidechainBlockDataBuilder::default()
-		.with_timestamp(duration_now().as_millis() as u64)
+		.with_timestamp(now_as_u64())
 		.with_layer_one_head(parentchain_header.hash())
 		.with_signer(signer.clone())
 		.with_payload(state_update)

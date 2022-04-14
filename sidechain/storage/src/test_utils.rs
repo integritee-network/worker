@@ -16,6 +16,7 @@
 */
 
 use crate::storage::SidechainStorage;
+use itp_time_utils::now_as_u64;
 use itp_types::ShardIdentifier;
 use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
 use its_test::{
@@ -24,11 +25,7 @@ use its_test::{
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
 use sp_core::{crypto::Pair, ed25519, H256};
-use std::{
-	path::PathBuf,
-	time::{SystemTime, UNIX_EPOCH},
-	vec::Vec,
-};
+use std::{path::PathBuf, vec::Vec};
 use temp_dir::TempDir;
 
 pub fn fill_storage_with_blocks(blocks: Vec<SignedSidechainBlock>) -> TempDir {
@@ -93,7 +90,7 @@ fn default_header_builder() -> SidechainHeaderBuilder {
 
 fn default_block_data_builder() -> SidechainBlockDataBuilder {
 	SidechainBlockDataBuilder::default()
-		.with_timestamp(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64)
+		.with_timestamp(now_as_u64())
 		.with_layer_one_head(H256::random())
 		.with_signer(ed25519::Pair::from_string("//Alice", None).unwrap())
 }

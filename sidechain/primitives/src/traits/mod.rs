@@ -26,7 +26,7 @@ use sp_core::{blake2_256, Pair, Public, H256};
 use sp_runtime::traits::Member;
 use sp_std::{fmt::Debug, prelude::*};
 
-pub trait Header: Encode + Decode {
+pub trait Header: Encode + Decode + Clone {
 	/// Identifier for the shards.
 	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
 

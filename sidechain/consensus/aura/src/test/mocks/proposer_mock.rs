@@ -36,10 +36,10 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 	) -> Result<Proposal<SignedSidechainBlock>, ConsensusError> {
 		Ok(Proposal {
 			block: {
-				let header = SidechainBlockDataBuilder::random()
+				let block_data = SidechainBlockDataBuilder::random()
 					.with_layer_one_head(self.parentchain_header.hash())
 					.build();
-				SidechainBlockBuilder::random().with_block_data(header).build_signed()
+				SidechainBlockBuilder::random().with_block_data(block_data).build_signed()
 			},
 
 			parentchain_effects: Default::default(),

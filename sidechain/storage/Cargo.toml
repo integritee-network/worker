@@ -25,6 +25,7 @@ temp-dir = "0.1"
 # local
 itp-types = { path = "../../core-primitives/types" }
 its-test = { path = "../test" }
+itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 
 [features]
 mocks = []
