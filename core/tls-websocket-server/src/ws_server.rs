@@ -252,12 +252,13 @@ mod tests {
 		fixtures::test_server_config_provider::TestServerConfigProvider,
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
-	use core::time::Duration;
 	use std::thread;
+	use tungstenite::{client::connect as client_connect, Message};
+	use url::Url;
 
 	#[test]
 	fn server_handles_multiple_connections() {
-		let _ = env_logger::builder().is_test(true).try_init();
+		let _ = env_logger::builder().is_test(false).try_init();
 
 		let config_provider = Arc::new(TestServerConfigProvider {});
 		let handler = Arc::new(WebSocketHandlerMock::new(None));
@@ -265,18 +266,40 @@ mod tests {
 		let server = Arc::new(TungsteniteWsServer::new(
 			"127.0.0.1:6677".to_string(),
 			config_provider,
-			handler,
+			handler.clone(),
 		));
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
-		thread::sleep(Duration::from_millis(100));
+		// thread::sleep(std::time::Duration::from_millis(100));
+		//
+		// let client_handles: Vec<_> = (0..6)
+		// 	.map(|_| {
+		// 		thread::spawn(|| {
+		// 			let (mut socket, response) =
+		// 				client_connect(Url::parse("wss://127.0.0.1:6677").unwrap())
+		// 					.expect("Can't connect");
+		//
+		// 			socket
+		// 				.write_message(Message::Text("Hello WebSocket".into()))
+		// 				.expect("client write message to be successful");
+		// 		})
+		// 	})
+		// 	.collect();
+		//
+		// for handle in client_handles.into_iter() {
+		// 	handle.join().expect("client handle to be joined");
+		// }
+
 		server.shut_down().unwrap();
 
-		let server_shutdown_result = server_join_handle.join().unwrap();
+		let server_shutdown_result =
+			server_join_handle.join().expect("Couldn't join on the associated thread");
 		if let Err(e) = server_shutdown_result {
 			panic!("Test failed, web-socket returned error: {:?}", e);
 		}
+
+		assert_eq!(6, handler.get_handled_messages().len());
 	}
 }

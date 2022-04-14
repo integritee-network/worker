@@ -34,6 +34,10 @@ impl WebSocketHandlerMock {
 	pub fn new(response: Option<String>) -> Self {
 		WebSocketHandlerMock { response, messages_handled: Default::default() }
 	}
+
+	pub fn get_handled_messages(&self) -> Vec<(Token, String)> {
+		self.messages_handled.read().unwrap().clone()
+	}
 }
 
 impl WebSocketHandler for WebSocketHandlerMock {
