@@ -43,8 +43,10 @@ pub enum WebSocketError {
 	SocketWriteError(String),
 	#[error("Lock poisoning")]
 	LockPoisoning,
+	#[error("Failed to receive server signal message: {0}")]
+	MioReceiveError(#[from] std::sync::mpsc::TryRecvError),
 	#[error("I/O error: {0}")]
 	IoError(#[from] std::io::Error),
-	#[error("Web-socket handler error: {0}")]
-	HandlerError(Box<dyn std::error::Error + Sync + Send + 'static>),
+	#[error("General web-socket error: {0}")]
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

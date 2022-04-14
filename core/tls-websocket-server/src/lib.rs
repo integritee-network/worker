@@ -16,10 +16,13 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// Because we need mio channel, but mio-extras is not ported to SGX!
+#![allow(deprecated)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -37,7 +40,7 @@ pub mod sgx_reexport_prelude {
 use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	connection::TungsteniteWsConnection,
+	config_provider::FromFileConfigProvider,
 	connection_id_generator::{ConnectionId, ConnectionIdGenerator},
 	error::WebSocketResult,
 	ws_server::TungsteniteWsServer,
@@ -51,10 +54,9 @@ use std::{
 use tungstenite::Message;
 
 mod common;
+mod config_provider;
 pub mod connection;
 pub mod connection_id_generator;
-mod connection_processor;
-pub mod connection_registry;
 pub mod error;
 mod ws_server;
 
@@ -79,14 +81,10 @@ pub trait WebSocketConnection: Send + Sync {
 }
 
 /// Handles a web-socket connection
-pub trait WebSocketHandler {
-	type Connection: WebSocketConnection;
-
-	fn handle(&self, connection: Self::Connection) -> WebSocketResult<()>;
-
+pub trait WebSocketHandler: Send + Sync {
 	fn handle_message(
 		&self,
-		connection_id: ConnectionId,
+		connection_token: Token,
 		message: String,
 	) -> WebSocketResult<Option<String>>;
 }
@@ -95,23 +93,21 @@ pub trait WebSocketHandler {
 pub trait WebSocketServer {
 	type Connection;
 
-	fn run<Handler>(&mut self, handler: Arc<Handler>) -> WebSocketResult<()>
-	where
-		Handler: WebSocketHandler<Connection = Self::Connection>;
+	fn run(&self) -> WebSocketResult<()>;
+
+	fn shut_down(&self) -> WebSocketResult<()>;
 }
 
 pub fn run_ws_server<Handler>(addr_plain: &str, handler: Arc<Handler>)
 where
-	Handler: WebSocketHandler<Connection = TungsteniteWsConnection>,
+	Handler: WebSocketHandler,
 {
-	let cert = "end.fullchain".to_string();
-	let key = "end.rsa".to_string();
+	let config_provider =
+		Arc::new(FromFileConfigProvider::new("end.rsa".to_string(), "end.fullchain".to_string()));
+	let web_socket_server =
+		TungsteniteWsServer::new(addr_plain.to_string(), config_provider, handler);
 
-	let id_generator = Arc::new(ConnectionIdGenerator::default());
-	let mut web_socket_server =
-		TungsteniteWsServer::new(addr_plain.to_string(), cert, key, id_generator);
-
-	match web_socket_server.run(handler) {
+	match web_socket_server.run() {
 		Ok(()) => {},
 		Err(e) => {
 			error!("Web socket server encountered an unexpected error: {:?}", e)

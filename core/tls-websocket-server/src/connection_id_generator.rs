@@ -30,9 +30,14 @@ pub trait GenerateConnectionId {
 	fn next_id(&self) -> WebSocketResult<ConnectionId>;
 }
 
-#[derive(Default)]
 pub struct ConnectionIdGenerator {
 	current_id: RwLock<ConnectionId>,
+}
+
+impl Default for ConnectionIdGenerator {
+	fn default() -> Self {
+		Self { current_id: RwLock::new(10) }
+	}
 }
 
 impl GenerateConnectionId for ConnectionIdGenerator {
@@ -51,8 +56,8 @@ mod tests {
 	fn next_id_works() {
 		let id_generator = ConnectionIdGenerator::default();
 
-		assert_eq!(1, id_generator.next_id().unwrap());
-		assert_eq!(2, id_generator.next_id().unwrap());
-		assert_eq!(3, id_generator.next_id().unwrap());
+		assert_eq!(11, id_generator.next_id().unwrap());
+		assert_eq!(12, id_generator.next_id().unwrap());
+		assert_eq!(13, id_generator.next_id().unwrap());
 	}
 }

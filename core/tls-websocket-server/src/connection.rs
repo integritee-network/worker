@@ -18,36 +18,47 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::WebSocketError, WebSocketConnection, WebSocketResult};
+use crate::{error::WebSocketError, WebSocketConnection, WebSocketHandler, WebSocketResult};
 use log::*;
 use mio::{net::TcpStream, Token};
 use rustls::{ServerSession, Session};
-use std::{format, string::String};
+use std::{format, string::String, sync::Arc};
 use tungstenite::{accept, Message, WebSocket};
 
 type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;
 type RustlsWebSocket = WebSocket<RustlsStream>;
 
-pub struct TungsteniteWsConnection {
+pub struct TungsteniteWsConnection<Handler> {
 	web_socket: RustlsWebSocket,
 	connection_token: Token,
+	connection_handler: Arc<Handler>,
+	is_closed: bool,
 }
 
-impl TungsteniteWsConnection {
+impl<Handler> TungsteniteWsConnection<Handler>
+where
+	Handler: WebSocketHandler,
+{
 	pub fn connect(
 		tcp_stream: TcpStream,
 		server_session: ServerSession,
 		connection_token: Token,
-	) -> WebSocketResult<TungsteniteWsConnection> {
+		handler: Arc<Handler>,
+	) -> WebSocketResult<Self> {
 		let tls_stream = rustls::StreamOwned::new(server_session, tcp_stream);
 		let web_socket = accept(tls_stream).map_err(|_| WebSocketError::HandShakeError)?;
 
-		Ok(TungsteniteWsConnection { web_socket, connection_token })
+		Ok(TungsteniteWsConnection {
+			web_socket,
+			connection_token,
+			connection_handler: handler,
+			is_closed: false,
+		})
 	}
 
 	pub fn register(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
 		poll.register(
-			self.web_socket.get_ref(),
+			&self.web_socket.get_ref().sock,
 			self.connection_token,
 			self.event_set(),
 			mio::PollOpt::level() | mio::PollOpt::oneshot(),
@@ -58,7 +69,7 @@ impl TungsteniteWsConnection {
 
 	/// What IO events we're currently waiting for,
 	/// based on wants_read/wants_write.
-	fn event_set(&self) -> mio::Ready {
+	pub fn event_set(&self) -> mio::Ready {
 		let wants_read = self.web_socket.get_ref().sess.wants_read();
 		let wants_write = self.web_socket.get_ref().sess.wants_write();
 
@@ -72,41 +83,54 @@ impl TungsteniteWsConnection {
 	}
 
 	/// We're a connection, and we have something to do.
-	fn ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) {
-		// If we're readable: read some TLS.  Then
-		// see if that yielded new plaintext.  Then
-		// see if the backend is readable too.
+	pub fn ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) -> WebSocketResult<()> {
+		let mut is_closing = false;
+
 		if ev.readiness().is_readable() {
-
-			self.web_socket.read_message()
-
-			self.do_tls_read();
-			self.try_plain_read();
-			self.try_back_read();
+			match self.web_socket.read_message() {
+				Ok(m) =>
+					if let Err(e) = self.handle_message(m) {
+						error!("Failed to handle web-socket message: {:?}", e);
+					},
+				Err(e) => match e {
+					tungstenite::Error::ConnectionClosed => is_closing = true,
+					_ => error!("Failed to read message from web-socket: {:?}", e),
+				},
+			}
 		}
 
 		if ev.readiness().is_writable() {
-			self.do_tls_write();
-		}
-
-		if self.closing {
-			let _ = self.socket.shutdown(Shutdown::Both);
-			self.close_back();
-			self.closed = true;
-		} else {
-			self.reregister(poll);
-		}
-	}
-
-	fn read_next_message(&mut self) -> WebSocketResult<String> {
-		// loop until we have a Message::Text
-		loop {
-			let message =
-				self.web_socket.read_message().map_err(|_| WebSocketError::ConnectionClosed)?;
-			if let Message::Text(s) = message {
-				return Ok(s)
+			if let Err(e) = self.web_socket.write_pending() {
+				match e {
+					tungstenite::Error::ConnectionClosed => is_closing = true,
+					_ => error!("Failed to write pending web-socket messages: {:?}", e),
+				}
 			}
 		}
+
+		if is_closing {
+			debug!("Connection ({:?}) is closed", self.connection_token);
+			self.is_closed = true;
+		} else {
+			// Re-register with the poll.
+			self.register(poll)?;
+		}
+		Ok(())
+	}
+
+	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
+		if let Message::Text(string_message) = message {
+			debug!("Got Message::Text on web-socket, calling handler..");
+			if let Some(reply) =
+				self.connection_handler.handle_message(self.connection_token, string_message)?
+			{
+				debug!("Handling message yielded a reply, sending it now..");
+				self.write_message(reply)?;
+				debug!("Reply sent successfully");
+			}
+			debug!("Successfully handled web-socket message");
+		}
+		Ok(())
 	}
 
 	fn write_message(&mut self, message: String) -> WebSocketResult<()> {
@@ -118,9 +142,16 @@ impl TungsteniteWsConnection {
 			.write_message(Message::Text(message))
 			.map_err(|e| WebSocketError::SocketWriteError(format!("{:?}", e)))
 	}
+
+	pub fn is_closed(&self) -> bool {
+		self.is_closed
+	}
 }
 
-impl WebSocketConnection for TungsteniteWsConnection {
+impl<Handler> WebSocketConnection for TungsteniteWsConnection<Handler>
+where
+	Handler: WebSocketHandler,
+{
 	fn id(&self) -> Token {
 		self.connection_token
 	}
@@ -139,7 +170,7 @@ impl WebSocketConnection for TungsteniteWsConnection {
 	{
 		debug!("processing web socket request");
 
-		let request = self.read_next_message()?;
+		let request = String::default(); //self.read_next_message()?;
 
 		let response = (initial_call)(request.as_str());
 

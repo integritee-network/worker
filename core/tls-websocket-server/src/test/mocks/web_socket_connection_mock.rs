@@ -16,24 +16,24 @@
 */
 
 use crate::{
-	connection_id_generator::ConnectionId,
 	error::{WebSocketError, WebSocketResult},
 	WebSocketConnection,
 };
+use mio::Token;
 use std::vec::Vec;
 use tungstenite::Message;
 
 /// Mock implementation of a web socket connection.
-#[derive(PartialEq, Eq, Hash, Default, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub(crate) struct WebSocketConnectionMock {
-	pub id: ConnectionId,
+	pub id: Token,
 	pub messages_to_read: Vec<Message>,
 	pub messages_written: Vec<Message>,
 	pub is_closed: bool,
 }
 
 impl WebSocketConnectionMock {
-	pub fn new(id: ConnectionId) -> Self {
+	pub fn new(id: Token) -> Self {
 		WebSocketConnectionMock {
 			id,
 			messages_to_read: Default::default(),
