@@ -293,7 +293,9 @@ mod tests {
 
 		thread::sleep(std::time::Duration::from_millis(100));
 
-		let client_handles: Vec<_> = (0..1)
+		let number_of_connections = 6usize;
+
+		let client_handles: Vec<_> = (0..number_of_connections)
 			.map(|_| {
 				let server_addr_str_clone = "localhost:21777".to_string();
 
@@ -318,7 +320,7 @@ mod tests {
 			panic!("Test failed, web-socket returned error: {:?}", e);
 		}
 
-		assert_eq!(6, handler.get_handled_messages().len());
+		assert_eq!(number_of_connections, handler.get_handled_messages().len());
 	}
 
 	fn connect_tls_client(server_addr: &str) -> WebSocket<MaybeTlsStream<TcpStream>> {
