@@ -22,6 +22,7 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{WebSocketHandler, WebSocketResult};
+use log::debug;
 use mio::Token;
 use std::{string::String, vec::Vec};
 
@@ -48,6 +49,7 @@ impl WebSocketHandler for WebSocketHandlerMock {
 	) -> WebSocketResult<Option<String>> {
 		let mut handled_messages_lock = self.messages_handled.write().unwrap();
 
+		debug!("Handling message: {}", message);
 		handled_messages_lock.push((connection_token, message));
 
 		Ok(self.response.clone())

@@ -258,11 +258,17 @@ pub(crate) enum ServerSignal {
 mod tests {
 	use super::*;
 	use crate::test::{
-		fixtures::test_server_config_provider::TestServerConfigProvider,
+		fixtures::{
+			no_cert_verifier::NoCertVerifier, test_server_config_provider::TestServerConfigProvider,
+		},
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
-	use std::thread;
-	use tungstenite::{client::connect as client_connect, Message};
+	use rustls::ClientConfig;
+	use std::{net::TcpStream, thread};
+	use tungstenite::{
+		client::connect as client_connect, client_tls_with_config, stream::MaybeTlsStream,
+		Connector, Message, WebSocket,
+	};
 	use url::Url;
 
 	#[test]
@@ -270,10 +276,14 @@ mod tests {
 		let _ = env_logger::builder().is_test(false).try_init();
 
 		let config_provider = Arc::new(TestServerConfigProvider {});
-		let handler = Arc::new(WebSocketHandlerMock::new(None));
+		let handler = Arc::new(WebSocketHandlerMock::new(Some(
+			"websocket server response bidibibup".to_string(),
+		)));
+
+		let server_addr_string: String = "127.0.0.1:21777".to_string();
 
 		let server = Arc::new(TungsteniteWsServer::new(
-			"127.0.0.1:21777".to_string(),
+			server_addr_string.clone(),
 			config_provider,
 			handler.clone(),
 		));
@@ -283,25 +293,24 @@ mod tests {
 
 		thread::sleep(std::time::Duration::from_millis(100));
 
-		// let client_handles: Vec<_> = (0..1)
-		// 	.map(|_| {
-		// 		thread::spawn(|| {
-		// 			let (mut socket, response) =
-		// 				client_connect(Url::parse("wss://127.0.0.1:6677").unwrap())
-		// 					.expect("Can't connect");
-		//
-		// 			socket
-		// 				.write_message(Message::Text("Hello WebSocket".into()))
-		// 				.expect("client write message to be successful");
-		// 		})
-		// 	})
-		// 	.collect();
-		//
-		// for handle in client_handles.into_iter() {
-		// 	handle.join().expect("client handle to be joined");
-		// }
-		//
-		// server.shut_down().unwrap();
+		let client_handles: Vec<_> = (0..1)
+			.map(|_| {
+				let server_addr_str_clone = "localhost:21777".to_string();
+
+				thread::spawn(move || {
+					let mut socket = connect_tls_client(server_addr_str_clone.as_str());
+					socket
+						.write_message(Message::Text("Hello WebSocket".into()))
+						.expect("client write message to be successful");
+				})
+			})
+			.collect();
+
+		for handle in client_handles.into_iter() {
+			handle.join().expect("client handle to be joined");
+		}
+
+		server.shut_down().unwrap();
 
 		let server_shutdown_result =
 			server_join_handle.join().expect("Couldn't join on the associated thread");
@@ -310,5 +319,30 @@ mod tests {
 		}
 
 		assert_eq!(6, handler.get_handled_messages().len());
+	}
+
+	fn connect_tls_client(server_addr: &str) -> WebSocket<MaybeTlsStream<TcpStream>> {
+		let ws_server_url = Url::parse(format!("wss://{}", server_addr).as_str()).unwrap();
+
+		let mut config = ClientConfig::new();
+		config.dangerous().set_certificate_verifier(Arc::new(NoCertVerifier {}));
+		let connector = Connector::Rustls(Arc::new(config));
+		let stream = TcpStream::connect(server_addr).unwrap();
+
+		let (mut socket, _response) =
+			client_tls_with_config(ws_server_url, stream, None, Some(connector))
+				.expect("Can't connect");
+
+		socket
+	}
+
+	#[test]
+	#[ignore]
+	fn client_test() {
+		let mut socket = connect_tls_client("ws.ifelse.io:443");
+
+		socket
+			.write_message(Message::Text("Hello WebSocket".into()))
+			.expect("client write message to be successful");
 	}
 }
