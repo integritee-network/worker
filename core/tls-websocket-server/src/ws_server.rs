@@ -88,6 +88,7 @@ where
 		let tls_session = rustls::ServerSession::new(&tls_config);
 		let connection_id = self.id_generator.next_id()?;
 		let token = mio::Token(connection_id);
+		debug!("New connection has token {:?}", token);
 
 		let mut web_socket_connection = TungsteniteWsConnection::connect(
 			socket,
@@ -95,12 +96,15 @@ where
 			token,
 			self.connection_handler.clone(),
 		)?;
+
+		debug!("Web-socket connection created");
 		web_socket_connection.register(poll)?;
 
 		let mut connections_lock =
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		connections_lock.insert(token, web_socket_connection);
 
+		debug!("Successfully accepted connection");
 		Ok(())
 	}
 
@@ -118,6 +122,7 @@ where
 			connection.ready(poll, event)?;
 
 			if connection.is_closed() {
+				debug!("Connection {:?} is closed, removing", token);
 				connections_lock.remove(&token);
 			}
 		}
@@ -199,6 +204,7 @@ where
 			for event in events.iter() {
 				match event.token() {
 					NEW_CONNECTIONS_LISTENER => {
+						debug!("Received new connection event");
 						if let Err(e) =
 							self.accept_connection(&mut poll, &mut tcp_listener, config.clone())
 						{
@@ -206,14 +212,17 @@ where
 						}
 					},
 					SERVER_SIGNAL_TOKEN => {
+						debug!("Received server signal event");
 						if self.handle_server_signal(&mut poll, &event, &mut shutdown_receiver)? {
 							break 'outer_event_loop
 						}
 					},
-					_ =>
+					_ => {
+						debug!("Connection (token {:?}) activity event", event.token());
 						if let Err(e) = self.connection_event(&mut poll, &event) {
 							error!("Failed to process connection event: {:?}", e);
-						},
+						}
+					},
 				}
 			}
 		}
@@ -264,7 +273,7 @@ mod tests {
 		let handler = Arc::new(WebSocketHandlerMock::new(None));
 
 		let server = Arc::new(TungsteniteWsServer::new(
-			"127.0.0.1:6677".to_string(),
+			"127.0.0.1:21777".to_string(),
 			config_provider,
 			handler.clone(),
 		));
@@ -272,9 +281,9 @@ mod tests {
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
-		// thread::sleep(std::time::Duration::from_millis(100));
-		//
-		// let client_handles: Vec<_> = (0..6)
+		thread::sleep(std::time::Duration::from_millis(100));
+
+		// let client_handles: Vec<_> = (0..1)
 		// 	.map(|_| {
 		// 		thread::spawn(|| {
 		// 			let (mut socket, response) =
@@ -291,8 +300,8 @@ mod tests {
 		// for handle in client_handles.into_iter() {
 		// 	handle.join().expect("client handle to be joined");
 		// }
-
-		server.shut_down().unwrap();
+		//
+		// server.shut_down().unwrap();
 
 		let server_shutdown_result =
 			server_join_handle.join().expect("Couldn't join on the associated thread");

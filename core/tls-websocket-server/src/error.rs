@@ -32,7 +32,7 @@ pub enum WebSocketError {
 	#[error("TCP bind error: {0}")]
 	TcpBindError(IoError),
 	#[error("Web-socket hand shake error")]
-	HandShakeError,
+	HandShakeError(String),
 	#[error("{0} is not a valid and active web-socket connection id")]
 	InvalidConnection(ConnectionId),
 	#[error("Web-socket connection already closed error")]
