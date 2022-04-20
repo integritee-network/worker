@@ -22,14 +22,11 @@ use crate::{
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
-use codec::Encode;
-use itp_types::H256;
 use its_primitives::{
 	traits::SignBlock,
 	types::{block_data::BlockData, header::Header, Block, SignedBlock},
 };
 use sp_core::{ed25519, Pair};
-use sp_runtime::traits::{BlakeTwo256, Hash};
 
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
@@ -72,11 +69,6 @@ impl SidechainBlockBuilder {
 	pub fn with_signer(mut self, signer: ed25519::Pair) -> Self {
 		self.signer = signer;
 		self
-	}
-
-	/// Calculate the payload of a sidechain block.
-	pub fn block_data_hash(&self) -> H256 {
-		self.block_data.using_encoded(BlakeTwo256::hash)
 	}
 
 	pub fn build(self) -> Block {
