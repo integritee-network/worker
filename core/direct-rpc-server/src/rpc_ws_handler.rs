@@ -23,7 +23,7 @@ extern crate alloc;
 use crate::{DetermineWatch, DirectRpcError, RpcConnectionRegistry, RpcHash};
 use alloc::boxed::Box;
 use itc_tls_websocket_server::{
-	WebSocketConnection, WebSocketError, WebSocketHandler, WebSocketResult,
+	WebSocketConnection, WebSocketError, WebSocketMessageHandler, WebSocketResult,
 };
 use jsonrpc_core::IoHandler;
 use log::*;
@@ -57,7 +57,7 @@ where
 	}
 }
 
-impl<Watcher, Registry, Hash, Connection> WebSocketHandler
+impl<Watcher, Registry, Hash, Connection> WebSocketMessageHandler
 	for RpcWsHandler<Watcher, Registry, Hash, Connection>
 where
 	Watcher: DetermineWatch<Hash = Hash>,

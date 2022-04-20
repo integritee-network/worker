@@ -21,7 +21,7 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{WebSocketHandler, WebSocketResult};
+use crate::{WebSocketMessageHandler, WebSocketResult};
 use log::debug;
 use mio::Token;
 use std::{string::String, vec::Vec};
@@ -41,7 +41,7 @@ impl WebSocketHandlerMock {
 	}
 }
 
-impl WebSocketHandler for WebSocketHandlerMock {
+impl WebSocketMessageHandler for WebSocketHandlerMock {
 	fn handle_message(
 		&self,
 		connection_token: Token,

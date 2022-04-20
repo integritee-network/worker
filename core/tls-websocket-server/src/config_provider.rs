@@ -20,7 +20,7 @@ use rustls::ServerConfig;
 use std::{string::String, sync::Arc};
 
 /// Trait to provide a Rustls server config.
-pub(crate) trait ProvideServerConfig {
+pub(crate) trait ProvideServerConfig: Send + Sync {
 	fn get_config(&self) -> WebSocketResult<Arc<rustls::ServerConfig>>;
 }
 

@@ -22,6 +22,7 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -61,8 +62,31 @@ mod ws_server;
 #[cfg(test)]
 mod test;
 
+/// Handles a web-socket connection message.
+pub trait WebSocketMessageHandler: Send + Sync {
+	fn handle_message(
+		&self,
+		connection_token: Token,
+		message: String,
+	) -> WebSocketResult<Option<String>>;
+}
+
+/// Allows to send response messages to a specific connection.
+pub trait WebSocketResponder: Send + Sync {
+	fn send_message(&self, connection_token: Token, message: String) -> WebSocketResult<()>;
+}
+
+/// Run a web-socket server with a given handler.
+pub trait WebSocketServer {
+	type Connection;
+
+	fn run(&self) -> WebSocketResult<()>;
+
+	fn shut_down(&self) -> WebSocketResult<()>;
+}
+
 /// Abstraction of a web socket connection using mio.
-pub trait WebSocketConnection: Send + Sync {
+pub(crate) trait WebSocketConnection: Send + Sync {
 	/// Socket type, typically a TCP stream.
 	type Socket: Evented;
 
@@ -107,27 +131,9 @@ pub trait WebSocketConnection: Send + Sync {
 	}
 }
 
-/// Handles a web-socket connection
-pub trait WebSocketHandler: Send + Sync {
-	fn handle_message(
-		&self,
-		connection_token: Token,
-		message: String,
-	) -> WebSocketResult<Option<String>>;
-}
-
-/// Run a web-socket server with a given handler
-pub trait WebSocketServer {
-	type Connection;
-
-	fn run(&self) -> WebSocketResult<()>;
-
-	fn shut_down(&self) -> WebSocketResult<()>;
-}
-
 pub fn run_ws_server<Handler>(addr_plain: &str, handler: Arc<Handler>)
 where
-	Handler: WebSocketHandler,
+	Handler: WebSocketMessageHandler,
 {
 	let config_provider =
 		Arc::new(FromFileConfigProvider::new("end.rsa".to_string(), "end.fullchain".to_string()));

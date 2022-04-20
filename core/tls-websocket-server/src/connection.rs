@@ -18,7 +18,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::WebSocketError, WebSocketConnection, WebSocketHandler, WebSocketResult};
+use crate::{error::WebSocketError, WebSocketConnection, WebSocketMessageHandler, WebSocketResult};
 use log::*;
 use mio::{net::TcpStream, Event, Poll, Ready, Token};
 use rustls::{ServerSession, Session};
@@ -39,7 +39,7 @@ pub struct TungsteniteWsConnection<Handler> {
 
 impl<Handler> TungsteniteWsConnection<Handler>
 where
-	Handler: WebSocketHandler,
+	Handler: WebSocketMessageHandler,
 {
 	pub fn new(
 		tcp_stream: TcpStream,
@@ -168,7 +168,7 @@ where
 		Ok(())
 	}
 
-	fn write_message(&mut self, message: String) -> WebSocketResult<()> {
+	pub(crate) fn write_message(&mut self, message: String) -> WebSocketResult<()> {
 		match self.web_socket.as_mut() {
 			Some(web_socket) => {
 				if !web_socket.can_write() {
@@ -187,7 +187,7 @@ where
 
 impl<Handler> WebSocketConnection for TungsteniteWsConnection<Handler>
 where
-	Handler: WebSocketHandler,
+	Handler: WebSocketMessageHandler,
 {
 	type Socket = TcpStream;
 

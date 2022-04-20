@@ -29,13 +29,14 @@ use crate::{
 	connection::TungsteniteWsConnection,
 	connection_id_generator::GenerateConnectionId,
 	error::{WebSocketError, WebSocketResult},
-	ConnectionIdGenerator, WebSocketConnection, WebSocketHandler, WebSocketServer,
+	ConnectionIdGenerator, WebSocketConnection, WebSocketMessageHandler, WebSocketResponder,
+	WebSocketServer,
 };
 use log::*;
 use mio::{
 	channel::{channel, Sender},
 	net::TcpListener,
-	Evented, Poll,
+	Evented, Poll, Token,
 };
 use net::SocketAddr;
 use rustls::ServerConfig;
@@ -58,7 +59,7 @@ pub(crate) struct TungsteniteWsServer<Handler, ConfigProvider> {
 impl<Handler, ConfigProvider> TungsteniteWsServer<Handler, ConfigProvider>
 where
 	ConfigProvider: ProvideServerConfig,
-	Handler: WebSocketHandler,
+	Handler: WebSocketMessageHandler,
 {
 	pub fn new(
 		ws_address: String,
@@ -163,7 +164,7 @@ where
 impl<Handler, ConfigProvider> WebSocketServer for TungsteniteWsServer<Handler, ConfigProvider>
 where
 	ConfigProvider: ProvideServerConfig,
-	Handler: WebSocketHandler,
+	Handler: WebSocketMessageHandler,
 {
 	type Connection = TungsteniteWsConnection<Handler>;
 
@@ -249,6 +250,21 @@ where
 	}
 }
 
+impl<Handler, ConfigProvider> WebSocketResponder for TungsteniteWsServer<Handler, ConfigProvider>
+where
+	ConfigProvider: ProvideServerConfig,
+	Handler: WebSocketMessageHandler,
+{
+	fn send_message(&self, connection_token: Token, message: String) -> WebSocketResult<()> {
+		let mut connections_lock =
+			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
+		let connection = connections_lock
+			.get_mut(&connection_token)
+			.ok_or_else(|| WebSocketError::InvalidConnection(connection_token.0))?;
+		connection.write_message(message)
+	}
+}
+
 /// Internal server signal enum.
 enum ServerSignal {
 	ShutDown,
@@ -263,6 +279,7 @@ mod tests {
 		},
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
+	use core::time::Duration;
 	use rustls::ClientConfig;
 	use std::{net::TcpStream, thread};
 	use tungstenite::{
@@ -270,37 +287,32 @@ mod tests {
 	};
 	use url::Url;
 
+	type TestServer = TungsteniteWsServer<WebSocketHandlerMock, TestServerConfigProvider>;
+
 	#[test]
 	fn server_handles_multiple_connections() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let config_provider = Arc::new(TestServerConfigProvider {});
 		let expected_answer = "websocket server response bidibibup".to_string();
-		let handler = Arc::new(WebSocketHandlerMock::new(Some(expected_answer.clone())));
+		let port: u16 = 21777;
 
-		let server_addr_string: String = "127.0.0.1:21777".to_string();
-
-		let server = Arc::new(TungsteniteWsServer::new(
-			server_addr_string.clone(),
-			config_provider,
-			handler.clone(),
-		));
+		let (server, handler) = create_server(Some(expected_answer.clone()), port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
-		thread::sleep(std::time::Duration::from_millis(100));
+		// Wait until server is up.
+		thread::sleep(std::time::Duration::from_millis(50));
 
 		let number_of_connections = 6usize;
 
 		// Spawn multiple clients that connect to the server simultaneously and send a message.
 		let client_handles: Vec<_> = (0..number_of_connections)
 			.map(|_| {
-				let server_addr_str_clone = "localhost:21777".to_string();
 				let expected_answer_clone = expected_answer.clone();
 
 				thread::spawn(move || {
-					let mut socket = connect_tls_client(server_addr_str_clone.as_str());
+					let mut socket = connect_tls_client(get_server_addr(port).as_str());
 					socket
 						.write_message(Message::Text("Hello WebSocket".into()))
 						.expect("client write message to be successful");
@@ -328,6 +340,83 @@ mod tests {
 		assert_eq!(number_of_connections, handler.get_handled_messages().len());
 	}
 
+	#[test]
+	fn server_sends_update_message_to_client() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		let expected_answer = "first response".to_string();
+		let port: u16 = 21778;
+		let (server, handler) = create_server(Some(expected_answer.clone()), port);
+
+		let server_clone = server.clone();
+		let server_join_handle = thread::spawn(move || server_clone.run());
+
+		// Wait until server is up.
+		thread::sleep(std::time::Duration::from_millis(50));
+
+		let update_message = "Message update".to_string();
+		let update_message_clone = update_message.clone();
+
+		let client_join_handle = thread::spawn(move || {
+			let mut socket = connect_tls_client(get_server_addr(port).as_str());
+			socket
+				.write_message(Message::Text("First request".into()))
+				.expect("client write message to be successful");
+
+			assert_eq!(Message::Text(expected_answer), socket.read_message().unwrap());
+			assert_eq!(Message::Text(update_message_clone), socket.read_message().unwrap());
+		});
+
+		let connection_token = poll_handler_for_first_connection(handler.as_ref());
+		server.send_message(connection_token, update_message).unwrap();
+
+		client_join_handle.join().unwrap();
+		server.shut_down().unwrap();
+		server_join_handle.join().unwrap().unwrap();
+
+		assert_eq!(1, handler.get_handled_messages().len());
+	}
+
+	#[test]
+	#[ignore]
+	fn client_test() {
+		let mut socket = connect_tls_client("ws.ifelse.io:443");
+
+		socket
+			.write_message(Message::Text("Hello WebSocket".into()))
+			.expect("client write message to be successful");
+	}
+
+	fn poll_handler_for_first_connection(handler: &WebSocketHandlerMock) -> Token {
+		loop {
+			match handler.get_handled_messages().first() {
+				None => thread::sleep(Duration::from_millis(5)),
+				Some(m) => return m.0,
+			}
+		}
+	}
+
+	fn create_server(
+		handler_response: Option<String>,
+		port: u16,
+	) -> (Arc<TestServer>, Arc<WebSocketHandlerMock>) {
+		let config_provider = Arc::new(TestServerConfigProvider {});
+		let handler = Arc::new(WebSocketHandlerMock::new(handler_response));
+
+		let server_addr_string = format!("127.0.0.1:{}", port);
+
+		let server = Arc::new(TungsteniteWsServer::new(
+			server_addr_string,
+			config_provider,
+			handler.clone(),
+		));
+		(server, handler)
+	}
+
+	fn get_server_addr(port: u16) -> String {
+		format!("localhost:{}", port)
+	}
+
 	fn connect_tls_client(server_addr: &str) -> WebSocket<MaybeTlsStream<TcpStream>> {
 		let ws_server_url = Url::parse(format!("wss://{}", server_addr).as_str()).unwrap();
 
@@ -341,15 +430,5 @@ mod tests {
 				.expect("Can't connect");
 
 		socket
-	}
-
-	#[test]
-	#[ignore]
-	fn client_test() {
-		let mut socket = connect_tls_client("ws.ifelse.io:443");
-
-		socket
-			.write_message(Message::Text("Hello WebSocket".into()))
-			.expect("client write message to be successful");
 	}
 }
