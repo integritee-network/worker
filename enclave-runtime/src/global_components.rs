@@ -23,15 +23,17 @@
 use crate::ocall::OcallApi;
 use ita_stf::{Hash, State as StfState};
 use itc_direct_rpc_server::{
-	rpc_connection_registry::ConnectionRegistry, rpc_watch_extractor::RpcWatchExtractor,
-	rpc_ws_handler::RpcWsHandler,
+	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
+	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
 	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
 	light_client::ValidatorAccessor,
 };
-use itc_tls_websocket_server::connection::TungsteniteWsConnection;
+use itc_tls_websocket_server::{
+	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer,
+};
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -42,7 +44,9 @@ use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_key_repository::StateKeyRepository,
 	state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
+use itp_top_pool::basic_pool::BasicPool;
 use itp_top_pool_author::{
+	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
 	pool_types::BPool,
 };
@@ -84,18 +88,20 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveParentchainBlockImportQueue>;
-pub type EnclaveRpcWsHandler = RpcWsHandler<
-	RpcWatchExtractor<Hash>,
-	ConnectionRegistry<Hash, TungsteniteWsConnection>,
-	Hash,
-	TungsteniteWsConnection,
->;
+
+pub type EnclaveRpcWsHandler =
+	RpcWsHandler<RpcWatchExtractor<Hash>, ConnectionRegistry<Hash>, Hash>;
+pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromFileConfigProvider>;
+pub type EnclaveRpcResponder =
+	RpcResponder<EnclaveRpcConnectionRegistry, Hash, EnclaveWebSocketServer>;
 
 /// Sidechain types
 pub type EnclaveSidechainState =
 	SidechainDB<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block, SgxExternalities>;
+pub type EnclaveTopPool =
+	BasicPool<SidechainApi<ParentchainBlock>, ParentchainBlock, EnclaveRpcResponder>;
 pub type EnclaveRpcAuthor =
-	Author<BPool, AuthorTopFilter, EnclaveStateHandler, Rsa3072KeyPair, EnclaveOCallApi>;
+	Author<EnclaveTopPool, AuthorTopFilter, EnclaveStateHandler, Rsa3072KeyPair, EnclaveOCallApi>;
 pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -143,6 +149,10 @@ pub static GLOBAL_STF_EXECUTOR_COMPONENT: ComponentContainer<EnclaveStfExecutor>
 /// O-Call API
 pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
 	ComponentContainer::new("O-call API");
+
+/// Trusted Web-socket server
+pub static GLOBAL_WEB_SOCKET_SERVER_COMPONENT: ComponentContainer<EnclaveWebSocketServer> =
+	ComponentContainer::new("Web-socket server");
 
 /// State handler.
 pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandler> =

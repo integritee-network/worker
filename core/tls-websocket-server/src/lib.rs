@@ -53,19 +53,19 @@ use std::{
 	sync::Arc,
 };
 
-mod config_provider;
-pub mod connection;
+pub mod config_provider;
+mod connection;
 pub mod connection_id_generator;
 pub mod error;
 mod tls_common;
-mod ws_server;
+pub mod ws_server;
 
 #[cfg(test)]
 mod test;
 
 /// Connection token alias.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub struct ConnectionToken(usize);
+pub struct ConnectionToken(pub usize);
 
 impl From<ConnectionToken> for Token {
 	fn from(c: ConnectionToken) -> Self {

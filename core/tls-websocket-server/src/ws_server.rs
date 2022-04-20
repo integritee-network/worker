@@ -47,7 +47,7 @@ pub(crate) const NEW_CONNECTIONS_LISTENER: mio::Token = mio::Token(0);
 pub(crate) const SERVER_SIGNAL_TOKEN: mio::Token = mio::Token(1);
 
 /// Secure web-socket server implementation using the Tungstenite library.
-pub(crate) struct TungsteniteWsServer<Handler, ConfigProvider> {
+pub struct TungsteniteWsServer<Handler, ConfigProvider> {
 	ws_address: String,
 	config_provider: Arc<ConfigProvider>,
 	connection_handler: Arc<Handler>,

@@ -15,5 +15,12 @@
 
 */
 
-pub mod determine_watch_mock;
-pub mod response_channel_mock;
+use crate::DirectRpcError;
+use std::string::String;
+
+/// Response / status update channel for an RPC call.
+pub trait RpcResponseChannel<Token>: Send + Sync {
+	type Error: Into<DirectRpcError>;
+
+	fn respond(&self, token: Token, message: String) -> Result<(), Self::Error>;
+}

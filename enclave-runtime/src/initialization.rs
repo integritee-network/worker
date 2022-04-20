@@ -18,16 +18,17 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
-		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
-		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStateFileIo,
+		EnclaveOCallApi, EnclaveRpcAuthor, EnclaveSidechainBlockImportQueue,
+		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
+		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPoolOperationHandler,
-		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		EnclaveValidatorAccessor, EnclaveWebSocketServer, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		GLOBAL_OCALL_API_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::public_api_rpc_handler,
@@ -121,7 +122,9 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 
 	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
-	let connection_registry = Arc::new(ConnectionRegistry::<Hash, TungsteniteWsConnection>::new());
+
+	let connection_registry = Arc::new(ConnectionRegistry::<Hash>::new());
+	let web_socket_server = Arc::new(EnclaveWebSocketServer::new());
 
 	// We initialize components for the public RPC / direct invocation server here, so we can start the server
 	// before registering on the parentchain. If we started the RPC AFTER registering on the parentchain and
@@ -130,7 +133,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	// validateer completely breaking (IO PipeError).
 	// Corresponding GH issues are #545 and #600.
 
-	let top_pool_author = itp_top_pool_author::initializer::create_top_pool_author(
+	let top_pool_author = create_top_pool_author(
 		connection_registry.clone(),
 		state_handler,
 		ocall_api,
@@ -257,4 +260,23 @@ pub(crate) fn init_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let _ = state_handler.initialize_shard(shard)?;
 	Ok(())
+}
+
+/// Initialize the TOP pool author component.
+///
+/// Creates and initializes the global author container from which the
+/// TOP pool author can be accessed. We do this in a centralized manner, to allow
+/// easy feature-gating of the entire sidechain/top-pool feature.
+pub fn create_top_pool_author(
+	connection_registry: Arc<EnclaveRpcConnectionRegistry>,
+	state_handler: Arc<EnclaveStateHandler>,
+	ocall_api: Arc<EnclaveOCallApi>,
+	shielding_crypto: EnclaveSh,
+) -> Arc<EnclaveRpcAuthor> {
+	let rpc_responder = Arc::new(RpcResponder::new(connection_registry));
+
+	let side_chain_api = Arc::new(SidechainApi::<itp_types::Block>::new());
+	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
+
+	Arc::new(Author::new(top_pool, AuthorTopFilter {}, state_handler, shielding_crypto, ocall_api))
 }

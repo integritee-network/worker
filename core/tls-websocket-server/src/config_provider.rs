@@ -20,11 +20,11 @@ use rustls::ServerConfig;
 use std::{string::String, sync::Arc};
 
 /// Trait to provide a Rustls server config.
-pub(crate) trait ProvideServerConfig: Send + Sync {
+pub trait ProvideServerConfig: Send + Sync {
 	fn get_config(&self) -> WebSocketResult<Arc<rustls::ServerConfig>>;
 }
 
-pub(crate) struct FromFileConfigProvider {
+pub struct FromFileConfigProvider {
 	private_key_path: String,
 	certificates_path: String,
 }
