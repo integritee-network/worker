@@ -16,9 +16,6 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// Because we need mio channel, but mio-extras is not ported to SGX!
-#![allow(deprecated)]
-#![feature(trait_alias)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
