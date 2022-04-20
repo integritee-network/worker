@@ -2498,6 +2498,7 @@ dependencies = [
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.21",
  "mio 0.6.23",
+ "mio-extras 2.0.6 (git+https://github.com/integritee-network/mio-extras-sgx?rev=963234b)",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "rustls 0.19.1",
  "sgx_tstd",
@@ -3702,6 +3703,20 @@ dependencies = [
  "lazycell",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.23",
+ "slab 0.4.5",
+]
+
+[[package]]
+name = "mio-extras"
+version = "2.0.6"
+source = "git+https://github.com/integritee-network/mio-extras-sgx?rev=963234b#963234bf55e44f9efff921938255126c48deef3a"
+dependencies = [
+ "lazycell",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mio 0.6.21",
+ "mio 0.6.23",
+ "sgx_tstd",
+ "sgx_types",
  "slab 0.4.5",
 ]
 
@@ -8082,7 +8097,7 @@ dependencies = [
  "httparse 1.6.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.23",
- "mio-extras",
+ "mio-extras 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha-1 0.8.2",

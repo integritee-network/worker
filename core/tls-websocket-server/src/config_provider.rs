@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use crate::{error::WebSocketResult, tls_common::make_config};
 use rustls::ServerConfig;
 use std::{string::String, sync::Arc};

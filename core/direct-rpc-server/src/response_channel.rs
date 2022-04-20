@@ -19,7 +19,7 @@ use crate::DirectRpcError;
 use std::string::String;
 
 /// Response / status update channel for an RPC call.
-pub trait RpcResponseChannel<Token>: Send + Sync {
+pub trait ResponseChannel<Token>: Send + Sync {
 	type Error: Into<DirectRpcError>;
 
 	fn respond(&self, token: Token, message: String) -> Result<(), Self::Error>;

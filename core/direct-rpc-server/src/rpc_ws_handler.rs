@@ -25,7 +25,7 @@ use itc_tls_websocket_server::{
 };
 use jsonrpc_core::IoHandler;
 use log::*;
-use std::{boxed::Box, sync::Arc};
+use std::{boxed::Box, string::String, sync::Arc};
 
 pub struct RpcWsHandler<Watcher, Registry, Hash>
 where

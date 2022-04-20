@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	response_channel::RpcResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
+	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
 use codec::{Decode, Encode};
@@ -24,25 +24,25 @@ use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperati
 use log::*;
 use std::{sync::Arc, vec::Vec};
 
-pub struct RpcResponder<Registry, Hash, ResponseChannel>
+pub struct RpcResponder<Registry, Hash, ResponseChannelType>
 where
 	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
-	ResponseChannel: RpcResponseChannel<Registry::Connection>,
+	ResponseChannelType: ResponseChannel<Registry::Connection>,
 {
 	connection_registry: Arc<Registry>,
-	response_channel: Arc<ResponseChannel>,
+	response_channel: Arc<ResponseChannelType>,
 }
 
-impl<Registry, Hash, ResponseChannel> RpcResponder<Registry, Hash, ResponseChannel>
+impl<Registry, Hash, ResponseChannelType> RpcResponder<Registry, Hash, ResponseChannelType>
 where
 	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
-	ResponseChannel: RpcResponseChannel<Registry::Connection>,
+	ResponseChannelType: ResponseChannel<Registry::Connection>,
 {
 	pub fn new(
 		connection_registry: Arc<Registry>,
-		web_socket_responder: Arc<ResponseChannel>,
+		web_socket_responder: Arc<ResponseChannelType>,
 	) -> Self {
 		RpcResponder { connection_registry, response_channel: web_socket_responder }
 	}
@@ -59,12 +59,12 @@ where
 	}
 }
 
-impl<Registry, Hash, ResponseChannel> SendRpcResponse
-	for RpcResponder<Registry, Hash, ResponseChannel>
+impl<Registry, Hash, ResponseChannelType> SendRpcResponse
+	for RpcResponder<Registry, Hash, ResponseChannelType>
 where
 	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
-	ResponseChannel: RpcResponseChannel<Registry::Connection>,
+	ResponseChannelType: ResponseChannel<Registry::Connection>,
 {
 	type Hash = Hash;
 

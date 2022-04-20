@@ -45,8 +45,7 @@ use crate::{
 	error::WebSocketResult,
 	ws_server::TungsteniteWsServer,
 };
-use log::*;
-use mio::{Evented, Token};
+use mio::{event::Evented, Token};
 use std::{
 	fmt::Debug,
 	string::{String, ToString},
@@ -152,19 +151,15 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 	}
 }
 
-pub fn run_ws_server<Handler>(addr_plain: &str, handler: Arc<Handler>)
+pub fn create_ws_server<Handler>(
+	addr_plain: &str,
+	handler: Arc<Handler>,
+) -> Arc<TungsteniteWsServer<Handler, FromFileConfigProvider>>
 where
 	Handler: WebSocketMessageHandler,
 {
 	let config_provider =
 		Arc::new(FromFileConfigProvider::new("end.rsa".to_string(), "end.fullchain".to_string()));
-	let web_socket_server =
-		TungsteniteWsServer::new(addr_plain.to_string(), config_provider, handler);
 
-	match web_socket_server.run() {
-		Ok(()) => {},
-		Err(e) => {
-			error!("Web socket server encountered an unexpected error: {:?}", e)
-		},
-	}
+	Arc::new(TungsteniteWsServer::new(addr_plain.to_string(), config_provider, handler))
 }

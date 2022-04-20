@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use crate::ConnectionId;
 use std::{boxed::Box, io::Error as IoError, net::AddrParseError, string::String};
 

@@ -18,20 +18,21 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
-		EnclaveOCallApi, EnclaveRpcAuthor, EnclaveSidechainBlockImportQueue,
-		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
-		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPoolOperationHandler,
-		EnclaveValidatorAccessor, EnclaveWebSocketServer, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
-		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveSidechainApi,
+		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStateFileIo,
+		EnclaveStateHandler, EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPool,
+		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT, GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
-	rpc::worker_api_direct::public_api_rpc_handler,
+	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
 	Hash,
 };
 use base58::ToBase58;
@@ -47,7 +48,7 @@ use itc_parentchain::{
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
-use itc_tls_websocket_server::{connection::TungsteniteWsConnection, run_ws_server};
+use itc_tls_websocket_server::{create_ws_server, ConnectionToken, WebSocketServer};
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -61,6 +62,8 @@ use itp_stf_state_handler::{
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
 use itp_storage::StorageProof;
+use itp_top_pool::pool::Options as PoolOptions;
+use itp_top_pool_author::author::AuthorTopFilter;
 use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer,
@@ -68,6 +71,7 @@ use its_sidechain::{
 };
 use log::*;
 use primitive_types::H256;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
 use std::{string::String, sync::Arc};
@@ -123,8 +127,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
 
-	let connection_registry = Arc::new(ConnectionRegistry::<Hash>::new());
-	let web_socket_server = Arc::new(EnclaveWebSocketServer::new());
+	let connection_registry = Arc::new(ConnectionRegistry::<Hash, ConnectionToken>::new());
 
 	// We initialize components for the public RPC / direct invocation server here, so we can start the server
 	// before registering on the parentchain. If we started the RPC AFTER registering on the parentchain and
@@ -251,7 +254,16 @@ pub(crate) fn init_light_client(
 pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResult<()> {
 	let rpc_handler = GLOBAL_RPC_WS_HANDLER_COMPONENT.get()?;
 
-	run_ws_server(server_addr.as_str(), rpc_handler);
+	let web_socket_server = create_ws_server(server_addr.as_str(), rpc_handler);
+
+	GLOBAL_WEB_SOCKET_SERVER_COMPONENT.initialize(web_socket_server.clone());
+
+	match web_socket_server.run() {
+		Ok(()) => {},
+		Err(e) => {
+			error!("Web socket server encountered an unexpected error: {:?}", e)
+		},
+	}
 
 	Ok(())
 }
@@ -263,20 +275,24 @@ pub(crate) fn init_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
 }
 
 /// Initialize the TOP pool author component.
-///
-/// Creates and initializes the global author container from which the
-/// TOP pool author can be accessed. We do this in a centralized manner, to allow
-/// easy feature-gating of the entire sidechain/top-pool feature.
 pub fn create_top_pool_author(
 	connection_registry: Arc<EnclaveRpcConnectionRegistry>,
 	state_handler: Arc<EnclaveStateHandler>,
 	ocall_api: Arc<EnclaveOCallApi>,
-	shielding_crypto: EnclaveSh,
-) -> Arc<EnclaveRpcAuthor> {
-	let rpc_responder = Arc::new(RpcResponder::new(connection_registry));
+	shielding_crypto: Rsa3072KeyPair,
+) -> Arc<EnclaveTopPoolAuthor> {
+	let response_channel = Arc::new(RpcResponseChannel::default());
+	let rpc_responder = Arc::new(EnclaveRpcResponder::new(connection_registry, response_channel));
 
-	let side_chain_api = Arc::new(SidechainApi::<itp_types::Block>::new());
-	let top_pool = Arc::new(BPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
+	let side_chain_api = Arc::new(EnclaveSidechainApi::new());
+	let top_pool =
+		Arc::new(EnclaveTopPool::create(PoolOptions::default(), side_chain_api, rpc_responder));
 
-	Arc::new(Author::new(top_pool, AuthorTopFilter {}, state_handler, shielding_crypto, ocall_api))
+	Arc::new(EnclaveTopPoolAuthor::new(
+		top_pool,
+		AuthorTopFilter {},
+		state_handler,
+		shielding_crypto,
+		ocall_api,
+	))
 }

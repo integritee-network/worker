@@ -34,13 +34,14 @@ use crate::{
 };
 use log::*;
 use mio::{
-	channel::{channel, Sender},
+	event::{Event, Evented},
 	net::TcpListener,
-	Evented, Poll,
+	Poll,
 };
+use mio_extras::channel::{channel, Receiver, Sender};
 use net::SocketAddr;
 use rustls::ServerConfig;
-use std::{collections::HashMap, net, string::String, sync::Arc};
+use std::{collections::HashMap, format, net, string::String, sync::Arc};
 
 // Default tokens for the server.
 pub(crate) const NEW_CONNECTIONS_LISTENER: mio::Token = mio::Token(0);
@@ -109,11 +110,7 @@ where
 		Ok(())
 	}
 
-	fn connection_event(
-		&self,
-		poll: &mut mio::Poll,
-		event: &mio::event::Event,
-	) -> WebSocketResult<()> {
+	fn connection_event(&self, poll: &mut mio::Poll, event: &Event) -> WebSocketResult<()> {
 		let token = event.token();
 
 		let mut connections_lock =
@@ -134,8 +131,8 @@ where
 	fn handle_server_signal(
 		&self,
 		poll: &mut mio::Poll,
-		event: &mio::event::Event,
-		signal_receiver: &mut mio::channel::Receiver<ServerSignal>,
+		event: &Event,
+		signal_receiver: &mut Receiver<ServerSignal>,
 	) -> WebSocketResult<bool> {
 		let signal = signal_receiver.try_recv()?;
 

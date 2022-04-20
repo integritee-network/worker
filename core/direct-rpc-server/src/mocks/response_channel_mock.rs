@@ -21,7 +21,7 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{response_channel::RpcResponseChannel, DirectRpcError};
+use crate::{response_channel::ResponseChannel, DirectRpcError};
 use std::vec::Vec;
 
 #[derive(Default)]
@@ -41,7 +41,7 @@ where
 	}
 }
 
-impl<Token> RpcResponseChannel<Token> for ResponseChannelMock<Token>
+impl<Token> ResponseChannel<Token> for ResponseChannelMock<Token>
 where
 	Token: Copy + Send + Sync,
 {

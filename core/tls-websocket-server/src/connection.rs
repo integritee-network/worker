@@ -20,9 +20,13 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{error::WebSocketError, WebSocketConnection, WebSocketMessageHandler, WebSocketResult};
 use log::*;
-use mio::{net::TcpStream, Event, Poll, Ready, Token};
+use mio::{event::Event, net::TcpStream, Poll, Ready, Token};
 use rustls::{ServerSession, Session};
-use std::{format, string::String, sync::Arc};
+use std::{
+	format,
+	string::{String, ToString},
+	sync::Arc,
+};
 use tungstenite::{accept, Message, WebSocket};
 
 type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;

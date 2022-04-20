@@ -39,7 +39,7 @@ use itc_tls_websocket_server::error::WebSocketError;
 use itp_types::{RpcResponse, TrustedOperationStatus};
 use serde_json::error::Error as SerdeJsonError;
 use sp_runtime::traits;
-use std::{fmt::Debug, vec::Vec};
+use std::{boxed::Box, fmt::Debug, vec::Vec};
 
 #[cfg(test)]
 mod mocks;
@@ -59,11 +59,13 @@ pub enum DirectRpcError {
 	#[error("Invalid connection hash")]
 	InvalidConnectionHash,
 	#[error("RPC serialization error: {0}")]
-	SerializationError(#[from] SerdeJsonError),
+	SerializationError(SerdeJsonError),
 	#[error("Web socket error: {0}")]
 	WebSocketError(#[from] WebSocketError),
 	#[error("Encoding error: {0}")]
-	EncodingError(#[from] CodecError),
+	EncodingError(CodecError),
+	#[error("Other error: {0}")]
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 pub type DirectRpcResult<T> = Result<T, DirectRpcError>;
