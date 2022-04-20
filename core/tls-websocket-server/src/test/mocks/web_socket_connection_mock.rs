@@ -15,11 +15,8 @@
 
 */
 
-use crate::{
-	error::{WebSocketError, WebSocketResult},
-	WebSocketConnection,
-};
-use mio::Token;
+use crate::{error::WebSocketResult, WebSocketConnection};
+use mio::{Event, Evented, Poll, PollOpt, Ready, Token};
 use std::vec::Vec;
 use tungstenite::Message;
 
@@ -30,18 +27,22 @@ pub(crate) struct WebSocketConnectionMock {
 	pub messages_to_read: Vec<Message>,
 	pub messages_written: Vec<Message>,
 	pub is_closed: bool,
+	socket: SocketMock,
 }
 
 impl WebSocketConnectionMock {
+	#[allow(unused)]
 	pub fn new(id: Token) -> Self {
 		WebSocketConnectionMock {
 			id,
 			messages_to_read: Default::default(),
 			messages_written: Default::default(),
 			is_closed: false,
+			socket: SocketMock {},
 		}
 	}
 
+	#[allow(unused)]
 	pub fn with_messages_to_read(mut self, messages: Vec<Message>) -> Self {
 		self.messages_to_read = messages;
 		self
@@ -49,31 +50,54 @@ impl WebSocketConnectionMock {
 }
 
 impl WebSocketConnection for WebSocketConnectionMock {
-	fn id(&self) -> Token {
-		self.id
+	type Socket = SocketMock;
+
+	fn socket(&self) -> &Self::Socket {
+		&self.socket
 	}
 
-	fn read_message(&mut self) -> WebSocketResult<Message> {
-		self.messages_to_read.pop().ok_or(WebSocketError::ConnectionClosed)
+	fn event_set(&self) -> Ready {
+		Ready::readable()
 	}
 
-	fn write_pending(&mut self) -> WebSocketResult<()> {
-		todo!()
-	}
-
-	fn process_request<F>(&mut self, _initial_call: F) -> WebSocketResult<String>
-	where
-		F: Fn(&str) -> String,
-	{
-		Ok(Default::default())
-	}
-
-	fn send_update(&mut self, message: String) -> WebSocketResult<()> {
-		self.messages_written.push(Message::Text(message));
+	fn ready(&mut self, _poll: &mut Poll, _ev: &Event) -> WebSocketResult<()> {
 		Ok(())
 	}
 
-	fn close(&mut self) {
-		self.is_closed = true;
+	fn is_closed(&self) -> bool {
+		self.is_closed
+	}
+
+	fn token(&self) -> Token {
+		self.id
+	}
+}
+
+#[derive(PartialEq, Eq, Clone)]
+pub(crate) struct SocketMock;
+
+impl Evented for SocketMock {
+	fn register(
+		&self,
+		_poll: &Poll,
+		_token: Token,
+		_interest: Ready,
+		_opts: PollOpt,
+	) -> std::io::Result<()> {
+		Ok(())
+	}
+
+	fn reregister(
+		&self,
+		_poll: &Poll,
+		_token: Token,
+		_interest: Ready,
+		_opts: PollOpt,
+	) -> std::io::Result<()> {
+		Ok(())
+	}
+
+	fn deregister(&self, _poll: &Poll) -> std::io::Result<()> {
+		Ok(())
 	}
 }

@@ -29,7 +29,7 @@ use crate::{
 	connection::TungsteniteWsConnection,
 	connection_id_generator::GenerateConnectionId,
 	error::{WebSocketError, WebSocketResult},
-	ConnectionIdGenerator, WebSocketHandler, WebSocketServer,
+	ConnectionIdGenerator, WebSocketConnection, WebSocketHandler, WebSocketServer,
 };
 use log::*;
 use mio::{
@@ -42,10 +42,10 @@ use rustls::ServerConfig;
 use std::{collections::HashMap, net, string::String, sync::Arc};
 
 // Default tokens for the server.
-const NEW_CONNECTIONS_LISTENER: mio::Token = mio::Token(0);
-const SERVER_SIGNAL_TOKEN: mio::Token = mio::Token(1);
+pub(crate) const NEW_CONNECTIONS_LISTENER: mio::Token = mio::Token(0);
+pub(crate) const SERVER_SIGNAL_TOKEN: mio::Token = mio::Token(1);
 
-/// Secure web-socket server implementation using the tungstenite library
+/// Secure web-socket server implementation using the Tungstenite library.
 pub(crate) struct TungsteniteWsServer<Handler, ConfigProvider> {
 	ws_address: String,
 	config_provider: Arc<ConfigProvider>,
@@ -90,7 +90,7 @@ where
 		let token = mio::Token(connection_id);
 		debug!("New connection has token {:?}", token);
 
-		let mut web_socket_connection = TungsteniteWsConnection::connect(
+		let mut web_socket_connection = TungsteniteWsConnection::new(
 			socket,
 			tls_session,
 			token,
@@ -178,18 +178,17 @@ where
 		let (server_signal_sender, mut shutdown_receiver) = channel::<ServerSignal>();
 		self.register_server_signal_sender(server_signal_sender)?;
 
-		let mut tcp_listener =
-			TcpListener::bind(&socket_addr).map_err(WebSocketError::TcpBindError)?;
+		let tcp_listener = TcpListener::bind(&socket_addr).map_err(WebSocketError::TcpBindError)?;
 		let mut poll = Poll::new()?;
 		poll.register(
-			&mut tcp_listener,
+			&tcp_listener,
 			NEW_CONNECTIONS_LISTENER,
 			mio::Ready::readable(),
 			mio::PollOpt::level(),
 		)?;
 
 		poll.register(
-			&mut shutdown_receiver,
+			&shutdown_receiver,
 			SERVER_SIGNAL_TOKEN,
 			mio::Ready::readable(),
 			mio::PollOpt::level(),
@@ -206,7 +205,7 @@ where
 					NEW_CONNECTIONS_LISTENER => {
 						debug!("Received new connection event");
 						if let Err(e) =
-							self.accept_connection(&mut poll, &mut tcp_listener, config.clone())
+							self.accept_connection(&mut poll, &tcp_listener, config.clone())
 						{
 							error!("Failed to accept new web-socket connection: {:?}", e);
 						}
@@ -250,7 +249,8 @@ where
 	}
 }
 
-pub(crate) enum ServerSignal {
+/// Internal server signal enum.
+enum ServerSignal {
 	ShutDown,
 }
 
@@ -266,19 +266,17 @@ mod tests {
 	use rustls::ClientConfig;
 	use std::{net::TcpStream, thread};
 	use tungstenite::{
-		client::connect as client_connect, client_tls_with_config, stream::MaybeTlsStream,
-		Connector, Message, WebSocket,
+		client_tls_with_config, stream::MaybeTlsStream, Connector, Message, WebSocket,
 	};
 	use url::Url;
 
 	#[test]
 	fn server_handles_multiple_connections() {
-		let _ = env_logger::builder().is_test(false).try_init();
+		let _ = env_logger::builder().is_test(true).try_init();
 
 		let config_provider = Arc::new(TestServerConfigProvider {});
-		let handler = Arc::new(WebSocketHandlerMock::new(Some(
-			"websocket server response bidibibup".to_string(),
-		)));
+		let expected_answer = "websocket server response bidibibup".to_string();
+		let handler = Arc::new(WebSocketHandlerMock::new(Some(expected_answer.clone())));
 
 		let server_addr_string: String = "127.0.0.1:21777".to_string();
 
@@ -295,15 +293,22 @@ mod tests {
 
 		let number_of_connections = 6usize;
 
+		// Spawn multiple clients that connect to the server simultaneously and send a message.
 		let client_handles: Vec<_> = (0..number_of_connections)
 			.map(|_| {
 				let server_addr_str_clone = "localhost:21777".to_string();
+				let expected_answer_clone = expected_answer.clone();
 
 				thread::spawn(move || {
 					let mut socket = connect_tls_client(server_addr_str_clone.as_str());
 					socket
 						.write_message(Message::Text("Hello WebSocket".into()))
 						.expect("client write message to be successful");
+
+					assert_eq!(
+						Message::Text(expected_answer_clone),
+						socket.read_message().unwrap()
+					);
 				})
 			})
 			.collect();
@@ -331,7 +336,7 @@ mod tests {
 		let connector = Connector::Rustls(Arc::new(config));
 		let stream = TcpStream::connect(server_addr).unwrap();
 
-		let (mut socket, _response) =
+		let (socket, _response) =
 			client_tls_with_config(ws_server_url, stream, None, Some(connector))
 				.expect("Can't connect");
 

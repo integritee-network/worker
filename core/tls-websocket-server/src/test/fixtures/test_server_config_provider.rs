@@ -18,8 +18,7 @@
 use crate::{
 	config_provider::ProvideServerConfig,
 	test::fixtures::{
-		no_cert_verifier::NoCertVerifier, test_cert::get_test_certificate_chain,
-		test_private_key::get_test_private_key,
+		test_cert::get_test_certificate_chain, test_private_key::get_test_private_key,
 	},
 	WebSocketResult,
 };
@@ -38,8 +37,6 @@ impl ProvideServerConfig for TestServerConfigProvider {
 		config
 			.set_single_cert_with_ocsp_and_sct(certs, privkey, vec![], vec![])
 			.unwrap();
-
-		//config.set_client_certificate_verifier(Arc::new(NoCertVerifier {}));
 
 		Ok(Arc::new(config))
 	}

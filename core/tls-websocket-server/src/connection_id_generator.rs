@@ -51,6 +51,7 @@ impl GenerateConnectionId for ConnectionIdGenerator {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::ws_server::{NEW_CONNECTIONS_LISTENER, SERVER_SIGNAL_TOKEN};
 
 	#[test]
 	fn next_id_works() {
@@ -59,5 +60,15 @@ mod tests {
 		assert_eq!(11, id_generator.next_id().unwrap());
 		assert_eq!(12, id_generator.next_id().unwrap());
 		assert_eq!(13, id_generator.next_id().unwrap());
+	}
+
+	#[test]
+	fn next_id_is_greater_than_default_tokens() {
+		let id_generator = ConnectionIdGenerator::default();
+
+		let first_id = id_generator.next_id().unwrap();
+
+		assert!(NEW_CONNECTIONS_LISTENER < mio::Token(first_id));
+		assert!(SERVER_SIGNAL_TOKEN < mio::Token(first_id));
 	}
 }

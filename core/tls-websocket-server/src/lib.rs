@@ -22,7 +22,6 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
-extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -46,38 +45,66 @@ use crate::{
 	ws_server::TungsteniteWsServer,
 };
 use log::*;
-use mio::Token;
+use mio::{Evented, Token};
 use std::{
 	string::{String, ToString},
 	sync::Arc,
 };
-use tungstenite::Message;
 
-mod common;
 mod config_provider;
 pub mod connection;
 pub mod connection_id_generator;
 pub mod error;
+mod tls_common;
 mod ws_server;
 
 #[cfg(test)]
 mod test;
 
-/// Abstraction of a web socket connection.
+/// Abstraction of a web socket connection using mio.
 pub trait WebSocketConnection: Send + Sync {
-	fn id(&self) -> Token;
+	/// Socket type, typically a TCP stream.
+	type Socket: Evented;
 
-	fn read_message(&mut self) -> WebSocketResult<Message>;
+	/// Get the underlying socket (TCP stream)
+	fn socket(&self) -> &Self::Socket;
 
-	fn write_pending(&mut self) -> WebSocketResult<()>;
+	/// What IO events we're currently waiting for,
+	/// based on wants_read/wants_write.
+	fn event_set(&self) -> mio::Ready;
 
-	fn process_request<F>(&mut self, initial_call: F) -> WebSocketResult<String>
-	where
-		F: Fn(&str) -> String;
+	/// Ready event, connection has work to do.
+	fn ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) -> WebSocketResult<()>;
 
-	fn send_update(&mut self, message: String) -> WebSocketResult<()>;
+	/// True if connection was closed.
+	fn is_closed(&self) -> bool;
 
-	fn close(&mut self);
+	/// Return the connection token (= ID)
+	fn token(&self) -> mio::Token;
+
+	/// Register the connection with the mio poll.
+	fn register(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
+		poll.register(
+			self.socket(),
+			self.token(),
+			self.event_set(),
+			mio::PollOpt::level() | mio::PollOpt::oneshot(),
+		)?;
+
+		Ok(())
+	}
+
+	/// Re-register the connection with the mio poll, after handling an event.
+	fn reregister(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
+		poll.reregister(
+			self.socket(),
+			self.token(),
+			self.event_set(),
+			mio::PollOpt::level() | mio::PollOpt::oneshot(),
+		)?;
+
+		Ok(())
+	}
 }
 
 /// Handles a web-socket connection

@@ -15,7 +15,7 @@
 
 */
 
-use crate::{common::make_config, error::WebSocketResult};
+use crate::{error::WebSocketResult, tls_common::make_config};
 use rustls::ServerConfig;
 use std::{string::String, sync::Arc};
 
