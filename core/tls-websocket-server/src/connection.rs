@@ -156,8 +156,9 @@ where
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
 		if let Message::Text(string_message) = message {
 			debug!("Got Message::Text on web-socket, calling handler..");
-			if let Some(reply) =
-				self.connection_handler.handle_message(self.connection_token, string_message)?
+			if let Some(reply) = self
+				.connection_handler
+				.handle_message(self.connection_token.into(), string_message)?
 			{
 				debug!("Handling message yielded a reply, sending it now..");
 				self.write_message(reply)?;

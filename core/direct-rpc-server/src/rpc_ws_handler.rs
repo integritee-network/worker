@@ -89,6 +89,14 @@ where
 			Err(e) => Err(WebSocketError::HandlerError(Box::new(e))),
 		}
 	}
+
+	fn handle_message(
+		&self,
+		connection_token: mio::token::Token,
+		message: String,
+	) -> WebSocketResult<Option<String>> {
+		todo!()
+	}
 }
 
 #[cfg(test)]

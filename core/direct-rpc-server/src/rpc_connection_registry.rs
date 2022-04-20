@@ -28,10 +28,10 @@ use std::collections::HashMap;
 
 type HashMapLock<K, V> = RwLock<HashMap<K, V>>;
 
-pub struct ConnectionRegistry<Hash, Connection>
+pub struct ConnectionRegistry<Hash, ConnectionToken>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	ConnectionToken: WebSocketConnection,
 {
 	connection_map: HashMapLock<
 		<Self as RpcConnectionRegistry>::Hash,
@@ -39,10 +39,10 @@ where
 	>,
 }
 
-impl<Hash, Connection> ConnectionRegistry<Hash, Connection>
+impl<Hash, ConnectionToken> ConnectionRegistry<Hash, ConnectionToken>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	ConnectionToken: WebSocketConnection,
 {
 	pub fn new() -> Self {
 		Self::default()
@@ -54,23 +54,23 @@ where
 	}
 }
 
-impl<Hash, Connection> Default for ConnectionRegistry<Hash, Connection>
+impl<Hash, ConnectionToken> Default for ConnectionRegistry<Hash, ConnectionToken>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	ConnectionToken: WebSocketConnection,
 {
 	fn default() -> Self {
 		ConnectionRegistry { connection_map: RwLock::new(HashMap::default()) }
 	}
 }
 
-impl<Hash, Connection> RpcConnectionRegistry for ConnectionRegistry<Hash, Connection>
+impl<Hash, ConnectionToken> RpcConnectionRegistry for ConnectionRegistry<Hash, ConnectionToken>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	ConnectionToken: WebSocketConnection,
 {
 	type Hash = Hash;
-	type Connection = Connection;
+	type Connection = ConnectionToken;
 
 	fn store(&self, hash: Self::Hash, connection: Self::Connection, rpc_response: RpcResponse) {
 		let mut map = self.connection_map.write().unwrap();

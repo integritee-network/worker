@@ -21,14 +21,13 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{WebSocketMessageHandler, WebSocketResult};
+use crate::{ConnectionToken, WebSocketMessageHandler, WebSocketResult};
 use log::debug;
-use mio::Token;
 use std::{string::String, vec::Vec};
 
 pub struct WebSocketHandlerMock {
 	pub response: Option<String>,
-	pub messages_handled: RwLock<Vec<(Token, String)>>,
+	pub messages_handled: RwLock<Vec<(ConnectionToken, String)>>,
 }
 
 impl WebSocketHandlerMock {
@@ -36,7 +35,7 @@ impl WebSocketHandlerMock {
 		WebSocketHandlerMock { response, messages_handled: Default::default() }
 	}
 
-	pub fn get_handled_messages(&self) -> Vec<(Token, String)> {
+	pub fn get_handled_messages(&self) -> Vec<(ConnectionToken, String)> {
 		self.messages_handled.read().unwrap().clone()
 	}
 }
@@ -44,7 +43,7 @@ impl WebSocketHandlerMock {
 impl WebSocketMessageHandler for WebSocketHandlerMock {
 	fn handle_message(
 		&self,
-		connection_token: Token,
+		connection_token: ConnectionToken,
 		message: String,
 	) -> WebSocketResult<Option<String>> {
 		let mut handled_messages_lock = self.messages_handled.write().unwrap();

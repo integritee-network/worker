@@ -29,14 +29,14 @@ use crate::{
 	connection::TungsteniteWsConnection,
 	connection_id_generator::GenerateConnectionId,
 	error::{WebSocketError, WebSocketResult},
-	ConnectionIdGenerator, WebSocketConnection, WebSocketMessageHandler, WebSocketResponder,
-	WebSocketServer,
+	ConnectionIdGenerator, ConnectionToken, WebSocketConnection, WebSocketMessageHandler,
+	WebSocketResponder, WebSocketServer,
 };
 use log::*;
 use mio::{
 	channel::{channel, Sender},
 	net::TcpListener,
-	Evented, Poll, Token,
+	Evented, Poll,
 };
 use net::SocketAddr;
 use rustls::ServerConfig;
@@ -255,11 +255,15 @@ where
 	ConfigProvider: ProvideServerConfig,
 	Handler: WebSocketMessageHandler,
 {
-	fn send_message(&self, connection_token: Token, message: String) -> WebSocketResult<()> {
+	fn send_message(
+		&self,
+		connection_token: ConnectionToken,
+		message: String,
+	) -> WebSocketResult<()> {
 		let mut connections_lock =
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		let connection = connections_lock
-			.get_mut(&connection_token)
+			.get_mut(&connection_token.into())
 			.ok_or_else(|| WebSocketError::InvalidConnection(connection_token.0))?;
 		connection.write_message(message)
 	}
@@ -279,9 +283,8 @@ mod tests {
 		},
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
-	use core::time::Duration;
 	use rustls::ClientConfig;
-	use std::{net::TcpStream, thread};
+	use std::{net::TcpStream, thread, time::Duration};
 	use tungstenite::{
 		client_tls_with_config, stream::MaybeTlsStream, Connector, Message, WebSocket,
 	};
@@ -368,6 +371,16 @@ mod tests {
 		});
 
 		let connection_token = poll_handler_for_first_connection(handler.as_ref());
+
+		// Send reply to a wrong connection token, should fail.
+		assert!(server
+			.send_message(
+				ConnectionToken(connection_token.0 + 1),
+				"wont get to the client".to_string()
+			)
+			.is_err());
+
+		// Send reply to the correct connection token.
 		server.send_message(connection_token, update_message).unwrap();
 
 		client_join_handle.join().unwrap();
@@ -387,7 +400,7 @@ mod tests {
 			.expect("client write message to be successful");
 	}
 
-	fn poll_handler_for_first_connection(handler: &WebSocketHandlerMock) -> Token {
+	fn poll_handler_for_first_connection(handler: &WebSocketHandlerMock) -> ConnectionToken {
 		loop {
 			match handler.get_handled_messages().first() {
 				None => thread::sleep(Duration::from_millis(5)),

@@ -18,11 +18,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // Because we need mio channel, but mio-extras is not ported to SGX!
 #![allow(deprecated)]
+#![feature(trait_alias)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
-extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -48,6 +48,7 @@ use crate::{
 use log::*;
 use mio::{Evented, Token};
 use std::{
+	fmt::Debug,
 	string::{String, ToString},
 	sync::Arc,
 };
@@ -62,18 +63,38 @@ mod ws_server;
 #[cfg(test)]
 mod test;
 
+/// Connection token alias.
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+pub struct ConnectionToken(usize);
+
+impl From<ConnectionToken> for Token {
+	fn from(c: ConnectionToken) -> Self {
+		Token(c.0)
+	}
+}
+
+impl From<Token> for ConnectionToken {
+	fn from(t: Token) -> Self {
+		ConnectionToken(t.0)
+	}
+}
+
 /// Handles a web-socket connection message.
 pub trait WebSocketMessageHandler: Send + Sync {
 	fn handle_message(
 		&self,
-		connection_token: Token,
+		connection_token: ConnectionToken,
 		message: String,
 	) -> WebSocketResult<Option<String>>;
 }
 
 /// Allows to send response messages to a specific connection.
 pub trait WebSocketResponder: Send + Sync {
-	fn send_message(&self, connection_token: Token, message: String) -> WebSocketResult<()>;
+	fn send_message(
+		&self,
+		connection_token: ConnectionToken,
+		message: String,
+	) -> WebSocketResult<()>;
 }
 
 /// Run a web-socket server with a given handler.
