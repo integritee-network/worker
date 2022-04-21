@@ -3,14 +3,15 @@ services:
   integritee-node:
     image: "integritee/integritee-node-dev:1.0.7"
     ports:
-     - 9944:9944
+     - "9944:9944"
     command: --dev --rpc-methods unsafe --ws-external --rpc-external
     logging:
       driver: none
   integritee-worker-1:
-    image: "gaudiworker:0.0.0"
+    build: "../Dockerfile"
+    depends_on: ['integritee-node']
     ports:
-      - 1234:1234
+      - "1234:1234"
     entrypoint: bash -c "
       sleep 5
       && ls -lh
@@ -20,7 +21,8 @@ services:
       && /usr/local/bin/integritee --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 run --dev --skip-ra"
     restart: always
   integritee-worker-2:
-    image: "gaudiworker:0.0.0"
+    build: "../Dockerfile"
+    depends_on: ['integritee-node', 'integritee-worker-1']
     entrypoint: bash -c "
       echo Hello 1
       && sleep 10
